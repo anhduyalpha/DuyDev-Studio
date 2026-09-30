@@ -108,8 +108,17 @@ export function openShareTargetModal(payload) {
 
   const classification = classifySharedPayload(payload);
   if (!classification.recommendations.length) {
-    // Nothing to recommend — skip modal
+    // Nothing to recommend — clean hash if on #share-target and exit
+    if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
     return;
+  }
+
+  // Clean up any previously attached listener before reopening
+  if (cleanupFn) {
+    cleanupFn();
+    cleanupFn = null;
   }
 
   container.innerHTML = `
@@ -182,6 +191,11 @@ export function closeShareTargetModal() {
   if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
+  // If mainContent is unexpectedly empty, ensure home view renders
+  const main = document.getElementById('mainContent');
+  if (main && !main.children.length) {
+    window.dispatchEvent(new CustomEvent('ds:re-render'));
+  }
 }
 
 /**
@@ -193,37 +207,52 @@ export function closeShareTargetModal() {
 async function dispatchSharedPayloadToTool(action, payload) {
   closeShareTargetModal();
 
-  // Navigate to target route
-  window.location.hash = action.route;
-
-  // Wait for hashchange handler to initialize the module
-  await new Promise(r => setTimeout(r, 150));
+  // Navigate to target route if not already there
+  if (window.location.hash !== action.route) {
+    window.location.hash = action.route;
+    // Wait for hashchange handler to initialize the module
+    await new Promise(r => setTimeout(r, 150));
+  }
 
   const { files, url, text } = payload;
+  const onReRender = () => window.dispatchEvent(new CustomEvent('ds:re-render'));
 
   try {
     switch (action.route) {
       case '#tool/studocu-dl': {
         const { studocuManager } = await import('../tools/studocu/hooks/useStudocu.js');
-        const targetUrl = url || text || '';
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
         if (targetUrl) studocuManager.startDownload(targetUrl);
         break;
       }
       case '#tool/qr-scan': {
         const { processScanFile } = await import('../tools/qr/hooks/useQrActions.js');
-        if (files?.[0]) processScanFile(files[0], () => {});
+        if (files?.[0]) await processScanFile(files[0], onReRender);
         break;
       }
       case '#tool/qr-multi': {
-        const { qrState } = await import('../tools/qr/hooks/useQrState.js');
-        qrState.targetUrl = url || text || '';
-        qrState.activeTab = 'url';
-        // Sync DOM input to trigger UI update
-        const urlInput = document.getElementById('inputQrUrl');
-        if (urlInput) {
-          urlInput.value = qrState.targetUrl;
-          urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+        const { qrState, persistQrState } = await import('../tools/qr/hooks/useQrState.js');
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || '';
+        if (targetUrl) {
+          qrState.activeTab = 'url';
+          if (qrState.dynamic) qrState.dynamic.targetUrl = targetUrl;
+          if (qrState.url) qrState.url.targetUrl = targetUrl;
+          const urlInput = document.getElementById('dynamicTargetUrl');
+          if (urlInput) {
+            urlInput.value = targetUrl;
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        } else if (text) {
+          qrState.activeTab = 'text';
+          if (qrState.text) qrState.text.content = text;
+          const textInput = document.getElementById('qrTextInput');
+          if (textInput) {
+            textInput.value = text;
+            textInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
         }
+        persistQrState();
+        onReRender();
         break;
       }
       case '#tool/pdf-studio': {
@@ -243,7 +272,19 @@ async function dispatchSharedPayloadToTool(action, payload) {
         break;
       }
       case '#tool/hash-checksum': {
-        // Hash studio will pick up file via dropzone — no programmatic injection needed
+        const { hashState } = await import('../tools/hash/HashStudio.js');
+        const { processHashFile, calculateTextHashes } = await import('../tools/hash/hooks/useHashActions.js');
+        if (files?.[0]) {
+          hashState.activeTab = 'file';
+          await processHashFile(files[0], hashState, onReRender);
+        } else if (text) {
+          hashState.activeTab = 'text';
+          hashState.textInput = text;
+          const textInput = document.getElementById('inputHashText');
+          if (textInput) textInput.value = text;
+          hashState.textHashes = await calculateTextHashes(text);
+          onReRender();
+        }
         break;
       }
     }

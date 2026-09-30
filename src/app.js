@@ -66,6 +66,9 @@ class App {
     // Listen to hash changes for client-side SPA routing
     window.addEventListener('hashchange', () => this.handleRoute());
 
+    // Global re-render event dispatcher
+    window.addEventListener('ds:re-render', () => this.renderCurrentView(true));
+
     // Initial render
     this.renderShell();
     initGlobalTaskDock();
@@ -84,30 +87,37 @@ class App {
   }
 
   async checkAndOpenShareTarget() {
-    let payload = await retrievePendingSharedData();
-    if (!payload) {
-      const hash = window.location.hash;
-      if (hash.startsWith('#share-target?') || hash === '#share-target') {
-        const queryIndex = hash.indexOf('?');
-        if (queryIndex !== -1) {
-          const params = new URLSearchParams(hash.substring(queryIndex + 1));
-          const url = params.get('url') || '';
-          const text = params.get('text') || '';
-          const title = params.get('title') || '';
-          if (url || text || title) {
-            payload = { url, text, title, files: [] };
+    if (this._checkingShareTarget) return;
+    this._checkingShareTarget = true;
+
+    try {
+      let payload = await retrievePendingSharedData();
+      if (!payload) {
+        const hash = window.location.hash;
+        if (hash.startsWith('#share-target?') || hash === '#share-target') {
+          const queryIndex = hash.indexOf('?');
+          if (queryIndex !== -1) {
+            const params = new URLSearchParams(hash.substring(queryIndex + 1));
+            const url = params.get('url') || '';
+            const text = params.get('text') || '';
+            const title = params.get('title') || '';
+            if (url || text || title) {
+              payload = { url, text, title, files: [] };
+            }
           }
         }
       }
-    }
 
-    if (!payload) {
-      if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
-        history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (!payload) {
+        if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+        return;
       }
-      return;
+      openShareTargetModal(payload);
+    } finally {
+      this._checkingShareTarget = false;
     }
-    openShareTargetModal(payload);
   }
 
   renderShell() {
@@ -143,8 +153,9 @@ class App {
       this.cleanupCurrentView();
       const hash = window.location.hash;
 
-      // Web Share Target route — open modal, do not render a page
+      // Web Share Target route — open modal over base dashboard view
       if (hash === '#share-target' || hash.startsWith('#share-target?')) {
+        this.renderCurrentView();
         this.checkAndOpenShareTarget();
         return;
       }
@@ -250,7 +261,7 @@ class App {
       setView(renderToolPage(id, sub), () => attachToolPageListeners(onSoftReRender));
     };
 
-    if (!hash || hash === '#' || hash === '#dashboard' || hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {
+    if (!hash || hash === '#' || hash === '#dashboard' || hash === '#share-target' || hash.startsWith('#share-target?') || hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
     } else if (hash.startsWith('#tool/')) {
       const parts = hash.replace('#tool/', '').split('/');

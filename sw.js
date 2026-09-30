@@ -88,11 +88,13 @@ async function handleShareTargetPost(event) {
       client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED' });
     }
 
-    // 303 See Other: POST → GET redirect
-    return Response.redirect('./#share-target', 303);
+    // 303 See Other: POST → GET redirect (must be absolute URL for Response.redirect)
+    const redirectUrl = new URL('./#share-target', self.registration ? self.registration.scope : self.location.href).href;
+    return Response.redirect(redirectUrl, 303);
   } catch (err) {
     console.error('[SW] Share target error:', err);
-    return Response.redirect('./#share-target', 303);
+    const redirectUrl = new URL('./#share-target', self.registration ? self.registration.scope : self.location.href).href;
+    return Response.redirect(redirectUrl, 303);
   }
 }
 

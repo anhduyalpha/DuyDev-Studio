@@ -94,8 +94,40 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)
-  app.post('/share-target', async (_req, reply) => {
-    return reply.redirect('/#share-target', 303);
+  app.post('/share-target', async (req, reply) => {
+    const params = new URLSearchParams();
+    const query = (req.query as Record<string, string>) || {};
+    if (query.url) params.set('url', query.url);
+    if (query.text) params.set('text', query.text);
+    if (query.title) params.set('title', query.title);
+
+    if (req.isMultipart()) {
+      try {
+        const parts = req.parts();
+        for await (const part of parts) {
+          if (part.type === 'field') {
+            const val = typeof part.value === 'string' ? part.value.trim() : '';
+            if (val) {
+              if (part.fieldname === 'url') params.set('url', val);
+              else if (part.fieldname === 'text') params.set('text', val);
+              else if (part.fieldname === 'title') params.set('title', val);
+            }
+          } else if (part.type === 'file') {
+            part.file.resume();
+          }
+        }
+      } catch (err) {
+        logger.warn({ err }, 'Error parsing fallback multipart share target');
+      }
+    } else if (req.body && typeof req.body === 'object') {
+      const body = req.body as Record<string, string>;
+      if (body.url) params.set('url', body.url);
+      if (body.text) params.set('text', body.text);
+      if (body.title) params.set('title', body.title);
+    }
+
+    const paramStr = params.toString();
+    return reply.redirect(paramStr ? `/#share-target?${paramStr}` : '/#share-target', 303);
   });
 
   // GET fallback for text/URL share (iOS Safari PWA)

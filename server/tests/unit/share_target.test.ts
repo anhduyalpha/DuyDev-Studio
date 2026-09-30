@@ -26,6 +26,54 @@ describe('Web Share Target & Classifier Suite', () => {
       expect(res.headers.location).toBe('/#share-target');
     });
 
+    it('POST /share-target with query params should preserve params in 303 redirect', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/share-target?url=https%3A%2F%2Fexample.com&title=MyTitle'
+      });
+
+      expect(res.statusCode).toBe(303);
+      const location = res.headers.location as string;
+      expect(location).toContain('/#share-target?');
+      expect(location).toContain('url=https%3A%2F%2Fexample.com');
+      expect(location).toContain('title=MyTitle');
+    });
+
+    it('POST /share-target with multipart form data should extract fields, drain files, and 303 redirect', async () => {
+      const boundary = '----WebKitFormBoundaryTest123456';
+      const body = [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="url"',
+        '',
+        'https://studocu.com/vn/document/12345',
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="title"',
+        '',
+        'Shared Studocu Title',
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="shared_files"; filename="test.txt"',
+        'Content-Type: text/plain',
+        '',
+        'sample file content to drain',
+        `--${boundary}--`
+      ].join('\r\n');
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/share-target',
+        headers: {
+          'content-type': `multipart/form-data; boundary=${boundary}`
+        },
+        payload: body
+      });
+
+      expect(res.statusCode).toBe(303);
+      const location = res.headers.location as string;
+      expect(location).toContain('/#share-target?');
+      expect(location).toContain('url=https%3A%2F%2Fstudocu.com%2Fvn%2Fdocument%2F12345');
+      expect(location).toContain('title=Shared+Studocu+Title');
+    });
+
     it('GET /share-target without query params should redirect to /#share-target', async () => {
       const res = await app.inject({
         method: 'GET',
@@ -161,6 +209,44 @@ describe('Web Share Target & Classifier Suite', () => {
       expect(result.type).toBe(SharePayloadType.PLAIN_TEXT);
       expect(result.recommendations[0].route).toBe('#tool/qr-multi');
       expect(result.recommendations[1].route).toBe('#tool/hash-checksum');
+    });
+
+    it('should classify archive files by MIME type even if filename has no extension', () => {
+      const zipMimeResult = classifySharedPayload({
+        files: [{ name: 'download_blob', type: 'application/x-zip-compressed' } as any]
+      });
+      expect(zipMimeResult.type).toBe(SharePayloadType.ARCHIVE_FILES);
+      expect(zipMimeResult.recommendations[0].route).toBe('#tool/archive-inspect');
+
+      const rarMimeResult = classifySharedPayload({
+        files: [{ name: 'content', type: 'application/x-rar-compressed' } as any]
+      });
+      expect(rarMimeResult.type).toBe(SharePayloadType.ARCHIVE_FILES);
+
+      const gzipMimeResult = classifySharedPayload({
+        files: [{ name: 'archive_blob', type: 'application/gzip' } as any]
+      });
+      expect(gzipMimeResult.type).toBe(SharePayloadType.ARCHIVE_FILES);
+    });
+
+    it('should classify international Studocu subdomains correctly', () => {
+      const subdomains = ['id.studocu.com', 'fr.studocu.com', 'es.studocu.com', 'it.studocu.com', 'de.studocu.com'];
+      for (const d of subdomains) {
+        const result = classifySharedPayload({
+          url: `https://${d}/document/universitas-indonesia/lecture-notes/99887`
+        });
+        expect(result.type).toBe(SharePayloadType.STUDOCU_URL);
+        expect(result.recommendations[0].isPrimary).toBe(true);
+        expect(result.recommendations[0].route).toBe('#tool/studocu-dl');
+      }
+    });
+
+    it('should handle null elements in files array gracefully', () => {
+      const nullFileResult = classifySharedPayload({
+        files: [null as any]
+      });
+      expect(nullFileResult.type).toBe(SharePayloadType.PLAIN_TEXT);
+      expect(nullFileResult.recommendations).toEqual([]);
     });
 
     it('should handle empty or null payload gracefully', () => {

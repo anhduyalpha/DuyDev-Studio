@@ -15,9 +15,24 @@ export const SharePayloadType = {
   GENERIC_FILES: 'GENERIC_FILES',
 };
 
-const STUDOCU_HOSTS = ['studocu.com', 'www.studocu.com', 'studocu.vn', 'www.studocu.vn'];
-const ARCHIVE_EXTS = ['.zip', '.rar', '.7z', '.tar', '.gz'];
+const ARCHIVE_EXTS = ['.zip', '.rar', '.7z', '.tar', '.gz', '.tgz', '.bz2', '.xz'];
+const ARCHIVE_MIMES = [
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/x-rar-compressed',
+  'application/x-7z-compressed',
+  'application/x-tar',
+  'application/gzip',
+  'application/vnd.rar',
+  'application/x-bzip2'
+];
 const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff|svg|avif|ico)$/i;
+
+function isStudocuHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'studocu.com' || host.endsWith('.studocu.com') || host === 'studocu.vn' || host.endsWith('.studocu.vn');
+}
 
 /**
  * Open IndexedDB ds_share_db.
@@ -75,9 +90,13 @@ export function classifySharedPayload(payload) {
   // 1. File-based classification (highest priority)
   if (files && files.length > 0) {
     const firstFile = files[0];
+    if (!firstFile) {
+      return { type: SharePayloadType.PLAIN_TEXT, recommendations: [] };
+    }
     const name = (firstFile.name || '').toLowerCase();
+    const mime = (firstFile.type || '').toLowerCase();
 
-    if (firstFile.type?.startsWith('image/') || IMAGE_RE.test(name)) {
+    if (mime.startsWith('image/') || IMAGE_RE.test(name)) {
       return {
         type: SharePayloadType.IMAGE_FILES,
         recommendations: [
@@ -89,7 +108,7 @@ export function classifySharedPayload(payload) {
       };
     }
 
-    if (firstFile.type === 'application/pdf' || name.endsWith('.pdf')) {
+    if (mime === 'application/pdf' || name.endsWith('.pdf')) {
       return {
         type: SharePayloadType.PDF_FILES,
         recommendations: [
@@ -102,7 +121,10 @@ export function classifySharedPayload(payload) {
       };
     }
 
-    if (ARCHIVE_EXTS.some(ext => name.endsWith(ext))) {
+    const isArchive = ARCHIVE_EXTS.some(ext => name.endsWith(ext)) ||
+      (mime && ARCHIVE_MIMES.includes(mime));
+
+    if (isArchive) {
       return {
         type: SharePayloadType.ARCHIVE_FILES,
         recommendations: [
@@ -127,7 +149,7 @@ export function classifySharedPayload(payload) {
   if (effectiveUrl) {
     try {
       const parsed = new URL(effectiveUrl);
-      if (STUDOCU_HOSTS.includes(parsed.hostname)) {
+      if (isStudocuHost(parsed.hostname)) {
         return {
           type: SharePayloadType.STUDOCU_URL,
           recommendations: [
