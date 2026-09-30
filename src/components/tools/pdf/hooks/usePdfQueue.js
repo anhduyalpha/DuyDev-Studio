@@ -6,9 +6,7 @@
 import { showToast } from '../../../../utilities/toast.js';
 import { watchJobProgress } from '../../../../utilities/jobWatcher.js';
 import { loadModuleState, saveModuleState } from '../../../../utilities/moduleState.js';
-import { uploadPdfFiles, dispatchPdfJob, buildPdfResult, buildClientPdfResult } from './pdfApi.js';
-import { canHandleClientPdf, executeClientPdfTask } from '../services/clientPdfEngine.js';
-import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
+import { uploadPdfFiles, dispatchPdfJob, buildPdfResult } from './pdfApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 
 const ALLOWED_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'tiff', 'tif', 'svg']);
@@ -52,9 +50,6 @@ export function filterFilesForMode(fileList, mode) {
  */
 export function releasePdfFileResources(file) {
   if (!file) return;
-  if (file.abortController) {
-    try { file.abortController.abort(); } catch {}
-  }
   if (file.localUrl) {
     try { URL.revokeObjectURL(file.localUrl); } catch {}
   }
@@ -251,10 +246,6 @@ export class PdfQueueManager {
 
       if (mode === 'organize' && (!this.organizeOrder || this.organizeOrder.length === 0)) {
         this.initOrganizePages(this.totalPages || this.files[0]?.pages || 1);
-      }
-
-      if (['compress', 'pdf_to_docx', 'security', 'extract_images'].includes(mode)) {
-        this.startBackgroundUploadForFiles(this.files);
       }
     }
 
@@ -605,8 +596,6 @@ export class PdfQueueManager {
     this.loadingFileName = validFiles[0]?.name || 'Tệp tin';
     this.notify('file-loading');
 
-    let newItems = [];
-
     try {
       const isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
       if (!isMulti && validFiles.length > 1) {
@@ -619,7 +608,7 @@ export class PdfQueueManager {
       }
 
       const chosenFiles = isMulti ? validFiles : validFiles.slice(0, 1);
-      newItems = chosenFiles.map((f) => ({
+      const newItems = chosenFiles.map((f) => ({
         id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         name: f.name,
         size: f.size,
@@ -630,7 +619,6 @@ export class PdfQueueManager {
       }));
 
       this.files = isMulti ? [...this.files, ...newItems] : newItems;
-      this.revokeResultUrl();
       this.result = null;
       this.error = null;
       this.pageRotations = {};
@@ -670,48 +658,7 @@ export class PdfQueueManager {
       this.isLoadingFile = false;
       this.loadingFileName = '';
       this.notify('files-change');
-      this.startBackgroundUploadForFiles(newItems);
     }
-  }
-
-  startBackgroundUploadForFiles(filesToUpload) {
-    if (!filesToUpload || filesToUpload.length === 0) return;
-
-    filesToUpload.forEach((item) => {
-      if (item.fileId || item.uploadPromise || item.uploadStatus === 'uploaded' || item.uploadStatus === 'uploading') {
-        return;
-      }
-      item.abortController = new AbortController();
-      item.uploadStatus = 'uploading';
-      item.uploadProgress = 0;
-
-      const targetBlob = item.rawFile || item;
-      item.uploadPromise = smartUploadFile(targetBlob, {
-        purpose: 'pdf-convert',
-        signal: item.abortController.signal,
-        onProgress: (p) => {
-          item.uploadProgress = p.percent;
-          this.notify('file-upload-progress');
-        }
-      }).then((res) => {
-        const fileId = res?.fileId || res?.id;
-        if (fileId) {
-          item.fileId = fileId;
-          item.uploadStatus = 'uploaded';
-          item.uploadProgress = 100;
-          this.notify('file-upload-progress');
-          return fileId;
-        }
-        item.uploadStatus = 'failed';
-        return null;
-      }).catch((err) => {
-        if (err?.name !== 'AbortError') {
-          item.uploadStatus = 'failed';
-          this.notify('file-upload-progress');
-        }
-        return null;
-      });
-    });
   }
 
   removeFile(id) {
@@ -736,7 +683,6 @@ export class PdfQueueManager {
     this.files = [];
     this.isLoadingFile = false;
     this.loadingFileName = '';
-    this.revokeResultUrl();
     this.result = null;
     this.error = null;
     this.pageRotations = {};
@@ -821,62 +767,13 @@ export class PdfQueueManager {
       return;
     }
 
+    const apiBase = typeof window !== 'undefined' && window.location ? window.location.origin : '';
     const startTime = Date.now();
     this.isProcessing = true;
     this.progress = 5;
-    this.error = null;
-    this.revokeResultUrl();
-    this.result = null;
-
-    const operation = this.mode === 'security' ? this.securityAction : this.mode;
-    const options = {
-      stripMetadata: this.stripMetadata,
-      angle: this.angle,
-      rotations: this.mode === 'rotate' && Object.keys(this.pageRotations).length > 0
-        ? this.pageRotations
-        : this.mode === 'organize' && Object.keys(this.organizeRotations).length > 0
-        ? this.organizeRotations
-        : undefined,
-      order: this.mode === 'organize'
-        ? this.organizeOrder.filter((p) => !this.organizeDeleted.has(p))
-        : undefined,
-      deletedSet: this.mode === 'organize' ? this.organizeDeleted : undefined,
-      selectedSplitPages: this.mode === 'split' ? this.selectedSplitPages : undefined,
-      compressionLevel: this.mode === 'compress' ? this.compressionPreset : undefined,
-      pages: this.pages || undefined,
-      watermarkText: this.watermarkText || undefined,
-      watermarkPosition: this.mode === 'watermark' ? (this.watermarkPosition || 'center') : undefined,
-      watermarkOpacity: this.mode === 'watermark' ? (typeof this.watermarkOpacity === 'number' ? this.watermarkOpacity : 0.3) : undefined,
-      pageNumbers: this.pageNumbers,
-      password: this.password || undefined
-    };
-
-    // Fast-path: Process 100% on client-side (< 0.8s, 0MB bandwidth) if safe
-    if (canHandleClientPdf(this.mode, this.files, this.totalPages, options)) {
-      try {
-        this.stage = 'Đang xử lý tại thiết bị (Client)...';
-        this.progress = 30;
-        this.notify('process-start');
-        taskCoordinator.syncTasks(true);
-
-        const clientBlob = await executeClientPdfTask(this.mode, this.files, options);
-        const dur = ((Date.now() - startTime) / 1000).toFixed(2);
-        this.progress = 100;
-        this.stage = 'Hoàn tất';
-        this.isProcessing = false;
-        this.result = buildClientPdfResult(clientBlob, this.files[0], this.mode, dur);
-        showToast('Hoàn tất xử lý tại thiết bị', 'success');
-        this.notify('completed');
-        taskCoordinator.syncTasks(true);
-        return this.result;
-      } catch (clientErr) {
-        console.warn('Client-side PDF failed, falling back to server engine:', clientErr);
-        showToast('Chuyển tiếp xử lý sang máy chủ...', 'info');
-      }
-    }
-
-    const apiBase = typeof window !== 'undefined' && window.location ? window.location.origin : '';
     this.stage = 'Đang tải tệp lên...';
+    this.error = null;
+    this.result = null;
     this.notify('process-start');
     taskCoordinator.syncTasks(true);
 
@@ -903,6 +800,27 @@ export class PdfQueueManager {
       this.stage = 'Đang khởi tạo...';
       this.notify('upload-progress');
       taskCoordinator.syncTasks(true);
+
+      const operation = this.mode === 'security' ? this.securityAction : this.mode;
+      const options = {
+        stripMetadata: this.stripMetadata,
+        angle: this.angle,
+        rotations: this.mode === 'rotate' && Object.keys(this.pageRotations).length > 0
+          ? this.pageRotations
+          : this.mode === 'organize' && Object.keys(this.organizeRotations).length > 0
+          ? this.organizeRotations
+          : undefined,
+        order: this.mode === 'organize'
+          ? this.organizeOrder.filter((p) => !this.organizeDeleted.has(p))
+          : undefined,
+        compressionLevel: this.mode === 'compress' ? this.compressionPreset : undefined,
+        pages: this.pages || undefined,
+        watermarkText: this.watermarkText || undefined,
+        watermarkPosition: this.mode === 'watermark' ? (this.watermarkPosition || 'center') : undefined,
+        watermarkOpacity: this.mode === 'watermark' ? (typeof this.watermarkOpacity === 'number' ? this.watermarkOpacity : 0.3) : undefined,
+        pageNumbers: this.pageNumbers,
+        password: this.password || undefined
+      };
 
       const { eventsUrl, pollUrl } = await dispatchPdfJob(fileIds, operation, options, abortSignal);
 
@@ -956,19 +874,12 @@ export class PdfQueueManager {
     }
   }
 
-  revokeResultUrl() {
-    if (this.result?.isClientProcessed && this.result?.downloadUrl) {
-      try { URL.revokeObjectURL(this.result.downloadUrl); } catch {}
-    }
-  }
-
   resetResult() {
     if (this.isProcessing) return;
     if (this.activeJobWatcherCleanup) {
       try { this.activeJobWatcherCleanup(); } catch {}
       this.activeJobWatcherCleanup = null;
     }
-    this.revokeResultUrl();
     this.result = null;
     this.error = null;
     this.stage = '';

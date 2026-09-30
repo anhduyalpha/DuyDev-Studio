@@ -18,7 +18,6 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/vendor/pdf-lib.min.js',
   './src/app.js?v=14.2',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',

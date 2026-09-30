@@ -96,18 +96,7 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
 
                 <!-- Name & Meta -->
                 <div class="min-w-0">
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <p class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">${f.name}</p>
-                    ${f.uploadStatus === 'uploading' ? `
-                      <span class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shrink-0">
-                        Đang tải (${f.uploadProgress || 0}%)
-                      </span>
-                    ` : f.fileId || f.uploadStatus === 'uploaded' ? `
-                      <span class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                        Sẵn sàng
-                      </span>
-                    ` : ''}
-                  </div>
+                  <p class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">${f.name}</p>
                   <p class="text-[11px] font-mono text-zinc-500 mt-0.5">
                     ${formatBytes(f.size)} ${f.pages ? `• ${f.pages} trang` : ''}
                   </p>

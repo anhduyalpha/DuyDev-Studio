@@ -121,15 +121,6 @@ export function renderDropzoneQueue(queueState = {}) {
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                     Đang xử lý
                   </span>
-                ` : singleFile.uploadStatus === 'uploading' ? `
-                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center gap-1 shrink-0">
-                    <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
-                    Đang tải lên (${singleFile.uploadProgress || 0}%)
-                  </span>
-                ` : singleFile.fileId || singleFile.uploadStatus === 'uploaded' ? `
-                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                    Đã sẵn sàng
-                  </span>
                 ` : `
                   <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                     Sẵn sàng

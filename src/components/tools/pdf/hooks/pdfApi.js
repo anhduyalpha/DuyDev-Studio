@@ -3,77 +3,94 @@
  */
 
 import { storage } from '../../../../utilities/storage.js';
-import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
 
-/**
- * Uploads PDF files concurrently with smart chunking (> 50MB) and eager upload reuse.
- */
 export async function uploadPdfFiles(files, onProgress, signal) {
-  const uploadedFileIds = new Array(files.length);
-  const concurrency = Math.min(3, files.length);
-  let activeIndex = 0;
+  const apiBase = typeof window !== 'undefined' && window.location ? window.location.origin : '';
+  const uploadedFileIds = [];
 
-  const uploadSingle = async (idx) => {
-    const item = files[idx];
+  for (let i = 0; i < files.length; i++) {
     if (signal?.aborted) {
       throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
     }
 
-    // Fast-path: Already uploaded by Background Eager Upload
-    if (item.fileId) {
-      uploadedFileIds[idx] = item.fileId;
-      if (onProgress) onProgress(idx, files.length, item.name, 100);
-      return item.fileId;
-    }
+    const item = files[i];
+    if (onProgress) onProgress(i, files.length, item.name, 0);
 
-    // In-flight eager upload: wait for ongoing promise
-    if (item.uploadPromise) {
-      try {
-        const id = await item.uploadPromise;
-        if (id) {
-          uploadedFileIds[idx] = id;
-          if (onProgress) onProgress(idx, files.length, item.name, 100);
-          return id;
-        }
-      } catch (_) {}
-    }
+    const formData = new FormData();
+    formData.append('file', item.rawFile);
+    formData.append('purpose', 'pdf-convert');
 
-    const targetBlob = item.rawFile || item;
-    if (onProgress) onProgress(idx, files.length, item.name, 0);
-    let res;
-    try {
-      res = await smartUploadFile(targetBlob, {
-        purpose: 'pdf-convert',
-        signal,
-        onProgress: (p) => {
-          if (onProgress) onProgress(idx, files.length, item.name, p.percent);
+    const fileId = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${apiBase}/api/v1/files/upload?purpose=pdf-convert`);
+
+      const onAbort = () => {
+        try { xhr.abort(); } catch {}
+        reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+      };
+
+      if (signal) {
+        if (signal.aborted) {
+          return onAbort();
         }
-      });
-    } catch (uploadErr) {
-      if (signal?.aborted || uploadErr?.name === 'AbortError' || uploadErr?.message?.toLowerCase().includes('abort')) {
-        throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
+        signal.addEventListener('abort', onAbort, { once: true });
       }
-      throw uploadErr;
-    }
 
-    const fileId = res?.fileId || res?.id;
-    if (!fileId) throw new Error(`Không nhận được fileId khi tải tệp ${item.name}`);
+      const cleanupSignal = () => {
+        if (signal) {
+          try { signal.removeEventListener('abort', onAbort); } catch {}
+        }
+      };
 
-    item.fileId = fileId;
-    item.uploadStatus = 'uploaded';
-    uploadedFileIds[idx] = fileId;
-    if (onProgress) onProgress(idx, files.length, item.name, 100);
-    return fileId;
-  };
+      if (xhr.upload && onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable && e.total > 0) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            onProgress(i, files.length, item.name, pct);
+          }
+        });
+      }
 
-  const pool = Array.from({ length: concurrency }, async () => {
-    while (activeIndex < files.length) {
-      const idx = activeIndex++;
-      await uploadSingle(idx);
-    }
-  });
+      xhr.onload = () => {
+        cleanupSignal();
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const res = JSON.parse(xhr.responseText);
+            resolve(res.data?.fileId);
+          } catch (e) {
+            reject(new Error(`Lỗi phân tích phản hồi máy chủ: ${e.message}`));
+          }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error?.message || `Lỗi tải tệp ${item.name}`));
+          } catch {
+            reject(new Error(`Lỗi tải tệp ${item.name} (${xhr.status})`));
+          }
+        }
+      };
 
-  await Promise.all(pool);
+      xhr.onerror = () => {
+        cleanupSignal();
+        if (signal?.aborted) {
+          reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+        } else {
+          reject(new Error(`Lỗi kết nối khi tải tệp ${item.name}`));
+        }
+      };
+
+      xhr.onabort = () => {
+        cleanupSignal();
+        reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+      };
+
+      xhr.send(formData);
+    });
+
+    uploadedFileIds.push(fileId);
+    if (onProgress) onProgress(i, files.length, item.name, 100);
+  }
+
   return uploadedFileIds;
 }
 
@@ -147,45 +164,6 @@ export function buildPdfResult(data, mainFile, mode, durationSec, apiBase) {
   });
 
   storage.fetchHistory().catch(() => {});
-
-  return result;
-}
-
-/**
- * Builds result object and logs history for instant client-side processed PDF tasks.
- */
-export function buildClientPdfResult(blob, mainFile, mode, durationSec) {
-  const localUrl = URL.createObjectURL(blob);
-  const baseName = mainFile?.name ? mainFile.name.replace(/\.[^/.]+$/, '') : 'document';
-  const outFileName = `${baseName}_${mode}.pdf`;
-
-  const result = {
-    fileName: outFileName,
-    originalSize: mainFile?.size || blob.size,
-    resultSize: blob.size,
-    savedPct: 0,
-    duration: `${durationSec}s`,
-    downloadUrl: localUrl,
-    resultFileId: null,
-    historyId: `hist_client_${Date.now()}`,
-    mode: mode,
-    isClientProcessed: true
-  };
-
-  storage.recordCompletedJob({
-    id: result.historyId,
-    tool: 'PDF Studio',
-    toolTitle: 'PDF Studio Pro',
-    toolId: 'pdf-studio',
-    fileName: result.fileName,
-    originalSize: result.originalSize,
-    resultSize: result.resultSize,
-    savedPct: 0,
-    mode: mode,
-    status: 'success',
-    downloadUrl: localUrl,
-    resultFileId: null
-  });
 
   return result;
 }
