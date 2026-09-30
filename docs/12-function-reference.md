@@ -1,0 +1,141 @@
+# Function reference — v1.8.6
+
+| File | Dòng | Hàm | Vai trò |
+|---|---:|---|---|
+| `background.js` | 114 | `normalizeLanguage()` | Hàm runtime của extension. |
+| `background.js` | 118 | `getInterfaceLanguage()` | Hàm runtime của extension. |
+| `background.js` | 127 | `tr()` | Hàm runtime của extension. |
+| `background.js` | 133 | `getExtensionSettings()` | Hàm runtime của extension. |
+| `background.js` | 148 | `getCookieGateState()` | Hàm runtime của extension. |
+| `background.js` | 179 | `markCookieGateCleared()` | Hàm runtime của extension. |
+| `background.js` | 198 | `removeStudocuCookiesLegacy182()` | Một phần của quy trình Active Premium v1.8.6. |
+| `background.js` | 219 | `cancelPremiumProbe()` | Hàm runtime của extension. |
+| `background.js` | 228 | `armPremiumProbe()` | Một phần của quy trình Active Premium v1.8.6. |
+| `background.js` | 243 | `resolvePremiumProbe()` | Một phần của quy trình Active Premium v1.8.6. |
+| `background.js` | 260 | `activatePremiumAndReload()` | Một phần của quy trình Active Premium v1.8.6. |
+| `background.js` | 342 | `requireCookieGateState()` | Hàm runtime của extension. |
+| `background.js` | 356 | `isSupportedStudocuUrl()` | Hàm runtime của extension. |
+| `background.js` | 365 | `createDocumentKey()` | Hàm runtime của extension. |
+| `background.js` | 374 | `serializableCheckpoint()` | Hàm runtime của extension. |
+| `background.js` | 393 | `serializeRuntimeJob()` | Hàm runtime của extension. |
+| `background.js` | 417 | `persistReliableQueueState()` | Hàm runtime của extension. |
+| `background.js` | 436 | `scheduleReliableQueuePersist()` | Hàm runtime của extension. |
+| `background.js` | 444 | `clearReliableQueueStateWhenIdle()` | Hàm runtime của extension. |
+| `background.js` | 452 | `hydrateReliableQueueState()` | Hàm runtime của extension. |
+| `background.js` | 517 | `queuePositionForTab()` | Hàm runtime của extension. |
+| `background.js` | 523 | `publicQueueState()` | Hàm runtime của extension. |
+| `background.js` | 542 | `waitForPreviewDecision()` | Hàm runtime của extension. |
+| `background.js` | 553 | `resolvePreviewDecision()` | Hàm runtime của extension. |
+| `background.js` | 564 | `saveExportHistory()` | Hàm runtime của extension. |
+| `background.js` | 578 | `showCompletionNotification()` | Hàm runtime của extension. |
+| `background.js` | 602 | `publicJob()` | Hàm runtime của extension. |
+| `background.js` | 629 | `normalizeStudocuTitle()` | Hàm runtime của extension. |
+| `background.js` | 641 | `safeFilename()` | Hàm runtime của extension. |
+| `background.js` | 650 | `isGenericDocumentTitle()` | Hàm runtime của extension. |
+| `background.js` | 655 | `titleFromStudocuUrl()` | Hàm runtime của extension. |
+| `background.js` | 681 | `resolveStudocuDocumentTitle()` | Hàm runtime của extension. |
+| `background.js` | 773 | `ensureUtilityOffscreenDocument()` | Hàm runtime của extension. |
+| `background.js` | 793 | `playCompletionSound()` | Hàm runtime của extension. |
+| `background.js` | 804 | `sleep()` | Hàm runtime của extension. |
+| `background.js` | 808 | `setPageExportMessage()` | Hàm runtime của extension. |
+| `background.js` | 842 | `cleanupPreparedViewer()` | Hàm runtime của extension. |
+| `background.js` | 896 | `cancelPageExport()` | Hàm runtime của extension. |
+| `background.js` | 934 | `attachJobDebugger()` | Hàm runtime của extension. |
+| `background.js` | 959 | `enterFastPrintIsolation()` | Hàm runtime của extension. |
+| `background.js` | 1039 | `exitFastPrintIsolation()` | Hàm runtime của extension. |
+| `background.js` | 1077 | `readPdfProtocolStream()` | Hàm runtime của extension. |
+| `background.js` | 1123 | `createPdfBlobFromBase64()` | Hàm runtime của extension. |
+| `background.js` | 1165 | `printAndDownloadAttached()` | Một phần của pipeline tạo PDF nhanh. |
+| `background.js` | 1354 | `verifyPreparedDom()` | Một phần của pipeline tạo PDF nhanh. |
+| `background.js` | 1482 | `prepareDocumentForJob()` | Hàm runtime của extension. |
+| `background.js` | 1501 | `verifyPreparedJob()` | Hàm runtime của extension. |
+| `background.js` | 1546 | `buildJobPreview()` | Hàm runtime của extension. |
+| `background.js` | 1566 | `runExportJob()` | Hàm runtime của extension. |
+| `background.js` | 1701 | `processExportQueue()` | Hàm runtime của extension. |
+| `background.js` | 1741 | `startBackgroundExport()` | Hàm runtime của extension. |
+| `background.js` | 1806 | `queueAllStudocuTabs()` | Hàm runtime của extension. |
+| `background.js` | 2066 | `runCleanViewer()` | Một phần của pipeline tạo PDF nhanh. |
+| `background.js` | 2117 | `pt()` | Hàm runtime của extension. |
+| `background.js` | 2344 | `assertCurrentRun()` | Hàm runtime của extension. |
+| `background.js` | 2354 | `checkpoint()` | Hàm runtime của extension. |
+| `background.js` | 2386 | `reportJobProgress()` | Hàm runtime của extension. |
+| `background.js` | 2436 | `createCaptureCheckpoint()` | Hàm runtime của extension. |
+| `background.js` | 2460 | `publishCaptureCheckpoint()` | Hàm runtime của extension. |
+| `background.js` | 2488 | `getTitle()` | Hàm runtime của extension. |
+| `background.js` | 2507 | `createOverlay()` | Hàm runtime của extension. |
+| `background.js` | 2541 | `injectStyles()` | Hàm runtime của extension. |
+| `background.js` | 2826 | `getAllPageNodes()` | Hàm runtime của extension. |
+| `background.js` | 2845 | `collectScrollContainers()` | Hàm runtime của extension. |
+| `background.js` | 2879 | `isDocumentScrollContainer()` | Hàm runtime của extension. |
+| `background.js` | 2885 | `getScrollTop()` | Hàm runtime của extension. |
+| `background.js` | 2891 | `getScrollLeft()` | Hàm runtime của extension. |
+| `background.js` | 2897 | `getScrollHeight()` | Hàm runtime của extension. |
+| `background.js` | 2907 | `getViewportHeight()` | Hàm runtime của extension. |
+| `background.js` | 2913 | `scrollRange()` | Hàm runtime của extension. |
+| `background.js` | 2917 | `findScrollContainer()` | Hàm runtime của extension. |
+| `background.js` | 2948 | `setScrollTop()` | Hàm runtime của extension. |
+| `background.js` | 2964 | `nextPaint()` | Hàm runtime của extension. |
+| `background.js` | 2968 | `forceScroll()` | Hàm runtime của extension. |
+| `background.js` | 2979 | `scrollPageIntoView()` | Hàm runtime của extension. |
+| `background.js` | 3017 | `turboPrefetchPages()` | Hàm runtime của extension. |
+| `background.js` | 3046 | `pageIndex()` | Hàm runtime của extension. |
+| `background.js` | 3062 | `findPageByIndex()` | Hàm runtime của extension. |
+| `background.js` | 3070 | `normalizeDocumentText()` | Hàm runtime của extension. |
+| `background.js` | 3074 | `hashString()` | Hàm runtime của extension. |
+| `background.js` | 3084 | `elementIntegrityProfile()` | Hàm runtime của extension. |
+| `background.js` | 3255 | `pageSignature()` | Hàm runtime của extension. |
+| `background.js` | 3260 | `classifyPageMode()` | Hàm runtime của extension. |
+| `background.js` | 3277 | `detectDocumentMode()` | Hàm runtime của extension. |
+| `background.js` | 3327 | `isProfileAtLeastAsComplete()` | Hàm runtime của extension. |
+| `background.js` | 3344 | `waitForPageStable()` | Hàm runtime của extension. |
+| `background.js` | 3397 | `copyComputedStyle()` | Hàm runtime của extension. |
+| `background.js` | 3500 | `deepCloneWithStyles()` | Hàm runtime của extension. |
+| `background.js` | 3540 | `getVisualPageRoot()` | Hàm runtime của extension. |
+| `background.js` | 3549 | `getNaturalPageSize()` | Hàm runtime của extension. |
+| `background.js` | 3566 | `copyRenderedStyles()` | Hàm runtime của extension. |
+| `background.js` | 3603 | `copyEssentialStyles()` | Hàm runtime của extension. |
+| `background.js` | 3615 | `shouldSkipMergedElement()` | Hàm runtime của extension. |
+| `background.js` | 3630 | `cloneMergedElement()` | Hàm runtime của extension. |
+| `background.js` | 3683 | `cloneScanMediaPage()` | Hàm runtime của extension. |
+| `background.js` | 3717 | `buildCapturedSheet()` | Hàm runtime của extension. |
+| `background.js` | 3881 | `waitForImages()` | Hàm runtime của extension. |
+| `background.js` | 3889 | `done()` | Hàm runtime của extension. |
+| `background.js` | 3912 | `updateProgress()` | Hàm runtime của extension. |
+| `background.js` | 4040 | `markPageDirtyFromNode()` | Hàm runtime của extension. |
+| `background.js` | 4050 | `startMutationTracking()` | Hàm runtime của extension. |
+| `background.js` | 4083 | `stopMutationTracking()` | Hàm runtime của extension. |
+| `popup.js` | 244 | `t()` | Hàm runtime của extension. |
+| `popup.js` | 249 | `applyStaticTranslations()` | Hàm runtime của extension. |
+| `popup.js` | 261 | `loadLanguage()` | Hàm runtime của extension. |
+| `popup.js` | 268 | `setLanguage()` | Hàm runtime của extension. |
+| `popup.js` | 282 | `isSupportedStudocuUrl()` | Hàm runtime của extension. |
+| `popup.js` | 291 | `setStatus()` | Hàm runtime của extension. |
+| `popup.js` | 301 | `isJobRunning()` | Hàm runtime của extension. |
+| `popup.js` | 305 | `updateActionAvailability()` | Hàm runtime của extension. |
+| `popup.js` | 314 | `renderCookieGate()` | Hàm runtime của extension. |
+| `popup.js` | 344 | `refreshCookieGate()` | Hàm runtime của extension. |
+| `popup.js` | 350 | `requireCookieGate()` | Hàm runtime của extension. |
+| `popup.js` | 358 | `formatDuration()` | Hàm runtime của extension. |
+| `popup.js` | 366 | `formatElapsed()` | Hàm runtime của extension. |
+| `popup.js` | 373 | `initSettings()` | Hàm runtime của extension. |
+| `popup.js` | 390 | `renderPreview()` | Hàm runtime của extension. |
+| `popup.js` | 415 | `renderJob()` | Hàm runtime của extension. |
+| `popup.js` | 491 | `queueStatusText()` | Hàm runtime của extension. |
+| `popup.js` | 508 | `renderQueue()` | Hàm runtime của extension. |
+| `popup.js` | 553 | `pollJobStatus()` | Hàm runtime của extension. |
+| `popup.js` | 560 | `startExport()` | Hàm runtime của extension. |
+| `popup.js` | 575 | `queueAllTabs()` | Hàm runtime của extension. |
+| `popup.js` | 584 | `setPaused()` | Hàm runtime của extension. |
+| `popup.js` | 591 | `cancelJob()` | Hàm runtime của extension. |
+| `popup.js` | 599 | `sendPreviewDecision()` | Hàm runtime của extension. |
+| `popup.js` | 612 | `activatePremium()` | Hàm runtime của extension. |
+| `popup.js` | 640 | `renderHistory()` | Hàm runtime của extension. |
+| `popup.js` | 681 | `loadHistory()` | Hàm runtime của extension. |
+| `popup.js` | 686 | `statusError()` | Hàm runtime của extension. |
+| `popup.js` | 690 | `initialize()` | Hàm runtime của extension. |
+| `premium_probe.js` | 12 | `visiblePremiumButton()` | Hàm của probe Active Premium để phát hiện nút hoặc vùng cuộn. |
+| `premium_probe.js` | 25 | `findScrollBox()` | Hàm của probe Active Premium để phát hiện nút hoặc vùng cuộn. |
+| `premium_probe.js` | 53 | `finish()` | Hàm runtime của extension. |
+| `premium_probe.js` | 117 | `nudgeBottom()` | Hàm runtime của extension. |
+| `premium_probe.js` | 140 | `onDomReady()` | Hàm runtime của extension. |
+| `offscreen.js` | 10 | `base64ToBytes()` | Hàm runtime của extension. |
