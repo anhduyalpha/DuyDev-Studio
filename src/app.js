@@ -25,6 +25,8 @@ import { renderServerPage, attachServerPageListeners } from './pages/ServerPage.
 import { renderStoragePage, attachStoragePageListeners } from './pages/StoragePage.js';
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
+import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
+import { openShareTargetModal } from './components/common/ShareTargetModal.js';
 
 class App {
   constructor() {
@@ -69,6 +71,43 @@ class App {
     initGlobalTaskDock();
     this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
+
+    // Web Share Target: listen for payloads from Service Worker
+    navigator.serviceWorker?.addEventListener('message', (e) => {
+      if (e.data?.type === 'DS_SHARE_TARGET_ARRIVED') {
+        this.checkAndOpenShareTarget();
+      }
+    });
+
+    // Check for pending share payload on startup
+    this.checkAndOpenShareTarget();
+  }
+
+  async checkAndOpenShareTarget() {
+    let payload = await retrievePendingSharedData();
+    if (!payload) {
+      const hash = window.location.hash;
+      if (hash.startsWith('#share-target?') || hash === '#share-target') {
+        const queryIndex = hash.indexOf('?');
+        if (queryIndex !== -1) {
+          const params = new URLSearchParams(hash.substring(queryIndex + 1));
+          const url = params.get('url') || '';
+          const text = params.get('text') || '';
+          const title = params.get('title') || '';
+          if (url || text || title) {
+            payload = { url, text, title, files: [] };
+          }
+        }
+      }
+    }
+
+    if (!payload) {
+      if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+      return;
+    }
+    openShareTargetModal(payload);
   }
 
   renderShell() {
@@ -81,6 +120,7 @@ class App {
         <div id="globalPreviewContainer"></div>
         <div id="globalTaskDockContainer"></div>
         <div id="globalSlideConfirmContainer">${renderSlideConfirmModal()}</div>
+        <div id="globalShareTargetContainer"></div>
       </div>
     `;
 
@@ -102,6 +142,12 @@ class App {
     try {
       this.cleanupCurrentView();
       const hash = window.location.hash;
+
+      // Web Share Target route — open modal, do not render a page
+      if (hash === '#share-target' || hash.startsWith('#share-target?')) {
+        this.checkAndOpenShareTarget();
+        return;
+      }
 
       // Direct Deep-Link to DD Studio Core PDF Reader (#view/pdf?file=...)
       if (hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {

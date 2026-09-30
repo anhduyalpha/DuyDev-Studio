@@ -92,6 +92,23 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(storageRoute);
   await app.register(viewerRoute);
 
+  // 6.1 Web Share Target Fallback Routes
+  // POST fallback (OS Share Sheet multipart POST when SW is not yet active)
+  app.post('/share-target', async (_req, reply) => {
+    return reply.redirect('/#share-target', 303);
+  });
+
+  // GET fallback for text/URL share (iOS Safari PWA)
+  app.get('/share-target', async (req, reply) => {
+    const { url, text, title } = (req.query as Record<string, string>) || {};
+    const params = new URLSearchParams();
+    if (url) params.set('url', url);
+    if (text) params.set('text', text);
+    if (title) params.set('title', title);
+    const paramStr = params.toString();
+    return reply.redirect(paramStr ? `/#share-target?${paramStr}` : '/#share-target', 303);
+  });
+
 function normalizeSafePath(pathname: string): string {
   try {
     const norm = decodeURIComponent(pathname).replace(/\\/g, '/');

@@ -46,5 +46,30 @@
       "url": "./index.html#tool/qr-multi",
       "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "shared_files",
+          "accept": [
+            "image/*",
+            "application/pdf",
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/x-rar-compressed",
+            "application/x-7z-compressed",
+            "text/*",
+            "*/*"
+          ]
+        }
+      ]
+    }
+  }
 }
