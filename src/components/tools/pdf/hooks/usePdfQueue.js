@@ -243,6 +243,10 @@ export class PdfQueueManager {
           }
         }
       }
+
+      if (mode === 'organize' && (!this.organizeOrder || this.organizeOrder.length === 0)) {
+        this.initOrganizePages(this.totalPages || this.files[0]?.pages || 1);
+      }
     }
 
     this.persist();
@@ -639,13 +643,16 @@ export class PdfQueueManager {
           first.pages = doc.numPages;
           first.cachedDoc = doc;
           this.totalPages = doc.numPages;
+          this.initOrganizePages(doc.numPages);
         } catch (err) {
           console.warn('PDF inspection fallback:', err);
           first.pages = 1;
           this.totalPages = 1;
+          this.initOrganizePages(1);
         }
       } else {
         this.totalPages = this.files.length;
+        this.initOrganizePages(this.totalPages);
       }
     } finally {
       this.isLoadingFile = false;

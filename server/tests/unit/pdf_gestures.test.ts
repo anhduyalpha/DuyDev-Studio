@@ -19,7 +19,7 @@ import {
   attachSwipeToDismiss,
   attachSlideToClear
 } from '../../../src/utilities/swipeGesture.js';
-import { computeDropIndex, attachPointerReorder } from '../../../src/utilities/dragReorder.js';
+import { computeDropIndex, computeDropIndex2D, attachPointerReorder } from '../../../src/utilities/dragReorder.js';
 import {
   closePdfPageLightbox,
   resolveLightboxRotation
@@ -280,6 +280,87 @@ describe('Milestone M2: Touch & Mouse Gestures, Lightbox & Drag-and-Drop', () =>
     it('should handle empty or single-item rect lists gracefully', () => {
       expect(computeDropIndex(50, [], 1)).toBe(1);
       expect(computeDropIndex(50, [{ index: 0, top: 0, bottom: 50, midY: 25 }], 0)).toBe(0);
+    });
+  });
+
+  describe('5b. Pointer 2D Grid Drag Drop Index Computation (computeDropIndex2D)', () => {
+    // 4 columns x 2 rows grid: 100px width x 140px height with 16px gap
+    const gridRects = [
+      // Row 0
+      { index: 0, left: 0, right: 100, top: 0, bottom: 140, width: 100, height: 140, midX: 50, midY: 70 },
+      { index: 1, left: 116, right: 216, top: 0, bottom: 140, width: 100, height: 140, midX: 166, midY: 70 },
+      { index: 2, left: 232, right: 332, top: 0, bottom: 140, width: 100, height: 140, midX: 282, midY: 70 },
+      { index: 3, left: 348, right: 448, top: 0, bottom: 140, width: 100, height: 140, midX: 398, midY: 70 },
+      // Row 1
+      { index: 4, left: 0, right: 100, top: 156, bottom: 296, width: 100, height: 140, midX: 50, midY: 226 },
+      { index: 5, left: 116, right: 216, top: 156, bottom: 296, width: 100, height: 140, midX: 166, midY: 226 },
+      { index: 6, left: 232, right: 332, top: 156, bottom: 296, width: 100, height: 140, midX: 282, midY: 226 },
+      { index: 7, left: 348, right: 448, top: 156, bottom: 296, width: 100, height: 140, midX: 398, midY: 226 }
+    ];
+
+    it('should accurately resolve direct hits inside each card bounding box', () => {
+      expect(computeDropIndex2D(50, 70, gridRects, 0)).toBe(0);
+      expect(computeDropIndex2D(150, 80, gridRects, 0)).toBe(1);
+      expect(computeDropIndex2D(250, 50, gridRects, 0)).toBe(2);
+      expect(computeDropIndex2D(400, 100, gridRects, 0)).toBe(3);
+      expect(computeDropIndex2D(80, 200, gridRects, 0)).toBe(4);
+      expect(computeDropIndex2D(180, 220, gridRects, 0)).toBe(5);
+      expect(computeDropIndex2D(300, 250, gridRects, 0)).toBe(6);
+      expect(computeDropIndex2D(420, 280, gridRects, 0)).toBe(7);
+    });
+
+    it('should support horizontal drag across columns on the same row', () => {
+      // Dragging card from col 0 to col 1, col 2, col 3 on row 0
+      expect(computeDropIndex2D(166, 70, gridRects, 0)).toBe(1);
+      expect(computeDropIndex2D(282, 70, gridRects, 0)).toBe(2);
+      expect(computeDropIndex2D(398, 70, gridRects, 0)).toBe(3);
+      // Dragging backwards on row 1 from col 3 to col 0
+      expect(computeDropIndex2D(50, 226, gridRects, 7)).toBe(4);
+    });
+
+    it('should support vertical drag across rows in the same column', () => {
+      // Dragging from Row 0 Col 0 (Slot 0) straight down to Row 1 Col 0 (Slot 4)
+      expect(computeDropIndex2D(50, 226, gridRects, 0)).toBe(4);
+      // Dragging from Row 1 Col 2 (Slot 6) straight up to Row 0 Col 2 (Slot 2)
+      expect(computeDropIndex2D(282, 70, gridRects, 6)).toBe(2);
+    });
+
+    it('should support diagonal drag across both columns and rows', () => {
+      // Dragging from Row 0 Col 0 (Slot 0) to Row 1 Col 2 (Slot 6)
+      expect(computeDropIndex2D(282, 226, gridRects, 0)).toBe(6);
+      // Dragging from Row 1 Col 3 (Slot 7) to Row 0 Col 1 (Slot 1)
+      expect(computeDropIndex2D(166, 70, gridRects, 7)).toBe(1);
+    });
+
+    it('should resolve gutter gaps to the closest card midpoint via Euclidean distance', () => {
+      // Horizontal gap between Slot 0 (right: 100) and Slot 1 (left: 116):
+      // Midpoints: Slot 0 midX=50, Slot 1 midX=166.
+      // Point at x=105, y=70: dist to Slot 0 is (105-50)=55, dist to Slot 1 is (166-105)=61 -> Slot 0
+      expect(computeDropIndex2D(105, 70, gridRects, 0)).toBe(0);
+      // Point at x=112, y=70: dist to Slot 0 is (112-50)=62, dist to Slot 1 is (166-112)=54 -> Slot 1
+      expect(computeDropIndex2D(112, 70, gridRects, 0)).toBe(1);
+
+      // Vertical gap between Row 0 (bottom: 140) and Row 1 (top: 156):
+      // Point at x=50, y=145: closer to Slot 0 (midY 70, dist 75) than Slot 4 (midY 226, dist 81) -> Slot 0
+      expect(computeDropIndex2D(50, 145, gridRects, 0)).toBe(0);
+      // Point at x=50, y=152: closer to Slot 4 (midY 226, dist 74) than Slot 0 (midY 70, dist 82) -> Slot 4
+      expect(computeDropIndex2D(50, 152, gridRects, 0)).toBe(4);
+    });
+
+    it('should clamp out-of-bounds coordinates to nearest border slot', () => {
+      // Beyond top-left corner
+      expect(computeDropIndex2D(-100, -50, gridRects, 3)).toBe(0);
+      // Beyond bottom-right corner
+      expect(computeDropIndex2D(600, 500, gridRects, 0)).toBe(7);
+      // Above column 2
+      expect(computeDropIndex2D(282, -80, gridRects, 0)).toBe(2);
+      // Below column 1
+      expect(computeDropIndex2D(166, 400, gridRects, 0)).toBe(5);
+    });
+
+    it('should gracefully handle empty or single-item rect lists', () => {
+      expect(computeDropIndex2D(100, 100, [], 2)).toBe(2);
+      expect(computeDropIndex2D(100, 100, [{ index: 0, left: 0, right: 100, top: 0, bottom: 100, midX: 50, midY: 50 }], 0)).toBe(0);
     });
   });
 

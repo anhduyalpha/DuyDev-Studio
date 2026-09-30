@@ -95,7 +95,7 @@ export function restoreCanvasFromCache(canvas, cacheKey) {
  */
 export function restoreThumbnailsSynchronously(container, file) {
   if (!container) return 0;
-  const canvases = container.querySelectorAll('canvas.pdf-thumb-canvas, canvas[id^="pdfSplitCanvas_"], canvas[id^="pdfRotateCanvas_"]');
+  const canvases = container.querySelectorAll('canvas.pdf-thumb-canvas, canvas[id^="pdfSplitCanvas_"], canvas[id^="pdfRotateCanvas_"], canvas[id^="pdfOrganizeCanvas_"]');
   let restored = 0;
 
   canvases.forEach((canvas) => {
@@ -120,20 +120,22 @@ export function restoreThumbnailsSynchronously(container, file) {
  * @param {Function} [options.onDocLoaded] Callback when total pages are resolved
  * @param {number} [options.pageIndex=0] Pagination page index (0-based)
  * @param {number} [options.pageSize=8] Visible page size
- * @param {string} [options.idPrefix='pdfSplit'] Prefix for element IDs ('pdfSplit' or 'pdfRotate')
+ * @param {string} [options.idPrefix='pdfSplit'] Prefix for element IDs ('pdfSplit', 'pdfRotate', or 'pdfOrganize')
+ * @param {Array<number>} [options.pageIndices] Explicit list of page indices to render (for organize reordering)
  */
 export async function renderWorkspaceThumbnails({
   file,
   onDocLoaded,
   pageIndex = 0,
   pageSize = 8,
-  idPrefix = 'pdfSplit'
+  idPrefix = 'pdfSplit',
+  pageIndices = null
 }) {
   if (!file) return;
   const currentToken = ++activeRenderSessionToken;
 
   // Step 1: Instant synchronous paint for already-cached pages
-  const rootContainer = document.getElementById(`${idPrefix}WorkspaceRoot`) || document.getElementById('pdfDropzoneContainer');
+  const rootContainer = document.getElementById(`${idPrefix}WorkspaceRoot`) || document.getElementById('pdfOrganizeWorkspaceRoot') || document.getElementById('pdfDropzoneContainer');
   restoreThumbnailsSynchronously(rootContainer, file);
 
   try {
@@ -158,11 +160,28 @@ export async function renderWorkspaceThumbnails({
       onDocLoaded(numPages);
     }
 
-    const startIdx = pageIndex * pageSize;
-    const endIdx = Math.min(numPages, startIdx + pageSize);
+    let targetIndices = [];
+    if (Array.isArray(pageIndices) && pageIndices.length > 0) {
+      targetIndices = pageIndices;
+    } else {
+      const domCanvases = rootContainer?.querySelectorAll(`canvas[id^="${idPrefix}Canvas_"]`);
+      if (domCanvases && domCanvases.length > 0) {
+        targetIndices = Array.from(domCanvases)
+          .map((c) => parseInt(c.dataset.pageIndex, 10))
+          .filter((n) => !isNaN(n));
+      }
+      if (targetIndices.length === 0) {
+        const startIdx = pageIndex * pageSize;
+        const endIdx = Math.min(numPages, startIdx + pageSize);
+        for (let i = startIdx; i < endIdx; i++) {
+          targetIndices.push(i);
+        }
+      }
+    }
 
-    for (let pIdx = startIdx; pIdx < endIdx; pIdx++) {
+    for (const pIdx of targetIndices) {
       if (activeRenderSessionToken !== currentToken) return;
+      if (pIdx < 0 || pIdx >= numPages) continue;
       const canvas = document.getElementById(`${idPrefix}Canvas_${pIdx}`);
       const skeleton = document.getElementById(`${idPrefix}Skeleton_${pIdx}`);
       if (!canvas) continue;

@@ -318,7 +318,10 @@ function bindDropzone(qm) {
     // Check if any canvas in the visible page range needs rendering
     const unrendered = rootEl.querySelector('#pdfOrganizeGrid canvas.pdf-thumb-canvas:not([data-rendered="true"])');
     if (unrendered || !qm.totalPages) {
-      loadAndRenderOrganizeThumbnails(qm.files[0], (numPages) => qm.setTotalPages(numPages), qm.thumbnailPage, 8);
+      const startIdx = (qm.thumbnailPage || 0) * 8;
+      const endIdx = Math.min(qm.organizeOrder.length, startIdx + 8);
+      const visibleSlots = qm.organizeOrder.slice(startIdx, endIdx);
+      loadAndRenderOrganizeThumbnails(qm.files[0], (numPages) => qm.setTotalPages(numPages), qm.thumbnailPage, 8, visibleSlots);
     }
   }
 
@@ -615,7 +618,7 @@ function syncLayoutColumns(state) {
   if (!dropEl || !cfgEl) return;
 
   const hasFiles = Boolean(state.files && state.files.length > 0);
-  const isVisual = (state.mode === 'rotate' || state.mode === 'split') && hasFiles;
+  const isVisual = (state.mode === 'rotate' || state.mode === 'split' || state.mode === 'organize') && hasFiles;
 
   dropEl.classList.remove('lg:col-span-12', 'lg:col-span-8', 'lg:col-span-7');
   cfgEl.classList.remove('hidden', 'lg:col-span-5', 'lg:col-span-4');

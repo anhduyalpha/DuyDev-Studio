@@ -155,8 +155,8 @@ export function renderPdfOrganizeWorkspace({
                 file,
                 pageIndex: origIdx,
                 rotation: deg,
-                canvasId: `organizeCanvas_${origIdx}`,
-                skeletonId: `organizeSkeleton_${origIdx}`,
+                canvasId: `pdfOrganizeCanvas_${origIdx}`,
+                skeletonId: `pdfOrganizeSkeleton_${origIdx}`,
                 eyePosition: 'left'
               })}
 
@@ -191,6 +191,13 @@ export function renderPdfOrganizeWorkspace({
 /**
  * Loads thumbnails for the Organize workspace using shared LRU cache
  */
-export async function loadAndRenderOrganizeThumbnails(file, onTotalPages, pageNumber = 0, pageSize = PAGE_SIZE) {
-  return renderWorkspaceThumbnails(file, onTotalPages, pageNumber, pageSize, '#pdfOrganizeGrid', 'organize');
+export async function loadAndRenderOrganizeThumbnails(file, onTotalPages, pageNumber = 0, pageSize = PAGE_SIZE, visibleSlots = null) {
+  return renderWorkspaceThumbnails({
+    file,
+    onDocLoaded: onTotalPages,
+    pageIndex: pageNumber,
+    pageSize,
+    idPrefix: 'pdfOrganize',
+    pageIndices: visibleSlots
+  });
 }

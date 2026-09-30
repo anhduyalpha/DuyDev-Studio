@@ -7,7 +7,7 @@
 import { triggerHaptic } from './swipeGesture.js';
 
 /**
- * Computes the target drop index based on pointer Y coordinate and item midpoint rects.
+ * Computes the target drop index based on pointer Y coordinate and item midpoint rects (1D compatibility).
  * @param {number} pointerY - Current client Y position of pointer
  * @param {Array<{ index: number, midY: number, top: number, bottom: number }>} itemRects - Measured rects
  * @param {number} currentIndex - Index of the item currently being dragged
@@ -24,7 +24,6 @@ export function computeDropIndex(pointerY, itemRects = [], currentIndex = 0) {
     const curr = itemRects[i];
     const next = itemRects[i + 1];
     if (pointerY >= curr.midY && pointerY <= next.midY) {
-      // Determine which midpoint is closer
       const distToCurr = Math.abs(pointerY - curr.midY);
       const distToNext = Math.abs(pointerY - next.midY);
       return distToCurr < distToNext ? curr.index : next.index;
@@ -35,7 +34,45 @@ export function computeDropIndex(pointerY, itemRects = [], currentIndex = 0) {
 }
 
 /**
- * Attaches pointer-based list reordering to a container.
+ * Computes the target drop index based on 2D pointer coordinates (X, Y) for multi-column grids or lists.
+ * @param {number} pointerX - Current client X position of pointer
+ * @param {number} pointerY - Current client Y position of pointer
+ * @param {Array<{ index: number, left: number, right: number, top: number, bottom: number, midX: number, midY: number }>} itemRects - Measured rects
+ * @param {number} currentIndex - Index of the item currently being dragged
+ * @returns {number} Target index
+ */
+export function computeDropIndex2D(pointerX, pointerY, itemRects = [], currentIndex = 0) {
+  if (!itemRects || itemRects.length <= 1) return currentIndex;
+
+  // Pass 1: Direct bounding box collision
+  for (let i = 0; i < itemRects.length; i++) {
+    const r = itemRects[i];
+    if (pointerX >= r.left && pointerX <= r.right && pointerY >= r.top && pointerY <= r.bottom) {
+      return r.index !== undefined ? r.index : i;
+    }
+  }
+
+  // Pass 2: Euclidean distance to nearest slot midpoint (for gutters and margins)
+  let closestIdx = currentIndex;
+  let minDistanceSq = Infinity;
+
+  for (let i = 0; i < itemRects.length; i++) {
+    const r = itemRects[i];
+    const midX = r.midX !== undefined ? r.midX : (r.left + (r.width || 0) / 2);
+    const midY = r.midY !== undefined ? r.midY : (r.top + (r.height || 0) / 2);
+    const distSq = (pointerX - midX) ** 2 + (pointerY - midY) ** 2;
+    if (distSq < minDistanceSq) {
+      minDistanceSq = distSq;
+      closestIdx = r.index !== undefined ? r.index : i;
+    }
+  }
+
+  return closestIdx;
+}
+
+/**
+ * Attaches pointer-based list or grid reordering to a container.
+ * Supports 2D vector coordinate tracking for multi-column grids and 1D lists.
  * @param {HTMLElement} container - The container holding reorderable items
  * @param {Object} options
  * @param {string} [options.itemSelector='.pdf-file-row-wrapper'] - Selector for item rows
@@ -60,29 +97,33 @@ export function attachPointerReorder(container, {
   let activeHandle = null;
   let fromIndex = -1;
   let currentTargetIndex = -1;
+  let startPointerX = 0;
   let startPointerY = 0;
   let itemRects = [];
   let itemElements = [];
-  let itemHeight = 60;
 
   const updateSiblingShifts = (targetIdx) => {
     itemElements.forEach((el, idx) => {
       if (idx === fromIndex) return;
       el.style.transition = 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)';
+
+      let targetSlot = idx;
       if (fromIndex < targetIdx) {
         if (idx > fromIndex && idx <= targetIdx) {
-          el.style.transform = `translateY(-${itemHeight}px)`;
-        } else {
-          el.style.transform = 'translateY(0px)';
+          targetSlot = idx - 1;
         }
       } else if (fromIndex > targetIdx) {
         if (idx >= targetIdx && idx < fromIndex) {
-          el.style.transform = `translateY(${itemHeight}px)`;
-        } else {
-          el.style.transform = 'translateY(0px)';
+          targetSlot = idx + 1;
         }
+      }
+
+      if (targetSlot !== idx && itemRects[targetSlot] && itemRects[idx]) {
+        const shiftX = itemRects[targetSlot].left - itemRects[idx].left;
+        const shiftY = itemRects[targetSlot].top - itemRects[idx].top;
+        el.style.transform = `translate(${shiftX}px, ${shiftY}px)`;
       } else {
-        el.style.transform = 'translateY(0px)';
+        el.style.transform = 'translate(0px, 0px)';
       }
     });
   };
@@ -98,7 +139,7 @@ export function attachPointerReorder(container, {
       draggedItem.style.boxShadow = '';
       draggedItem.style.transform = '';
       draggedItem.style.transition = '';
-      draggedItem.classList.remove('ring-2', 'ring-amber-500', 'shadow-xl', 'scale-[1.01]');
+      draggedItem.classList.remove('ring-2', 'ring-amber-500', 'shadow-xl', 'scale-[1.01]', 'scale-[1.02]');
     }
   };
 
@@ -121,6 +162,7 @@ export function attachPointerReorder(container, {
     draggedItem = item;
     activeHandle = handle;
     currentTargetIndex = fromIndex;
+    startPointerX = e.clientX;
     startPointerY = e.clientY;
 
     try {
@@ -129,24 +171,26 @@ export function attachPointerReorder(container, {
 
     triggerHaptic(15);
 
-    // Measure bounding rectangles of items
+    // Measure 2D bounding boxes of all sibling items
     itemRects = itemElements.map((el, i) => {
       const rect = el.getBoundingClientRect();
       return {
         index: i,
+        left: rect.left,
+        right: rect.right,
         top: rect.top,
         bottom: rect.bottom,
-        midY: rect.top + rect.height / 2,
-        height: rect.height
+        width: rect.width,
+        height: rect.height,
+        midX: rect.left + rect.width / 2,
+        midY: rect.top + rect.height / 2
       };
     });
 
-    itemHeight = itemRects[fromIndex]?.height || 64;
-
-    // Apply visual lifting to dragged item
+    // Apply visual elevation to dragged item
     draggedItem.style.zIndex = '40';
     draggedItem.style.transition = 'none';
-    draggedItem.classList.add('ring-2', 'ring-amber-500', 'shadow-xl', 'scale-[1.01]');
+    draggedItem.classList.add('ring-2', 'ring-amber-500', 'shadow-xl', 'scale-[1.02]');
 
     if (onDragStart) onDragStart(fromIndex, draggedItem);
   };
@@ -155,11 +199,12 @@ export function attachPointerReorder(container, {
     if (!isDragging || e.pointerId !== activePointerId || !draggedItem) return;
     if (e.cancelable) e.preventDefault();
 
+    const dx = e.clientX - startPointerX;
     const dy = e.clientY - startPointerY;
-    draggedItem.style.transform = `translateY(${dy}px) scale(1.01)`;
+    draggedItem.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`;
     draggedItem.style.willChange = 'transform';
 
-    const targetIdx = computeDropIndex(e.clientY, itemRects, fromIndex);
+    const targetIdx = computeDropIndex2D(e.clientX, e.clientY, itemRects, fromIndex);
     if (targetIdx !== currentTargetIndex) {
       currentTargetIndex = targetIdx;
       triggerHaptic(10);
