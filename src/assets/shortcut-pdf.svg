@@ -1,41 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
-    <linearGradient id="pdfGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="pdfChassisBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16161B" />
+      <stop offset="50%" stop-color="#0E0E12" />
+      <stop offset="100%" stop-color="#070709" />
+    </linearGradient>
+    <linearGradient id="pdfChromeBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#71717A" stop-opacity="0.10" />
+    </linearGradient>
+    <linearGradient id="pdfBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#F43F5E" />
       <stop offset="100%" stop-color="#BE123C" />
     </linearGradient>
-    <filter id="pdfGlow" x="-20%" y="-20%" width="140%" height="140%">
+    <filter id="pdfOrbGlow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="6" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
     </filter>
   </defs>
-  <rect width="192" height="192" rx="48" fill="#0B0F17" />
-  <rect x="8" y="8" width="176" height="176" rx="42" fill="#111827" stroke="url(#pdfGrad)" stroke-width="5" filter="url(#pdfGlow)" />
-  <rect x="10" y="10" width="172" height="172" rx="40" fill="#111827" />
-  
-  <!-- Document Page Glyph -->
+
+  <rect width="192" height="192" rx="48" fill="#070709" />
+  <rect x="5" y="5" width="182" height="182" rx="44" fill="url(#pdfChassisBg)" stroke="url(#pdfChromeBorder)" stroke-width="1.5" />
+
+  <!-- Document Sheet Body -->
   <path d="M 58 42 L 106 42 L 134 70 L 134 150 C 134 153.3 131.3 156 128 156 L 64 156 C 60.7 156 58 153.3 58 150 Z" 
-        fill="#1E293B" stroke="#334155" stroke-width="2.5" />
-  <!-- Fold Flap -->
+        fill="#18181D" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+  <!-- Folded Corner in Titanium -->
   <path d="M 106 42 L 106 68 C 106 69.1 106.9 70 108 70 L 134 70 Z" 
-        fill="#334155" />
-  
-  <!-- Content Lines -->
-  <rect x="70" y="80" width="38" height="4" rx="2" fill="#475569" />
-  <rect x="70" y="92" width="52" height="4" rx="2" fill="#475569" />
-  <rect x="70" y="104" width="44" height="4" rx="2" fill="#475569" />
-  
-  <!-- Precision PDF Badge -->
-  <rect x="66" y="118" width="60" height="24" rx="5" fill="#E11D48" />
+        fill="#2A2A32" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+  <!-- Horizontal Text Guidelines -->
+  <rect x="70" y="80" width="38" height="3.5" rx="1.75" fill="#52525B" />
+  <rect x="70" y="92" width="52" height="3.5" rx="1.75" fill="#52525B" />
+  <rect x="70" y="104" width="44" height="3.5" rx="1.75" fill="#52525B" />
+  <!-- Luxury PDF Badge -->
+  <rect x="66" y="118" width="60" height="24" rx="6" fill="url(#pdfBadgeGrad)" stroke="rgba(255,255,255,0.25)" stroke-width="1" />
   <text x="96" y="135" 
-        font-family="system-ui, -apple-system, sans-serif" 
+        font-family="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif" 
         font-size="13" 
         font-weight="900" 
         letter-spacing="0.5" 
         text-anchor="middle" 
         fill="#FFFFFF">PDF</text>
-        
-  <!-- Beacon indicator -->
-  <circle cx="146" cy="46" r="7" fill="#F43F5E" />
-  <circle cx="146" cy="46" r="12" fill="#F43F5E" opacity="0.3" />
+
+  <!-- Glowing Status Orb -->
+  <circle cx="148" cy="44" r="16" fill="#F43F5E" opacity="0.35" filter="url(#pdfOrbGlow)" />
+  <circle cx="148" cy="44" r="7.5" fill="#1C060B" stroke="rgba(255,255,255,0.35)" stroke-width="0.8" />
+  <circle cx="148" cy="44" r="6" fill="#F43F5E" />
+  <circle cx="146.5" cy="42.5" r="1.5" fill="#FFFFFF" />
 </svg>

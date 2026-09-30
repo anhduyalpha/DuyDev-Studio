@@ -1,29 +1,113 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="grad512" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1" />
-      <stop offset="50%" stop-color="#4F46E5" />
-      <stop offset="100%" stop-color="#06B6D4" />
+    <!-- Background Gradient (Obsidian Void) -->
+    <linearGradient id="chassisBg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16161B" />
+      <stop offset="45%" stop-color="#0E0E12" />
+      <stop offset="100%" stop-color="#070709" />
     </linearGradient>
-    <linearGradient id="text512" x1="0%" y1="0%" x2="100%" y2="100%">
+
+    <!-- Hairline Chrome Border Gradient -->
+    <linearGradient id="chromeBorder512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32" />
+      <stop offset="35%" stop-color="#E4E4E7" stop-opacity="0.18" />
+      <stop offset="70%" stop-color="#71717A" stop-opacity="0.10" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.22" />
+    </linearGradient>
+
+    <!-- Top Specular Rim Reflection -->
+    <linearGradient id="innerRim512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.14" />
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Monogram Typography Gradient (Pure White to Titanium Silver) -->
+    <linearGradient id="monogramGrad512" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#CFFAFE" />
+      <stop offset="65%" stop-color="#F4F4F6" />
+      <stop offset="100%" stop-color="#A1A1AA" />
     </linearGradient>
-    <filter id="glow512" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="16" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+
+    <!-- Ambient Center Spotlight Behind Monogram -->
+    <radialGradient id="centerGlow512" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.08" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.02" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Status Orb Radial Glow Gradients -->
+    <radialGradient id="orbCore512" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="35%" stop-color="#6EE7B7" />
+      <stop offset="75%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#047857" />
+    </radialGradient>
+
+    <radialGradient id="orbHalo512" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.85" />
+      <stop offset="35%" stop-color="#10B981" stop-opacity="0.5" />
+      <stop offset="70%" stop-color="#059669" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Filter: Monogram Subtle Depth -->
+    <filter id="textShadow512" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.9" />
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <!-- Filter: Status Orb Blur & Glow -->
+    <filter id="orbBloom512" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="12" result="blur1" />
+      <feGaussianBlur stdDeviation="24" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="diffuseGlow512" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="28" />
     </filter>
   </defs>
-  <rect width="512" height="512" rx="128" fill="#0B0F17" />
-  <rect x="20" y="20" width="472" height="472" rx="112" fill="#111827" stroke="url(#grad512)" stroke-width="14" filter="url(#glow512)" />
-  <rect x="24" y="24" width="464" height="464" rx="108" fill="#111827" />
-  <text x="256" y="316" 
-        font-family="system-ui, -apple-system, sans-serif" 
-        font-size="192" 
+
+  <!-- Outer Solid Mask Base -->
+  <rect width="512" height="512" rx="128" fill="#070709" />
+
+  <!-- Obsidian Precision Chassis with Hairline Chrome Stroke -->
+  <rect x="14" y="14" width="484" height="484" rx="116" fill="url(#chassisBg512)" stroke="url(#chromeBorder512)" stroke-width="2.5" />
+
+  <!-- Top Specular Rim Reflection -->
+  <rect x="16" y="16" width="480" height="240" rx="114" fill="url(#innerRim512)" />
+
+  <!-- Ambient Internal Spotlight -->
+  <ellipse cx="256" cy="280" rx="190" ry="170" fill="url(#centerGlow512)" />
+
+  <!-- Precision Optical Reticle (Instrument Aesthetic) -->
+  <line x1="236" y1="418" x2="276" y2="418" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round" />
+  <line x1="256" y1="408" x2="256" y2="428" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round" />
+
+  <!-- Flagship 'DS' Monogram -->
+  <text x="256" y="322" 
+        font-family="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+        font-size="204" 
         font-weight="900" 
-        letter-spacing="-6" 
+        letter-spacing="-8" 
         text-anchor="middle" 
-        fill="url(#text512)">DS</text>
-  <circle cx="392" cy="120" r="22" fill="#10B981" />
-  <circle cx="392" cy="120" r="38" fill="#10B981" opacity="0.3" />
+        fill="url(#monogramGrad512)" 
+        filter="url(#textShadow512)">DS</text>
+
+  <!-- Signature Status Orb (Dấu tròn trên icon chính có hiệu ứng blur và glow) -->
+  <!-- Layer 1: Diffuse Ambient Atmosphere -->
+  <circle cx="396" cy="116" r="48" fill="url(#orbHalo512)" filter="url(#diffuseGlow512)" />
+  <!-- Layer 2: Mid-Intensity Radiance Halo -->
+  <circle cx="396" cy="116" r="30" fill="url(#orbHalo512)" filter="url(#orbBloom512)" />
+  <!-- Layer 3: Precision Dark Lens Bevel Frame -->
+  <circle cx="396" cy="116" r="20" fill="#061A10" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" />
+  <!-- Layer 4: Intense Glowing Emerald/White Core -->
+  <circle cx="396" cy="116" r="16" fill="url(#orbCore512)" />
+  <!-- Layer 5: Specular Optical Highlight -->
+  <ellipse cx="392" cy="112" rx="5" ry="3" fill="#FFFFFF" opacity="0.9" />
 </svg>

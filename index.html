@@ -15,7 +15,7 @@
   <!-- Manifest & Icons -->
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="src/assets/logo-ds.svg">
-  <link rel="apple-touch-icon" href="src/assets/icon-192.svg">
+  <link rel="apple-touch-icon" href="src/assets/icon-192.png">
   
   <!-- Google Fonts: Plus Jakarta Sans (Primary UI), Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,9 +65,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.6">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=14.6">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.6">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.7">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=14.7">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.7">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -106,7 +106,7 @@
     if ('caches' in window) {
       caches.keys().then(function(names) {
         names.forEach(function(name) {
-          if (name !== 'duydev-studio-v14.6') {
+          if (name !== 'duydev-studio-v14.7') {
             caches.delete(name);
           }
         });
@@ -253,7 +253,7 @@
   <script src="src/vendor/qr-code-styling.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=14.6"></script>
+  <script type="module" src="src/app.js?v=14.7"></script>
 </body>
 </html>
 

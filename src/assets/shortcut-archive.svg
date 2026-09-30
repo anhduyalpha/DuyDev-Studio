@@ -1,51 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
-    <linearGradient id="archiveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="arcChassisBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16161B" />
+      <stop offset="50%" stop-color="#0E0E12" />
+      <stop offset="100%" stop-color="#070709" />
+    </linearGradient>
+    <linearGradient id="arcChromeBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#71717A" stop-opacity="0.10" />
+    </linearGradient>
+    <linearGradient id="arcBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#F59E0B" />
       <stop offset="100%" stop-color="#D97706" />
     </linearGradient>
-    <filter id="archiveGlow" x="-20%" y="-20%" width="140%" height="140%">
+    <filter id="arcOrbGlow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="6" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
     </filter>
   </defs>
-  <rect width="192" height="192" rx="48" fill="#0B0F17" />
-  <rect x="8" y="8" width="176" height="176" rx="42" fill="#111827" stroke="url(#archiveGrad)" stroke-width="5" filter="url(#archiveGlow)" />
-  <rect x="10" y="10" width="172" height="172" rx="40" fill="#111827" />
-  
-  <!-- Archive Folder / Vault Body -->
+
+  <rect width="192" height="192" rx="48" fill="#070709" />
+  <rect x="5" y="5" width="182" height="182" rx="44" fill="url(#arcChassisBg)" stroke="url(#arcChromeBorder)" stroke-width="1.5" />
+
+  <!-- Archive Box Container -->
   <path d="M 54 54 C 54 49.6 57.6 46 62 46 L 82 46 L 90 52 L 126 52 C 130.4 52 134 55.6 134 60 L 134 144 C 134 148.4 130.4 152 126 152 L 62 152 C 57.6 152 54 148.4 54 144 Z" 
-        fill="#1E293B" stroke="#334155" stroke-width="2.5" />
-        
-  <!-- Folder tab line -->
-  <line x1="54" y1="62" x2="134" y2="62" stroke="#334155" stroke-width="1.5" />
-  
-  <!-- Central Zipper Track -->
-  <rect x="89" y="62" width="10" height="50" fill="#0F172A" />
-  
-  <!-- Alternating Zipper Teeth -->
-  <rect x="84" y="66" width="8" height="6" rx="1.5" fill="#F59E0B" />
-  <rect x="96" y="73" width="8" height="6" rx="1.5" fill="#FBBF24" />
-  <rect x="84" y="80" width="8" height="6" rx="1.5" fill="#F59E0B" />
-  <rect x="96" y="87" width="8" height="6" rx="1.5" fill="#FBBF24" />
-  
-  <!-- Zipper Slider Head -->
-  <rect x="82" y="94" width="24" height="18" rx="4" fill="#F59E0B" stroke="#D97706" stroke-width="1.5" />
-  <!-- Slider Pull Tab -->
-  <path d="M 89 110 L 99 110 L 97 119 C 97 120.5 91 120.5 91 119 Z" fill="#FDE68A" />
-  <circle cx="94" cy="115" r="1.5" fill="#0B0F17" />
-  
-  <!-- Precision ZIP Badge -->
-  <rect x="66" y="122" width="60" height="22" rx="5" fill="#D97706" />
+        fill="#18181D" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+  <line x1="54" y1="62" x2="134" y2="62" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+
+  <!-- Precision Zipper Track -->
+  <rect x="89" y="62" width="10" height="50" fill="#0E0E12" />
+  <rect x="84" y="66" width="8" height="5.5" rx="1.5" fill="#E4E4E7" />
+  <rect x="96" y="73" width="8" height="5.5" rx="1.5" fill="#F59E0B" />
+  <rect x="84" y="80" width="8" height="5.5" rx="1.5" fill="#E4E4E7" />
+  <rect x="96" y="87" width="8" height="5.5" rx="1.5" fill="#F59E0B" />
+  <rect x="82" y="94" width="24" height="18" rx="4" fill="#2A2A32" stroke="#F59E0B" stroke-width="1.5" />
+  <circle cx="94" cy="103" r="2" fill="#F59E0B" />
+
+  <!-- Luxury ZIP Badge -->
+  <rect x="66" y="122" width="60" height="22" rx="6" fill="url(#arcBadgeGrad)" stroke="rgba(255,255,255,0.25)" stroke-width="1" />
   <text x="96" y="137" 
-        font-family="system-ui, -apple-system, sans-serif" 
+        font-family="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif" 
         font-size="12" 
         font-weight="900" 
         letter-spacing="0.5" 
         text-anchor="middle" 
         fill="#FFFFFF">ZIP</text>
-  
-  <!-- Beacon indicator -->
-  <circle cx="146" cy="46" r="7" fill="#F59E0B" />
-  <circle cx="146" cy="46" r="12" fill="#F59E0B" opacity="0.3" />
+
+  <!-- Glowing Status Orb -->
+  <circle cx="148" cy="44" r="16" fill="#F59E0B" opacity="0.35" filter="url(#arcOrbGlow)" />
+  <circle cx="148" cy="44" r="7.5" fill="#1C1204" stroke="rgba(255,255,255,0.35)" stroke-width="0.8" />
+  <circle cx="148" cy="44" r="6" fill="#F59E0B" />
+  <circle cx="146.5" cy="42.5" r="1.5" fill="#FFFFFF" />
 </svg>

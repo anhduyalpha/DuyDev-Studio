@@ -1,31 +1,100 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="mgrad512" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1" />
-      <stop offset="50%" stop-color="#4F46E5" />
-      <stop offset="100%" stop-color="#06B6D4" />
+    <!-- Background Gradient -->
+    <linearGradient id="chassisBgMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16161B" />
+      <stop offset="45%" stop-color="#0E0E12" />
+      <stop offset="100%" stop-color="#070709" />
     </linearGradient>
-    <linearGradient id="mtext512" x1="0%" y1="0%" x2="100%" y2="100%">
+
+    <!-- Hairline Chrome Border Gradient -->
+    <linearGradient id="chromeBorderMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32" />
+      <stop offset="35%" stop-color="#E4E4E7" stop-opacity="0.18" />
+      <stop offset="70%" stop-color="#71717A" stop-opacity="0.10" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.22" />
+    </linearGradient>
+
+    <!-- Top Specular Rim Reflection -->
+    <linearGradient id="innerRimMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.14" />
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Monogram Typography Gradient -->
+    <linearGradient id="monogramGradMask" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#CFFAFE" />
+      <stop offset="65%" stop-color="#F4F4F6" />
+      <stop offset="100%" stop-color="#A1A1AA" />
     </linearGradient>
-    <filter id="mglow512" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="12" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+
+    <!-- Center Spotlight -->
+    <radialGradient id="centerGlowMask" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.08" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.02" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Status Orb Gradients -->
+    <radialGradient id="orbCoreMask" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="35%" stop-color="#6EE7B7" />
+      <stop offset="75%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#047857" />
+    </radialGradient>
+
+    <radialGradient id="orbHaloMask" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.85" />
+      <stop offset="35%" stop-color="#10B981" stop-opacity="0.5" />
+      <stop offset="70%" stop-color="#059669" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Filters -->
+    <filter id="textShadowMask" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.9" />
+    </filter>
+
+    <filter id="orbBloomMask" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="diffuseGlowMask" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="22" />
     </filter>
   </defs>
-  <!-- Full bleed 100% background: No white edges when masked by Android -->
-  <rect width="512" height="512" fill="#0B0F17" />
-  <!-- Safe zone squircle (376x376 centered at 68,68) -->
-  <rect x="68" y="68" width="376" height="376" rx="88" fill="#111827" stroke="url(#mgrad512)" stroke-width="10" filter="url(#mglow512)" />
-  <rect x="72" y="72" width="368" height="368" rx="84" fill="#111827" />
-  <text x="256" y="306" 
-        font-family="system-ui, -apple-system, sans-serif" 
-        font-size="154" 
+
+  <!-- Full Canvas Mask Fill for Android Safe Zone -->
+  <rect width="512" height="512" fill="#070709" />
+
+  <!-- Inner Elevated Precision Chassis (Safe Zone Compliant) -->
+  <rect x="64" y="64" width="384" height="384" rx="92" fill="url(#chassisBgMask)" stroke="url(#chromeBorderMask)" stroke-width="2" />
+  <rect x="66" y="66" width="380" height="190" rx="90" fill="url(#innerRimMask)" />
+  <ellipse cx="256" cy="275" rx="150" ry="130" fill="url(#centerGlowMask)" />
+
+  <!-- Precision Optical Crosshair -->
+  <line x1="240" y1="384" x2="272" y2="384" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" stroke-linecap="round" />
+  <line x1="256" y1="376" x2="256" y2="392" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" stroke-linecap="round" />
+
+  <!-- Monogram -->
+  <text x="256" y="308" 
+        font-family="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+        font-size="156" 
         font-weight="900" 
-        letter-spacing="-5" 
+        letter-spacing="-6" 
         text-anchor="middle" 
-        fill="url(#mtext512)">DS</text>
-  <circle cx="366" cy="146" r="18" fill="#10B981" />
-  <circle cx="366" cy="146" r="30" fill="#10B981" opacity="0.3" />
+        fill="url(#monogramGradMask)" 
+        filter="url(#textShadowMask)">DS</text>
+
+  <!-- Glowing Status Orb (Safe Zone Position) -->
+  <circle cx="366" cy="146" r="38" fill="url(#orbHaloMask)" filter="url(#diffuseGlowMask)" />
+  <circle cx="366" cy="146" r="24" fill="url(#orbHaloMask)" filter="url(#orbBloomMask)" />
+  <circle cx="366" cy="146" r="16" fill="#061A10" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" />
+  <circle cx="366" cy="146" r="13" fill="url(#orbCoreMask)" />
+  <ellipse cx="363" cy="143" rx="4" ry="2.5" fill="#FFFFFF" opacity="0.9" />
 </svg>

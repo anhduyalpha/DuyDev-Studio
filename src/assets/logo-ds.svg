@@ -1,10 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
-  <rect x="2" y="2" width="92" height="92" rx="26" fill="#121215" stroke="rgba(255, 255, 255, 0.12)" stroke-width="2" />
-  <text x="48" y="59" 
-        font-family="system-ui, -apple-system, sans-serif" 
-        font-size="34" 
-        font-weight="800" 
-        letter-spacing="-0.5" 
+  <defs>
+    <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16161B" />
+      <stop offset="50%" stop-color="#0E0E12" />
+      <stop offset="100%" stop-color="#070709" />
+    </linearGradient>
+    <linearGradient id="logoBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#71717A" stop-opacity="0.10" />
+    </linearGradient>
+    <linearGradient id="logoText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#A1A1AA" />
+    </linearGradient>
+    <radialGradient id="logoOrbCore" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="40%" stop-color="#34D399" />
+      <stop offset="100%" stop-color="#059669" />
+    </radialGradient>
+    <filter id="logoOrbGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="2" y="2" width="92" height="92" rx="26" fill="url(#logoBg)" stroke="url(#logoBorder)" stroke-width="1.5" />
+  <text x="48" y="61" 
+        font-family="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+        font-size="38" 
+        font-weight="900" 
+        letter-spacing="-1.5" 
         text-anchor="middle" 
-        fill="#FAFAFA">DS</text>
+        fill="url(#logoText)">DS</text>
+  <!-- Glowing Status Orb -->
+  <circle cx="74" cy="22" r="7" fill="#10B981" opacity="0.4" filter="url(#logoOrbGlow)" />
+  <circle cx="74" cy="22" r="4.5" fill="#061A10" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" />
+  <circle cx="74" cy="22" r="3.5" fill="url(#logoOrbCore)" />
+  <circle cx="73" cy="21" r="1" fill="#FFFFFF" />
 </svg>
