@@ -684,6 +684,27 @@ export function attachPdfConverterListeners(queueManager) {
       return;
     }
 
+    if (eventType === 'file-upload-progress') {
+      if (!state.isProcessing) {
+        if (state.mode === 'merge' || state.mode === 'images_to_pdf') {
+          const dropEl = document.getElementById('pdfDropzoneContainer');
+          if (dropEl) {
+            dropEl.innerHTML = renderDropzoneQueue(state);
+            bindDropzone(queueManager);
+            refreshIcons(dropEl);
+          }
+        } else if (!['rotate', 'split', 'organize'].includes(state.mode)) {
+          const dropEl = document.getElementById('pdfDropzoneContainer');
+          if (dropEl) {
+            dropEl.innerHTML = renderDropzoneQueue(state);
+            bindDropzone(queueManager);
+            refreshIcons(dropEl);
+          }
+        }
+      }
+      return;
+    }
+
     if (eventType === 'doc-info') {
       document.querySelectorAll('.badge-page-count').forEach((el) => {
         el.textContent = state.totalPages > 0 ? `${state.totalPages} trang` : '';

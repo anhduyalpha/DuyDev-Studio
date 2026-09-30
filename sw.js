@@ -3,22 +3,23 @@
  * Provides offline caching, app installability, and instant updates on LAN
  */
 
-const CACHE_NAME = 'duydev-studio-v12.0';
+const CACHE_NAME = 'duydev-studio-v12.1';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=12.0',
-  './src/styles/studocu.css?v=12.0',
-  './src/styles/highlight-theme.css?v=12.0',
+  './src/styles/stitch-tokens.css?v=12.1',
+  './src/styles/studocu.css?v=12.1',
+  './src/styles/highlight-theme.css?v=12.1',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=11.9',
+  './src/vendor/pdf-lib.min.js',
+  './src/app.js?v=12.1',
   './src/assets/logo-ds.svg',
   './src/assets/icon-192.svg',
   './src/assets/icon-512.svg'

@@ -23,6 +23,7 @@ export function renderResultCard(result) {
             <div class="flex items-center gap-2">
               <h4 class="text-sm font-bold text-zinc-900 dark:text-white">Xử lý hoàn tất</h4>
               ${isDocx ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Word DOCX</span>' : ''}
+              ${result.isClientProcessed ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Xử lý tại thiết bị</span>' : ''}
             </div>
             <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               Tệp: <strong class="text-zinc-800 dark:text-zinc-200 font-mono">${result.fileName}</strong> • Thời gian: <span class="text-zinc-600 dark:text-zinc-300 font-mono">${result.duration}</span>
