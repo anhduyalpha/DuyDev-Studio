@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="pdfGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="100%" stop-color="#BE123C" />
+    </linearGradient>
+    <filter id="pdfGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <rect width="192" height="192" rx="48" fill="#0B0F17" />
+  <rect x="8" y="8" width="176" height="176" rx="42" fill="#111827" stroke="url(#pdfGrad)" stroke-width="5" filter="url(#pdfGlow)" />
+  <rect x="10" y="10" width="172" height="172" rx="40" fill="#111827" />
+  
+  <!-- Document Page Glyph -->
+  <path d="M 58 42 L 106 42 L 134 70 L 134 150 C 134 153.3 131.3 156 128 156 L 64 156 C 60.7 156 58 153.3 58 150 Z" 
+        fill="#1E293B" stroke="#334155" stroke-width="2.5" />
+  <!-- Fold Flap -->
+  <path d="M 106 42 L 106 68 C 106 69.1 106.9 70 108 70 L 134 70 Z" 
+        fill="#334155" />
+  
+  <!-- Content Lines -->
+  <rect x="70" y="80" width="38" height="4" rx="2" fill="#475569" />
+  <rect x="70" y="92" width="52" height="4" rx="2" fill="#475569" />
+  <rect x="70" y="104" width="44" height="4" rx="2" fill="#475569" />
+  
+  <!-- Precision PDF Badge -->
+  <rect x="66" y="118" width="60" height="24" rx="5" fill="#E11D48" />
+  <text x="96" y="135" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="13" 
+        font-weight="900" 
+        letter-spacing="0.5" 
+        text-anchor="middle" 
+        fill="#FFFFFF">PDF</text>
+        
+  <!-- Beacon indicator -->
+  <circle cx="146" cy="46" r="7" fill="#F43F5E" />
+  <circle cx="146" cy="46" r="12" fill="#F43F5E" opacity="0.3" />
+</svg>

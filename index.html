@@ -65,9 +65,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.3">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=14.3">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.3">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.4">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=14.4">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.4">
 
   <!-- Autonomous Cache Recovery & Script Error Boundary -->
   <script>
@@ -82,7 +82,7 @@
     if ('caches' in window) {
       caches.keys().then(function(names) {
         names.forEach(function(name) {
-          if (name !== 'duydev-studio-v14.3') {
+          if (name !== 'duydev-studio-v14.4') {
             caches.delete(name);
           }
         });
@@ -181,7 +181,7 @@
   <script src="src/vendor/qr-code-styling.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=14.3"></script>
+  <script type="module" src="src/app.js?v=14.4"></script>
 </body>
 </html>
 

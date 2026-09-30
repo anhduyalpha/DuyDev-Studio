@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mgrad512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="50%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="mtext512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#CFFAFE" />
+    </linearGradient>
+    <filter id="mglow512" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Full bleed 100% background: No white edges when masked by Android -->
+  <rect width="512" height="512" fill="#0B0F17" />
+  <!-- Safe zone squircle (376x376 centered at 68,68) -->
+  <rect x="68" y="68" width="376" height="376" rx="88" fill="#111827" stroke="url(#mgrad512)" stroke-width="10" filter="url(#mglow512)" />
+  <rect x="72" y="72" width="368" height="368" rx="84" fill="#111827" />
+  <text x="256" y="306" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="154" 
+        font-weight="900" 
+        letter-spacing="-5" 
+        text-anchor="middle" 
+        fill="url(#mtext512)">DS</text>
+  <circle cx="366" cy="146" r="18" fill="#10B981" />
+  <circle cx="366" cy="146" r="30" fill="#10B981" opacity="0.3" />
+</svg>

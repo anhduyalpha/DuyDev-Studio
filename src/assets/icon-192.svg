@@ -9,9 +9,14 @@
       <stop offset="0%" stop-color="#FFFFFF" />
       <stop offset="100%" stop-color="#CFFAFE" />
     </linearGradient>
+    <filter id="glow192" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
   </defs>
   <rect width="192" height="192" rx="48" fill="#0B0F17" />
-  <rect x="8" y="8" width="176" height="176" rx="42" fill="#111827" stroke="url(#grad192)" stroke-width="6" />
+  <rect x="8" y="8" width="176" height="176" rx="42" fill="#111827" stroke="url(#grad192)" stroke-width="6" filter="url(#glow192)" />
+  <rect x="10" y="10" width="172" height="172" rx="40" fill="#111827" />
   <text x="96" y="118" 
         font-family="system-ui, -apple-system, sans-serif" 
         font-size="72" 
