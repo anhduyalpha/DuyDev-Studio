@@ -51,17 +51,19 @@ It handles:
 - Do NOT introduce artificial rate-limiting, captcha, or tight file size caps.
 - Bind server to `0.0.0.0` and allow all local network and Cloudflare origins.
 
-### Rule 5: Local-First Development & Git Deployment (No WinSCP / Remote Server Editing)
-- Strictly follow `.agents/rules/local-workflow.md`.
-- **FORBIDDEN**: Using WinSCP, `scp`, `rsync`, or SSH remote editing to manually copy source files or modify code on the remote server (`192.168.2.171`).
-- **FORBIDDEN**: Modifying or testing code directly on the remote server.
-- **REQUIRED**: All coding, refactoring, and testing must be performed on the local machine (`c:\Users\AnhDuy\Code\Project\DD Studio`).
-- **LOCAL TESTING**: Use ready-made launch scripts in `scripts/`:
-  - `.\scripts\start-background.ps1` (or `npm run start:bg`) / `.\start-background.bat`
-  - `.\scripts\status-background.ps1` (or `npm run status:bg`)
-  - `.\scripts\stop-background.ps1` (or `npm run stop:bg`) / `.\stop-background.bat`
-  - Local endpoint: `http://localhost:3000` / `http://127.0.0.1:3000/api/v1/health`
-- **DEPLOYMENT**: Deploy exclusively through Git by recording Conventional Commits and pushing to GitHub (`git push origin main`).
+### Rule 5: Local Coding, Git Push & Remote Server Testing Workflow
+- **Code on Local Machine**:
+  - All coding, refactoring, and file modifications are done strictly on the local machine (`c:\Users\AnhDuy\Code\Project\DD Studio`).
+  - **FORBIDDEN**: Using WinSCP, `scp`, or editing code directly on the remote server.
+  - Once code changes are made, create Conventional Commits and push to GitHub (`git push origin main`).
+- **Deploy & Test on Homeserver via SSH**:
+  - Production runs on the homeserver (`192.168.2.171` / `duydevstudio.alphadaniel.io.vn`).
+  - Do NOT run background test servers on local machine unless asked.
+  - SSH into the server to pull from Git and restart:
+    ```powershell
+    ssh anhduy@192.168.2.171 "cd /home/anhduy/dd-studio && git pull origin main && cd server && npm run build && sudo systemctl restart dd-studio.service && systemctl status dd-studio.service --no-pager"
+    ```
+  - Verify live features on the actual production web app.
 
 ---
 

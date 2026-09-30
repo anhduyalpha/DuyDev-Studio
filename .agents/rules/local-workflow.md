@@ -1,34 +1,19 @@
-# Local-First Development & Git Deployment Workflow
+# Development & Deployment Workflow: Local Code -> Git Push -> Remote Server Test
 
-## 1. Core Mandate
-All development for DuyDev Studio is strictly **local-first**. Code is developed, tested, and verified on the local machine and deployed exclusively through Git to GitHub.
+## 1. Core Workflow Mandate
+1. **Local Machine (`c:\Users\AnhDuy\Code\Project\DD Studio`)**:
+   - Write code, refactor, and fix bugs 100% locally.
+   - Run type checks / tests if needed (`npm --prefix server run build`).
+   - Create Conventional Commits and push to GitHub (`git push origin main`).
+   - Do NOT run local background dev servers or test on local machine unless explicitly asked.
+2. **Homeserver (`anhduy@192.168.2.171`)**:
+   - The production site is already running live at `https://duydevstudio.alphadaniel.io.vn` (and LAN `http://192.168.2.171:3000`).
+   - To test changes: SSH into the homeserver, pull latest code from GitHub, build, and restart the systemd service:
+     ```powershell
+     ssh anhduy@192.168.2.171 "cd /home/anhduy/dd-studio && git pull origin main && cd server && npm run build && sudo systemctl restart dd-studio.service && systemctl status dd-studio.service --no-pager"
+     ```
+   - Test features directly on the server / production URL.
 
 ## 2. Strict Prohibitions
-1. **NO WinSCP / NO Remote Server Code Editing**:
-   - **FORBIDDEN**: Using WinSCP, `scp`, `rsync`, or SSH remote editing to manually copy source files or modify code on the remote server (`192.168.2.171`).
-   - **FORBIDDEN**: SSHing into the homeserver to run `nano`, `vim`, or apply direct hotfixes on the server.
-2. **All changes must originate from the local repository**:
-   - Working Directory: `c:\Users\AnhDuy\Code\Project\DD Studio`
-
-## 3. Local Execution & Testing Procedure
-Always test locally using the pre-configured scripts inside `scripts/`:
-- **Start Local Server in Background**:
-  - PowerShell: `.\scripts\start-background.ps1` (or `npm run start:bg`)
-  - Batch: `.\start-background.bat`
-- **Check Status**:
-  - PowerShell: `.\scripts\status-background.ps1` (or `npm run status:bg`)
-  - Health endpoint: `http://127.0.0.1:3000/api/v1/health`
-- **Stop Local Server**:
-  - PowerShell: `.\scripts\stop-background.ps1` (or `npm run stop:bg`)
-  - Batch: `.\stop-background.bat`
-- **Code & Test Verification**:
-  - Type checking: `npm --prefix server run build` (`npx tsc --noEmit`)
-  - Test suite: `npm --prefix server test -- --run`
-
-## 4. Deployment via Git
-- Once code is verified locally, record clean Conventional Commits.
-- Push directly to GitHub:
-  ```powershell
-  git push origin main
-  ```
-- Any deployment to the homeserver or production environments will pull from GitHub or run automated CI/CD. Never bypass Git.
+- **NO WinSCP / NO File Copying**: Do not use WinSCP, `scp`, or `rsync` to manually upload files to the server.
+- **NO Editing on Server**: Do not edit files on the remote server via SSH. All changes must be committed and pushed from local Git.
