@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v14.7';
+const CACHE_NAME = 'duydev-studio-v14.8';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=14.7',
-  './src/styles/studocu.css?v=14.7',
-  './src/styles/highlight-theme.css?v=14.7',
+  './src/styles/stitch-tokens.css?v=14.8',
+  './src/styles/studocu.css?v=14.8',
+  './src/styles/highlight-theme.css?v=14.8',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=14.7',
+  './src/app.js?v=14.8',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
@@ -191,6 +191,13 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
+});
+
+// Message Event: Skip waiting on demand
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ─── Fetch Event ───
