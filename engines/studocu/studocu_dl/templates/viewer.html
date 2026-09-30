@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Studocu PDF Reader</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+    <script src="/static/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/pdf.worker.min.js';
+        } else {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = () => {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                if (typeof initViewer === 'function') initViewer();
+            };
+            document.head.appendChild(s);
+        }
+    </script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-bar: #1e293b;
+            --border: #334155;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0b1120;
+            color: var(--text);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button, a, input {
+            touch-action: manipulation;
+        }
+        .toolbar {
+            height: 52px;
+            background: var(--bg-bar);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            gap: 12px;
+            z-index: 10;
+        }
+        .doc-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 400px;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .btn-ctrl {
+            background: transparent;
+            border: none;
+            color: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-ctrl:hover {
+            background: var(--border);
+            color: var(--accent);
+        }
+        .btn-action {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-dl { background: #10b981; color: #fff; }
+        .btn-dl:hover { background: #059669; }
+        .viewport {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 24px;
+            background: #1e293b;
+            position: relative;
+            touch-action: pan-x pan-y pinch-zoom;
+            -webkit-overflow-scrolling: touch;
+        }
+        #viewerCanvas {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            border-radius: 4px;
+            background: #ffffff;
+            display: none;
+        }
+        .loading {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: var(--accent);
+            font-size: 1rem;
+        }
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(56, 189, 248, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive Mobile Toolbar & Viewer */
+        @media (max-width: 640px) {
+            .toolbar {
+                height: auto;
+                min-height: 48px;
+                padding: calc(6px + var(--safe-top)) 8px 6px 8px;
+                gap: 6px;
+            }
+            .doc-title {
+                display: none; /* Hide long title to let navigation controls have full width */
+            }
+            .controls {
+                width: 100%;
+                justify-content: space-between;
+                gap: 4px;
+            }
+            .control-group {
+                padding: 2px 4px;
+                gap: 2px;
+            }
+            .btn-ctrl {
+                min-width: 36px;
+                min-height: 36px;
+                padding: 4px 6px;
+                font-size: 0.9rem;
+            }
+            #pageInput {
+                width: 38px !important;
+                height: 32px !important;
+                font-size: 16px !important; /* iOS zoom prevention */
+            }
+            .btn-action {
+                min-height: 36px;
+                padding: 4px 8px;
+                font-size: 0.78rem;
+            }
+            .viewport {
+                padding: 8px 4px calc(8px + var(--safe-bottom)) 4px;
+            }
+            #viewerCanvas {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <span id="docTitle" class="doc-title">📄 Đang tải...</span>
+        <div class="controls">
+            <div class="control-group">
+                <button class="btn-ctrl" onclick="prevPage()" title="Trang trước (Phím mũi tên Trái)">◀</button>
+                <input id="pageInput" type="number" min="1" value="1" onchange="jumpToPage(this.value)" style="width: 44px; text-align: center; background: #0f172a; border: 1px solid var(--border); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 0.85rem;">
+                <span style="font-size: 0.85rem; color: #94a3b8;">/ <span id="totalPages">1</span></span>
+                <button class="btn-ctrl" onclick="nextPage()" title="Trang sau (Phím mũi tên Phải)">▶</button>
+            </div>
+            <div class="control-group">
+                <button class="btn-ctrl" onclick="zoomOut()" title="Thu nhỏ">➖</button>
+                <span id="zoomLabel" style="font-size: 0.82rem; min-width: 42px; text-align: center; color: #cbd5e1;">100%</span>
+                <button class="btn-ctrl" onclick="zoomIn()" title="Phóng to">➕</button>
+                <button class="btn-ctrl" onclick="fitWidth()" title="Vừa chiều rộng" style="font-size: 0.78rem;">↕ Vừa</button>
+            </div>
+            <a id="dlBtn" href="#" class="btn-action btn-dl" download>📥 Tải về</a>
+        </div>
+    </div>
+    <div class="viewport" id="viewport">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <span>Đang giải mã và hiển thị PDF...</span>
+        </div>
+        <canvas id="viewerCanvas"></canvas>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const docId = params.get('id');
+        const rawFileName = params.get('file');
+        let fileName = '';
+        let viewUrl = '';
+
+        if (docId) {
+            viewUrl = '/api/document-stream?id=' + encodeURIComponent(docId);
+            fileName = decodeURIComponent(rawFileName || docId);
+        } else if (rawFileName) {
+            fileName = decodeURIComponent(rawFileName || '');
+            viewUrl = '/api/document-stream?file=' + encodeURIComponent(fileName);
+        } else {
+            document.getElementById('loading').innerHTML = '<p style="color: #ef4444;">❌ Không tìm thấy tài liệu.</p>';
+        }
+
+        document.title = fileName ? (fileName + ' - Studocu Reader') : 'Studocu PDF Reader';
+        document.getElementById('docTitle').textContent = '📄 ' + (fileName || 'Tài liệu');
+        document.getElementById('docTitle').title = fileName || 'Tài liệu';
+
+        const dlUrl = fileName ? ('/downloads/' + encodeURIComponent(fileName)) : '#';
+        document.getElementById('dlBtn').href = dlUrl;
+
+        let pdfDoc = null;
+        let pageNum = 1;
+        let scale = 1.25;
+        let isRendering = false;
+        let pendingNum = null;
+
+        async function initViewer() {
+            if (!window.pdfjsLib || !viewUrl) return;
+            try {
+                let loadingTask;
+                try {
+                    loadingTask = pdfjsLib.getDocument({ url: viewUrl, withCredentials: false });
+                    pdfDoc = await loadingTask.promise;
+                } catch (urlErr) {
+                    console.warn('Direct URL fetch failed, falling back to ArrayBuffer:', urlErr);
+                    const resp = await fetch(viewUrl);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+                    const buf = await resp.arrayBuffer();
+                    loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buf) });
+                    pdfDoc = await loadingTask.promise;
+                }
+                document.getElementById('totalPages').textContent = pdfDoc.numPages;
+                document.getElementById('pageInput').max = pdfDoc.numPages;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('viewerCanvas').style.display = 'block';
+                fitWidth();
+            } catch (e) {
+                document.getElementById('loading').innerHTML = `
+                    <div style="text-align: center; color: #ef4444;">
+                        <p style="font-weight: bold; margin-bottom: 8px;">❌ Không thể mở tài liệu trực tiếp:</p>
+                        <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 14px;">${e.message}</p>
+                        <a href="${dlUrl}" class="btn-action btn-dl" download>📥 Tải file về máy</a>
+                    </div>
+                `;
+            }
+        }
+
+        function render(num) {
+            if (!pdfDoc) return;
+            isRendering = true;
+            document.getElementById('pageInput').value = num;
+
+            pdfDoc.getPage(num).then(page => {
+                const canvas = document.getElementById('viewerCanvas');
+                const ctx = canvas.getContext('2d');
+                const pixelRatio = window.devicePixelRatio || 1;
+                const viewport = page.getViewport({ scale });
+
+                canvas.width = Math.floor(viewport.width * pixelRatio);
+                canvas.height = Math.floor(viewport.height * pixelRatio);
+                canvas.style.width = Math.floor(viewport.width) + 'px';
+                canvas.style.height = Math.floor(viewport.height) + 'px';
+
+                ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+                const renderContext = { canvasContext: ctx, viewport };
+                const task = page.render(renderContext);
+
+                task.promise.then(() => {
+                    isRendering = false;
+                    if (pendingNum !== null) {
+                        render(pendingNum);
+                        pendingNum = null;
+                    }
+                });
+            });
+        }
+
+        function queueRender(num) {
+            if (isRendering) pendingNum = num;
+            else render(num);
+        }
+
+        function prevPage() {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRender(pageNum);
+        }
+
+        function nextPage() {
+            if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRender(pageNum);
+        }
+
+        function jumpToPage(val) {
+            if (!pdfDoc) return;
+            let n = parseInt(val, 10);
+            if (isNaN(n)) return;
+            if (n < 1) n = 1;
+            if (n > pdfDoc.numPages) n = pdfDoc.numPages;
+            pageNum = n;
+            queueRender(pageNum);
+        }
+
+        function zoomIn() {
+            if (scale >= 3.0) return;
+            scale += 0.2;
+            updateZoom();
+            queueRender(pageNum);
+        }
+
+        function zoomOut() {
+            if (scale <= 0.4) return;
+            scale -= 0.2;
+            updateZoom();
+            queueRender(pageNum);
+        }
+
+        function fitWidth() {
+            if (!pdfDoc) return;
+            pdfDoc.getPage(pageNum).then(page => {
+                const container = document.getElementById('viewport');
+                const padding = window.innerWidth <= 640 ? 8 : 48;
+                const containerWidth = Math.max(80, (container.clientWidth || window.innerWidth) - padding);
+                const unscaledViewport = page.getViewport({ scale: 1.0 });
+                scale = Math.max(0.3, Math.min(3.0, containerWidth / unscaledViewport.width));
+                updateZoom();
+                queueRender(pageNum);
+            });
+        }
+
+        function updateZoom() {
+            document.getElementById('zoomLabel').textContent = Math.round(scale * 100) + '%';
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') nextPage();
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevPage();
+        });
+
+        // Mobile touch swipe gestures for page switching
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const vpEl = document.getElementById('viewport');
+        if (vpEl) {
+            vpEl.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            vpEl.addEventListener('touchend', e => {
+                if (e.changedTouches.length === 1) {
+                    const diffX = e.changedTouches[0].clientX - touchStartX;
+                    const diffY = e.changedTouches[0].clientY - touchStartY;
+                    if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+                        if (diffX < 0) nextPage();
+                        else prevPage();
+                    }
+                }
+            }, { passive: true });
+        }
+
+        window.addEventListener('resize', () => {
+            if (pdfDoc && window.innerWidth <= 640) {
+                fitWidth();
+            }
+        });
+
+        if (window.pdfjsLib) {
+            initViewer();
+        } else {
+            setTimeout(initViewer, 300);
+        }
+    </script>
+</body>
+</html>

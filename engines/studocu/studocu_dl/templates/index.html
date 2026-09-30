@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Studocu Downloader - DuyDev</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z'/><polyline points='14 2 14 8 20 8'/><path d='M12 18v-6'/><path d='m9 15 3 3 3-3'/></svg>">
+    <script src="/static/pdf.min.js?v=20260919"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/pdf.worker.min.js';
+        } else {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = () => {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            };
+            document.head.appendChild(s);
+        }
+    </script>
+    <link rel="stylesheet" href="/static/app.css?v=20260920_white_v1">
+    <style>
+        /* Failsafe to guarantee paste button renders as soft white petite pill even if stylesheet is cached */
+        .btn-hero-paste {
+            background: linear-gradient(180deg, #ffffff 0%, #ececef 100%) !important;
+            color: #09090b !important;
+            border: 1px solid rgba(255, 255, 255, 0.95) !important;
+            border-radius: 9999px !important;
+            height: 38px !important;
+            padding: 0 18px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header & Branding -->
+        <header class="header">
+            <div class="brand-badge">
+                <span class="badge-dot"></span>
+                <span>DuyDev</span>
+                <span class="badge-sep">/</span>
+                <span class="badge-ver">v2.5</span>
+            </div>
+            <h1 class="brand-title">
+                <svg class="brand-icon" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <path d="M12 18v-6"/>
+                    <path d="m9 15 3 3 3-3"/>
+                </svg>
+                <span>Studocu Downloader</span>
+            </h1>
+            <p class="brand-subtitle">Trình trích xuất tài liệu Studocu độ nét cao, hỗ trợ PDF &amp; Markdown sạch.</p>
+        </header>
+
+        <!-- Main Form Card with BorderBeam -->
+        <div class="card border-beam-card">
+            <form id="downloadForm">
+                <input type="hidden" id="url" name="url">
+
+                <!-- Centered Petite Pill Paste Button -->
+                <div class="hero-paste-wrapper">
+                    <button type="button" class="btn-hero-paste" id="pasteBtn" title="Dán liên kết Studocu từ clipboard để tải ngay">
+                        <div class="btn-hero-main">
+                            <div class="btn-hero-icon" id="pasteBtnIcon">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+                                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                                </svg>
+                            </div>
+                            <span class="btn-hero-title" id="pasteBtnTitle">Dán link &amp; Tải ngay</span>
+                        </div>
+                        <div class="btn-hero-badge" id="pasteBtnBadge">
+                            <kbd>Ctrl</kbd>
+                            <kbd>V</kbd>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Cancel Button when downloading -->
+                <div id="cancelContainer" style="display: none; margin-top: 10px; text-align: center;">
+                    <button type="button" id="cancelBtn" class="btn-cancel-job" onclick="cancelCurrentJob()" title="Hủy bỏ và ngắt toàn bộ tiến trình tải">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        <span>Hủy tiến trình tải</span>
+                    </button>
+                </div>
+
+                <!-- Advanced Options Collapsible -->
+                <div class="disclosure-wrap">
+                    <button type="button" class="collapsible" id="toggleCookieBtn">
+                        <svg class="icon-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        <span>Tùy chọn nâng cao (Cookie / Phiên đăng nhập)</span>
+                    </button>
+
+                    <div id="cookieSection" class="disclosure-content" style="display: none;">
+                        <div class="cookie-help">
+                            <p class="cookie-help-title">Tự động vượt Cloudflare Turnstile</p>
+                            <p>Mặc định hệ thống tự động giải mã Cloudflare trong 3-5 giây mà không cần nhập cookie. Chỉ cần nhập cookie khi tài liệu yêu cầu tài khoản sinh viên hoặc Premium.</p>
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label for="cookie" class="field-label">
+                                <span>Chuỗi Cookie thủ công</span>
+                            </label>
+                            <textarea id="cookie" name="cookie" rows="2" placeholder="studocu_session=...; cf_clearance=..."></textarea>
+                        </div>
+                        <div class="cookie-actions">
+                            <button type="button" onclick="resetSession()" class="btn-secondary">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                <span>Dọn sạch Session</span>
+                            </button>
+                            <span id="resetStatus" class="reset-status"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" style="display: none;"></button>
+            </form>
+        </div>
+
+        <!-- Download Progress & Terminal Card -->
+        <div class="card card-terminal" id="progressCard" style="display: none;">
+            <!-- Terminal Chrome Header -->
+            <div class="terminal-header">
+                <div class="terminal-header-left">
+                    <div class="terminal-dots">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <div class="terminal-tab-title">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                        <span>Live Extraction Stream</span>
+                    </div>
+                </div>
+                <div class="terminal-header-right">
+                    <div class="terminal-badge-wrap">
+                        <span class="status-indicator running"></span>
+                        <span id="jobBadge" class="badge-status badge-running">ĐANG CHẠY</span>
+                    </div>
+                    <span id="jobTimer" class="terminal-timer">0s</span>
+                    <button type="button" class="terminal-btn-cancel" id="terminalCancelBtn" onclick="cancelCurrentJob()" title="Hủy bỏ và ngắt toàn bộ tiến trình tải">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        <span>Hủy tải</span>
+                    </button>
+                    <button type="button" class="btn-terminal-action" id="copyLogsBtn" onclick="copyTerminalLogs()" title="Sao chép toàn bộ nhật ký">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        <span id="copyLogsText">Sao chép</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Real-time Progress Bar -->
+            <div class="terminal-progress-section" id="terminalProgressWrap">
+                <div class="progress-meta-row">
+                    <span id="progressStepLabel" class="progress-step-text">Khởi tạo kết nối phiên làm việc...</span>
+                    <span id="progressPercentLabel" class="progress-percent-text">5%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressBarFill" style="width: 5%;"></div>
+                </div>
+            </div>
+
+            <!-- Terminal Screen / Log Lines -->
+            <div class="terminal-screen" id="terminalLog"></div>
+
+            <!-- Download Result Actions -->
+            <div id="jobDownloads" class="job-downloads" style="display: none;"></div>
+        </div>
+
+        <!-- File Management Card -->
+        <div class="card">
+            <div class="file-section-header">
+                <div class="file-section-title">
+                    <span id="fileSectionIcon" class="section-icon">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                    </span>
+                    <span id="fileSectionTitleText">Tài liệu đã tải</span>
+                    <span id="fileStatsBadge" class="file-stats-badge">Đang tải...</span>
+                </div>
+                <div class="file-header-actions">
+                    <button type="button" class="btn-action-danger" id="emptyTrashBtn" style="display: none;" onclick="emptyTrash()" title="Dọn sạch toàn bộ thùng rác">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        <span>Dọn sạch Thùng rác</span>
+                    </button>
+                    <button type="button" class="btn-refresh" id="refreshBtn" onclick="refreshFiles()" title="Tải lại danh sách tài liệu">
+                        <svg class="icon-refresh" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                        <span>Làm mới</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toolbar: Search & Segmented Filter Tabs -->
+            <div class="file-toolbar">
+                <div class="file-toolbar-top">
+                    <div class="file-search-wrap">
+                        <span class="file-search-icon">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </span>
+                        <input type="text" id="fileSearchInput" class="file-search-input" placeholder="Tìm kiếm tên tài liệu..." oninput="onFileSearch(this.value)">
+                        <button type="button" id="fileSearchClear" class="file-search-clear" onclick="clearFileSearch()" title="Xóa tìm kiếm">✕</button>
+                    </div>
+                </div>
+                <div class="file-toolbar-bottom">
+                    <div class="file-filter-tabs">
+                        <button type="button" class="filter-tab active" data-filter="all" onclick="setFileFilter('all')">
+                            <span>Tất cả</span> <span class="filter-count" id="countAll">0</span>
+                        </button>
+                        <button type="button" class="filter-tab" data-filter="pdf" onclick="setFileFilter('pdf')">
+                            <span>PDF</span> <span class="filter-count" id="countPdf">0</span>
+                        </button>
+                        <button type="button" class="filter-tab" data-filter="md" onclick="setFileFilter('md')">
+                            <span>Markdown</span> <span class="filter-count" id="countMd">0</span>
+                        </button>
+                        <button type="button" class="filter-tab filter-tab-trash" data-filter="trash" onclick="setFileFilter('trash')" title="Thùng rác chứa các file đã xóa tạm">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            <span>Thùng rác</span> <span class="filter-count" id="countTrash">0</span>
+                        </button>
+                    </div>
+                    <div class="file-sort-wrap">
+                        <label for="fileSortSelect" class="sort-label">Sắp xếp:</label>
+                        <div class="select-wrapper">
+                            <select id="fileSortSelect" class="file-sort-select" onchange="onFileSortChange(this.value)">
+                                <option value="newest" selected>Mới nhất</option>
+                                <option value="oldest">Cũ nhất</option>
+                                <option value="name_asc">Tên (A → Z)</option>
+                                <option value="name_desc">Tên (Z → A)</option>
+                                <option value="size_desc">Dung lượng lớn</option>
+                                <option value="size_asc">Dung lượng nhỏ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="fileList">Đang tải danh sách file...</div>
+        </div>
+    </div>
+
+    <!-- PDF Viewer Modal Popup (Mozilla PDF.js) -->
+    <div id="pdfModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closePdfModal();">
+        <div class="modal-window">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span id="modalTitle" class="modal-title">Xem tài liệu</span>
+                </div>
+                <div class="modal-actions">
+                    <a id="modalOpenTab" href="#" target="_blank" class="btn-action" title="Mở trong tab riêng toàn màn hình">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        <span>Tab mới</span>
+                    </a>
+                    <a id="modalDlBtn" href="#" class="btn-action btn-primary-action" download title="Tải file về máy">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Tải về</span>
+                    </a>
+                    <button type="button" onclick="closePdfModal()" class="btn-action btn-close-modal" title="Đóng cửa sổ">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <iframe id="modalPdfFrame" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <audio id="notifySound" src="/static/complete.wav" preload="auto"></audio>
+
+    <div id="pasteToast" class="paste-toast" style="display: none;">
+        <span id="pasteToastMsg"></span>
+    </div>
+
+    <script src="/static/thinking-orbs.js?v=20260920_white_v1"></script>
+    <script src="/static/app.js?v=20260920_white_v1"></script>
+    <script>
+        (function() {
+            if (window.self !== window.top) {
+                document.documentElement.classList.add('is-embedded');
+                if (document.body) document.body.classList.add('is-embedded');
+                function notifyHeight() {
+                    const h = Math.max(
+                        document.body ? document.body.scrollHeight : 0,
+                        document.documentElement ? document.documentElement.scrollHeight : 0
+                    );
+                    if (h > 100) {
+                        window.parent.postMessage({ type: 'STUDOCU_FRAME_RESIZE', height: h }, '*');
+                    }
+                }
+                window.addEventListener('load', notifyHeight);
+                window.addEventListener('resize', notifyHeight);
+                if (window.ResizeObserver && document.body) {
+                    new ResizeObserver(notifyHeight).observe(document.body);
+                }
+                setInterval(notifyHeight, 600);
+            }
+        })();
+    </script>
+</body>
+</html>
