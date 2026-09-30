@@ -23,6 +23,8 @@ const ASSETS_TO_PRECACHE = [
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
   './src/assets/logo-ds.svg',
+  './src/assets/icon-192.png',
+  './src/assets/icon-512.png',
   './src/assets/icon-192.svg',
   './src/assets/icon-512.svg'
 ];

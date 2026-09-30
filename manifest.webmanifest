@@ -10,7 +10,20 @@
   "theme_color": "#111827",
   "lang": "vi",
   "categories": ["utilities", "productivity", "developer tools"],
+  "id": "duydev-studio-pwa",
   "icons": [
+    {
+      "src": "src/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "src/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "src/assets/icon-192.svg",
       "sizes": "192x192",
@@ -30,21 +43,21 @@
       "short_name": "PDF Suite",
       "description": "Mở nhanh công cụ xử lý PDF",
       "url": "./index.html#tool/pdf-convert",
-      "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "src/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Xem File Nén",
       "short_name": "Archive Peek",
       "description": "Duyệt nội dung .ZIP/.RAR trực tuyến",
       "url": "./index.html#archive",
-      "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "src/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Tạo mã QR",
       "short_name": "VietQR",
       "description": "Tạo mã QR Wi-Fi & thanh toán",
       "url": "./index.html#tool/qr-multi",
-      "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "src/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "share_target": {
@@ -61,12 +74,18 @@
           "accept": [
             "image/*",
             "application/pdf",
+            ".pdf",
             "application/zip",
             "application/x-zip-compressed",
             "application/x-rar-compressed",
             "application/x-7z-compressed",
+            ".zip",
+            ".rar",
+            ".7z",
             "text/*",
-            "*/*"
+            ".txt",
+            ".docx",
+            ".xlsx"
           ]
         }
       ]
