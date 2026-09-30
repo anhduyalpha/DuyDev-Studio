@@ -65,9 +65,33 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.5">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=14.5">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.5">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.6">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=14.6">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.6">
+
+  <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
+  <style>
+    #globalShareTargetContainer {
+      position: relative;
+      z-index: 9998;
+    }
+    #shareTargetBackdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    #shareTargetPanel {
+      background-color: #111114;
+      border-color: #27272a;
+      color: #fafafa;
+    }
+    .share-action-card[aria-selected="true"] {
+      border-color: rgba(99, 102, 241, 0.8);
+      background-color: rgba(99, 102, 241, 0.15);
+    }
+  </style>
 
   <!-- Autonomous Cache Recovery & Script Error Boundary -->
   <script>
@@ -82,7 +106,7 @@
     if ('caches' in window) {
       caches.keys().then(function(names) {
         names.forEach(function(name) {
-          if (name !== 'duydev-studio-v14.5') {
+          if (name !== 'duydev-studio-v14.6') {
             caches.delete(name);
           }
         });
@@ -161,7 +185,7 @@
   <!-- Root Mount Point for Modular PWA Architecture -->
   <div id="app">
     <!-- Immediate CSS loader to prevent black void during script execution -->
-    <div class="min-h-screen flex items-center justify-center p-4">
+    <div id="appStartupLoader" class="min-h-screen flex items-center justify-center p-4">
       <div class="flex flex-col items-center gap-3 text-zinc-400">
         <div class="w-9 h-9 rounded-xl bg-zinc-200 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.12] flex items-center justify-center font-bold text-xs text-zinc-900 dark:text-white animate-pulse">
           DS
@@ -170,6 +194,54 @@
       </div>
     </div>
   </div>
+
+  <!-- Global Share Target Modal Container (Mounted at body root to decouple from SPA router DOM updates) -->
+  <div id="globalShareTargetContainer"></div>
+
+  <!-- Fast-Path Instant Overlay for Web Share Target (<150ms immediate display) -->
+  <script type="module">
+    import { retrievePendingSharedData } from './src/utilities/shareTargetHelper.js';
+    import { openShareTargetModal } from './src/components/common/ShareTargetModal.js';
+
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=');
+
+    if (isShare) {
+      // Suppress startup text immediately so the user does not wait on the splash screen
+      const loader = document.getElementById('appStartupLoader');
+      if (loader) loader.style.display = 'none';
+
+      (async () => {
+        try {
+          let payload = await retrievePendingSharedData();
+          if (!payload) {
+            // Quick backoff retry (max 2 attempts, ~120ms total) in case Service Worker transaction is completing
+            for (let i = 0; i < 2; i++) {
+              await new Promise((r) => setTimeout(r, 60));
+              payload = await retrievePendingSharedData();
+              if (payload) break;
+            }
+          }
+          if (!payload) {
+            const sp = new URLSearchParams(search);
+            const url = sp.get('url') || '';
+            const text = sp.get('text') || '';
+            const title = sp.get('title') || '';
+            if (url || text || title) {
+              payload = { url, text, title, files: [] };
+            }
+          }
+          if (payload) {
+            window.__FAST_PATH_SHARE_ACTIVE = true;
+            openShareTargetModal(payload);
+          }
+        } catch (err) {
+          console.warn('[FastPath] Direct share target launch warning:', err);
+        }
+      })();
+    }
+  </script>
 
   <!-- Code Syntax Highlighting Engine -->
   <script src="src/vendor/highlight.min.js"></script>
@@ -181,7 +253,7 @@
   <script src="src/vendor/qr-code-styling.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=14.5"></script>
+  <script type="module" src="src/app.js?v=14.6"></script>
 </body>
 </html>
 

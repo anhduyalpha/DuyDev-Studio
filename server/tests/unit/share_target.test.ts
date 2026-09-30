@@ -280,5 +280,18 @@ describe('Web Share Target & Classifier Suite', () => {
       expect(nullResult.type).toBe(SharePayloadType.PLAIN_TEXT);
       expect(nullResult.recommendations).toEqual([]);
     });
+
+    it('isShareTargetModalOpen should accurately reflect __FAST_PATH_SHARE_ACTIVE flag', async () => {
+      const { isShareTargetModalOpen } = await import('../../../src/components/common/ShareTargetModal.js');
+      (global as any).window = (global as any).window || {};
+      (global as any).window.__FAST_PATH_SHARE_ACTIVE = false;
+      expect(isShareTargetModalOpen()).toBe(false);
+
+      (global as any).window.__FAST_PATH_SHARE_ACTIVE = true;
+      expect(isShareTargetModalOpen()).toBe(true);
+
+      (global as any).window.__FAST_PATH_SHARE_ACTIVE = false;
+      expect(isShareTargetModalOpen()).toBe(false);
+    });
   });
 });

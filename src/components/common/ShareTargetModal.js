@@ -118,6 +118,31 @@ function renderActionCards(recommendations, selectedIndex = 0) {
 }
 
 /**
+ * Safely trigger Lucide icon rendering even if the external script is still loading.
+ */
+function triggerLucideIcons() {
+  if (typeof window !== 'undefined' && window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  } else if (typeof window !== 'undefined') {
+    const timer = setInterval(() => {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+        clearInterval(timer);
+      }
+    }, 50);
+    setTimeout(() => clearInterval(timer), 2500);
+  }
+}
+
+/**
+ * Check if the Share Target Modal is currently active/open.
+ * @returns {boolean}
+ */
+export function isShareTargetModalOpen() {
+  return typeof window !== 'undefined' && Boolean(window.__FAST_PATH_SHARE_ACTIVE);
+}
+
+/**
  * Open the Smart Share Dispatch Modal.
  * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
  */
@@ -125,12 +150,15 @@ export function openShareTargetModal(payload) {
   const container = document.getElementById('globalShareTargetContainer');
   if (!container) return;
 
+  window.__FAST_PATH_SHARE_ACTIVE = true;
+
   const classification = classifySharedPayload(payload);
   if (!classification.recommendations || !classification.recommendations.length) {
     // If no recommendations, clean hash if on #share-target and exit
     if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
+    window.__FAST_PATH_SHARE_ACTIVE = false;
     return;
   }
 
@@ -187,8 +215,8 @@ export function openShareTargetModal(payload) {
     </div>
   `;
 
-  // Render Lucide icons
-  if (window.lucide) window.lucide.createIcons();
+  // Render Lucide icons safely
+  triggerLucideIcons();
 
   // Bind events
   const close = () => closeShareTargetModal();
@@ -208,7 +236,7 @@ export function openShareTargetModal(payload) {
     const listEl = document.getElementById('shareActionCardsList');
     if (listEl) {
       listEl.innerHTML = renderActionCards(classification.recommendations, selectedIndex);
-      if (window.lucide) window.lucide.createIcons();
+      triggerLucideIcons();
       bindCardClicks();
     }
     const labelEl = document.getElementById('shareTargetSubmitLabel');
@@ -265,6 +293,7 @@ export function openShareTargetModal(payload) {
  * Close the Share Target Modal and clean up.
  */
 export function closeShareTargetModal() {
+  window.__FAST_PATH_SHARE_ACTIVE = false;
   const container = document.getElementById('globalShareTargetContainer');
   if (container) container.innerHTML = '';
   if (cleanupFn) {
@@ -305,6 +334,18 @@ async function fetchImageAsFile(imageUrl) {
  * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
  */
 async function dispatchSharedPayloadToTool(action, payload) {
+  // If app.js background bootstrap hasn't signaled ready, wait for ds:app-ready
+  if (typeof window !== 'undefined' && !window.__dsAppReady) {
+    const submitBtn = document.getElementById('shareTargetBtnSubmit');
+    const submitLabel = document.getElementById('shareTargetSubmitLabel');
+    if (submitLabel) submitLabel.textContent = 'Đang khởi động module...';
+    if (submitBtn) submitBtn.classList.add('opacity-75', 'pointer-events-none');
+    window.addEventListener('ds:app-ready', () => {
+      dispatchSharedPayloadToTool(action, payload);
+    }, { once: true });
+    return;
+  }
+
   closeShareTargetModal();
 
   // Navigate to target route if not already there

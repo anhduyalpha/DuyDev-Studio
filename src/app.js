@@ -76,6 +76,10 @@ class App {
     this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
 
+    // Signal app readiness for any fast-path queued interactions
+    window.__dsAppReady = true;
+    window.dispatchEvent(new CustomEvent('ds:app-ready'));
+
     // Web Share Target: listen for payloads from Service Worker
     navigator.serviceWorker?.addEventListener('message', (e) => {
       if (e.data?.type === 'DS_SHARE_TARGET_ARRIVED') {
@@ -88,6 +92,8 @@ class App {
   }
 
   async checkAndOpenShareTarget() {
+    // Fast-path overlay already initiated modal from index.html
+    if (typeof window !== 'undefined' && window.__FAST_PATH_SHARE_ACTIVE) return;
     if (this._checkingShareTarget) return;
     this._checkingShareTarget = true;
 
@@ -108,11 +114,15 @@ class App {
       let payload = await retrievePendingSharedData();
       if (!payload && isShareRoute) {
         for (let i = 0; i < 4; i++) {
+          if (typeof window !== 'undefined' && window.__FAST_PATH_SHARE_ACTIVE) return;
           await new Promise(r => setTimeout(r, 120));
           payload = await retrievePendingSharedData();
           if (payload) break;
         }
       }
+
+      // Check again if fast path took over
+      if (typeof window !== 'undefined' && window.__FAST_PATH_SHARE_ACTIVE) return;
 
       // 3. Fallback to URL parameters if IndexedDB had no files
       if (!payload && (url || text || title)) {
@@ -140,6 +150,13 @@ class App {
   }
 
   renderShell() {
+    // Ensure globalShareTargetContainer exists on body outside appRoot so modal survives route re-renders
+    if (!document.getElementById('globalShareTargetContainer')) {
+      const shareTargetEl = document.createElement('div');
+      shareTargetEl.id = 'globalShareTargetContainer';
+      document.body.appendChild(shareTargetEl);
+    }
+
     this.appRoot.innerHTML = `
       <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
         <div id="headerContainer"></div>
@@ -149,7 +166,6 @@ class App {
         <div id="globalPreviewContainer"></div>
         <div id="globalTaskDockContainer"></div>
         <div id="globalSlideConfirmContainer">${renderSlideConfirmModal()}</div>
-        <div id="globalShareTargetContainer"></div>
       </div>
     `;
 
