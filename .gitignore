@@ -1,0 +1,89 @@
+# Dependencies
+node_modules/
+server/node_modules/
+package-lock.json.bak
+
+# Build Artifacts
+dist/
+server/dist/
+build/
+
+# Database (SQLite - all locations)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+certs/
+*.pem
+*.key
+*.crt
+
+# Ephemeral File Storage & Uploads
+data/
+server/data/
+uploads/
+processed/
+temp/
+*.tmp
+.tmp/
+.tmp*
+scratch/
+
+# Loose root test artifacts & temporary scripts
+/*.docx
+/*.pdf
+/*.png
+check_repos.py
+filter_fc.py
+list_repo_files.py
+pull_repo_core.py
+scrape_qr_repos.py
+famous_qr_repos.json
+
+# Python Virtual Environments & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+engines/**/venv/
+engines/**/__pycache__/
+
+# Logs & PIDs
+logs/
+*.log
+server/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pid
+.*.pid
+server/.*.pid
+dd-studio.pid
+
+# OS, IDE & Gemini artifacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.gemini/
+.antigravity/

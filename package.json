@@ -1,0 +1,29 @@
+{
+  "name": "duydev-studio-pwa",
+  "version": "2.0.0",
+  "description": "DuyDev Studio - Personal Self-Hosted Progressive Web App Utility Hub",
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix server run dev",
+    "build": "npm --prefix server run build",
+    "start": "npm --prefix server start",
+    "server:deploy": "bash ./scripts/deploy.sh",
+    "server:start": "bash ./scripts/start.sh",
+    "server:restart": "bash ./scripts/restart.sh",
+    "server:stop": "bash ./scripts/stop.sh",
+    "server:status": "bash ./scripts/status.sh",
+    "start:bg": "powershell -ExecutionPolicy Bypass -NoProfile -File ./scripts/start-background.ps1",
+    "stop:bg": "powershell -ExecutionPolicy Bypass -NoProfile -File ./scripts/stop-background.ps1",
+    "status": "powershell -ExecutionPolicy Bypass -NoProfile -File ./scripts/status-background.ps1"
+  },
+  "keywords": [
+    "pwa",
+    "self-hosted",
+    "pdf-tools",
+    "converter",
+    "qr-code",
+    "archive-inspector"
+  ],
+  "author": "DuyDev",
+  "license": "MIT"
+}
