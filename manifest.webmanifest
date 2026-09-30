@@ -1,0 +1,50 @@
+{
+  "name": "DuyDev Studio",
+  "short_name": "DuyDev DS",
+  "description": "Personal Self-Hosted Utility Hub & File Processing Suite",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0F17",
+  "theme_color": "#111827",
+  "lang": "vi",
+  "categories": ["utilities", "productivity", "developer tools"],
+  "icons": [
+    {
+      "src": "src/assets/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "src/assets/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nén & Đổi PDF",
+      "short_name": "PDF Suite",
+      "description": "Mở nhanh công cụ xử lý PDF",
+      "url": "./index.html#tool/pdf-convert",
+      "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Xem File Nén",
+      "short_name": "Archive Peek",
+      "description": "Duyệt nội dung .ZIP/.RAR trực tuyến",
+      "url": "./index.html#archive",
+      "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tạo mã QR",
+      "short_name": "VietQR",
+      "description": "Tạo mã QR Wi-Fi & thanh toán",
+      "url": "./index.html#tool/qr-multi",
+      "icons": [{ "src": "src/assets/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}
