@@ -85,21 +85,36 @@ function renderPayloadPreview(payload, classification) {
 /**
  * Build action cards grid HTML.
  * @param {Array<{ label: string, route: string, mode?: string, imageUrl?: string, isPrimary?: boolean }>} recommendations
+ * @param {number} [selectedIndex=0]
  * @returns {string}
  */
-function renderActionCards(recommendations) {
-  return recommendations.map((rec, i) => `
+function renderActionCards(recommendations, selectedIndex = 0) {
+  return recommendations.map((rec, i) => {
+    const isSelected = (i === selectedIndex);
+    return `
     <button type="button"
       class="share-action-card group flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-left w-full
-        ${rec.isPrimary
-          ? 'border-indigo-500/60 bg-indigo-500/15 hover:bg-indigo-500/25 shadow-sm'
+        ${isSelected
+          ? 'border-indigo-500/80 bg-indigo-500/15 shadow-sm ring-1 ring-indigo-500/30'
           : 'border-zinc-700/50 bg-zinc-800/30 hover:bg-zinc-800/60 hover:border-zinc-600'}"
-      data-action-index="${i}">
-      ${rec.isPrimary ? '<span class="text-xs text-indigo-400 font-bold shrink-0">★</span>' : '<span class="text-xs text-zinc-600 shrink-0">•</span>'}
-      <span class="text-xs sm:text-sm font-medium text-zinc-200 group-hover:text-white flex-1">${rec.label}</span>
-      <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 ml-auto shrink-0 transition-transform group-hover:translate-x-0.5"></i>
+      data-action-index="${i}"
+      aria-selected="${isSelected ? 'true' : 'false'}">
+      <span class="action-indicator text-xs ${isSelected ? 'text-indigo-400 font-bold' : 'text-zinc-600'} shrink-0">
+        ${isSelected ? '★' : '•'}
+      </span>
+      <span class="text-xs sm:text-sm font-medium ${isSelected ? 'text-white font-semibold' : 'text-zinc-200 group-hover:text-white'} flex-1 truncate">
+        ${rec.label}
+      </span>
+      ${isSelected
+        ? `<span class="action-badge px-2 py-0.5 rounded-md bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 text-[10px] font-semibold flex items-center gap-1 shrink-0 animate-fadeIn">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+          </span>`
+        : `<i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 ml-auto shrink-0 transition-transform group-hover:translate-x-0.5"></i>`
+      }
     </button>
-  `).join('');
+  `;
+  }).join('');
 }
 
 /**
@@ -124,6 +139,10 @@ export function openShareTargetModal(payload) {
     cleanupFn();
     cleanupFn = null;
   }
+
+  const primaryIdx = classification.recommendations.findIndex(r => r.isPrimary);
+  let selectedIndex = primaryIdx >= 0 ? primaryIdx : 0;
+  let lastClickedIndex = -1;
 
   container.innerHTML = `
     <div id="shareTargetBackdrop" class="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm animate-fadeIn"></div>
@@ -151,9 +170,18 @@ export function openShareTargetModal(payload) {
         <!-- Action Cards -->
         <div class="space-y-2">
           <p class="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider">Hành động gợi ý</p>
-          <div class="space-y-2">
-            ${renderActionCards(classification.recommendations)}
+          <div id="shareActionCardsList" class="space-y-2">
+            ${renderActionCards(classification.recommendations, selectedIndex)}
           </div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="pt-2 border-t border-zinc-800/60">
+          <button type="button" id="shareTargetBtnSubmit"
+            class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs tracking-wide shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition cursor-pointer">
+            <span id="shareTargetSubmitLabel">Mở module: ${classification.recommendations[selectedIndex]?.label || 'Đã chọn'}</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -168,16 +196,65 @@ export function openShareTargetModal(payload) {
   document.getElementById('shareTargetBtnClose')?.addEventListener('click', close);
   document.getElementById('shareTargetBackdrop')?.addEventListener('click', close);
 
-  const onKeydown = (e) => { if (e.key === 'Escape') close(); };
-  document.addEventListener('keydown', onKeydown);
+  const confirmAction = () => {
+    const action = classification.recommendations[selectedIndex];
+    if (action) dispatchSharedPayloadToTool(action, payload);
+  };
 
-  container.querySelectorAll('.share-action-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.actionIndex, 10);
-      const action = classification.recommendations[idx];
-      if (action) dispatchSharedPayloadToTool(action, payload);
+  document.getElementById('shareTargetBtnSubmit')?.addEventListener('click', confirmAction);
+
+  function updateSelection(newIndex) {
+    selectedIndex = newIndex;
+    const listEl = document.getElementById('shareActionCardsList');
+    if (listEl) {
+      listEl.innerHTML = renderActionCards(classification.recommendations, selectedIndex);
+      if (window.lucide) window.lucide.createIcons();
+      bindCardClicks();
+    }
+    const labelEl = document.getElementById('shareTargetSubmitLabel');
+    if (labelEl && classification.recommendations[selectedIndex]) {
+      labelEl.textContent = `Mở module: ${classification.recommendations[selectedIndex].label}`;
+    }
+  }
+
+  function bindCardClicks() {
+    container.querySelectorAll('.share-action-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.actionIndex, 10);
+        if (lastClickedIndex === idx) {
+          // Second click on the same selected module -> Dispatch!
+          const action = classification.recommendations[idx];
+          if (action) dispatchSharedPayloadToTool(action, payload);
+        } else {
+          // First click -> select this module, jump the purple highlight down to this module!
+          lastClickedIndex = idx;
+          updateSelection(idx);
+        }
+      });
     });
-  });
+  }
+
+  bindCardClicks();
+
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') {
+      close();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = (selectedIndex + 1) % classification.recommendations.length;
+      lastClickedIndex = next;
+      updateSelection(next);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = (selectedIndex - 1 + classification.recommendations.length) % classification.recommendations.length;
+      lastClickedIndex = prev;
+      updateSelection(prev);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmAction();
+    }
+  };
+  document.addEventListener('keydown', onKeydown);
 
   cleanupFn = () => {
     document.removeEventListener('keydown', onKeydown);
