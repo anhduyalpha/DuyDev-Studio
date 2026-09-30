@@ -183,14 +183,13 @@ export async function renderWorkspaceThumbnails({
       if (activeRenderSessionToken !== currentToken) return;
       if (pIdx < 0 || pIdx >= numPages) continue;
       const canvas = document.getElementById(`${idPrefix}Canvas_${pIdx}`);
-      const skeleton = document.getElementById(`${idPrefix}Skeleton_${pIdx}`);
+      const skeleton = document.getElementById(`${idPrefix}Skeleton_${pIdx}`) || canvas?.parentElement?.querySelector('.pdf-thumb-skeleton');
       if (!canvas) continue;
 
       const cacheKey = pdfPageCache.buildKey(file, pIdx, 0, 1);
 
       // Check cache in case it was hydrated while processing prior pages
-      if (pdfPageCache.has(cacheKey)) {
-        restoreCanvasFromCache(canvas, cacheKey);
+      if (pdfPageCache.has(cacheKey) && restoreCanvasFromCache(canvas, cacheKey)) {
         continue;
       }
 
@@ -253,6 +252,13 @@ export async function renderWorkspaceThumbnails({
   } catch (err) {
     if (activeRenderSessionToken === currentToken) {
       console.error(`[PdfPreviewCanvas] Error rendering ${idPrefix} thumbnails:`, err);
+      // Defensively dismiss all skeletons to eliminate infinite spinner deadlock on document failure
+      const skeletons = rootContainer?.querySelectorAll('.pdf-thumb-skeleton');
+      skeletons?.forEach((sk) => {
+        const pIdx = sk.id?.split('_')[1];
+        const label = pIdx !== undefined && !isNaN(Number(pIdx)) ? `Trang ${Number(pIdx) + 1}` : 'Lỗi tải';
+        sk.innerHTML = `<span class="text-[10px] font-mono text-zinc-400">${label}</span>`;
+      });
     }
   }
 }

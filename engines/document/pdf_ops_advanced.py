@@ -294,9 +294,7 @@ def cmd_organize(args):
     if not valid_pages:
         raise ValueError("Danh sách trang không hợp lệ hoặc rỗng")
 
-    emit_progress(30, f"Selecting and reordering {len(valid_pages)} pages")
-    doc.select(valid_pages)
-
+    # Apply rotations to original page indices before selecting/reordering
     rotations_json = getattr(args, "rotations", None) or getattr(args, "rotations_json", None)
     if rotations_json:
         try:
@@ -306,11 +304,14 @@ def cmd_organize(args):
         for idx_str, rot_deg in rot_map.items():
             try:
                 page_idx = int(idx_str)
-                if 0 <= page_idx < len(doc):
+                if 0 <= page_idx < total:
                     deg = int(rot_deg) % 360
                     doc[page_idx].set_rotation((doc[page_idx].rotation + deg) % 360)
             except Exception:
                 pass
+
+    emit_progress(30, f"Selecting and reordering {len(valid_pages)} pages")
+    doc.select(valid_pages)
 
     if getattr(args, "strip_metadata", False):
         emit_progress(85, "Sanitizing metadata headers")

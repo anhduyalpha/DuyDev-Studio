@@ -16,17 +16,20 @@ import { triggerHaptic } from './swipeGesture.js';
 export function computeDropIndex(pointerY, itemRects = [], currentIndex = 0) {
   if (!itemRects || itemRects.length <= 1) return currentIndex;
 
-  if (pointerY <= itemRects[0].midY) return 0;
-  const lastIdx = itemRects.length - 1;
-  if (pointerY >= itemRects[lastIdx].midY) return lastIdx;
+  const validRects = itemRects.filter((r) => r && typeof r.midY === 'number');
+  if (validRects.length <= 1) return currentIndex;
+
+  if (pointerY <= validRects[0].midY) return validRects[0].index !== undefined ? validRects[0].index : 0;
+  const lastIdx = validRects.length - 1;
+  if (pointerY >= validRects[lastIdx].midY) return validRects[lastIdx].index !== undefined ? validRects[lastIdx].index : lastIdx;
 
   for (let i = 0; i < lastIdx; i++) {
-    const curr = itemRects[i];
-    const next = itemRects[i + 1];
+    const curr = validRects[i];
+    const next = validRects[i + 1];
     if (pointerY >= curr.midY && pointerY <= next.midY) {
       const distToCurr = Math.abs(pointerY - curr.midY);
       const distToNext = Math.abs(pointerY - next.midY);
-      return distToCurr < distToNext ? curr.index : next.index;
+      return distToCurr < distToNext ? (curr.index !== undefined ? curr.index : i) : (next.index !== undefined ? next.index : i + 1);
     }
   }
 
@@ -43,10 +46,14 @@ export function computeDropIndex(pointerY, itemRects = [], currentIndex = 0) {
  */
 export function computeDropIndex2D(pointerX, pointerY, itemRects = [], currentIndex = 0) {
   if (!itemRects || itemRects.length <= 1) return currentIndex;
+  if (typeof pointerX !== 'number' || isNaN(pointerX) || typeof pointerY !== 'number' || isNaN(pointerY)) {
+    return currentIndex;
+  }
 
   // Pass 1: Direct bounding box collision
   for (let i = 0; i < itemRects.length; i++) {
     const r = itemRects[i];
+    if (!r) continue;
     if (pointerX >= r.left && pointerX <= r.right && pointerY >= r.top && pointerY <= r.bottom) {
       return r.index !== undefined ? r.index : i;
     }
@@ -58,8 +65,9 @@ export function computeDropIndex2D(pointerX, pointerY, itemRects = [], currentIn
 
   for (let i = 0; i < itemRects.length; i++) {
     const r = itemRects[i];
-    const midX = r.midX !== undefined ? r.midX : (r.left + (r.width || 0) / 2);
-    const midY = r.midY !== undefined ? r.midY : (r.top + (r.height || 0) / 2);
+    if (!r) continue;
+    const midX = r.midX !== undefined ? r.midX : ((r.left ?? 0) + (r.width || 0) / 2);
+    const midY = r.midY !== undefined ? r.midY : ((r.top ?? 0) + (r.height || 0) / 2);
     const distSq = (pointerX - midX) ** 2 + (pointerY - midY) ** 2;
     if (distSq < minDistanceSq) {
       minDistanceSq = distSq;
@@ -91,6 +99,10 @@ export function attachPointerReorder(container, {
 } = {}) {
   if (!container) return () => {};
 
+  if (typeof container._cleanupPointerReorder === 'function') {
+    try { container._cleanupPointerReorder(); } catch {}
+  }
+
   let isDragging = false;
   let activePointerId = null;
   let draggedItem = null;
@@ -101,6 +113,24 @@ export function attachPointerReorder(container, {
   let startPointerY = 0;
   let itemRects = [];
   let itemElements = [];
+
+  const targetWindow = typeof window !== 'undefined' ? window : (container?.ownerDocument?.defaultView || null);
+
+  const addDragListeners = () => {
+    if (targetWindow) {
+      targetWindow.addEventListener('pointermove', onPointerMove, { passive: false });
+      targetWindow.addEventListener('pointerup', onPointerEnd);
+      targetWindow.addEventListener('pointercancel', onPointerEnd);
+    }
+  };
+
+  const removeDragListeners = () => {
+    if (targetWindow) {
+      targetWindow.removeEventListener('pointermove', onPointerMove);
+      targetWindow.removeEventListener('pointerup', onPointerEnd);
+      targetWindow.removeEventListener('pointercancel', onPointerEnd);
+    }
+  };
 
   const updateSiblingShifts = (targetIdx) => {
     itemElements.forEach((el, idx) => {
@@ -139,6 +169,7 @@ export function attachPointerReorder(container, {
       draggedItem.style.boxShadow = '';
       draggedItem.style.transform = '';
       draggedItem.style.transition = '';
+      draggedItem.style.willChange = '';
       draggedItem.classList.remove('ring-2', 'ring-amber-500', 'shadow-xl', 'scale-[1.01]', 'scale-[1.02]');
     }
   };
@@ -162,8 +193,10 @@ export function attachPointerReorder(container, {
     draggedItem = item;
     activeHandle = handle;
     currentTargetIndex = fromIndex;
-    startPointerX = e.clientX;
-    startPointerY = e.clientY;
+    startPointerX = e.clientX ?? 0;
+    startPointerY = e.clientY ?? 0;
+
+    addDragListeners();
 
     try {
       activeHandle.setPointerCapture?.(e.pointerId);
@@ -173,7 +206,7 @@ export function attachPointerReorder(container, {
 
     // Measure 2D bounding boxes of all sibling items
     itemRects = itemElements.map((el, i) => {
-      const rect = el.getBoundingClientRect();
+      const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 };
       return {
         index: i,
         left: rect.left,
@@ -199,12 +232,14 @@ export function attachPointerReorder(container, {
     if (!isDragging || e.pointerId !== activePointerId || !draggedItem) return;
     if (e.cancelable) e.preventDefault();
 
-    const dx = e.clientX - startPointerX;
-    const dy = e.clientY - startPointerY;
+    const clientX = e.clientX ?? 0;
+    const clientY = e.clientY ?? 0;
+    const dx = clientX - startPointerX;
+    const dy = clientY - startPointerY;
     draggedItem.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`;
     draggedItem.style.willChange = 'transform';
 
-    const targetIdx = computeDropIndex2D(e.clientX, e.clientY, itemRects, fromIndex);
+    const targetIdx = computeDropIndex2D(clientX, clientY, itemRects, fromIndex);
     if (targetIdx !== currentTargetIndex) {
       currentTargetIndex = targetIdx;
       triggerHaptic(10);
@@ -215,6 +250,7 @@ export function attachPointerReorder(container, {
   const onPointerEnd = (e) => {
     if (!isDragging || e.pointerId !== activePointerId) return;
     isDragging = false;
+    removeDragListeners();
 
     try {
       activeHandle?.releasePointerCapture?.(e.pointerId);
@@ -243,20 +279,17 @@ export function attachPointerReorder(container, {
   };
 
   container.addEventListener('pointerdown', onPointerDown);
-  const targetWindow = typeof window !== 'undefined' ? window : (container?.ownerDocument?.defaultView || null);
-  if (targetWindow) {
-    targetWindow.addEventListener('pointermove', onPointerMove, { passive: false });
-    targetWindow.addEventListener('pointerup', onPointerEnd);
-    targetWindow.addEventListener('pointercancel', onPointerEnd);
-  }
 
-  return () => {
+  const cleanup = () => {
+    removeDragListeners();
     container.removeEventListener('pointerdown', onPointerDown);
-    if (targetWindow) {
-      targetWindow.removeEventListener('pointermove', onPointerMove);
-      targetWindow.removeEventListener('pointerup', onPointerEnd);
-      targetWindow.removeEventListener('pointercancel', onPointerEnd);
-    }
     resetAllTransforms();
+    if (container._cleanupPointerReorder === cleanup) {
+      delete container._cleanupPointerReorder;
+    }
   };
+
+  container._cleanupPointerReorder = cleanup;
+
+  return cleanup;
 }

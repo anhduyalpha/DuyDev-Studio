@@ -281,6 +281,11 @@ describe('Milestone M2: Touch & Mouse Gestures, Lightbox & Drag-and-Drop', () =>
       expect(computeDropIndex(50, [], 1)).toBe(1);
       expect(computeDropIndex(50, [{ index: 0, top: 0, bottom: 50, midY: 25 }], 0)).toBe(0);
     });
+
+    it('should defensively handle null, undefined or malformed rect entries in 1D computeDropIndex', () => {
+      expect(computeDropIndex(50, [null as any, null as any], 1)).toBe(1);
+      expect(computeDropIndex(50, [{ index: 0, top: 0, bottom: 50, midY: 25 }, null as any], 0)).toBe(0);
+    });
   });
 
   describe('5b. Pointer 2D Grid Drag Drop Index Computation (computeDropIndex2D)', () => {
@@ -362,6 +367,13 @@ describe('Milestone M2: Touch & Mouse Gestures, Lightbox & Drag-and-Drop', () =>
       expect(computeDropIndex2D(100, 100, [], 2)).toBe(2);
       expect(computeDropIndex2D(100, 100, [{ index: 0, left: 0, right: 100, top: 0, bottom: 100, midX: 50, midY: 50 }], 0)).toBe(0);
     });
+
+    it('should defensively handle null entries and non-numeric coordinates in computeDropIndex2D', () => {
+      expect(computeDropIndex2D(NaN, 100, gridRects, 3)).toBe(3);
+      expect(computeDropIndex2D(100, NaN, gridRects, 3)).toBe(3);
+      expect(computeDropIndex2D(50, 50, [null as any, null as any], 2)).toBe(2);
+      expect(computeDropIndex2D(50, 50, [{ index: 0, left: 0, right: 100, top: 0, bottom: 100, midX: 50, midY: 50 }, null as any], 0)).toBe(0);
+    });
   });
 
   describe('6. Lightbox Rotation Preservation Logic', () => {
@@ -440,6 +452,22 @@ describe('Milestone M2: Touch & Mouse Gestures, Lightbox & Drag-and-Drop', () =>
       expect(typeof cleanupReorder).toBe('function');
       cleanupReorder();
       expect(mockContainer.removeEventListener).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+    });
+
+    it('should invoke prior cleanup when re-attached to the same container', () => {
+      const mockContainer = {
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        querySelectorAll: vi.fn().mockReturnValue([])
+      } as unknown as HTMLElement;
+
+      const cleanup1 = attachPointerReorder(mockContainer);
+      expect(mockContainer.removeEventListener).not.toHaveBeenCalled();
+
+      // Second attach on same container should invoke previous cleanup
+      const cleanup2 = attachPointerReorder(mockContainer);
+      expect(mockContainer.removeEventListener).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+      cleanup2();
     });
   });
 
@@ -621,6 +649,213 @@ describe('Milestone M2: Touch & Mouse Gestures, Lightbox & Drag-and-Drop', () =>
         expect(mockModal.remove).toHaveBeenCalled();
       } finally {
         (globalThis as any).document = origDocument;
+        (globalThis as any).window = origWindow;
+      }
+    });
+
+    it('should simulate full 2D pointer drag reorder flow: elevation, sibling 2D vector shifts, drop execution, and cleanup', () => {
+      const mockVibrate = vi.fn().mockReturnValue(true);
+      // @ts-expect-error Mocking navigator
+      globalThis.navigator = { vibrate: mockVibrate };
+
+      const windowListeners: Record<string, (e: any) => void> = {};
+      const origWindow = (globalThis as any).window;
+      (globalThis as any).window = {
+        addEventListener: (evt: string, fn: (e: any) => void) => { windowListeners[evt] = fn; },
+        removeEventListener: (evt: string) => { delete windowListeners[evt]; }
+      };
+
+      try {
+        // Build 4 items in a 2x2 grid:
+        // Slot 0 (left: 0, top: 0), Slot 1 (left: 120, top: 0)
+        // Slot 2 (left: 0, top: 120), Slot 3 (left: 120, top: 120)
+        const rects = [
+          { left: 0, right: 100, top: 0, bottom: 100, width: 100, height: 100 },
+          { left: 120, right: 220, top: 0, bottom: 100, width: 100, height: 100 },
+          { left: 0, right: 100, top: 120, bottom: 220, width: 100, height: 100 },
+          { left: 120, right: 220, top: 120, bottom: 220, width: 100, height: 100 }
+        ];
+
+        const mockItems = rects.map((r, i) => {
+          const handle = {
+            setPointerCapture: vi.fn(),
+            releasePointerCapture: vi.fn(),
+            closest: vi.fn()
+          };
+          const item = {
+            index: i,
+            style: {} as Record<string, string>,
+            classList: {
+              add: vi.fn(),
+              remove: vi.fn()
+            },
+            getBoundingClientRect: () => r,
+            closest: vi.fn(),
+            handle
+          };
+          handle.closest.mockImplementation((sel: string) => {
+            if (sel === '.drag-grip-handle') return handle;
+            if (sel === '.pdf-organize-card') return item;
+            return null;
+          });
+          item.closest.mockImplementation((sel: string) => (sel === '.pdf-organize-card' ? item : null));
+          return item;
+        });
+
+        const containerListeners: Record<string, (e: any) => void> = {};
+        const mockContainer = {
+          addEventListener: (evt: string, fn: (e: any) => void) => { containerListeners[evt] = fn; },
+          removeEventListener: (evt: string) => { delete containerListeners[evt]; },
+          contains: (el: any) => mockItems.some((item) => item === el || item.handle === el),
+          querySelectorAll: (sel: string) => (sel === '.pdf-organize-card' ? mockItems : [])
+        } as unknown as HTMLElement;
+
+        const onReorder = vi.fn();
+        const cleanup = attachPointerReorder(mockContainer, {
+          itemSelector: '.pdf-organize-card',
+          handleSelector: '.drag-grip-handle',
+          onReorder
+        });
+
+        // Initially when idle, no window listeners should be attached
+        expect(windowListeners['pointermove']).toBeUndefined();
+        expect(windowListeners['pointerup']).toBeUndefined();
+
+        // 1. Pointer down on handle of item 0 (at midpoint x=50, y=50)
+        containerListeners['pointerdown']({
+          button: 0,
+          clientX: 50,
+          clientY: 50,
+          pointerId: 10,
+          target: mockItems[0].handle,
+          preventDefault: vi.fn()
+        });
+
+        // Window drag listeners now active
+        expect(windowListeners['pointermove']).toBeDefined();
+        expect(mockItems[0].handle.setPointerCapture).toHaveBeenCalledWith(10);
+        expect(mockItems[0].style.zIndex).toBe('40');
+        expect(mockItems[0].classList.add).toHaveBeenCalledWith('ring-2', 'ring-amber-500', 'shadow-xl', 'scale-[1.02]');
+
+        // 2. Drag diagonally to Slot 3 (x=170, y=170) -> dx = 120, dy = 120
+        windowListeners['pointermove']({
+          clientX: 170,
+          clientY: 170,
+          pointerId: 10,
+          cancelable: true,
+          preventDefault: vi.fn()
+        });
+
+        expect(mockItems[0].style.transform).toBe('translate(120px, 120px) scale(1.02)');
+        expect(mockItems[0].style.willChange).toBe('transform');
+
+        // Siblings shift:
+        // Slot 1 shifts to slot 0: dx = 0 - 120 = -120, dy = 0
+        expect(mockItems[1].style.transform).toBe('translate(-120px, 0px)');
+        // Slot 2 shifts to slot 1: dx = 120 - 0 = 120, dy = 0 - 120 = -120
+        expect(mockItems[2].style.transform).toBe('translate(120px, -120px)');
+        // Slot 3 shifts to slot 2: dx = 0 - 120 = -120, dy = 0
+        expect(mockItems[3].style.transform).toBe('translate(-120px, 0px)');
+
+        // 3. Pointer up -> commits reorder (0 -> 3)
+        windowListeners['pointerup']({
+          clientX: 170,
+          clientY: 170,
+          pointerId: 10,
+          type: 'pointerup'
+        });
+
+        expect(onReorder).toHaveBeenCalledWith(0, 3);
+        // willChange and transforms cleanly reset
+        expect(mockItems[0].style.willChange).toBe('');
+        expect(mockItems[0].style.transform).toBe('');
+        expect(mockItems[1].style.transform).toBe('');
+
+        // Window listeners cleanly unregistered
+        expect(windowListeners['pointermove']).toBeUndefined();
+        expect(windowListeners['pointerup']).toBeUndefined();
+
+        cleanup();
+      } finally {
+        (globalThis as any).window = origWindow;
+      }
+    });
+
+    it('should simulate pointer drag cancellation: reset transforms and skip onReorder', () => {
+      const windowListeners: Record<string, (e: any) => void> = {};
+      const origWindow = (globalThis as any).window;
+      (globalThis as any).window = {
+        addEventListener: (evt: string, fn: (e: any) => void) => { windowListeners[evt] = fn; },
+        removeEventListener: (evt: string) => { delete windowListeners[evt]; }
+      };
+
+      try {
+        const mockItems = [
+          { left: 0, right: 100, top: 0, bottom: 100, width: 100, height: 100 },
+          { left: 120, right: 220, top: 0, bottom: 100, width: 100, height: 100 }
+        ].map((r, i) => {
+          const handle = { setPointerCapture: vi.fn(), releasePointerCapture: vi.fn(), closest: vi.fn() };
+          const item = {
+            index: i,
+            style: {} as Record<string, string>,
+            classList: { add: vi.fn(), remove: vi.fn() },
+            getBoundingClientRect: () => r,
+            closest: vi.fn(),
+            handle
+          };
+          handle.closest.mockImplementation((sel: string) => (sel === '.drag-handle' ? handle : sel === '.card' ? item : null));
+          item.closest.mockImplementation((sel: string) => (sel === '.card' ? item : null));
+          return item;
+        });
+
+        const containerListeners: Record<string, (e: any) => void> = {};
+        const mockContainer = {
+          addEventListener: (evt: string, fn: (e: any) => void) => { containerListeners[evt] = fn; },
+          removeEventListener: vi.fn(),
+          contains: () => true,
+          querySelectorAll: () => mockItems
+        } as unknown as HTMLElement;
+
+        const onReorder = vi.fn();
+        attachPointerReorder(mockContainer, {
+          itemSelector: '.card',
+          handleSelector: '.drag-handle',
+          onReorder
+        });
+
+        // 1. Pointer down on item 0
+        containerListeners['pointerdown']({
+          button: 0,
+          clientX: 50,
+          clientY: 50,
+          pointerId: 20,
+          target: mockItems[0].handle,
+          preventDefault: vi.fn()
+        });
+
+        // 2. Drag item 0 to slot 1
+        windowListeners['pointermove']({
+          clientX: 170,
+          clientY: 50,
+          pointerId: 20,
+          cancelable: true,
+          preventDefault: vi.fn()
+        });
+        expect(mockItems[1].style.transform).toBe('translate(-120px, 0px)');
+
+        // 3. Pointer cancel (e.g. browser pinch gesture / system interruption)
+        windowListeners['pointercancel']({
+          clientX: 170,
+          clientY: 50,
+          pointerId: 20,
+          type: 'pointercancel'
+        });
+
+        expect(onReorder).not.toHaveBeenCalled();
+        expect(mockItems[0].style.transform).toBe('');
+        expect(mockItems[1].style.transform).toBe('');
+        expect(windowListeners['pointermove']).toBeUndefined();
+      } finally {
         (globalThis as any).window = origWindow;
       }
     });
