@@ -1,0 +1,124 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  apiKey       String?   @unique @map("api_key")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  jobs         Job[]
+
+  @@map("users")
+}
+
+model Job {
+  id           String      @id @default(cuid())
+  userId       String?     @map("user_id")
+  type         String      // pdf_compress, pdf_convert, media_transcode, ocr
+  status       String      @default("QUEUED") // QUEUED, PROCESSING, COMPLETED, FAILED, CANCELED
+  progress     Int         @default(0)
+  errorMessage String?     @map("error_message")
+  optionsJson  String      @map("options_json")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  startedAt    DateTime?   @map("started_at")
+  completedAt  DateTime?   @map("completed_at")
+
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  files        FileRecord[]
+
+  @@index([status, createdAt])
+  @@map("jobs")
+}
+
+model FileRecord {
+  id           String      @id @default(cuid())
+  jobId        String?     @map("job_id")
+  purpose      String      @default("UPLOAD") // UPLOAD, PROCESSED_ARTIFACT, TEMPORARY_SCRATCH
+  originalName String      @map("original_name")
+  storagePath  String      @map("storage_path")
+  mimeType     String      @map("mime_type")
+  sizeBytes    BigInt      @map("size_bytes")
+  hashSha256   String      @map("hash_sha256")
+  isPurged     Boolean     @default(false) @map("is_purged")
+  expiresAt    DateTime    @map("expires_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  job          Job?        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt, isPurged])
+  @@index([hashSha256])
+  @@map("files")
+}
+
+model SystemMetric {
+  id         Int      @id @default(autoincrement())
+  cpuUsage   Float    @map("cpu_usage")
+  ramUsage   Float    @map("ram_usage")
+  diskFreeGb Float    @map("disk_free_gb")
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@index([recordedAt])
+  @@map("system_metrics")
+}
+
+model DynamicQr {
+  id            String      @id @default(cuid())
+  slug          String      @unique
+  targetUrl     String      @map("target_url")
+  title         String?
+  scanCount     Int         @default(0) @map("scan_count")
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  lastScannedAt DateTime?   @map("last_scanned_at")
+  scans         QrScanLog[]
+
+  @@index([slug])
+  @@index([createdAt])
+  @@map("dynamic_qrs")
+}
+
+model QrScanLog {
+  id          Int       @id @default(autoincrement())
+  dynamicQrId String    @map("dynamic_qr_id")
+  scannedAt   DateTime  @default(now()) @map("scanned_at")
+  userAgent   String?   @map("user_agent")
+  referer     String?
+  ipAddress   String?   @map("ip_address")
+
+  dynamicQr   DynamicQr @relation(fields: [dynamicQrId], references: [id], onDelete: Cascade)
+
+  @@index([dynamicQrId, scannedAt])
+  @@index([scannedAt])
+  @@map("qr_scan_logs")
+}
+
+model HistoryRecord {
+  id           String    @id @default(cuid())
+  toolId       String    @map("tool_id")
+  toolTitle    String    @map("tool_title")
+  fileName     String    @map("file_name")
+  originalSize BigInt    @default(0) @map("original_size")
+  resultSize   BigInt    @default(0) @map("result_size")
+  resultFileId String?   @map("result_file_id")
+  downloadUrl  String?   @map("download_url")
+  status       String    @default("success")
+  detailsJson  String?   @map("details_json")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([isDeleted, createdAt])
+  @@index([isDeleted, deletedAt])
+  @@index([resultFileId])
+  @@map("history_records")
+}
+

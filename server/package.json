@@ -1,0 +1,60 @@
+{
+  "name": "duydev-studio-server",
+  "version": "1.0.0",
+  "description": "DuyDev Studio - Personal Self-Hosted Utility Hub Backend Engine",
+  "type": "module",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/multipart": "^8.1.0",
+    "@fastify/sensible": "^5.5.0",
+    "@fastify/static": "^7.0.4",
+    "@prisma/client": "^5.11.0",
+    "7zip-bin": "^5.2.0",
+    "bullmq": "^5.4.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.26.2",
+    "ioredis": "^5.3.2",
+    "jsqr": "^1.4.0",
+    "node-7z": "^3.0.0",
+    "node-stream-zip": "^1.15.0",
+    "pdf-lib": "^1.17.1",
+    "pino": "^8.19.0",
+    "qrcode": "^1.5.3",
+    "sharp": "^0.33.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@types/qrcode": "^1.5.5",
+    "@types/supertest": "^6.0.2",
+    "pino-pretty": "^10.3.1",
+    "prisma": "^5.11.0",
+    "supertest": "^6.3.4",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.2",
+    "vitest": "^1.4.0"
+  },
+  "keywords": [
+    "self-hosted",
+    "fastify",
+    "bullmq",
+    "pdf-tools",
+    "converter",
+    "archive-inspector",
+    "vietqr"
+  ],
+  "author": "DuyDev",
+  "license": "MIT"
+}
