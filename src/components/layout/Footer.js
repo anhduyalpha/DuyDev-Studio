@@ -13,7 +13,7 @@ export function renderFooter() {
         </div>
 
         <div class="flex items-center gap-4 text-zinc-700 dark:text-zinc-300 font-medium">
-          <a href="#" class="hover:text-black dark:hover:text-white transition">Điều khoản</a>
+          <a href="#terms" class="hover:text-black dark:hover:text-white transition">Điều khoản</a>
           <span>•</span>
           <a href="#settings" class="hover:text-black dark:hover:text-white transition">Cài đặt</a>
         </div>

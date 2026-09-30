@@ -21,6 +21,7 @@ const ASSETS_TO_PRECACHE = [
   './src/app.js?v=14.2',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
+  './src/pages/TermsPage.js',
   './src/assets/logo-ds.svg',
   './src/assets/icon-192.svg',
   './src/assets/icon-512.svg'

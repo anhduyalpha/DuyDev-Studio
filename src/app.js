@@ -23,6 +23,7 @@ import { renderArchiveCompressWorkspace, attachArchiveCompressListeners } from '
 import { renderHistoryPage, attachHistoryPageListeners } from './pages/HistoryPage.js';
 import { renderServerPage, attachServerPageListeners } from './pages/ServerPage.js';
 import { renderStoragePage, attachStoragePageListeners } from './pages/StoragePage.js';
+import { renderTermsPage, attachTermsPageListeners } from './pages/TermsPage.js';
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
 import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
@@ -290,6 +291,8 @@ class App {
       setView(renderStoragePage(), () => attachStoragePageListeners(onSoftReRender));
     } else if (hash === '#settings' || hash === '#server') {
       setView(renderServerPage(), () => attachServerPageListeners(onSoftReRender));
+    } else if (hash === '#terms' || hash === '#terms-of-service' || hash === '#dieu-khoan') {
+      setView(renderTermsPage(), () => attachTermsPageListeners(onSoftReRender));
     } else {
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
     }

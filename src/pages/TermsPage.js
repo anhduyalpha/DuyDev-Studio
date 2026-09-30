@@ -1,0 +1,253 @@
+/**
+ * TermsPage.js - Điều khoản dịch vụ & Tuyên bố miễn trừ hài hước
+ * DuyDev Studio Personal Utility Hub
+ */
+
+import { copyText } from '../utilities/clipboard.js';
+import { showToast } from '../utilities/toast.js';
+
+export function renderTermsPage() {
+  return `
+    <div class="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
+      <!-- Breadcrumb -->
+      <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+        <a href="#" class="hover:text-zinc-800 dark:hover:text-zinc-200 transition">Trang chủ</a>
+        <span>/</span>
+        <span class="text-zinc-900 dark:text-zinc-100 font-medium">Điều khoản dịch vụ</span>
+      </div>
+
+      <!-- Hero Header -->
+      <div class="relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-gradient-to-b from-white to-zinc-50/50 dark:from-zinc-900/90 dark:to-[#0c0c0e] p-6 sm:p-8 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold tracking-wide">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>PHIÊN BẢN CƠM THÊM • MIỄN TRỪ TRÁCH NHIỆM</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              Điều khoản sử dụng & Tuyên bố miễn trừ
+            </h1>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+              Vui lòng đọc kỹ trước khi bấm lung tung. Đọc hay không đọc thì đằng nào bạn cũng đã lỡ bấm vào web rồi.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3 shrink-0">
+            <a href="#" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 text-xs font-medium text-zinc-700 dark:text-zinc-200 transition shadow-sm cursor-pointer">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              <span>Quay lại Dashboard</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tuyên ngôn cốt lõi -->
+      <div class="p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200 flex items-start gap-3.5">
+        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center shrink-0 text-amber-600 dark:text-amber-400">
+          <i data-lucide="info" class="w-4 h-4"></i>
+        </div>
+        <div class="text-xs sm:text-sm leading-relaxed space-y-1">
+          <p class="font-semibold text-amber-900 dark:text-amber-100">
+            Tuyên ngôn khai sinh của website:
+          </p>
+          <p class="text-amber-800/90 dark:text-amber-200/90 font-medium">
+            "Đây là web lỏ tự code phục vụ nhu cầu cá nhân của Anh Duy để làm việc, nén PDF cho lẹ, cào tài liệu học tập, soi file zip và nghịch linh tinh, chứ không phải tập đoàn công nghệ triệu đô nào cả."
+          </p>
+        </div>
+      </div>
+
+      <!-- Danh sách điều khoản -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Điều 1 -->
+        <div class="p-5 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] space-y-3 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
+              <i data-lucide="flame" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-rose-500 font-semibold">Điều 1</span>
+              <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Miễn trừ trách nhiệm cấp vũ trụ</h3>
+            </div>
+          </div>
+          <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Hệ thống chạy trên một chiếc máy chủ homeserver nhỏ bé đặt dưới gầm bàn. Nếu một ngày web lăn ra chết, đừng hoảng loạn, có thể mẹ tác giả vừa rút nhầm dây nguồn để cắm nồi cơm điện, hoặc mạng nhà đang đứt cáp quang.
+          </p>
+          <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+            ⚠️ Tác giả không chịu trách nhiệm nếu bạn nén tài liệu lúc 23:59 rồi bị trễ hạn nộp bài. Hãy nộp sớm hơn đi!
+          </div>
+        </div>
+
+        <!-- Điều 2 -->
+        <div class="p-5 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] space-y-3 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-500 font-semibold">Điều 2</span>
+              <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Bảo mật & Quyền riêng tư (Thật 100%)</h3>
+            </div>
+          </div>
+          <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Chúng tôi cam đoan không bán dữ liệu của bạn cho bất kỳ ai — đơn giản vì dữ liệu của bạn chả ai thèm mua, và tác giả cũng lười viết database lưu lịch sử xem của bạn.
+          </p>
+          <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+            🔒 Mọi tệp xử lý xong được cơ chế dọn rác tự động xóa sạch, không ai rảnh ngồi đọc tài liệu của bạn đâu.
+          </div>
+        </div>
+
+        <!-- Điều 3 -->
+        <div class="p-5 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] space-y-3 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-500 dark:text-indigo-400 shrink-0">
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-indigo-500 font-semibold">Điều 3</span>
+              <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Văn hóa sử dụng chùa văn minh</h3>
+            </div>
+          </div>
+          <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Dùng tẹt ga không tốn một xu, không quảng cáo cờ bạc, không pop-up phiền toái. Nhưng xin đừng đem bot đi DDoS hay cào phá server. Con chip Celeron gánh còng lưng, ép quá nó bốc khói là cả làng cùng nhịn.
+          </p>
+          <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+            🛠️ Thấy lỗi thì hoan hỉ nhắn dev một tiếng, đừng ngồi chửi thầm tội nghiệp.
+          </div>
+        </div>
+
+        <!-- Điều 4 -->
+        <div class="p-5 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] space-y-3 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-500 dark:text-amber-400 shrink-0">
+              <i data-lucide="coffee" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-amber-500 font-semibold">Điều 4</span>
+              <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Chính sách Dô-nết (Nuôi Server)</h3>
+            </div>
+          </div>
+          <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Nếu công cụ này giúp bạn kịp qua môn, tiết kiệm 15 phút cuộc đời hoặc đơn giản là thấy dev dễ thương: xin mời dô-nết tùy tâm! Tiền ủng hộ sẽ được chuyển hóa thành tiền điện, tiền mạng hoặc vài gói mì Hảo Hảo lúc nửa đêm.
+          </p>
+          <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+            ❤️ Không ép buộc, nhưng ai donate thì server sẽ tự động chạy nhanh hơn 0.01% nhờ aura tâm linh.
+          </div>
+        </div>
+      </div>
+
+      <!-- Hộp Dô-Nết / Donate Cực Xịn -->
+      <div id="donateSection" class="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/40 via-zinc-900/90 to-[#0e0e12] p-6 sm:p-8 shadow-xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/20 shrink-0">
+              <i data-lucide="heart" class="w-6 h-6 fill-white"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base sm:text-lg font-bold text-white">Quỹ bảo kê tiền điện & mì tôm cho Dev</h2>
+                <span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-mono font-semibold">DÔ-NẾT TÙY TÂM</span>
+              </div>
+              <p class="text-xs text-zinc-400 mt-0.5">Một ly trà đá hay gói bim bim cũng đủ làm dev cảm động rớt nước mắt.</p>
+            </div>
+          </div>
+
+          <a href="#tool/qr-multi" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-white font-medium transition cursor-pointer border border-white/10 self-start sm:self-auto">
+            <i data-lucide="qr-code" class="w-4 h-4 text-indigo-400"></i>
+            <span>Mở QR Studio</span>
+          </a>
+        </div>
+
+        <!-- Bank Card & QR Display Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
+          <!-- Chi tiết tài khoản -->
+          <div class="space-y-3.5 bg-black/40 border border-white/10 rounded-2xl p-4 sm:p-5">
+            <div class="flex items-center justify-between text-xs text-zinc-400 border-b border-white/5 pb-2.5">
+              <span>Ngân hàng</span>
+              <span class="font-semibold text-zinc-200">MB Bank (Ngân hàng Quân Đội)</span>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-zinc-400 border-b border-white/5 pb-2.5">
+              <span>Chủ tài khoản</span>
+              <span class="font-bold text-amber-400 tracking-wide font-mono uppercase">DANG ANH DUY</span>
+            </div>
+
+            <div class="space-y-1.5">
+              <span class="text-xs text-zinc-400 block">Số tài khoản nhận donate</span>
+              <div class="flex items-center gap-2">
+                <span id="donateStk" class="font-mono text-lg sm:text-xl font-bold text-white tracking-widest bg-zinc-900/90 px-3.5 py-2 rounded-xl border border-indigo-500/40 flex-1 select-all">
+                  0768134698
+                </span>
+                <button type="button" id="btnCopyStk" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30">
+                  <i data-lucide="copy" class="w-4 h-4"></i>
+                  <span>Sao chép</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-zinc-400 pt-1 flex items-center gap-2">
+              <i data-lucide="message-square" class="w-3.5 h-3.5 text-zinc-500 shrink-0"></i>
+              <span>Lời nhắn gợi ý: <span class="text-zinc-300 font-mono italic">"Nuoi server lo"</span> hoặc <span class="text-zinc-300 font-mono italic">"Moi Duy ly cafe"</span></span>
+            </div>
+          </div>
+
+          <!-- Lời cảm tạ & Bảo chứng -->
+          <div class="p-5 rounded-2xl border border-white/10 bg-black/20 space-y-4 text-xs text-zinc-300 leading-relaxed">
+            <div class="flex items-center gap-2.5 text-amber-400 font-semibold">
+              <i data-lucide="award" class="w-4 h-4"></i>
+              <span>Cam kết minh bạch của Dev:</span>
+            </div>
+            <ul class="space-y-2 list-disc list-inside text-zinc-400">
+              <li>100% tiền donate sẽ đi thẳng vào tiền điện nuôi homeserver và dạ dày của dev.</li>
+              <li>Tuyệt đối không hoàn tiền dưới mọi hình thức vì có thể tiền đã được dùng để mua xúc xích.</li>
+              <li>Người donate được nhận lời chúc sức khỏe, may mắn và pass qua mọi môn học từ vũ trụ.</li>
+            </ul>
+
+            <div class="pt-2 flex flex-wrap gap-2">
+              <button type="button" id="btnQuickCopy5k" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium cursor-pointer transition">
+                ☕ Ủng hộ 10.000đ (Ly trà đá)
+              </button>
+              <button type="button" id="btnQuickCopy20k" class="px-3 py-1.5 rounded-lg bg-indigo-900/40 hover:bg-indigo-900/70 border border-indigo-500/30 text-indigo-200 text-xs font-medium cursor-pointer transition">
+                🍜 Ủng hộ 30.000đ (Tô hủ tiếu)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/80">
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-left">
+          Bằng việc tiếp tục ở lại trang này, bạn mặc nhiên đã đồng ý với tất cả điều khoản lỏ bên trên.
+        </p>
+        <div class="flex items-center gap-3">
+          <a href="#" class="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-semibold cursor-pointer transition shadow-sm">
+            Tôi đồng ý (dù chả còn cách nào khác)
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function attachTermsPageListeners() {
+  const btnCopyStk = document.getElementById('btnCopyStk');
+  const donateStk = document.getElementById('donateStk');
+
+  const handleCopy = async (note = '') => {
+    const stk = donateStk?.textContent?.trim() || '0768134698';
+    const success = await copyText(stk);
+    if (success) {
+      showToast(note ? `Đã sao chép STK: ${stk} (${note})! Cảm ơn đại gia ❤️` : `Đã sao chép STK: ${stk}! Cảm ơn đại gia ❤️`, 'success');
+    } else {
+      showToast(`STK: ${stk} - MB Bank (DANG ANH DUY)`, 'info');
+    }
+  };
+
+  btnCopyStk?.addEventListener('click', () => handleCopy());
+  document.getElementById('btnQuickCopy5k')?.addEventListener('click', () => handleCopy('Ly trà đá'));
+  document.getElementById('btnQuickCopy20k')?.addEventListener('click', () => handleCopy('Tô hủ tiếu'));
+
+  return () => {
+    // Teardown cleanup if needed
+  };
+}
