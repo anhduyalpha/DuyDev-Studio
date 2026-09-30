@@ -92,29 +92,47 @@ class App {
     this._checkingShareTarget = true;
 
     try {
+      // 1. Extract query params from both window.location.search and window.location.hash
+      const searchParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      const queryIndex = hash.indexOf('?');
+      const hashParams = queryIndex !== -1 ? new URLSearchParams(hash.substring(queryIndex + 1)) : new URLSearchParams();
+
+      const url = searchParams.get('url') || hashParams.get('url') || '';
+      const text = searchParams.get('text') || hashParams.get('text') || '';
+      const title = searchParams.get('title') || hashParams.get('title') || '';
+      const hasFiles = searchParams.get('hasFiles') === '1' || hashParams.get('hasFiles') === '1';
+      const isShareRoute = hash.startsWith('#share-target') || window.location.pathname.endsWith('/share-target') || hasFiles || Boolean(url || text);
+
+      // 2. Poll IndexedDB with backoff if this is a share event (prevents race condition with SW write)
       let payload = await retrievePendingSharedData();
-      if (!payload) {
-        const hash = window.location.hash;
-        if (hash.startsWith('#share-target?') || hash === '#share-target') {
-          const queryIndex = hash.indexOf('?');
-          if (queryIndex !== -1) {
-            const params = new URLSearchParams(hash.substring(queryIndex + 1));
-            const url = params.get('url') || '';
-            const text = params.get('text') || '';
-            const title = params.get('title') || '';
-            if (url || text || title) {
-              payload = { url, text, title, files: [] };
-            }
-          }
+      if (!payload && isShareRoute) {
+        for (let i = 0; i < 4; i++) {
+          await new Promise(r => setTimeout(r, 120));
+          payload = await retrievePendingSharedData();
+          if (payload) break;
         }
+      }
+
+      // 3. Fallback to URL parameters if IndexedDB had no files
+      if (!payload && (url || text || title)) {
+        payload = { url, text, title, files: [] };
+      }
+
+      // 4. Merge URL parameters into payload if missing
+      if (payload) {
+        if (!payload.url && url) payload.url = url;
+        if (!payload.text && text) payload.text = text;
+        if (!payload.title && title) payload.title = title;
       }
 
       if (!payload) {
         if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
-          history.replaceState(null, '', window.location.pathname + window.location.search);
+          history.replaceState(null, '', window.location.pathname);
         }
         return;
       }
+
       openShareTargetModal(payload);
     } finally {
       this._checkingShareTarget = false;

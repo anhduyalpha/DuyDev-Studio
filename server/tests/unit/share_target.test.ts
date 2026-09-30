@@ -241,6 +241,28 @@ describe('Web Share Target & Classifier Suite', () => {
       }
     });
 
+    it('should classify Google Images URL containing imgurl parameter as IMAGE_URL with QR scan', () => {
+      const googleImgUrl = 'https://www.google.com/imgres?q=qr%20code&imgurl=https%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fd%2Fd0%2FQR_code_for_mobile_English_Wikipedia.svg&imgrefurl=https%3A%2F%2Fen.wikipedia.org';
+      const result = classifySharedPayload({
+        url: googleImgUrl
+      });
+
+      expect(result.type).toBe(SharePayloadType.IMAGE_URL);
+      expect(result.recommendations[0].isPrimary).toBe(true);
+      expect(result.recommendations[0].route).toBe('#tool/qr-scan');
+      expect(result.recommendations[0].imageUrl).toContain('QR_code_for_mobile_English_Wikipedia.svg');
+    });
+
+    it('should classify direct image URL as IMAGE_URL with QR scan', () => {
+      const directImageUrl = 'https://example.com/assets/wifi_qr_code.png?v=2';
+      const result = classifySharedPayload({
+        url: directImageUrl
+      });
+
+      expect(result.type).toBe(SharePayloadType.IMAGE_URL);
+      expect(result.recommendations[0].route).toBe('#tool/qr-scan');
+    });
+
     it('should handle null elements in files array gracefully', () => {
       const nullFileResult = classifySharedPayload({
         files: [null as any]

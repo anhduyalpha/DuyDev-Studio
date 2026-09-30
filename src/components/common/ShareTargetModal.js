@@ -11,10 +11,11 @@ import { formatBytes } from '../../utilities/formatters.js';
 let cleanupFn = null;
 
 const TYPE_LABELS = {
-  [SharePayloadType.STUDOCU_URL]: 'Liên kết Studocu',
-  [SharePayloadType.GENERIC_URL]: 'Liên kết',
+  [SharePayloadType.STUDOCU_URL]: 'Tài liệu Studocu',
+  [SharePayloadType.IMAGE_URL]: 'Liên kết Hình ảnh / QR',
+  [SharePayloadType.GENERIC_URL]: 'Liên kết Web',
   [SharePayloadType.PLAIN_TEXT]: 'Văn bản',
-  [SharePayloadType.IMAGE_FILES]: 'Hình ảnh',
+  [SharePayloadType.IMAGE_FILES]: 'Tệp Hình ảnh',
   [SharePayloadType.PDF_FILES]: 'Tài liệu PDF',
   [SharePayloadType.ARCHIVE_FILES]: 'Tệp nén',
   [SharePayloadType.GENERIC_FILES]: 'Tệp tin',
@@ -22,6 +23,7 @@ const TYPE_LABELS = {
 
 const TYPE_ICONS = {
   [SharePayloadType.STUDOCU_URL]: 'book-open',
+  [SharePayloadType.IMAGE_URL]: 'image',
   [SharePayloadType.GENERIC_URL]: 'link',
   [SharePayloadType.PLAIN_TEXT]: 'type',
   [SharePayloadType.IMAGE_FILES]: 'image',
@@ -38,41 +40,43 @@ const TYPE_ICONS = {
  */
 function renderPayloadPreview(payload, classification) {
   const icon = TYPE_ICONS[classification.type] || 'file';
-  const label = TYPE_LABELS[classification.type] || 'Dữ liệu';
+  const label = TYPE_LABELS[classification.type] || 'Dữ liệu chia sẻ';
   const parts = [];
 
   if (payload.url) {
     try {
-      const domain = new URL(payload.url).hostname;
-      parts.push(`<span class="text-xs text-zinc-400 truncate block" title="${payload.url}">${domain}</span>`);
+      const parsed = new URL(payload.url);
+      const displayDomain = parsed.hostname.replace(/^www\./, '');
+      const pathSnippet = parsed.pathname.length > 25 ? parsed.pathname.slice(0, 25) + '…' : parsed.pathname;
+      parts.push(`<span class="text-xs text-zinc-300 font-mono truncate block" title="${payload.url}">${displayDomain}${pathSnippet}</span>`);
     } catch {
-      parts.push(`<span class="text-xs text-zinc-400 truncate block">${payload.url}</span>`);
+      parts.push(`<span class="text-xs text-zinc-300 font-mono truncate block">${payload.url}</span>`);
     }
   } else if (payload.text) {
     const preview = payload.text.length > 80 ? payload.text.slice(0, 80) + '…' : payload.text;
     parts.push(`<span class="text-xs text-zinc-400 truncate block">${preview}</span>`);
   }
 
-  if (payload.files?.length) {
+  if (payload.files && payload.files.length > 0) {
     const fileList = payload.files.slice(0, 3).map(f =>
-      `<span class="text-xs text-zinc-400">${f.name} <span class="text-zinc-600">(${formatBytes(f.size)})</span></span>`
+      `<span class="text-xs text-zinc-300">${f.name} <span class="text-zinc-500 font-mono">(${formatBytes(f.size)})</span></span>`
     ).join('<br>');
     if (payload.files.length > 3) {
-      parts.push(fileList + `<br><span class="text-xs text-zinc-500">+${payload.files.length - 3} tệp khác</span>`);
+      parts.push(fileList + `<br><span class="text-xs text-zinc-500 font-semibold">+${payload.files.length - 3} tệp khác</span>`);
     } else {
       parts.push(fileList);
     }
   }
 
   return `
-    <div class="flex items-start gap-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
-      <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 shrink-0">
-        <i data-lucide="${icon}" class="w-4 h-4"></i>
+    <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-zinc-800/50 border border-zinc-700/60 shadow-inner">
+      <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+        <i data-lucide="${icon}" class="w-5 h-5"></i>
       </div>
-      <div class="min-w-0 flex-1">
-        <span class="inline-block px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 text-[10px] font-semibold uppercase tracking-wider">${label}</span>
-        ${payload.title ? `<p class="text-sm text-zinc-200 mt-1 truncate">${payload.title}</p>` : ''}
-        <div class="mt-1">${parts.join('')}</div>
+      <div class="min-w-0 flex-1 space-y-1">
+        <span class="inline-block px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold uppercase tracking-wider">${label}</span>
+        ${payload.title ? `<p class="text-sm font-medium text-zinc-100 truncate">${payload.title}</p>` : ''}
+        <div class="space-y-0.5">${parts.join('')}</div>
       </div>
     </div>
   `;
@@ -80,7 +84,7 @@ function renderPayloadPreview(payload, classification) {
 
 /**
  * Build action cards grid HTML.
- * @param {Array<{ label: string, route: string, mode?: string, isPrimary?: boolean }>} recommendations
+ * @param {Array<{ label: string, route: string, mode?: string, imageUrl?: string, isPrimary?: boolean }>} recommendations
  * @returns {string}
  */
 function renderActionCards(recommendations) {
@@ -88,12 +92,12 @@ function renderActionCards(recommendations) {
     <button type="button"
       class="share-action-card group flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-left w-full
         ${rec.isPrimary
-          ? 'border-indigo-500/50 bg-indigo-500/10 hover:bg-indigo-500/20'
+          ? 'border-indigo-500/60 bg-indigo-500/15 hover:bg-indigo-500/25 shadow-sm'
           : 'border-zinc-700/50 bg-zinc-800/30 hover:bg-zinc-800/60 hover:border-zinc-600'}"
       data-action-index="${i}">
-      ${rec.isPrimary ? '<span class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider shrink-0">★</span>' : ''}
-      <span class="text-sm text-zinc-200 group-hover:text-white">${rec.label}</span>
-      <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 ml-auto shrink-0"></i>
+      ${rec.isPrimary ? '<span class="text-xs text-indigo-400 font-bold shrink-0">★</span>' : '<span class="text-xs text-zinc-600 shrink-0">•</span>'}
+      <span class="text-xs sm:text-sm font-medium text-zinc-200 group-hover:text-white flex-1">${rec.label}</span>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 ml-auto shrink-0 transition-transform group-hover:translate-x-0.5"></i>
     </button>
   `).join('');
 }
@@ -107,8 +111,8 @@ export function openShareTargetModal(payload) {
   if (!container) return;
 
   const classification = classifySharedPayload(payload);
-  if (!classification.recommendations.length) {
-    // Nothing to recommend — clean hash if on #share-target and exit
+  if (!classification.recommendations || !classification.recommendations.length) {
+    // If no recommendations, clean hash if on #share-target and exit
     if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
@@ -122,16 +126,19 @@ export function openShareTargetModal(payload) {
   }
 
   container.innerHTML = `
-    <div id="shareTargetBackdrop" class="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-sm animate-fadeIn" style="animation: fadeIn 0.15s ease-out;"></div>
+    <div id="shareTargetBackdrop" class="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm animate-fadeIn"></div>
     <div class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div id="shareTargetPanel" class="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-zinc-800 bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div id="shareTargetPanel" class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-zinc-800 bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
         <!-- Header -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between pb-1 border-b border-zinc-800/60">
           <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 shrink-0">
               <i data-lucide="share-2" class="w-4 h-4"></i>
             </div>
-            <h3 class="text-sm font-semibold text-zinc-100">Dữ liệu chia sẻ</h3>
+            <div>
+              <h3 class="text-sm font-bold text-zinc-100">Chia sẻ vào DuyDev Studio</h3>
+              <p class="text-[11px] text-zinc-500">Chọn module để nạp và xử lý tệp</p>
+            </div>
           </div>
           <button type="button" id="shareTargetBtnClose" class="text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-800/80 transition cursor-pointer" title="Đóng">
             <i data-lucide="x" class="w-4 h-4"></i>
@@ -143,7 +150,7 @@ export function openShareTargetModal(payload) {
 
         <!-- Action Cards -->
         <div class="space-y-2">
-          <p class="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">Chọn hành động</p>
+          <p class="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider">Hành động gợi ý</p>
           <div class="space-y-2">
             ${renderActionCards(classification.recommendations)}
           </div>
@@ -187,9 +194,9 @@ export function closeShareTargetModal() {
     cleanupFn();
     cleanupFn = null;
   }
-  // Clean hash if it's #share-target
+  // Clean hash and query params if on share-target
   if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
-    history.replaceState(null, '', window.location.pathname + window.location.search);
+    history.replaceState(null, '', window.location.pathname);
   }
   // If mainContent is unexpectedly empty, ensure home view renders
   const main = document.getElementById('mainContent');
@@ -199,9 +206,25 @@ export function closeShareTargetModal() {
 }
 
 /**
+ * Fetch image blob helper with graceful CORS fallback
+ * @param {string} imageUrl
+ * @returns {Promise<File|null>}
+ */
+async function fetchImageAsFile(imageUrl) {
+  try {
+    const resp = await fetch(imageUrl);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    const ext = blob.type.split('/')[1] || 'png';
+    return new File([blob], `shared-image.${ext}`, { type: blob.type || 'image/png' });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Dispatch shared payload to the selected tool module.
- * Uses dynamic imports to load only the target module.
- * @param {{ label: string, route: string, mode?: string }} action
+ * @param {{ label: string, route: string, mode?: string, imageUrl?: string }} action
  * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
  */
 async function dispatchSharedPayloadToTool(action, payload) {
@@ -227,7 +250,32 @@ async function dispatchSharedPayloadToTool(action, payload) {
       }
       case '#tool/qr-scan': {
         const { processScanFile } = await import('../tools/qr/hooks/useQrActions.js');
-        if (files?.[0]) await processScanFile(files[0], onReRender);
+        if (files?.[0]) {
+          await processScanFile(files[0], onReRender);
+        } else if (action.imageUrl || url) {
+          const imgUrl = action.imageUrl || url;
+          const file = await fetchImageAsFile(imgUrl);
+          if (file) {
+            await processScanFile(file, onReRender);
+          } else {
+            // Attempt server proxy decode
+            try {
+              const res = await fetch('/api/v1/qr/decode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl: imgUrl })
+              });
+              const json = await res.json();
+              if (json.success && json.data?.text) {
+                const { qrState } = await import('../tools/qr/hooks/useQrState.js');
+                qrState.scan.result = json.data.text;
+                onReRender();
+              }
+            } catch (err) {
+              console.warn('[ShareTarget] Image scan fallback failed:', err);
+            }
+          }
+        }
         break;
       }
       case '#tool/qr-multi': {
@@ -258,12 +306,22 @@ async function dispatchSharedPayloadToTool(action, payload) {
       case '#tool/pdf-studio': {
         const { pdfQueueManager } = await import('../tools/pdf/hooks/usePdfQueue.js');
         if (action.mode) pdfQueueManager.setMode(action.mode);
-        if (files?.length) await pdfQueueManager.addFiles(files);
+        if (files?.length) {
+          await pdfQueueManager.addFiles(files);
+        } else if (action.imageUrl) {
+          const imgFile = await fetchImageAsFile(action.imageUrl);
+          if (imgFile) await pdfQueueManager.addFiles([imgFile]);
+        }
         break;
       }
       case '#tool/universal-converter': {
         const { converterManager } = await import('../tools/converter/hooks/useConverter.js');
-        if (files?.length) converterManager.addFiles(files);
+        if (files?.length) {
+          converterManager.addFiles(files);
+        } else if (action.imageUrl) {
+          const imgFile = await fetchImageAsFile(action.imageUrl);
+          if (imgFile) converterManager.addFiles([imgFile]);
+        }
         break;
       }
       case '#tool/archive-inspect': {

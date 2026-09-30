@@ -1,12 +1,13 @@
 /**
  * @module shareTargetHelper
  * Utilities for reading, classifying, and cleaning up Web Share Target payloads
- * stored in IndexedDB by the Service Worker.
+ * stored in IndexedDB by the Service Worker or provided via URL parameters.
  */
 
 /** @enum {string} Payload classification types */
 export const SharePayloadType = {
   STUDOCU_URL: 'STUDOCU_URL',
+  IMAGE_URL: 'IMAGE_URL',
   GENERIC_URL: 'GENERIC_URL',
   PLAIN_TEXT: 'PLAIN_TEXT',
   IMAGE_FILES: 'IMAGE_FILES',
@@ -26,12 +27,46 @@ const ARCHIVE_MIMES = [
   'application/vnd.rar',
   'application/x-bzip2'
 ];
-const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff|svg|avif|ico)$/i;
+const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff|svg|avif|ico)(\?.*)?$/i;
 
 function isStudocuHost(hostname) {
   if (!hostname) return false;
   const host = hostname.toLowerCase();
   return host === 'studocu.com' || host.endsWith('.studocu.com') || host === 'studocu.vn' || host.endsWith('.studocu.vn');
+}
+
+/**
+ * Extracts a direct image URL from Google Images, search links, or text containing image URLs.
+ * @param {string} [url]
+ * @param {string} [text]
+ * @returns {string|null} Direct image URL if detected
+ */
+export function extractImageUrlFromTextOrUrl(url = '', text = '') {
+  const combined = `${url} ${text}`.trim();
+  if (!combined) return null;
+
+  // 1. Check for Google Images imgurl parameter
+  const imgUrlMatch = combined.match(/[?&]imgurl=([^&\s]+)/i);
+  if (imgUrlMatch && imgUrlMatch[1]) {
+    try {
+      return decodeURIComponent(imgUrlMatch[1]);
+    } catch {
+      return imgUrlMatch[1];
+    }
+  }
+
+  // 2. Check for direct image URLs ending in image extensions
+  const directImgMatch = combined.match(/https?:\/\/[^\s"'<>]+\.(?:jpe?g|png|webp|gif|bmp|svg|avif)(?:\?[^\s"'<>]*)?/i);
+  if (directImgMatch) {
+    return directImgMatch[0];
+  }
+
+  // 3. Check for Google app shortlinks or Google imgres
+  if (url && (url.includes('images.app.goo.gl') || url.includes('google.com/imgres'))) {
+    return url;
+  }
+
+  return null;
 }
 
 /**
@@ -72,7 +107,7 @@ export async function retrievePendingSharedData() {
     });
     db.close();
 
-    if (!allPayloads.length) return null;
+    if (!allPayloads || !allPayloads.length) return null;
     return allPayloads[allPayloads.length - 1];
   } catch {
     return null;
@@ -80,9 +115,9 @@ export async function retrievePendingSharedData() {
 }
 
 /**
- * Classify share payload and return type + recommended actions.
+ * Classify share payload and return type + rich recommended actions.
  * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
- * @returns {{ type: string, recommendations: Array<{ label: string, route: string, mode?: string, isPrimary?: boolean }> }}
+ * @returns {{ type: string, recommendations: Array<{ label: string, route: string, mode?: string, imageUrl?: string, isPrimary?: boolean }> }}
  */
 export function classifySharedPayload(payload) {
   const { url, text, files } = payload || {};
@@ -100,10 +135,10 @@ export function classifySharedPayload(payload) {
       return {
         type: SharePayloadType.IMAGE_FILES,
         recommendations: [
-          { label: 'Quét mã QR từ ảnh', route: '#tool/qr-scan', isPrimary: true },
+          { label: 'Quét mã QR từ ảnh này', route: '#tool/qr-scan', isPrimary: true },
+          { label: 'Đổi định dạng ảnh (Converter)', route: '#tool/universal-converter' },
           { label: 'Chuyển ảnh thành PDF', route: '#tool/pdf-studio', mode: 'images_to_pdf' },
-          { label: 'Đổi định dạng ảnh', route: '#tool/universal-converter' },
-          { label: 'Tính mã băm', route: '#tool/hash-checksum' },
+          { label: 'Tính mã băm kiểm tra toàn vẹn', route: '#tool/hash-checksum' },
         ],
       };
     }
@@ -116,7 +151,7 @@ export function classifySharedPayload(payload) {
           { label: 'PDF sang Word', route: '#tool/pdf-studio', mode: 'pdf_to_docx' },
           { label: 'Tách trang', route: '#tool/pdf-studio', mode: 'split' },
           { label: 'Xoay trang', route: '#tool/pdf-studio', mode: 'rotate' },
-          { label: 'Xem tài liệu', route: '#tool/pdf-studio', mode: 'view' },
+          { label: 'Xem tài liệu PDF', route: '#tool/pdf-studio', mode: 'view' },
         ],
       };
     }
@@ -128,8 +163,8 @@ export function classifySharedPayload(payload) {
       return {
         type: SharePayloadType.ARCHIVE_FILES,
         recommendations: [
-          { label: 'Soi tệp nén', route: '#tool/archive-inspect', isPrimary: true },
-          { label: 'Chuyển đổi định dạng', route: '#tool/universal-converter' },
+          { label: 'Soi tệp nén trực tuyến', route: '#tool/archive-inspect', isPrimary: true },
+          { label: 'Chuyển đổi định dạng tệp', route: '#tool/universal-converter' },
         ],
       };
     }
@@ -143,7 +178,21 @@ export function classifySharedPayload(payload) {
     };
   }
 
-  // 2. URL-based classification
+  // 2. Image URL / Google Image search detection
+  const detectedImageUrl = extractImageUrlFromTextOrUrl(url, text);
+  if (detectedImageUrl) {
+    return {
+      type: SharePayloadType.IMAGE_URL,
+      recommendations: [
+        { label: 'Quét mã QR từ liên kết ảnh này', route: '#tool/qr-scan', imageUrl: detectedImageUrl, isPrimary: true },
+        { label: 'Tải ảnh & Đổi định dạng', route: '#tool/universal-converter', imageUrl: detectedImageUrl },
+        { label: 'Chuyển ảnh thành PDF', route: '#tool/pdf-studio', mode: 'images_to_pdf', imageUrl: detectedImageUrl },
+        { label: 'Tạo mã QR cho liên kết gốc', route: '#tool/qr-multi' },
+      ],
+    };
+  }
+
+  // 3. URL-based classification
   const effectiveUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || '';
 
   if (effectiveUrl) {
@@ -154,7 +203,7 @@ export function classifySharedPayload(payload) {
           type: SharePayloadType.STUDOCU_URL,
           recommendations: [
             { label: 'Tải tài liệu Studocu', route: '#tool/studocu-dl', isPrimary: true },
-            { label: 'Tạo mã QR cho link này', route: '#tool/qr-multi' },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
           ],
         };
       }
@@ -163,18 +212,20 @@ export function classifySharedPayload(payload) {
     return {
       type: SharePayloadType.GENERIC_URL,
       recommendations: [
-        { label: 'Tạo mã QR cho link', route: '#tool/qr-multi', isPrimary: true },
+        { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi', isPrimary: true },
+        { label: 'Quét mã QR từ trang web này', route: '#tool/qr-scan' },
+        { label: 'Rút gọn liên kết', route: '#tool/qr-multi' },
       ],
     };
   }
 
-  // 3. Plain text
+  // 4. Plain text
   if (text) {
     return {
       type: SharePayloadType.PLAIN_TEXT,
       recommendations: [
-        { label: 'Tạo mã QR văn bản', route: '#tool/qr-multi', isPrimary: true },
-        { label: 'Tính mã băm', route: '#tool/hash-checksum' },
+        { label: 'Tạo mã QR cho văn bản này', route: '#tool/qr-multi', isPrimary: true },
+        { label: 'Tính mã băm chuỗi văn bản', route: '#tool/hash-checksum' },
       ],
     };
   }

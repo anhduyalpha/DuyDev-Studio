@@ -1,30 +1,35 @@
 /**
- * DuyDev Studio - Service Worker (v6.0 - Web Share Target + Network-First)
- * Provides offline caching, app installability, instant updates, and Share Target API
+ * DuyDev Studio - Service Worker (v6.1 - Bulletproof Share Target & App Shell)
+ * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v14.2';
+const CACHE_NAME = 'duydev-studio-v14.3';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=14.2',
-  './src/styles/studocu.css?v=14.2',
-  './src/styles/highlight-theme.css?v=14.2',
+  './src/styles/stitch-tokens.css?v=14.3',
+  './src/styles/studocu.css?v=14.3',
+  './src/styles/highlight-theme.css?v=14.3',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=14.2',
+  './src/app.js?v=14.3',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
   './src/assets/logo-ds.svg',
   './src/assets/icon-192.png',
   './src/assets/icon-512.png',
+  './src/assets/icon-maskable-192.png',
+  './src/assets/icon-maskable-512.png',
+  './src/assets/shortcut-pdf.png',
+  './src/assets/shortcut-archive.png',
+  './src/assets/shortcut-qr.png',
   './src/assets/icon-192.svg',
   './src/assets/icon-512.svg'
 ];
@@ -50,31 +55,58 @@ function openShareDb() {
  * @returns {Promise<void>}
  */
 async function saveSharePayload(payload) {
-  const db = await openShareDb();
-  const tx = db.transaction('shares', 'readwrite');
-  tx.objectStore('shares').add({ ...payload, timestamp: Date.now() });
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
+  try {
+    const db = await openShareDb();
+    const tx = db.transaction('shares', 'readwrite');
+    tx.objectStore('shares').add({ ...payload, timestamp: Date.now() });
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (err) {
+    console.warn('[SW] IndexedDB write failed:', err);
+  }
+}
+
+/**
+ * Helper to build client redirect URL preserving parameters across webview barriers
+ */
+function buildShareRedirectUrl(params) {
+  const base = self.registration ? self.registration.scope : self.location.href;
+  const redirectUrl = new URL('./', base);
+  if (params.url) redirectUrl.searchParams.set('url', params.url);
+  if (params.text) redirectUrl.searchParams.set('text', params.text);
+  if (params.title) redirectUrl.searchParams.set('title', params.title);
+  if (params.hasFiles) redirectUrl.searchParams.set('hasFiles', '1');
+  redirectUrl.searchParams.set('t', Date.now().toString());
+  redirectUrl.hash = '#share-target';
+  return redirectUrl.href;
 }
 
 /**
  * Handle POST /share-target from OS Share Sheet.
- * Parse formData, save to IndexedDB, notify clients, redirect.
+ * Parse formData, save to IndexedDB, notify clients, redirect with query params & hash.
  * @param {FetchEvent} event
  * @returns {Promise<Response>}
  */
 async function handleShareTargetPost(event) {
+  let payload = { title: '', text: '', url: '', files: [] };
   try {
     const formData = await event.request.formData();
-    const payload = {
-      title: formData.get('title') || '',
-      text: formData.get('text') || '',
-      url: formData.get('url') || '',
-      files: formData.getAll('shared_files').filter(f => f instanceof File && f.size > 0),
-    };
+    
+    // Inspect all entries to capture files regardless of field name variations
+    for (const [key, value] of formData.entries()) {
+      if (value && typeof value === 'object' && typeof value.size === 'number' && value.size > 0) {
+        payload.files.push(value);
+      } else if (!payload.url && key === 'url') {
+        payload.url = String(value || '').trim();
+      } else if (!payload.text && key === 'text') {
+        payload.text = String(value || '').trim();
+      } else if (!payload.title && key === 'title') {
+        payload.title = String(value || '').trim();
+      }
+    }
 
     // Some Android apps send URL in text field instead of url field
     if (!payload.url && payload.text) {
@@ -87,17 +119,46 @@ async function handleShareTargetPost(event) {
     // Wake up existing client tab if open
     const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: false });
     for (const client of allClients) {
-      client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED' });
+      client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED', payloadSummary: { hasFiles: payload.files.length > 0, url: payload.url } });
     }
 
-    // 303 See Other: POST → GET redirect (must be absolute URL for Response.redirect)
-    const redirectUrl = new URL('./#share-target', self.registration ? self.registration.scope : self.location.href).href;
+    const redirectUrl = buildShareRedirectUrl({
+      url: payload.url,
+      text: payload.text,
+      title: payload.title,
+      hasFiles: payload.files.length > 0
+    });
     return Response.redirect(redirectUrl, 303);
   } catch (err) {
-    console.error('[SW] Share target error:', err);
-    const redirectUrl = new URL('./#share-target', self.registration ? self.registration.scope : self.location.href).href;
+    console.error('[SW] Share target POST error:', err);
+    const redirectUrl = buildShareRedirectUrl({
+      url: payload.url,
+      text: payload.text,
+      title: payload.title,
+      hasFiles: payload.files.length > 0
+    });
     return Response.redirect(redirectUrl, 303);
   }
+}
+
+/**
+ * Handle GET /share-target fallback from browser or third party app
+ * @param {FetchEvent} event
+ * @param {URL} url
+ * @returns {Response}
+ */
+function handleShareTargetGet(url) {
+  const urlParam = url.searchParams.get('url') || '';
+  const textParam = url.searchParams.get('text') || '';
+  const titleParam = url.searchParams.get('title') || '';
+
+  const redirectUrl = buildShareRedirectUrl({
+    url: urlParam,
+    text: textParam,
+    title: titleParam,
+    hasFiles: false
+  });
+  return Response.redirect(redirectUrl, 303);
 }
 
 // ─── Lifecycle Events ───
@@ -136,11 +197,18 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  const isShareTarget = url.pathname.replace(/\/$/, '').endsWith('/share-target');
 
-  // 0. Share Target POST handler (must be BEFORE GET-only guard)
-  if (event.request.method === 'POST' && url.pathname.endsWith('/share-target')) {
-    event.respondWith(handleShareTargetPost(event));
-    return;
+  // 0. Share Target Handlers (intercepted BEFORE any caching or network guards)
+  if (isShareTarget) {
+    if (event.request.method === 'POST') {
+      event.respondWith(handleShareTargetPost(event));
+      return;
+    }
+    if (event.request.method === 'GET') {
+      event.respondWith(handleShareTargetGet(url));
+      return;
+    }
   }
 
   // Non-GET requests: pass through to network
