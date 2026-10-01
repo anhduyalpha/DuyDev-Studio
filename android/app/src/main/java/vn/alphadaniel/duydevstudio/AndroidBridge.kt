@@ -346,9 +346,13 @@ class AndroidBridge(
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or 
+                        Intent.FLAG_ACTIVITY_NEW_TASK or 
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
             }
 
+            activity.evaluateJs("if (typeof showToast === 'function') showToast('Đang mở trình cài đặt APK...', 'info');")
             activity.startActivity(installIntent)
         } catch (e: Exception) {
             val safeErr = (e.message ?: "Lỗi không xác định").replace("'", "\\'")

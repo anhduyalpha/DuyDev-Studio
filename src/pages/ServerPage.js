@@ -69,13 +69,13 @@ export function renderServerPage() {
         </div>
       </div>
 
-      <!-- 2. Quản trị Dữ liệu & Hệ thống (Bảo vệ bằng mật khẩu Admin) -->
+      <!-- 2. Quản trị Hệ thống & Đường truyền (Bảo vệ bằng mật khẩu Admin) -->
       <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
         ${!isAdmin ? `
           <!-- Trạng thái đã khóa -->
           <div class="flex items-center justify-between">
             <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i> Quyền riêng tư & Dữ liệu
+              <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i> Quản trị Hệ thống & Đường truyền
             </h3>
             <span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold flex items-center gap-1.5">
               <i data-lucide="lock" class="w-3 h-3"></i> ĐÃ KHÓA
@@ -85,7 +85,7 @@ export function renderServerPage() {
           <div class="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/[0.05] space-y-3">
             <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
               <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
-              <span>Khu vực dành riêng cho Quản trị viên. Nhập mật khẩu để thao tác dữ liệu và cấu hình hệ thống.</span>
+              <span>Khu vực dành riêng cho Quản trị viên. Nhập mật khẩu để cấu hình đường truyền máy chủ và quản trị dữ liệu.</span>
             </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input 
@@ -107,7 +107,7 @@ export function renderServerPage() {
           <!-- Trạng thái đã mở khóa -->
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-white/5 pb-3">
             <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> Quyền riêng tư & Dữ liệu
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> Quản trị Hệ thống & Đường truyền
             </h3>
             <div class="flex items-center gap-2">
               <span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1.5">
@@ -119,6 +119,49 @@ export function renderServerPage() {
               <button id="btnLockAdminSession" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition cursor-pointer flex items-center gap-1">
                 <i data-lucide="lock" class="w-3 h-3"></i> Khóa
               </button>
+            </div>
+          </div>
+
+          <!-- Đường truyền & Kết nối máy chủ -->
+          <div class="space-y-3 pt-1 border-b border-zinc-100 dark:border-white/5 pb-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="network" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Đường truyền & Kết nối máy chủ
+                </p>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Tùy chọn kết nối trực tiếp LAN / Tailscale VPN hoặc Cloudflare Tunnel</p>
+              </div>
+              <button id="btnProbeHighways" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="activity" class="w-3.5 h-3.5"></i> Đo độ trễ
+              </button>
+            </div>
+
+            <div class="space-y-2" id="highwaysListContainer">
+              ${HIGHWAYS.map(h => {
+                const isActive = currentHighway.id === h.id;
+                return `
+                  <div class="p-3 rounded-xl ${isActive ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40' : 'bg-zinc-50 dark:bg-white/[0.02] border-zinc-200/80 dark:border-white/[0.05]'} border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition">
+                    <div class="space-y-0.5 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-semibold text-xs text-zinc-900 dark:text-white">${h.name}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-zinc-200/60 dark:bg-white/10 text-zinc-600 dark:text-zinc-400'}">${h.speed}</span>
+                        ${isActive ? '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>' : ''}
+                      </div>
+                      <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono">${h.url}</p>
+                    </div>
+                    <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                      <span id="highwayPing_${h.id}" class="text-[11px] font-mono text-zinc-400">-- ms</span>
+                      ${isActive ? `
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">ĐANG DÙNG</span>
+                      ` : `
+                        <button class="btn-switch-highway px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 transition shadow-xs cursor-pointer flex items-center gap-1" data-url="${h.url}">
+                          <i data-lucide="zap" class="w-3 h-3"></i> Kết nối
+                        </button>
+                      `}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
 
@@ -232,47 +275,7 @@ export function renderServerPage() {
         </div>` : ''}
       </div>
 
-      <!-- 4. Đường truyền & Kết nối máy chủ -->
-      <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-            <i data-lucide="network" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Đường truyền & Kết nối máy chủ
-          </h3>
-          <button id="btnProbeHighways" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5 cursor-pointer">
-            <i data-lucide="activity" class="w-3.5 h-3.5"></i> Đo độ trễ
-          </button>
-        </div>
-
-        <div class="space-y-2.5" id="highwaysListContainer">
-          ${HIGHWAYS.map(h => {
-            const isActive = currentHighway.id === h.id;
-            return `
-              <div class="p-3.5 rounded-xl ${isActive ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40' : 'bg-zinc-50 dark:bg-white/[0.02] border-zinc-200/80 dark:border-white/[0.05]'} border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
-                <div class="space-y-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span class="font-semibold text-xs text-zinc-900 dark:text-white">${h.name}</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-zinc-200/60 dark:bg-white/10 text-zinc-600 dark:text-zinc-400'}">${h.speed}</span>
-                    ${isActive ? '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>' : ''}
-                  </div>
-                  <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono">${h.url}</p>
-                </div>
-                <div class="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                  <span id="highwayPing_${h.id}" class="text-[11px] font-mono text-zinc-400">-- ms</span>
-                  ${isActive ? `
-                    <span class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">ĐANG DÙNG</span>
-                  ` : `
-                    <button class="btn-switch-highway px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 transition shadow-xs cursor-pointer flex items-center gap-1" data-url="${h.url}">
-                      <i data-lucide="zap" class="w-3 h-3"></i> Kết nối
-                    </button>
-                  `}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-
-      <!-- 5. Thông tin ứng dụng & Homeserver -->
+      <!-- 4. Thông tin ứng dụng & Homeserver -->
       <div class="text-center py-4 text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
         <p class="font-bold text-zinc-800 dark:text-zinc-300">DuyDev Studio • Self-Hosted & Cloudflare Tunnel Edition</p>
       </div>
@@ -501,8 +504,10 @@ export function attachServerPageListeners(onRerender) {
     }
   }
 
-  // 11. Connection Highways (Pings & 1-Click Switch)
+  // 11. Connection Highways (Pings & 1-Click Switch - Admin Only)
   const refreshHighwayPings = async () => {
+    if (!isAdminAuthenticated()) return;
+
     HIGHWAYS.forEach(h => {
       const el = document.getElementById(`highwayPing_${h.id}`);
       if (el) {
@@ -536,6 +541,7 @@ export function attachServerPageListeners(onRerender) {
   const container = document.getElementById('highwaysListContainer');
   if (container) {
     container.addEventListener('click', (e) => {
+      if (!isAdminAuthenticated()) return;
       const btn = e.target.closest('.btn-switch-highway');
       if (btn && btn.dataset.url) {
         showToast('Đang chuyển sang đường truyền mới...', 'info');
@@ -544,6 +550,8 @@ export function attachServerPageListeners(onRerender) {
     });
   }
 
-  // Trigger initial ping test
-  setTimeout(refreshHighwayPings, 150);
+  // Trigger initial ping test only if Admin is authenticated
+  if (isAdminAuthenticated()) {
+    setTimeout(refreshHighwayPings, 150);
+  }
 }

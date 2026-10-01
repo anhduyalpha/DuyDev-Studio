@@ -9,9 +9,10 @@ const STORAGE_KEY_PWD_HASH = 'ds_admin_pwd_hash';
 const SESSION_KEY_AUTH = 'ds_admin_authenticated';
 const SESSION_KEY_TOKEN = 'ds_admin_token';
 
-// SHA-256 for default fallback password: "duydev"
+// SHA-256 for default password: "anhduy123"
+const DEFAULT_HASH_ANHDUY = 'a40c326dd366739719ecbb8380f0534093cf6916b9b63114a71e885d20692ccc';
+// SHA-256 for legacy fallback passwords: "duydev", "admin"
 const DEFAULT_HASH_DUYDEV = '3bc00dd78427db6937b4606a8e593ec3560c4343665d9fba311b103612baf8fb';
-// SHA-256 for default fallback password: "admin"
 const DEFAULT_HASH_ADMIN = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
 
 /**
@@ -124,7 +125,12 @@ export async function verifyAdminPassword(password) {
   // 2. Fallback to local storage hash or defaults
   const storedHash = localStorage.getItem(STORAGE_KEY_PWD_HASH);
   let isValid = false;
-  if (storedHash) {
+  if (inputHash === DEFAULT_HASH_ANHDUY) {
+    isValid = true;
+    try {
+      localStorage.setItem(STORAGE_KEY_PWD_HASH, DEFAULT_HASH_ANHDUY);
+    } catch {}
+  } else if (storedHash) {
     isValid = (inputHash === storedHash);
   } else {
     isValid = (inputHash === DEFAULT_HASH_DUYDEV || inputHash === DEFAULT_HASH_ADMIN);

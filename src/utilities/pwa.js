@@ -32,7 +32,7 @@ export async function getCurrentVersion() {
       console.warn('[PWA] Error reading cache keys:', err);
     }
   }
-  return 'duydev-studio-v15.5';
+  return 'duydev-studio-v15.7';
 }
 
 /**

