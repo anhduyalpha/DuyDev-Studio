@@ -9,6 +9,7 @@ import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import zlib from 'zlib';
 import { pipeline } from 'stream/promises';
 import { Transform } from 'stream';
 import { prisma } from '../../lib/prisma.js';
@@ -102,6 +103,60 @@ export async function uploadChunkPart(request: FastifyRequest, reply: FastifyRep
   try {
     await pipeline(data.file, countStream, writeStream);
     // Atomic rename only when payload stream is completely written without errors
+    await fsPromises.rename(tempChunkPath, finalChunkPath);
+  } catch (err) {
+    await StorageManager.unlinkSafe(tempChunkPath);
+    throw err;
+  }
+
+  return reply.status(200).send({
+    success: true,
+    data: { uploadId, chunkIndex, bytesReceived }
+  });
+}
+
+/**
+ * Raw Binary Streaming Chunk Upload (WinSCP-like direct socket-to-disk pipeline)
+ * Bypasses multipart boundary scanning and memory overhead.
+ */
+export async function uploadChunkStream(request: FastifyRequest, reply: FastifyReply) {
+  const query = (request.query || {}) as Record<string, string>;
+  const headers = request.headers as Record<string, string | undefined>;
+
+  const uploadId = String(headers['x-upload-id'] || query.uploadId || '');
+  const chunkIndex = Number(headers['x-chunk-index'] ?? query.chunkIndex);
+
+  if (!uploadId || isNaN(chunkIndex)) {
+    throw new BadRequestError('x-upload-id and x-chunk-index are required');
+  }
+
+  const chunkDir = getChunkDir(uploadId);
+  if (!fs.existsSync(chunkDir)) {
+    throw new NotFoundError(`Upload session '${uploadId}' expired or not found`);
+  }
+
+  const finalChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part`);
+  const tempChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part.tmp_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`);
+  const writeStream = fs.createWriteStream(tempChunkPath, { highWaterMark: 4 * 1024 * 1024 });
+
+  let bytesReceived = 0;
+  const countStream = new Transform({
+    transform(chunk, _encoding, callback) {
+      bytesReceived += chunk.length;
+      callback(null, chunk);
+    }
+  });
+
+  const inputStream = (request.body as NodeJS.ReadableStream) || request.raw;
+  const contentEncoding = headers['content-encoding'] || headers['x-content-encoding'];
+  const decompressStream = contentEncoding === 'gzip' ? zlib.createGunzip() : null;
+
+  try {
+    if (decompressStream) {
+      await pipeline(inputStream, decompressStream, countStream, writeStream);
+    } else {
+      await pipeline(inputStream, countStream, writeStream);
+    }
     await fsPromises.rename(tempChunkPath, finalChunkPath);
   } catch (err) {
     await StorageManager.unlinkSafe(tempChunkPath);

@@ -4,6 +4,7 @@
 
 import { toggleTheme, getStoredTheme, updateThemeUI } from '../../hooks/useTheme.js';
 import { storage } from '../../utilities/storage.js';
+import { getCurrentHighway, switchHighway, probeHighway, HIGHWAYS } from '../../utilities/connectionHighway.js';
 
 export function updateHeaderTrashIndicator() {
   const dot = document.getElementById('headerTrashDot');
@@ -16,7 +17,8 @@ export function updateHeaderTrashIndicator() {
 export function renderHeader() {
   const isDark = getStoredTheme() === 'dark';
   const trashCount = storage.getLocalTrash().length;
-  const isLan = typeof window !== 'undefined' && window.location.hostname === '192.168.2.171';
+  const currentHighway = getCurrentHighway();
+  const isDirect = currentHighway.id !== 'cloudflare';
 
   return `
     <header class="sticky top-0 z-40 w-full glass-panel px-4 lg:px-8 py-3">
@@ -46,15 +48,17 @@ export function renderHeader() {
 
         <!-- Right: Controls -->
         <div class="flex items-center gap-1 sm:gap-2.5 shrink-0">
-          ${isLan ? `
+          ${isDirect ? `
             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              LAN 1Gbps
+              ${currentHighway.badge}
             </span>
           ` : `
-            <button id="btnSwitchToLan" style="display: none;" onclick="window.location.href='http://192.168.2.171:3000' + window.location.hash" title="Chuyển sang kết nối mạng LAN cục bộ siêu tốc (1000 Mbps)" class="items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer">
-              <i data-lucide="zap" class="w-3.5 h-3.5"></i> Chuyển sang LAN Siêu Tốc (1000 Mbps)
-            </button>
+            <span id="highwayHeaderContainer">
+              <button id="btnSwitchHighway" style="display: none;" title="Chuyển sang đường truyền siêu tốc" class="items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer">
+                <i data-lucide="zap" class="w-3.5 h-3.5"></i> <span id="btnSwitchHighwayLabel">Tailscale (250 Mbps)</span>
+              </button>
+            </span>
           `}
 
           <!-- Storage Drive Link -->
@@ -110,8 +114,8 @@ export function attachHeaderListeners(onSearch) {
   // Sync trash indicator on load
   storage.fetchTrash().then(trash => updateHeaderTrashIndicator()).catch(() => {});
 
-  // Probe local LAN connection if on remote domain
-  probeLanAvailability();
+  // Probe direct highway (Tailscale or LAN) if on remote domain
+  probeHighwayAvailability();
 
   // Keyboard shortcut Cmd/Ctrl + K
   window.addEventListener('keydown', (e) => {
@@ -125,23 +129,39 @@ export function attachHeaderListeners(onSearch) {
   });
 }
 
-async function probeLanAvailability() {
+async function probeHighwayAvailability() {
   if (typeof window === 'undefined') return;
-  if (window.location.hostname === '192.168.2.171') return;
+  const current = getCurrentHighway();
+  if (current.id !== 'cloudflare') return;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300);
-    await fetch('http://192.168.2.171:3000/api/v1/health', {
-      method: 'GET',
-      mode: 'no-cors',
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    const btn = document.getElementById('btnSwitchToLan');
-    if (btn) {
+  const btn = document.getElementById('btnSwitchHighway');
+  const label = document.getElementById('btnSwitchHighwayLabel');
+  if (!btn) return;
+
+  // 1. Probe Tailscale Direct first (highest priority for 4G WAN)
+  const tailscale = HIGHWAYS.find(h => h.id === 'tailscale');
+  if (tailscale) {
+    const tsRes = await probeHighway(tailscale, 400);
+    if (tsRes.reachable) {
+      if (label) label.textContent = 'Tailscale Siêu Tốc (250 Mbps)';
+      btn.onclick = () => switchHighway(tailscale.url);
+      btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer';
+      btn.style.display = 'inline-flex';
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      return;
+    }
+  }
+
+  // 2. Probe LAN (Home Wi-Fi)
+  const lan = HIGHWAYS.find(h => h.id === 'lan');
+  if (lan) {
+    const lanRes = await probeHighway(lan, 300);
+    if (lanRes.reachable) {
+      if (label) label.textContent = 'LAN Siêu Tốc (1000 Mbps)';
+      btn.onclick = () => switchHighway(lan.url);
+      btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer';
       btn.style.display = 'inline-flex';
       if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
-  } catch (_) {}
+  }
 }

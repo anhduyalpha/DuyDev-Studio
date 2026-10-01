@@ -65,6 +65,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     fileHwm: 4 * 1024 * 1024
   } as any);
 
+  // 3.1. Raw Binary Streaming Content-Type Parser (Direct WinSCP/SFTP socket ingestion)
+  app.addContentTypeParser(
+    ['application/octet-stream', 'application/x-binary'],
+    (_request, payload, done) => {
+      done(null, payload);
+    }
+  );
+
   // 4. Register Request Logging Hook
   app.addHook('onRequest', async (req) => {
     logger.debug({ reqId: req.id, method: req.method, url: req.url }, 'Incoming request');

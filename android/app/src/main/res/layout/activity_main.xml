@@ -74,7 +74,17 @@
             android:background="@drawable/bg_button_primary"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="10dp" />
+
+        <Button
+            android:id="@+id/btnOpenTailscale"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/open_tailscale"
+            android:textColor="@color/text_primary"
+            android:background="@drawable/bg_button_secondary"
+            android:textAllCaps="false"
+            android:layout_marginBottom="10dp" />
 
         <Button
             android:id="@+id/btnOpenLan"
@@ -82,6 +92,16 @@
             android:layout_height="48dp"
             android:text="@string/open_lan"
             android:textColor="@color/text_primary"
+            android:background="@drawable/bg_button_secondary"
+            android:textAllCaps="false"
+            android:layout_marginBottom="10dp" />
+
+        <Button
+            android:id="@+id/btnOpenCloudflare"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/open_cloudflare"
+            android:textColor="@color/text_secondary"
             android:background="@drawable/bg_button_secondary"
             android:textAllCaps="false" />
 

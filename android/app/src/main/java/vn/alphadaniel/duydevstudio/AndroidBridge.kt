@@ -66,6 +66,118 @@ class AndroidBridge(
     }
 
     /**
+     * Return active server host currently loaded.
+     */
+    @JavascriptInterface
+    fun getActiveHost(): String {
+        val u = activity.intent?.dataString
+        return if (!u.isNullOrBlank()) {
+            try {
+                val uri = Uri.parse(u)
+                val portStr = if (uri.port != -1 && uri.port != 80 && uri.port != 443) ":${uri.port}" else ""
+                "${uri.scheme}://${uri.host}$portStr"
+            } catch (_: Exception) {
+                MainActivity.PRIMARY_HOST
+            }
+        } else {
+            val prefs = activity.getSharedPreferences("ds_prefs", android.content.Context.MODE_PRIVATE)
+            prefs.getString(MainActivity.PREF_KEY_ACTIVE_HOST, MainActivity.PRIMARY_HOST) ?: MainActivity.PRIMARY_HOST
+        }
+    }
+
+    /**
+     * Switch active server host from JavaScript.
+     */
+    @JavascriptInterface
+    fun switchHost(url: String) {
+        activity.loadHost(url)
+    }
+
+    /**
+     * Probe a single highway endpoint without CORS/Mixed-Content restrictions.
+     */
+    @JavascriptInterface
+    fun probeHighway(targetUrl: String, timeoutMs: Int): String {
+        return try {
+            val start = System.currentTimeMillis()
+            val url = URL("$targetUrl/api/v1/health")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = timeoutMs
+            conn.readTimeout = timeoutMs
+            conn.requestMethod = "GET"
+            conn.instanceFollowRedirects = false
+            conn.connect()
+            val code = conn.responseCode
+            val elapsed = System.currentTimeMillis() - start
+            conn.disconnect()
+            val reachable = code in 200..399
+            JSONObject().apply {
+                put("reachable", reachable)
+                put("status", code)
+                put("latencyMs", elapsed)
+            }.toString()
+        } catch (_: Exception) {
+            JSONObject().apply {
+                put("reachable", false)
+                put("latencyMs", -1)
+            }.toString()
+        }
+    }
+
+    /**
+     * Probe all 4 highways in parallel without CORS/Mixed-Content restrictions.
+     */
+    @JavascriptInterface
+    fun probeAllHighways(): String {
+        val targets = listOf(
+            Pair("lan", MainActivity.LAN_HOST),
+            Pair("tailscale", MainActivity.TAILSCALE_HOST),
+            Pair("wireguard", MainActivity.WIREGUARD_HOST),
+            Pair("cloudflare", MainActivity.PRIMARY_HOST)
+        )
+        val results = JSONObject()
+        val threads = targets.map { (key, host) ->
+            Thread {
+                try {
+                    val start = System.currentTimeMillis()
+                    val url = URL("$host/api/v1/health")
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.connectTimeout = 800
+                    conn.readTimeout = 800
+                    conn.requestMethod = "GET"
+                    conn.instanceFollowRedirects = false
+                    conn.connect()
+                    val code = conn.responseCode
+                    val elapsed = System.currentTimeMillis() - start
+                    conn.disconnect()
+                    val obj = JSONObject().apply {
+                        put("reachable", code in 200..399)
+                        put("latencyMs", elapsed)
+                        put("url", host)
+                    }
+                    synchronized(results) {
+                        results.put(key, obj)
+                    }
+                } catch (_: Exception) {
+                    val obj = JSONObject().apply {
+                        put("reachable", false)
+                        put("latencyMs", -1)
+                        put("url", host)
+                    }
+                    synchronized(results) {
+                        results.put(key, obj)
+                    }
+                }
+            }
+        }
+        threads.forEach { it.start() }
+        threads.forEach {
+            try { it.join(1000) } catch (_: Exception) {}
+        }
+        return results.toString()
+    }
+
+    /**
      * Check if app has permission to install unknown packages (Android 8.0+).
      */
     @JavascriptInterface

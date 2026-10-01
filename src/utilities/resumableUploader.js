@@ -6,7 +6,18 @@
 
 const CHECKPOINT_KEY = 'ds_chunk_upload_checkpoint';
 
-export function getOptimalChunkSize(fileSize) {
+export function isWanConnection() {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname || '';
+  return h.includes('alphadaniel.io.vn') || h.includes('cloudflare');
+}
+
+export function getOptimalChunkSize(fileSize, isWan = isWanConnection()) {
+  if (isWan) {
+    // 4G / Cloudflare WAN: 4MB chunks with pipelining maximize throughput and minimize jitter penalties
+    if (fileSize > 2 * 1024 * 1024 * 1024) return 8 * 1024 * 1024;
+    return 4 * 1024 * 1024;
+  }
   if (fileSize > 5 * 1024 * 1024 * 1024) return 40 * 1024 * 1024; // > 5GB: 40MB chunks
   if (fileSize > 2 * 1024 * 1024 * 1024) return 32 * 1024 * 1024; // 2GB - 5GB: 32MB chunks
   if (fileSize > 500 * 1024 * 1024) return 25 * 1024 * 1024;      // 500MB - 2GB: 25MB chunks
@@ -207,14 +218,15 @@ export class ResumableUploader {
       const end = Math.min(this.file.size, start + this.chunkSize);
       const blobSlice = this.file.slice(start, end);
 
-      const formData = new FormData();
-      formData.append('file', blobSlice, `chunk_${chunkIndex}.part`);
-
       const xhr = new XMLHttpRequest();
       xhr.timeout = 180_000; // 3 minutes timeout per chunk
       this.activeXhrs.set(chunkIndex, xhr);
 
-      xhr.open('POST', `/api/v1/files/chunk/upload?uploadId=${encodeURIComponent(this.uploadId)}&chunkIndex=${chunkIndex}`);
+      // Fast streaming raw binary pipeline (WinSCP style, bypasses multipart overhead)
+      xhr.open('POST', `/api/v1/files/chunk/stream?uploadId=${encodeURIComponent(this.uploadId)}&chunkIndex=${chunkIndex}`);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.setRequestHeader('X-Upload-Id', String(this.uploadId));
+      xhr.setRequestHeader('X-Chunk-Index', String(chunkIndex));
 
       for (const [k, v] of Object.entries(this.headers)) {
         xhr.setRequestHeader(k, v);
@@ -249,7 +261,7 @@ export class ResumableUploader {
         reject(new Error(`Lỗi kết nối khi gửi chunk #${chunkIndex}`));
       };
 
-      xhr.send(formData);
+      xhr.send(blobSlice);
     });
   }
 
@@ -337,7 +349,11 @@ export function formatEta(sec) {
  * Automatically uses direct upload for <= 50MB and ResumableUploader for > 50MB (up to 10GB+).
  */
 export async function smartUploadFile(file, options = {}) {
-  const threshold = options.thresholdBytes || 50 * 1024 * 1024;
+  const isWan = isWanConnection();
+  // On WAN (Cloudflare 4G): files > 8MB automatically switch to 4x concurrent chunked streaming
+  // On LAN / Direct VPN: direct streaming handles up to 50MB in < 1.5s
+  const defaultThreshold = isWan ? 8 * 1024 * 1024 : 50 * 1024 * 1024;
+  const threshold = options.thresholdBytes || defaultThreshold;
   const signal = options.signal || options.abortController?.signal;
 
   if (file.size <= threshold && !options.forceChunked) {

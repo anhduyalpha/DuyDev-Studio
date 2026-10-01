@@ -38,8 +38,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val PRIMARY_HOST = "https://duydevstudio.alphadaniel.io.vn"
         const val LAN_HOST = "http://192.168.2.171:3000"
+        const val TAILSCALE_HOST = "http://100.90.62.15:3000"
+        const val WIREGUARD_HOST = "http://10.7.0.1:3000"
         const val EXTRA_TARGET_ROUTE = "extra_target_route"
         const val EXTRA_TARGET_MODE = "extra_target_mode"
+        const val PREF_KEY_ACTIVE_HOST = "active_host"
     }
 
     private lateinit var webView: WebView
@@ -47,7 +50,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var offlineContainer: View
     private lateinit var btnRetry: Button
+    private lateinit var btnOpenTailscale: Button
     private lateinit var btnOpenLan: Button
+    private lateinit var btnOpenCloudflare: Button
 
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermissionRequest: PermissionRequest? = null
@@ -97,12 +102,14 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
 
         if (savedInstanceState == null) {
+            val prefs = getSharedPreferences("ds_prefs", MODE_PRIVATE)
+            val baseHost = prefs.getString(PREF_KEY_ACTIVE_HOST, PRIMARY_HOST) ?: PRIMARY_HOST
             val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
             val launchUrl = if (!targetRoute.isNullOrBlank()) {
                 val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
-                "$PRIMARY_HOST$cleanRoute"
+                "$baseHost$cleanRoute"
             } else {
-                PRIMARY_HOST
+                baseHost
             }
             webView.loadUrl(launchUrl)
         } else {
@@ -147,7 +154,9 @@ class MainActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBar)
         offlineContainer = findViewById(R.id.offlineContainer)
         btnRetry = findViewById(R.id.btnRetry)
+        btnOpenTailscale = findViewById(R.id.btnOpenTailscale)
         btnOpenLan = findViewById(R.id.btnOpenLan)
+        btnOpenCloudflare = findViewById(R.id.btnOpenCloudflare)
 
         swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#6366F1"))
         swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#18181B"))
@@ -160,9 +169,36 @@ class MainActivity : AppCompatActivity() {
             webView.reload()
         }
 
+        btnOpenTailscale.setOnClickListener {
+            showOffline(false)
+            loadHost(TAILSCALE_HOST)
+        }
+
         btnOpenLan.setOnClickListener {
             showOffline(false)
-            webView.loadUrl(LAN_HOST)
+            loadHost(LAN_HOST)
+        }
+
+        btnOpenCloudflare.setOnClickListener {
+            showOffline(false)
+            loadHost(PRIMARY_HOST)
+        }
+    }
+
+    /**
+     * Switch active server host and persist preference.
+     */
+    fun loadHost(baseUrl: String) {
+        val prefs = getSharedPreferences("ds_prefs", MODE_PRIVATE)
+        prefs.edit().putString(PREF_KEY_ACTIVE_HOST, baseUrl).apply()
+        val currentHash = try {
+            val u = Uri.parse(webView.url ?: "")
+            val frag = u.fragment
+            if (!frag.isNullOrBlank()) "#$frag" else ""
+        } catch (_: Exception) { "" }
+        val targetUrl = "$baseUrl$currentHash"
+        runOnUiThread {
+            webView.loadUrl(targetUrl)
         }
     }
 
@@ -304,9 +340,11 @@ class MainActivity : AppCompatActivity() {
 
                 val host = uri.host?.lowercase(Locale.ROOT) ?: ""
 
-                // Allow internal app navigation
+                // Allow internal app navigation across all 4 highway endpoints
                 if (host == "duydevstudio.alphadaniel.io.vn" ||
                     host == "192.168.2.171" ||
+                    host == "100.90.62.15" ||
+                    host == "10.7.0.1" ||
                     host == "localhost" ||
                     host == "10.0.2.2") {
                     return false

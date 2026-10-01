@@ -17,7 +17,9 @@
     <string name="offline_title">Không thể kết nối máy chủ</string>
     <string name="offline_desc">Không thể tải DuyDev Studio. Vui lòng kiểm tra lại kết nối mạng hoặc thử kết nối qua LAN Homeserver.</string>
     <string name="retry">Thử lại</string>
-    <string name="open_lan">Mở LAN Homeserver</string>
+    <string name="open_tailscale">Mở Tailscale Direct (250 Mbps)</string>
+    <string name="open_lan">Mở LAN Homeserver (1 Gbps)</string>
+    <string name="open_cloudflare">Mở Cloudflare Tunnel (Dự phòng)</string>
 
     <!-- App Shortcuts -->
     <string name="shortcut_pdf_short">Nén &amp; Đổi PDF</string>
