@@ -82,7 +82,11 @@ class App {
 
     // Web Share Target: listen for payloads from Service Worker
     navigator.serviceWorker?.addEventListener('message', (e) => {
-      if (e.data?.type === 'DS_SHARE_TARGET_ARRIVED') {
+      if (e.data?.type === 'DS_SHARE_TARGET_PAYLOAD' && e.data.payload) {
+        if (!document.getElementById('shareTargetPanel')) {
+          openShareTargetModal(e.data.payload);
+        }
+      } else if (e.data?.type === 'DS_SHARE_TARGET_ARRIVED') {
         this.checkAndOpenShareTarget();
       }
     });
@@ -92,8 +96,8 @@ class App {
   }
 
   async checkAndOpenShareTarget() {
-    // Fast-path overlay already initiated modal from index.html
-    if (typeof window !== 'undefined' && window.__FAST_PATH_SHARE_ACTIVE) return;
+    // If modal is already open in DOM, avoid duplicate work
+    if (document.getElementById('shareTargetPanel')) return;
     if (this._checkingShareTarget) return;
     this._checkingShareTarget = true;
 
@@ -114,15 +118,15 @@ class App {
       let payload = await retrievePendingSharedData();
       if (!payload && isShareRoute) {
         for (let i = 0; i < 4; i++) {
-          if (typeof window !== 'undefined' && window.__FAST_PATH_SHARE_ACTIVE) return;
+          if (document.getElementById('shareTargetPanel')) return;
           await new Promise(r => setTimeout(r, 120));
           payload = await retrievePendingSharedData();
           if (payload) break;
         }
       }
 
-      // Check again if fast path took over
-      if (typeof window !== 'undefined' && window.__FAST_PATH_SHARE_ACTIVE) return;
+      // Check again if modal was opened while waiting
+      if (document.getElementById('shareTargetPanel')) return;
 
       // 3. Fallback to URL parameters if IndexedDB had no files
       if (!payload && (url || text || title)) {
@@ -143,7 +147,9 @@ class App {
         return;
       }
 
-      openShareTargetModal(payload);
+      if (!document.getElementById('shareTargetPanel')) {
+        openShareTargetModal(payload);
+      }
     } finally {
       this._checkingShareTarget = false;
     }

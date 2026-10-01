@@ -75,6 +75,9 @@ export function extractImageUrlFromTextOrUrl(url = '', text = '') {
  */
 function openShareDb() {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      return reject(new Error('IndexedDB is not supported'));
+    }
     const req = indexedDB.open('ds_share_db', 1);
     req.onupgradeneeded = () => req.result.createObjectStore('shares', { autoIncrement: true });
     req.onsuccess = () => resolve(req.result);
@@ -83,35 +86,158 @@ function openShareDb() {
 }
 
 /**
- * Read and delete all pending share payloads from IndexedDB (consume-once).
- * Returns the most recent payload or null.
+ * Peek pending share payload from IndexedDB without write locks or deletion.
+ * Opens a readonly transaction on object store 'shares'.
  * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
-export async function retrievePendingSharedData() {
+export async function peekPendingSharedPayload() {
   try {
+    if (typeof indexedDB === 'undefined') return null;
     const db = await openShareDb();
-    const tx = db.transaction('shares', 'readwrite');
-    const store = tx.objectStore('shares');
-
-    const allPayloads = await new Promise((resolve, reject) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-
-    // Clear after reading — atomic within same transaction
-    store.clear();
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
-
-    if (!allPayloads || !allPayloads.length) return null;
-    return allPayloads[allPayloads.length - 1];
+    try {
+      const tx = db.transaction('shares', 'readonly');
+      const store = tx.objectStore('shares');
+      const allPayloads = await new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      if (!allPayloads || !allPayloads.length) return null;
+      return allPayloads[allPayloads.length - 1];
+    } finally {
+      db.close();
+    }
   } catch {
     return null;
   }
+}
+
+/**
+ * Read and delete pending share payloads from IndexedDB using readwrite transaction.
+ * Opens a readwrite transaction ONLY to consume data.
+ * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
+ */
+export async function consumePendingSharedPayload() {
+  try {
+    if (typeof indexedDB === 'undefined') return null;
+    const db = await openShareDb();
+    try {
+      const tx = db.transaction('shares', 'readwrite');
+      const store = tx.objectStore('shares');
+
+      const allPayloads = await new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+
+      if (!allPayloads || !allPayloads.length) {
+        return null;
+      }
+
+      store.clear();
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+
+      return allPayloads[allPayloads.length - 1];
+    } finally {
+      db.close();
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Poll for pending shared data with adaptive backoff and BroadcastChannel wake-up.
+ * @param {number} [maxWaitMs=4500]
+ * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
+ */
+export async function pollPendingSharedData(maxWaitMs = 4500) {
+  // 1. Instant check
+  const instantPeek = await peekPendingSharedPayload();
+  if (instantPeek) {
+    const consumed = await consumePendingSharedPayload();
+    if (consumed) return consumed;
+  }
+
+  const startTime = Date.now();
+  const delays = [40, 60, 100, 150, 250, 350, 500, 600, 800, 1000];
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    let bc = null;
+    let timerId = null;
+
+    const cleanup = () => {
+      if (timerId) clearTimeout(timerId);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {}
+        bc = null;
+      }
+    };
+
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve(result);
+    };
+
+    // BroadcastChannel instant wake-up
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        bc = new BroadcastChannel('ds_share_channel');
+        bc.onmessage = async (event) => {
+          if (event.data?.type === 'PAYLOAD_READY') {
+            const payload = await consumePendingSharedPayload();
+            if (payload) finish(payload);
+          }
+        };
+      } catch {}
+    }
+
+    // Adaptive backoff poll step
+    let stepIndex = 0;
+    const scheduleNext = () => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= maxWaitMs) {
+        finish(null);
+        return;
+      }
+
+      const delay = delays[Math.min(stepIndex, delays.length - 1)];
+      stepIndex++;
+
+      timerId = setTimeout(async () => {
+        if (resolved) return;
+        const peek = await peekPendingSharedPayload();
+        if (peek) {
+          const payload = await consumePendingSharedPayload();
+          if (payload) {
+            finish(payload);
+            return;
+          }
+        }
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+  });
+}
+
+/**
+ * Read and delete all pending share payloads from IndexedDB (consume-once).
+ * Backward-compatible wrapper around consumePendingSharedPayload.
+ * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
+ */
+export async function retrievePendingSharedData() {
+  return consumePendingSharedPayload();
 }
 
 /**

@@ -95,9 +95,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.9">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=14.9">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.9">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=15.3">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=15.3">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=15.3">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -136,7 +136,7 @@
     if ('caches' in window) {
       caches.keys().then(function(names) {
         names.forEach(function(name) {
-          if (name !== 'duydev-studio-v15.2') {
+          if (name !== 'duydev-studio-v15.3') {
             caches.delete(name);
           }
         });
@@ -276,42 +276,84 @@
 
   <!-- Fast-Path Instant Overlay for Web Share Target (<150ms immediate display) -->
   <script type="module">
-    import { retrievePendingSharedData } from './src/utilities/shareTargetHelper.js';
+    import { pollPendingSharedData } from './src/utilities/shareTargetHelper.js';
     import { openShareTargetModal } from './src/components/common/ShareTargetModal.js';
 
     const hash = window.location.hash || '';
     const search = window.location.search || '';
     const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=');
 
-    if (isShare) {
-      (async () => {
-        try {
-          let payload = await retrievePendingSharedData();
-          if (!payload) {
-            // Quick backoff retry (max 3 attempts, ~120ms total) in case Service Worker transaction is completing
-            for (let i = 0; i < 3; i++) {
-              await new Promise((r) => setTimeout(r, 40));
-              payload = await retrievePendingSharedData();
-              if (payload) break;
-            }
+    function closeFastSharePlaceholder() {
+      const p = document.getElementById('fastPathSharePlaceholder');
+      if (p) p.remove();
+      window.__FAST_PATH_SHARE_ACTIVE = false;
+      document.documentElement.classList.remove('is-share-target');
+      if (window.location.hash.startsWith('#share-target')) {
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }
+    window.closeFastSharePlaceholder = closeFastSharePlaceholder;
+
+    async function attemptFastShareLoad() {
+      const previewCard = document.getElementById('fastSharePreviewCard');
+      const skeletons = document.getElementById('fastShareActionSkeletons');
+      const statusLabel = document.getElementById('fastShareStatusLabel');
+
+      if (statusLabel) statusLabel.textContent = 'Đang nạp dữ liệu chia sẻ...';
+      if (skeletons) skeletons.style.display = 'flex';
+      if (previewCard) {
+        previewCard.innerHTML = `
+          <div style="display:flex;align-items:center;gap:0.625rem;">
+            <div style="width:1.25rem;height:1.25rem;border-radius:50%;border:2px solid #6366f1;border-top-color:transparent;animation:spin 0.8s linear infinite;" class="animate-spin"></div>
+            <span id="fastSharePreviewText" style="font-size:12px;color:#d4d4d8;">Đang đọc tệp và chuẩn bị module...</span>
+          </div>
+        `;
+      }
+
+      try {
+        let payload = await pollPendingSharedData(4500);
+
+        if (!payload) {
+          const sp = new URLSearchParams(window.location.search);
+          const url = sp.get('url') || '';
+          const text = sp.get('text') || '';
+          const title = sp.get('title') || '';
+          if (url || text || title) {
+            payload = { url, text, title, files: [] };
           }
-          if (!payload) {
-            const sp = new URLSearchParams(search);
-            const url = sp.get('url') || '';
-            const text = sp.get('text') || '';
-            const title = sp.get('title') || '';
-            if (url || text || title) {
-              payload = { url, text, title, files: [] };
-            }
-          }
-          if (payload) {
-            window.__FAST_PATH_SHARE_ACTIVE = true;
-            openShareTargetModal(payload);
-          }
-        } catch (err) {
-          console.warn('[FastPath] Direct share target launch warning:', err);
         }
-      })();
+
+        if (payload) {
+          window.__FAST_PATH_SHARE_ACTIVE = true;
+          openShareTargetModal(payload);
+        } else {
+          // Timeout recovery UI
+          if (statusLabel) statusLabel.textContent = 'Không thể nạp tệp';
+          if (skeletons) skeletons.style.display = 'none';
+          if (previewCard) {
+            previewCard.innerHTML = `
+              <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                <div style="display:flex;align-items:flex-start;gap:0.625rem;">
+                  <span style="color:#f59e0b;font-size:1.125rem;line-height:1;margin-top:0.125rem;">⚠️</span>
+                  <span style="font-size:12px;color:#d4d4d8;line-height:1.4;">Không thể nạp tệp chia sẻ từ thiết bị. Tệp có thể đã bị hệ điều hành thu hồi hoặc phiên truyền tải bị ngắt.</span>
+                </div>
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;padding-top:0.25rem;">
+                  <button type="button" id="fastShareBtnRetry" style="padding:0.375rem 0.75rem;border-radius:0.5rem;background:#4f46e5;color:white;font-size:11px;font-weight:600;border:none;cursor:pointer;">Thử lại</button>
+                  <button type="button" id="fastShareBtnClose" style="padding:0.375rem 0.75rem;border-radius:0.5rem;background:rgba(63,63,70,0.5);color:#d4d4d8;font-size:11px;font-weight:500;border:none;cursor:pointer;">Đóng</button>
+                </div>
+              </div>
+            `;
+            document.getElementById('fastShareBtnRetry')?.addEventListener('click', () => attemptFastShareLoad());
+            document.getElementById('fastShareBtnClose')?.addEventListener('click', closeFastSharePlaceholder);
+          }
+        }
+      } catch (err) {
+        console.warn('[FastPath] Direct share target launch warning:', err);
+      }
+    }
+
+    if (isShare) {
+      attemptFastShareLoad();
     }
   </script>
 
@@ -334,7 +376,7 @@
   <script src="src/vendor/qr-code-styling.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=14.9"></script>
+  <script type="module" src="src/app.js?v=15.3"></script>
 </body>
 </html>
 

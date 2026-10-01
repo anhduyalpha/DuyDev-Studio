@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app.js';
-import { classifySharedPayload, SharePayloadType } from '../../../src/utilities/shareTargetHelper.js';
+import {
+  classifySharedPayload,
+  SharePayloadType,
+  peekPendingSharedPayload,
+  consumePendingSharedPayload,
+  pollPendingSharedData,
+  retrievePendingSharedData
+} from '../../../src/utilities/shareTargetHelper.js';
 
 describe('Web Share Target & Classifier Suite', () => {
   describe('Server Fallback Endpoints (/share-target)', () => {
@@ -292,6 +299,228 @@ describe('Web Share Target & Classifier Suite', () => {
 
       (global as any).window.__FAST_PATH_SHARE_ACTIVE = false;
       expect(isShareTargetModalOpen()).toBe(false);
+    });
+  });
+
+  describe('IndexedDB Lock-Free & Polling Suite', () => {
+    it('should return null gracefully when indexedDB is undefined (Node.js environment)', async () => {
+      const originalIDB = (global as any).indexedDB;
+      delete (global as any).indexedDB;
+
+      const peek = await peekPendingSharedPayload();
+      expect(peek).toBeNull();
+
+      const consumed = await consumePendingSharedPayload();
+      expect(consumed).toBeNull();
+
+      const retrieved = await retrievePendingSharedData();
+      expect(retrieved).toBeNull();
+
+      const polled = await pollPendingSharedData(50);
+      expect(polled).toBeNull();
+
+      if (originalIDB !== undefined) {
+        (global as any).indexedDB = originalIDB;
+      }
+    });
+
+    it('peekPendingSharedPayload should read without deleting, and consumePendingSharedPayload should clear', async () => {
+      const store: any[] = [];
+      const mockDb = {
+        close: () => {},
+        transaction: (_names: string, mode: string) => {
+          const tx: any = {
+            oncomplete: null,
+            onerror: null,
+            objectStore: () => ({
+              getAll: () => {
+                const req: any = {};
+                setTimeout(() => {
+                  req.result = [...store];
+                  if (req.onsuccess) req.onsuccess();
+                }, 0);
+                return req;
+              },
+              clear: () => {
+                store.length = 0;
+              }
+            })
+          };
+          if (mode === 'readwrite') {
+            setTimeout(() => {
+              if (tx.oncomplete) tx.oncomplete();
+            }, 5);
+          }
+          return tx;
+        }
+      };
+
+      const originalIDB = (global as any).indexedDB;
+      (global as any).indexedDB = {
+        open: () => {
+          const req: any = {};
+          setTimeout(() => {
+            req.result = mockDb;
+            if (req.onsuccess) req.onsuccess();
+          }, 0);
+          return req;
+        }
+      };
+
+      try {
+        // Initially empty
+        expect(await peekPendingSharedPayload()).toBeNull();
+
+        // Add an item
+        store.push({ title: 'Test 1', url: 'https://example.com' });
+
+        // Peek should return the item without removing it
+        const peek1 = await peekPendingSharedPayload();
+        expect(peek1).toEqual({ title: 'Test 1', url: 'https://example.com' });
+        expect(store.length).toBe(1);
+
+        // Second peek should still return the item
+        const peek2 = await peekPendingSharedPayload();
+        expect(peek2).toEqual({ title: 'Test 1', url: 'https://example.com' });
+        expect(store.length).toBe(1);
+
+        // Consume should return the item AND clear the store
+        const consumed = await consumePendingSharedPayload();
+        expect(consumed).toEqual({ title: 'Test 1', url: 'https://example.com' });
+        expect(store.length).toBe(0);
+
+        // Subsequent peek should return null
+        expect(await peekPendingSharedPayload()).toBeNull();
+      } finally {
+        if (originalIDB !== undefined) {
+          (global as any).indexedDB = originalIDB;
+        } else {
+          delete (global as any).indexedDB;
+        }
+      }
+    });
+
+    it('pollPendingSharedData should wake up immediately via BroadcastChannel PAYLOAD_READY', async () => {
+      const store: any[] = [];
+      const mockDb = {
+        close: () => {},
+        transaction: (_names: string, mode: string) => {
+          const tx: any = {
+            oncomplete: null,
+            onerror: null,
+            objectStore: () => ({
+              getAll: () => {
+                const req: any = {};
+                setTimeout(() => {
+                  req.result = [...store];
+                  if (req.onsuccess) req.onsuccess();
+                }, 0);
+                return req;
+              },
+              clear: () => {
+                store.length = 0;
+              }
+            })
+          };
+          if (mode === 'readwrite') {
+            setTimeout(() => {
+              if (tx.oncomplete) tx.oncomplete();
+            }, 5);
+          }
+          return tx;
+        }
+      };
+
+      const originalIDB = (global as any).indexedDB;
+      const originalBC = (global as any).BroadcastChannel;
+
+      (global as any).indexedDB = {
+        open: () => {
+          const req: any = {};
+          setTimeout(() => {
+            req.result = mockDb;
+            if (req.onsuccess) req.onsuccess();
+          }, 0);
+          return req;
+        }
+      };
+
+      const channelSubscribers = new Set<any>();
+      (global as any).BroadcastChannel = class {
+        name: string;
+        onmessage: any = null;
+        constructor(name: string) {
+          this.name = name;
+          channelSubscribers.add(this);
+        }
+        postMessage(data: any) {
+          for (const sub of channelSubscribers) {
+            if (sub !== this && sub.onmessage) {
+              sub.onmessage({ data });
+            }
+          }
+        }
+        close() {
+          channelSubscribers.delete(this);
+        }
+      };
+
+      try {
+        const pollPromise = pollPendingSharedData(3000);
+
+        // Simulate SW finishing save after 25ms and broadcasting PAYLOAD_READY
+        setTimeout(() => {
+          store.push({ title: 'Shared via SW', url: 'https://sw-shared.com' });
+          const swBc = new (global as any).BroadcastChannel('ds_share_channel');
+          swBc.postMessage({ type: 'PAYLOAD_READY' });
+          swBc.close();
+        }, 25);
+
+        const result = await pollPromise;
+        expect(result).toEqual({ title: 'Shared via SW', url: 'https://sw-shared.com' });
+      } finally {
+        if (originalIDB !== undefined) (global as any).indexedDB = originalIDB;
+        else delete (global as any).indexedDB;
+
+        if (originalBC !== undefined) (global as any).BroadcastChannel = originalBC;
+        else delete (global as any).BroadcastChannel;
+      }
+    });
+
+    it('pollPendingSharedData should resolve to null on timeout if no data arrives', async () => {
+      const originalIDB = (global as any).indexedDB;
+      (global as any).indexedDB = {
+        open: () => {
+          const req: any = {};
+          setTimeout(() => {
+            req.result = {
+              close: () => {},
+              transaction: () => ({
+                objectStore: () => ({
+                  getAll: () => {
+                    const r: any = {};
+                    setTimeout(() => {
+                      r.result = [];
+                      if (r.onsuccess) r.onsuccess();
+                    }, 0);
+                    return r;
+                  }
+                })
+              })
+            };
+            if (req.onsuccess) req.onsuccess();
+          }, 0);
+          return req;
+        }
+      };
+
+      try {
+        const result = await pollPendingSharedData(80);
+        expect(result).toBeNull();
+      } finally {
+        if (originalIDB !== undefined) (global as any).indexedDB = originalIDB;
+        else delete (global as any).indexedDB;
+      }
     });
   });
 });

@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v15.2';
+const CACHE_NAME = 'duydev-studio-v15.3';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=15.2',
-  './src/styles/studocu.css?v=15.2',
-  './src/styles/highlight-theme.css?v=15.2',
+  './src/styles/stitch-tokens.css?v=15.3',
+  './src/styles/studocu.css?v=15.3',
+  './src/styles/highlight-theme.css?v=15.3',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=15.2',
+  './src/app.js?v=15.3',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
@@ -64,6 +64,15 @@ async function saveSharePayload(payload) {
       tx.onerror = () => reject(tx.error);
     });
     db.close();
+
+    // Broadcast instant wake-up notification to listening window clients
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('ds_share_channel');
+        bc.postMessage({ type: 'PAYLOAD_READY', timestamp: Date.now() });
+        bc.close();
+      }
+    } catch {}
   } catch (err) {
     console.warn('[SW] IndexedDB write failed:', err);
   }
@@ -125,6 +134,7 @@ async function handleShareTargetPost(event) {
       }
       for (const client of allClients) {
         client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED', payloadSummary: { hasFiles: payload.files.length > 0, url: payload.url } });
+        client.postMessage({ type: 'DS_SHARE_TARGET_PAYLOAD', payload });
       }
     }
 
