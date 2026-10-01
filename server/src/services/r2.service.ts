@@ -33,8 +33,19 @@ export interface R2Metrics {
 
 export class R2Service {
   private static s3Client: S3Client | null = null;
-  private static metricsFilePath = path.resolve(process.cwd(), 'data', 'r2_metrics.json');
   private static cachedMetrics: R2Metrics | null = null;
+
+  static getMetricsFilePath(): string {
+    const serverDataDir = path.resolve(process.cwd(), 'server', 'data');
+    if (fs.existsSync(serverDataDir)) {
+      return path.join(serverDataDir, 'r2_metrics.json');
+    }
+    const directDataDir = path.resolve(process.cwd(), 'data');
+    if (fs.existsSync(directDataDir)) {
+      return path.join(directDataDir, 'r2_metrics.json');
+    }
+    return path.resolve(resolvedStoragePaths.root, '..', 'r2_metrics.json');
+  }
 
   static getClient(): S3Client {
     if (!this.s3Client) {
@@ -52,10 +63,11 @@ export class R2Service {
 
   static getMetrics(): R2Metrics {
     const currentMonth = new Date().toISOString().slice(0, 7);
+    const metricsFilePath = this.getMetricsFilePath();
     if (!this.cachedMetrics) {
       try {
-        if (fs.existsSync(this.metricsFilePath)) {
-          const raw = fs.readFileSync(this.metricsFilePath, 'utf-8');
+        if (fs.existsSync(metricsFilePath)) {
+          const raw = fs.readFileSync(metricsFilePath, 'utf-8');
           const data = JSON.parse(raw);
           if (data && data.month === currentMonth) {
             this.cachedMetrics = data;
@@ -95,13 +107,14 @@ export class R2Service {
   private static persistMetrics(): void {
     if (!this.cachedMetrics) return;
     try {
-      const dataDir = path.dirname(this.metricsFilePath);
+      const metricsFilePath = this.getMetricsFilePath();
+      const dataDir = path.dirname(metricsFilePath);
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
       }
-      const tmpPath = `${this.metricsFilePath}.tmp`;
+      const tmpPath = `${metricsFilePath}.tmp`;
       fs.writeFileSync(tmpPath, JSON.stringify(this.cachedMetrics, null, 2), 'utf-8');
-      fs.renameSync(tmpPath, this.metricsFilePath);
+      fs.renameSync(tmpPath, metricsFilePath);
     } catch (err) {
       logger.warn({ err }, 'Failed to persist r2_metrics.json');
     }
@@ -133,8 +146,12 @@ export class R2Service {
   static async generatePresignedUploadUrl(
     fileName: string,
     mimeType: string,
-    _sizeBytes?: number
+    sizeBytes?: number
   ): Promise<{ presignedUrl: string; fileKey: string; fileId: string; sanitizedName: string }> {
+    if (sizeBytes && sizeBytes > limits.maxUploadSizeBytes) {
+      throw new FileSizeLimitError(`File exceeds maximum size of ${env.MAX_UPLOAD_SIZE_MB}MB`);
+    }
+
     const fileId = `fil_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
     const sanitizedName = path.basename(fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
     const fileKey = `transit/${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}_${sanitizedName}`;

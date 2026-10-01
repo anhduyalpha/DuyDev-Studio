@@ -259,5 +259,96 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(false);
     });
+
+    it('rejects transit completion with malicious or traversal fileId', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/complete-transit',
+        payload: {
+          fileKey: 'transit/test_file.txt',
+          fileId: '../../etc/shadow',
+          originalName: 'exploit.txt'
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(false);
+    });
+
+    it('auto-bypasses to direct upload for IPv4-mapped IPv6 LAN address', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/presign',
+        remoteAddress: '::ffff:192.168.2.105',
+        headers: {
+          host: 'duydev-homeserver:3000'
+        },
+        payload: {
+          fileName: 'doc_ipv6.pdf',
+          fileSize: 1000000,
+          mimeType: 'application/pdf',
+          purpose: 'pdf-convert'
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.mode).toBe('direct');
+    });
+
+    it('rejects presign request when fileSize exceeds system maxUploadSizeBytes', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/presign',
+        headers: {
+          'cf-connecting-ip': '203.0.113.195',
+          host: 'duydevstudio.alphadaniel.io.vn'
+        },
+        payload: {
+          fileName: 'huge_archive.iso',
+          fileSize: 100 * 1024 * 1024 * 1024, // 100GB > 50GB limit
+          mimeType: 'application/octet-stream',
+          purpose: 'storage-drive'
+        }
+      });
+
+      expect(response.statusCode).toBe(413);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('FILE_SIZE_LIMIT_EXCEEDED');
+    });
+
+    it('cleans orphaned transit objects older than 1 hour', async () => {
+      const client = R2Service.getClient();
+      const twoHoursAgo = new Date(Date.now() - 2 * 3600 * 1000);
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+      const sendSpy = vi.spyOn(client, 'send').mockImplementation(async (command: any) => {
+        const commandName = command.constructor.name;
+        if (commandName === 'ListObjectsV2Command') {
+          return {
+            Contents: [
+              { Key: 'transit/orphaned_old.pdf', LastModified: twoHoursAgo },
+              { Key: 'transit/in_progress_fresh.pdf', LastModified: tenMinutesAgo }
+            ]
+          } as any;
+        }
+        if (commandName === 'DeleteObjectCommand') {
+          return {} as any;
+        }
+        return {} as any;
+      });
+
+      const purged = await R2Service.cleanOrphanedTransitObjects(3600 * 1000);
+      expect(purged).toBe(1);
+
+      const deleteCalls = sendSpy.mock.calls.filter(call => call[0]?.constructor?.name === 'DeleteObjectCommand');
+      expect(deleteCalls.length).toBe(1);
+      expect((deleteCalls[0][0] as any).input.Key).toBe('transit/orphaned_old.pdf');
+
+      sendSpy.mockRestore();
+    });
   });
 });

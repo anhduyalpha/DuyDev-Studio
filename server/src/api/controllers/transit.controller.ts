@@ -8,8 +8,9 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import path from 'path';
 import { prisma } from '../../lib/prisma.js';
 import { StorageManager } from '../../storage/storage.manager.js';
-import { computeExpiresAt } from '../../config/limits.config.js';
-import { BadRequestError } from '../../lib/errors.js';
+import { computeExpiresAt, limits } from '../../config/limits.config.js';
+import { env } from '../../config/env.config.js';
+import { BadRequestError, FileSizeLimitError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { R2Service } from '../../services/r2.service.js';
 import { presignTransitBodySchema, completeTransitBodySchema } from '../../schemas/files.schema.js';
@@ -27,13 +28,14 @@ export function isLanRequest(request: FastifyRequest): boolean {
   }
 
   const rawIp = request.ip || request.socket.remoteAddress || '';
+  const cleanIp = rawIp.replace(/^::ffff:/, '');
   if (
-    rawIp === '127.0.0.1' ||
-    rawIp === '::1' ||
-    rawIp === 'localhost' ||
-    rawIp.startsWith('192.168.') ||
-    rawIp.startsWith('10.') ||
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(rawIp) ||
+    cleanIp === '127.0.0.1' ||
+    cleanIp === '::1' ||
+    cleanIp === 'localhost' ||
+    cleanIp.startsWith('192.168.') ||
+    cleanIp.startsWith('10.') ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanIp) ||
     hostHeader.startsWith('192.168.') ||
     hostHeader.startsWith('localhost') ||
     hostHeader.startsWith('127.0.0.1')
@@ -48,6 +50,10 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
   const body = presignTransitBodySchema.parse(request.body);
   const { fileName, fileSize, mimeType, purpose } = body;
   const isForceR2 = (request.query as Record<string, unknown>)?.forceR2 === 'true';
+
+  if (fileSize && fileSize > limits.maxUploadSizeBytes) {
+    throw new FileSizeLimitError(`File exceeds maximum size of ${env.MAX_UPLOAD_SIZE_MB}MB`);
+  }
 
   // 1. LAN Auto-Bypass: If request is within local network, return direct upload endpoint to save R2 quota
   if (!isForceR2 && isLanRequest(request)) {
@@ -94,14 +100,23 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
 
 export async function completeTransitUpload(request: FastifyRequest, reply: FastifyReply) {
   const body = completeTransitBodySchema.parse(request.body);
-  const { fileKey, fileId, originalName, mimeType, purpose } = body;
+  const { fileKey, fileId, originalName, mimeType, purpose, sizeBytes } = body;
 
   // Security guard against path traversal or non-transit key manipulation
   if (!fileKey.startsWith('transit/') || fileKey.includes('..')) {
     throw new BadRequestError('Invalid or unauthorized transit fileKey');
   }
 
-  const ext = path.extname(originalName) || '.bin';
+  if (!/^fil_[a-zA-Z0-9_]+$/.test(fileId)) {
+    throw new BadRequestError('Invalid fileId format');
+  }
+
+  if (sizeBytes && sizeBytes > limits.maxUploadSizeBytes) {
+    throw new FileSizeLimitError(`File exceeds maximum size of ${env.MAX_UPLOAD_SIZE_MB}MB`);
+  }
+
+  const safeOriginalName = path.basename(originalName) || 'file.bin';
+  const ext = path.extname(safeOriginalName) || '.bin';
   const targetPath = StorageManager.getUploadPath(fileId, ext);
 
   // Ingest stream from R2 directly to disk and delete from R2 upon success
@@ -113,7 +128,7 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
     data: {
       id: fileId,
       purpose: 'UPLOAD',
-      originalName,
+      originalName: safeOriginalName,
       storagePath: targetPath,
       mimeType: mimeType || 'application/octet-stream',
       sizeBytes: BigInt(byteCount),
@@ -140,3 +155,4 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
     }
   });
 }
+

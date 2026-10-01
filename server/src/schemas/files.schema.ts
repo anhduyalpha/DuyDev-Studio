@@ -36,7 +36,7 @@ export type PresignTransitBody = z.infer<typeof presignTransitBodySchema>;
 
 export const completeTransitBodySchema = z.object({
   fileKey: z.string().min(1, 'fileKey is required'),
-  fileId: z.string().min(1, 'fileId is required'),
+  fileId: z.string().regex(/^fil_[a-zA-Z0-9_]+$/, 'Invalid fileId format'),
   originalName: z.string().min(1, 'originalName is required'),
   mimeType: z.string().optional(),
   purpose: z.string().optional().default('pdf-convert'),

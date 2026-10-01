@@ -8,7 +8,7 @@
  * 4. DOM Locking & Listener Hygiene in usePdfDom.js
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { PdfQueueManager } from '../../../src/components/tools/pdf/hooks/usePdfQueue.js';
 import { renderConfigPanel } from '../../../src/components/tools/pdf/components/ConfigPanel.js';
 import {

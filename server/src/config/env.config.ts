@@ -6,9 +6,14 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load .env
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load .env from process.cwd() and ensure server/.env is loaded reliably
 dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'server', '.env') });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

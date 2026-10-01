@@ -12,6 +12,13 @@ export function isWanConnection() {
   return h.includes('alphadaniel.io.vn') || h.includes('cloudflare');
 }
 
+export function resolveApiUrl(path) {
+  if (typeof window !== 'undefined' && window.location?.origin && typeof path === 'string' && path.startsWith('/')) {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
+}
+
 export function getOptimalChunkSize(fileSize, _isWan = isWanConnection()) {
   // Adaptive chunk sizing ladder for high throughput over WAN/Cloudflare and all networks:
   // Cloudflare request body limit on free/standard plans is 100MB; all chunk sizes remain
@@ -472,7 +479,7 @@ function uploadViaR2Transit(file, presignData, options = {}) {
           if (typeof options.onStage === 'function') {
             options.onStage('Đang nạp tệp vào máy chủ...');
           }
-          const completeRes = await fetch('/api/v1/files/complete-transit', {
+          const completeRes = await fetch(resolveApiUrl('/api/v1/files/complete-transit'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -537,7 +544,7 @@ export async function smartUploadFile(file, options = {}) {
   // 1. Presign query: check if R2 Transit Pipe is available for this request
   if (!options.uploadUrl && !options.forceDirect) {
     try {
-      const presignRes = await fetch('/api/v1/files/presign', {
+      const presignRes = await fetch(resolveApiUrl('/api/v1/files/presign'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
