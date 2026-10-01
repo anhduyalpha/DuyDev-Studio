@@ -10,45 +10,43 @@ import {
 
 describe('Resumable Uploader Engine Suite', () => {
   describe('Adaptive Chunk Sizing (getOptimalChunkSize)', () => {
-    it('provides minimum 16MB chunk for small files to avoid TCP slow-start', () => {
+    it('provides minimum 10MB chunk for small files (<= 50MB) to avoid TCP slow-start', () => {
       const size10MB = 10 * 1024 * 1024;
       const chunk = getOptimalChunkSize(size10MB, false);
-      expect(chunk).toBe(16 * 1024 * 1024);
+      expect(chunk).toBe(10 * 1024 * 1024);
     });
 
-    it('allocates 16MB chunk for 100MB file', () => {
+    it('allocates 20MB chunk for 100MB file', () => {
       const size100MB = 100 * 1024 * 1024;
       const chunk = getOptimalChunkSize(size100MB, true);
-      expect(chunk).toBe(16 * 1024 * 1024);
+      expect(chunk).toBe(20 * 1024 * 1024);
       const totalChunks = Math.ceil(size100MB / chunk);
-      expect(totalChunks).toBe(7); // only 7 roundtrips!
+      expect(totalChunks).toBe(5); // only 5 roundtrips!
     });
 
-    it('allocates optimal ~32MB chunk for 953.8MB archive (e.g. hello.zip) instead of 4MB', () => {
+    it('allocates optimal 25MB chunk for 953.8MB archive (e.g. hello.zip) instead of 4MB', () => {
       const sizeHelloZip = Math.floor(953.8 * 1024 * 1024);
       const wanChunk = getOptimalChunkSize(sizeHelloZip, true);
       const lanChunk = getOptimalChunkSize(sizeHelloZip, false);
 
-      // Both WAN and LAN must use high-throughput chunks (>= 30MB)
-      expect(wanChunk).toBeGreaterThanOrEqual(30 * 1024 * 1024);
-      expect(wanChunk).toBeLessThanOrEqual(48 * 1024 * 1024);
-      expect(lanChunk).toBeGreaterThanOrEqual(30 * 1024 * 1024);
+      // Both WAN and LAN must use high-throughput chunks (25MB)
+      expect(wanChunk).toBe(25 * 1024 * 1024);
+      expect(lanChunk).toBe(25 * 1024 * 1024);
 
-      // Ensure total chunks is between 20 and 35, NEVER 239!
+      // Ensure total chunks is around 39, NEVER 239!
       const totalChunks = Math.ceil(sizeHelloZip / wanChunk);
-      expect(totalChunks).toBeLessThanOrEqual(35);
-      expect(totalChunks).toBeGreaterThanOrEqual(20);
+      expect(totalChunks).toBe(39);
     });
 
-    it('clamps chunk size to max 48MB for multi-gigabyte files (well under Cloudflare 100MB limit)', () => {
+    it('clamps chunk size to max 40MB for multi-gigabyte files (well under Cloudflare 100MB limit)', () => {
       const size10GB = 10 * 1024 * 1024 * 1024;
       const chunk = getOptimalChunkSize(size10GB, true);
-      expect(chunk).toBe(48 * 1024 * 1024);
+      expect(chunk).toBe(40 * 1024 * 1024);
     });
 
     it('returns valid minimum chunk for 0 or negative fileSize', () => {
-      expect(getOptimalChunkSize(0)).toBe(16 * 1024 * 1024);
-      expect(getOptimalChunkSize(-100)).toBe(16 * 1024 * 1024);
+      expect(getOptimalChunkSize(0)).toBe(10 * 1024 * 1024);
+      expect(getOptimalChunkSize(-100)).toBe(10 * 1024 * 1024);
     });
   });
 

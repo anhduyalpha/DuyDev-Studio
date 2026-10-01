@@ -261,17 +261,26 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
   let totalBytes = 0;
 
   try {
+    let writeError: Error | null = null;
+    const onWriteError = (err: Error) => { writeError = err; };
+    writeStream.on('error', onWriteError);
+
     // Stream each chunk sequentially with backpressure, deleting chunk immediately to reclaim disk space
     for (let i = 0; i < totalChunks; i++) {
+      if (writeError) throw writeError;
       const chunkPath = path.join(chunkDir, `chunk_${i}.part`);
       const readStream = fs.createReadStream(chunkPath, { highWaterMark: 8 * 1024 * 1024 });
 
       for await (const chunk of readStream) {
+        if (writeError) throw writeError;
         const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         totalBytes += buf.length;
         hash.update(buf);
         if (!writeStream.write(buf)) {
-          await new Promise<void>((resolve) => writeStream.once('drain', resolve));
+          await new Promise<void>((resolve, reject) => {
+            writeStream.once('drain', resolve);
+            writeStream.once('error', reject);
+          });
         }
       }
 
@@ -279,6 +288,7 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
       await StorageManager.unlinkSafe(chunkPath);
     }
 
+    if (writeError) throw writeError;
     writeStream.end();
     await new Promise<void>((resolve, reject) => {
       writeStream.once('finish', () => resolve());

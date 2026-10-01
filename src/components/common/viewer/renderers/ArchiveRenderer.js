@@ -12,6 +12,7 @@ import { closeFileViewer } from '../FileViewerCore.js';
 import { ViewerConnector } from '../FileViewerConnector.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { getAdminToken } from '../../../../utilities/adminAuth.js';
+import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
 
 /**
  * Initial markup for the archive viewer viewport
@@ -155,19 +156,14 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
   // 2. Fetch and inspect archive
   async function loadArchive() {
     try {
-      // If we don't have a server fileId and no drivePath, but have a local rawFile blob, upload it first
+      // If we don't have a server fileId and no drivePath, but have a local rawFile blob, upload it via high-speed smart upload
       if (!fileId && !drivePath && state.rawFile) {
-        const formData = new FormData();
-        formData.append('file', state.rawFile, state.name);
-        formData.append('purpose', 'archive-inspect');
-        const upRes = await fetch('/api/v1/files/upload?purpose=archive-inspect', {
-          method: 'POST',
-          body: formData,
+        const upRes = await smartUploadFile(state.rawFile, {
+          purpose: 'archive-inspect',
           signal: abortController.signal
         });
-        if (!upRes.ok) throw new Error('Không thể tải tệp nén lên máy chủ để đọc');
-        const upJson = await upRes.json();
-        fileId = upJson.data?.fileId;
+        if (!upRes?.fileId) throw new Error('Không thể tải tệp nén lên máy chủ để đọc');
+        fileId = upRes.fileId;
       }
 
       if (!fileId && !drivePath) throw new Error('Không tìm thấy định danh hoặc đường dẫn của tệp nén');
