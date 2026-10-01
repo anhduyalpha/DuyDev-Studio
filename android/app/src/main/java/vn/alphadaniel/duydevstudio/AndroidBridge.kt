@@ -406,13 +406,17 @@ class AndroidBridge(
             val targetDir = json.optString("targetDir", "/")
             val serverUrl = json.optString("serverUrl", getActiveHost())
 
+            val nativeUri = vn.alphadaniel.duydevstudio.upload.NativeFileRegistry.get(fileName, fileSize)
+            val uriString = nativeUri?.toString() ?: ""
+
             val inputData = androidx.work.workDataOf(
                 vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_FILE_NAME to fileName,
                 vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_FILE_SIZE to fileSize,
                 vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_MIME_TYPE to mimeType,
                 vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_PURPOSE to purpose,
                 vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_TARGET_DIR to targetDir,
-                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_SERVER_URL to serverUrl
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_SERVER_URL to serverUrl,
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_URI_STRING to uriString
             )
 
             val constraints = androidx.work.Constraints.Builder()
@@ -422,6 +426,7 @@ class AndroidBridge(
             val uploadWorkRequest = androidx.work.OneTimeWorkRequestBuilder<vn.alphadaniel.duydevstudio.upload.UploadWorker>()
                 .setInputData(inputData)
                 .setConstraints(constraints)
+                .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .addTag(vn.alphadaniel.duydevstudio.upload.UploadWorker.TAG)
                 .build()
 

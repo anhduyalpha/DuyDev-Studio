@@ -172,6 +172,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        currentInstance = this
+        evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-resumed')); }")
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         webView.saveState(outState)
@@ -610,10 +616,18 @@ class MainActivity : AppCompatActivity() {
                 val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
                 if (cursor.moveToFirst()) {
                     if (nameIndex != -1) name = cursor.getString(nameIndex) ?: name
-                    if (sizeIndex != -1) size = cursor.getLong(sizeIndex)
+                    if (sizeIndex != -1 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex)
                 }
             }
         } catch (_: Exception) {}
+        if (size <= 0L) {
+            try {
+                contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+                    val len = afd.length
+                    if (len > 0L) size = len
+                }
+            } catch (_: Exception) {}
+        }
         return Pair(name, size)
     }
 

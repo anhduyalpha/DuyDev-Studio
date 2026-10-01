@@ -201,7 +201,7 @@ class UploadWorker(
                 var r2Req = Request.Builder()
                     .url(presignedUrl)
                     .put(streamingBody)
-                    .addHeader("Content-Type", mimeType)
+                    .header("Content-Type", mimeType)
                     .build()
 
                 var call = okHttpClient.newCall(r2Req)
@@ -231,7 +231,7 @@ class UploadWorker(
                         r2Req = Request.Builder()
                             .url(presignedUrl)
                             .put(streamingBody)
-                            .addHeader("Content-Type", mimeType)
+                            .header("Content-Type", mimeType)
                             .build()
                         call = okHttpClient.newCall(r2Req)
                         activeCall = call
@@ -287,8 +287,13 @@ class UploadWorker(
                 }
             } else {
                 // Mode Direct: Multipart POST directly to server
-                val uploadUrl = presignData?.optString("uploadUrl")?.takeIf { it.isNotBlank() }
-                    ?: "$serverUrl/api/v1/files/upload?purpose=$purpose"
+                val rawUploadUrl = presignData?.optString("uploadUrl")?.takeIf { it.isNotBlank() }
+                val uploadUrl = when {
+                    rawUploadUrl == null -> "$serverUrl/api/v1/files/upload?purpose=$purpose"
+                    rawUploadUrl.startsWith("http://") || rawUploadUrl.startsWith("https://") -> rawUploadUrl
+                    rawUploadUrl.startsWith("/") -> "$serverUrl$rawUploadUrl"
+                    else -> "$serverUrl/$rawUploadUrl"
+                }
 
                 val streamingBody = ProgressRequestBody(
                     context.contentResolver,
@@ -349,6 +354,8 @@ class UploadWorker(
                     e.message
                 )
                 dispatchWebComplete(false, null, e.message)
+            } else {
+                dispatchWebComplete(false, null, "Tác vụ tải lên đã bị hủy")
             }
             Result.failure(workDataOf("error" to (e.message ?: "Upload failed")))
         } finally {
@@ -366,7 +373,11 @@ class UploadWorker(
             put("etaSeconds", etaSeconds)
             put("stageText", "Đang tải lên: $percent%")
         }.toString()
-        val safePayload = payload.replace("\\", "\\\\").replace("'", "\\'")
+        val safePayload = payload
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
         val js = "if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-upload-progress', { detail: JSON.parse('$safePayload') })); }"
         MainActivity.currentInstance?.evaluateJs(js)
     }
@@ -378,7 +389,11 @@ class UploadWorker(
             if (data != null) put("data", data)
             if (error != null) put("error", error)
         }.toString()
-        val safePayload = payload.replace("\\", "\\\\").replace("'", "\\'")
+        val safePayload = payload
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
         val js = "if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-upload-complete', { detail: JSON.parse('$safePayload') })); }"
         MainActivity.currentInstance?.evaluateJs(js)
     }

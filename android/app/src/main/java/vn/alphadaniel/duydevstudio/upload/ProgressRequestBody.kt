@@ -42,11 +42,12 @@ class ProgressRequestBody(
                 totalWritten += bytesRead
 
                 val now = System.currentTimeMillis()
-                if (now - lastProgressTime >= intervalMs || totalWritten == contentLength) {
+                if (now - lastProgressTime >= intervalMs || (contentLength > 0 && totalWritten == contentLength)) {
                     lastProgressTime = now
-                    onProgress(totalWritten, contentLength)
+                    onProgress(totalWritten, if (contentLength > 0) contentLength else totalWritten)
                 }
             }
+            onProgress(totalWritten, if (contentLength > 0) contentLength else totalWritten)
         }
     }
 }

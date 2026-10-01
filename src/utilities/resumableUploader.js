@@ -562,20 +562,6 @@ export async function smartUploadFile(file, options = {}) {
       const taskId = window.AndroidBridge.startBackgroundUpload(JSON.stringify(payload));
       if (!taskId) throw new Error('Không thể khởi tạo tiến trình upload trong nền');
 
-      if (typeof options.onUploaderCreated === 'function') {
-        options.onUploaderCreated({
-          cancel: () => {
-            try { window.AndroidBridge.cancelBackgroundUpload(taskId); } catch (_) {}
-          },
-          pause: () => {},
-          resume: () => {}
-        });
-      }
-
-      if (typeof options.onStage === 'function') {
-        options.onStage('Đang tải lên trong nền (Android WorkManager)...');
-      }
-
       return await new Promise((resolve, reject) => {
         let isSettled = false;
 
@@ -592,6 +578,20 @@ export async function smartUploadFile(file, options = {}) {
           cleanup();
           reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
         };
+
+        if (typeof options.onUploaderCreated === 'function') {
+          options.onUploaderCreated({
+            cancel: () => {
+              abortHandler();
+            },
+            pause: () => {},
+            resume: () => {}
+          });
+        }
+
+        if (typeof options.onStage === 'function') {
+          options.onStage('Đang tải lên trong nền (Android WorkManager)...');
+        }
 
         const progressHandler = (e) => {
           const detail = e.detail;
@@ -624,7 +624,12 @@ export async function smartUploadFile(file, options = {}) {
             if (detail.success) {
               resolve(detail.data);
             } else {
-              reject(new Error(detail.error || 'Upload trong nền thất bại'));
+              const errMsg = detail.error || 'Upload trong nền thất bại';
+              if (errMsg.includes('hủy') || errMsg.includes('cancel')) {
+                reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+              } else {
+                reject(new Error(errMsg));
+              }
             }
           }
         };
