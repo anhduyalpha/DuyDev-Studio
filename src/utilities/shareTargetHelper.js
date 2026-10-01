@@ -77,30 +77,46 @@ export function extractImageUrlFromTextOrUrl(url = '', text = '') {
  * @returns {File}
  */
 export function base64ToFile(base64Data, filename, mimeType) {
-  const binaryString = atob(base64Data);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  if (!base64Data) {
+    return new File([], filename, { type: mimeType, lastModified: Date.now() });
   }
-  return new File([bytes], filename, { type: mimeType, lastModified: Date.now() });
+  try {
+    const cleaned = base64Data.trim();
+    const binaryString = atob(cleaned);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new File([bytes], filename, { type: mimeType, lastModified: Date.now() });
+  } catch (err) {
+    console.warn('[AndroidBridge] Failed to decode base64 file data:', filename, err);
+    return new File([], filename, { type: mimeType, lastModified: Date.now() });
+  }
 }
 
 /**
  * Normalize payload from AndroidBridge into standard share payload with File objects
  * @param {object} nativePayload
+ * @param {boolean} [shouldFetchFiles=true] - If false, creates lightweight placeholder File instances for fast peeking
  * @returns {Promise<{ title?: string, text?: string, url?: string, targetRoute?: string, targetMode?: string, files: File[] }|null>}
  */
-export async function normalizeNativePayload(nativePayload) {
+export async function normalizeNativePayload(nativePayload, shouldFetchFiles = true) {
   if (!nativePayload) return null;
   const files = [];
 
   if (Array.isArray(nativePayload.files)) {
     for (const f of nativePayload.files) {
-      if (f.base64) {
-        files.push(base64ToFile(f.base64, f.name || 'shared-file', f.type || 'application/octet-stream'));
-      } else if (f.fetchUrl) {
-        try {
+      try {
+        if (!shouldFetchFiles) {
+          // Fast-path stub: create placeholder File with metadata for UI peek without blob network overhead
+          files.push(new File([], f.name || 'shared-file', {
+            type: f.type || 'application/octet-stream',
+            lastModified: Date.now()
+          }));
+        } else if (f.base64) {
+          files.push(base64ToFile(f.base64, f.name || 'shared-file', f.type || 'application/octet-stream'));
+        } else if (f.fetchUrl) {
           const resp = await fetch(f.fetchUrl);
           if (resp.ok) {
             const blob = await resp.blob();
@@ -109,9 +125,9 @@ export async function normalizeNativePayload(nativePayload) {
               lastModified: Date.now()
             }));
           }
-        } catch (err) {
-          console.warn('[AndroidBridge] Failed to fetch shared file from bridge:', f.fetchUrl, err);
         }
+      } catch (err) {
+        console.warn('[AndroidBridge] Failed to process shared file:', f.name, err);
       }
     }
   }
@@ -149,13 +165,13 @@ function openShareDb() {
  */
 export async function peekPendingSharedPayload() {
   try {
-    // 0. Check native AndroidBridge first (instant 0ms)
+    // 0. Check native AndroidBridge first (instant 0ms, file stubs only)
     if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getSharedPayload === 'function') {
       const raw = window.AndroidBridge.getSharedPayload();
       if (raw) {
         try {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (parsed) return await normalizeNativePayload(parsed);
+          if (parsed) return await normalizeNativePayload(parsed, false);
         } catch (e) {
           console.warn('[AndroidBridge] Peek parse error:', e);
         }
@@ -195,10 +211,13 @@ export async function consumePendingSharedPayload() {
       if (raw) {
         try {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (typeof window.AndroidBridge.clearSharedPayload === 'function') {
-            window.AndroidBridge.clearSharedPayload();
+          if (parsed) {
+            const normalized = await normalizeNativePayload(parsed, true);
+            if (typeof window.AndroidBridge.clearSharedPayload === 'function') {
+              window.AndroidBridge.clearSharedPayload();
+            }
+            return normalized;
           }
-          if (parsed) return await normalizeNativePayload(parsed);
         } catch (e) {
           console.warn('[AndroidBridge] Consume parse error:', e);
         }

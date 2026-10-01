@@ -683,5 +683,57 @@ describe('Web Share Target & Classifier Suite', () => {
         else delete (global as any).window;
       }
     });
+
+    it('base64ToFile should gracefully return fallback File on empty or malformed input without throwing', () => {
+      const emptyFile = base64ToFile('', 'empty.txt', 'text/plain');
+      expect(emptyFile).toBeDefined();
+      expect(emptyFile.name).toBe('empty.txt');
+      expect(emptyFile.size).toBe(0);
+
+      const invalidFile = base64ToFile('%%%not-valid-base64%%%', 'bad.dat', 'application/octet-stream');
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile.name).toBe('bad.dat');
+      expect(invalidFile.size).toBe(0);
+    });
+
+    it('normalizeNativePayload in peek mode (shouldFetchFiles=false) should produce placeholder stubs', async () => {
+      const nativePayload = {
+        title: 'Document with fetchUrl',
+        url: 'https://duydevstudio.alphadaniel.io.vn',
+        files: [
+          {
+            name: 'heavy-file.zip',
+            type: 'application/zip',
+            size: 52428800,
+            fetchUrl: '/__android_share_file__/0'
+          }
+        ]
+      };
+
+      // Peeking must not throw or require fetch() to be mocked
+      const peeked = await normalizeNativePayload(nativePayload, false);
+      expect(peeked).toBeDefined();
+      expect(peeked?.files.length).toBe(1);
+      expect(peeked?.files[0].name).toBe('heavy-file.zip');
+      expect(peeked?.files[0].type).toBe('application/zip');
+      expect(peeked?.url).toBe('https://duydevstudio.alphadaniel.io.vn');
+    });
+
+    it('normalizeNativePayload should survive partially corrupted files without dropping valid files', async () => {
+      const validB64 = Buffer.from('Valid Content').toString('base64');
+      const nativePayload = {
+        title: 'Mixed files',
+        files: [
+          { name: 'corrupted.bin', type: 'application/octet-stream', base64: '!!!bad!!!' },
+          { name: 'valid.txt', type: 'text/plain', base64: validB64 }
+        ]
+      };
+
+      const result = await normalizeNativePayload(nativePayload, true);
+      expect(result).toBeDefined();
+      expect(result?.files.length).toBe(2);
+      expect(result?.files[1].name).toBe('valid.txt');
+      expect(result?.files[1].size).toBe(Buffer.from('Valid Content').length);
+    });
   });
 });

@@ -155,6 +155,62 @@ class MainActivity : AppCompatActivity() {
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(webView, true)
 
+        // Initialize ServiceWorkerController for offline-first PWA caching
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            val swController = android.webkit.ServiceWorkerController.getInstance()
+            swController.setServiceWorkerClient(object : android.webkit.ServiceWorkerClient() {
+                override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
+                    val uri = request.url
+                    if (uri?.path?.contains("/__android_share_file__/") == true) {
+                        val index = uri.lastPathSegment?.toIntOrNull() ?: 0
+                        val fileUri = sharedUrisList.getOrNull(index)
+                        if (fileUri != null) {
+                            try {
+                                val mime = contentResolver.getType(fileUri) ?: "application/octet-stream"
+                                val stream = contentResolver.openInputStream(fileUri)
+                                if (stream != null) {
+                                    val encoding = if (mime.startsWith("text/") || mime.contains("json") || mime.contains("javascript")) "UTF-8" else null
+                                    val response = WebResourceResponse(mime, encoding, stream)
+                                    response.responseHeaders = mapOf(
+                                        "Access-Control-Allow-Origin" to "*",
+                                        "Access-Control-Allow-Methods" to "GET, OPTIONS",
+                                        "Access-Control-Allow-Headers" to "*",
+                                        "Cache-Control" to "no-cache, no-store"
+                                    )
+                                    return response
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+                    return super.shouldInterceptRequest(request)
+                }
+            })
+        }
+
+        // Native download listener for file conversion outputs
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
+            try {
+                val request = android.app.DownloadManager.Request(Uri.parse(url)).apply {
+                    setMimeType(mimetype)
+                    addRequestHeader("User-Agent", userAgent)
+                    setDescription("Downloading file...")
+                    setTitle(android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype))
+                    setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setDestinationInExternalPublicDir(
+                        android.os.Environment.DIRECTORY_DOWNLOADS,
+                        android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype)
+                    )
+                }
+                val dm = getSystemService(DOWNLOAD_SERVICE) as? android.app.DownloadManager
+                dm?.enqueue(request)
+            } catch (_: Exception) {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
+                } catch (_: Exception) {}
+            }
+        }
+
         // Inject Native Javascript Interface
         webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
 
@@ -211,6 +267,13 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val uri = request?.url ?: return false
+                val scheme = uri.scheme?.lowercase(Locale.ROOT) ?: ""
+
+                // Allow internal schemes (blob downloads, data URIs, javascript, about)
+                if (scheme == "blob" || scheme == "data" || scheme == "javascript" || scheme == "about") {
+                    return false
+                }
+
                 val host = uri.host?.lowercase(Locale.ROOT) ?: ""
 
                 // Allow internal app navigation
@@ -230,20 +293,22 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-                val url = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
-                if (url.contains("/__android_share_file__/")) {
-                    val index = url.substringAfterLast("/").toIntOrNull() ?: 0
-                    val uri = sharedUrisList.getOrNull(index)
-                    if (uri != null) {
+                val uri = request?.url ?: return super.shouldInterceptRequest(view, request)
+                if (uri.path?.contains("/__android_share_file__/") == true) {
+                    val index = uri.lastPathSegment?.toIntOrNull() ?: 0
+                    val fileUri = sharedUrisList.getOrNull(index)
+                    if (fileUri != null) {
                         try {
-                            val mime = contentResolver.getType(uri) ?: "application/octet-stream"
-                            val stream = contentResolver.openInputStream(uri)
+                            val mime = contentResolver.getType(fileUri) ?: "application/octet-stream"
+                            val stream = contentResolver.openInputStream(fileUri)
                             if (stream != null) {
-                                val response = WebResourceResponse(mime, "UTF-8", stream)
+                                val encoding = if (mime.startsWith("text/") || mime.contains("json") || mime.contains("javascript")) "UTF-8" else null
+                                val response = WebResourceResponse(mime, encoding, stream)
                                 response.responseHeaders = mapOf(
                                     "Access-Control-Allow-Origin" to "*",
                                     "Access-Control-Allow-Methods" to "GET, OPTIONS",
-                                    "Cache-Control" to "no-cache"
+                                    "Access-Control-Allow-Headers" to "*",
+                                    "Cache-Control" to "no-cache, no-store"
                                 )
                                 return response
                             }
@@ -305,6 +370,7 @@ class MainActivity : AppCompatActivity() {
         if (intent.action == Intent.ACTION_SEND) {
             val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                 ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+                ?: intent.data
             if (uri != null) uris.add(uri)
         } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
             val list = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
@@ -321,7 +387,13 @@ class MainActivity : AppCompatActivity() {
         val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT) ?: ""
 
-        if (uris.isNotEmpty() || text.isNotBlank()) {
+        val detectedUrl = when {
+            intent.dataString?.startsWith("http://") == true || intent.dataString?.startsWith("https://") == true -> intent.dataString
+            text.startsWith("http://") || text.startsWith("https://") -> text
+            else -> Regex("""https?://[^\s]+""").find(text)?.value
+        }
+
+        if (uris.isNotEmpty() || text.isNotBlank() || !detectedUrl.isNullOrBlank()) {
             sharedUrisList.clear()
             sharedUrisList.addAll(uris)
 
@@ -351,6 +423,7 @@ class MainActivity : AppCompatActivity() {
             val payload = JSONObject().apply {
                 if (subject.isNotBlank()) put("title", subject)
                 if (text.isNotBlank()) put("text", text)
+                if (!detectedUrl.isNullOrBlank()) put("url", detectedUrl)
                 if (targetRoute != null) put("targetRoute", targetRoute)
                 if (targetMode != null) put("targetMode", targetMode)
                 put("files", fileListJson)

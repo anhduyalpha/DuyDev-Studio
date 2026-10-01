@@ -17,17 +17,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    signingConfigs {
-        create("release") {
-            // Fallback to debug signing config so release APK is installable out of the box
-            val debugConfig = getByName("debug")
-            storeFile = debugConfig.storeFile
-            storePassword = debugConfig.storePassword
-            keyAlias = debugConfig.keyAlias
-            keyPassword = debugConfig.keyPassword
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -35,7 +24,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             applicationIdSuffix = ".debug"

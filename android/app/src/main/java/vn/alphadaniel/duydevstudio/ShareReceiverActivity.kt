@@ -1,5 +1,6 @@
 package vn.alphadaniel.duydevstudio
 
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -26,6 +27,8 @@ class ShareReceiverActivity : AppCompatActivity() {
         val mode: String? = null
     )
 
+    private val collectedUris = mutableListOf<Uri>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -41,32 +44,38 @@ class ShareReceiverActivity : AppCompatActivity() {
         }
 
         // Collect incoming shared URIs or plain text
-        val sharedUris = mutableListOf<Uri>()
+        collectedUris.clear()
         if (action == Intent.ACTION_SEND) {
             val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                 ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
-            if (uri != null) sharedUris.add(uri)
+                ?: intent.data
+            if (uri != null) collectedUris.add(uri)
         } else if (action == Intent.ACTION_SEND_MULTIPLE) {
             val uris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
             if (uris != null) {
-                sharedUris.addAll(uris)
+                collectedUris.addAll(uris)
             } else if (intent.clipData != null) {
                 for (i in 0 until intent.clipData!!.itemCount) {
                     val u = intent.clipData!!.getItemAt(i).uri
-                    if (u != null) sharedUris.add(u)
+                    if (u != null) collectedUris.add(u)
                 }
             }
         }
 
         val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        val url = if (text.startsWith("http://") || text.startsWith("https://")) text else ""
+        val urlRegex = Regex("""https?://[^\s]+""")
+        val url = if (text.startsWith("http://") || text.startsWith("https://")) {
+            text
+        } else {
+            urlRegex.find(text)?.value ?: ""
+        }
 
-        if (sharedUris.isEmpty() && text.isBlank()) {
+        if (collectedUris.isEmpty() && text.isBlank() && url.isBlank()) {
             finish()
             return
         }
 
-        showNativeShareDialog(sharedUris, text, url)
+        showNativeShareDialog(collectedUris, text, url)
     }
 
     private fun showNativeShareDialog(sharedUris: List<Uri>, text: String, url: String) {
@@ -104,14 +113,21 @@ class ShareReceiverActivity : AppCompatActivity() {
 
             // Classify file and suggest tool actions
             if (mime == "application/pdf" || name.lowercase(Locale.ROOT).endsWith(".pdf")) {
+                if (sharedUris.size > 1) {
+                    actions.add(ShareAction("Gộp ${sharedUris.size} tệp PDF", "#tool/pdf-studio", "merge"))
+                }
                 actions.add(ShareAction("Nén PDF", "#tool/pdf-studio", "compress"))
                 actions.add(ShareAction("PDF sang Word", "#tool/pdf-studio", "pdf_to_docx"))
                 actions.add(ShareAction("Tách trang", "#tool/pdf-studio", "split"))
                 actions.add(ShareAction("Xem tài liệu PDF", "#tool/pdf-studio", "view"))
             } else if (mime.startsWith("image/") || isImageExtension(name)) {
-                actions.add(ShareAction("Quét mã QR từ ảnh", "#tool/qr-scan"))
+                if (sharedUris.size > 1) {
+                    actions.add(ShareAction("Ghép ${sharedUris.size} ảnh thành PDF", "#tool/pdf-studio", "images_to_pdf"))
+                } else {
+                    actions.add(ShareAction("Quét mã QR từ ảnh", "#tool/qr-scan"))
+                    actions.add(ShareAction("Chuyển ảnh thành PDF", "#tool/pdf-studio", "images_to_pdf"))
+                }
                 actions.add(ShareAction("Đổi định dạng ảnh", "#tool/universal-converter"))
-                actions.add(ShareAction("Chuyển ảnh thành PDF", "#tool/pdf-studio", "images_to_pdf"))
                 actions.add(ShareAction("Tính mã băm toàn vẹn", "#tool/hash-checksum"))
             } else if (isArchive(name, mime)) {
                 actions.add(ShareAction("Soi tệp nén trực tuyến", "#tool/archive-inspect"))
@@ -122,13 +138,17 @@ class ShareReceiverActivity : AppCompatActivity() {
             }
         } else {
             // Text or URL
-            tvFileName.text = if (url.isNotEmpty()) url else text
-            tvFileMeta.text = if (url.isNotEmpty()) "LIÊN KẾT WEB" else "VĂN BẢN THUẦN"
+            val isLink = url.isNotEmpty()
+            tvFileName.text = if (isLink) url else text
+            tvFileMeta.text = if (isLink) "LIÊN KẾT WEB" else "VĂN BẢN THUẦN"
 
             if (url.contains("studocu.com") || url.contains("studocu.vn")) {
                 actions.add(ShareAction("Tải tài liệu Studocu", "#tool/studocu-dl"))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
-            } else if (url.isNotEmpty()) {
+            } else if (isImageExtension(url)) {
+                actions.add(ShareAction("Quét mã QR từ ảnh", "#tool/qr-scan"))
+                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
+            } else if (isLink) {
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
                 actions.add(ShareAction("Quét mã QR từ trang web", "#tool/qr-scan"))
             } else {
@@ -158,9 +178,19 @@ class ShareReceiverActivity : AppCompatActivity() {
         val targetIntent = Intent(this, MainActivity::class.java).apply {
             this.action = intent.action
             this.type = intent.type
-            this.clipData = intent.clipData
             this.data = intent.data
             intent.extras?.let { putExtras(it) }
+
+            // Ensure all collected URIs are in ClipData so FLAG_GRANT_READ_URI_PERMISSION applies
+            if (collectedUris.isNotEmpty()) {
+                val clip = ClipData.newUri(contentResolver, "shared_file", collectedUris[0])
+                for (i in 1 until collectedUris.size) {
+                    clip.addItem(ClipData.Item(collectedUris[i]))
+                }
+                this.clipData = clip
+            } else if (intent.clipData != null) {
+                this.clipData = intent.clipData
+            }
 
             putExtra(MainActivity.EXTRA_TARGET_ROUTE, action.route)
             if (action.mode != null) {
