@@ -21,15 +21,15 @@ export function renderHeader() {
   const isDirect = currentHighway.id !== 'cloudflare';
 
   return `
-    <header class="sticky top-0 z-40 w-full glass-panel px-3 sm:px-4 lg:px-8 py-2 sm:py-3">
-      <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+    <header class="sticky top-0 z-40 w-full glass-panel px-2.5 sm:px-4 lg:px-8 py-2 sm:py-2.5">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-4 min-w-0">
         
         <!-- Left: Clean Branding -->
-        <div class="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none shrink-0" onclick="window.location.hash = ''">
-          <div class="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/80 dark:bg-white/[0.06] border border-zinc-300 dark:border-white/[0.12] flex items-center justify-center transition hover:bg-zinc-300 dark:hover:bg-white/[0.1]">
-            <span class="font-bold text-xs sm:text-sm tracking-wider text-zinc-900 dark:text-white">DS</span>
+        <div class="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer select-none shrink-0" onclick="window.location.hash = ''">
+          <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-zinc-200/80 dark:bg-white/[0.06] border border-zinc-300 dark:border-white/[0.12] flex items-center justify-center transition hover:bg-zinc-300 dark:hover:bg-white/[0.1]">
+            <span class="font-bold text-[10px] sm:text-xs tracking-wider text-zinc-900 dark:text-white">DS</span>
           </div>
-          <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-[#FAFAFA] whitespace-nowrap">DuyDev Studio</span>
+          <span class="font-bold text-xs sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-[#FAFAFA] whitespace-nowrap">DuyDev Studio</span>
         </div>
 
         <!-- Center: Minimalist Search Bar (Desktop) -->
@@ -46,44 +46,44 @@ export function renderHeader() {
           </div>
         </div>
 
-        <!-- Right: Controls -->
+        <!-- Right: Controls (All visible, compact on mobile to never overflow) -->
         <div class="flex items-center gap-1 sm:gap-2 shrink-0">
           ${isDirect ? `
-            <span class="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              ${currentHighway.badge}
+            <span class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <span class="hidden min-[400px]:inline">${currentHighway.id === 'lan' ? 'LAN ' : ''}</span>${currentHighway.id === 'lan' ? '1Gbps' : currentHighway.badge}
             </span>
           ` : `
             <span id="highwayHeaderContainer">
-              <button id="btnSwitchHighway" style="display: none;" title="Chuyển kết nối" class="items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap">
-                <i data-lucide="zap" class="w-3.5 h-3.5"></i> <span id="btnSwitchHighwayLabel">Tailscale (250 Mbps)</span>
+              <button id="btnSwitchHighway" style="display: none;" title="Chuyển kết nối" class="items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap">
+                <i data-lucide="zap" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i> <span id="btnSwitchHighwayLabel">Tailscale</span>
               </button>
             </span>
           `}
 
-          <!-- Storage Drive Link (Desktop/Tablet - Mobile has Tiện ích in BottomNav) -->
-          <a href="#storage" title="Bộ nhớ lưu trữ" class="hidden sm:inline-flex p-2 sm:p-2.5 text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
-            <i data-lucide="hard-drive" class="w-4 h-4"></i>
+          <!-- Storage Drive Link -->
+          <a href="#storage" title="Bộ nhớ lưu trữ" class="inline-flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-lg sm:rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
+            <i data-lucide="hard-drive" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </a>
 
-          <!-- History Link -->
-          <a href="#history" title="Lịch sử tác vụ" class="hidden sm:inline-flex p-2 sm:p-2.5 text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition">
+          <!-- History Link (Desktop only) -->
+          <a href="#history" title="Lịch sử tác vụ" class="hidden sm:inline-flex w-8 h-8 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition">
             <i data-lucide="clock" class="w-4 h-4"></i>
           </a>
 
-          <!-- Trash Bin Link (Placed immediately next to Theme Toggle) -->
-          <a href="#trash" id="headerTrashBtn" title="Thùng rác" class="relative inline-flex items-center justify-center p-1.5 sm:p-2.5 text-zinc-700 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-            <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1 sm:top-1.5 right-1 sm:right-1.5 w-2 h-2 rounded-full bg-rose-500"></span>
+          <!-- Trash Bin Link -->
+          <a href="#trash" id="headerTrashBtn" title="Thùng rác" class="relative inline-flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center text-zinc-700 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-lg sm:rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+            <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-0.5 right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500"></span>
           </a>
 
           <!-- Theme Toggle Button -->
-          <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" class="p-1.5 sm:p-2.5 text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
-            <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4"></i>
+          <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" class="inline-flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-lg sm:rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
+            <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </button>
 
-          <!-- User Profile Avatar (Desktop/Tablet - Mobile has Cài đặt in BottomNav) -->
-          <div onclick="window.location.hash = '#settings'" title="Cài đặt" class="hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-200 dark:bg-white/[0.06] border border-zinc-300 dark:border-white/[0.12] items-center justify-center font-bold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 cursor-pointer hover:border-zinc-400 dark:hover:border-white/30 transition">
+          <!-- User Profile Avatar -->
+          <div onclick="window.location.hash = '#settings'" title="Cài đặt" class="flex w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-zinc-200 dark:bg-white/[0.06] border border-zinc-300 dark:border-white/[0.12] items-center justify-center font-bold text-[11px] sm:text-xs text-zinc-800 dark:text-zinc-200 cursor-pointer hover:border-zinc-400 dark:hover:border-white/30 transition shrink-0">
             D
           </div>
 
@@ -143,9 +143,9 @@ async function probeHighwayAvailability() {
   if (tailscale) {
     const tsRes = await probeHighway(tailscale, 400);
     if (tsRes.reachable) {
-      if (label) label.textContent = 'Tailscale (250 Mbps)';
+      if (label) label.textContent = window.innerWidth < 640 ? 'Tailscale' : 'Tailscale (250 Mbps)';
       btn.onclick = () => switchHighway(tailscale.url);
-      btn.className = 'inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap';
+      btn.className = 'inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap';
       btn.style.display = 'inline-flex';
       if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
       return;
@@ -157,9 +157,9 @@ async function probeHighwayAvailability() {
   if (lan) {
     const lanRes = await probeHighway(lan, 300);
     if (lanRes.reachable) {
-      if (label) label.textContent = 'LAN (1 Gbps)';
+      if (label) label.textContent = window.innerWidth < 640 ? 'LAN 1G' : 'LAN (1 Gbps)';
       btn.onclick = () => switchHighway(lan.url);
-      btn.className = 'inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap';
+      btn.className = 'inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap';
       btn.style.display = 'inline-flex';
       if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
