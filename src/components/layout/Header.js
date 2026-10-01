@@ -48,17 +48,17 @@ export function renderHeader() {
         <!-- Right: Controls -->
         <div class="flex items-center gap-1 sm:gap-2.5 shrink-0">
           
-          <!-- App Update Button (Pill on Desktop, Responsive Icon on Mobile) -->
-          <button id="btnPwaUpdate" class="relative p-2 sm:px-3 sm:py-1.5 rounded-xl border border-zinc-200 dark:border-white/[0.08] hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-700 dark:text-zinc-300 text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer" title="Cập nhật ứng dụng">
-            <i data-lucide="refresh-cw" id="iconPwaUpdate" class="w-4 h-4"></i>
-            <span class="hidden md:inline">Cập nhật</span>
+          <!-- App Update Button -->
+          <button id="btnPwaUpdate" class="relative px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-zinc-200 dark:border-white/[0.08] hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-700 dark:text-zinc-300 text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer" title="Cập nhật ứng dụng">
+            <i data-lucide="refresh-cw" id="iconPwaUpdate" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+            <span class="text-[11px] sm:text-xs">Cập nhật</span>
             <span id="badgePwaUpdate" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-950 animate-pulse"></span>
           </button>
 
-          <!-- App Install Button (Responsive Icon on Mobile, Pill on Desktop) -->
-          <button id="btnPwaInstall" class="hidden p-2 sm:px-3 sm:py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs shrink-0" title="Cài đặt">
-            <i data-lucide="download" class="w-4 h-4"></i>
-            <span class="hidden md:inline">Cài đặt</span>
+          <!-- App Install Button -->
+          <button id="btnPwaInstall" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer" title="Cài đặt">
+            <i data-lucide="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+            <span class="text-[11px] sm:text-xs">Cài đặt</span>
           </button>
 
           <!-- Storage Drive Link -->

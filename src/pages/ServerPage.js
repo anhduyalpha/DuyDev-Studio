@@ -3,6 +3,7 @@
  */
 
 import { pwaInstall } from '../hooks/usePWAInstall.js';
+import { pwaUpdate } from '../utilities/pwa.js';
 import { toggleTheme, getStoredTheme } from '../hooks/useTheme.js';
 import { showToast } from '../utilities/toast.js';
 import { clearAllModuleStates } from '../utilities/moduleState.js';
@@ -133,19 +134,27 @@ export function renderServerPage() {
         `}
       </div>
 
-      <!-- 3. Cài đặt Ứng dụng PWA -->
+      <!-- 3. Cài đặt Ứng dụng PWA & Cập nhật -->
       <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
-        <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-          <i data-lucide="smartphone" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Cài đặt ứng dụng
-        </h3>
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="smartphone" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Quản lý ứng dụng PWA
+          </h3>
+          <span class="text-xs font-mono text-zinc-500">v14.8</span>
+        </div>
 
         <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          Cài đặt DuyDev Studio trực tiếp vào màn hình chính của điện thoại.
+          Cài đặt DuyDev Studio trực tiếp vào màn hình chính của điện thoại hoặc kiểm tra cập nhật phiên bản mới.
         </p>
 
-        <button id="btnServerInstallPwa" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20 cursor-pointer">
-          <i data-lucide="download" class="w-4 h-4"></i> Cài đặt ứng dụng lên thiết bị
-        </button>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <button id="btnServerInstallPwa" class="flex-1 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20 cursor-pointer">
+            <i data-lucide="download" class="w-4 h-4"></i> Cài đặt vào điện thoại
+          </button>
+          <button id="btnServerUpdatePwa" class="flex-1 px-5 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-zinc-900 dark:text-white border border-zinc-200 dark:border-white/10 text-sm font-semibold flex items-center justify-center gap-2 transition shadow-xs cursor-pointer">
+            <i data-lucide="refresh-cw" id="iconServerUpdatePwa" class="w-4 h-4"></i> Cập nhật ứng dụng
+          </button>
+        </div>
       </div>
 
       <!-- 4. Thông tin ứng dụng & Homeserver -->
@@ -245,6 +254,30 @@ export function attachServerPageListeners(onRerender) {
   if (btnInstall) {
     btnInstall.addEventListener('click', () => {
       pwaInstall.promptInstall();
+    });
+  }
+
+  // 8. PWA update
+  const btnServerUpdate = document.getElementById('btnServerUpdatePwa');
+  const iconServerUpdate = document.getElementById('iconServerUpdatePwa');
+  if (btnServerUpdate) {
+    pwaUpdate.subscribe((hasUpdate, isChecking) => {
+      if (iconServerUpdate) {
+        iconServerUpdate.classList.toggle('animate-spin', Boolean(isChecking));
+      }
+      if (hasUpdate) {
+        btnServerUpdate.classList.remove('bg-zinc-100', 'dark:bg-white/[0.08]');
+        btnServerUpdate.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        btnServerUpdate.title = 'Đã có bản cập nhật mới! Nhấn để khởi động lại';
+      }
+    });
+
+    btnServerUpdate.addEventListener('click', () => {
+      if (pwaUpdate.hasUpdate) {
+        pwaUpdate.applyUpdate();
+      } else {
+        pwaUpdate.checkForUpdate(true);
+      }
     });
   }
 }
