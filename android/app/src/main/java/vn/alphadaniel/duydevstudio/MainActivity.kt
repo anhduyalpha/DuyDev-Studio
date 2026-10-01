@@ -36,6 +36,9 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
 
     companion object {
+        @Volatile
+        var currentInstance: MainActivity? = null
+
         const val PRIMARY_HOST = "https://duydevstudio.alphadaniel.io.vn"
         const val LAN_HOST = "http://192.168.2.171:3000"
         const val TAILSCALE_HOST = "http://100.90.62.15:3000"
@@ -75,8 +78,32 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        for (uri in uris) {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            val meta = getUriMetadata(uri)
+            vn.alphadaniel.duydevstudio.upload.NativeFileRegistry.register(meta.first, meta.second, uri)
+        }
         filePathCallback?.onReceiveValue(if (uris.isNotEmpty()) uris.toTypedArray() else null)
         filePathCallback = null
+    }
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // Handled: POST_NOTIFICATIONS runtime permission result
+    }
+
+    fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
     }
 
     private val cameraPermissionLauncher = registerForActivityResult(
@@ -92,12 +119,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        currentInstance = this
         setContentView(R.layout.activity_main)
 
         initViews()
         setupWebView()
         setupBackHandler()
         pruneRedundantCache()
+        requestNotificationPermission()
 
         handleIntent(intent)
 
@@ -146,6 +175,13 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         webView.saveState(outState)
+    }
+
+    override fun onDestroy() {
+        if (currentInstance == this) {
+            currentInstance = null
+        }
+        super.onDestroy()
     }
 
     private fun initViews() {
@@ -308,15 +344,36 @@ class MainActivity : AppCompatActivity() {
                 this@MainActivity.filePathCallback?.onReceiveValue(null)
                 this@MainActivity.filePathCallback = filePathCallback
 
-                val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
-                    type = "*/*"
+                val isMulti = fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                    if (isMulti) {
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    }
+                    val acceptTypes = fileChooserParams?.acceptTypes?.filter { it.isNotBlank() }
+                    if (!acceptTypes.isNullOrEmpty()) {
+                        if (acceptTypes.size == 1) {
+                            type = acceptTypes[0]
+                        } else {
+                            putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
+                        }
+                    }
                 }
                 try {
                     fileChooserLauncher.launch(intent)
-                } catch (e: Exception) {
-                    this@MainActivity.filePathCallback = null
-                    return false
+                } catch (_: Exception) {
+                    try {
+                        val fallbackIntent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                            type = "*/*"
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                        }
+                        fileChooserLauncher.launch(fallbackIntent)
+                    } catch (_: Exception) {
+                        this@MainActivity.filePathCallback = null
+                        return false
+                    }
                 }
                 return true
             }
@@ -492,6 +549,14 @@ class MainActivity : AppCompatActivity() {
         if (uris.isNotEmpty() || text.isNotBlank() || !detectedUrl.isNullOrBlank()) {
             sharedUrisList.clear()
             sharedUrisList.addAll(uris)
+
+            for (u in uris) {
+                try {
+                    contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {}
+                val m = getUriMetadata(u)
+                vn.alphadaniel.duydevstudio.upload.NativeFileRegistry.register(m.first, m.second, u)
+            }
 
             val fileListJson = JSONArray()
             for (i in uris.indices) {

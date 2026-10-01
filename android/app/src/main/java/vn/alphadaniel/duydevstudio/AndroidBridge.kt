@@ -383,4 +383,102 @@ class AndroidBridge(
         }.toString()
         activity.evaluateJs("window.dispatchEvent(new CustomEvent('ds:apk-download-error', { detail: $payload }));")
     }
+
+    /**
+     * Check if a native Content URI exists in registry for the given file name and size.
+     */
+    @JavascriptInterface
+    fun hasNativeUri(name: String, size: Long): Boolean {
+        return vn.alphadaniel.duydevstudio.upload.NativeFileRegistry.has(name, size)
+    }
+
+    /**
+     * Start background upload via WorkManager and return the unique task UUID string.
+     */
+    @JavascriptInterface
+    fun startBackgroundUpload(jsonPayload: String): String {
+        return try {
+            val json = JSONObject(jsonPayload)
+            val fileName = json.getString("fileName")
+            val fileSize = json.getLong("fileSize")
+            val mimeType = json.optString("mimeType", "application/octet-stream")
+            val purpose = json.optString("purpose", "general")
+            val targetDir = json.optString("targetDir", "/")
+            val serverUrl = json.optString("serverUrl", getActiveHost())
+
+            val inputData = androidx.work.workDataOf(
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_FILE_NAME to fileName,
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_FILE_SIZE to fileSize,
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_MIME_TYPE to mimeType,
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_PURPOSE to purpose,
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_TARGET_DIR to targetDir,
+                vn.alphadaniel.duydevstudio.upload.UploadWorker.KEY_SERVER_URL to serverUrl
+            )
+
+            val constraints = androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                .build()
+
+            val uploadWorkRequest = androidx.work.OneTimeWorkRequestBuilder<vn.alphadaniel.duydevstudio.upload.UploadWorker>()
+                .setInputData(inputData)
+                .setConstraints(constraints)
+                .addTag(vn.alphadaniel.duydevstudio.upload.UploadWorker.TAG)
+                .build()
+
+            androidx.work.WorkManager.getInstance(activity.applicationContext).enqueue(uploadWorkRequest)
+            uploadWorkRequest.id.toString()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    /**
+     * Cancel an active or queued background upload task.
+     */
+    @JavascriptInterface
+    fun cancelBackgroundUpload(taskId: String) {
+        try {
+            val uuid = java.util.UUID.fromString(taskId)
+            androidx.work.WorkManager.getInstance(activity.applicationContext).cancelWorkById(uuid)
+            vn.alphadaniel.duydevstudio.upload.UploadNotificationManager.cancelNotification(
+                activity.applicationContext,
+                uuid.hashCode()
+            )
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Get JSON array of currently active or enqueued upload tasks.
+     */
+    @JavascriptInterface
+    fun getActiveUploads(): String {
+        return try {
+            val workInfos = androidx.work.WorkManager.getInstance(activity.applicationContext)
+                .getWorkInfosByTag(vn.alphadaniel.duydevstudio.upload.UploadWorker.TAG)
+                .get()
+            val list = org.json.JSONArray()
+            for (info in workInfos) {
+                if (info.state == androidx.work.WorkInfo.State.RUNNING || info.state == androidx.work.WorkInfo.State.ENQUEUED) {
+                    val item = JSONObject().apply {
+                        put("id", info.id.toString())
+                        put("state", info.state.name)
+                    }
+                    list.put(item)
+                }
+            }
+            list.toString()
+        } catch (_: Exception) {
+            "[]"
+        }
+    }
+
+    /**
+     * Request notification permission on Android 13+ (API 33+).
+     */
+    @JavascriptInterface
+    fun requestNotificationPermission() {
+        activity.runOnUiThread {
+            activity.requestNotificationPermission()
+        }
+    }
 }

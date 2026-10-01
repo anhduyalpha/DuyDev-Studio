@@ -542,6 +542,111 @@ export async function smartUploadFile(file, options = {}) {
     throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
   }
 
+  // 0. Android Native Background Upload Delegation
+  if (
+    typeof window !== 'undefined' &&
+    window.AndroidBridge?.isNativeApp?.() &&
+    window.AndroidBridge?.hasNativeUri?.(file.name, file.size)
+  ) {
+    try {
+      const activeHost = window.AndroidBridge.getActiveHost?.() || (typeof window.location !== 'undefined' ? window.location.origin : '');
+      const payload = {
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        purpose: options.purpose || 'general',
+        targetDir: options.targetDir || '/',
+        serverUrl: activeHost
+      };
+
+      const taskId = window.AndroidBridge.startBackgroundUpload(JSON.stringify(payload));
+      if (!taskId) throw new Error('Không thể khởi tạo tiến trình upload trong nền');
+
+      if (typeof options.onUploaderCreated === 'function') {
+        options.onUploaderCreated({
+          cancel: () => {
+            try { window.AndroidBridge.cancelBackgroundUpload(taskId); } catch (_) {}
+          },
+          pause: () => {},
+          resume: () => {}
+        });
+      }
+
+      if (typeof options.onStage === 'function') {
+        options.onStage('Đang tải lên trong nền (Android WorkManager)...');
+      }
+
+      return await new Promise((resolve, reject) => {
+        let isSettled = false;
+
+        const cleanup = () => {
+          window.removeEventListener('ds:native-upload-progress', progressHandler);
+          window.removeEventListener('ds:native-upload-complete', completeHandler);
+          if (signal) signal.removeEventListener('abort', abortHandler);
+        };
+
+        const abortHandler = () => {
+          if (isSettled) return;
+          isSettled = true;
+          try { window.AndroidBridge.cancelBackgroundUpload(taskId); } catch (_) {}
+          cleanup();
+          reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+        };
+
+        const progressHandler = (e) => {
+          const detail = e.detail;
+          if (detail && detail.taskId === taskId) {
+            if (options.onProgress) {
+              options.onProgress({
+                percent: detail.percent || 0,
+                uploadedBytes: detail.uploadedBytes || 0,
+                totalBytes: detail.totalBytes || file.size,
+                formattedUploaded: formatBytes(detail.uploadedBytes || 0),
+                formattedTotal: formatBytes(detail.totalBytes || file.size),
+                speedBytesPerSec: detail.speedBytesPerSec || 0,
+                formattedSpeed: formatSpeed(detail.speedBytesPerSec || 0),
+                etaSeconds: detail.etaSeconds || 0,
+                formattedEta: formatEta(detail.etaSeconds || 0)
+              });
+            }
+            if (detail.stageText && options.onStage) {
+              options.onStage(detail.stageText);
+            }
+          }
+        };
+
+        const completeHandler = (e) => {
+          const detail = e.detail;
+          if (detail && detail.taskId === taskId) {
+            if (isSettled) return;
+            isSettled = true;
+            cleanup();
+            if (detail.success) {
+              resolve(detail.data);
+            } else {
+              reject(new Error(detail.error || 'Upload trong nền thất bại'));
+            }
+          }
+        };
+
+        if (signal) {
+          if (signal.aborted) {
+            abortHandler();
+            return;
+          }
+          signal.addEventListener('abort', abortHandler, { once: true });
+        }
+
+        window.addEventListener('ds:native-upload-progress', progressHandler);
+        window.addEventListener('ds:native-upload-complete', completeHandler);
+      });
+    } catch (nativeErr) {
+      if (signal?.aborted) throw nativeErr;
+      console.warn('[SmartUpload] Native background upload failed, falling back to Web pipeline:', nativeErr);
+      // Fall through cleanly to Web pipeline
+    }
+  }
+
   // 1. Presign query: check if R2 Transit Pipe is available for this request
   if (!options.uploadUrl && !options.forceDirect) {
     try {
