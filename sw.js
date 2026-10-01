@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v15.0';
+const CACHE_NAME = 'duydev-studio-v15.1';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=14.7',
-  './src/styles/studocu.css?v=14.7',
-  './src/styles/highlight-theme.css?v=14.7',
+  './src/styles/stitch-tokens.css?v=15.1',
+  './src/styles/studocu.css?v=15.1',
+  './src/styles/highlight-theme.css?v=15.1',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=14.7',
+  './src/app.js?v=15.1',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
@@ -31,7 +31,9 @@ const ASSETS_TO_PRECACHE = [
   './src/assets/shortcut-archive.png',
   './src/assets/shortcut-qr.png',
   './src/assets/icon-192.svg',
-  './src/assets/icon-512.svg'
+  './src/assets/icon-512.svg',
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/lucide@latest'
 ];
 
 // ─── IndexedDB helpers for Share Target ───
@@ -118,8 +120,14 @@ async function handleShareTargetPost(event) {
 
     // Wake up existing client tab if open
     const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: false });
-    for (const client of allClients) {
-      client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED', payloadSummary: { hasFiles: payload.files.length > 0, url: payload.url } });
+    if (allClients.length > 0) {
+      const existingClient = allClients[0];
+      if (typeof existingClient.focus === 'function') {
+        existingClient.focus().catch(() => {});
+      }
+      for (const client of allClients) {
+        client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED', payloadSummary: { hasFiles: payload.files.length > 0, url: payload.url } });
+      }
     }
 
     const redirectUrl = buildShareRedirectUrl({
@@ -230,7 +238,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Same-origin assets: Network-First with Cache Fallback for offline PWA
+  // 2. App Shell Navigation: Cache-First with Stale-While-Revalidate for instant FCP (<50ms)
+  // Allows Android OS to dismiss the native splash screen immediately without waiting for network!
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      caches.match('./index.html').then((cached) => {
+        const networkFetch = fetch(event.request, { cache: 'no-cache' })
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const clone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return networkResponse;
+          })
+          .catch(() => {});
+
+        return cached || networkFetch || caches.match('./');
+      })
+    );
+    return;
+  }
+
+  // 3. Same-origin assets: Network-First with Cache Fallback for offline PWA
   if (url.origin === self.location.origin) {
     event.respondWith(
       fetch(event.request, { cache: 'no-cache' })
