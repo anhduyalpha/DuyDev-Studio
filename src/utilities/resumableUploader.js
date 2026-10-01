@@ -491,6 +491,7 @@ function uploadViaR2Transit(file, presignData, options = {}) {
               originalName: file.name,
               mimeType: file.type || 'application/octet-stream',
               purpose: options.purpose || 'general',
+              targetDir: options.targetDir || undefined,
               sizeBytes: file.size
             }),
             signal
@@ -554,7 +555,8 @@ export async function smartUploadFile(file, options = {}) {
           fileName: file.name,
           fileSize: file.size,
           mimeType: file.type || 'application/octet-stream',
-          purpose: options.purpose || 'general'
+          purpose: options.purpose || 'general',
+          targetDir: options.targetDir || undefined
         }),
         signal
       });
@@ -569,6 +571,8 @@ export async function smartUploadFile(file, options = {}) {
             console.warn('[SmartUpload] R2 transit failed, falling back to direct upload:', r2Err);
             // Fall through gracefully to direct upload
           }
+        } else if (presignJson.success && presignJson.data?.uploadUrl) {
+          options.uploadUrl = presignJson.data.uploadUrl;
         }
       }
     } catch (presignErr) {

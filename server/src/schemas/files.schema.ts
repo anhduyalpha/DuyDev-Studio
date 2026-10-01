@@ -29,7 +29,8 @@ export const presignTransitBodySchema = z.object({
   fileName: z.string().min(1, 'fileName is required'),
   fileSize: z.number().nonnegative().optional(),
   mimeType: z.string().optional(),
-  purpose: z.string().optional().default('pdf-convert')
+  purpose: z.string().optional().default('pdf-convert'),
+  targetDir: z.string().optional()
 });
 
 export type PresignTransitBody = z.infer<typeof presignTransitBodySchema>;
@@ -40,6 +41,7 @@ export const completeTransitBodySchema = z.object({
   originalName: z.string().min(1, 'originalName is required'),
   mimeType: z.string().optional(),
   purpose: z.string().optional().default('pdf-convert'),
+  targetDir: z.string().optional(),
   sizeBytes: z.number().nonnegative().optional()
 });
 

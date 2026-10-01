@@ -5,6 +5,8 @@
  */
 
 import { FastifyReply, FastifyRequest } from 'fastify';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import { prisma } from '../../lib/prisma.js';
 import { StorageManager } from '../../storage/storage.manager.js';
@@ -13,6 +15,7 @@ import { env } from '../../config/env.config.js';
 import { BadRequestError, FileSizeLimitError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { R2Service } from '../../services/r2.service.js';
+import { DriveService } from '../../services/drive.service.js';
 import { presignTransitBodySchema, completeTransitBodySchema } from '../../schemas/files.schema.js';
 
 export function isLanRequest(request: FastifyRequest): boolean {
@@ -55,6 +58,10 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
     throw new FileSizeLimitError(`File exceeds maximum size of ${env.MAX_UPLOAD_SIZE_MB}MB`);
   }
 
+  const uploadUrl = purpose === 'storage-drive'
+    ? `/api/v1/storage/upload?path=${encodeURIComponent(body.targetDir || '/')}`
+    : `/api/v1/files/upload?purpose=${encodeURIComponent(purpose || 'pdf-convert')}`;
+
   // 1. LAN Auto-Bypass: If request is within local network, return direct upload endpoint to save R2 quota
   if (!isForceR2 && isLanRequest(request)) {
     logger.debug({ ip: request.ip, host: request.headers.host }, 'LAN detected: routing to direct upload');
@@ -62,7 +69,7 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
       success: true,
       data: {
         mode: 'direct',
-        uploadUrl: `/api/v1/files/upload?purpose=${encodeURIComponent(purpose || 'pdf-convert')}`
+        uploadUrl
       }
     });
   }
@@ -74,7 +81,7 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
       success: true,
       data: {
         mode: 'direct',
-        uploadUrl: `/api/v1/files/upload?purpose=${encodeURIComponent(purpose || 'pdf-convert')}`
+        uploadUrl
       }
     });
   }
@@ -127,19 +134,38 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
   const fileRecord = await prisma.fileRecord.create({
     data: {
       id: fileId,
-      purpose: 'UPLOAD',
+      purpose: purpose === 'storage-drive' ? 'DRIVE' : 'UPLOAD',
       originalName: safeOriginalName,
       storagePath: targetPath,
       mimeType: mimeType || 'application/octet-stream',
       sizeBytes: BigInt(byteCount),
       hashSha256,
       isPurged: false,
-      expiresAt
+      expiresAt: purpose === 'storage-drive' ? new Date('2099-12-31T23:59:59.999Z') : expiresAt
     }
   });
 
+  let driveItemPath: string | undefined;
+  if (purpose === 'storage-drive') {
+    const targetDir = body.targetDir || '/';
+    const targetDiskDir = DriveService.getDiskPath(targetDir);
+    await fsPromises.mkdir(targetDiskDir, { recursive: true });
+
+    let finalName = safeOriginalName;
+    let targetFilePath = path.join(targetDiskDir, finalName);
+    let counter = 1;
+    const base = path.basename(safeOriginalName, ext);
+    while (fs.existsSync(targetFilePath)) {
+      finalName = `${base} (${counter})${ext}`;
+      targetFilePath = path.join(targetDiskDir, finalName);
+      counter++;
+    }
+    await fsPromises.copyFile(targetPath, targetFilePath);
+    driveItemPath = targetDir === '/' ? `/${finalName}` : `${DriveService.normalizeRelativePath(targetDir)}/${finalName}`;
+  }
+
   logger.info(
-    { fileId: fileRecord.id, originalName: fileRecord.originalName, sizeBytes: byteCount, purpose },
+    { fileId: fileRecord.id, originalName: fileRecord.originalName, sizeBytes: byteCount, purpose, driveItemPath },
     'R2 transit upload ingested and purged successfully'
   );
 
@@ -151,7 +177,11 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
       mimeType: fileRecord.mimeType,
       sizeBytes: Number(fileRecord.sizeBytes),
       hashSha256: fileRecord.hashSha256,
-      expiresAt: fileRecord.expiresAt.toISOString()
+      expiresAt: fileRecord.expiresAt.toISOString(),
+      driveItemPath,
+      uploaded: driveItemPath
+        ? [{ name: path.basename(driveItemPath), sizeBytes: Number(fileRecord.sizeBytes), path: driveItemPath }]
+        : undefined
     }
   });
 }

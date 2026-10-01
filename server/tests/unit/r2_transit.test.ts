@@ -298,6 +298,70 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
       expect(body.data.mode).toBe('direct');
     });
 
+    it('routes storage-drive LAN presign request to storage upload endpoint', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/presign',
+        remoteAddress: '192.168.2.100',
+        headers: {
+          host: '192.168.2.171:3000'
+        },
+        payload: {
+          fileName: 'notes.txt',
+          fileSize: 1024,
+          mimeType: 'text/plain',
+          purpose: 'storage-drive',
+          targetDir: '/Documents'
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.mode).toBe('direct');
+      expect(body.data.uploadUrl).toContain('/api/v1/storage/upload?path=%2FDocuments');
+    });
+
+    it('ingests storage-drive transit file and places it into drive sandbox', async () => {
+      const client = R2Service.getClient();
+      const testBuffer = Buffer.from('drive transit payload content');
+      const sendSpy = vi.spyOn(client, 'send').mockImplementation(async (command: any) => {
+        const commandName = command.constructor.name;
+        if (commandName === 'GetObjectCommand') {
+          return { Body: Readable.from(testBuffer) } as any;
+        }
+        if (commandName === 'DeleteObjectCommand') {
+          return {} as any;
+        }
+        return {} as any;
+      });
+
+      const fileId = `fil_drive_${Date.now()}`;
+      const testFileName = `drive_file_${Date.now()}.txt`;
+      createdFileIds.push(fileId);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/complete-transit',
+        payload: {
+          fileKey: `transit/${fileId}_${testFileName}`,
+          fileId,
+          originalName: testFileName,
+          mimeType: 'text/plain',
+          purpose: 'storage-drive',
+          targetDir: '/TestFolder'
+        }
+      });
+
+      expect(response.statusCode).toBe(201);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.driveItemPath).toBe(`/TestFolder/${testFileName}`);
+      expect(body.data.uploaded).toBeDefined();
+
+      sendSpy.mockRestore();
+    });
+
     it('rejects presign request when fileSize exceeds system maxUploadSizeBytes', async () => {
       const response = await app.inject({
         method: 'POST',
