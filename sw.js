@@ -70,7 +70,9 @@ async function saveSharePayload(payload) {
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel('ds_share_channel');
         bc.postMessage({ type: 'PAYLOAD_READY', timestamp: Date.now() });
-        bc.close();
+        setTimeout(() => {
+          try { bc.close(); } catch {}
+        }, 200);
       }
     } catch {}
   } catch (err) {
@@ -125,16 +127,16 @@ async function handleShareTargetPost(event) {
 
     await saveSharePayload(payload);
 
-    // Wake up existing client tab if open
-    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: false });
+    // Wake up existing client tab if open (including uncontrolled clients during startup)
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (allClients.length > 0) {
       const existingClient = allClients[0];
       if (typeof existingClient.focus === 'function') {
         existingClient.focus().catch(() => {});
       }
       for (const client of allClients) {
-        client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED', payloadSummary: { hasFiles: payload.files.length > 0, url: payload.url } });
         client.postMessage({ type: 'DS_SHARE_TARGET_PAYLOAD', payload });
+        client.postMessage({ type: 'DS_SHARE_TARGET_ARRIVED', payloadSummary: { hasFiles: payload.files.length > 0, url: payload.url } });
       }
     }
 

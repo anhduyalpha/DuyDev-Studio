@@ -141,7 +141,8 @@ class App {
       }
 
       if (!payload) {
-        if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
+        if (!document.getElementById('fastPathSharePlaceholder') &&
+            (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?'))) {
           history.replaceState(null, '', window.location.pathname);
         }
         return;

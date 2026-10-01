@@ -228,7 +228,7 @@
             <div id="fastShareStatusLabel" style="font-size:11px;color:#a1a1aa;">Đang nạp dữ liệu chia sẻ...</div>
           </div>
         </div>
-        <button type="button" onclick="var p = document.getElementById('fastPathSharePlaceholder'); if (p) p.remove(); window.__FAST_PATH_SHARE_ACTIVE = false; history.replaceState(null, '', window.location.pathname);" style="color:#a1a1aa;padding:0.375rem;border-radius:0.5rem;background:transparent;border:none;cursor:pointer;" title="Đóng">
+        <button type="button" onclick="if (window.closeFastSharePlaceholder) { window.closeFastSharePlaceholder(); } else { var p = document.getElementById('fastPathSharePlaceholder'); if (p) p.remove(); window.__FAST_PATH_SHARE_ACTIVE = false; document.documentElement.classList.remove('is-share-target'); history.replaceState(null, '', window.location.pathname); }" style="color:#a1a1aa;padding:0.375rem;border-radius:0.5rem;background:transparent;border:none;cursor:pointer;" title="Đóng">
           ✕
         </button>
       </div>
@@ -245,12 +245,16 @@
     </div>
   </div>
 
-  <!-- Synchronously inspect URL search params to populate fastSharePreviewText in 0ms -->
+  <!-- Synchronously inspect URL search & hash params to populate fastSharePreviewText in 0ms -->
   <script>
     (function() {
       if (!window.__FAST_PATH_SHARE_ACTIVE) return;
       try {
-        var sp = new URLSearchParams(window.location.search);
+        var h = window.location.hash || '';
+        var hq = h.includes('?') ? h.split('?')[1] : '';
+        var s = window.location.search ? window.location.search.slice(1) : '';
+        var combined = [s, hq].filter(Boolean).join('&');
+        var sp = new URLSearchParams(combined);
         var url = sp.get('url');
         var text = sp.get('text');
         var title = sp.get('title');
@@ -288,7 +292,7 @@
       if (p) p.remove();
       window.__FAST_PATH_SHARE_ACTIVE = false;
       document.documentElement.classList.remove('is-share-target');
-      if (window.location.hash.startsWith('#share-target')) {
+      if (window.location.hash.startsWith('#share-target') || window.location.search.includes('hasFiles=1')) {
         history.replaceState(null, '', window.location.pathname);
       }
     }
@@ -314,7 +318,11 @@
         let payload = await pollPendingSharedData(4500);
 
         if (!payload) {
-          const sp = new URLSearchParams(window.location.search);
+          const h = window.location.hash || '';
+          const hq = h.includes('?') ? h.split('?')[1] : '';
+          const s = window.location.search ? window.location.search.slice(1) : '';
+          const combined = [s, hq].filter(Boolean).join('&');
+          const sp = new URLSearchParams(combined);
           const url = sp.get('url') || '';
           const text = sp.get('text') || '';
           const title = sp.get('title') || '';
@@ -323,10 +331,24 @@
           }
         }
 
+        // Avoid duplicate modal if already opened while polling
+        if (document.getElementById('shareTargetPanel')) {
+          const p = document.getElementById('fastPathSharePlaceholder');
+          if (p) p.remove();
+          return;
+        }
+
         if (payload) {
           window.__FAST_PATH_SHARE_ACTIVE = true;
           openShareTargetModal(payload);
         } else {
+          // Double-check modal was not opened in between
+          if (document.getElementById('shareTargetPanel')) {
+            const p = document.getElementById('fastPathSharePlaceholder');
+            if (p) p.remove();
+            return;
+          }
+
           // Timeout recovery UI
           if (statusLabel) statusLabel.textContent = 'Không thể nạp tệp';
           if (skeletons) skeletons.style.display = 'none';

@@ -522,5 +522,92 @@ describe('Web Share Target & Classifier Suite', () => {
         else delete (global as any).indexedDB;
       }
     });
+
+    it('pollPendingSharedData should resolve immediately with null if shareTargetPanel is already mounted in DOM', async () => {
+      const originalDoc = (global as any).document;
+      (global as any).document = {
+        getElementById: (id: string) => {
+          if (id === 'shareTargetPanel') return { id: 'shareTargetPanel' };
+          return null;
+        }
+      };
+
+      try {
+        const startTime = Date.now();
+        const result = await pollPendingSharedData(3000);
+        const elapsed = Date.now() - startTime;
+        expect(result).toBeNull();
+        expect(elapsed).toBeLessThan(50); // Immediate exit
+      } finally {
+        if (originalDoc !== undefined) (global as any).document = originalDoc;
+        else delete (global as any).document;
+      }
+    });
+
+    it('pollPendingSharedData should strictly respect maxWaitMs hard ceiling without overshooting', async () => {
+      const originalIDB = (global as any).indexedDB;
+      (global as any).indexedDB = {
+        open: () => {
+          const req: any = {};
+          setTimeout(() => {
+            req.result = {
+              close: () => {},
+              transaction: () => ({
+                objectStore: () => ({
+                  getAll: () => {
+                    const r: any = {};
+                    setTimeout(() => {
+                      r.result = [];
+                      if (r.onsuccess) r.onsuccess();
+                    }, 0);
+                    return r;
+                  }
+                })
+              })
+            };
+            if (req.onsuccess) req.onsuccess();
+          }, 0);
+          return req;
+        }
+      };
+
+      try {
+        const startTime = Date.now();
+        const result = await pollPendingSharedData(120);
+        const elapsed = Date.now() - startTime;
+        expect(result).toBeNull();
+        expect(elapsed).toBeGreaterThanOrEqual(100);
+        expect(elapsed).toBeLessThan(250); // Hard ceiling respected, no multi-second overshoot
+      } finally {
+        if (originalIDB !== undefined) (global as any).indexedDB = originalIDB;
+        else delete (global as any).indexedDB;
+      }
+    });
+
+    it('should correctly parse combined query params from hash fragment (Fastify server redirect format)', () => {
+      const targetHash = '#share-target?url=https%3A%2F%2Fwww.studocu.com%2Fvn%2Fdocument%2F12345&title=SharedTitle';
+      const hashQuery = targetHash.includes('?') ? targetHash.split('?')[1] : '';
+      const sp = new URLSearchParams(hashQuery);
+      const url = sp.get('url') || '';
+      const title = sp.get('title') || '';
+
+      const payload = { url, title, text: '', files: [] };
+      const classification = classifySharedPayload(payload);
+      expect(classification.type).toBe(SharePayloadType.STUDOCU_URL);
+      expect(classification.recommendations[0].route).toBe('#tool/studocu-dl');
+    });
+
+    it('pwa.js fallback version should match sw.js CACHE_NAME v15.3', async () => {
+      const { getCurrentVersion } = await import('../../../src/utilities/pwa.js');
+      const originalWindow = (global as any).window;
+      (global as any).window = {}; // No CacheStorage
+      try {
+        const version = await getCurrentVersion();
+        expect(version).toBe('duydev-studio-v15.3');
+      } finally {
+        if (originalWindow !== undefined) (global as any).window = originalWindow;
+        else delete (global as any).window;
+      }
+    });
   });
 });

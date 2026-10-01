@@ -156,6 +156,11 @@ export async function consumePendingSharedPayload() {
  * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
 export async function pollPendingSharedData(maxWaitMs = 4500) {
+  // If modal is already open in DOM, resolve immediately to avoid redundant I/O
+  if (typeof document !== 'undefined' && document.getElementById('shareTargetPanel')) {
+    return null;
+  }
+
   // 1. Instant check
   const instantPeek = await peekPendingSharedPayload();
   if (instantPeek) {
@@ -170,9 +175,17 @@ export async function pollPendingSharedData(maxWaitMs = 4500) {
     let resolved = false;
     let bc = null;
     let timerId = null;
+    let hardTimeoutTimer = null;
 
     const cleanup = () => {
-      if (timerId) clearTimeout(timerId);
+      if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+      if (hardTimeoutTimer) {
+        clearTimeout(hardTimeoutTimer);
+        hardTimeoutTimer = null;
+      }
       if (bc) {
         try {
           bc.close();
@@ -188,11 +201,17 @@ export async function pollPendingSharedData(maxWaitMs = 4500) {
       resolve(result);
     };
 
+    // Hard ceiling timeout: guarantee promise strictly settles at or before maxWaitMs
+    hardTimeoutTimer = setTimeout(() => {
+      finish(null);
+    }, maxWaitMs);
+
     // BroadcastChannel instant wake-up
     if (typeof BroadcastChannel !== 'undefined') {
       try {
         bc = new BroadcastChannel('ds_share_channel');
         bc.onmessage = async (event) => {
+          if (resolved) return;
           if (event.data?.type === 'PAYLOAD_READY') {
             const payload = await consumePendingSharedPayload();
             if (payload) finish(payload);
@@ -204,18 +223,31 @@ export async function pollPendingSharedData(maxWaitMs = 4500) {
     // Adaptive backoff poll step
     let stepIndex = 0;
     const scheduleNext = () => {
+      if (resolved) return;
+      if (typeof document !== 'undefined' && document.getElementById('shareTargetPanel')) {
+        finish(null);
+        return;
+      }
+
       const elapsed = Date.now() - startTime;
       if (elapsed >= maxWaitMs) {
         finish(null);
         return;
       }
 
-      const delay = delays[Math.min(stepIndex, delays.length - 1)];
+      const rawDelay = delays[Math.min(stepIndex, delays.length - 1)];
+      const delay = Math.min(rawDelay, Math.max(10, maxWaitMs - elapsed));
       stepIndex++;
 
       timerId = setTimeout(async () => {
         if (resolved) return;
+        if (typeof document !== 'undefined' && document.getElementById('shareTargetPanel')) {
+          finish(null);
+          return;
+        }
+
         const peek = await peekPendingSharedPayload();
+        if (resolved) return;
         if (peek) {
           const payload = await consumePendingSharedPayload();
           if (payload) {

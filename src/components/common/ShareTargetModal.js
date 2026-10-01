@@ -157,9 +157,9 @@ export function openShareTargetModal(payload) {
 
   const classification = classifySharedPayload(payload);
   if (!classification.recommendations || !classification.recommendations.length) {
-    // If no recommendations, clean hash if on #share-target and exit
-    if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
-      history.replaceState(null, '', window.location.pathname + window.location.search);
+    document.documentElement.classList.remove('is-share-target');
+    if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?') || window.location.search.includes('hasFiles=1')) {
+      history.replaceState(null, '', window.location.pathname);
     }
     window.__FAST_PATH_SHARE_ACTIVE = false;
     return;
@@ -297,6 +297,7 @@ export function openShareTargetModal(payload) {
  */
 export function closeShareTargetModal() {
   window.__FAST_PATH_SHARE_ACTIVE = false;
+  document.documentElement.classList.remove('is-share-target');
   const placeholder = document.getElementById('fastPathSharePlaceholder');
   if (placeholder) placeholder.remove();
   const container = document.getElementById('globalShareTargetContainer');
@@ -306,7 +307,7 @@ export function closeShareTargetModal() {
     cleanupFn = null;
   }
   // Clean hash and query params if on share-target
-  if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?')) {
+  if (window.location.hash === '#share-target' || window.location.hash.startsWith('#share-target?') || window.location.search.includes('hasFiles=1')) {
     history.replaceState(null, '', window.location.pathname);
   }
   // If mainContent is unexpectedly empty, ensure home view renders
