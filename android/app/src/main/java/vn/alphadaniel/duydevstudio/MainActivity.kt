@@ -97,9 +97,24 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
 
         if (savedInstanceState == null) {
-            webView.loadUrl(PRIMARY_HOST)
+            val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+            val launchUrl = if (!targetRoute.isNullOrBlank()) {
+                val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
+                "$PRIMARY_HOST$cleanRoute"
+            } else {
+                PRIMARY_HOST
+            }
+            webView.loadUrl(launchUrl)
         } else {
             webView.restoreState(savedInstanceState)
+            val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+            if (!targetRoute.isNullOrBlank()) {
+                val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
+                val jsRoute = cleanRoute.replace("'", "\\'")
+                webView.post {
+                    webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+                }
+            }
         }
     }
 
@@ -107,6 +122,18 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
+
+        val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+        if (!targetRoute.isNullOrBlank()) {
+            val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
+            val destUrl = "$PRIMARY_HOST$cleanRoute"
+            if (webView.url?.startsWith(PRIMARY_HOST) == true) {
+                val jsRoute = cleanRoute.replace("'", "\\'")
+                webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+            } else {
+                webView.loadUrl(destUrl)
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_pdf"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_pdf"
+        android:shortcutShortLabel="@string/shortcut_pdf_short"
+        android:shortcutLongLabel="@string/shortcut_pdf_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="vn.alphadaniel.duydevstudio"
+            android:targetClass="vn.alphadaniel.duydevstudio.MainActivity">
+            <extra
+                android:name="extra_target_route"
+                android:value="#tool/pdf-convert" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_archive"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_archive"
+        android:shortcutShortLabel="@string/shortcut_archive_short"
+        android:shortcutLongLabel="@string/shortcut_archive_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="vn.alphadaniel.duydevstudio"
+            android:targetClass="vn.alphadaniel.duydevstudio.MainActivity">
+            <extra
+                android:name="extra_target_route"
+                android:value="#archive" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_qr"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_qr"
+        android:shortcutShortLabel="@string/shortcut_qr_short"
+        android:shortcutLongLabel="@string/shortcut_qr_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="vn.alphadaniel.duydevstudio"
+            android:targetClass="vn.alphadaniel.duydevstudio.MainActivity">
+            <extra
+                android:name="extra_target_route"
+                android:value="#tool/qr-multi" />
+        </intent>
+    </shortcut>
+</shortcuts>
