@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v15.1';
+const CACHE_NAME = 'duydev-studio-v15.2';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=15.1',
-  './src/styles/studocu.css?v=15.1',
-  './src/styles/highlight-theme.css?v=15.1',
+  './src/styles/stitch-tokens.css?v=15.2',
+  './src/styles/studocu.css?v=15.2',
+  './src/styles/highlight-theme.css?v=15.2',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=15.1',
+  './src/app.js?v=15.2',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
@@ -31,9 +31,7 @@ const ASSETS_TO_PRECACHE = [
   './src/assets/shortcut-archive.png',
   './src/assets/shortcut-qr.png',
   './src/assets/icon-192.svg',
-  './src/assets/icon-512.svg',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/lucide@latest'
+  './src/assets/icon-512.svg'
 ];
 
 // ─── IndexedDB helpers for Share Target ───
@@ -185,11 +183,20 @@ self.addEventListener('message', (event) => {
 // Install Event: Pre-cache core shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching core shell');
-      return cache.addAll(ASSETS_TO_PRECACHE).catch((err) => {
-        console.warn('[SW] Core precache partial warning:', err);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      console.log('[SW] Pre-caching core shell:', CACHE_NAME);
+      try {
+        await cache.addAll(ASSETS_TO_PRECACHE);
+      } catch (err) {
+        console.warn('[SW] Core precache bulk warning, falling back to individual caching:', err);
+        for (const asset of ASSETS_TO_PRECACHE) {
+          try {
+            await cache.add(asset);
+          } catch (e) {
+            console.warn('[SW] Failed to cache single asset:', asset, e);
+          }
+        }
+      }
     })
   );
   self.skipWaiting();
@@ -242,19 +249,42 @@ self.addEventListener('fetch', (event) => {
   // Allows Android OS to dismiss the native splash screen immediately without waiting for network!
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match('./index.html').then((cached) => {
-        const networkFetch = fetch(event.request, { cache: 'no-cache' })
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const clone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-            }
-            return networkResponse;
-          })
-          .catch(() => {});
+      (async () => {
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          // 1. Match with ignoreSearch to handle query params like ?hasFiles=1&t=...
+          const cached = (await cache.match(event.request, { ignoreSearch: true })) ||
+                         (await cache.match('./index.html')) ||
+                         (await cache.match('./'));
 
-        return cached || networkFetch || caches.match('./');
-      })
+          // 2. Background revalidation without blocking initial paint
+          const networkPromise = fetch(event.request, { cache: 'no-cache' })
+            .then(async (networkResponse) => {
+              if (networkResponse && networkResponse.status === 200) {
+                const clone = networkResponse.clone();
+                await cache.put(event.request, clone);
+              }
+              return networkResponse;
+            })
+            .catch(() => null);
+
+          // 3. Return cached HTML immediately in <3ms so Android dismisses the native splash screen instantly
+          if (cached) {
+            event.waitUntil(networkPromise);
+            return cached;
+          }
+
+          // 4. Fallback to network if cache was empty
+          const netRes = await networkPromise;
+          if (netRes) return netRes;
+        } catch (err) {
+          console.warn('[SW] Navigation cache handler warning:', err);
+        }
+
+        return (await caches.match('./index.html')) ||
+               (await caches.match('./')) ||
+               new Response('', { status: 503, statusText: 'Offline' });
+      })()
     );
     return;
   }
