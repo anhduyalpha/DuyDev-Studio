@@ -25,3 +25,23 @@ export const fileDownloadQuerySchema = z.object({
 
 export type FileDownloadQuery = z.infer<typeof fileDownloadQuerySchema>;
 
+export const presignTransitBodySchema = z.object({
+  fileName: z.string().min(1, 'fileName is required'),
+  fileSize: z.number().nonnegative().optional(),
+  mimeType: z.string().optional(),
+  purpose: z.string().optional().default('pdf-convert')
+});
+
+export type PresignTransitBody = z.infer<typeof presignTransitBodySchema>;
+
+export const completeTransitBodySchema = z.object({
+  fileKey: z.string().min(1, 'fileKey is required'),
+  fileId: z.string().min(1, 'fileId is required'),
+  originalName: z.string().min(1, 'originalName is required'),
+  mimeType: z.string().optional(),
+  purpose: z.string().optional().default('pdf-convert'),
+  sizeBytes: z.number().nonnegative().optional()
+});
+
+export type CompleteTransitBody = z.infer<typeof completeTransitBodySchema>;
+

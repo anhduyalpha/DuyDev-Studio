@@ -6,6 +6,7 @@ import { StorageManager } from '../storage/storage.manager.js';
 import { limits, isPermanentRetention } from '../config/limits.config.js';
 import { resolvedStoragePaths } from '../config/env.config.js';
 import { logger } from '../lib/logger.js';
+import { R2Service } from './r2.service.js';
 
 export interface JanitorPurgeResult {
   purgedCount: number;
@@ -51,6 +52,22 @@ export class JanitorService {
   }
 
   /**
+   * Cleans up orphaned objects in R2 transit/ prefix older than 1 hour
+   */
+  static async cleanOrphanedR2TransitObjects(): Promise<number> {
+    try {
+      const purged = await R2Service.cleanOrphanedTransitObjects();
+      if (purged > 0) {
+        logger.info({ purged }, 'Janitor: Purged orphaned R2 transit objects');
+      }
+      return purged;
+    } catch (err) {
+      logger.warn({ err }, 'Janitor: Failed to clean orphaned R2 transit objects');
+      return 0;
+    }
+  }
+
+  /**
    * Runs a single purge pass over all expired, unpurged file records
    */
   static async runJanitorOnce(options: { forceExpiredCheck?: boolean } = {}): Promise<JanitorPurgeResult> {
@@ -67,6 +84,7 @@ export class JanitorService {
 
     try {
       await this.cleanupOrphanedChunks();
+      await this.cleanOrphanedR2TransitObjects();
 
       if (isPermanentRetention && !options.forceExpiredCheck) {
         logger.debug('Janitor: Permanent retention enabled, skipping file auto-purge');

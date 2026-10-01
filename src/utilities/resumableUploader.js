@@ -390,16 +390,190 @@ export function formatEta(sec) {
 }
 
 /**
+ * Uploads a file directly to Cloudflare R2 Edge using Presigned PUT URL,
+ * monitors upload telemetry, and executes server ingestion upon completion.
+ */
+function uploadViaR2Transit(file, presignData, options = {}) {
+  const signal = options.signal || options.abortController?.signal;
+
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      return reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+    }
+
+    if (typeof options.onStage === 'function') {
+      options.onStage('Đang tăng tốc tải lên đám mây...');
+    }
+
+    const xhr = new XMLHttpRequest();
+    if (typeof options.onXhrCreated === 'function') {
+      options.onXhrCreated(xhr);
+    }
+    if (typeof options.onUploaderCreated === 'function') {
+      options.onUploaderCreated({
+        cancel: () => {
+          try { xhr.abort(); } catch (_) {}
+        },
+        pause: () => {},
+        resume: () => {}
+      });
+    }
+
+    const abortHandler = () => {
+      try { xhr.abort(); } catch (_) {}
+      reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+    };
+
+    if (signal) {
+      signal.addEventListener('abort', abortHandler, { once: true });
+    }
+
+    xhr.open('PUT', presignData.presignedUrl);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+    let lastTime = Date.now();
+    let lastLoaded = 0;
+    let currentSpeed = 0;
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && options.onProgress) {
+        const now = Date.now();
+        const timeDelta = (now - lastTime) / 1000;
+        if (timeDelta >= 0.25 || e.loaded === e.total) {
+          const bytesDelta = e.loaded - lastLoaded;
+          const instantSpeed = timeDelta > 0 ? Math.max(0, bytesDelta / timeDelta) : 0;
+          currentSpeed = currentSpeed === 0 ? instantSpeed : (currentSpeed * 0.7 + instantSpeed * 0.3);
+          lastLoaded = e.loaded;
+          lastTime = now;
+        }
+
+        const percent = Math.min(100, Math.round((e.loaded / e.total) * 100));
+        const remainingBytes = Math.max(0, e.total - e.loaded);
+        const etaSeconds = currentSpeed > 0 ? Math.round(remainingBytes / currentSpeed) : 0;
+
+        options.onProgress({
+          percent,
+          uploadedBytes: e.loaded,
+          totalBytes: e.total,
+          formattedUploaded: formatBytes(e.loaded),
+          formattedTotal: formatBytes(e.total),
+          speedBytesPerSec: currentSpeed,
+          formattedSpeed: formatSpeed(currentSpeed),
+          etaSeconds,
+          formattedEta: formatEta(etaSeconds)
+        });
+      }
+    };
+
+    xhr.onload = async () => {
+      if (signal) signal.removeEventListener('abort', abortHandler);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          if (typeof options.onStage === 'function') {
+            options.onStage('Đang nạp tệp vào máy chủ...');
+          }
+          const completeRes = await fetch('/api/v1/files/complete-transit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(options.headers || {})
+            },
+            body: JSON.stringify({
+              fileKey: presignData.fileKey,
+              fileId: presignData.fileId,
+              originalName: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              purpose: options.purpose || 'general',
+              sizeBytes: file.size
+            }),
+            signal
+          });
+          const completeJson = await completeRes.json();
+          if (completeRes.ok && completeJson.success) {
+            resolve(completeJson.data);
+          } else {
+            reject(new Error(completeJson.error?.message || 'Lỗi nạp tệp từ trạm trung chuyển'));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      } else {
+        reject(new Error(`Tải lên trạm trung chuyển thất bại với mã HTTP ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      if (signal) signal.removeEventListener('abort', abortHandler);
+      reject(new Error('Lỗi kết nối mạng khi tải lên trạm trung chuyển'));
+    };
+
+    xhr.timeout = 600_000;
+    xhr.ontimeout = () => {
+      if (signal) signal.removeEventListener('abort', abortHandler);
+      reject(new Error('Hết thời gian tải lên trạm trung chuyển (600s)'));
+    };
+
+    xhr.onabort = () => {
+      if (signal) signal.removeEventListener('abort', abortHandler);
+      reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+    };
+
+    xhr.send(file);
+  });
+}
+
+/**
  * Universal Smart Upload helper:
- * Automatically uses direct upload for <= 50MB and ResumableUploader for > 50MB (up to 10GB+).
+ * Automatically routes through Cloudflare R2 Transit Pipe on WAN,
+ * or direct streaming for <= 80MB on LAN, with ResumableUploader fallback.
  */
 export async function smartUploadFile(file, options = {}) {
-  // Direct streaming handles up to 80MB in 1 single fast HTTP/2 POST request on all connections.
-  // (Cloudflare body limit is 100MB; 80MB achieves 0 chunk overhead and saturates TCP pipe).
-  // Files > 80MB switch to resilient concurrent chunked upload with auto-recovery and timeouts.
+  const signal = options.signal || options.abortController?.signal;
+
+  if (signal?.aborted) {
+    throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
+  }
+
+  // 1. Presign query: check if R2 Transit Pipe is available for this request
+  if (!options.uploadUrl && !options.forceDirect) {
+    try {
+      const presignRes = await fetch('/api/v1/files/presign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {})
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          purpose: options.purpose || 'general'
+        }),
+        signal
+      });
+
+      if (presignRes.ok) {
+        const presignJson = await presignRes.json();
+        if (presignJson.success && presignJson.data?.mode === 'r2') {
+          try {
+            return await uploadViaR2Transit(file, presignJson.data, options);
+          } catch (r2Err) {
+            if (signal?.aborted) throw r2Err;
+            console.warn('[SmartUpload] R2 transit failed, falling back to direct upload:', r2Err);
+            // Fall through gracefully to direct upload
+          }
+        }
+      }
+    } catch (presignErr) {
+      if (signal?.aborted) throw presignErr;
+      console.warn('[SmartUpload] Presign request failed, falling back to direct upload:', presignErr);
+      // Fall through gracefully to direct upload
+    }
+  }
+
+  // 2. Direct streaming handles up to 80MB in 1 single fast HTTP/2 POST request on all connections.
   const defaultThreshold = 80 * 1024 * 1024;
   const threshold = options.thresholdBytes || defaultThreshold;
-  const signal = options.signal || options.abortController?.signal;
 
   if (file.size <= threshold && !options.forceChunked) {
     return new Promise((resolve, reject) => {

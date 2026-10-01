@@ -24,7 +24,13 @@ const envSchema = z.object({
   API_KEY: z.string().default('duydev_super_secret_token_2026'),
   CORS_ORIGIN: z.string().default('*'),
   HTTPS_PORT: z.coerce.number().default(3443),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info')
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  R2_ENABLED: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
+  R2_ACCOUNT_ID: z.string().default(''),
+  R2_ACCESS_KEY_ID: z.string().default(''),
+  R2_SECRET_ACCESS_KEY: z.string().default(''),
+  R2_BUCKET_NAME: z.string().default('ddstudio-backend'),
+  R2_MAX_MONTHLY_REQUESTS: z.coerce.number().default(900000)
 });
 
 const parsed = envSchema.safeParse(process.env);
