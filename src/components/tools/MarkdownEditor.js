@@ -5,7 +5,7 @@
 
 import { showToast } from '../../utilities/toast.js';
 import { parseMarkdownToHtml, downloadBlob } from '../../utilities/markdownParser.js';
-import { loadModuleState, saveModuleState, renderResetStateButton } from '../../utilities/moduleState.js';
+import { loadModuleState, saveModuleState } from '../../utilities/moduleState.js';
 import { storage } from '../../utilities/storage.js';
 
 /**
@@ -98,7 +98,6 @@ export function renderMarkdownEditor() {
           <button id="btnPrintPdf" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold flex items-center gap-1.5 transition shadow-xs">
             <i data-lucide="printer" class="w-3.5 h-3.5"></i> In / Xuất PDF
           </button>
-          ${renderResetStateButton('markdown')}
         </div>
       </div>
 

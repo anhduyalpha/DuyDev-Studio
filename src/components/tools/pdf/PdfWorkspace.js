@@ -9,7 +9,6 @@ import { renderConfigPanel } from './components/ConfigPanel.js';
 import { renderResultCard } from './components/ResultCard.js';
 import { renderPdfErrorBanner } from './components/PdfErrorBanner.js';
 import { renderPdfHistoryList } from './components/PdfHistoryList.js';
-import { renderResetStateButton } from '../../../utilities/moduleState.js';
 
 export { attachPdfConverterListeners } from './hooks/usePdfDom.js';
 export { renderPdfErrorBanner };
@@ -32,7 +31,6 @@ export function renderPdfConverter(queueState = {}) {
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-900 dark:text-zinc-200 font-semibold">PDF Studio</span>
         </div>
-        ${renderResetStateButton('pdf_studio')}
       </div>
 
       <!-- Mode Selector -->

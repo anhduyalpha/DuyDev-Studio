@@ -158,57 +158,66 @@ export function renderTermsPage() {
         </div>
 
         <!-- Bank Card & QR Display Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
-          <!-- Chi tiết tài khoản -->
-          <div class="space-y-3.5 bg-black/40 border border-white/10 rounded-2xl p-4 sm:p-5">
-            <div class="flex items-center justify-between text-xs text-zinc-400 border-b border-white/5 pb-2.5">
-              <span>Ngân hàng</span>
-              <span class="font-semibold text-zinc-200">MB Bank (Ngân hàng Quân Đội)</span>
-            </div>
-
-            <div class="flex items-center justify-between text-xs text-zinc-400 border-b border-white/5 pb-2.5">
-              <span>Chủ tài khoản</span>
-              <span class="font-bold text-amber-400 tracking-wide font-mono uppercase">DANG ANH DUY</span>
-            </div>
-
-            <div class="space-y-1.5">
-              <span class="text-xs text-zinc-400 block">Số tài khoản nhận donate</span>
-              <div class="flex items-center gap-2">
-                <span id="donateStk" class="font-mono text-lg sm:text-xl font-bold text-white tracking-widest bg-zinc-900/90 px-3.5 py-2 rounded-xl border border-indigo-500/40 flex-1 select-all">
-                  0768134698
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+          <!-- Chi tiết tài khoản (7 cols) -->
+          <div class="md:col-span-7 flex flex-col justify-between space-y-4 bg-black/40 border border-white/10 rounded-2xl p-5 sm:p-6 shadow-inner">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between text-xs text-zinc-400 border-b border-white/5 pb-2.5">
+                <span>Ngân hàng</span>
+                <span class="font-semibold text-zinc-100 flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono text-[10px] font-bold">ACB</span>
+                  <span>Ngân hàng TMCP Á Châu</span>
                 </span>
-                <button type="button" id="btnCopyStk" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30">
-                  <i data-lucide="copy" class="w-4 h-4"></i>
-                  <span>Sao chép</span>
-                </button>
+              </div>
+
+              <div class="flex items-center justify-between text-xs text-zinc-400 border-b border-white/5 pb-2.5">
+                <span>Chủ tài khoản</span>
+                <span class="font-bold text-amber-400 tracking-wide font-mono uppercase text-sm">ĐẶNG HOÀNG ANH DUY</span>
+              </div>
+
+              <div class="space-y-1.5 pt-1">
+                <span class="text-xs text-zinc-400 block font-medium">Số tài khoản nhận donate</span>
+                <div class="flex items-center gap-2">
+                  <span id="donateStk" class="font-mono text-xl sm:text-2xl font-bold text-white tracking-widest bg-zinc-900/90 px-4 py-2.5 rounded-xl border border-indigo-500/40 flex-1 select-all">
+                    36646437
+                  </span>
+                  <button type="button" id="btnCopyStk" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-lg shadow-indigo-600/30">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <span>Sao chép</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-[11px] text-zinc-400 pt-2 flex items-center gap-2">
+                <i data-lucide="message-square" class="w-3.5 h-3.5 text-zinc-500 shrink-0"></i>
+                <span>Nội dung chuyển khoản: <span class="text-zinc-200 font-mono font-medium">Nuoi server DDStudio</span></span>
               </div>
             </div>
 
-            <div class="text-[11px] text-zinc-400 pt-1 flex items-center gap-2">
-              <i data-lucide="message-square" class="w-3.5 h-3.5 text-zinc-500 shrink-0"></i>
-              <span>Lời nhắn gợi ý: <span class="text-zinc-300 font-mono italic">"Nuoi server lo"</span> hoặc <span class="text-zinc-300 font-mono italic">"Moi Duy ly cafe"</span></span>
+            <div class="pt-3 border-t border-white/5 flex flex-wrap gap-2">
+              <button type="button" id="btnQuickCopy5k" class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-300 text-xs font-medium cursor-pointer transition flex items-center gap-1.5">
+                <span>☕</span> <span>Sao chép STK (10.000đ)</span>
+              </button>
+              <button type="button" id="btnQuickCopy20k" class="px-3 py-1.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-500/30 text-indigo-300 text-xs font-medium cursor-pointer transition flex items-center gap-1.5">
+                <span>🍜</span> <span>Sao chép STK (30.000đ)</span>
+              </button>
             </div>
           </div>
 
-          <!-- Lời cảm tạ & Bảo chứng -->
-          <div class="p-5 rounded-2xl border border-white/10 bg-black/20 space-y-4 text-xs text-zinc-300 leading-relaxed">
-            <div class="flex items-center gap-2.5 text-amber-400 font-semibold">
-              <i data-lucide="award" class="w-4 h-4"></i>
-              <span>Cam kết minh bạch của Dev:</span>
+          <!-- Mã VietQR (5 cols) -->
+          <div class="md:col-span-5 flex flex-col items-center justify-center p-5 rounded-2xl border border-white/10 bg-black/40 text-center space-y-3">
+            <div class="relative p-2.5 bg-white rounded-2xl shadow-xl max-w-[210px] w-full">
+              <img
+                src="https://img.vietqr.io/image/ACB-36646437-compact2.png?amount=10000&addInfo=Nuoi%20server%20DDStudio&accountName=DANG%20HOANG%20ANH%20DUY"
+                alt="VietQR Donate ACB 36646437 - ĐẶNG HOÀNG ANH DUY"
+                class="w-full h-auto aspect-square object-contain rounded-xl"
+                loading="lazy"
+                onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'py-12 text-zinc-800 text-xs font-mono font-bold\'>ACB - 36646437<br>DANG HOANG ANH DUY</div>';"
+              />
             </div>
-            <ul class="space-y-2 list-disc list-inside text-zinc-400">
-              <li>100% tiền donate sẽ đi thẳng vào tiền điện nuôi homeserver và dạ dày của dev.</li>
-              <li>Tuyệt đối không hoàn tiền dưới mọi hình thức vì có thể tiền đã được dùng để mua xúc xích.</li>
-              <li>Người donate được nhận lời chúc sức khỏe, may mắn và pass qua mọi môn học từ vũ trụ.</li>
-            </ul>
-
-            <div class="pt-2 flex flex-wrap gap-2">
-              <button type="button" id="btnQuickCopy5k" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium cursor-pointer transition">
-                ☕ Ủng hộ 10.000đ (Ly trà đá)
-              </button>
-              <button type="button" id="btnQuickCopy20k" class="px-3 py-1.5 rounded-lg bg-indigo-900/40 hover:bg-indigo-900/70 border border-indigo-500/30 text-indigo-200 text-xs font-medium cursor-pointer transition">
-                🍜 Ủng hộ 30.000đ (Tô hủ tiếu)
-              </button>
+            <div class="space-y-1">
+              <p class="text-xs font-semibold text-zinc-200">Mã VietQR Napas 24/7</p>
+              <p class="text-[11px] text-zinc-400">Quét bằng mọi ứng dụng ngân hàng hoặc ví điện tử</p>
             </div>
           </div>
         </div>
@@ -234,12 +243,12 @@ export function attachTermsPageListeners() {
   const donateStk = document.getElementById('donateStk');
 
   const handleCopy = async (note = '') => {
-    const stk = donateStk?.textContent?.trim() || '0768134698';
+    const stk = donateStk?.textContent?.trim() || '36646437';
     const success = await copyText(stk);
     if (success) {
-      showToast(note ? `Đã sao chép STK: ${stk} (${note})! Cảm ơn đại gia ❤️` : `Đã sao chép STK: ${stk}! Cảm ơn đại gia ❤️`, 'success');
+      showToast(note ? `Đã sao chép STK: ${stk} (${note})! Cảm ơn bạn ❤️` : `Đã sao chép STK ACB: ${stk}! Cảm ơn bạn ❤️`, 'success');
     } else {
-      showToast(`STK: ${stk} - MB Bank (DANG ANH DUY)`, 'info');
+      showToast(`STK: ${stk} - ACB (ĐẶNG HOÀNG ANH DUY)`, 'info');
     }
   };
 

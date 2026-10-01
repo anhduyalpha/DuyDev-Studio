@@ -18,7 +18,12 @@ export function attachVideoListeners(state, registerCleanup) {
   if (!video) return;
 
   registerCleanup(() => {
-    try { video.pause(); video.src = ''; } catch {}
+    try {
+      video.pause();
+      video.currentTime = 0;
+      video.removeAttribute('src');
+      video.load();
+    } catch {}
   });
 
   // Resilient blob recovery fallback if direct range stream fails

@@ -5,7 +5,6 @@
  */
 
 import { renderArchiveCompressPane } from './components/ArchiveCompressPane.js';
-import { renderResetStateButton } from '../../../utilities/moduleState.js';
 import { attachDropzoneListeners } from '../../common/Dropzone.js';
 import { archiveCompressManager } from './hooks/useArchiveCompressManager.js';
 import { showToast } from '../../../utilities/toast.js';
@@ -21,10 +20,6 @@ export function renderArchiveCompressWorkspace(state = archiveCompressManager.ge
           </a>
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-900 dark:text-zinc-200 font-semibold">Nén Tệp</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          ${renderResetStateButton('archive_compress')}
         </div>
       </div>
 

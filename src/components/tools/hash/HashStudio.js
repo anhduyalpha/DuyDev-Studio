@@ -9,7 +9,7 @@ import { copyText } from '../../../utilities/clipboard.js';
 import { renderDropzone, attachDropzoneListeners } from '../../common/Dropzone.js';
 import { calculateTextHashes, processHashFile, updateBase64 } from './hooks/useHashActions.js';
 import { renderHashCards, renderCompareMatchHtml, bindCopyHashButtons } from './components/HashCards.js';
-import { loadModuleState, saveModuleState, renderResetStateButton } from '../../../utilities/moduleState.js';
+import { loadModuleState, saveModuleState } from '../../../utilities/moduleState.js';
 
 /**
  * @typedef {Object} HashResultMap
@@ -91,7 +91,6 @@ export function renderHashStudio() {
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-600 dark:text-zinc-400 font-medium">Mã Băm & Base64</span>
         </div>
-        ${renderResetStateButton('hash')}
       </div>
 
       <div class="flex items-center gap-1.5 p-1.5 bg-zinc-100 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-white/[0.06] rounded-2xl max-w-md">

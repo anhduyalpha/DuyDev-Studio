@@ -32,7 +32,7 @@ export async function getCurrentVersion() {
       console.warn('[PWA] Error reading cache keys:', err);
     }
   }
-  return 'duydev-studio-v15.7';
+  return 'duydev-studio-v16.3';
 }
 
 /**
@@ -133,14 +133,29 @@ export async function checkForAppUpdate() {
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
+  const hadExistingController = Boolean(navigator.serviceWorker.controller);
   let refreshing = false;
 
-  // When a new SW takes over, reload to apply new assets
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
+  const performSafeReload = (reason) => {
     if (refreshing) return;
+    const lastReload = sessionStorage.getItem('ds_sw_just_reloaded');
+    if (lastReload && Date.now() - Number(lastReload) < 10000) {
+      console.log(`[PWA] Skipping reload (${reason}): already reloaded recently`);
+      return;
+    }
     refreshing = true;
-    console.log('[PWA] Controller changed -> Auto refreshing...');
+    try { sessionStorage.setItem('ds_sw_just_reloaded', String(Date.now())); } catch {}
+    console.log(`[PWA] ${reason} -> Reloading to apply new assets...`);
     window.location.reload();
+  };
+
+  // When a new SW takes over, reload to apply new assets ONLY if an older SW was controlling the page
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadExistingController) {
+      console.log('[PWA] Initial Service Worker activated. Skipping reload.');
+      return;
+    }
+    performSafeReload('Controller updated');
   });
 
   const doRegister = () => {
@@ -159,10 +174,8 @@ export function registerServiceWorker() {
               installingWorker.state === 'activated' ||
               (installingWorker.state === 'installed' && navigator.serviceWorker.controller)
             ) {
-              if (!refreshing) {
-                refreshing = true;
-                console.log('[PWA] New version activated, refreshing...');
-                window.location.reload();
+              if (hadExistingController) {
+                performSafeReload('New version activated');
               }
             }
           });

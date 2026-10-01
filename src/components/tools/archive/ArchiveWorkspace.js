@@ -6,7 +6,6 @@
 import { renderArchiveTreePane } from './components/ArchiveTreePane.js';
 import { renderFileTablePane } from './components/FileTablePane.js';
 import { renderArchiveHeaderBanner, renderArchiveEmptyDropzone } from './components/MemberModal.js';
-import { renderResetStateButton } from '../../../utilities/moduleState.js';
 import { renderUploadProgressCard, renderResumeCheckpointBanner } from '../../common/UploadProgressCard.js';
 
 export function renderArchiveViewer(state = {}) {
@@ -41,7 +40,6 @@ export function renderArchiveViewer(state = {}) {
               <span>Đổi tệp</span>
             </button>
           ` : ''}
-          ${renderResetStateButton('archive')}
         </div>
       </div>
 

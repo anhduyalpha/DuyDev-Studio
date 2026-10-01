@@ -172,8 +172,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        if (::webView.isInitialized) {
+            webView.onPause()
+            webView.pauseTimers()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        if (::webView.isInitialized) {
+            webView.resumeTimers()
+            webView.onResume()
+        }
         currentInstance = this
         evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-resumed')); }")
     }
@@ -487,10 +499,19 @@ class MainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 if (offlineContainer.visibility == View.VISIBLE) {
                     finish()
-                } else if (webView.canGoBack()) {
-                    webView.goBack()
                 } else {
-                    finish()
+                    webView.evaluateJavascript(
+                        "(function() { if (document.getElementById('fileViewerCoreModal')) { if (window.closeFileViewer) { window.closeFileViewer(); } else { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'})); } return 'true'; } return 'false'; })()"
+                    ) { result ->
+                        val closedModal = result?.replace("\"", "") == "true"
+                        if (!closedModal) {
+                            if (webView.canGoBack()) {
+                                webView.goBack()
+                            } else {
+                                finish()
+                            }
+                        }
+                    }
                 }
             }
         })

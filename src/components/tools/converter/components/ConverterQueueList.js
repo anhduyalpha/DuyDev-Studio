@@ -10,6 +10,10 @@ export function renderConverterQueueList(state) {
   const items = state.items || [];
   if (items.length === 0) return '';
 
+  const isUploading = items.some(
+    (it) => it.uploadStatus === 'uploading' || it.status === 'uploading'
+  );
+
   return `
     <div class="rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.07] shadow-sm overflow-hidden space-y-3 p-4 sm:p-5">
       <div class="flex items-center justify-between gap-3 border-b border-zinc-100 dark:border-white/[0.05] pb-3">
@@ -20,7 +24,7 @@ export function renderConverterQueueList(state) {
             ${items.length} tệp
           </span>
         </div>
-        <button id="btnClearConverterQueue" type="button" class="text-xs text-zinc-500 hover:text-red-500 transition flex items-center gap-1">
+        <button id="btnClearConverterQueue" type="button" ${isUploading ? 'disabled title="Đang tải tệp lên máy chủ..."' : 'title="Xóa tất cả tệp"'} class="text-xs ${isUploading ? 'opacity-40 cursor-not-allowed text-zinc-400' : 'text-zinc-500 hover:text-red-500 transition cursor-pointer'} flex items-center gap-1">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa tất cả
         </button>
       </div>

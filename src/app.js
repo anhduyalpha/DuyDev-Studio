@@ -25,6 +25,7 @@ import { renderServerPage, attachServerPageListeners } from './pages/ServerPage.
 import { renderStoragePage, attachStoragePageListeners } from './pages/StoragePage.js';
 import { renderTermsPage, attachTermsPageListeners } from './pages/TermsPage.js';
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
+import { closeFileViewer } from './components/common/viewer/FileViewerCore.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
 import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
 import { openShareTargetModal } from './components/common/ShareTargetModal.js';
@@ -52,17 +53,6 @@ class App {
       localStorage.removeItem('ds_last_route');
     } catch {}
 
-    // Global listener for resetting module state directly from UI buttons
-    document.addEventListener('click', (e) => {
-      const resetBtn = e.target.closest('[data-reset-module]');
-      if (resetBtn) {
-        const moduleId = resetBtn.dataset.resetModule;
-        if (moduleId) {
-          clearModuleState(moduleId);
-          window.location.reload();
-        }
-      }
-    });
 
     // Listen to hash changes for client-side SPA routing
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -95,6 +85,15 @@ class App {
     if (typeof window !== 'undefined') {
       window.addEventListener('ds:native-share-arrived', () => {
         this.checkAndOpenShareTarget();
+      });
+
+      // Pause active media when browser/tab/app moves to background
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          document.querySelectorAll('audio, video').forEach((media) => {
+            try { media.pause(); } catch {}
+          });
+        }
       });
     }
 
@@ -182,7 +181,7 @@ class App {
     this.appRoot.innerHTML = `
       <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-hidden">
         <div id="headerContainer" class="w-full"></div>
-        <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-28 sm:py-8 min-w-0 overflow-x-hidden"></main>
+        <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-36 sm:py-8 min-w-0 overflow-x-hidden"></main>
         <div id="footerContainer" class="w-full"></div>
         <div id="bottomNavContainer"></div>
         <div id="globalPreviewContainer"></div>
@@ -207,8 +206,12 @@ class App {
 
   handleRoute() {
     try {
-      this.cleanupCurrentView();
       const hash = window.location.hash;
+      const isPdfView = hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf');
+      if (!isPdfView) {
+        closeFileViewer();
+      }
+      this.cleanupCurrentView();
 
       // Web Share Target route — open modal over base dashboard view
       if (hash === '#share-target' || hash.startsWith('#share-target?')) {

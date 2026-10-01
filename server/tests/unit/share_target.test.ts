@@ -599,13 +599,13 @@ describe('Web Share Target & Classifier Suite', () => {
       expect(classification.recommendations[0].route).toBe('#tool/studocu-dl');
     });
 
-    it('pwa.js fallback version should match sw.js CACHE_NAME v15.7', async () => {
+    it('pwa.js fallback version should match sw.js CACHE_NAME v16.3', async () => {
       const { getCurrentVersion } = await import('../../../src/utilities/pwa.js');
       const originalWindow = (global as any).window;
       (global as any).window = {}; // No CacheStorage
       try {
         const version = await getCurrentVersion();
-        expect(version).toBe('duydev-studio-v15.7');
+        expect(version).toBe('duydev-studio-v16.3');
       } finally {
         if (originalWindow !== undefined) (global as any).window = originalWindow;
         else delete (global as any).window;

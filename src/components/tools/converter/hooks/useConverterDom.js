@@ -91,10 +91,10 @@ export function updateBatchButton(manager) {
   const pendingCount = validItems.length;
 
   startButton.disabled = pendingCount === 0 || isBusy || isUploading;
-  startButton.className = `w-full py-3.5 px-5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition shadow-sm ${
+  startButton.className = `w-full py-4 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all duration-200 ${
     startButton.disabled
-      ? 'bg-zinc-200 dark:bg-white/[0.08] text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
-      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 active:scale-[0.99] cursor-pointer'
+      ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
+      : 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 active:scale-[0.98] cursor-pointer'
   }`;
 
   const textElement = document.getElementById('btnStartConversionText');
@@ -109,15 +109,15 @@ export function updateBatchButton(manager) {
     } else if (pendingCount > 0) {
       textElement.textContent = `Chuyển đổi ${pendingCount} tệp tin`;
     } else {
-      textElement.textContent = 'Chưa có tệp sẵn sàng';
+      textElement.textContent = 'Chọn tệp để chuyển đổi';
     }
   }
 
   const iconElement = document.getElementById('btnStartConversionIcon');
   if (iconElement) {
     iconElement.innerHTML = (isBusy || isUploading)
-      ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>'
-      : '<i data-lucide="zap" class="w-4 h-4"></i>';
+      ? '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>'
+      : '<i data-lucide="zap" class="w-5 h-5 fill-current"></i>';
 
     refreshLucide(iconElement);
   }
@@ -381,6 +381,13 @@ export function attachConverterListeners(manager) {
       }
 
       if (e.target.closest('#btnClearConverterQueue')) {
+        const isUploading = manager.items?.some(
+          (it) => it.uploadStatus === 'uploading' || it.status === 'uploading'
+        );
+        if (isUploading) {
+          showToast('Đang tải tệp lên máy chủ, vui lòng đợi hoàn tất!', 'warning');
+          return;
+        }
         manager.clearQueue();
         updateConverterHistoryDom(manager);
         return;

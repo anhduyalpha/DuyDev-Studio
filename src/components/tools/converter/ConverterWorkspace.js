@@ -9,7 +9,6 @@ import { renderConverterOptions } from './components/ConverterOptions.js';
 import { renderConverterQueueList } from './components/ConverterQueueList.js';
 import { renderConverterResult } from './components/ConverterResult.js';
 import { renderConverterHistoryList } from './components/ConverterHistoryList.js';
-import { renderResetStateButton } from '../../../utilities/moduleState.js';
 
 export { attachConverterListeners } from './hooks/useConverterDom.js';
 
@@ -27,7 +26,6 @@ export function renderConverterWorkspace(state) {
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-600 dark:text-zinc-400 font-medium">File Converter</span>
         </div>
-        ${renderResetStateButton('converter_batch')}
       </div>
 
       <!-- Persistent Error Banner -->

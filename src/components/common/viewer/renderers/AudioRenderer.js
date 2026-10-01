@@ -77,7 +77,12 @@ export function attachAudioListeners(state, registerCleanup) {
   if (!audio) return;
 
   registerCleanup(() => {
-    try { audio.pause(); audio.src = ''; } catch {}
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.removeAttribute('src');
+      audio.load();
+    } catch {}
   });
 
   const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];

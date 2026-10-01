@@ -111,20 +111,20 @@ export function renderConverterOptions(state) {
       </div>
 
       <!-- Action Button -->
-      <div class="pt-2">
+      <div class="pt-3">
         <button id="btnStartConversion" type="button" ${isDisabled ? 'disabled' : ''}
-          class="w-full py-3.5 px-5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition shadow-sm ${
+          class="w-full py-4 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all duration-200 ${
             isDisabled
-              ? 'bg-zinc-200 dark:bg-white/[0.08] text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 active:scale-[0.99] cursor-pointer'
+              ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
+              : 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 active:scale-[0.98] cursor-pointer'
           }">
           <span id="btnStartConversionIcon">
             ${isConverting
-              ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>'
-              : '<i data-lucide="zap" class="w-4 h-4"></i>'}
+              ? '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>'
+              : '<i data-lucide="zap" class="w-5 h-5 fill-current"></i>'}
           </span>
           <span id="btnStartConversionText">
-            ${isConverting ? 'Đang chuyển đổi theo lô...' : pendingCount > 0 ? `Chuyển đổi ${pendingCount} tệp tin` : 'Chưa có tệp sẵn sàng'}
+            ${isConverting ? 'Đang chuyển đổi theo lô...' : pendingCount > 0 ? `Chuyển đổi ${pendingCount} tệp tin` : 'Chọn tệp để chuyển đổi'}
           </span>
         </button>
       </div>

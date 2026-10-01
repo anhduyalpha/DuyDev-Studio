@@ -37,12 +37,35 @@ let activeCleanups = [];
 let savedScrollY = 0;
 
 export function closeFileViewer() {
+  // 1. Quét và giải phóng cưỡng chế toàn bộ thẻ audio và video trong DOM
+  const mediaElements = document.querySelectorAll('audio, video');
+  mediaElements.forEach((el) => {
+    try {
+      el.pause();
+      el.currentTime = 0;
+      el.removeAttribute('src');
+      el.load(); // Buộc giải phóng native media decoder pipeline
+    } catch {}
+  });
+
+  // 2. Dọn sạch src của iframe để ngắt hoàn toàn embedded players
+  const iframes = document.querySelectorAll('#fileViewerCoreModal iframe');
+  iframes.forEach((ifr) => {
+    try { ifr.src = 'about:blank'; } catch {}
+  });
+
+  // 3. Thực thi các hàm cleanup đăng ký riêng của từng renderer
   while (activeCleanups.length > 0) {
     const fn = activeCleanups.pop();
     try { fn(); } catch {}
   }
+
+  // 4. Xóa modal khỏi DOM
   const modal = document.getElementById('fileViewerCoreModal');
   if (modal) modal.remove();
+  const mount = document.getElementById('globalFileViewerMount');
+  if (mount) mount.innerHTML = '';
+
   if (window.location.hash.startsWith('#view/pdf') || window.location.hash.startsWith('#preview/pdf') || window.location.hash.startsWith('#reader/pdf')) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
@@ -50,6 +73,10 @@ export function closeFileViewer() {
     window.scrollTo({ top: savedScrollY, behavior: 'instant' });
     savedScrollY = 0;
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.closeFileViewer = closeFileViewer;
 }
 
 export function openFileViewer(state) {

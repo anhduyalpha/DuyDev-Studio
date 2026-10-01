@@ -14,7 +14,6 @@ import { renderQrPreviewCard } from './components/QrPreviewCard.js';
 import { renderQrScannerWorkspace } from './components/QrScannerPanel.js';
 import { renderQrHistoryList } from './components/QrHistoryList.js';
 import { attachQrStudioListeners, attachQrScannerListeners } from './hooks/useQrListeners.js';
-import { renderResetStateButton } from '../../../utilities/moduleState.js';
 
 export { qrState, attachQrStudioListeners, attachQrScannerListeners };
 
@@ -32,7 +31,6 @@ export function renderQrScanner() {
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-900 dark:text-zinc-200 font-semibold">Quét Mã QR</span>
         </div>
-        ${renderResetStateButton('qr')}
       </div>
 
       <!-- Header Intro -->
@@ -79,7 +77,6 @@ export function renderQrStudio(initialTab = null) {
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-900 dark:text-zinc-200 font-semibold">Tạo Mã QR</span>
         </div>
-        ${renderResetStateButton('qr')}
       </div>
 
       <!-- Navigation Tabs Bar (Creation Only) -->
