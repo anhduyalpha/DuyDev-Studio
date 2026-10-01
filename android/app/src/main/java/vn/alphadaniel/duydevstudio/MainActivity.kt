@@ -92,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupWebView()
         setupBackHandler()
+        pruneRedundantCache()
 
         handleIntent(intent)
 
@@ -359,6 +360,25 @@ class MainActivity : AppCompatActivity() {
     private fun showOffline(show: Boolean) {
         offlineContainer.visibility = if (show) View.VISIBLE else View.GONE
         swipeRefreshLayout.visibility = if (show) View.GONE else View.VISIBLE
+    }
+
+    private fun pruneRedundantCache() {
+        Thread {
+            try {
+                val maxAgeMs = 24 * 3600 * 1000L
+                val now = System.currentTimeMillis()
+                cacheDir?.listFiles()?.forEach { file ->
+                    if (file.isFile && (now - file.lastModified() > maxAgeMs)) {
+                        file.delete()
+                    }
+                }
+                externalCacheDir?.listFiles()?.forEach { file ->
+                    if (file.isFile && (now - file.lastModified() > maxAgeMs)) {
+                        file.delete()
+                    }
+                }
+            } catch (_: Exception) {}
+        }.start()
     }
 
     private fun handleIntent(intent: Intent?) {

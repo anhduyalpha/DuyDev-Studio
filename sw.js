@@ -3,23 +3,24 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v15.3';
+const CACHE_NAME = 'duydev-studio-v15.4';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=15.3',
-  './src/styles/studocu.css?v=15.3',
-  './src/styles/highlight-theme.css?v=15.3',
+  './src/styles/stitch-tokens.css?v=15.4',
+  './src/styles/studocu.css?v=15.4',
+  './src/styles/highlight-theme.css?v=15.4',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=15.3',
+  './src/app.js?v=15.4',
   './src/utilities/shareTargetHelper.js',
+  './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
   './src/assets/logo-ds.svg',
@@ -78,6 +79,36 @@ async function saveSharePayload(payload) {
   } catch (err) {
     console.warn('[SW] IndexedDB write failed:', err);
   }
+}
+
+/**
+ * Prune orphaned temporary payloads in ds_share_db older than 30 minutes.
+ */
+async function pruneOrphanedShares() {
+  try {
+    if (typeof indexedDB === 'undefined') return;
+    const db = await openShareDb();
+    const tx = db.transaction('shares', 'readwrite');
+    const store = tx.objectStore('shares');
+    const now = Date.now();
+    const maxAge = 30 * 60 * 1000;
+    const req = store.openCursor();
+    req.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        const time = cursor.value?.timestamp || 0;
+        if (!time || now - time > maxAge) {
+          cursor.delete();
+        }
+        cursor.continue();
+      }
+    };
+    await new Promise((resolve) => {
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+    });
+    db.close();
+  } catch {}
 }
 
 /**
@@ -214,11 +245,12 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate Event: Clean ALL old caches immediately
+// Activate Event: Clean ALL old caches immediately & prune orphaned shares
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME) {
             console.log('[SW] Deleting stale cache:', name);
@@ -226,9 +258,10 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+      await pruneOrphanedShares();
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
 // ─── Fetch Event ───
@@ -307,8 +340,17 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request, { cache: 'no-cache' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            const contentType = networkResponse.headers.get('content-type') || '';
+            const contentLength = networkResponse.headers.get('content-length');
+            const isOversized = contentLength && parseInt(contentLength, 10) > 4 * 1024 * 1024;
+            const isMediaOrBinary = contentType.includes('video/') || contentType.includes('audio/') || contentType.includes('application/octet-stream') || contentType.includes('application/zip');
+            const hasShareQuery = url.search.includes('hasFiles=1') || url.search.includes('&t=') || url.search.includes('?t=');
+
+            // Only cache lightweight static code, styles, fonts, and assets (<4MB, no heavy media or transient query tokens)
+            if (!isOversized && !isMediaOrBinary && !hasShareQuery) {
+              const clone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
+            }
           }
           return networkResponse;
         })

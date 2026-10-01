@@ -100,6 +100,14 @@ class App {
 
     // Check for pending share payload on startup
     this.checkAndOpenShareTarget();
+
+    // Schedule non-intrusive background janitor to prune obsolete cache & orphaned shares (idle after 4s)
+    setTimeout(async () => {
+      try {
+        const { runStorageJanitor } = await import('./utilities/storageJanitor.js');
+        runStorageJanitor();
+      } catch {}
+    }, 4000);
   }
 
   async checkAndOpenShareTarget() {

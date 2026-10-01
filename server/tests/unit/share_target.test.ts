@@ -599,17 +599,22 @@ describe('Web Share Target & Classifier Suite', () => {
       expect(classification.recommendations[0].route).toBe('#tool/studocu-dl');
     });
 
-    it('pwa.js fallback version should match sw.js CACHE_NAME v15.3', async () => {
+    it('pwa.js fallback version should match sw.js CACHE_NAME v15.4', async () => {
       const { getCurrentVersion } = await import('../../../src/utilities/pwa.js');
       const originalWindow = (global as any).window;
       (global as any).window = {}; // No CacheStorage
       try {
         const version = await getCurrentVersion();
-        expect(version).toBe('duydev-studio-v15.3');
+        expect(version).toBe('duydev-studio-v15.4');
       } finally {
         if (originalWindow !== undefined) (global as any).window = originalWindow;
         else delete (global as any).window;
       }
+    });
+
+    it('storageJanitor should run without errors when APIs are absent or present', async () => {
+      const { runStorageJanitor } = await import('../../../src/utilities/storageJanitor.js');
+      await expect(runStorageJanitor()).resolves.toBeUndefined();
     });
 
     it('base64ToFile should correctly convert base64 string to a File instance', () => {
