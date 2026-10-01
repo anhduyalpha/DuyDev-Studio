@@ -1,6 +1,6 @@
 /**
  * PWA Service Worker Registration & Lifecycle Manager
- * Handles SW registration, automatic update checks on foreground,
+ * Handles SW registration, deterministic update checks against the server,
  * and exposes helpers for the Settings page.
  */
 
@@ -19,60 +19,110 @@ export function isStandaloneMode() {
 }
 
 /**
- * Query the active Service Worker for its CACHE_NAME version string.
- * Falls back to 'unknown' if SW is unavailable or doesn't respond within 2s.
+ * Read the current local version from CacheStorage or fallback constant.
  * @returns {Promise<string>}
  */
-export function getSwVersion() {
-  return new Promise((resolve) => {
-    const controller = navigator.serviceWorker?.controller;
-    if (!controller) {
-      resolve('unknown');
-      return;
+export async function getCurrentVersion() {
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      const pwaKey = keys.find((k) => k.startsWith('duydev-studio-'));
+      if (pwaKey) return pwaKey;
+    } catch (err) {
+      console.warn('[PWA] Error reading cache keys:', err);
     }
-
-    /** @type {ReturnType<typeof setTimeout> | null} */
-    let timeoutId = null;
-
-    const onMessage = (e) => {
-      if (e.data?.type === 'VERSION_INFO') {
-        navigator.serviceWorker.removeEventListener('message', onMessage);
-        if (timeoutId) clearTimeout(timeoutId);
-        resolve(e.data.version || 'unknown');
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('message', onMessage);
-    controller.postMessage({ type: 'GET_VERSION' });
-
-    // Fallback timeout: resolve with 'unknown' if SW doesn't respond
-    timeoutId = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener('message', onMessage);
-      resolve('unknown');
-    }, 2000);
-  });
+  }
+  return 'duydev-studio-v14.9';
 }
 
 /**
- * Trigger Service Worker update check.
- * If a new worker is found, the existing controllerchange listener will
- * automatically reload the page once the new SW activates.
+ * Fetch the live sw.js script from the server (bypassing all browser/SW cache)
+ * and parse the exact CACHE_NAME constant currently deployed.
+ * @returns {Promise<string>}
+ */
+export async function getServerVersion() {
+  const resp = await fetch(`./sw.js?t=${Date.now()}`, { cache: 'no-store' });
+  if (!resp.ok) {
+    throw new Error(`Máy chủ phản hồi mã lỗi ${resp.status}`);
+  }
+  const text = await resp.text();
+  const match = text.match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/);
+  if (!match) {
+    throw new Error('Không thể phân tích phiên bản từ kịch bản Service Worker');
+  }
+  return match[1];
+}
+
+/**
+ * Legacy compatibility alias for getSwVersion
+ * @returns {Promise<string>}
+ */
+export async function getSwVersion() {
+  return getCurrentVersion();
+}
+
+/**
+ * Deterministic update check:
+ * Compares the live server version from ./sw.js against local CacheStorage.
+ * If server version differs from local, triggers update and auto-reload.
  * @returns {Promise<{ updated: boolean, message: string }>}
  */
 export async function checkForAppUpdate() {
-  if (!swRegistration) {
-    return { updated: false, message: 'Service Worker chưa sẵn sàng' };
-  }
   try {
-    await swRegistration.update();
-    const waiting = swRegistration.waiting || swRegistration.installing;
-    if (waiting) {
-      return { updated: true, message: 'Đang tải bản cập nhật mới...' };
+    const [localVer, serverVer] = await Promise.all([
+      getCurrentVersion(),
+      getServerVersion()
+    ]);
+
+    console.log(`[PWA] Checking update: Local=${localVer}, Server=${serverVer}`);
+
+    if (serverVer && serverVer !== localVer) {
+      // New version found! Trigger SW update
+      if (swRegistration) {
+        swRegistration.update().catch(() => {});
+      }
+
+      // Proactively clear stale cache keys so the new version loads clean
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(
+            keys.filter((k) => k !== serverVer).map((k) => caches.delete(k))
+          );
+        } catch {}
+      }
+
+      // Schedule reload with cache buster
+      setTimeout(() => {
+        window.location.replace(
+          window.location.origin +
+            window.location.pathname +
+            `?v=${Date.now()}` +
+            window.location.hash
+        );
+      }, 1000);
+
+      return {
+        updated: true,
+        message: `Đã có bản cập nhật mới (${serverVer}). Đang tải và áp dụng...`
+      };
     }
-    return { updated: false, message: 'Bạn đang sử dụng phiên bản mới nhất' };
+
+    // Already on latest version
+    if (swRegistration) {
+      swRegistration.update().catch(() => {});
+    }
+
+    return {
+      updated: false,
+      message: `Bạn đang sử dụng phiên bản mới nhất (${localVer})`
+    };
   } catch (err) {
     console.warn('[PWA] Update check failed:', err);
-    return { updated: false, message: 'Không thể kiểm tra cập nhật (offline?)' };
+    return {
+      updated: false,
+      message: 'Không thể kết nối đến máy chủ để kiểm tra cập nhật (offline?)'
+    };
   }
 }
 
@@ -131,8 +181,8 @@ export function registerServiceWorker() {
 
   // Auto-check for updates when app returns from background (foreground resume)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && swRegistration) {
-      swRegistration.update().catch(() => {});
+    if (document.visibilityState === 'visible') {
+      checkForAppUpdate().catch(() => {});
     }
   });
 }
