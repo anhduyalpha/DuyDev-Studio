@@ -1,17 +1,17 @@
 /**
- * DuyDev Studio - Service Worker (v6.1 - Bulletproof Share Target & App Shell)
+ * DuyDev Studio - Service Worker (v6.2 - Bulletproof Share Target & App Shell)
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v16.1';
+const CACHE_NAME = 'duydev-studio-v16.2';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=16.1',
-  './src/styles/studocu.css?v=16.1',
-  './src/styles/highlight-theme.css?v=16.1',
+  './src/styles/stitch-tokens.css?v=16.2',
+  './src/styles/studocu.css?v=16.2',
+  './src/styles/highlight-theme.css?v=16.2',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',

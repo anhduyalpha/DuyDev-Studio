@@ -345,7 +345,7 @@ class App {
       setView(renderHistoryPage(hash === '#trash' ? 'trash' : 'history'), () => attachHistoryPageListeners(onSoftReRender));
     } else if (hash === '#storage' || hash.startsWith('#storage/') || hash.startsWith('#storage?')) {
       setView(renderStoragePage(), () => attachStoragePageListeners(onSoftReRender));
-    } else if (hash === '#settings' || hash === '#server') {
+    } else if (hash === '#settings' || hash === '#server' || hash === '#admin') {
       setView(renderServerPage(), () => attachServerPageListeners(onSoftReRender));
     } else if (hash === '#terms' || hash === '#terms-of-service' || hash === '#dieu-khoan') {
       setView(renderTermsPage(), () => attachTermsPageListeners(onSoftReRender));

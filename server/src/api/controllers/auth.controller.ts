@@ -75,3 +75,41 @@ export async function authStatusHandler(_request: FastifyRequest, reply: Fastify
     }
   });
 }
+
+/**
+ * Authentication PreHandler Guard for Admin & Telemetry Endpoints
+ */
+export async function adminAuthGuard(request: FastifyRequest, reply: FastifyReply) {
+  const authHeader = (request.headers['x-storage-auth'] as string) || (request.headers.authorization as string) || '';
+  const queryToken = (request.query as Record<string, string>)?.auth || (request.query as Record<string, string>)?.token || '';
+  const candidate = authHeader || queryToken;
+
+  if (candidate) {
+    if (AuthService.validateToken(candidate)) {
+      return;
+    }
+    const isPasswordValid = await AuthService.verifyPassword(candidate.replace(/^Bearer\s+/i, '').trim());
+    if (isPasswordValid) {
+      return;
+    }
+  }
+
+  return reply.status(401).send({
+    success: false,
+    error: 'UNAUTHORIZED',
+    message: 'Yêu cầu quyền Quản trị viên để truy cập thông số này.'
+  });
+}
+
+/**
+ * R2 Telemetry and Quota Inspector Handler
+ */
+export async function r2StatsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const { R2Service } = await import('../../services/r2.service.js');
+  const stats = await R2Service.getTelemetrySummary();
+  return reply.send({
+    success: true,
+    data: stats
+  });
+}
+

@@ -22,6 +22,7 @@ import {
   lockAdminSession, 
   showChangePasswordModal 
 } from '../utilities/adminAuth.js';
+import { renderR2TelemetryCard, attachR2TelemetryListeners } from '../components/server/R2TelemetryCard.js';
 
 export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
@@ -115,6 +116,10 @@ export function renderServerPage() {
             </div>
           </div>
 
+          <!-- Cloudflare R2 Transit & Quota Telemetry -->
+          <div id="r2TelemetryContainer" class="py-1">
+            ${renderR2TelemetryCard()}
+          </div>
 
           <div class="flex items-center justify-between text-sm py-2 border-b border-zinc-100 dark:border-white/5">
             <div>
@@ -280,6 +285,12 @@ export function attachServerPageListeners(onRerender) {
       triggerUpdate();
     };
   }
+
+  // 3.1 R2 Telemetry Card listeners (when admin section is unlocked)
+  if (document.getElementById('btnRefreshR2Stats')) {
+    attachR2TelemetryListeners();
+  }
+
 
   // 4. Change admin password
   const btnChangePwd = document.getElementById('btnChangeAdminPwd');

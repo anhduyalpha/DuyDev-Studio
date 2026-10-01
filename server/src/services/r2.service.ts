@@ -302,4 +302,88 @@ export class R2Service {
 
     return purgedCount;
   }
+
+  private static cachedLiveStorage: { data: any; expiresAt: number } | null = null;
+
+  static async getTelemetrySummary(): Promise<any> {
+    const metrics = this.getMetrics();
+    const maxMonthly = env.R2_MAX_MONTHLY_REQUESTS || 900000;
+    const remaining = Math.max(0, maxMonthly - metrics.totalRequests);
+    const percentUsed = Number(((metrics.totalRequests / maxMonthly) * 100).toFixed(2));
+
+    const summary: any = {
+      enabled: env.R2_ENABLED,
+      bucketName: env.R2_BUCKET_NAME,
+      accountId: env.R2_ACCOUNT_ID,
+      month: metrics.month,
+      classA: metrics.classA,
+      classB: metrics.classB,
+      totalRequests: metrics.totalRequests,
+      maxMonthlyRequests: maxMonthly,
+      remainingRequests: remaining,
+      percentUsed,
+      updatedAt: metrics.updatedAt,
+      freeTier: {
+        maxMonthlyClassA: 1_000_000,
+        maxMonthlyClassB: 10_000_000,
+        maxStorageGb: 10
+      },
+      liveStorage: null
+    };
+
+    if (
+      env.R2_ENABLED &&
+      env.R2_ACCOUNT_ID &&
+      env.R2_ACCESS_KEY_ID &&
+      env.R2_SECRET_ACCESS_KEY &&
+      env.R2_BUCKET_NAME
+    ) {
+      const now = Date.now();
+      if (this.cachedLiveStorage && this.cachedLiveStorage.expiresAt > now) {
+        summary.liveStorage = this.cachedLiveStorage.data;
+      } else {
+        try {
+          const client = this.getClient();
+          const res = await client.send(new ListObjectsV2Command({ Bucket: env.R2_BUCKET_NAME }));
+          const count = res.KeyCount || 0;
+          let totalBytes = 0;
+          const objects = (res.Contents || []).map((o) => {
+            totalBytes += o.Size || 0;
+            return {
+              key: o.Key || '',
+              sizeBytes: o.Size || 0,
+              sizeMb: Number(((o.Size || 0) / (1024 * 1024)).toFixed(2)),
+              lastModified: o.LastModified?.toISOString()
+            };
+          });
+
+          const liveData = {
+            objectCount: count,
+            totalBytes,
+            totalMb: Number((totalBytes / (1024 * 1024)).toFixed(2)),
+            totalGb: Number((totalBytes / (1024 * 1024 * 1024)).toFixed(4)),
+            objects
+          };
+
+          this.cachedLiveStorage = {
+            data: liveData,
+            expiresAt: now + 10_000
+          };
+
+          summary.liveStorage = liveData;
+        } catch (err: any) {
+          summary.liveStorage = {
+            objectCount: 0,
+            totalBytes: 0,
+            totalMb: 0,
+            totalGb: 0,
+            error: err.message
+          };
+        }
+      }
+    }
+
+    return summary;
+  }
 }
+

@@ -7,7 +7,7 @@ export function renderBottomNav(activeRoute = '') {
   const isUtility = activeRoute.startsWith('#storage') || activeRoute.startsWith('#tool/storage') || activeRoute.startsWith('#tool/studocu') || activeRoute.startsWith('#tool/hash');
   const isPdf = activeRoute.startsWith('#tool/pdf');
   const isArchive = activeRoute === '#archive';
-  const isSettings = activeRoute === '#settings' || activeRoute === '#server' || activeRoute === '#trash' || activeRoute === '#history';
+  const isSettings = activeRoute === '#settings' || activeRoute === '#server' || activeRoute === '#admin' || activeRoute === '#trash' || activeRoute === '#history';
 
   const navItem = (href, icon, label, isActive) => `
     <a href="${href}" class="flex flex-col items-center justify-center py-1.5 px-2 rounded-xl flex-1 transition-all duration-150 active:scale-95 ${
