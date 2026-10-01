@@ -49,7 +49,7 @@ export async function initChunkUpload(request: FastifyRequest, reply: FastifyRep
     fileName: path.basename(body.fileName),
     fileSize: body.fileSize,
     totalChunks: body.totalChunks,
-    chunkSize: body.chunkSize || 5 * 1024 * 1024,
+    chunkSize: body.chunkSize || 32 * 1024 * 1024,
     purpose: body.purpose || 'archive-inspect',
     targetDir: body.targetDir || '/',
     strictSizeCheck: body.strictSizeCheck ?? false,
@@ -90,24 +90,18 @@ export async function uploadChunkPart(request: FastifyRequest, reply: FastifyRep
 
   const finalChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part`);
   const tempChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part.tmp_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`);
-  const writeStream = fs.createWriteStream(tempChunkPath, { highWaterMark: 4 * 1024 * 1024 });
-
-  let bytesReceived = 0;
-  const countStream = new Transform({
-    transform(chunk, _encoding, callback) {
-      bytesReceived += chunk.length;
-      callback(null, chunk);
-    }
-  });
+  const writeStream = fs.createWriteStream(tempChunkPath, { highWaterMark: 8 * 1024 * 1024 });
 
   try {
-    await pipeline(data.file, countStream, writeStream);
+    await pipeline(data.file, writeStream);
     // Atomic rename only when payload stream is completely written without errors
     await fsPromises.rename(tempChunkPath, finalChunkPath);
   } catch (err) {
     await StorageManager.unlinkSafe(tempChunkPath);
     throw err;
   }
+
+  const bytesReceived = writeStream.bytesWritten;
 
   return reply.status(200).send({
     success: true,
@@ -137,15 +131,7 @@ export async function uploadChunkStream(request: FastifyRequest, reply: FastifyR
 
   const finalChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part`);
   const tempChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part.tmp_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`);
-  const writeStream = fs.createWriteStream(tempChunkPath, { highWaterMark: 4 * 1024 * 1024 });
-
-  let bytesReceived = 0;
-  const countStream = new Transform({
-    transform(chunk, _encoding, callback) {
-      bytesReceived += chunk.length;
-      callback(null, chunk);
-    }
-  });
+  const writeStream = fs.createWriteStream(tempChunkPath, { highWaterMark: 8 * 1024 * 1024 });
 
   const inputStream = (request.body as NodeJS.ReadableStream) || request.raw;
   const contentEncoding = headers['content-encoding'] || headers['x-content-encoding'];
@@ -153,15 +139,17 @@ export async function uploadChunkStream(request: FastifyRequest, reply: FastifyR
 
   try {
     if (decompressStream) {
-      await pipeline(inputStream, decompressStream, countStream, writeStream);
+      await pipeline(inputStream, decompressStream, writeStream);
     } else {
-      await pipeline(inputStream, countStream, writeStream);
+      await pipeline(inputStream, writeStream);
     }
     await fsPromises.rename(tempChunkPath, finalChunkPath);
   } catch (err) {
     await StorageManager.unlinkSafe(tempChunkPath);
     throw err;
   }
+
+  const bytesReceived = writeStream.bytesWritten;
 
   return reply.status(200).send({
     success: true,
@@ -268,7 +256,7 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
     targetPath = StorageManager.getUploadPath(fileId, ext);
   }
 
-  const writeStream = fs.createWriteStream(targetPath, { highWaterMark: 4 * 1024 * 1024 });
+  const writeStream = fs.createWriteStream(targetPath, { highWaterMark: 8 * 1024 * 1024 });
   const hash = crypto.createHash('sha256');
   let totalBytes = 0;
 
@@ -276,20 +264,16 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
     // Stream each chunk sequentially with backpressure, deleting chunk immediately to reclaim disk space
     for (let i = 0; i < totalChunks; i++) {
       const chunkPath = path.join(chunkDir, `chunk_${i}.part`);
-      await new Promise<void>((resolve, reject) => {
-        const readStream = fs.createReadStream(chunkPath, { highWaterMark: 4 * 1024 * 1024 });
-        readStream.on('data', (chunk: Buffer | string) => {
-          const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-          totalBytes += buf.length;
-          hash.update(buf);
-          if (!writeStream.write(buf)) {
-            readStream.pause();
-            writeStream.once('drain', () => readStream.resume());
-          }
-        });
-        readStream.on('end', () => resolve());
-        readStream.on('error', (err) => reject(err));
-      });
+      const readStream = fs.createReadStream(chunkPath, { highWaterMark: 8 * 1024 * 1024 });
+
+      for await (const chunk of readStream) {
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        totalBytes += buf.length;
+        hash.update(buf);
+        if (!writeStream.write(buf)) {
+          await new Promise<void>((resolve) => writeStream.once('drain', resolve));
+        }
+      }
 
       // Incremental disk reclaim: delete chunk immediately after it has been written
       await StorageManager.unlinkSafe(chunkPath);

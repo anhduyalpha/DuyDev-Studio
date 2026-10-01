@@ -13,16 +13,26 @@ export function isWanConnection() {
 }
 
 export function getOptimalChunkSize(fileSize, isWan = isWanConnection()) {
-  if (isWan) {
-    // 4G / Cloudflare WAN: 4MB chunks with pipelining maximize throughput and minimize jitter penalties
-    if (fileSize > 2 * 1024 * 1024 * 1024) return 8 * 1024 * 1024;
-    return 4 * 1024 * 1024;
-  }
-  if (fileSize > 5 * 1024 * 1024 * 1024) return 40 * 1024 * 1024; // > 5GB: 40MB chunks
-  if (fileSize > 2 * 1024 * 1024 * 1024) return 32 * 1024 * 1024; // 2GB - 5GB: 32MB chunks
-  if (fileSize > 500 * 1024 * 1024) return 25 * 1024 * 1024;      // 500MB - 2GB: 25MB chunks
-  if (fileSize > 50 * 1024 * 1024) return 20 * 1024 * 1024;       // 50MB - 500MB: 20MB chunks
-  return 10 * 1024 * 1024;                                         // <= 50MB: 10MB chunks
+  // Target: around 20 to 35 chunks total for large files to saturate network bandwidth
+  // while keeping connection setup and HTTP roundtrip latency overhead negligible.
+  // Cloudflare's request body limit on free/standard plans is 100MB.
+  // We keep chunk size safely at or below 48MB to avoid any proxy boundary or memory limits.
+  // We never drop below 16MB (even on WAN) to prevent TCP slow-start starvation.
+  const MAX_CHUNK = 48 * 1024 * 1024; // 48 MB
+  const MIN_CHUNK = 16 * 1024 * 1024; // 16 MB
+  const MB = 1024 * 1024;
+
+  if (!fileSize || fileSize <= 0) return MIN_CHUNK;
+
+  // Aim for ~25-30 chunks to maintain high throughput and fine-grained progress updates
+  const targetChunks = 25;
+  const calculated = Math.ceil(fileSize / targetChunks);
+
+  // Clamp between MIN_CHUNK (16MB) and MAX_CHUNK (48MB)
+  const clamped = Math.max(MIN_CHUNK, Math.min(MAX_CHUNK, calculated));
+
+  // Round up to nearest 1MB boundary for clean alignment
+  return Math.ceil(clamped / MB) * MB;
 }
 
 export class ResumableUploader {
@@ -30,7 +40,7 @@ export class ResumableUploader {
     this.file = file;
     this.chunkSize = options.chunkSize || getOptimalChunkSize(file.size);
     const isWan = isWanConnection();
-    this.concurrency = options.concurrency || (isWan ? 2 : 4);
+    this.concurrency = options.concurrency || (isWan ? 3 : 4);
     this.purpose = options.purpose || 'archive-inspect';
     this.targetDir = options.targetDir || null;
     this.headers = options.headers || {};
@@ -230,6 +240,28 @@ export class ResumableUploader {
     }
   }
 
+  _getChunkByteLength(chunkIndex) {
+    const start = chunkIndex * this.chunkSize;
+    const end = Math.min(this.file.size, start + this.chunkSize);
+    return Math.max(0, end - start);
+  }
+
+  _getCompletedBytes() {
+    let sum = 0;
+    for (const idx of this.uploadedChunks) {
+      sum += this._getChunkByteLength(idx);
+    }
+    return sum;
+  }
+
+  _getCurrentTotalSent() {
+    let inFlight = 0;
+    for (const b of this.activeBytes.values()) {
+      inFlight += b;
+    }
+    return Math.min(this.file.size, this._getCompletedBytes() + inFlight);
+  }
+
   sendChunk(chunkIndex) {
     return new Promise((resolve, reject) => {
       const start = chunkIndex * this.chunkSize;
@@ -237,7 +269,7 @@ export class ResumableUploader {
       const blobSlice = this.file.slice(start, end);
 
       const xhr = new XMLHttpRequest();
-      xhr.timeout = 180_000; // 3 minutes timeout per chunk
+      xhr.timeout = 300_000; // 5 minutes timeout per chunk
       this.activeXhrs.set(chunkIndex, xhr);
 
       // Fast streaming raw binary pipeline (WinSCP style, bypasses multipart overhead)
@@ -253,9 +285,7 @@ export class ResumableUploader {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           this.activeBytes.set(chunkIndex, e.loaded);
-          let inFlight = 0;
-          for (const b of this.activeBytes.values()) inFlight += b;
-          const totalSent = (this.uploadedChunks.size * this.chunkSize) + inFlight;
+          const totalSent = this._getCurrentTotalSent();
           this.calculateSpeed(totalSent);
         }
       };
@@ -270,7 +300,7 @@ export class ResumableUploader {
       xhr.ontimeout = () => {
         this.activeXhrs.delete(chunkIndex);
         this.activeBytes.delete(chunkIndex);
-        reject(new Error(`Chunk #${chunkIndex} hết thời gian phản hồi (180s)`));
+        reject(new Error(`Chunk #${chunkIndex} hết thời gian phản hồi (300s)`));
       };
 
       xhr.onerror = () => {
@@ -298,10 +328,8 @@ export class ResumableUploader {
   }
 
   emitTelemetry(knownSent) {
-    let inFlight = 0;
-    for (const b of this.activeBytes.values()) inFlight += b;
-    const uploadedBytes = Math.min(this.file.size, knownSent ?? ((this.uploadedChunks.size * this.chunkSize) + inFlight));
-    const percent = Math.min(100, Math.round((uploadedBytes / this.file.size) * 100));
+    const uploadedBytes = Math.min(this.file.size, knownSent ?? this._getCurrentTotalSent());
+    const percent = this.file.size > 0 ? Math.min(100, Math.round((uploadedBytes / this.file.size) * 100)) : 0;
     const remainingBytes = Math.max(0, this.file.size - uploadedBytes);
     const etaSeconds = this.speed > 0 ? Math.round(remainingBytes / this.speed) : 0;
 
@@ -330,6 +358,7 @@ export class ResumableUploader {
   resume() {
     this.isPaused = false;
     this.lastWindowTime = Date.now();
+    this.lastWindowBytes = this._getCurrentTotalSent();
     this.emitTelemetry();
   }
 
