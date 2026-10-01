@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DuyDev Studio</string>
+    <string name="share_title">Chia sẻ vào DuyDev Studio</string>
+    <string name="share_subtitle">Chọn công cụ để tiếp tục xử lý</string>
+    <string name="action_compress_pdf">Nén PDF</string>
+    <string name="action_pdf_to_word">PDF sang Word</string>
+    <string name="action_split_pdf">Tách trang PDF</string>
+    <string name="action_qr_scan">Quét mã QR từ ảnh</string>
+    <string name="action_qr_gen">Tạo mã QR</string>
+    <string name="action_converter">Đổi định dạng tệp</string>
+    <string name="action_archive">Soi tệp nén trực tuyến</string>
+    <string name="action_hash">Tính mã băm kiểm tra</string>
+    <string name="action_studocu">Tải tài liệu Studocu</string>
+    <string name="action_image_to_pdf">Chuyển ảnh thành PDF</string>
+    <string name="action_view_pdf">Xem tài liệu PDF</string>
+    <string name="offline_title">Không thể kết nối máy chủ</string>
+    <string name="offline_desc">Không thể tải DuyDev Studio. Vui lòng kiểm tra lại kết nối mạng hoặc thử kết nối qua LAN Homeserver.</string>
+    <string name="retry">Thử lại</string>
+    <string name="open_lan">Mở LAN Homeserver</string>
+</resources>

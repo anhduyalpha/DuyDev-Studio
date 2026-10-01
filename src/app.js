@@ -91,6 +91,13 @@ class App {
       }
     });
 
+    // Native Android wrapper: listen for payloads arriving via AndroidBridge
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ds:native-share-arrived', () => {
+        this.checkAndOpenShareTarget();
+      });
+    }
+
     // Check for pending share payload on startup
     this.checkAndOpenShareTarget();
   }

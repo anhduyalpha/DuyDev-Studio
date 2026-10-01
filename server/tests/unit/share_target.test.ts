@@ -7,7 +7,9 @@ import {
   peekPendingSharedPayload,
   consumePendingSharedPayload,
   pollPendingSharedData,
-  retrievePendingSharedData
+  retrievePendingSharedData,
+  base64ToFile,
+  normalizeNativePayload
 } from '../../../src/utilities/shareTargetHelper.js';
 
 describe('Web Share Target & Classifier Suite', () => {
@@ -604,6 +606,78 @@ describe('Web Share Target & Classifier Suite', () => {
       try {
         const version = await getCurrentVersion();
         expect(version).toBe('duydev-studio-v15.3');
+      } finally {
+        if (originalWindow !== undefined) (global as any).window = originalWindow;
+        else delete (global as any).window;
+      }
+    });
+
+    it('base64ToFile should correctly convert base64 string to a File instance', () => {
+      const b64 = Buffer.from('Hello Native Android Bridge').toString('base64');
+      const file = base64ToFile(b64, 'test.txt', 'text/plain');
+      expect(file).toBeDefined();
+      expect(file.name).toBe('test.txt');
+      expect(file.type).toBe('text/plain');
+      expect(file.size).toBe(Buffer.from('Hello Native Android Bridge').length);
+    });
+
+    it('normalizeNativePayload should parse embedded files and metadata from AndroidBridge payload', async () => {
+      const b64 = Buffer.from('PDF Content Data').toString('base64');
+      const nativePayload = {
+        title: 'Shared Document',
+        text: 'Document note',
+        targetRoute: '#tool/pdf-studio',
+        targetMode: 'compress',
+        files: [
+          {
+            name: 'sample.pdf',
+            type: 'application/pdf',
+            size: 16,
+            base64: b64
+          }
+        ]
+      };
+
+      const normalized = await normalizeNativePayload(nativePayload);
+      expect(normalized).toBeDefined();
+      expect(normalized?.title).toBe('Shared Document');
+      expect(normalized?.targetRoute).toBe('#tool/pdf-studio');
+      expect(normalized?.targetMode).toBe('compress');
+      expect(normalized?.files.length).toBe(1);
+      expect(normalized?.files[0].name).toBe('sample.pdf');
+      expect(normalized?.files[0].type).toBe('application/pdf');
+    });
+
+    it('peekPendingSharedPayload and consumePendingSharedPayload should read from window.AndroidBridge and consume', async () => {
+      const originalWindow = (global as any).window;
+      let cleared = false;
+      const dummyPayload = JSON.stringify({
+        title: 'Test Native Share',
+        text: 'https://example.com',
+        url: 'https://example.com',
+        files: []
+      });
+
+      (global as any).window = {
+        AndroidBridge: {
+          getSharedPayload: () => (cleared ? null : dummyPayload),
+          clearSharedPayload: () => { cleared = true; }
+        }
+      };
+
+      try {
+        const peeked = await peekPendingSharedPayload();
+        expect(peeked).toBeDefined();
+        expect(peeked?.title).toBe('Test Native Share');
+        expect(cleared).toBe(false);
+
+        const consumed = await consumePendingSharedPayload();
+        expect(consumed).toBeDefined();
+        expect(consumed?.title).toBe('Test Native Share');
+        expect(cleared).toBe(true);
+
+        const peekedAgain = await peekPendingSharedPayload();
+        expect(peekedAgain).toBeNull();
       } finally {
         if (originalWindow !== undefined) (global as any).window = originalWindow;
         else delete (global as any).window;

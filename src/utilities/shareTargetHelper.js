@@ -70,6 +70,63 @@ export function extractImageUrlFromTextOrUrl(url = '', text = '') {
 }
 
 /**
+ * Convert base64 data string to File object
+ * @param {string} base64Data
+ * @param {string} filename
+ * @param {string} mimeType
+ * @returns {File}
+ */
+export function base64ToFile(base64Data, filename, mimeType) {
+  const binaryString = atob(base64Data);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return new File([bytes], filename, { type: mimeType, lastModified: Date.now() });
+}
+
+/**
+ * Normalize payload from AndroidBridge into standard share payload with File objects
+ * @param {object} nativePayload
+ * @returns {Promise<{ title?: string, text?: string, url?: string, targetRoute?: string, targetMode?: string, files: File[] }|null>}
+ */
+export async function normalizeNativePayload(nativePayload) {
+  if (!nativePayload) return null;
+  const files = [];
+
+  if (Array.isArray(nativePayload.files)) {
+    for (const f of nativePayload.files) {
+      if (f.base64) {
+        files.push(base64ToFile(f.base64, f.name || 'shared-file', f.type || 'application/octet-stream'));
+      } else if (f.fetchUrl) {
+        try {
+          const resp = await fetch(f.fetchUrl);
+          if (resp.ok) {
+            const blob = await resp.blob();
+            files.push(new File([blob], f.name || 'shared-file', {
+              type: f.type || blob.type || 'application/octet-stream',
+              lastModified: Date.now()
+            }));
+          }
+        } catch (err) {
+          console.warn('[AndroidBridge] Failed to fetch shared file from bridge:', f.fetchUrl, err);
+        }
+      }
+    }
+  }
+
+  return {
+    title: nativePayload.title || '',
+    text: nativePayload.text || '',
+    url: nativePayload.url || '',
+    targetRoute: nativePayload.targetRoute || null,
+    targetMode: nativePayload.targetMode || null,
+    files
+  };
+}
+
+/**
  * Open IndexedDB ds_share_db.
  * @returns {Promise<IDBDatabase>}
  */
@@ -86,12 +143,25 @@ function openShareDb() {
 }
 
 /**
- * Peek pending share payload from IndexedDB without write locks or deletion.
+ * Peek pending share payload from AndroidBridge or IndexedDB without write locks or deletion.
  * Opens a readonly transaction on object store 'shares'.
  * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
 export async function peekPendingSharedPayload() {
   try {
+    // 0. Check native AndroidBridge first (instant 0ms)
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getSharedPayload === 'function') {
+      const raw = window.AndroidBridge.getSharedPayload();
+      if (raw) {
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (parsed) return await normalizeNativePayload(parsed);
+        } catch (e) {
+          console.warn('[AndroidBridge] Peek parse error:', e);
+        }
+      }
+    }
+
     if (typeof indexedDB === 'undefined') return null;
     const db = await openShareDb();
     try {
@@ -113,12 +183,28 @@ export async function peekPendingSharedPayload() {
 }
 
 /**
- * Read and delete pending share payloads from IndexedDB using readwrite transaction.
+ * Read and delete pending share payloads from AndroidBridge or IndexedDB using readwrite transaction.
  * Opens a readwrite transaction ONLY to consume data.
  * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
 export async function consumePendingSharedPayload() {
   try {
+    // 0. Check native AndroidBridge first (instant 0ms)
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getSharedPayload === 'function') {
+      const raw = window.AndroidBridge.getSharedPayload();
+      if (raw) {
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (typeof window.AndroidBridge.clearSharedPayload === 'function') {
+            window.AndroidBridge.clearSharedPayload();
+          }
+          if (parsed) return await normalizeNativePayload(parsed);
+        } catch (e) {
+          console.warn('[AndroidBridge] Consume parse error:', e);
+        }
+      }
+    }
+
     if (typeof indexedDB === 'undefined') return null;
     const db = await openShareDb();
     try {

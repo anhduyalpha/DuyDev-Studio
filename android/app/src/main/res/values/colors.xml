@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#09090B</color>
+    <color name="surface_dark">#111114</color>
+    <color name="surface_card">#18181B</color>
+    <color name="surface_card_hover">#222226</color>
+    <color name="border_dark">#27272A</color>
+    <color name="border_subtle">#1F1F23</color>
+    <color name="accent_indigo">#6366F1</color>
+    <color name="accent_indigo_hover">#4F46E5</color>
+    <color name="accent_indigo_subtle">#1A1C2E</color>
+    <color name="text_primary">#F4F4F5</color>
+    <color name="text_secondary">#A1A1AA</color>
+    <color name="text_muted">#71717A</color>
+    <color name="transparent">#00000000</color>
+</resources>

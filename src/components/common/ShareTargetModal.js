@@ -165,6 +165,15 @@ export function openShareTargetModal(payload) {
     return;
   }
 
+  // If user selected an action in native bottom sheet, dispatch directly without duplicate dialog
+  if (payload.targetRoute) {
+    const targetAction = classification.recommendations.find(r => r.route === payload.targetRoute && (!payload.targetMode || r.mode === payload.targetMode))
+      || classification.recommendations.find(r => r.route === payload.targetRoute)
+      || { label: 'Xử lý', route: payload.targetRoute, mode: payload.targetMode };
+    dispatchSharedPayloadToTool(targetAction, payload);
+    return;
+  }
+
   // Clean up any previously attached listener before reopening
   if (cleanupFn) {
     cleanupFn();
