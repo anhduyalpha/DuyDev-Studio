@@ -12,10 +12,10 @@ export async function inspectArchiveFile(file, options = {}) {
 
   if (onStage) onStage('Đang tải tệp nén lên máy chủ...');
 
-  // Step 1: Upload file using smartUploadFile (direct stream for <= 50MB, resumable for > 50MB)
+  // Step 1: Upload file using smartUploadFile (direct stream for <= 80MB, resumable for > 80MB)
   const uploadResult = await smartUploadFile(file, {
     purpose: 'archive-inspect',
-    thresholdBytes: 50 * 1024 * 1024,
+    thresholdBytes: 80 * 1024 * 1024,
     existingUploadId,
     existingUploadedChunks,
     onProgress,

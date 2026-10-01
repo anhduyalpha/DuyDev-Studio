@@ -18,7 +18,7 @@ export async function compressFilesToServer(files, options, onStage, onProgress)
     const rawFile = f.rawFile || f;
     const uploadRes = await smartUploadFile(rawFile, {
       purpose: 'archive-compress',
-      thresholdBytes: 50 * 1024 * 1024,
+      thresholdBytes: 80 * 1024 * 1024,
       signal: options?.signal,
       onStage: (st) => onStage && onStage(`[${i + 1}/${files.length}] ${st}`),
       onProgress: (p) => {

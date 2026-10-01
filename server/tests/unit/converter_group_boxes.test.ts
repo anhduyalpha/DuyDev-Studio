@@ -223,15 +223,15 @@ describe('Converter Group Boxes & Upload Speed Acceleration Suite', () => {
   });
 
   describe('5. Upload Acceleration & Optimal Chunk Size Verification', () => {
-    it('should return minimum 10MB chunk for <= 50MB and 20MB-40MB for > 50MB', () => {
-      expect(getOptimalChunkSize(5 * 1024 * 1024)).toBe(10 * 1024 * 1024);
-      expect(getOptimalChunkSize(30 * 1024 * 1024)).toBe(10 * 1024 * 1024);
-      expect(getOptimalChunkSize(50 * 1024 * 1024)).toBe(10 * 1024 * 1024);
+    it('should return optimal chunk ladder (20MB up to 50MB)', () => {
+      expect(getOptimalChunkSize(5 * 1024 * 1024)).toBe(20 * 1024 * 1024);
+      expect(getOptimalChunkSize(30 * 1024 * 1024)).toBe(20 * 1024 * 1024);
+      expect(getOptimalChunkSize(50 * 1024 * 1024)).toBe(20 * 1024 * 1024);
       expect(getOptimalChunkSize(100 * 1024 * 1024)).toBe(20 * 1024 * 1024);
       expect(getOptimalChunkSize(200 * 1024 * 1024)).toBe(20 * 1024 * 1024);
-      expect(getOptimalChunkSize(1024 * 1024 * 1024)).toBe(25 * 1024 * 1024);
-      expect(getOptimalChunkSize(3 * 1024 * 1024 * 1024)).toBe(32 * 1024 * 1024);
-      expect(getOptimalChunkSize(10 * 1024 * 1024 * 1024)).toBe(40 * 1024 * 1024);
+      expect(getOptimalChunkSize(1024 * 1024 * 1024)).toBe(30 * 1024 * 1024);
+      expect(getOptimalChunkSize(3 * 1024 * 1024 * 1024)).toBe(40 * 1024 * 1024);
+      expect(getOptimalChunkSize(10 * 1024 * 1024 * 1024)).toBe(50 * 1024 * 1024);
     });
 
     it('should verify 4MB highWaterMark is configured in app.ts and files.controller.ts', () => {

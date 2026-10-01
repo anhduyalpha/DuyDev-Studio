@@ -30,7 +30,7 @@ export class StorageService {
 
   /**
    * Uploads one or more files to the destination directory.
-   * Transparently uses ResumableUploader (> 50MB up to 10GB+) or direct multipart (<= 50MB).
+   * Transparently uses ResumableUploader (> 80MB up to 10GB+) or direct multipart (<= 80MB).
    * Executes multi-file uploads concurrently via bounded poolAll (concurrency = 3).
    */
   static async uploadFiles(files, targetPath = '/', onProgress = null, options = {}) {
@@ -38,10 +38,10 @@ export class StorageService {
     const totalFiles = fileList.length;
 
     return poolAll(fileList, async (currentFile, i) => {
-      const isLarge = currentFile.size > 50 * 1024 * 1024;
+      const isLarge = currentFile.size > 80 * 1024 * 1024;
 
       if (isLarge) {
-        // Multi-part adaptive chunked upload for large files (> 50MB up to 10GB+)
+        // Multi-part adaptive chunked upload for large files (> 80MB up to 10GB+)
         const uploader = new ResumableUploader(currentFile, {
           purpose: 'storage-drive',
           targetDir: targetPath,
@@ -69,7 +69,7 @@ export class StorageService {
 
         return await uploader.start();
       } else {
-        // Direct single-request upload for small files (<= 50MB)
+        // Direct single-request upload for small files (<= 80MB)
         if (typeof options.onStage === 'function') {
           options.onStage(`Đang tải lên ${currentFile.name}...`, i + 1, totalFiles, currentFile);
         }

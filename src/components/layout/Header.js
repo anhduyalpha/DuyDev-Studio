@@ -4,7 +4,6 @@
 
 import { toggleTheme, getStoredTheme, updateThemeUI } from '../../hooks/useTheme.js';
 import { storage } from '../../utilities/storage.js';
-import { getCurrentHighway, switchHighway, probeHighway, HIGHWAYS } from '../../utilities/connectionHighway.js';
 
 export function updateHeaderTrashIndicator() {
   const dot = document.getElementById('headerTrashDot');
@@ -17,8 +16,6 @@ export function updateHeaderTrashIndicator() {
 export function renderHeader() {
   const isDark = getStoredTheme() === 'dark';
   const trashCount = storage.getLocalTrash().length;
-  const currentHighway = getCurrentHighway();
-  const isDirect = currentHighway.id !== 'cloudflare';
 
   return `
     <header class="sticky top-0 z-40 w-full glass-panel px-2.5 sm:px-4 lg:px-8 py-2 sm:py-2.5">
@@ -48,18 +45,6 @@ export function renderHeader() {
 
         <!-- Right: Controls (All visible, compact on mobile to never overflow) -->
         <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-          ${isDirect ? `
-            <span class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-              <span class="hidden min-[400px]:inline">${currentHighway.id === 'lan' ? 'LAN ' : ''}</span>${currentHighway.id === 'lan' ? '1Gbps' : currentHighway.badge}
-            </span>
-          ` : `
-            <span id="highwayHeaderContainer">
-              <button id="btnSwitchHighway" style="display: none;" title="Chuyển kết nối" class="items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap">
-                <i data-lucide="zap" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i> <span id="btnSwitchHighwayLabel">Tailscale</span>
-              </button>
-            </span>
-          `}
 
           <!-- Storage Drive Link -->
           <a href="#storage" title="Bộ nhớ lưu trữ" class="inline-flex w-7 h-7 sm:w-8 sm:h-8 items-center justify-center text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-lg sm:rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
@@ -114,9 +99,6 @@ export function attachHeaderListeners(onSearch) {
   // Sync trash indicator on load
   storage.fetchTrash().then(trash => updateHeaderTrashIndicator()).catch(() => {});
 
-  // Probe direct highway (Tailscale or LAN) if on remote domain
-  probeHighwayAvailability();
-
   // Keyboard shortcut Cmd/Ctrl + K
   window.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -127,41 +109,4 @@ export function attachHeaderListeners(onSearch) {
       }
     }
   });
-}
-
-async function probeHighwayAvailability() {
-  if (typeof window === 'undefined') return;
-  const current = getCurrentHighway();
-  if (current.id !== 'cloudflare') return;
-
-  const btn = document.getElementById('btnSwitchHighway');
-  const label = document.getElementById('btnSwitchHighwayLabel');
-  if (!btn) return;
-
-  // 1. Probe Tailscale Direct first (highest priority for 4G WAN)
-  const tailscale = HIGHWAYS.find(h => h.id === 'tailscale');
-  if (tailscale) {
-    const tsRes = await probeHighway(tailscale, 400);
-    if (tsRes.reachable) {
-      if (label) label.textContent = window.innerWidth < 640 ? 'Tailscale' : 'Tailscale (250 Mbps)';
-      btn.onclick = () => switchHighway(tailscale.url);
-      btn.className = 'inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap';
-      btn.style.display = 'inline-flex';
-      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-      return;
-    }
-  }
-
-  // 2. Probe LAN (Home Wi-Fi)
-  const lan = HIGHWAYS.find(h => h.id === 'lan');
-  if (lan) {
-    const lanRes = await probeHighway(lan, 300);
-    if (lanRes.reachable) {
-      if (label) label.textContent = window.innerWidth < 640 ? 'LAN 1G' : 'LAN (1 Gbps)';
-      btn.onclick = () => switchHighway(lan.url);
-      btn.className = 'inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer whitespace-nowrap';
-      btn.style.display = 'inline-flex';
-      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-    }
-  }
 }

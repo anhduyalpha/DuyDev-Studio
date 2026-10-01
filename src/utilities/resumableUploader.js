@@ -13,26 +13,22 @@ export function isWanConnection() {
 }
 
 export function getOptimalChunkSize(fileSize, _isWan = isWanConnection()) {
-  // Adaptive chunk sizing ladder for high throughput over both LAN and WAN/Cloudflare:
+  // Adaptive chunk sizing ladder for high throughput over WAN/Cloudflare and all networks:
   // Cloudflare request body limit on free/standard plans is 100MB; all chunk sizes remain
-  // comfortably between 10MB and 40MB without memory bloat or TCP slow-start stalls.
-  // Previously, WAN uploads were artificially throttled to 4MB chunks (causing 239 round-trips
-  // and 466 KB/s speeds on ~1GB archives). Removing that cap and using 25MB chunks drops
-  // 953.8MB archives to 39 chunks (~84% roundtrip reduction) saturating connection bandwidth.
-  if (!fileSize || fileSize <= 0) return 10 * 1024 * 1024;
-  if (fileSize > 5 * 1024 * 1024 * 1024) return 40 * 1024 * 1024; // > 5GB: 40MB chunks
-  if (fileSize > 2 * 1024 * 1024 * 1024) return 32 * 1024 * 1024; // 2GB - 5GB: 32MB chunks
-  if (fileSize > 500 * 1024 * 1024) return 25 * 1024 * 1024;      // 500MB - 2GB: 25MB chunks
-  if (fileSize > 50 * 1024 * 1024) return 20 * 1024 * 1024;       // 50MB - 500MB: 20MB chunks
-  return 10 * 1024 * 1024;                                         // <= 50MB: 10MB chunks
+  // comfortably between 20MB and 50MB for files > 80MB. This minimizes round-trip overhead and fully
+  // saturates TCP/HTTP2 pipes with 4 concurrent streams, just like leading cloud storage providers.
+  if (!fileSize || fileSize <= 0) return 20 * 1024 * 1024;
+  if (fileSize > 5 * 1024 * 1024 * 1024) return 50 * 1024 * 1024; // > 5GB: 50MB chunks
+  if (fileSize > 2 * 1024 * 1024 * 1024) return 40 * 1024 * 1024; // 2GB - 5GB: 40MB chunks
+  if (fileSize > 500 * 1024 * 1024) return 30 * 1024 * 1024;      // 500MB - 2GB: 30MB chunks
+  return 20 * 1024 * 1024;                                         // <= 500MB: 20MB chunks
 }
 
 export class ResumableUploader {
   constructor(file, options = {}) {
     this.file = file;
     this.chunkSize = options.chunkSize || getOptimalChunkSize(file.size);
-    const isWan = isWanConnection();
-    this.concurrency = options.concurrency || (isWan ? 3 : 4);
+    this.concurrency = options.concurrency || 4;
     this.purpose = options.purpose || 'archive-inspect';
     this.targetDir = options.targetDir || null;
     this.headers = options.headers || {};
@@ -398,9 +394,10 @@ export function formatEta(sec) {
  * Automatically uses direct upload for <= 50MB and ResumableUploader for > 50MB (up to 10GB+).
  */
 export async function smartUploadFile(file, options = {}) {
-  // Direct streaming handles up to 50MB in 1 single fast HTTP/2 POST request on both LAN and WAN.
-  // Files > 50MB switch to resilient concurrent chunked upload with auto-recovery and timeouts.
-  const defaultThreshold = 50 * 1024 * 1024;
+  // Direct streaming handles up to 80MB in 1 single fast HTTP/2 POST request on all connections.
+  // (Cloudflare body limit is 100MB; 80MB achieves 0 chunk overhead and saturates TCP pipe).
+  // Files > 80MB switch to resilient concurrent chunked upload with auto-recovery and timeouts.
+  const defaultThreshold = 80 * 1024 * 1024;
   const threshold = options.thresholdBytes || defaultThreshold;
   const signal = options.signal || options.abortController?.signal;
 

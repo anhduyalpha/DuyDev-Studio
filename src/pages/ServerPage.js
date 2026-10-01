@@ -22,19 +22,12 @@ import {
   lockAdminSession, 
   showChangePasswordModal 
 } from '../utilities/adminAuth.js';
-import { 
-  HIGHWAYS, 
-  getCurrentHighway, 
-  switchHighway, 
-  probeAllHighways 
-} from '../utilities/connectionHighway.js';
 
 export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
   const isAdmin = isAdminAuthenticated();
   const isStandalone = isStandaloneMode();
   const isNative = isNativeApp();
-  const currentHighway = getCurrentHighway();
 
   return `
     <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn">
@@ -107,7 +100,7 @@ export function renderServerPage() {
           <!-- Trạng thái đã mở khóa -->
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-white/5 pb-3">
             <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> Quản trị Hệ thống & Đường truyền
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> Quản trị Hệ thống
             </h3>
             <div class="flex items-center gap-2">
               <span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1.5">
@@ -122,47 +115,6 @@ export function renderServerPage() {
             </div>
           </div>
 
-          <!-- Đường truyền & Kết nối máy chủ -->
-          <div class="space-y-3 pt-1 border-b border-zinc-100 dark:border-white/5 pb-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white flex items-center gap-2">
-                  <i data-lucide="network" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Đường truyền & Kết nối máy chủ
-                </p>
-              </div>
-              <button id="btnProbeHighways" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5 cursor-pointer">
-                <i data-lucide="activity" class="w-3.5 h-3.5"></i> Đo độ trễ
-              </button>
-            </div>
-
-            <div class="space-y-2" id="highwaysListContainer">
-              ${HIGHWAYS.map(h => {
-                const isActive = currentHighway.id === h.id;
-                return `
-                  <div class="p-3 rounded-xl ${isActive ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40' : 'bg-zinc-50 dark:bg-white/[0.02] border-zinc-200/80 dark:border-white/[0.05]'} border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition">
-                    <div class="space-y-0.5 min-w-0">
-                      <div class="flex items-center gap-2">
-                        <span class="font-semibold text-xs text-zinc-900 dark:text-white">${h.name}</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-zinc-200/60 dark:bg-white/10 text-zinc-600 dark:text-zinc-400'}">${h.speed}</span>
-                        ${isActive ? '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>' : ''}
-                      </div>
-                      <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono">${h.url}</p>
-                    </div>
-                    <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-                      <span id="highwayPing_${h.id}" class="text-[11px] font-mono text-zinc-400">-- ms</span>
-                      ${isActive ? `
-                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">HIỆN TẠI</span>
-                      ` : `
-                        <button class="btn-switch-highway px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 transition shadow-xs cursor-pointer flex items-center gap-1" data-url="${h.url}">
-                          <i data-lucide="zap" class="w-3 h-3"></i> Kết nối
-                        </button>
-                      `}
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
 
           <div class="flex items-center justify-between text-sm py-2 border-b border-zinc-100 dark:border-white/5">
             <div>
@@ -493,56 +445,5 @@ export function attachServerPageListeners(onRerender) {
         badgeVersion.textContent = version;
       });
     }
-  }
-
-  // 11. Connection Highways (Pings & 1-Click Switch - Admin Only)
-  const refreshHighwayPings = async () => {
-    if (!isAdminAuthenticated()) return;
-
-    HIGHWAYS.forEach(h => {
-      const el = document.getElementById(`highwayPing_${h.id}`);
-      if (el) {
-        el.textContent = '...';
-        el.className = 'text-[11px] font-mono text-zinc-400';
-      }
-    });
-
-    const results = await probeAllHighways(800);
-    results.forEach(res => {
-      const el = document.getElementById(`highwayPing_${res.id}`);
-      if (el) {
-        if (res.reachable) {
-          el.textContent = `${res.latencyMs}ms`;
-          el.className = 'text-[11px] font-mono text-emerald-500 font-semibold';
-        } else {
-          el.textContent = 'Offline';
-          el.className = 'text-[11px] font-mono text-zinc-500';
-        }
-      }
-    });
-  };
-
-  const btnProbe = document.getElementById('btnProbeHighways');
-  if (btnProbe) {
-    btnProbe.addEventListener('click', () => {
-      refreshHighwayPings();
-    });
-  }
-
-  const container = document.getElementById('highwaysListContainer');
-  if (container) {
-    container.addEventListener('click', (e) => {
-      if (!isAdminAuthenticated()) return;
-      const btn = e.target.closest('.btn-switch-highway');
-      if (btn && btn.dataset.url) {
-        showToast('Đang chuyển kết nối...', 'info');
-        switchHighway(btn.dataset.url);
-      }
-    });
-  }
-
-  // Trigger initial ping test only if Admin is authenticated
-  if (isAdminAuthenticated()) {
-    setTimeout(refreshHighwayPings, 150);
   }
 }
