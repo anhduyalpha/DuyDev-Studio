@@ -89,7 +89,7 @@ export async function uploadChunkPart(request: FastifyRequest, reply: FastifyRep
 
   const finalChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part`);
   const tempChunkPath = path.join(chunkDir, `chunk_${chunkIndex}.part.tmp_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`);
-  const writeStream = fs.createWriteStream(tempChunkPath);
+  const writeStream = fs.createWriteStream(tempChunkPath, { highWaterMark: 4 * 1024 * 1024 });
 
   let bytesReceived = 0;
   const countStream = new Transform({
@@ -213,7 +213,7 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
     targetPath = StorageManager.getUploadPath(fileId, ext);
   }
 
-  const writeStream = fs.createWriteStream(targetPath);
+  const writeStream = fs.createWriteStream(targetPath, { highWaterMark: 4 * 1024 * 1024 });
   const hash = crypto.createHash('sha256');
   let totalBytes = 0;
 
@@ -222,7 +222,7 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
     for (let i = 0; i < totalChunks; i++) {
       const chunkPath = path.join(chunkDir, `chunk_${i}.part`);
       await new Promise<void>((resolve, reject) => {
-        const readStream = fs.createReadStream(chunkPath, { highWaterMark: 1024 * 1024 });
+        const readStream = fs.createReadStream(chunkPath, { highWaterMark: 4 * 1024 * 1024 });
         readStream.on('data', (chunk: Buffer | string) => {
           const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
           totalBytes += buf.length;

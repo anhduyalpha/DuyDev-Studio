@@ -16,6 +16,7 @@ export function updateHeaderTrashIndicator() {
 export function renderHeader() {
   const isDark = getStoredTheme() === 'dark';
   const trashCount = storage.getLocalTrash().length;
+  const isLan = typeof window !== 'undefined' && window.location.hostname === '192.168.2.171';
 
   return `
     <header class="sticky top-0 z-40 w-full glass-panel px-4 lg:px-8 py-3">
@@ -45,6 +46,16 @@ export function renderHeader() {
 
         <!-- Right: Controls -->
         <div class="flex items-center gap-1 sm:gap-2.5 shrink-0">
+          ${isLan ? `
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              LAN 1Gbps
+            </span>
+          ` : `
+            <button id="btnSwitchToLan" onclick="window.location.href='http://192.168.2.171:3000' + window.location.hash" title="Chuyển sang kết nối mạng LAN cục bộ siêu tốc (1000 Mbps)" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i> Chuyển sang LAN Siêu Tốc
+            </button>
+          `}
 
           <!-- Storage Drive Link -->
           <a href="#storage" title="Bộ nhớ lưu trữ (Storage)" class="inline-flex p-2 sm:p-2.5 text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
@@ -99,6 +110,9 @@ export function attachHeaderListeners(onSearch) {
   // Sync trash indicator on load
   storage.fetchTrash().then(trash => updateHeaderTrashIndicator()).catch(() => {});
 
+  // Probe local LAN connection if on remote domain
+  probeLanAvailability();
+
   // Keyboard shortcut Cmd/Ctrl + K
   window.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -109,4 +123,25 @@ export function attachHeaderListeners(onSearch) {
       }
     }
   });
+}
+
+async function probeLanAvailability() {
+  if (typeof window === 'undefined') return;
+  if (window.location.hostname === '192.168.2.171') return;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 350);
+    await fetch('http://192.168.2.171:3000/api/v1/health', {
+      method: 'GET',
+      mode: 'no-cors',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    const btn = document.getElementById('btnSwitchToLan');
+    if (btn) {
+      btn.classList.remove('hidden');
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+  } catch (_) {}
 }

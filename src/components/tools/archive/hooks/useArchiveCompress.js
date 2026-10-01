@@ -2,24 +2,26 @@
  * useArchiveCompress - Manages multi-file uploads via ResumableUploader and archive generation (< 100 lines)
  */
 
-import { ResumableUploader } from '../../../../utilities/resumableUploader.js';
+import { smartUploadFile, poolAll } from '../../../../utilities/resumableUploader.js';
 
 export async function compressFilesToServer(files, options, onStage, onProgress) {
   const apiBase = window.location.origin;
-  const fileIds = [];
 
-  // Step 1: Upload each file in the batch via ResumableUploader
-  for (let i = 0; i < files.length; i++) {
-    const f = files[i];
+  if (onStage) {
+    onStage(`Đang tải lên song song ${files.length} tệp tin...`);
+  }
+
+  const fileProgressMap = new Map();
+
+  // Step 1: Upload files concurrently via bounded poolAll
+  const fileIds = await poolAll(files, async (f, i) => {
     const rawFile = f.rawFile || f;
-    if (onStage) {
-      onStage(`Đang truyền tệp (${i + 1}/${files.length}): ${f.name}`);
-    }
-
-    const uploader = new ResumableUploader(rawFile, {
+    const uploadRes = await smartUploadFile(rawFile, {
       purpose: 'archive-compress',
+      thresholdBytes: 50 * 1024 * 1024,
       onStage: (st) => onStage && onStage(`[${i + 1}/${files.length}] ${st}`),
       onProgress: (p) => {
+        fileProgressMap.set(i, p.percent || 0);
         if (onProgress) {
           onProgress({
             ...p,
@@ -31,10 +33,9 @@ export async function compressFilesToServer(files, options, onStage, onProgress)
       }
     });
 
-    const uploadRes = await uploader.start();
     if (!uploadRes?.fileId) throw new Error(`Tải tệp '${f.name}' thất bại`);
-    fileIds.push(uploadRes.fileId);
-  }
+    return uploadRes.fileId;
+  }, 3);
 
   // Step 2: Trigger backend archive creation
   if (onStage) onStage('Đang đóng gói và nén tệp tin...');

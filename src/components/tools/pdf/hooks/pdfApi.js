@@ -3,95 +3,75 @@
  */
 
 import { storage } from '../../../../utilities/storage.js';
+import { poolAll, smartUploadFile } from '../../../../utilities/resumableUploader.js';
 
 export async function uploadPdfFiles(files, onProgress, signal) {
-  const apiBase = typeof window !== 'undefined' && window.location ? window.location.origin : '';
-  const uploadedFileIds = [];
+  if (signal?.aborted) {
+    throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
+  }
 
-  for (let i = 0; i < files.length; i++) {
+  const fileProgressMap = new Map();
+
+  return poolAll(files, async (item, idx) => {
     if (signal?.aborted) {
       throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
     }
 
-    const item = files[i];
-    if (onProgress) onProgress(i, files.length, item.name, 0);
+    // 1. If already uploaded via background eager upload, return existing fileId
+    if (item.fileId) {
+      fileProgressMap.set(idx, 100);
+      if (onProgress) onProgress(idx, files.length, item.name, 100);
+      return item.fileId;
+    }
 
-    const formData = new FormData();
-    formData.append('file', item.rawFile);
-    formData.append('purpose', 'pdf-convert');
-
-    const fileId = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${apiBase}/api/v1/files/upload?purpose=pdf-convert`);
-
-      const onAbort = () => {
-        try { xhr.abort(); } catch {}
-        reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
-      };
-
-      if (signal) {
-        if (signal.aborted) {
-          return onAbort();
+    // 2. If eager upload is currently in flight, await it
+    if (item.uploadPromise) {
+      try {
+        const res = await item.uploadPromise;
+        const fid = res?.fileId || item.fileId;
+        if (fid) {
+          fileProgressMap.set(idx, 100);
+          if (onProgress) onProgress(idx, files.length, item.name, 100);
+          return fid;
         }
-        signal.addEventListener('abort', onAbort, { once: true });
+      } catch (err) {
+        if (signal?.aborted || err?.name === 'AbortError') {
+          throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
+        }
+        // If eager upload failed or was cancelled, continue to direct retry below
       }
+    }
 
-      const cleanupSignal = () => {
-        if (signal) {
-          try { signal.removeEventListener('abort', onAbort); } catch {}
+    // 3. Parallel upload with smartUploadFile
+    fileProgressMap.set(idx, 0);
+    if (onProgress) onProgress(idx, files.length, item.name, 0);
+
+    let res;
+    try {
+      res = await smartUploadFile(item.rawFile || item, {
+        purpose: 'pdf-convert',
+        signal,
+        onProgress: (p) => {
+          const pct = p.percent || 0;
+          fileProgressMap.set(idx, pct);
+          if (onProgress) onProgress(idx, files.length, item.name, pct);
         }
-      };
-
-      if (xhr.upload && onProgress) {
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable && e.total > 0) {
-            const pct = Math.round((e.loaded / e.total) * 100);
-            onProgress(i, files.length, item.name, pct);
-          }
-        });
+      });
+    } catch (err) {
+      if (signal?.aborted || err?.name === 'AbortError') {
+        throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
       }
+      throw err;
+    }
 
-      xhr.onload = () => {
-        cleanupSignal();
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const res = JSON.parse(xhr.responseText);
-            resolve(res.data?.fileId);
-          } catch (e) {
-            reject(new Error(`Lỗi phân tích phản hồi máy chủ: ${e.message}`));
-          }
-        } else {
-          try {
-            const err = JSON.parse(xhr.responseText);
-            reject(new Error(err.error?.message || `Lỗi tải tệp ${item.name}`));
-          } catch {
-            reject(new Error(`Lỗi tải tệp ${item.name} (${xhr.status})`));
-          }
-        }
-      };
+    item.fileId = res.fileId;
+    item.uploadStatus = 'uploaded';
+    item.uploadProgress = 100;
+    fileProgressMap.set(idx, 100);
+    if (onProgress) onProgress(idx, files.length, item.name, 100);
 
-      xhr.onerror = () => {
-        cleanupSignal();
-        if (signal?.aborted) {
-          reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
-        } else {
-          reject(new Error(`Lỗi kết nối khi tải tệp ${item.name}`));
-        }
-      };
-
-      xhr.onabort = () => {
-        cleanupSignal();
-        reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
-      };
-
-      xhr.send(formData);
-    });
-
-    uploadedFileIds.push(fileId);
-    if (onProgress) onProgress(i, files.length, item.name, 100);
-  }
-
-  return uploadedFileIds;
+    return res.fileId;
+  }, 3);
 }
 
 export async function dispatchPdfJob(uploadedFileIds, operation, options, signal) {

@@ -37,9 +37,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: false, // We use custom Pino logger
     disableRequestLogging: true,
-    bodyLimit: 50 * 1024 * 1024,
+    bodyLimit: 50 * 1024 * 1024 * 1024,
     connectionTimeout: 0,
-    keepAliveTimeout: 120_000
+    keepAliveTimeout: 300_000,
+    requestTimeout: 0
   });
 
   // 1. Register Global Error Handler
@@ -57,10 +58,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(multipart, {
     limits: {
       fileSize: limits.maxUploadSizeBytes,
-      files: 100
+      files: 100,
+      fieldSize: 10 * 1024 * 1024
     },
-    highWaterMark: 1024 * 1024,
-    fileHwm: 1024 * 1024
+    highWaterMark: 4 * 1024 * 1024,
+    fileHwm: 4 * 1024 * 1024
   } as any);
 
   // 4. Register Request Logging Hook

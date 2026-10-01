@@ -5,7 +5,7 @@
  */
 
 import { getStorageAuthHeaders, getAdminToken } from '../utilities/adminAuth.js';
-import { ResumableUploader, formatBytes } from '../utilities/resumableUploader.js';
+import { ResumableUploader, formatBytes, formatSpeed, formatEta, poolAll } from '../utilities/resumableUploader.js';
 
 export class StorageService {
   /**
@@ -30,19 +30,18 @@ export class StorageService {
 
   /**
    * Uploads one or more files to the destination directory.
-   * Transparently uses ResumableUploader (> 25MB up to 10GB+) or direct multipart (<= 25MB).
+   * Transparently uses ResumableUploader (> 50MB up to 10GB+) or direct multipart (<= 50MB).
+   * Executes multi-file uploads concurrently via bounded poolAll (concurrency = 3).
    */
   static async uploadFiles(files, targetPath = '/', onProgress = null, options = {}) {
     const fileList = Array.from(files);
-    const uploadedResults = [];
     const totalFiles = fileList.length;
 
-    for (let i = 0; i < totalFiles; i++) {
-      const currentFile = fileList[i];
-      const isLarge = currentFile.size > 25 * 1024 * 1024;
+    return poolAll(fileList, async (currentFile, i) => {
+      const isLarge = currentFile.size > 50 * 1024 * 1024;
 
       if (isLarge) {
-        // Multi-part adaptive chunked upload for large files (100MB - 10GB+)
+        // Multi-part adaptive chunked upload for large files (> 50MB up to 10GB+)
         const uploader = new ResumableUploader(currentFile, {
           purpose: 'storage-drive',
           targetDir: targetPath,
@@ -68,15 +67,14 @@ export class StorageService {
           options.onUploaderCreated(uploader, currentFile, i + 1, totalFiles);
         }
 
-        const result = await uploader.start();
-        uploadedResults.push(result);
+        return await uploader.start();
       } else {
-        // Direct single-request upload for small files (<= 25MB)
+        // Direct single-request upload for small files (<= 50MB)
         if (typeof options.onStage === 'function') {
           options.onStage(`Đang tải lên ${currentFile.name}...`, i + 1, totalFiles, currentFile);
         }
 
-        const result = await new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
           const formData = new FormData();
           formData.append('file', currentFile);
 
@@ -89,20 +87,37 @@ export class StorageService {
             xhr.setRequestHeader('x-storage-auth', token);
           }
 
+          let lastTime = Date.now();
+          let lastLoaded = 0;
+          let currentSpeed = 0;
+
           if (xhr.upload && typeof onProgress === 'function') {
             xhr.upload.onprogress = (evt) => {
               if (evt.lengthComputable) {
-                const percent = Math.round((evt.loaded / evt.total) * 100);
+                const now = Date.now();
+                const timeDelta = (now - lastTime) / 1000;
+                if (timeDelta >= 0.25 || evt.loaded === evt.total) {
+                  const bytesDelta = evt.loaded - lastLoaded;
+                  const instantSpeed = timeDelta > 0 ? Math.max(0, bytesDelta / timeDelta) : 0;
+                  currentSpeed = currentSpeed === 0 ? instantSpeed : (currentSpeed * 0.7 + instantSpeed * 0.3);
+                  lastLoaded = evt.loaded;
+                  lastTime = now;
+                }
+
+                const percent = Math.min(100, Math.round((evt.loaded / evt.total) * 100));
+                const remainingBytes = Math.max(0, evt.total - evt.loaded);
+                const etaSeconds = currentSpeed > 0 ? Math.round(remainingBytes / currentSpeed) : 0;
+
                 onProgress(percent, evt.loaded, evt.total, {
                   percent,
                   uploadedBytes: evt.loaded,
                   totalBytes: evt.total,
                   formattedUploaded: formatBytes(evt.loaded),
                   formattedTotal: formatBytes(evt.total),
-                  speedBytesPerSec: 0,
-                  formattedSpeed: '',
-                  etaSeconds: 0,
-                  formattedEta: '',
+                  speedBytesPerSec: currentSpeed,
+                  formattedSpeed: formatSpeed(currentSpeed),
+                  etaSeconds,
+                  formattedEta: formatEta(etaSeconds),
                   fileIndex: i + 1,
                   totalFiles,
                   currentFileName: currentFile.name
@@ -133,12 +148,8 @@ export class StorageService {
 
           xhr.send(formData);
         });
-
-        uploadedResults.push(result);
       }
-    }
-
-    return uploadedResults;
+    }, 3);
   }
 
   /**

@@ -3,25 +3,27 @@
  * Manages zero-extraction archive inspection via ResumableUploader
  */
 
-import { ResumableUploader } from '../../../../utilities/resumableUploader.js';
+import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
 import { extractFolders, getFilesInFolder } from './archiveTreeHelper.js';
 
 export async function inspectArchiveFile(file, options = {}) {
   const { onProgress, onStage, existingUploadId, existingUploadedChunks } = options;
   const apiBase = window.location.origin;
 
-  // Step 1: Upload file using ResumableUploader
-  const uploader = new ResumableUploader(file, {
+  if (onStage) onStage('Đang tải tệp nén lên máy chủ...');
+
+  // Step 1: Upload file using smartUploadFile (direct stream for <= 50MB, resumable for > 50MB)
+  const uploadResult = await smartUploadFile(file, {
     purpose: 'archive-inspect',
+    thresholdBytes: 50 * 1024 * 1024,
     existingUploadId,
     existingUploadedChunks,
     onProgress,
-    onStage
+    onStage,
+    onUploaderCreated: options.onUploaderCreated,
+    signal: options.signal
   });
 
-  options.onUploaderCreated?.(uploader);
-
-  const uploadResult = await uploader.start();
   if (!uploadResult?.fileId) throw new Error('Không nhận được fileId sau khi tải lên');
 
   // Step 2: Request zero-extraction structural inspection

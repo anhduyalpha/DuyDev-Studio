@@ -8,6 +8,7 @@ import { watchJobProgress } from '../../../../utilities/jobWatcher.js';
 import { loadModuleState, saveModuleState } from '../../../../utilities/moduleState.js';
 import { uploadPdfFiles, dispatchPdfJob, buildPdfResult } from './pdfApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
+import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
 
 const ALLOWED_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'tiff', 'tif', 'svg']);
 
@@ -50,6 +51,10 @@ export function filterFilesForMode(fileList, mode) {
  */
 export function releasePdfFileResources(file) {
   if (!file) return;
+  if (file.abortController) {
+    try { file.abortController.abort(); } catch {}
+    file.abortController = null;
+  }
   if (file.localUrl) {
     try { URL.revokeObjectURL(file.localUrl); } catch {}
   }
@@ -608,15 +613,45 @@ export class PdfQueueManager {
       }
 
       const chosenFiles = isMulti ? validFiles : validFiles.slice(0, 1);
-      const newItems = chosenFiles.map((f) => ({
-        id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        name: f.name,
-        size: f.size,
-        type: f.type || (isImages ? 'image/png' : 'application/pdf'),
-        pages: 0,
-        rawFile: f,
-        localUrl: URL.createObjectURL(f)
-      }));
+      const newItems = chosenFiles.map((f) => {
+        const item = {
+          id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          name: f.name,
+          size: f.size,
+          type: f.type || (isImages ? 'image/png' : 'application/pdf'),
+          pages: 0,
+          rawFile: f,
+          localUrl: URL.createObjectURL(f),
+          fileId: null,
+          uploadStatus: 'uploading',
+          uploadProgress: 0,
+          uploadError: null,
+          abortController: new AbortController()
+        };
+
+        item.uploadPromise = smartUploadFile(item.rawFile, {
+          purpose: 'pdf-convert',
+          signal: item.abortController.signal,
+          onProgress: (p) => {
+            item.uploadProgress = p.percent || 0;
+            this.notify('upload-progress');
+          }
+        }).then((res) => {
+          item.fileId = res.fileId;
+          item.uploadStatus = 'uploaded';
+          item.uploadProgress = 100;
+          this.notify('upload-progress');
+          return res;
+        }).catch((err) => {
+          if (!item.abortController?.signal?.aborted) {
+            item.uploadStatus = 'error';
+            item.uploadError = err.message || 'Lỗi tải lên';
+            this.notify('upload-progress');
+          }
+        });
+
+        return item;
+      });
 
       this.files = isMulti ? [...this.files, ...newItems] : newItems;
       this.result = null;
@@ -781,25 +816,36 @@ export class PdfQueueManager {
     const abortSignal = this.activeUploadAbortController.signal;
 
     try {
-      const fileIds = await uploadPdfFiles(this.files, (idx, total, name, filePct = 0) => {
-        const fileWeight = 20 / Math.max(1, total);
-        const overallUpload = Math.round((idx * fileWeight) + ((filePct / 100) * fileWeight));
-        this.progress = Math.min(25, Math.max(this.progress, 5 + overallUpload));
-        this.stage = total > 1
-          ? `Đang upload [${idx + 1}/${total}]: ${name} (${filePct}%)`
-          : `Đang upload tệp (${filePct}%)`;
+      const allAlreadyUploaded = this.files.length > 0 && this.files.every((f) => !!f.fileId);
+      let fileIds;
+
+      if (allAlreadyUploaded) {
+        fileIds = this.files.map((f) => f.fileId);
+        this.progress = 25;
+        this.stage = 'Đang khởi tạo...';
         this.notify('upload-progress');
         taskCoordinator.syncTasks(true);
-      }, abortSignal);
+      } else {
+        fileIds = await uploadPdfFiles(this.files, (idx, total, name, filePct = 0) => {
+          const fileWeight = 20 / Math.max(1, total);
+          const overallUpload = Math.round((idx * fileWeight) + ((filePct / 100) * fileWeight));
+          this.progress = Math.min(25, Math.max(this.progress, 5 + overallUpload));
+          this.stage = total > 1
+            ? `Đang upload [${idx + 1}/${total}]: ${name} (${filePct}%)`
+            : `Đang upload tệp (${filePct}%)`;
+          this.notify('upload-progress');
+          taskCoordinator.syncTasks(true);
+        }, abortSignal);
 
-      if (abortSignal.aborted) {
-        throw new DOMException('Tác vụ đã bị hủy', 'AbortError');
+        if (abortSignal.aborted) {
+          throw new DOMException('Tác vụ đã bị hủy', 'AbortError');
+        }
+
+        this.progress = 25;
+        this.stage = 'Đang khởi tạo...';
+        this.notify('upload-progress');
+        taskCoordinator.syncTasks(true);
       }
-
-      this.progress = 25;
-      this.stage = 'Đang khởi tạo...';
-      this.notify('upload-progress');
-      taskCoordinator.syncTasks(true);
 
       const operation = this.mode === 'security' ? this.securityAction : this.mode;
       const options = {

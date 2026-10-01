@@ -10,8 +10,7 @@ export function getOptimalChunkSize(fileSize) {
   if (fileSize > 5 * 1024 * 1024 * 1024) return 40 * 1024 * 1024; // > 5GB: 40MB chunks
   if (fileSize > 2 * 1024 * 1024 * 1024) return 32 * 1024 * 1024; // 2GB - 5GB: 32MB chunks
   if (fileSize > 500 * 1024 * 1024) return 25 * 1024 * 1024;      // 500MB - 2GB: 25MB chunks
-  if (fileSize > 150 * 1024 * 1024) return 15 * 1024 * 1024;      // 150MB - 500MB: 15MB chunks
-  if (fileSize > 50 * 1024 * 1024) return 10 * 1024 * 1024;       // 50MB - 150MB: 10MB chunks
+  if (fileSize > 50 * 1024 * 1024) return 20 * 1024 * 1024;       // 50MB - 500MB: 20MB chunks
   return 10 * 1024 * 1024;                                         // <= 50MB: 10MB chunks
 }
 
@@ -19,7 +18,7 @@ export class ResumableUploader {
   constructor(file, options = {}) {
     this.file = file;
     this.chunkSize = options.chunkSize || getOptimalChunkSize(file.size);
-    this.concurrency = options.concurrency || (file.size > 1024 * 1024 * 1024 ? 4 : 3);
+    this.concurrency = options.concurrency || 4;
     this.purpose = options.purpose || 'archive-inspect';
     this.targetDir = options.targetDir || null;
     this.headers = options.headers || {};
@@ -344,7 +343,7 @@ export async function smartUploadFile(file, options = {}) {
   if (file.size <= threshold && !options.forceChunked) {
     return new Promise((resolve, reject) => {
       if (signal?.aborted) {
-        return reject(new DOMException('Upload aborted', 'AbortError'));
+        return reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
       }
 
       const xhr = new XMLHttpRequest();
@@ -354,7 +353,7 @@ export async function smartUploadFile(file, options = {}) {
 
       const abortHandler = () => {
         try { xhr.abort(); } catch (_) {}
-        reject(new DOMException('Upload aborted', 'AbortError'));
+        reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
       };
 
       if (signal) {
@@ -372,19 +371,36 @@ export async function smartUploadFile(file, options = {}) {
         for (const [k, v] of Object.entries(options.headers)) xhr.setRequestHeader(k, v);
       }
 
+      let lastTime = Date.now();
+      let lastLoaded = 0;
+      let currentSpeed = 0;
+
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && options.onProgress) {
+          const now = Date.now();
+          const timeDelta = (now - lastTime) / 1000;
+          if (timeDelta >= 0.25 || e.loaded === e.total) {
+            const bytesDelta = e.loaded - lastLoaded;
+            const instantSpeed = timeDelta > 0 ? Math.max(0, bytesDelta / timeDelta) : 0;
+            currentSpeed = currentSpeed === 0 ? instantSpeed : (currentSpeed * 0.7 + instantSpeed * 0.3);
+            lastLoaded = e.loaded;
+            lastTime = now;
+          }
+
           const percent = Math.min(100, Math.round((e.loaded / e.total) * 100));
+          const remainingBytes = Math.max(0, e.total - e.loaded);
+          const etaSeconds = currentSpeed > 0 ? Math.round(remainingBytes / currentSpeed) : 0;
+
           options.onProgress({
             percent,
             uploadedBytes: e.loaded,
             totalBytes: e.total,
             formattedUploaded: formatBytes(e.loaded),
             formattedTotal: formatBytes(e.total),
-            speedBytesPerSec: 0,
-            formattedSpeed: '--',
-            etaSeconds: 0,
-            formattedEta: '--'
+            speedBytesPerSec: currentSpeed,
+            formattedSpeed: formatSpeed(currentSpeed),
+            etaSeconds,
+            formattedEta: formatEta(etaSeconds)
           });
         }
       };
@@ -408,15 +424,15 @@ export async function smartUploadFile(file, options = {}) {
         reject(new Error('Lỗi kết nối mạng khi tải tệp lên'));
       };
 
-      xhr.timeout = 180_000;
+      xhr.timeout = 300_000;
       xhr.ontimeout = () => {
         if (signal) signal.removeEventListener('abort', abortHandler);
-        reject(new Error('Hết thời gian phản hồi khi tải tệp lên (180s)'));
+        reject(new Error('Hết thời gian phản hồi khi tải tệp lên (300s)'));
       };
 
       xhr.onabort = () => {
         if (signal) signal.removeEventListener('abort', abortHandler);
-        reject(new DOMException('Upload aborted', 'AbortError'));
+        reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
       };
 
       xhr.send(formData);
@@ -430,9 +446,30 @@ export async function smartUploadFile(file, options = {}) {
   if (signal) {
     if (signal.aborted) {
       uploader.cancel();
-      throw new DOMException('Upload aborted', 'AbortError');
+      throw new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError');
     }
     signal.addEventListener('abort', () => uploader.cancel(), { once: true });
   }
   return uploader.start();
+}
+
+/**
+ * Bounded concurrency parallel pool for multi-file operations.
+ * Executes workerFn(item, index) with at most maxConcurrency concurrent tasks.
+ * Preserves result order.
+ */
+export async function poolAll(items, workerFn, maxConcurrency = 3) {
+  if (!items || items.length === 0) return [];
+  const results = new Array(items.length);
+  let nextIdx = 0;
+
+  const workers = new Array(Math.min(items.length, maxConcurrency)).fill(0).map(async () => {
+    while (nextIdx < items.length) {
+      const currentIdx = nextIdx++;
+      results[currentIdx] = await workerFn(items[currentIdx], currentIdx);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
 }

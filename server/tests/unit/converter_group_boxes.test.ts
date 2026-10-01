@@ -223,24 +223,24 @@ describe('Converter Group Boxes & Upload Speed Acceleration Suite', () => {
   });
 
   describe('5. Upload Acceleration & Optimal Chunk Size Verification', () => {
-    it('should return minimum 10MB chunk for file sizes <= 50MB and > 50MB', () => {
+    it('should return minimum 10MB chunk for <= 50MB and 20MB-40MB for > 50MB', () => {
       expect(getOptimalChunkSize(5 * 1024 * 1024)).toBe(10 * 1024 * 1024);
       expect(getOptimalChunkSize(30 * 1024 * 1024)).toBe(10 * 1024 * 1024);
       expect(getOptimalChunkSize(50 * 1024 * 1024)).toBe(10 * 1024 * 1024);
-      expect(getOptimalChunkSize(100 * 1024 * 1024)).toBe(10 * 1024 * 1024);
-      expect(getOptimalChunkSize(200 * 1024 * 1024)).toBe(15 * 1024 * 1024);
+      expect(getOptimalChunkSize(100 * 1024 * 1024)).toBe(20 * 1024 * 1024);
+      expect(getOptimalChunkSize(200 * 1024 * 1024)).toBe(20 * 1024 * 1024);
       expect(getOptimalChunkSize(1024 * 1024 * 1024)).toBe(25 * 1024 * 1024);
       expect(getOptimalChunkSize(3 * 1024 * 1024 * 1024)).toBe(32 * 1024 * 1024);
       expect(getOptimalChunkSize(10 * 1024 * 1024 * 1024)).toBe(40 * 1024 * 1024);
     });
 
-    it('should verify 1MB highWaterMark is configured in app.ts and files.controller.ts', () => {
+    it('should verify 4MB highWaterMark is configured in app.ts and files.controller.ts', () => {
       const appFile = fs.readFileSync(path.resolve(__dirname, '../../src/app.ts'), 'utf-8');
-      expect(appFile).toContain('highWaterMark: 1024 * 1024');
-      expect(appFile).toContain('fileHwm: 1024 * 1024');
+      expect(appFile).toContain('highWaterMark: 4 * 1024 * 1024');
+      expect(appFile).toContain('fileHwm: 4 * 1024 * 1024');
 
       const controllerFile = fs.readFileSync(path.resolve(__dirname, '../../src/api/controllers/files.controller.ts'), 'utf-8');
-      expect(controllerFile).toContain('createWriteStream(targetPath, { highWaterMark: 1024 * 1024 })');
+      expect(controllerFile).toContain('createWriteStream(targetPath, { highWaterMark: 4 * 1024 * 1024 })');
     });
   });
 });

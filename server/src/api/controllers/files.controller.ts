@@ -44,7 +44,7 @@ export async function uploadFile(request: FastifyRequest, reply: FastifyReply) {
     }
   });
 
-  const writeStream = fs.createWriteStream(targetPath, { highWaterMark: 1024 * 1024 });
+  const writeStream = fs.createWriteStream(targetPath, { highWaterMark: 4 * 1024 * 1024 });
 
   try {
     await pipeline(data.file, hashingStream, writeStream);
