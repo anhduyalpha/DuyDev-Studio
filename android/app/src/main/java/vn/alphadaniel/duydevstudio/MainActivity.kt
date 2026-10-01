@@ -502,4 +502,13 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
         return Pair(name, size)
     }
+
+    /**
+     * Helper to safely execute JavaScript on WebView from any thread.
+     */
+    fun evaluateJs(script: String) {
+        runOnUiThread {
+            webView.evaluateJavascript(script, null)
+        }
+    }
 }

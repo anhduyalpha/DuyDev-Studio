@@ -1,6 +1,17 @@
 package vn.alphadaniel.duydevstudio
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.webkit.JavascriptInterface
+import androidx.core.content.FileProvider
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Two-way JavaScript interface bridge between Android native layer and WebView.
@@ -11,6 +22,7 @@ class AndroidBridge(
     companion object {
         @Volatile
         var sharedPayloadJson: String? = null
+        private const val UPDATE_FILE_NAME = "duydev-studio-update.apk"
     }
 
     /**
@@ -38,11 +50,11 @@ class AndroidBridge(
     }
 
     /**
-     * Return app version.
+     * Return app version dynamically from Gradle BuildConfig.
      */
     @JavascriptInterface
     fun getAppVersion(): String {
-        return "1.0.0"
+        return BuildConfig.VERSION_NAME
     }
 
     /**
@@ -51,5 +63,208 @@ class AndroidBridge(
     @JavascriptInterface
     fun getBaseUrl(): String {
         return MainActivity.PRIMARY_HOST
+    }
+
+    /**
+     * Check if app has permission to install unknown packages (Android 8.0+).
+     */
+    @JavascriptInterface
+    fun canRequestPackageInstalls(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.packageManager.canRequestPackageInstalls()
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Open system settings screen to allow installing unknown apps.
+     */
+    @JavascriptInterface
+    fun openInstallPermissionSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${activity.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                activity.startActivity(intent)
+            } catch (_: Exception) {
+                val genericIntent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                activity.startActivity(genericIntent)
+            }
+        }
+    }
+
+    /**
+     * Download latest APK in background thread and trigger installation upon completion.
+     */
+    @JavascriptInterface
+    fun downloadAndInstallApk(apkUrl: String) {
+        Thread {
+            var connection: HttpURLConnection? = null
+            var inputStream: InputStream? = null
+            var outputStream: FileOutputStream? = null
+
+            try {
+                val updatesDir = File(activity.cacheDir, "updates")
+                if (!updatesDir.exists()) updatesDir.mkdirs()
+                val apkFile = File(updatesDir, UPDATE_FILE_NAME)
+                if (apkFile.exists()) apkFile.delete()
+
+                var targetUrl = apkUrl
+                var redirects = 0
+                while (redirects < 6) {
+                    val url = URL(targetUrl)
+                    connection = url.openConnection() as HttpURLConnection
+                    connection.instanceFollowRedirects = false
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 30000
+                    connection.setRequestProperty("User-Agent", "DuyDevStudioAndroidUpdater/1.0")
+                    connection.connect()
+
+                    val status = connection.responseCode
+                    if (status in 300..399) {
+                        val redirectLocation = connection.getHeaderField("Location")
+                        connection.disconnect()
+                        if (!redirectLocation.isNullOrBlank()) {
+                            targetUrl = redirectLocation
+                            redirects++
+                            continue
+                        }
+                    }
+                    break
+                }
+
+                val finalStatus = connection?.responseCode ?: -1
+                if (finalStatus != HttpURLConnection.HTTP_OK) {
+                    dispatchApkDownloadError("Máy chủ trả về mã HTTP $finalStatus")
+                    return@Thread
+                }
+
+                val totalBytes = connection?.contentLengthLong ?: -1L
+                inputStream = connection?.inputStream
+                outputStream = FileOutputStream(apkFile)
+
+                if (inputStream == null) {
+                    dispatchApkDownloadError("Không thể đọc luồng dữ liệu từ máy chủ")
+                    return@Thread
+                }
+
+                val buffer = ByteArray(64 * 1024)
+                var bytesRead: Int
+                var totalRead: Long = 0
+                var lastProgressTime = 0L
+
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                    totalRead += bytesRead
+
+                    val now = System.currentTimeMillis()
+                    if (now - lastProgressTime > 120 || (totalBytes > 0 && totalRead == totalBytes)) {
+                        lastProgressTime = now
+                        val percent = if (totalBytes > 0) ((totalRead * 100) / totalBytes).toInt() else -1
+                        dispatchApkDownloadProgress(percent, totalRead, totalBytes)
+                    }
+                }
+                outputStream.flush()
+
+                dispatchApkDownloadComplete(apkFile.absolutePath, totalRead)
+
+                // Launch package installer on UI thread
+                activity.runOnUiThread {
+                    installApk(apkFile)
+                }
+            } catch (e: Exception) {
+                dispatchApkDownloadError(e.message ?: "Lỗi kết nối mạng khi tải APK")
+            } finally {
+                try { outputStream?.close() } catch (_: Exception) {}
+                try { inputStream?.close() } catch (_: Exception) {}
+                try { connection?.disconnect() } catch (_: Exception) {}
+            }
+        }.start()
+    }
+
+    /**
+     * Check if downloaded APK exists in cache.
+     */
+    @JavascriptInterface
+    fun hasDownloadedApk(): Boolean {
+        val apkFile = File(File(activity.cacheDir, "updates"), UPDATE_FILE_NAME)
+        return apkFile.exists() && apkFile.length() > 0
+    }
+
+    /**
+     * Install previously downloaded APK from cache.
+     */
+    @JavascriptInterface
+    fun installDownloadedApk(): Boolean {
+        val apkFile = File(File(activity.cacheDir, "updates"), UPDATE_FILE_NAME)
+        if (apkFile.exists() && apkFile.length() > 0) {
+            activity.runOnUiThread {
+                installApk(apkFile)
+            }
+            return true
+        }
+        return false
+    }
+
+    private fun installApk(apkFile: File) {
+        try {
+            if (!apkFile.exists() || apkFile.length() == 0L) {
+                activity.evaluateJs("if (typeof showToast === 'function') showToast('Tệp APK không tồn tại hoặc bị lỗi', 'error');")
+                return
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!activity.packageManager.canRequestPackageInstalls()) {
+                    openInstallPermissionSettings()
+                    activity.evaluateJs("if (typeof showToast === 'function') showToast('Vui lòng bật quyền cài đặt ứng dụng cho DuyDev Studio để tiếp tục', 'warning');")
+                    return
+                }
+            }
+
+            val apkUri = FileProvider.getUriForFile(
+                activity,
+                "${activity.packageName}.fileprovider",
+                apkFile
+            )
+
+            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+
+            activity.startActivity(installIntent)
+        } catch (e: Exception) {
+            val safeErr = (e.message ?: "Lỗi không xác định").replace("'", "\\'")
+            activity.evaluateJs("if (typeof showToast === 'function') showToast('Không thể mở bộ cài đặt: $safeErr', 'error');")
+        }
+    }
+
+    private fun dispatchApkDownloadProgress(percent: Int, bytes: Long, total: Long) {
+        val payload = JSONObject().apply {
+            put("percent", percent)
+            put("bytes", bytes)
+            put("total", total)
+        }.toString()
+        activity.evaluateJs("window.dispatchEvent(new CustomEvent('ds:apk-download-progress', { detail: $payload }));")
+    }
+
+    private fun dispatchApkDownloadComplete(path: String, bytes: Long) {
+        val payload = JSONObject().apply {
+            put("path", path)
+            put("bytes", bytes)
+        }.toString()
+        activity.evaluateJs("window.dispatchEvent(new CustomEvent('ds:apk-download-complete', { detail: $payload }));")
+    }
+
+    private fun dispatchApkDownloadError(message: String) {
+        val payload = JSONObject().apply {
+            put("message", message)
+        }.toString()
+        activity.evaluateJs("window.dispatchEvent(new CustomEvent('ds:apk-download-error', { detail: $payload }));")
     }
 }

@@ -11,10 +11,14 @@ android {
         applicationId = "vn.alphadaniel.duydevstudio"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "15.4.0"
+        versionCode = 3
+        versionName = "15.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

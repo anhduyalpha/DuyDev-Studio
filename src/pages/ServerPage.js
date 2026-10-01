@@ -4,6 +4,15 @@
 
 import { pwaInstall } from '../hooks/usePWAInstall.js';
 import { isStandaloneMode, checkForAppUpdate, getSwVersion } from '../utilities/pwa.js';
+import {
+  isNativeApp,
+  getNativeAppVersion,
+  checkApkUpdate,
+  startApkUpdate,
+  listenApkProgress,
+  canRequestPackageInstalls,
+  installDownloadedApk
+} from '../utilities/apkUpdater.js';
 import { toggleTheme, getStoredTheme } from '../hooks/useTheme.js';
 import { showToast } from '../utilities/toast.js';
 import { clearAllModuleStates } from '../utilities/moduleState.js';
@@ -18,6 +27,7 @@ export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
   const isAdmin = isAdminAuthenticated();
   const isStandalone = isStandaloneMode();
+  const isNative = isNativeApp();
 
   return `
     <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn">
@@ -141,7 +151,7 @@ export function renderServerPage() {
           <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
             <i data-lucide="smartphone" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Ứng dụng & Cập nhật
           </h3>
-          <span id="badgeAppVersion" class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/[0.08]">
+          <span id="badgeAppVersion" class="px-2.5 py-1 rounded-md text-[11px] font-mono ${isNative ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 font-bold' : 'bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/[0.08]'}">
             ...
           </span>
         </div>
@@ -150,12 +160,41 @@ export function renderServerPage() {
           <div>
             <p class="font-semibold text-zinc-900 dark:text-zinc-100">Trạng thái thiết bị</p>
           </div>
-          ${isStandalone
+          ${isNative
+            ? '<span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 font-bold">APK NATIVE</span>'
+            : isStandalone
             ? '<span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">ĐÃ CÀI ĐẶT</span>'
             : '<button id="btnSettingsInstallPwa" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer"><i data-lucide="download" class="w-3.5 h-3.5"></i> Cài đặt lên thiết bị</button>'
           }
         </div>
 
+        ${isNative ? `
+        <div class="space-y-3 py-2.5 border-b border-zinc-100 dark:border-white/5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+            <div>
+              <p class="font-semibold text-zinc-900 dark:text-zinc-100">Cập nhật Android APK</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Tự động tải tệp APK mới nhất từ GitHub và cài đặt</p>
+            </div>
+            <button id="btnCheckAppUpdate" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold border border-indigo-500 transition shadow-2xs flex items-center justify-center gap-2 cursor-pointer">
+              <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Cập nhật APK
+            </button>
+          </div>
+
+          <div id="apkUpdateProgressContainer" class="hidden p-3.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-medium">
+              <span id="apkUpdateStatusText" class="text-zinc-700 dark:text-zinc-300">Đang chuẩn bị tải...</span>
+              <span id="apkUpdatePercentText" class="font-mono text-indigo-600 dark:text-indigo-400 font-bold">0%</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-zinc-200 dark:bg-white/10 overflow-hidden">
+              <div id="apkUpdateProgressBar" class="h-full bg-indigo-600 rounded-full transition-all duration-150" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+              <span id="apkUpdateBytesText">0 MB / 0 MB</span>
+              <button id="btnRetryApkInstall" class="hidden text-indigo-600 dark:text-indigo-400 hover:underline font-sans font-semibold cursor-pointer">Cài đặt ngay</button>
+            </div>
+          </div>
+        </div>
+        ` : `
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5 border-b border-zinc-100 dark:border-white/5">
           <div>
             <p class="font-semibold text-zinc-900 dark:text-zinc-100">Kiểm tra phiên bản mới</p>
@@ -165,6 +204,7 @@ export function renderServerPage() {
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kiểm tra cập nhật
           </button>
         </div>
+        `}
 
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5">
           <div>
@@ -176,7 +216,10 @@ export function renderServerPage() {
           </button>
         </div>
 
-        ${isStandalone ? `
+        ${isNative ? `
+        <div class="px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.04] text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          Ứng dụng đang chạy trong lớp bao Native Android APK (Kotlin). Mọi bản cập nhật có thể tải và cài đặt trực tiếp tại đây.
+        </div>` : isStandalone ? `
         <div class="px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.04] text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
           Icon trên màn hình chính do hệ điều hành quản lý (WebAPK). Để cập nhật icon, gỡ cài đặt và thêm lại ứng dụng.
         </div>` : ''}
@@ -284,22 +327,105 @@ export function attachServerPageListeners(onRerender) {
 
   // 8. Check for app update
   const btnCheckUpdate = document.getElementById('btnCheckAppUpdate');
+  const isNative = isNativeApp();
+
   if (btnCheckUpdate) {
-    btnCheckUpdate.addEventListener('click', async () => {
-      btnCheckUpdate.disabled = true;
-      btnCheckUpdate.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang kiểm tra...';
-      if (window.lucide) window.lucide.createIcons();
-
-      const result = await checkForAppUpdate();
-      showToast(result.message, result.updated ? 'success' : 'info');
-
-      if (!result.updated) {
-        btnCheckUpdate.disabled = false;
-        btnCheckUpdate.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kiểm tra cập nhật';
-        if (window.lucide) window.lucide.createIcons();
+    if (isNative) {
+      const btnRetryInstall = document.getElementById('btnRetryApkInstall');
+      if (btnRetryInstall) {
+        btnRetryInstall.addEventListener('click', () => {
+          installDownloadedApk();
+        });
       }
-      // If updated, controllerchange listener in pwa.js will auto-reload
-    });
+
+      btnCheckUpdate.addEventListener('click', async () => {
+        btnCheckUpdate.disabled = true;
+        btnCheckUpdate.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang kiểm tra...';
+        if (window.lucide) window.lucide.createIcons();
+
+        try {
+          const check = await checkApkUpdate();
+          const progressContainer = document.getElementById('apkUpdateProgressContainer');
+          const statusText = document.getElementById('apkUpdateStatusText');
+          const percentText = document.getElementById('apkUpdatePercentText');
+          const progressBar = document.getElementById('apkUpdateProgressBar');
+          const bytesText = document.getElementById('apkUpdateBytesText');
+
+          if (check.hasUpdate) {
+            const sizeMb = (check.apkAsset.size / 1048576).toFixed(1);
+            showToast(`Tìm thấy bản phát hành ${check.tagName} (${sizeMb} MB). Bắt đầu tải...`, 'info');
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            if (!canRequestPackageInstalls()) {
+              showToast('Lưu ý: Thiết bị cần quyền cài đặt ứng dụng từ nguồn ngoài', 'warning');
+            }
+
+            const cleanup = listenApkProgress({
+              onProgress: ({ percent, bytes, total }) => {
+                if (percentText) percentText.textContent = `${percent >= 0 ? percent : 0}%`;
+                if (progressBar) progressBar.style.width = `${Math.max(0, percent)}%`;
+                if (statusText) statusText.textContent = `Đang tải APK (${check.tagName})...`;
+                if (bytesText) {
+                  const mIn = (bytes / 1048576).toFixed(1);
+                  const mTot = total > 0 ? (total / 1048576).toFixed(1) : sizeMb;
+                  bytesText.textContent = `${mIn} MB / ${mTot} MB`;
+                }
+              },
+              onComplete: () => {
+                if (statusText) statusText.textContent = 'Đã tải xong! Đang mở trình cài đặt...';
+                if (percentText) percentText.textContent = '100%';
+                if (progressBar) progressBar.style.width = '100%';
+                if (btnRetryInstall) btnRetryInstall.classList.remove('hidden');
+                showToast('Tải hoàn tất! Đang khởi chạy bộ cài đặt hệ thống', 'success');
+                btnCheckUpdate.disabled = false;
+                btnCheckUpdate.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> Cài đặt APK';
+                if (window.lucide) window.lucide.createIcons();
+                cleanup();
+              },
+              onError: (err) => {
+                if (statusText) statusText.textContent = `Lỗi tải: ${err.message || 'Lỗi mạng'}`;
+                showToast(`Không thể tải APK: ${err.message || 'Lỗi mạng'}`, 'error');
+                btnCheckUpdate.disabled = false;
+                btnCheckUpdate.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Thử lại';
+                if (window.lucide) window.lucide.createIcons();
+                cleanup();
+              }
+            });
+
+            startApkUpdate(check.apkAsset.downloadUrl);
+          } else {
+            showToast(`Bạn đang sử dụng phiên bản APK mới nhất (${check.currentVersion})`, 'success');
+            btnCheckUpdate.disabled = false;
+            btnCheckUpdate.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> Đã là bản mới nhất';
+            if (window.lucide) window.lucide.createIcons();
+            setTimeout(() => {
+              btnCheckUpdate.innerHTML = '<i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Cập nhật APK';
+              if (window.lucide) window.lucide.createIcons();
+            }, 3000);
+          }
+        } catch (err) {
+          showToast(`Lỗi kiểm tra cập nhật: ${err.message}`, 'error');
+          btnCheckUpdate.disabled = false;
+          btnCheckUpdate.innerHTML = '<i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Cập nhật APK';
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+    } else {
+      btnCheckUpdate.addEventListener('click', async () => {
+        btnCheckUpdate.disabled = true;
+        btnCheckUpdate.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang kiểm tra...';
+        if (window.lucide) window.lucide.createIcons();
+
+        const result = await checkForAppUpdate();
+        showToast(result.message, result.updated ? 'success' : 'info');
+
+        if (!result.updated) {
+          btnCheckUpdate.disabled = false;
+          btnCheckUpdate.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kiểm tra cập nhật';
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+    }
   }
 
   // 9. Force purge cache & reload (reuse emergencyResetApp from index.html)
@@ -316,11 +442,15 @@ export function attachServerPageListeners(onRerender) {
     });
   }
 
-  // 10. Populate version badge from Service Worker
+  // 10. Populate version badge
   const badgeVersion = document.getElementById('badgeAppVersion');
   if (badgeVersion) {
-    getSwVersion().then((version) => {
-      badgeVersion.textContent = version;
-    });
+    if (isNative) {
+      badgeVersion.textContent = `v${getNativeAppVersion()} (APK)`;
+    } else {
+      getSwVersion().then((version) => {
+        badgeVersion.textContent = version;
+      });
+    }
   }
 }
