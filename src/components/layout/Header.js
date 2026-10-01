@@ -52,8 +52,8 @@ export function renderHeader() {
               LAN 1Gbps
             </span>
           ` : `
-            <button id="btnSwitchToLan" onclick="window.location.href='http://192.168.2.171:3000' + window.location.hash" title="Chuyển sang kết nối mạng LAN cục bộ siêu tốc (1000 Mbps)" class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer">
-              <i data-lucide="zap" class="w-3.5 h-3.5"></i> Chuyển sang LAN Siêu Tốc
+            <button id="btnSwitchToLan" style="display: none;" onclick="window.location.href='http://192.168.2.171:3000' + window.location.hash" title="Chuyển sang kết nối mạng LAN cục bộ siêu tốc (1000 Mbps)" class="items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i> Chuyển sang LAN Siêu Tốc (1000 Mbps)
             </button>
           `}
 
@@ -131,7 +131,7 @@ async function probeLanAvailability() {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 350);
+    const timeoutId = setTimeout(() => controller.abort(), 300);
     await fetch('http://192.168.2.171:3000/api/v1/health', {
       method: 'GET',
       mode: 'no-cors',
@@ -140,7 +140,7 @@ async function probeLanAvailability() {
     clearTimeout(timeoutId);
     const btn = document.getElementById('btnSwitchToLan');
     if (btn) {
-      btn.classList.remove('hidden');
+      btn.style.display = 'inline-flex';
       if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
   } catch (_) {}

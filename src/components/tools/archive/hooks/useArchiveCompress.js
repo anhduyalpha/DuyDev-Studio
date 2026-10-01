@@ -19,6 +19,7 @@ export async function compressFilesToServer(files, options, onStage, onProgress)
     const uploadRes = await smartUploadFile(rawFile, {
       purpose: 'archive-compress',
       thresholdBytes: 50 * 1024 * 1024,
+      signal: options?.signal,
       onStage: (st) => onStage && onStage(`[${i + 1}/${files.length}] ${st}`),
       onProgress: (p) => {
         fileProgressMap.set(i, p.percent || 0);
@@ -43,6 +44,7 @@ export async function compressFilesToServer(files, options, onStage, onProgress)
   const compressRes = await fetch(`${apiBase}/api/v1/archive/compress`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: options?.signal,
     body: JSON.stringify({
       fileIds,
       archiveName: options.archiveName || 'archive.zip',

@@ -27,7 +27,34 @@ export async function uploadPdfFiles(files, onProgress, signal) {
     // 2. If eager upload is currently in flight, await it
     if (item.uploadPromise) {
       try {
-        const res = await item.uploadPromise;
+        item.onEagerProgress = (p) => {
+          const pct = p.percent || 0;
+          fileProgressMap.set(idx, pct);
+          if (onProgress) onProgress(idx, files.length, item.name, pct);
+        };
+
+        let abortListener;
+        const res = await Promise.race([
+          item.uploadPromise,
+          new Promise((_, reject) => {
+            if (signal?.aborted) {
+              return reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+            }
+            if (signal) {
+              abortListener = () => {
+                try { item.abortController?.abort(); } catch {}
+                reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+              };
+              signal.addEventListener('abort', abortListener, { once: true });
+            }
+          })
+        ]).finally(() => {
+          item.onEagerProgress = null;
+          if (signal && abortListener) {
+            signal.removeEventListener('abort', abortListener);
+          }
+        });
+
         const fid = res?.fileId || item.fileId;
         if (fid) {
           fileProgressMap.set(idx, 100);

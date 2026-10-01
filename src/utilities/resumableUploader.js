@@ -346,9 +346,22 @@ export async function smartUploadFile(file, options = {}) {
         return reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
       }
 
+      if (typeof options.onStage === 'function') {
+        options.onStage('Đang tải tệp lên...');
+      }
+
       const xhr = new XMLHttpRequest();
       if (typeof options.onXhrCreated === 'function') {
         options.onXhrCreated(xhr);
+      }
+      if (typeof options.onUploaderCreated === 'function') {
+        options.onUploaderCreated({
+          cancel: () => {
+            try { xhr.abort(); } catch (_) {}
+          },
+          pause: () => {},
+          resume: () => {}
+        });
       }
 
       const abortHandler = () => {

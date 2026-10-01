@@ -629,12 +629,15 @@ export class PdfQueueManager {
           abortController: new AbortController()
         };
 
-        item.uploadPromise = smartUploadFile(item.rawFile, {
+        const p = smartUploadFile(item.rawFile, {
           purpose: 'pdf-convert',
           signal: item.abortController.signal,
-          onProgress: (p) => {
-            item.uploadProgress = p.percent || 0;
+          onProgress: (prog) => {
+            item.uploadProgress = prog.percent || 0;
             this.notify('upload-progress');
+            if (typeof item.onEagerProgress === 'function') {
+              item.onEagerProgress(prog);
+            }
           }
         }).then((res) => {
           item.fileId = res.fileId;
@@ -642,13 +645,17 @@ export class PdfQueueManager {
           item.uploadProgress = 100;
           this.notify('upload-progress');
           return res;
-        }).catch((err) => {
+        });
+
+        p.catch((err) => {
           if (!item.abortController?.signal?.aborted) {
             item.uploadStatus = 'error';
             item.uploadError = err.message || 'Lỗi tải lên';
             this.notify('upload-progress');
           }
         });
+
+        item.uploadPromise = p;
 
         return item;
       });

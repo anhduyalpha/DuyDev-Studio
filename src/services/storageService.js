@@ -75,6 +75,11 @@ export class StorageService {
         }
 
         return await new Promise((resolve, reject) => {
+          const signal = options.signal;
+          if (signal?.aborted) {
+            return reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+          }
+
           const formData = new FormData();
           formData.append('file', currentFile);
 
@@ -85,6 +90,25 @@ export class StorageService {
           const token = getAdminToken();
           if (token) {
             xhr.setRequestHeader('x-storage-auth', token);
+          }
+
+          const abortHandler = () => {
+            try { xhr.abort(); } catch (_) {}
+            reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
+          };
+
+          if (signal) {
+            signal.addEventListener('abort', abortHandler, { once: true });
+          }
+
+          if (typeof options.onUploaderCreated === 'function') {
+            options.onUploaderCreated({
+              cancel: () => {
+                try { xhr.abort(); } catch (_) {}
+              },
+              pause: () => {},
+              resume: () => {}
+            }, currentFile, i + 1, totalFiles);
           }
 
           let lastTime = Date.now();
@@ -127,6 +151,7 @@ export class StorageService {
           }
 
           xhr.onload = () => {
+            if (signal) signal.removeEventListener('abort', abortHandler);
             if (xhr.status === 401) {
               return reject(new Error('UNAUTHORIZED'));
             }
@@ -143,7 +168,19 @@ export class StorageService {
           };
 
           xhr.onerror = () => {
+            if (signal) signal.removeEventListener('abort', abortHandler);
             reject(new Error('Lỗi kết nối mạng trong quá trình tải tệp'));
+          };
+
+          xhr.timeout = 300_000;
+          xhr.ontimeout = () => {
+            if (signal) signal.removeEventListener('abort', abortHandler);
+            reject(new Error('Hết thời gian phản hồi khi tải tệp lên (300s)'));
+          };
+
+          xhr.onabort = () => {
+            if (signal) signal.removeEventListener('abort', abortHandler);
+            reject(new DOMException('Tác vụ tải tệp đã bị hủy', 'AbortError'));
           };
 
           xhr.send(formData);
