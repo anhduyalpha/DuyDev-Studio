@@ -9,16 +9,16 @@ const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=14.8',
-  './src/styles/studocu.css?v=14.8',
-  './src/styles/highlight-theme.css?v=14.8',
+  './src/styles/stitch-tokens.css?v=14.7',
+  './src/styles/studocu.css?v=14.7',
+  './src/styles/highlight-theme.css?v=14.7',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=14.8',
+  './src/app.js?v=14.7',
   './src/utilities/shareTargetHelper.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
@@ -161,6 +161,17 @@ function handleShareTargetGet(url) {
   return Response.redirect(redirectUrl, 303);
 }
 
+// ─── Message Handler ───
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_VERSION') {
+    event.source?.postMessage({
+      type: 'VERSION_INFO',
+      version: CACHE_NAME
+    });
+  }
+});
+
 // ─── Lifecycle Events ───
 
 // Install Event: Pre-cache core shell
@@ -191,13 +202,6 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
-});
-
-// Message Event: Skip waiting on demand
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
 });
 
 // ─── Fetch Event ───

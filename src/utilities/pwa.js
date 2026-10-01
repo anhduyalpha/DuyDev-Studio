@@ -1,165 +1,138 @@
 /**
  * PWA Service Worker Registration & Lifecycle Manager
- * Handles background sync, auto updates, manual update triggering, and observable UI state.
+ * Handles SW registration, automatic update checks on foreground,
+ * and exposes helpers for the Settings page.
  */
 
-import { showToast } from './toast.js';
+/** @type {ServiceWorkerRegistration | null} */
+let swRegistration = null;
 
-class PWAUpdateManager {
-  constructor() {
-    this.registration = null;
-    this.hasUpdate = false;
-    this.isChecking = false;
-    this.waitingWorker = null;
-    this.listeners = new Set();
-    this.refreshing = false;
-  }
+/**
+ * Check if PWA is running in standalone mode (installed on device).
+ * @returns {boolean}
+ */
+export function isStandaloneMode() {
+  return Boolean(
+    window.matchMedia?.('(display-mode: standalone)')?.matches ||
+    window.navigator?.standalone
+  );
+}
 
-  subscribe(listener) {
-    this.listeners.add(listener);
-    listener(this.hasUpdate, this.isChecking);
-    return () => this.listeners.delete(listener);
-  }
-
-  notify() {
-    this.listeners.forEach((fn) => fn(this.hasUpdate, this.isChecking));
-  }
-
-  init(registration) {
-    this.registration = registration;
-
-    // Check if a worker is already waiting
-    if (registration.waiting) {
-      this.waitingWorker = registration.waiting;
-      this.hasUpdate = true;
-      this.notify();
+/**
+ * Query the active Service Worker for its CACHE_NAME version string.
+ * Falls back to 'unknown' if SW is unavailable or doesn't respond within 2s.
+ * @returns {Promise<string>}
+ */
+export function getSwVersion() {
+  return new Promise((resolve) => {
+    const controller = navigator.serviceWorker?.controller;
+    if (!controller) {
+      resolve('unknown');
+      return;
     }
 
-    // Monitor for new service worker being installed
-    registration.addEventListener('updatefound', () => {
-      const installingWorker = registration.installing;
-      if (!installingWorker) return;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    let timeoutId = null;
 
-      installingWorker.addEventListener('statechange', () => {
-        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          this.waitingWorker = installingWorker;
-          this.hasUpdate = true;
-          this.notify();
-          showToast('Đã có bản cập nhật mới! Nhấn Cập nhật để áp dụng.', 'info', 6000);
-        }
-      });
-    });
-
-    // Check for updates on visibility change (when resuming app from background)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        this.checkForUpdate(false);
+    const onMessage = (e) => {
+      if (e.data?.type === 'VERSION_INFO') {
+        navigator.serviceWorker.removeEventListener('message', onMessage);
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve(e.data.version || 'unknown');
       }
-    });
+    };
 
-    // Periodic background update check (every 15 minutes)
-    setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        this.checkForUpdate(false);
-      }
-    }, 15 * 60 * 1000);
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    controller.postMessage({ type: 'GET_VERSION' });
+
+    // Fallback timeout: resolve with 'unknown' if SW doesn't respond
+    timeoutId = setTimeout(() => {
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      resolve('unknown');
+    }, 2000);
+  });
+}
+
+/**
+ * Trigger Service Worker update check.
+ * If a new worker is found, the existing controllerchange listener will
+ * automatically reload the page once the new SW activates.
+ * @returns {Promise<{ updated: boolean, message: string }>}
+ */
+export async function checkForAppUpdate() {
+  if (!swRegistration) {
+    return { updated: false, message: 'Service Worker chưa sẵn sàng' };
   }
-
-  async checkForUpdate(isManual = false) {
-    if (this.isChecking) return;
-    this.isChecking = true;
-    this.notify();
-
-    try {
-      if (!navigator.onLine) {
-        if (isManual) showToast('Không có kết nối mạng', 'warning');
-        return;
-      }
-
-      if (!this.registration) {
-        this.registration = await navigator.serviceWorker?.getRegistration();
-      }
-
-      if (this.registration) {
-        // If an update is already waiting, prompt or apply
-        if (this.registration.waiting) {
-          this.waitingWorker = this.registration.waiting;
-          this.hasUpdate = true;
-          this.notify();
-          if (isManual) {
-            this.applyUpdate();
-            return;
-          }
-        }
-
-        await this.registration.update();
-
-        // Brief delay to allow updatefound event to fire if a new worker is discovered
-        await new Promise((r) => setTimeout(r, 1200));
-
-        if (this.hasUpdate) {
-          if (isManual) {
-            this.applyUpdate();
-          }
-        } else if (isManual) {
-          showToast('Ứng dụng đang ở phiên bản mới nhất', 'success');
-        }
-      } else if (isManual) {
-        showToast('Ứng dụng đang ở phiên bản mới nhất', 'success');
-      }
-    } catch (err) {
-      console.warn('[PWA] Update check error:', err);
-      if (isManual) {
-        showToast('Không thể kiểm tra bản cập nhật lúc này', 'warning');
-      }
-    } finally {
-      this.isChecking = false;
-      this.notify();
+  try {
+    await swRegistration.update();
+    const waiting = swRegistration.waiting || swRegistration.installing;
+    if (waiting) {
+      return { updated: true, message: 'Đang tải bản cập nhật mới...' };
     }
-  }
-
-  applyUpdate() {
-    if (this.refreshing) return;
-    this.refreshing = true;
-
-    showToast('Đang khởi động phiên bản mới...', 'info', 2000);
-
-    if (this.waitingWorker) {
-      this.waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-    } else {
-      window.location.reload();
-    }
+    return { updated: false, message: 'Bạn đang sử dụng phiên bản mới nhất' };
+  } catch (err) {
+    console.warn('[PWA] Update check failed:', err);
+    return { updated: false, message: 'Không thể kiểm tra cập nhật (offline?)' };
   }
 }
 
-export const pwaUpdate = new PWAUpdateManager();
-
+/**
+ * Register the Service Worker, listen for updates, and auto-check
+ * on visibility change (foreground resume).
+ */
 export function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (pwaUpdate.refreshing) return;
-      pwaUpdate.refreshing = true;
-      console.log('[PWA] Controller changed -> Auto refreshing page for instant update...');
-      window.location.reload();
-    });
+  if (!('serviceWorker' in navigator)) return;
 
-    const doRegister = () => {
-      navigator.serviceWorker
-        .register('./sw.js', { updateViaCache: 'none' })
-        .then((reg) => {
-          console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
-          pwaUpdate.init(reg);
-          reg.update().catch(() => {});
-        })
-        .catch((error) => {
-          console.warn('[PWA] ServiceWorker registration failed:', error);
-        });
-    };
+  let refreshing = false;
 
-    if (document.readyState === 'complete') {
-      doRegister();
-    } else {
-      window.addEventListener('load', doRegister);
-    }
+  // When a new SW takes over, reload to apply new assets
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    console.log('[PWA] Controller changed -> Auto refreshing...');
+    window.location.reload();
+  });
+
+  const doRegister = () => {
+    navigator.serviceWorker
+      .register('./sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        swRegistration = reg;
+        console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
+        reg.update().catch(() => {});
+
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          if (!installingWorker) return;
+          installingWorker.addEventListener('statechange', () => {
+            if (
+              installingWorker.state === 'activated' ||
+              (installingWorker.state === 'installed' && navigator.serviceWorker.controller)
+            ) {
+              if (!refreshing) {
+                refreshing = true;
+                console.log('[PWA] New version activated, refreshing...');
+                window.location.reload();
+              }
+            }
+          });
+        };
+      })
+      .catch((error) => {
+        console.warn('[PWA] ServiceWorker registration failed:', error);
+      });
+  };
+
+  if (document.readyState === 'complete') {
+    doRegister();
+  } else {
+    window.addEventListener('load', doRegister);
   }
+
+  // Auto-check for updates when app returns from background (foreground resume)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && swRegistration) {
+      swRegistration.update().catch(() => {});
+    }
+  });
 }

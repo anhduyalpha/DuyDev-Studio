@@ -3,7 +3,7 @@
  */
 
 import { pwaInstall } from '../hooks/usePWAInstall.js';
-import { pwaUpdate } from '../utilities/pwa.js';
+import { isStandaloneMode, checkForAppUpdate, getSwVersion } from '../utilities/pwa.js';
 import { toggleTheme, getStoredTheme } from '../hooks/useTheme.js';
 import { showToast } from '../utilities/toast.js';
 import { clearAllModuleStates } from '../utilities/moduleState.js';
@@ -17,6 +17,7 @@ import {
 export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
   const isAdmin = isAdminAuthenticated();
+  const isStandalone = isStandaloneMode();
 
   return `
     <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn">
@@ -134,27 +135,51 @@ export function renderServerPage() {
         `}
       </div>
 
-      <!-- 3. Cài đặt Ứng dụng PWA & Cập nhật -->
+      <!-- 3. Ứng dụng & Cập nhật -->
       <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-            <i data-lucide="smartphone" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Quản lý ứng dụng PWA
+            <i data-lucide="smartphone" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Ứng dụng & Cập nhật
           </h3>
-          <span class="text-xs font-mono text-zinc-500">v14.8</span>
+          <span id="badgeAppVersion" class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/[0.08]">
+            ...
+          </span>
         </div>
 
-        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-          Cài đặt DuyDev Studio trực tiếp vào màn hình chính của điện thoại hoặc kiểm tra cập nhật phiên bản mới.
-        </p>
+        <div class="flex items-center justify-between text-sm py-2 border-b border-zinc-100 dark:border-white/5">
+          <div>
+            <p class="font-semibold text-zinc-900 dark:text-zinc-100">Trạng thái thiết bị</p>
+          </div>
+          ${isStandalone
+            ? '<span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">ĐÃ CÀI ĐẶT</span>'
+            : '<button id="btnSettingsInstallPwa" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer"><i data-lucide="download" class="w-3.5 h-3.5"></i> Cài đặt lên thiết bị</button>'
+          }
+        </div>
 
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          <button id="btnServerInstallPwa" class="flex-1 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/20 cursor-pointer">
-            <i data-lucide="download" class="w-4 h-4"></i> Cài đặt vào điện thoại
-          </button>
-          <button id="btnServerUpdatePwa" class="flex-1 px-5 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-zinc-900 dark:text-white border border-zinc-200 dark:border-white/10 text-sm font-semibold flex items-center justify-center gap-2 transition shadow-xs cursor-pointer">
-            <i data-lucide="refresh-cw" id="iconServerUpdatePwa" class="w-4 h-4"></i> Cập nhật ứng dụng
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5 border-b border-zinc-100 dark:border-white/5">
+          <div>
+            <p class="font-semibold text-zinc-900 dark:text-zinc-100">Kiểm tra phiên bản mới</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Tải bản cập nhật mới nhất từ máy chủ</p>
+          </div>
+          <button id="btnCheckAppUpdate" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-zinc-200 text-sm font-semibold border border-zinc-200 dark:border-white/10 transition shadow-2xs flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kiểm tra cập nhật
           </button>
         </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5">
+          <div>
+            <p class="font-semibold text-zinc-900 dark:text-zinc-100">Làm mới toàn bộ Cache</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Xóa bộ nhớ đệm và tải lại hoàn toàn ứng dụng</p>
+          </div>
+          <button id="btnForcePurgeUpdate" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 text-sm font-semibold border border-amber-200 dark:border-amber-500/20 transition shadow-2xs flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="hard-drive-download" class="w-3.5 h-3.5"></i> Xóa Cache & Tải lại
+          </button>
+        </div>
+
+        ${isStandalone ? `
+        <div class="px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.04] text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          Icon trên màn hình chính do hệ điều hành quản lý (WebAPK). Để cập nhật icon, gỡ cài đặt và thêm lại ứng dụng.
+        </div>` : ''}
       </div>
 
       <!-- 4. Thông tin ứng dụng & Homeserver -->
@@ -249,35 +274,53 @@ export function attachServerPageListeners(onRerender) {
     });
   }
 
-  // 7. PWA install
-  const btnInstall = document.getElementById('btnServerInstallPwa');
+  // 7. PWA Install (shown only when not standalone)
+  const btnInstall = document.getElementById('btnSettingsInstallPwa');
   if (btnInstall) {
     btnInstall.addEventListener('click', () => {
       pwaInstall.promptInstall();
     });
   }
 
-  // 8. PWA update
-  const btnServerUpdate = document.getElementById('btnServerUpdatePwa');
-  const iconServerUpdate = document.getElementById('iconServerUpdatePwa');
-  if (btnServerUpdate) {
-    pwaUpdate.subscribe((hasUpdate, isChecking) => {
-      if (iconServerUpdate) {
-        iconServerUpdate.classList.toggle('animate-spin', Boolean(isChecking));
+  // 8. Check for app update
+  const btnCheckUpdate = document.getElementById('btnCheckAppUpdate');
+  if (btnCheckUpdate) {
+    btnCheckUpdate.addEventListener('click', async () => {
+      btnCheckUpdate.disabled = true;
+      btnCheckUpdate.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang kiểm tra...';
+      if (window.lucide) window.lucide.createIcons();
+
+      const result = await checkForAppUpdate();
+      showToast(result.message, result.updated ? 'success' : 'info');
+
+      if (!result.updated) {
+        btnCheckUpdate.disabled = false;
+        btnCheckUpdate.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kiểm tra cập nhật';
+        if (window.lucide) window.lucide.createIcons();
       }
-      if (hasUpdate) {
-        btnServerUpdate.classList.remove('bg-zinc-100', 'dark:bg-white/[0.08]');
-        btnServerUpdate.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
-        btnServerUpdate.title = 'Đã có bản cập nhật mới! Nhấn để khởi động lại';
+      // If updated, controllerchange listener in pwa.js will auto-reload
+    });
+  }
+
+  // 9. Force purge cache & reload (reuse emergencyResetApp from index.html)
+  const btnPurge = document.getElementById('btnForcePurgeUpdate');
+  if (btnPurge) {
+    btnPurge.addEventListener('click', () => {
+      if (typeof window.emergencyResetApp === 'function') {
+        window.emergencyResetApp();
+      } else {
+        // Fallback: manual cache purge
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+        window.location.replace(window.location.origin + window.location.pathname + '?clear=' + Date.now());
       }
     });
+  }
 
-    btnServerUpdate.addEventListener('click', () => {
-      if (pwaUpdate.hasUpdate) {
-        pwaUpdate.applyUpdate();
-      } else {
-        pwaUpdate.checkForUpdate(true);
-      }
+  // 10. Populate version badge from Service Worker
+  const badgeVersion = document.getElementById('badgeAppVersion');
+  if (badgeVersion) {
+    getSwVersion().then((version) => {
+      badgeVersion.textContent = version;
     });
   }
 }

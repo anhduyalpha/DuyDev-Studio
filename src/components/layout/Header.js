@@ -2,8 +2,6 @@
  * Global Header Component (Dark Professional Minimalism)
  */
 
-import { pwaInstall } from '../../hooks/usePWAInstall.js';
-import { pwaUpdate } from '../../utilities/pwa.js';
 import { toggleTheme, getStoredTheme, updateThemeUI } from '../../hooks/useTheme.js';
 import { storage } from '../../utilities/storage.js';
 
@@ -47,19 +45,6 @@ export function renderHeader() {
 
         <!-- Right: Controls -->
         <div class="flex items-center gap-1 sm:gap-2.5 shrink-0">
-          
-          <!-- App Update Button -->
-          <button id="btnPwaUpdate" class="relative px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-zinc-200 dark:border-white/[0.08] hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-700 dark:text-zinc-300 text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer" title="Cập nhật ứng dụng">
-            <i data-lucide="refresh-cw" id="iconPwaUpdate" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-            <span class="text-[11px] sm:text-xs">Cập nhật</span>
-            <span id="badgePwaUpdate" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-950 animate-pulse"></span>
-          </button>
-
-          <!-- App Install Button -->
-          <button id="btnPwaInstall" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer" title="Cài đặt">
-            <i data-lucide="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-            <span class="text-[11px] sm:text-xs">Cài đặt</span>
-          </button>
 
           <!-- Storage Drive Link -->
           <a href="#storage" title="Bộ nhớ lưu trữ (Storage)" class="inline-flex p-2 sm:p-2.5 text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
@@ -98,53 +83,6 @@ export function attachHeaderListeners(onSearch) {
   const searchInput = document.getElementById('globalSearchInput');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => onSearch(e.target.value));
-  }
-
-  // App Update listener
-  const btnUpdate = document.getElementById('btnPwaUpdate');
-  const iconUpdate = document.getElementById('iconPwaUpdate');
-  const badgeUpdate = document.getElementById('badgePwaUpdate');
-
-  if (btnUpdate) {
-    pwaUpdate.subscribe((hasUpdate, isChecking) => {
-      if (badgeUpdate) {
-        badgeUpdate.classList.toggle('hidden', !hasUpdate);
-      }
-      if (iconUpdate) {
-        iconUpdate.classList.toggle('animate-spin', Boolean(isChecking));
-      }
-      if (hasUpdate) {
-        btnUpdate.title = 'Đã có bản cập nhật mới! Nhấn để áp dụng';
-        btnUpdate.classList.add('border-emerald-500/50', 'text-emerald-600', 'dark:text-emerald-400');
-      } else {
-        btnUpdate.title = 'Cập nhật ứng dụng';
-        btnUpdate.classList.remove('border-emerald-500/50', 'text-emerald-600', 'dark:text-emerald-400');
-      }
-    });
-
-    btnUpdate.addEventListener('click', () => {
-      if (pwaUpdate.hasUpdate) {
-        pwaUpdate.applyUpdate();
-      } else {
-        pwaUpdate.checkForUpdate(true);
-      }
-    });
-  }
-
-  // App Install listener
-  const btnInstall = document.getElementById('btnPwaInstall');
-  if (btnInstall) {
-    pwaInstall.subscribe((canInstall, isInstalled) => {
-      if (canInstall && !isInstalled) {
-        btnInstall.classList.remove('hidden');
-      } else {
-        btnInstall.classList.add('hidden');
-      }
-    });
-
-    btnInstall.addEventListener('click', () => {
-      pwaInstall.promptInstall();
-    });
   }
 
   // Theme toggle listener
