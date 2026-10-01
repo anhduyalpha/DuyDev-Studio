@@ -215,6 +215,17 @@ class MainActivity : AppCompatActivity() {
         settings.mediaPlaybackRequiresUserGesture = false
         settings.userAgentString = "${settings.userAgentString} DuyDevStudioNative/1.0"
 
+        // Enforce viewport compliance and lock zoom/scaling
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+        settings.setSupportZoom(false)
+        settings.builtInZoomControls = false
+        settings.displayZoomControls = false
+        settings.textZoom = 100
+
+        webView.overScrollMode = View.OVER_SCROLL_NEVER
+        webView.isHorizontalScrollBarEnabled = false
+
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(webView, true)

@@ -2,7 +2,7 @@
 <html lang="vi" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
   <title>DuyDev Studio - Utility Hub</title>
   
   <!-- PWA Meta Tags -->
@@ -95,9 +95,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=15.8">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=15.8">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=15.8">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=15.9">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=15.9">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=15.9">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -136,7 +136,7 @@
     if ('caches' in window) {
       caches.keys().then(function(names) {
         names.forEach(function(name) {
-          if (name !== 'duydev-studio-v15.8') {
+          if (name !== 'duydev-studio-v15.9') {
             caches.delete(name);
           }
         });
@@ -210,7 +210,7 @@
     });
   </script>
 </head>
-<body class="bg-[#F4F4F6] dark:bg-[#09090B] text-zinc-900 dark:text-[#FAFAFA] font-sans min-h-screen transition-colors duration-200">
+<body class="bg-[#F4F4F6] dark:bg-[#09090B] text-zinc-900 dark:text-[#FAFAFA] font-sans min-h-screen transition-colors duration-200 overflow-x-hidden w-full max-w-full">
   
   <!-- Fast-Path Instant Share Target Shell (<10ms display) -->
   <div id="fastPathSharePlaceholder" class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4" style="position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;">
@@ -380,7 +380,7 @@
   </script>
 
   <!-- Root Mount Point for Modular PWA Architecture -->
-  <div id="app">
+  <div id="app" class="w-full max-w-full overflow-x-hidden min-h-screen">
     <!-- Immediate CSS loader to prevent black void during normal script execution (suppressed in share mode) -->
     <div id="appStartupLoader" class="min-h-screen flex items-center justify-center p-4">
       <div class="flex flex-col items-center gap-3 text-zinc-400">
@@ -398,7 +398,7 @@
   <script src="src/vendor/qr-code-styling.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=15.8"></script>
+  <script type="module" src="src/app.js?v=15.9"></script>
 </body>
 </html>
 

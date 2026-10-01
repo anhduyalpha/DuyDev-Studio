@@ -104,8 +104,9 @@ html.dark textarea::placeholder {
   color: #71717A;
 }
 
-/* Global Commercial Typography & Font Smoothing */
+/* Global Commercial Typography, Box Sizing & Viewport Containment */
 *, *::before, *::after {
+  box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -117,6 +118,10 @@ html {
   line-height: 1.5;
   letter-spacing: -0.011em;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 body {
@@ -126,6 +131,18 @@ body {
   font-weight: 450;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+#app {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
 }
 
 html.dark body {

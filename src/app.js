@@ -180,10 +180,10 @@ class App {
     }
 
     this.appRoot.innerHTML = `
-      <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
-        <div id="headerContainer"></div>
-        <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 pt-4 pb-28 sm:py-8"></main>
-        <div id="footerContainer"></div>
+      <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-hidden">
+        <div id="headerContainer" class="w-full"></div>
+        <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-28 sm:py-8 min-w-0 overflow-x-hidden"></main>
+        <div id="footerContainer" class="w-full"></div>
         <div id="bottomNavContainer"></div>
         <div id="globalPreviewContainer"></div>
         <div id="globalTaskDockContainer"></div>

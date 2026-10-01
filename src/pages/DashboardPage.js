@@ -64,7 +64,7 @@ export function renderDashboardPage() {
 
 
       <!-- Category Filter Pills Bar -->
-      <div>
+      <div class="w-full min-w-0 overflow-hidden">
         ${renderCategoryFilters(currentCategory, counts)}
       </div>
 
