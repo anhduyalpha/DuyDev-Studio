@@ -55,14 +55,14 @@ export function renderHeader() {
             </span>
           ` : `
             <span id="highwayHeaderContainer">
-              <button id="btnSwitchHighway" style="display: none;" title="Chuyển sang đường truyền siêu tốc" class="items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer">
+              <button id="btnSwitchHighway" style="display: none;" title="Chuyển kết nối" class="items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer">
                 <i data-lucide="zap" class="w-3.5 h-3.5"></i> <span id="btnSwitchHighwayLabel">Tailscale (250 Mbps)</span>
               </button>
             </span>
           `}
 
           <!-- Storage Drive Link -->
-          <a href="#storage" title="Bộ nhớ lưu trữ (Storage)" class="inline-flex p-2 sm:p-2.5 text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
+          <a href="#storage" title="Bộ nhớ lưu trữ" class="inline-flex p-2 sm:p-2.5 text-zinc-700 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
             <i data-lucide="hard-drive" class="w-4 h-4"></i>
           </a>
 
@@ -78,7 +78,7 @@ export function renderHeader() {
           </a>
 
           <!-- Theme Toggle Button -->
-          <button id="btnThemeToggle" title="${isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}" class="p-2 sm:p-2.5 text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
+          <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" class="p-2 sm:p-2.5 text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition cursor-pointer">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4"></i>
           </button>
 
@@ -143,7 +143,7 @@ async function probeHighwayAvailability() {
   if (tailscale) {
     const tsRes = await probeHighway(tailscale, 400);
     if (tsRes.reachable) {
-      if (label) label.textContent = 'Tailscale Siêu Tốc (250 Mbps)';
+      if (label) label.textContent = 'Tailscale (250 Mbps)';
       btn.onclick = () => switchHighway(tailscale.url);
       btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-xs cursor-pointer';
       btn.style.display = 'inline-flex';
@@ -157,7 +157,7 @@ async function probeHighwayAvailability() {
   if (lan) {
     const lanRes = await probeHighway(lan, 300);
     if (lanRes.reachable) {
-      if (label) label.textContent = 'LAN Siêu Tốc (1000 Mbps)';
+      if (label) label.textContent = 'LAN (1 Gbps)';
       btn.onclick = () => switchHighway(lan.url);
       btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs cursor-pointer';
       btn.style.display = 'inline-flex';

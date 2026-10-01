@@ -53,11 +53,11 @@ export function renderServerPage() {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5 border-b border-zinc-100 dark:border-white/5">
           <div>
             <p class="font-semibold text-zinc-900 dark:text-zinc-100">Chế độ giao diện</p>
-            <p id="serverThemeStatus" class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">${isDark ? 'Đang bật: Giao diện tối' : 'Đang bật: Giao diện sáng'}</p>
+            <p id="serverThemeStatus" class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">${isDark ? 'Giao diện tối' : 'Giao diện sáng'}</p>
           </div>
           <button id="btnServerThemeToggle" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 hover:text-zinc-950 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-zinc-200 text-sm font-semibold border border-zinc-200 dark:border-white/10 transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4"></i>
-            <span>${isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}</span>
+            <span>${isDark ? 'Giao diện sáng' : 'Giao diện tối'}</span>
           </button>
         </div>
 
@@ -85,7 +85,7 @@ export function renderServerPage() {
           <div class="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/[0.05] space-y-3">
             <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
               <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
-              <span>Khu vực dành riêng cho Quản trị viên. Nhập mật khẩu để cấu hình đường truyền máy chủ và quản trị dữ liệu.</span>
+              <span>Khu vực Quản trị viên. Nhập mật khẩu để mở khóa.</span>
             </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input 
@@ -129,7 +129,6 @@ export function renderServerPage() {
                 <p class="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white flex items-center gap-2">
                   <i data-lucide="network" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Đường truyền & Kết nối máy chủ
                 </p>
-                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Tùy chọn kết nối trực tiếp LAN / Tailscale VPN hoặc Cloudflare Tunnel</p>
               </div>
               <button id="btnProbeHighways" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5 cursor-pointer">
                 <i data-lucide="activity" class="w-3.5 h-3.5"></i> Đo độ trễ
@@ -152,7 +151,7 @@ export function renderServerPage() {
                     <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
                       <span id="highwayPing_${h.id}" class="text-[11px] font-mono text-zinc-400">-- ms</span>
                       ${isActive ? `
-                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">ĐANG DÙNG</span>
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">HIỆN TẠI</span>
                       ` : `
                         <button class="btn-switch-highway px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 transition shadow-xs cursor-pointer flex items-center gap-1" data-url="${h.url}">
                           <i data-lucide="zap" class="w-3 h-3"></i> Kết nối
@@ -168,15 +167,15 @@ export function renderServerPage() {
           <div class="flex items-center justify-between text-sm py-2 border-b border-zinc-100 dark:border-white/5">
             <div>
               <p class="font-semibold text-zinc-900 dark:text-zinc-100">Tự động hủy tệp tạm</p>
-              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa sạch tệp tải lên khỏi bộ nhớ đệm sau 30 phút</p>
+              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa tệp tải lên sau 30 phút</p>
             </div>
             <span class="px-2.5 py-1 rounded-md text-xs font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">ĐÃ BẬT</span>
           </div>
 
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5 border-b border-zinc-100 dark:border-white/5">
             <div>
-              <p class="font-semibold text-zinc-900 dark:text-zinc-100">Bộ nhớ tạm công cụ (Cache State)</p>
-              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa sạch các form dữ liệu nháp và cấu hình đã lưu của toàn bộ công cụ</p>
+              <p class="font-semibold text-zinc-900 dark:text-zinc-100">Bộ nhớ tạm công cụ</p>
+              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa dữ liệu nháp và cấu hình đã lưu</p>
             </div>
             <button id="btnClearAllModuleStates" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 hover:text-zinc-950 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-zinc-200 border border-zinc-200 dark:border-white/10 text-sm font-semibold transition shadow-2xs text-center cursor-pointer">
               Đặt lại toàn bộ
@@ -186,7 +185,7 @@ export function renderServerPage() {
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2">
             <div>
               <p class="font-semibold text-zinc-900 dark:text-zinc-100">Lịch sử tác vụ trên trình duyệt</p>
-              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa danh sách các tệp bạn đã từng xử lý gần đây</p>
+              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa danh sách các tệp đã xử lý</p>
             </div>
             <button id="btnClearServerHistory" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 border border-red-200 dark:border-red-500/20 text-sm font-semibold transition shadow-2xs text-center cursor-pointer">
               Xóa lịch sử
@@ -265,19 +264,11 @@ export function renderServerPage() {
             <i data-lucide="hard-drive-download" class="w-3.5 h-3.5"></i> Xóa Cache & Tải lại
           </button>
         </div>
-
-        ${isNative ? `
-        <div class="px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.04] text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-          Ứng dụng đang chạy trong lớp bao Native Android APK (Kotlin). Mọi bản cập nhật có thể tải và cài đặt trực tiếp tại đây.
-        </div>` : isStandalone ? `
-        <div class="px-3 py-2 rounded-lg bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.04] text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-          Icon trên màn hình chính do hệ điều hành quản lý (WebAPK). Để cập nhật icon, gỡ cài đặt và thêm lại ứng dụng.
-        </div>` : ''}
       </div>
 
-      <!-- 4. Thông tin ứng dụng & Homeserver -->
-      <div class="text-center py-4 text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
-        <p class="font-bold text-zinc-800 dark:text-zinc-300">DuyDev Studio • Self-Hosted & Cloudflare Tunnel Edition</p>
+      <!-- 4. Thông tin ứng dụng -->
+      <div class="text-center py-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <p class="font-bold text-zinc-800 dark:text-zinc-300">DuyDev Studio</p>
       </div>
 
     </div>
@@ -544,7 +535,7 @@ export function attachServerPageListeners(onRerender) {
       if (!isAdminAuthenticated()) return;
       const btn = e.target.closest('.btn-switch-highway');
       if (btn && btn.dataset.url) {
-        showToast('Đang chuyển sang đường truyền mới...', 'info');
+        showToast('Đang chuyển kết nối...', 'info');
         switchHighway(btn.dataset.url);
       }
     });

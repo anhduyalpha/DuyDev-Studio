@@ -13,7 +13,7 @@ export const HIGHWAYS = [
     hostname: '100.90.62.15',
     speed: '250 Mbps',
     benchmarkTime: '~0.3s / 10MB',
-    desc: 'Đường truyền P2P mã hóa qua Tailscale VPN (tốc độ như WinSCP)'
+    desc: 'Đường truyền Tailscale P2P VPN'
   },
   {
     id: 'lan',
@@ -23,7 +23,7 @@ export const HIGHWAYS = [
     hostname: '192.168.2.171',
     speed: '1000 Mbps',
     benchmarkTime: '~0.3s / 10MB',
-    desc: 'Mạng Wi-Fi / Cáp LAN tại nhà'
+    desc: 'Mạng LAN nội bộ'
   },
   {
     id: 'wireguard',
@@ -33,7 +33,7 @@ export const HIGHWAYS = [
     hostname: '10.7.0.1',
     speed: '250 Mbps',
     benchmarkTime: '~0.3s / 10MB',
-    desc: 'Đường hầm VPN cá nhân WireGuard'
+    desc: 'Đường hầm WireGuard VPN'
   },
   {
     id: 'cloudflare',
@@ -43,7 +43,7 @@ export const HIGHWAYS = [
     hostname: 'duydevstudio.alphadaniel.io.vn',
     speed: '1 - 3 MB/s',
     benchmarkTime: 'Tùy mạng 4G',
-    desc: 'Đường hầm truy cập từ xa khi không bật VPN'
+    desc: 'Đường hầm Cloudflare WAN'
   }
 ];
 

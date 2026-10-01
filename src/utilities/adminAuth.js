@@ -330,7 +330,6 @@ export function showChangePasswordModal(onUpdated) {
           </div>
           <div>
             <h4 class="font-bold text-sm text-zinc-900 dark:text-white">Đổi mật khẩu Quản trị</h4>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Đặt mật khẩu mới cho khu vực quản trị.</p>
           </div>
         </div>
 

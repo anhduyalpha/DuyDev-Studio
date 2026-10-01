@@ -9,23 +9,23 @@
     <string name="action_qr_scan">Quét mã QR từ ảnh</string>
     <string name="action_qr_gen">Tạo mã QR</string>
     <string name="action_converter">Đổi định dạng tệp</string>
-    <string name="action_archive">Soi tệp nén trực tuyến</string>
-    <string name="action_hash">Tính mã băm kiểm tra</string>
+    <string name="action_archive">Xem tệp nén</string>
+    <string name="action_hash">Mã băm checksum</string>
     <string name="action_studocu">Tải tài liệu Studocu</string>
     <string name="action_image_to_pdf">Chuyển ảnh thành PDF</string>
-    <string name="action_view_pdf">Xem tài liệu PDF</string>
+    <string name="action_view_pdf">Xem PDF</string>
     <string name="offline_title">Không thể kết nối máy chủ</string>
     <string name="offline_desc">Không thể tải DuyDev Studio. Vui lòng kiểm tra lại kết nối mạng hoặc thử kết nối qua LAN Homeserver.</string>
     <string name="retry">Thử lại</string>
-    <string name="open_tailscale">Mở Tailscale Direct (250 Mbps)</string>
-    <string name="open_lan">Mở LAN Homeserver (1 Gbps)</string>
-    <string name="open_cloudflare">Mở Cloudflare Tunnel (Dự phòng)</string>
+    <string name="open_tailscale">Mở Tailscale Direct</string>
+    <string name="open_lan">Mở LAN Homeserver</string>
+    <string name="open_cloudflare">Mở Cloudflare Tunnel</string>
 
     <!-- App Shortcuts -->
     <string name="shortcut_pdf_short">Nén &amp; Đổi PDF</string>
     <string name="shortcut_pdf_long">Mở nhanh công cụ xử lý PDF</string>
     <string name="shortcut_archive_short">Xem File Nén</string>
-    <string name="shortcut_archive_long">Duyệt nội dung .ZIP/.RAR trực tuyến</string>
+    <string name="shortcut_archive_long">Duyệt tệp ZIP, RAR</string>
     <string name="shortcut_qr_short">Tạo mã QR</string>
     <string name="shortcut_qr_long">Tạo mã QR Wi-Fi &amp; thanh toán</string>
 </resources>
