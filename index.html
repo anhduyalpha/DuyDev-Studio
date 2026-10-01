@@ -16,6 +16,36 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="src/assets/logo-ds.svg">
   <link rel="apple-touch-icon" href="src/assets/icon-192.png">
+
+  <!-- Share Target Module Preloads (Parallel network download during head parse) -->
+  <link rel="modulepreload" href="./src/utilities/shareTargetHelper.js">
+  <link rel="modulepreload" href="./src/components/common/ShareTargetModal.js">
+  <link rel="modulepreload" href="./src/utilities/formatters.js">
+
+  <!-- Frame-0 Share Target Instant Detection & Startup Loader Suppression -->
+  <script>
+    (function() {
+      var h = window.location.hash || '';
+      var s = window.location.search || '';
+      if (h.includes('share-target') || s.includes('hasFiles=1') || s.includes('url=') || s.includes('text=')) {
+        document.documentElement.classList.add('is-share-target');
+        window.__FAST_PATH_SHARE_ACTIVE = true;
+      }
+    })();
+  </script>
+  <style>
+    /* Instant suppression: Never show startup loader when opening via Share Sheet */
+    .is-share-target #appStartupLoader {
+      display: none !important;
+    }
+    /* Instant display: Show fast-path share placeholder on frame 1 */
+    #fastPathSharePlaceholder {
+      display: none;
+    }
+    .is-share-target #fastPathSharePlaceholder {
+      display: flex !important;
+    }
+  </style>
   
   <!-- Google Fonts: Plus Jakarta Sans (Primary UI), Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,9 +95,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.7">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=14.7">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.7">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=14.9">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=14.9">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=14.9">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -106,7 +136,7 @@
     if ('caches' in window) {
       caches.keys().then(function(names) {
         names.forEach(function(name) {
-          if (name !== 'duydev-studio-v14.9') {
+          if (name !== 'duydev-studio-v15.0') {
             caches.delete(name);
           }
         });
@@ -182,18 +212,64 @@
 </head>
 <body class="bg-[#F4F4F6] dark:bg-[#09090B] text-zinc-900 dark:text-[#FAFAFA] font-sans min-h-screen transition-colors duration-200">
   
-  <!-- Root Mount Point for Modular PWA Architecture -->
-  <div id="app">
-    <!-- Immediate CSS loader to prevent black void during script execution -->
-    <div id="appStartupLoader" class="min-h-screen flex items-center justify-center p-4">
-      <div class="flex flex-col items-center gap-3 text-zinc-400">
-        <div class="w-9 h-9 rounded-xl bg-zinc-200 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.12] flex items-center justify-center font-bold text-xs text-zinc-900 dark:text-white animate-pulse">
-          DS
+  <!-- Fast-Path Instant Share Target Shell (<10ms display) -->
+  <div id="fastPathSharePlaceholder" class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4" style="position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;">
+    <!-- Backdrop -->
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:9998;"></div>
+    <!-- Panel -->
+    <div style="position:relative;z-index:9999;width:100%;max-width:28rem;border-top-left-radius:1.5rem;border-top-right-radius:1.5rem;border:1px solid rgba(63,63,70,0.5);background:#111114;padding:1.25rem;color:#fafafa;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" class="sm:rounded-3xl">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(63,63,70,0.4);">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:2.25rem;height:2.25rem;border-radius:0.75rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);display:flex;align-items:center;justify-content:center;color:#818cf8;font-weight:bold;font-size:12px;">
+            DS
+          </div>
+          <div>
+            <div style="font-size:0.875rem;font-weight:700;color:#f4f4f5;">Chia sẻ vào DuyDev Studio</div>
+            <div id="fastShareStatusLabel" style="font-size:11px;color:#a1a1aa;">Đang nạp dữ liệu chia sẻ...</div>
+          </div>
         </div>
-        <span class="text-xs font-mono text-zinc-500">Đang khởi động DuyDev Studio...</span>
+        <button type="button" onclick="var p = document.getElementById('fastPathSharePlaceholder'); if (p) p.remove(); window.__FAST_PATH_SHARE_ACTIVE = false; history.replaceState(null, '', window.location.pathname);" style="color:#a1a1aa;padding:0.375rem;border-radius:0.5rem;background:transparent;border:none;cursor:pointer;" title="Đóng">
+          ✕
+        </button>
+      </div>
+      <div id="fastSharePreviewCard" style="margin-top:1rem;padding:0.875rem;border-radius:1rem;background:rgba(39,39,42,0.5);border:1px solid rgba(63,63,70,0.5);">
+        <div style="display:flex;align-items:center;gap:0.625rem;">
+          <div style="width:1.25rem;height:1.25rem;border-radius:50%;border:2px solid #6366f1;border-top-color:transparent;animation:spin 0.8s linear infinite;" class="animate-spin"></div>
+          <span id="fastSharePreviewText" style="font-size:12px;color:#d4d4d8;">Đang đọc tệp và chuẩn bị module...</span>
+        </div>
+      </div>
+      <div style="margin-top:1rem;display:flex;flex-direction:column;gap:0.5rem;" id="fastShareActionSkeletons">
+        <div style="height:2.75rem;border-radius:0.75rem;background:rgba(39,39,42,0.4);border:1px solid rgba(63,63,70,0.3);animation:pulse 1.5s infinite;" class="animate-pulse"></div>
+        <div style="height:2.75rem;border-radius:0.75rem;background:rgba(39,39,42,0.3);border:1px solid rgba(63,63,70,0.2);animation:pulse 1.5s infinite;" class="animate-pulse"></div>
       </div>
     </div>
   </div>
+
+  <!-- Synchronously inspect URL search params to populate fastSharePreviewText in 0ms -->
+  <script>
+    (function() {
+      if (!window.__FAST_PATH_SHARE_ACTIVE) return;
+      try {
+        var sp = new URLSearchParams(window.location.search);
+        var url = sp.get('url');
+        var text = sp.get('text');
+        var title = sp.get('title');
+        var hasFiles = sp.get('hasFiles') === '1';
+        var previewEl = document.getElementById('fastSharePreviewText');
+        var statusEl = document.getElementById('fastShareStatusLabel');
+        if (hasFiles && previewEl) {
+          previewEl.textContent = 'Đang đọc tệp từ thiết bị và chuẩn bị module...';
+          if (statusEl) statusEl.textContent = 'Đã nhận tệp chia sẻ';
+        } else if (url && previewEl) {
+          previewEl.textContent = 'Liên kết: ' + (url.length > 45 ? url.slice(0, 45) + '…' : url);
+          if (statusEl) statusEl.textContent = 'Đã nhận liên kết chia sẻ';
+        } else if (text && previewEl) {
+          previewEl.textContent = 'Nội dung: ' + (text.length > 45 ? text.slice(0, 45) + '…' : text);
+          if (statusEl) statusEl.textContent = 'Đã nhận nội dung chia sẻ';
+        }
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- Global Share Target Modal Container (Mounted at body root to decouple from SPA router DOM updates) -->
   <div id="globalShareTargetContainer"></div>
@@ -208,17 +284,13 @@
     const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=');
 
     if (isShare) {
-      // Suppress startup text immediately so the user does not wait on the splash screen
-      const loader = document.getElementById('appStartupLoader');
-      if (loader) loader.style.display = 'none';
-
       (async () => {
         try {
           let payload = await retrievePendingSharedData();
           if (!payload) {
-            // Quick backoff retry (max 2 attempts, ~120ms total) in case Service Worker transaction is completing
-            for (let i = 0; i < 2; i++) {
-              await new Promise((r) => setTimeout(r, 60));
+            // Quick backoff retry (max 3 attempts, ~120ms total) in case Service Worker transaction is completing
+            for (let i = 0; i < 3; i++) {
+              await new Promise((r) => setTimeout(r, 40));
               payload = await retrievePendingSharedData();
               if (payload) break;
             }
@@ -243,17 +315,26 @@
     }
   </script>
 
-  <!-- Code Syntax Highlighting Engine -->
-  <script src="src/vendor/highlight.min.js"></script>
+  <!-- Root Mount Point for Modular PWA Architecture -->
+  <div id="app">
+    <!-- Immediate CSS loader to prevent black void during normal script execution (suppressed in share mode) -->
+    <div id="appStartupLoader" class="min-h-screen flex items-center justify-center p-4">
+      <div class="flex flex-col items-center gap-3 text-zinc-400">
+        <div class="w-9 h-9 rounded-xl bg-zinc-200 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.12] flex items-center justify-center font-bold text-xs text-zinc-900 dark:text-white animate-pulse">
+          DS
+        </div>
+        <span class="text-xs font-mono text-zinc-500">Đang khởi động DuyDev Studio...</span>
+      </div>
+    </div>
+  </div>
 
-  <!-- Thinking Orbs Canvas 2D Engine -->
-  <script src="src/vendor/thinking-orbs.js"></script>
-
-  <!-- QR Code Styling Engine (Local Vendor with CDN Fallback) -->
-  <script src="src/vendor/qr-code-styling.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
+  <!-- Non-blocking deferred vendor engines -->
+  <script src="src/vendor/highlight.min.js" defer></script>
+  <script src="src/vendor/thinking-orbs.js" defer></script>
+  <script src="src/vendor/qr-code-styling.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=14.7"></script>
+  <script type="module" src="src/app.js?v=14.9"></script>
 </body>
 </html>
 

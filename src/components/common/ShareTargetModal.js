@@ -147,6 +147,9 @@ export function isShareTargetModalOpen() {
  * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
  */
 export function openShareTargetModal(payload) {
+  const placeholder = document.getElementById('fastPathSharePlaceholder');
+  if (placeholder) placeholder.remove();
+
   const container = document.getElementById('globalShareTargetContainer');
   if (!container) return;
 
@@ -294,6 +297,8 @@ export function openShareTargetModal(payload) {
  */
 export function closeShareTargetModal() {
   window.__FAST_PATH_SHARE_ACTIVE = false;
+  const placeholder = document.getElementById('fastPathSharePlaceholder');
+  if (placeholder) placeholder.remove();
   const container = document.getElementById('globalShareTargetContainer');
   if (container) container.innerHTML = '';
   if (cleanupFn) {
