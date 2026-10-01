@@ -1,0 +1,78 @@
+name: Build Android APK & Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build & Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Release APK
+        run: |
+          cd android
+          gradle assembleRelease --stacktrace
+
+      - name: Prepare APK Asset
+        run: |
+          mkdir -p dist
+          APK_PATH=$(find android/app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: Release APK not found!"
+            exit 1
+          fi
+          echo "Found APK at $APK_PATH"
+          cp "$APK_PATH" dist/duydev-studio.apk
+          ls -lh dist/duydev-studio.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: duydev-studio-apk
+          path: dist/duydev-studio.apk
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: DuyDev Studio Native APK ${{ github.ref_name }}
+          files: dist/duydev-studio.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## DuyDev Studio Native Android Wrapper (${{ github.ref_name }})
+
+            ### Điểm nổi bật:
+            - **Khởi động siêu tốc (<80ms)**: Shell Native Kotlin (~3MB) loại bỏ hoàn toàn Splash Screen 2–3s của Chromium WebAPK.
+            - **Chia sẻ tức thì (0ms Splash)**: Giao diện `ShareReceiverActivity` trong suốt hiển thị Bottom Sheet trực tiếp trên ứng dụng nguồn.
+            - **Cầu nối Native Bridge**: Truyền tải dữ liệu và tệp tin qua RAM với `@JavascriptInterface`.
+            - **Hỗ trợ mạng cá nhân**: Tương thích hoàn toàn với Cloudflare Tunnel và mạng LAN Homeserver.
+
+            ### Cài đặt:
+            Tải tệp **`duydev-studio.apk`** đính kèm bên dưới và cài đặt trên thiết bị Android của bạn.
