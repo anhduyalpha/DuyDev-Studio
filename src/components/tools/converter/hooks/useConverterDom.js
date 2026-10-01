@@ -11,6 +11,16 @@ import { bindConverterHistory, updateConverterHistoryDom } from '../components/C
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 
 /**
+ * Safely refreshes Lucide icons if available in current runtime environment.
+ * @param {HTMLElement} root - DOM node root to search for icons
+ */
+function refreshLucide(root) {
+  if (typeof window !== 'undefined' && window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons({ root });
+  }
+}
+
+/**
  * Synchronizes category tab styles and reveals the active category's format grid and options.
  * @param {string} activeCategory - The selected category ('image' | 'video' | 'audio' | 'document')
  */
@@ -69,12 +79,18 @@ export function updateBatchButton(manager) {
   const startButton = document.getElementById('btnStartConversion');
   if (!startButton) return;
 
-  const pendingCount = manager.items.filter(
-    (item) => item.status === 'ready' || item.status === 'idle' || item.status === 'retry'
-  ).length;
   const isBusy = manager.isConverting;
+  const uploadingItems = manager.items.filter(
+    (item) => item.uploadStatus === 'uploading' || item.status === 'uploading'
+  );
+  const isUploading = uploadingItems.length > 0;
 
-  startButton.disabled = pendingCount === 0 || isBusy;
+  const validItems = manager.items.filter(
+    (item) => (item.status === 'ready' || item.status === 'idle' || item.status === 'retry') && (item.fileId || item.file)
+  );
+  const pendingCount = validItems.length;
+
+  startButton.disabled = pendingCount === 0 || isBusy || isUploading;
   startButton.className = `w-full py-3.5 px-5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition shadow-sm ${
     startButton.disabled
       ? 'bg-zinc-200 dark:bg-white/[0.08] text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
@@ -85,6 +101,11 @@ export function updateBatchButton(manager) {
   if (textElement) {
     if (isBusy) {
       textElement.textContent = 'Đang chuyển đổi theo lô...';
+    } else if (isUploading) {
+      const avgProg = Math.round(
+        uploadingItems.reduce((acc, it) => acc + (it.uploadProgress || 0), 0) / uploadingItems.length
+      );
+      textElement.textContent = `Đang tải lên máy chủ (${avgProg}%)...`;
     } else if (pendingCount > 0) {
       textElement.textContent = `Chuyển đổi ${pendingCount} tệp tin`;
     } else {
@@ -94,13 +115,11 @@ export function updateBatchButton(manager) {
 
   const iconElement = document.getElementById('btnStartConversionIcon');
   if (iconElement) {
-    iconElement.innerHTML = isBusy
+    iconElement.innerHTML = (isBusy || isUploading)
       ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>'
       : '<i data-lucide="zap" class="w-4 h-4"></i>';
 
-    if (window.lucide) {
-      window.lucide.createIcons({ root: iconElement });
-    }
+    refreshLucide(iconElement);
   }
 }
 
@@ -114,33 +133,25 @@ export function setupConverterObserver(manager) {
     const formatElement = document.getElementById('converterFormatContainer');
     if (formatElement) {
       formatElement.innerHTML = renderFormatSelector(manager);
-      if (window.lucide) {
-        window.lucide.createIcons({ root: formatElement });
-      }
+      refreshLucide(formatElement);
     }
 
     const queueElement = document.getElementById('converterQueueContainer');
     if (queueElement) {
       queueElement.innerHTML = renderConverterQueueList(manager);
-      if (window.lucide) {
-        window.lucide.createIcons({ root: queueElement });
-      }
+      refreshLucide(queueElement);
     }
 
     const resultElement = document.getElementById('converterResultContainer');
     if (resultElement) {
       resultElement.innerHTML = renderConverterResult(manager);
-      if (window.lucide) {
-        window.lucide.createIcons({ root: resultElement });
-      }
+      refreshLucide(resultElement);
     }
 
     const dropzoneElement = document.getElementById('converterDropzoneContainer');
     if (dropzoneElement) {
       dropzoneElement.innerHTML = renderConverterDropzone(manager);
-      if (window.lucide) {
-        window.lucide.createIcons({ root: dropzoneElement });
-      }
+      refreshLucide(dropzoneElement);
     }
 
     syncCategoryUI(manager.selectedCategory);
@@ -171,17 +182,22 @@ export function setupConverterObserver(manager) {
         if (item.uploadStatus === 'uploading') {
           badge.className = 'badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40';
           badge.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Đang tải lên ${item.uploadProgress || 0}%`;
-          if (window.lucide) window.lucide.createIcons({ root: badge });
+          refreshLucide(badge);
         } else if (item.uploadStatus === 'uploaded' || item.fileId) {
           badge.className = 'badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40';
           badge.setAttribute('title', 'Đã sẵn sàng');
           badge.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> Đã sẵn sàng`;
-          if (window.lucide) window.lucide.createIcons({ root: badge });
+          refreshLucide(badge);
         } else if (item.uploadStatus === 'error') {
           badge.className = 'badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40';
           badge.setAttribute('title', item.uploadError || 'Tải lên ngầm thất bại');
           badge.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i> Lỗi tải lên`;
-          if (window.lucide) window.lucide.createIcons({ root: badge });
+          refreshLucide(badge);
+        } else if (item.status === 'stale' || item.uploadStatus === 'expired') {
+          badge.className = 'badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40';
+          badge.setAttribute('title', 'Phiên làm việc đã hết hạn. Vui lòng nạp lại tệp.');
+          badge.innerHTML = `<i data-lucide="refresh-cw" class="w-3 h-3"></i> Cần nạp lại`;
+          refreshLucide(badge);
         }
       });
 
@@ -189,11 +205,10 @@ export function setupConverterObserver(manager) {
         const queueElement = document.getElementById('converterQueueContainer');
         if (queueElement) {
           queueElement.innerHTML = renderConverterQueueList(manager);
-          if (window.lucide) {
-            window.lucide.createIcons({ root: queueElement });
-          }
+          refreshLucide(queueElement);
         }
       }
+      updateBatchButton(manager);
       return;
     }
 

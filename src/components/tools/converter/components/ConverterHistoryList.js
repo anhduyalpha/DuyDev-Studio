@@ -104,7 +104,7 @@ export function updateConverterHistoryDom(manager) {
   if (!el) return;
   el.innerHTML = renderConverterHistoryList();
   bindConverterHistory(manager);
-  if (window.lucide) window.lucide.createIcons({ root: el });
+  if (typeof window !== 'undefined' && window.lucide) window.lucide.createIcons({ root: el });
 }
 
 export function bindConverterHistory(manager) {

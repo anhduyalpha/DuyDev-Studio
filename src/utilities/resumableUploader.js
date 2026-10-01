@@ -29,7 +29,8 @@ export class ResumableUploader {
   constructor(file, options = {}) {
     this.file = file;
     this.chunkSize = options.chunkSize || getOptimalChunkSize(file.size);
-    this.concurrency = options.concurrency || 4;
+    const isWan = isWanConnection();
+    this.concurrency = options.concurrency || (isWan ? 2 : 4);
     this.purpose = options.purpose || 'archive-inspect';
     this.targetDir = options.targetDir || null;
     this.headers = options.headers || {};
@@ -111,19 +112,27 @@ export class ResumableUploader {
     try {
       if (!this.uploadId) {
         this.onStage('Khởi tạo phiên truyền tệp...');
-        const initRes = await fetch('/api/v1/files/chunk/init', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...this.headers },
-          body: JSON.stringify({
-            fileName: this.file.name,
-            fileSize: this.file.size,
-            totalChunks: this.totalChunks,
-            chunkSize: this.chunkSize,
-            purpose: this.purpose,
-            targetDir: this.targetDir,
-            strictSizeCheck: true
-          })
-        });
+        const initController = new AbortController();
+        const initTimeoutId = setTimeout(() => initController.abort(), 30_000);
+        let initRes;
+        try {
+          initRes = await fetch('/api/v1/files/chunk/init', {
+            method: 'POST',
+            signal: initController.signal,
+            headers: { 'Content-Type': 'application/json', ...this.headers },
+            body: JSON.stringify({
+              fileName: this.file.name,
+              fileSize: this.file.size,
+              totalChunks: this.totalChunks,
+              chunkSize: this.chunkSize,
+              purpose: this.purpose,
+              targetDir: this.targetDir,
+              strictSizeCheck: true
+            })
+          });
+        } finally {
+          clearTimeout(initTimeoutId);
+        }
         const initData = await initRes.json();
         if (!initRes.ok || !initData.success) {
           throw new Error(initData.error?.message || (typeof initData.error === 'string' ? initData.error : 'Khởi tạo tải thất bại'));
@@ -138,6 +147,7 @@ export class ResumableUploader {
       }
 
       this.saveCheckpoint();
+      this.emitTelemetry(0);
 
       // Step 2: Upload remaining chunks concurrently with worker pool
       const pending = [];
@@ -169,11 +179,19 @@ export class ResumableUploader {
 
       // Step 3: Complete & Assembly
       this.onStage('Đang hoàn tất và ghép tệp trên server...');
-      const compRes = await fetch('/api/v1/files/chunk/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...this.headers },
-        body: JSON.stringify({ uploadId: this.uploadId })
-      });
+      const compController = new AbortController();
+      const compTimeoutId = setTimeout(() => compController.abort(), 60_000);
+      let compRes;
+      try {
+        compRes = await fetch('/api/v1/files/chunk/complete', {
+          method: 'POST',
+          signal: compController.signal,
+          headers: { 'Content-Type': 'application/json', ...this.headers },
+          body: JSON.stringify({ uploadId: this.uploadId })
+        });
+      } finally {
+        clearTimeout(compTimeoutId);
+      }
       const compData = await compRes.json();
       if (!compRes.ok || !compData.success) {
         throw new Error(compData.error?.message || (typeof compData.error === 'string' ? compData.error : 'Ghép tệp thất bại'));
@@ -268,9 +286,9 @@ export class ResumableUploader {
   calculateSpeed(totalSent) {
     const now = Date.now();
     const timeDelta = (now - this.lastWindowTime) / 1000;
-    if (timeDelta >= 0.5) {
+    if (timeDelta >= 0.25 || totalSent === this.file.size) {
       const bytesDelta = totalSent - this.lastWindowBytes;
-      const instantSpeed = Math.max(0, bytesDelta / timeDelta);
+      const instantSpeed = timeDelta > 0 ? Math.max(0, bytesDelta / timeDelta) : 0;
       // Exponential moving average filter for smooth speed readout
       this.speed = this.speed === 0 ? instantSpeed : (this.speed * 0.7 + instantSpeed * 0.3);
       this.lastWindowBytes = totalSent;
@@ -349,10 +367,9 @@ export function formatEta(sec) {
  * Automatically uses direct upload for <= 50MB and ResumableUploader for > 50MB (up to 10GB+).
  */
 export async function smartUploadFile(file, options = {}) {
-  const isWan = isWanConnection();
-  // On WAN (Cloudflare 4G): files > 8MB automatically switch to 4x concurrent chunked streaming
-  // On LAN / Direct VPN: direct streaming handles up to 50MB in < 1.5s
-  const defaultThreshold = isWan ? 8 * 1024 * 1024 : 50 * 1024 * 1024;
+  // Direct streaming handles up to 50MB in 1 single fast HTTP/2 POST request on both LAN and WAN.
+  // Files > 50MB switch to resilient concurrent chunked upload with auto-recovery and timeouts.
+  const defaultThreshold = 50 * 1024 * 1024;
   const threshold = options.thresholdBytes || defaultThreshold;
   const signal = options.signal || options.abortController?.signal;
 

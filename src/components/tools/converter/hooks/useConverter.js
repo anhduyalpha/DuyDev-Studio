@@ -96,11 +96,17 @@ export class ConverterManager {
         Object.assign(this.renamePattern, saved.renamePattern);
       }
       if (Array.isArray(saved.items)) {
-        this.items = saved.items.map((it) => ({
-          ...it,
-          file: null,
-          eventSource: null
-        }));
+        this.items = saved.items.map((it) => {
+          const isStale = !it.fileId;
+          return {
+            ...it,
+            file: null,
+            eventSource: null,
+            status: isStale ? 'stale' : it.status,
+            uploadStatus: isStale ? 'expired' : (it.fileId ? 'uploaded' : 'idle'),
+            error: isStale ? 'Tệp cần được nạp lại (phiên cũ)' : it.error
+          };
+        });
       }
     }
   }
@@ -117,6 +123,7 @@ export class ConverterManager {
         detectedMeta: it.detectedMeta,
         targetFormat: it.targetFormat,
         status: it.status,
+        uploadStatus: it.uploadStatus,
         progress: it.progress,
         result: it.result,
         error: it.error
@@ -351,10 +358,20 @@ export class ConverterManager {
   async startConversion() {
     if (this.isConverting) return;
 
+    // Guard: Check if any item is currently uploading
+    const uploadingItems = this.items.filter((it) => it.uploadStatus === 'uploading');
+    if (uploadingItems.length > 0) {
+      return showToast('Đang tải tệp lên máy chủ, vui lòng đợi giây lát...', 'info');
+    }
+
     const pending = this.items.filter(
-      (it) => it.status === 'ready' || it.status === 'idle' || it.status === 'retry'
+      (it) => (it.status === 'ready' || it.status === 'idle' || it.status === 'retry') && (it.fileId || it.file)
     );
     if (pending.length === 0) {
+      const hasStale = this.items.some((it) => it.status === 'stale' || (!it.fileId && !it.file));
+      if (hasStale) {
+        return showToast('Các tệp cũ đã hết hạn phiên làm việc. Vui lòng nạp lại tệp.', 'warning');
+      }
       return showToast('Không có tệp nào trong hàng đợi cần chuyển đổi', 'warning');
     }
 

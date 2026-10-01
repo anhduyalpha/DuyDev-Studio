@@ -49,7 +49,7 @@ function renderGroupPills(formats, currentTarget, groupExt) {
     }
 
     return `
-      <button type="button" data-group-ext="${groupExt}" data-format="${fmt.id}" data-recommended="${isRecommended}" class="btn-group-format-pill py-2.5 px-3 rounded-xl transition text-center flex items-center justify-center relative cursor-pointer ${borderClass}">
+      <button type="button" data-group-ext="${groupExt}" data-format="${fmt.id}" data-recommended="${isRecommended}" class="btn-group-format-pill py-2 px-2.5 rounded-lg transition text-center flex items-center justify-center relative cursor-pointer ${borderClass}">
         <span class="font-mono text-xs font-bold flex items-center gap-1">
           ${fmt.name}${isRecommended ? '<span class="text-amber-500 text-xs">★</span>' : ''}
         </span>
@@ -91,7 +91,7 @@ function renderGroupBox(group) {
 
       <!-- Collapsible File List Dropdown -->
       <details class="group/files rounded-xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200/70 dark:border-white/[0.06] overflow-hidden text-xs">
-        <summary class="px-3 py-2 flex items-center justify-between cursor-pointer select-none text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">
+        <summary class="px-3 py-1.5 flex items-center justify-between cursor-pointer select-none text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">
           <div class="flex items-center gap-2 min-w-0">
             <i data-lucide="folder" class="w-3.5 h-3.5 text-indigo-500 shrink-0"></i>
             <span class="font-medium truncate">Danh sách ${group.items.length} tệp ${extUpper}</span>
@@ -113,11 +113,10 @@ function renderGroupBox(group) {
         </div>
       </details>
 
-
       <!-- Format Pills Grid -->
-      <div class="group-format-grid ${isVideo ? 'space-y-3' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2'}">
+      <div class="group-format-grid ${isVideo ? 'space-y-3' : 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2'}">
         ${isVideo ? `
-          <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
             ${renderGroupPills(videoTargets, currentTarget, group.ext)}
           </div>
           ${audioTargets.length > 0 ? `
@@ -126,7 +125,7 @@ function renderGroupBox(group) {
               <span class="flex-shrink mx-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">Trích xuất âm thanh</span>
               <div class="flex-grow border-t border-zinc-200 dark:border-white/[0.08]"></div>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
               ${renderGroupPills(audioTargets, currentTarget, group.ext)}
             </div>
           ` : ''}

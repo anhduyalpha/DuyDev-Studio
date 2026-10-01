@@ -83,12 +83,16 @@ export function startBackgroundUpload(manager, item) {
       item.uploadStatus = 'uploaded';
       item.uploadProgress = 100;
       item.uploadError = null;
+      manager.persist();
       manager.notify('upload-progress');
+      return upData;
     } catch (err) {
       if (abortController.signal.aborted) return;
       item.uploadStatus = 'error';
       item.uploadError = err.message || 'Lỗi tải lên ngầm';
+      manager.persist();
       manager.notify('upload-progress');
+      throw err;
     }
   })();
 
@@ -102,6 +106,11 @@ export async function processSingleItem(manager, item) {
     item.progress = 5;
     item.stage = 'Đang khởi tạo chuyển đổi...';
     manager.notify('item-progress');
+
+    // 0. Hard guard: Ensure we have either fileId or file
+    if (!item.fileId && !item.file) {
+      throw new Error('Tệp chưa được tải lên máy chủ hoặc phiên làm việc đã hết hạn. Vui lòng nạp lại tệp.');
+    }
 
     // 1. Upload if missing fileId
     if (!item.fileId && item.file) {
@@ -118,6 +127,8 @@ export async function processSingleItem(manager, item) {
       if (!item.fileId) {
         const abortController = new AbortController();
         item.abortController = abortController;
+        item.uploadStatus = 'uploading';
+        manager.notify('upload-progress');
         const upData = await smartUploadFile(item.file, {
           purpose: 'universal-converter',
           signal: abortController.signal,
@@ -128,8 +139,10 @@ export async function processSingleItem(manager, item) {
           },
           onProgress: (p) => {
             item.progress = Math.min(40, Math.round(p.percent * 0.4));
+            item.uploadProgress = p.percent || 0;
             item.stage = `Đang tải lên ${p.percent}%...`;
             manager.notify('item-progress');
+            manager.notify('upload-progress');
           }
         });
         if (!upData?.fileId) {
@@ -139,7 +152,14 @@ export async function processSingleItem(manager, item) {
         item.uploadStatus = 'uploaded';
         item.uploadProgress = 100;
         item.uploadError = null;
+        manager.persist();
+        manager.notify('upload-progress');
       }
+    }
+
+    // 1.1 Final verification of fileId before creating job
+    if (!item.fileId) {
+      throw new Error('Không thể xác thực mã tệp trên máy chủ (fileId missing)');
     }
 
     // 2. Enqueue conversion job
