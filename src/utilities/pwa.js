@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v18.5';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v18.6';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.

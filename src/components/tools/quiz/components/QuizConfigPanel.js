@@ -115,11 +115,9 @@ export function renderQuizConfigPanel(state) {
           <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="https://drive.google.com/file/d/.../view" class="w-full bg-zinc-950 border ${
             isDriveValid
               ? 'border-emerald-500/40 focus:border-emerald-500'
-              : hasDriveUrl
-              ? 'border-rose-500/40 focus:border-rose-500'
-              : !hasFile
-              ? 'border-rose-500/20 focus:border-rose-500/50'
-              : 'border-zinc-800 focus:border-zinc-600'
+              : isFileReady
+              ? 'border-zinc-800 focus:border-zinc-600'
+              : 'border-rose-500/40 focus:border-rose-500'
           } rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-hidden transition" />
         </div>
       </div>
