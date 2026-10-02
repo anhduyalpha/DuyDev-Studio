@@ -43,21 +43,29 @@ function renderQueueItem(it, idx, isConverting) {
   const isError = it.status === 'error';
   const isBusy = it.status === 'converting';
 
+  const catColorMap = {
+    image: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+    video: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    audio: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
+    document: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+  };
+  const catColor = catColorMap[meta.category] || 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/[0.06]';
+
   return `
-    <div class="py-3 px-1 sm:px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 group rounded-xl hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition" data-item-id="${it.id}">
+    <div class="py-3 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 group rounded-xl hover:bg-zinc-50/80 dark:hover:bg-white/[0.03] transition border border-transparent hover:border-zinc-200/50 dark:hover:border-white/[0.04]" data-item-id="${it.id}">
       <!-- Info Left (Row 1 on Mobile) -->
       <div class="flex items-center gap-3 min-w-0 flex-1">
-        <div class="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-white/[0.05] border border-zinc-200 dark:border-white/[0.06] flex items-center justify-center shrink-0 font-mono text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+        <div class="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 font-mono text-[11px] font-bold ${catColor}">
           ${meta.extension || 'FILE'}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate" title="${meta.name || ''}">
+          <p class="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate" title="${meta.name || ''}">
             ${meta.name || 'Tệp không tên'}
           </p>
           <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mt-0.5">
             <span>${formatBytes(meta.size || 0)}</span>
             <span>•</span>
-            <span class="text-indigo-500 uppercase">${meta.categoryLabel || meta.category || 'Tài liệu'}</span>
+            <span class="text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-semibold">${meta.categoryLabel || meta.category || 'Tài liệu'}</span>
           </div>
         </div>
       </div>
@@ -66,7 +74,7 @@ function renderQueueItem(it, idx, isConverting) {
       <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-white/[0.04]">
         <div class="flex items-center gap-2 flex-wrap min-w-0">
           <!-- Target Format Selector (Disabled when converting/done) -->
-          <select class="item-format-select py-1 px-2 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-white/[0.05] border border-zinc-200 dark:border-white/[0.08] text-zinc-800 dark:text-zinc-200 cursor-pointer disabled:opacity-50 w-28"
+          <select class="item-format-select py-1.5 px-2.5 text-xs font-mono font-bold rounded-xl bg-zinc-100 dark:bg-white/[0.06] border border-zinc-200/80 dark:border-white/[0.08] text-zinc-900 dark:text-white cursor-pointer disabled:opacity-50 w-28 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
             data-item-id="${it.id}" ${isBusy || isDone ? 'disabled' : ''}>
             ${compatibleFormats.map(fmt => `
               <option value="${fmt.id}" ${(it.targetFormat || '').toLowerCase() === fmt.id.toLowerCase() ? 'selected' : ''}>
@@ -123,7 +131,7 @@ function renderQueueItem(it, idx, isConverting) {
         </div>
 
         <!-- Delete Item Button -->
-        <button type="button" class="btn-remove-item p-2 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.04] transition disabled:opacity-30 shrink-0 cursor-pointer"
+        <button type="button" class="btn-remove-item p-2 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 rounded-xl hover:bg-red-500/10 transition disabled:opacity-30 shrink-0 cursor-pointer active:scale-90"
           data-item-id="${it.id}" ${isBusy ? 'disabled' : ''} title="Xóa tệp này">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>

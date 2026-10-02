@@ -146,10 +146,10 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION) {
     </button>
   `;
 
-  const textSpan = toast.querySelector('.toast-message-text');
+  const textSpan = typeof toast.querySelector === 'function' ? toast.querySelector('.toast-message-text') : null;
   const toastRecord = createToastRecord(toast, cleanMessage, type, textSpan);
 
-  const closeBtn = toast.querySelector('.btn-toast-close');
+  const closeBtn = typeof toast.querySelector === 'function' ? toast.querySelector('.btn-toast-close') : null;
   if (closeBtn) {
     closeBtn.onclick = (e) => {
       e.stopPropagation();
@@ -158,7 +158,7 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION) {
   }
 
   toast.onclick = (e) => {
-    if (e.target !== closeBtn && !closeBtn?.contains(e.target)) {
+    if (e.target !== closeBtn && !closeBtn?.contains?.(e.target)) {
       toastRecord.dismiss();
     }
   };
@@ -215,7 +215,7 @@ export function showActionableToast(message, { type = 'success', actionText = 'M
 
   const toastRecord = createToastRecord(toast, cleanMessage, type);
 
-  const actionBtn = toast.querySelector('.btn-toast-action');
+  const actionBtn = typeof toast.querySelector === 'function' ? toast.querySelector('.btn-toast-action') : null;
   if (actionBtn) {
     actionBtn.onclick = (e) => {
       e.stopPropagation();
@@ -224,7 +224,7 @@ export function showActionableToast(message, { type = 'success', actionText = 'M
     };
   }
 
-  const dismissBtn = toast.querySelector('.btn-toast-dismiss');
+  const dismissBtn = typeof toast.querySelector === 'function' ? toast.querySelector('.btn-toast-dismiss') : null;
   if (dismissBtn) {
     dismissBtn.onclick = (e) => {
       e.stopPropagation();

@@ -55,14 +55,14 @@ export function syncFormatUI(activeCategory, targetFormat) {
       (pillElement.dataset.format || '').toLowerCase() === (targetFormat || '').toLowerCase();
     const isRecommended = pillElement.dataset.recommended === 'true';
 
-    let borderClass = 'border border-zinc-200 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/[0.2] bg-zinc-50/50 dark:bg-white/[0.02] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white';
+    let pillClass = 'border border-zinc-200 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/[0.2] bg-zinc-50/50 dark:bg-white/[0.02] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium';
     if (isTargetActive) {
-      borderClass = 'ring-2 ring-indigo-500 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 font-bold border-indigo-500/40 shadow-xs';
+      pillClass = 'ring-2 ring-indigo-500 bg-indigo-600 text-white font-bold border-indigo-600 shadow-sm shadow-indigo-600/30';
     } else if (isRecommended) {
-      borderClass = 'border-2 border-indigo-400/40 dark:border-indigo-500/30 hover:border-indigo-500/60 bg-zinc-50/50 dark:bg-white/[0.02] text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white';
+      pillClass = 'border border-indigo-500/30 dark:border-indigo-400/30 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 hover:border-indigo-500/60 font-semibold';
     }
 
-    pillElement.className = `btn-format-pill py-3 px-4 rounded-xl transition text-center flex items-center justify-center relative group ${borderClass}`;
+    pillElement.className = `btn-format-pill py-3 px-4 rounded-xl transition text-center flex items-center justify-center relative group active:scale-95 cursor-pointer ${pillClass}`;
   });
 
   const badgeElement = document.getElementById('badgeCurrentTargetFormat');

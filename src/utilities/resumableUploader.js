@@ -7,7 +7,7 @@
 const CHECKPOINT_KEY = 'ds_chunk_upload_checkpoint';
 
 export function isWanConnection() {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined' || !window.location) return false;
   const h = window.location.hostname || '';
   return h.includes('alphadaniel.io.vn') || h.includes('cloudflare');
 }

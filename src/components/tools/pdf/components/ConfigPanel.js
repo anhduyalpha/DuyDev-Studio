@@ -267,8 +267,12 @@ export function renderConfigPanel(queueState = {}) {
 
     return `
       <button id="btnStartProcess" ${startDisabled ? 'disabled' : ''} type="button"
-        class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 transition cursor-pointer">
-        <i data-lucide="${mode === 'view' ? 'eye' : 'play'}" class="w-4 h-4"></i>
+        class="w-full py-3.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+          startDisabled
+            ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
+            : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-zinc-950 shadow-lg shadow-amber-500/25 active:scale-[0.98] cursor-pointer'
+        }">
+        <i data-lucide="${mode === 'view' ? 'eye' : 'play'}" class="w-4 h-4 fill-current"></i>
         <span>${getPrimaryButtonLabel()}</span>
       </button>
     `;

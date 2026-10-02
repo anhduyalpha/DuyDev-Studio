@@ -6,11 +6,13 @@ const DEFAULT_TOOLS = [
   // 1. PDF Studio Suite
   {
     id: 'pdf-studio',
-    title: 'PDF Studio',
-    description: 'Ghép, tách, xoay, nén, chuyển đổi, watermark và xem PDF.',
+    title: 'PDF Studio Pro',
+    description: 'Ghép, tách, xoay, nén, đóng dấu và xem PDF chuyên nghiệp.',
     category: 'pdf',
     icon: 'file-text',
-    badge: '',
+    badge: '9-in-1 Suite',
+    featured: true,
+    specs: ['Nén & Ghép', 'Tách & Xoay', 'Watermark'],
     color: '#F59E0B',
     route: '#tool/pdf-studio',
     tags: ['pdf', 'ghép', 'tách', 'xoay', 'ảnh sang pdf', 'nén', 'mật khẩu', 'watermark', 'trích ảnh', 'xem pdf', 'merge', 'split', 'rotate']
@@ -19,22 +21,26 @@ const DEFAULT_TOOLS = [
   // 2. Archive Inspector (.ZIP / .RAR)
   {
     id: 'archive-inspect',
-    title: 'Xem Tệp Nén',
-    description: 'Duyệt cấu trúc thư mục và trích xuất tệp không cần giải nén.',
+    title: 'Soi Tệp Nén',
+    description: 'Duyệt cấu trúc thư mục và trích xuất không cần giải nén.',
     category: 'archive',
     icon: 'archive',
-    badge: '',
+    badge: 'Zero-Extraction',
+    featured: true,
+    specs: ['.ZIP', '.RAR', '.7Z', 'Trích tức thì'],
     color: '#0EA5E9',
     route: '#archive',
     tags: ['zip', 'rar', 'nén', 'xem', 'preview', 'tree', 'extract']
   },
   {
     id: 'server-archive',
-    title: 'Nén Tệp',
+    title: 'Nén Tệp ZIP',
     description: 'Nén tệp tin và thư mục thành định dạng ZIP.',
     category: 'archive',
     icon: 'folder-archive',
     badge: '',
+    featured: false,
+    specs: ['ZIP archive'],
     color: '#0EA5E9',
     route: '#server-archive',
     tags: ['zip', 'archive', 'nén']
@@ -43,11 +49,13 @@ const DEFAULT_TOOLS = [
   // 3. Format Converters
   {
     id: 'universal-converter',
-    title: 'File Converter',
-    description: 'Chuyển đổi định dạng hình ảnh, video, âm thanh và tài liệu.',
+    title: 'File Converter Pro',
+    description: 'Chuyển đổi 65+ định dạng hình ảnh, video, âm thanh và tài liệu.',
     category: 'convert',
     icon: 'refresh-cw',
-    badge: '',
+    badge: '65+ Định dạng',
+    featured: true,
+    specs: ['Hình ảnh', 'Video & Nhạc', 'Tài liệu'],
     color: '#6366F1',
     route: '#tool/universal-converter',
     tags: ['convert', 'chuyển đổi', 'universal', 'file converter', 'ảnh', 'video', 'nhạc', 'văn bản', 'webp', 'mp4', 'pdf']
@@ -60,6 +68,8 @@ const DEFAULT_TOOLS = [
     category: 'convert',
     icon: 'code-2',
     badge: '',
+    featured: false,
+    specs: ['Markdown', 'DOCX', 'PDF'],
     color: '#8B5CF6',
     route: '#tool/markdown-docs',
     tags: ['markdown', 'docx', 'html', 'pdf', 'document']
@@ -68,11 +78,13 @@ const DEFAULT_TOOLS = [
   // 4. QR Studio
   {
     id: 'qr-multi',
-    title: 'Tạo Mã QR',
-    description: 'Tạo mã QR thanh toán VietQR, Wi-Fi, liên kết và danh bạ.',
+    title: 'QR Studio Pro',
+    description: 'Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ.',
     category: 'qr',
     icon: 'qr-code',
-    badge: '',
+    badge: 'VietQR Napas',
+    featured: true,
+    specs: ['VietQR 24/7', 'Wi-Fi & Link', 'Mẫu tùy chỉnh'],
     color: '#10B981',
     route: '#tool/qr-multi',
     tags: ['qr', 'qrcode', 'wifi', 'vietqr', 'vcard', 'tạo mã']
@@ -84,6 +96,8 @@ const DEFAULT_TOOLS = [
     category: 'qr',
     icon: 'scan-line',
     badge: '',
+    featured: false,
+    specs: ['Ảnh & Clipboard'],
     color: '#10B981',
     route: '#tool/qr-scan',
     tags: ['qr', 'quét', 'decode', 'reader']
@@ -97,6 +111,8 @@ const DEFAULT_TOOLS = [
     category: 'system',
     icon: 'binary',
     badge: '',
+    featured: false,
+    specs: ['MD5', 'SHA-256', 'Base64'],
     color: '#64748B',
     route: '#tool/hash-checksum',
     tags: ['hash', 'md5', 'sha256', 'base64']
@@ -108,6 +124,8 @@ const DEFAULT_TOOLS = [
     category: 'system',
     icon: 'file-down',
     badge: '',
+    featured: false,
+    specs: ['PDF & MD'],
     color: '#6366F1',
     route: '#tool/studocu-dl',
     tags: ['studocu', 'tài liệu', 'tiện ích', 'download', 'pdf', 'slide', 'bài giảng']
@@ -115,10 +133,12 @@ const DEFAULT_TOOLS = [
   {
     id: 'storage',
     title: 'Bộ Nhớ Lưu Trữ',
-    description: 'Kho lưu trữ và truyền tải tập tin cá nhân giữa các thiết bị.',
+    description: 'Kho lưu trữ và truyền tải tập tin cá nhân an toàn giữa các thiết bị.',
     category: 'system',
     icon: 'hard-drive',
     badge: 'Cá nhân',
+    featured: false,
+    specs: ['Cloud Drive', 'Tải lên / về'],
     color: '#6366F1',
     route: '#storage',
     tags: ['storage', 'drive', 'files', 'lưu trữ', 'casaos', 'tập tin', 'upload', 'download']

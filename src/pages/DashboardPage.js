@@ -14,9 +14,52 @@ import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 
+function renderToolsContent(toolsList, isAllDefault) {
+  if (isAllDefault) {
+    const featured = toolsList.filter(t => t.featured);
+    const secondary = toolsList.filter(t => !t.featured);
+
+    return `
+      <div class="space-y-6">
+        <!-- Spotlight Core Tools -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">Tâm điểm tác vụ</h2>
+            </div>
+            <span class="text-xs font-mono text-zinc-400">4 bộ công cụ chính</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            ${featured.map(t => renderToolCard(t, true)).join('')}
+          </div>
+        </div>
+
+        <!-- Secondary Utility Tools -->
+        <div class="space-y-3 pt-1">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tiện ích & Công cụ hỗ trợ</h3>
+            <span class="text-xs font-mono text-zinc-400">${secondary.length} công cụ</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+            ${secondary.map(t => renderToolCard(t, false)).join('')}
+          </div>
+        </div>
+      </div>
+    `.trim();
+  }
+
+  return `
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+      ${toolsList.map(t => renderToolCard(t, t.featured)).join('')}
+    </div>
+  `.trim();
+}
+
 export function renderDashboardPage() {
   const tools = toolRegistry.getFilteredTools();
   const currentCategory = toolRegistry.currentCategory;
+  const isAllDefault = currentCategory === 'all' && !toolRegistry.searchQuery;
   const counts = {
     all: toolRegistry.tools.length,
     pdf: toolRegistry.tools.filter(t => t.category === 'pdf').length,
@@ -68,14 +111,16 @@ export function renderDashboardPage() {
         ${renderCategoryFilters(currentCategory, counts)}
       </div>
 
-      <!-- Tools Grid (Responsive 1-col sleek rows on mobile, multi-col on desktop) -->
+      <!-- Tools Grid -->
       <div>
         <div class="flex items-center justify-between mb-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">Tất cả công cụ (${tools.length})</span>
+          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">
+            ${isAllDefault ? `Tất cả công cụ (${tools.length})` : `Kết quả (${tools.length})`}
+          </span>
         </div>
 
-        <div id="toolsGridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4">
-          ${tools.map(tool => renderToolCard(tool)).join('')}
+        <div id="toolsGridContainer">
+          ${renderToolsContent(tools, isAllDefault)}
         </div>
       </div>
 
@@ -113,12 +158,14 @@ export function attachDashboardListeners(onReRender) {
     const filteredTools = toolRegistry.getFilteredTools();
     const gridEl = document.getElementById('toolsGridContainer');
     const countEl = document.getElementById('toolsCountLabel');
+    const isAll = cat === 'all' && !toolRegistry.searchQuery;
+
     if (gridEl) {
-      gridEl.innerHTML = filteredTools.map(tool => renderToolCard(tool)).join('');
+      gridEl.innerHTML = renderToolsContent(filteredTools, isAll);
       if (window.lucide) window.lucide.createIcons({ root: gridEl });
     }
     if (countEl) {
-      countEl.textContent = `Tất cả công cụ (${filteredTools.length})`;
+      countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
     }
 
     // 3. Update active pill styling across all tabs in place

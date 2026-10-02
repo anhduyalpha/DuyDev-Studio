@@ -30,14 +30,19 @@ export function syncModeTabs(activeMode, isProcessing = false) {
     const isActive = btn.dataset.mode === activeMode;
     if (isProcessing) {
       btn.disabled = true;
-      btn.className = 'btn-pdf-mode flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0 opacity-40 cursor-not-allowed pointer-events-none text-zinc-400 dark:text-zinc-600';
+      btn.className = 'btn-pdf-mode flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0 opacity-40 cursor-not-allowed pointer-events-none text-zinc-400 dark:text-zinc-600';
     } else {
       btn.disabled = false;
-      btn.className = `btn-pdf-mode flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer shrink-0 ${
+      btn.className = `btn-pdf-mode flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer shrink-0 ${
         isActive
-          ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-          : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/60 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]'
+          ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm font-bold'
+          : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/70 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]'
       }`;
+    }
+    const icon = typeof btn.querySelector === 'function' ? btn.querySelector('svg, i') : null;
+    if (icon && icon.classList) {
+      icon.classList.toggle('text-amber-400', isActive);
+      icon.classList.toggle('dark:text-amber-500', isActive);
     }
   });
 }
