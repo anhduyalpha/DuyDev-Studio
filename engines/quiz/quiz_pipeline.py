@@ -336,7 +336,7 @@ def parse_and_standardize_questions(
                     current_p += 1
                 emit_progress(
                     current_p,
-                    f"Agnes 3.0 Flash đang chuẩn hóa {batch_label} ({elapsed}s)..."
+                    f"Đang chuẩn hóa {batch_label} ({elapsed}s)..."
                 )
 
         if "err" in err_holder:
@@ -919,7 +919,7 @@ def run_pipeline(
     raw_text, actual_pages = extract_raw_pages(pdf_local, pages)
 
     # 3. AI Extraction & Answer Ingestion
-    emit_progress(45, f"Agnes 3.0 Flash đang chuẩn hóa câu hỏi & giải chi tiết ({count} câu)...")
+    emit_progress(45, f"Đang chuẩn hóa câu hỏi & giải chi tiết ({count} câu)...")
     questions = parse_and_standardize_questions(
         raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model
     )

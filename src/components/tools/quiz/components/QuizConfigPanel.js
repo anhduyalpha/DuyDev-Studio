@@ -113,7 +113,7 @@ export function renderQuizConfigPanel(state) {
       <div class="space-y-2 bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/60">
         <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
           <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span>Nhận diện lệnh tự nhiên</span>
+          <span>Nhận diện thông minh</span>
         </label>
         <div class="flex gap-2">
           <input type="text" id="quizPromptInput" placeholder="Ví dụ: Trang 11, 20 câu, từ câu 1" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500/50 transition" />

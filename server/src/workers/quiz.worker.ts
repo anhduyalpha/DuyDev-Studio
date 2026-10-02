@@ -113,7 +113,9 @@ function executeQuizEngine(
       try {
         const payload: PythonProgressEvent = JSON.parse(line.trim());
         if (payload.progress !== undefined) {
-          const p = onProgress(payload.progress, payload.stage || 'Đang xử lý đề thi...').catch(() => {});
+          const rawStage = payload.stage || 'Đang xử lý đề thi...';
+          const cleanStage = rawStage.replace(/Agnes(\s*3\.0\s*Flash)?\s*/gi, '').trim();
+          const p = onProgress(payload.progress, cleanStage || 'Đang xử lý đề thi...').catch(() => {});
           pendingPromises.push(p);
         }
         if (payload.success) {
