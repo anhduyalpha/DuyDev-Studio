@@ -7,6 +7,10 @@
 import { quizManager } from './useQuiz.js';
 import { renderQuizConfigPanel } from '../components/QuizConfigPanel.js';
 import { renderQuizResultCard } from '../components/QuizResultCard.js';
+import { renderQuizHistoryList } from '../components/QuizHistoryList.js';
+import { deleteQuizHistoryItem, clearAllQuizHistory } from '../utilities/quizHistoryHelper.js';
+import { copyText } from '../../../../utilities/clipboard.js';
+import { showToast } from '../../../../utilities/toast.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 
 export function attachQuizListeners() {
@@ -156,6 +160,10 @@ export function attachQuizListeners() {
     if (resultEl) {
       resultEl.innerHTML = renderQuizResultCard(state);
       attachResultHandlers();
+    }
+
+    if (event === 'job-completed') {
+      renderAndBindHistory();
     }
 
     if (window.lucide?.createIcons) window.lucide.createIcons();
@@ -322,23 +330,112 @@ export function attachQuizListeners() {
       };
     });
 
-    // Native APK download buttons
+    // Native APK and browser download buttons
     const downloadBtns = document.querySelectorAll('.btn-quiz-download');
     downloadBtns.forEach((btn) => {
-      btn.onclick = (e) => {
-        if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
-          e.preventDefault();
-          const fileUrl = btn.dataset.fileUrl || btn.getAttribute('href');
-          const fileName = btn.dataset.fileName || btn.getAttribute('download') || 'document.pdf';
-          window.AndroidBridge.downloadFile(fileUrl, fileName);
+      btn.onclick = (e) => handleQuizDownload(e, btn);
+    });
+  }
+
+  // Unified download dispatcher for result card and history list
+  function handleQuizDownload(e, btn) {
+    const fileUrl = btn.dataset.fileUrl || btn.getAttribute('href');
+    const fileName = btn.dataset.fileName || btn.getAttribute('download') || 'quiz_document.pdf';
+    const mimeType = fileName.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream';
+
+    if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+      e.preventDefault();
+      try {
+        window.AndroidBridge.downloadFile(fileUrl, fileName, mimeType);
+        return;
+      } catch (err) {
+        console.warn('AndroidBridge.downloadFile failed, fallback to native navigation', err);
+        window.location.href = fileUrl;
+        return;
+      }
+    }
+  }
+
+  // Attach History Handlers
+  function attachHistoryHandlers() {
+    // 1. History Preview buttons
+    const historyPreviewBtns = document.querySelectorAll('.btn-quiz-history-preview');
+    historyPreviewBtns.forEach((btn) => {
+      btn.onclick = () => {
+        const fileId = btn.dataset.fileId;
+        const fileName = btn.dataset.fileName;
+        const viewUrl = btn.dataset.viewUrl;
+        const downloadUrl = btn.dataset.downloadUrl;
+        if (fileId || viewUrl) {
+          ViewerConnector.preview({
+            id: fileId || fileName,
+            fileId: fileId,
+            name: fileName,
+            fileName: fileName,
+            mimeType: 'application/pdf',
+            viewUrl: viewUrl || `/api/v1/files/view/${fileId}`,
+            downloadUrl: downloadUrl || `/api/v1/files/download/${fileId}`
+          });
         }
       };
     });
+
+    // 2. History Download buttons
+    const historyDownloadBtns = document.querySelectorAll('.btn-quiz-history-download');
+    historyDownloadBtns.forEach((btn) => {
+      btn.onclick = (e) => handleQuizDownload(e, btn);
+    });
+
+    // 3. History Copy link buttons
+    const copyBtns = document.querySelectorAll('.btn-quiz-history-copy');
+    copyBtns.forEach((btn) => {
+      btn.onclick = async () => {
+        const relUrl = btn.dataset.copyUrl;
+        if (relUrl) {
+          const fullUrl = relUrl.startsWith('http') ? relUrl : `${window.location.origin}${relUrl}`;
+          await copyText(fullUrl);
+          showToast('Đã sao chép liên kết tải về', 'success');
+        }
+      };
+    });
+
+    // 4. Delete single history pair
+    const deletePairBtns = document.querySelectorAll('.btn-quiz-delete-pair');
+    deletePairBtns.forEach((btn) => {
+      btn.onclick = () => {
+        const pairId = btn.dataset.pairId;
+        if (pairId) {
+          deleteQuizHistoryItem(pairId);
+          renderAndBindHistory();
+          showToast('Đã xóa bộ đề khỏi lịch sử', 'success');
+        }
+      };
+    });
+
+    // 5. Clear all history
+    const btnClearAll = document.getElementById('btnQuizClearHistory');
+    if (btnClearAll) {
+      btnClearAll.onclick = () => {
+        clearAllQuizHistory();
+        renderAndBindHistory();
+        showToast('Đã xóa toàn bộ lịch sử tạo bài tập', 'success');
+      };
+    }
+  }
+
+  function renderAndBindHistory() {
+    const historyEl = document.getElementById('quizHistoryContainer');
+    if (historyEl) {
+      historyEl.innerHTML = renderQuizHistoryList();
+      attachHistoryHandlers();
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+    }
   }
 
   // Initial handler binding
   attachConfigHandlers();
   attachResultHandlers();
+  attachHistoryHandlers();
 
   // Return clean teardown function
   return () => {

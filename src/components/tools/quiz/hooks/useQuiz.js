@@ -6,6 +6,7 @@
 import { uploadQuizFile, parsePromptApi, generateQuizJob, connectJobEvents } from './quizApi.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { storage } from '../../../../utilities/storage.js';
+import { saveQuizHistoryPair } from '../utilities/quizHistoryHelper.js';
 
 class QuizManager {
   constructor() {
@@ -295,6 +296,18 @@ class QuizManager {
           // Sync completed items to local history
           if (res?.worksheet && res?.answer) {
             try {
+              saveQuizHistoryPair({
+                id: `quiz_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                timestamp: Date.now(),
+                createdAt: new Date().toISOString(),
+                prefix: this.state.prefix || 'Bài tập',
+                title: this.state.title || 'Bài tập trắc nghiệm',
+                count: res.questionsCount || this.state.count,
+                pages: this.state.pages,
+                worksheet: res.worksheet,
+                answer: res.answer
+              });
+
               storage.addHistoryItem({
                 toolId: 'quiz-generator',
                 toolTitle: 'Tạo Bài Tập Trắc Nghiệm',

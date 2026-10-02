@@ -491,6 +491,12 @@ class AndroidBridge(
      * Download file natively with explicit filename and push notification featuring the app icon.
      */
     @JavascriptInterface
+    fun downloadFile(url: String, fileName: String) {
+        val mime = if (fileName.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "application/octet-stream"
+        downloadFile(url, fileName, mime)
+    }
+
+    @JavascriptInterface
     fun downloadFile(url: String, fileName: String, mimeType: String) {
         val fullUrl = if (url.startsWith("http://") || url.startsWith("https://")) {
             url

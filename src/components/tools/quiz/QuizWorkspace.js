@@ -6,6 +6,7 @@
 
 import { renderQuizConfigPanel } from './components/QuizConfigPanel.js';
 import { renderQuizResultCard } from './components/QuizResultCard.js';
+import { renderQuizHistoryList } from './components/QuizHistoryList.js';
 import { quizManager } from './hooks/useQuiz.js';
 import { attachQuizListeners } from './hooks/useQuizListeners.js';
 
@@ -33,6 +34,10 @@ export function renderQuizWorkspace() {
 
         <div id="quizResultContainer">
           ${renderQuizResultCard(state)}
+        </div>
+
+        <div id="quizHistoryContainer">
+          ${renderQuizHistoryList()}
         </div>
       </div>
     </div>
