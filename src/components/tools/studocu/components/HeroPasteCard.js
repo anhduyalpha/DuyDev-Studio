@@ -29,7 +29,7 @@ export function renderHeroPasteCard(state) {
             id="studocuPasteBtn"
             class="btn-hero-paste ${isDownloading ? 'btn-hero-downloading' : ''}"
             ${isDownloading ? 'disabled' : ''}
-            title="Dán link (Ctrl+V)"
+            title="Dán link"
           >
             <div id="studocuPasteBtnIcon" class="w-4 h-4 flex items-center justify-center">
               ${isDownloading
@@ -39,9 +39,6 @@ export function renderHeroPasteCard(state) {
             <span id="studocuPasteBtnTitle">
               ${isDownloading ? 'Đang tải...' : 'Dán link & Tải'}
             </span>
-            <div id="studocuPasteBtnBadge" class="btn-hero-badge hidden sm:inline-flex ${isDownloading ? 'hidden' : ''}">
-              <kbd class="font-mono">Ctrl</kbd><kbd class="font-mono">V</kbd>
-            </div>
           </button>
         </div>
 
