@@ -135,7 +135,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
 
     let inputSource = gdriveUrl || '';
     let originalSizeBytes = 0;
-    if (fileId) {
+    if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
       const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
       if (!fileRecord || fileRecord.isPurged) {
         throw new NotFoundError(`Tệp nguồn ${fileId} không tồn tại hoặc đã bị xóa`);
@@ -205,8 +205,8 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     const ansHash = await StorageManager.computeSha256(ansStoragePath);
     const expiresAt = computeExpiresAt();
 
-    const wsFileName = `${prefix}_DeBai.pdf`;
-    const ansFileName = `${prefix}_DapAn.pdf`;
+    const wsFileName = path.basename(wsTmpPath);
+    const ansFileName = path.basename(ansTmpPath);
 
     // Atomic Prisma transaction to register both files
     await prisma.$transaction([
@@ -323,7 +323,7 @@ let _quizWorkerInstance: Worker<QuizJobPayload> | null = null;
 export function getQuizWorker(): Worker<QuizJobPayload> {
   if (!_quizWorkerInstance) {
     _quizWorkerInstance = new Worker<QuizJobPayload>(
-      'ds-tasks',
+      'ds-quiz-tasks',
       async (bullJob: BullJob<QuizJobPayload>) => {
         if (bullJob.name === 'quiz_process') {
           return processQuizJob(bullJob.data);

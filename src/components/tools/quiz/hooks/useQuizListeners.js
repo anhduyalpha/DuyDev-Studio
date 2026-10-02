@@ -1,5 +1,5 @@
 /**
- * useQuizListeners Hook (< 240 lines)
+ * useQuizListeners Hook (< 210 lines)
  * Event delegation and selective DOM state updates for Quiz Generator.
  * Adheres to Rule 1 (Explicit resource cleanup) and Rule 3 (Minimalism).
  */
@@ -17,6 +17,26 @@ export function attachQuizListeners() {
 
   let isTornDown = false;
 
+  function syncGenerateButton() {
+    const state = quizManager.getState();
+    const btnGen = document.getElementById('btnQuizGenerate');
+    if (!btnGen) return;
+
+    const isReady = (Boolean(state.file?.status === 'ready') || Boolean(state.gdriveUrl?.trim())) &&
+                    Boolean(state.pages?.trim()) &&
+                    Boolean(state.prefix?.trim()) &&
+                    !state.isProcessing;
+
+    btnGen.disabled = !isReady;
+    if (isReady) {
+      btnGen.classList.remove('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
+      btnGen.classList.add('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+    } else {
+      btnGen.classList.add('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
+      btnGen.classList.remove('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+    }
+  }
+
   // Selective re-rendering helper
   function updateDom(event) {
     if (isTornDown) return;
@@ -31,9 +51,11 @@ export function attachQuizListeners() {
     const selStart = activeEl && 'selectionStart' in activeEl ? activeEl.selectionStart : null;
     const selEnd = activeEl && 'selectionEnd' in activeEl ? activeEl.selectionEnd : null;
 
-    if (configEl && (event === 'source-mode-changed' || event === 'file-selected' || event === 'file-uploaded' || event === 'file-cleared' || event === 'file-upload-error' || event === 'prompt-parsed' || event === 'params-changed' || event === 'job-started' || event === 'job-completed' || event === 'job-error')) {
+    if (configEl && (event === 'file-selected' || event === 'file-uploaded' || event === 'file-cleared' || event === 'file-upload-error' || event === 'prompt-parsed' || event === 'job-started' || event === 'job-completed' || event === 'job-error')) {
       configEl.innerHTML = renderQuizConfigPanel(state);
       attachConfigHandlers();
+    } else {
+      syncGenerateButton();
     }
 
     if (resultEl) {
@@ -62,11 +84,6 @@ export function attachQuizListeners() {
 
   // Attach Config Panel Handlers
   function attachConfigHandlers() {
-    const btnFile = document.getElementById('btnQuizModeFile');
-    const btnDrive = document.getElementById('btnQuizModeDrive');
-    if (btnFile) btnFile.onclick = () => quizManager.setSourceMode('file');
-    if (btnDrive) btnDrive.onclick = () => quizManager.setSourceMode('gdrive');
-
     // Dropzone & File Input
     const dropzone = document.getElementById('quizDropzone');
     const fileInput = document.getElementById('quizFileInput');
@@ -110,7 +127,10 @@ export function attachQuizListeners() {
     // Google Drive Input
     const driveInput = document.getElementById('quizDriveInput');
     if (driveInput) {
-      driveInput.oninput = (e) => quizManager.setGdriveUrl(e.target.value);
+      driveInput.oninput = (e) => {
+        quizManager.setGdriveUrl(e.target.value);
+        syncGenerateButton();
+      };
     }
 
     // Prompt Box
@@ -129,7 +149,10 @@ export function attachQuizListeners() {
     // Parameters
     const pagesInput = document.getElementById('quizPagesInput');
     if (pagesInput) {
-      pagesInput.oninput = (e) => quizManager.setParams({ pages: e.target.value });
+      pagesInput.oninput = (e) => {
+        quizManager.setParams({ pages: e.target.value });
+        syncGenerateButton();
+      };
     }
 
     const startInput = document.getElementById('quizStartInput');
@@ -139,7 +162,10 @@ export function attachQuizListeners() {
 
     const prefixInput = document.getElementById('quizPrefixInput');
     if (prefixInput) {
-      prefixInput.oninput = (e) => quizManager.setParams({ prefix: e.target.value });
+      prefixInput.oninput = (e) => {
+        quizManager.setParams({ prefix: e.target.value });
+        syncGenerateButton();
+      };
     }
 
     const titleInput = document.getElementById('quizTitleInput');
@@ -158,9 +184,13 @@ export function attachQuizListeners() {
 
     // Primary Action Button
     const btnGen = document.getElementById('btnQuizGenerate');
-    if (btnGen && !btnGen.disabled) {
-      btnGen.onclick = () => quizManager.startGeneration();
+    if (btnGen) {
+      btnGen.onclick = () => {
+        if (!btnGen.disabled) quizManager.startGeneration();
+      };
     }
+
+    syncGenerateButton();
   }
 
   // Attach Result Handlers

@@ -11,7 +11,7 @@ export const createQuizJobSchema = z
     start: z.number().int().min(1).optional(),
     title: z.string().min(1).default('BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12'),
     subtitle: z.string().optional().default(''),
-    prefix: z.string().min(1).default('Quiz_A4'),
+    prefix: z.string().trim().min(1, 'Vui lòng nhập Tên File (Bắt buộc)'),
     apiKey: z.string().optional()
   })
   .transform((data) => ({

@@ -267,7 +267,11 @@ export function getPdfWorker(): Worker<PdfJobPayload> {
   if (!_workerInstance) {
     _workerInstance = new Worker<PdfJobPayload>(
       'ds-tasks',
-      async (bullJob: BullJob<PdfJobPayload>) => processPdfJob(bullJob.data),
+      async (bullJob: BullJob<PdfJobPayload>) => {
+        if (bullJob.name === 'pdf_process') {
+          return processPdfJob(bullJob.data);
+        }
+      },
       { connection: redisConnection, concurrency: limits.workerConcurrency.pdf }
     );
     _workerInstance.on('error', (err) => { logger.warn({ err: err.message }, 'PDF worker warning/error'); });

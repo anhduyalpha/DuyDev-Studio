@@ -1,6 +1,6 @@
 /**
- * QuizWorkspace Component (< 120 lines)
- * Workspace orchestrator for AI Quiz Generator (Tạo Bài Tập).
+ * QuizWorkspace Component (< 100 lines)
+ * Unified single-column workspace orchestrator for AI Quiz Generator.
  * Adhering to Rule 1 & Rule 3 (Minimalism, High Cohesion).
  */
 
@@ -13,7 +13,7 @@ export function renderQuizWorkspace() {
   const state = quizManager.getState();
 
   return `
-    <div id="quizWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-6xl mx-auto">
+    <div id="quizWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-3xl mx-auto">
       <!-- Top Navigation & Breadcrumb -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-400">
@@ -25,15 +25,13 @@ export function renderQuizWorkspace() {
         </div>
       </div>
 
-      <!-- 2-Column Responsive Workspace Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Left: Configuration & Prompt (5 cols) -->
-        <div id="quizConfigContainer" class="lg:col-span-6 space-y-4">
+      <!-- Unified Single-Column Flow -->
+      <div class="space-y-6">
+        <div id="quizConfigContainer">
           ${renderQuizConfigPanel(state)}
         </div>
 
-        <!-- Right: Progress, Results & Preview (6 cols) -->
-        <div id="quizResultContainer" class="lg:col-span-6 space-y-4">
+        <div id="quizResultContainer">
           ${renderQuizResultCard(state)}
         </div>
       </div>

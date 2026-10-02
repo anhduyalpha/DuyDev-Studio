@@ -39,7 +39,8 @@ describe('Quiz Module Unit & Integration Tests', () => {
       const payload = {
         driveUrl: 'https://drive.google.com/file/d/123456789/view?usp=sharing',
         pages: '1-5',
-        count: 10
+        count: 10,
+        prefix: 'HoaHoc_12'
       };
       const result = createQuizJobSchema.safeParse(payload);
       expect(result.success).toBe(true);
@@ -47,14 +48,28 @@ describe('Quiz Module Unit & Integration Tests', () => {
         expect(result.data.count).toBe(10);
         expect(result.data.startNum).toBe(1);
         expect(result.data.gdriveUrl).toBe(payload.driveUrl);
-        expect(result.data.prefix).toBe('Quiz_A4');
+        expect(result.data.prefix).toBe('HoaHoc_12');
+      }
+    });
+
+    it('rejects a payload when prefix is missing or empty', () => {
+      const payload = {
+        fileId: 'fil_test_123',
+        pages: '1',
+        prefix: ''
+      };
+      const result = createQuizJobSchema.safeParse(payload);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain('Tên File (Bắt buộc)');
       }
     });
 
     it('rejects a payload when both fileId and driveUrl are missing', () => {
       const payload = {
         pages: '1,2,3',
-        count: 20
+        count: 20,
+        prefix: 'Test'
       };
       const result = createQuizJobSchema.safeParse(payload);
       expect(result.success).toBe(false);

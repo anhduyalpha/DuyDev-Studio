@@ -3,14 +3,14 @@ import crypto from 'crypto';
 import { prisma } from '../../lib/prisma.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { createQuizJobSchema, parsePromptSchema } from '../../schemas/quiz.schema.js';
-import { enqueueJob } from '../../queues/task.queue.js';
+import { enqueueQuizJob as enqueueToQuizQueue } from '../../queues/task.queue.js';
 import { logger } from '../../lib/logger.js';
 
 export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyReply) {
   const body = createQuizJobSchema.parse(request.body);
   const { fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, apiKey } = body;
 
-  if (fileId) {
+  if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
     const fileRecord = await prisma.fileRecord.findUnique({
       where: { id: fileId }
     });
@@ -32,7 +32,7 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
   });
 
   try {
-    await enqueueJob('quiz_process', {
+    await enqueueToQuizQueue({
       jobId: job.id,
       fileId,
       gdriveUrl,

@@ -1,5 +1,5 @@
 /**
- * useQuiz Hook & State Manager (< 240 lines)
+ * useQuiz Hook & State Manager (< 250 lines)
  * Reactive state machine for Quiz Generator with defensive resource cleanup.
  */
 
@@ -9,7 +9,6 @@ import { showToast } from '../../../../utilities/toast.js';
 class QuizManager {
   constructor() {
     this.state = {
-      sourceMode: 'file', // 'file' | 'gdrive'
       file: null,
       fileId: null,
       gdriveUrl: '',
@@ -18,7 +17,7 @@ class QuizManager {
       start: 1,
       title: 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
       subtitle: '',
-      prefix: 'Quiz_A4',
+      prefix: '',
       isProcessing: false,
       progress: 0,
       stage: '',
@@ -51,11 +50,6 @@ class QuizManager {
     }
   }
 
-  setSourceMode(mode) {
-    this.state.sourceMode = mode;
-    this.notify('source-mode-changed');
-  }
-
   async setFile(file) {
     if (this.uploadAbortController) {
       this.uploadAbortController.abort();
@@ -74,6 +68,8 @@ class QuizManager {
       return;
     }
 
+    // Clear Google Drive URL when a file is explicitly chosen
+    this.state.gdriveUrl = '';
     this.state.file = {
       name: file.name,
       size: file.size,
@@ -116,7 +112,20 @@ class QuizManager {
   }
 
   setGdriveUrl(url) {
-    this.state.gdriveUrl = (url || '').trim();
+    const clean = (url || '').trim();
+    this.state.gdriveUrl = clean;
+
+    // If user enters a drive link, clear any previously chosen file
+    if (clean) {
+      if (this.uploadAbortController) {
+        this.uploadAbortController.abort();
+        this.uploadAbortController = null;
+      }
+      if (this.state.file) {
+        this.state.file = null;
+        this.state.fileId = null;
+      }
+    }
     this.notify('gdrive-changed');
   }
 
@@ -126,7 +135,7 @@ class QuizManager {
     if (params.start !== undefined) this.state.start = Math.max(1, Number(params.start) || 1);
     if (params.title !== undefined) this.state.title = String(params.title).trim();
     if (params.subtitle !== undefined) this.state.subtitle = String(params.subtitle).trim();
-    if (params.prefix !== undefined) this.state.prefix = String(params.prefix).trim() || 'Quiz_A4';
+    if (params.prefix !== undefined) this.state.prefix = String(params.prefix).trim();
     this.notify('params-changed');
   }
 
@@ -149,20 +158,26 @@ class QuizManager {
   async startGeneration() {
     if (this.state.isProcessing) return;
 
-    if (this.state.sourceMode === 'file') {
-      if (!this.state.fileId) {
-        showToast('Vui lòng đợi tệp PDF tải lên hoàn tất', 'warning');
-        return;
-      }
-    } else {
-      if (!this.state.gdriveUrl) {
-        showToast('Vui lòng nhập liên kết Google Drive', 'warning');
-        return;
-      }
+    const hasFile = Boolean(this.state.fileId);
+    const hasDrive = Boolean(this.state.gdriveUrl);
+
+    if (!hasFile && !hasDrive) {
+      showToast('Vui lòng chọn tệp PDF hoặc nhập liên kết Google Drive', 'warning');
+      return;
     }
 
-    if (!this.state.pages) {
-      showToast('Vui lòng nhập số trang hoặc dải trang cần lấy câu hỏi', 'warning');
+    if (this.state.file && this.state.file.status !== 'ready') {
+      showToast('Vui lòng đợi tệp PDF tải lên hoàn tất', 'warning');
+      return;
+    }
+
+    if (!this.state.pages || !this.state.pages.trim()) {
+      showToast('Vui lòng nhập trang cần trích xuất', 'warning');
+      return;
+    }
+
+    if (!this.state.prefix || !this.state.prefix.trim()) {
+      showToast('Vui lòng nhập Tên File ( Bắt Buộc )', 'warning');
       return;
     }
 
@@ -175,17 +190,17 @@ class QuizManager {
 
     try {
       const payload = {
-        pages: this.state.pages,
+        pages: this.state.pages.trim(),
         count: this.state.count,
         startNum: this.state.start,
         title: this.state.title || 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
         subtitle: this.state.subtitle || '',
-        prefix: this.state.prefix || 'Quiz_A4'
+        prefix: this.state.prefix.trim()
       };
 
-      if (this.state.sourceMode === 'file') {
+      if (this.state.fileId) {
         payload.fileId = this.state.fileId;
-      } else {
+      } else if (this.state.gdriveUrl) {
         payload.gdriveUrl = this.state.gdriveUrl;
       }
 

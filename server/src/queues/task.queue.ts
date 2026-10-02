@@ -35,12 +35,24 @@ converterQueue.on('error', (err) => {
   logger.warn({ err: err.message }, 'BullMQ converterQueue warning/error');
 });
 
+export const quizQueue = new Queue('ds-quiz-tasks', {
+  connection: redisConnection
+});
+
+quizQueue.on('error', (err) => {
+  logger.warn({ err: err.message }, 'BullMQ quizQueue warning/error');
+});
+
 export async function enqueueJob<T = unknown>(type: string, payload: T, options?: JobsOptions) {
   return taskQueue.add(type, payload, options);
 }
 
 export async function enqueueConverterJob<T = unknown>(payload: T, options?: JobsOptions) {
   return converterQueue.add('converter_process', payload, options);
+}
+
+export async function enqueueQuizJob<T = unknown>(payload: T, options?: JobsOptions) {
+  return quizQueue.add('quiz_process', payload, options);
 }
 
 export function createRedisSubscriber(): Redis {
@@ -75,7 +87,7 @@ export async function publishJobEvent(jobId: string, eventName: string, data: un
 
 export async function closeTaskQueue(): Promise<void> {
   try {
-    await Promise.allSettled([taskQueue.close(), converterQueue.close()]);
+    await Promise.allSettled([taskQueue.close(), converterQueue.close(), quizQueue.close()]);
     await redisConnection.quit().catch(() => redisConnection.disconnect());
   } catch {
     redisConnection.disconnect();
