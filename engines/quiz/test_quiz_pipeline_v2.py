@@ -330,6 +330,40 @@ class TestQuizPipelineV2(unittest.TestCase):
         self.assertIn("Chọn phương án đúng.", questions[0]["question"])
         self.assertIsNotNone(questions[0].get("image_data"))
 
+    def test_sequential_index_mapping_with_renumbered_questions(self):
+        """Verify that questions re-indexed from 1 still receive assets mapped to original question numbers (e.g. 14, 15)."""
+        questions = [
+            {"number": 1, "type": "mcq", "question": "Chất béo T được tìm thấy trong thịt bò...", "image_ref": None},
+            {"number": 2, "type": "mcq", "question": "Sơ đồ biểu diễn một phân tử chất hữu cơ X...", "image_ref": None}
+        ]
+        assets = [
+            {"id": "fig_p36_1", "name": "fig_p36_1.png", "data_uri": "data:image/png;base64,AAA1"},
+            {"id": "fig_p36_2", "name": "fig_p36_2.png", "data_uri": "data:image/png;base64,AAA2"}
+        ]
+        asset_map = {"fig_p36_1": 14, "fig_p36_2": 15}
+        source_nums = [14, 15]
+
+        link_assets_to_questions(questions, assets, asset_question_map=asset_map, source_question_nums=source_nums)
+
+        self.assertEqual(questions[0]["image_ref"], "fig_p36_1.png")
+        self.assertEqual(questions[0]["image_data"], "data:image/png;base64,AAA1")
+        self.assertEqual(questions[1]["image_ref"], "fig_p36_2.png")
+        self.assertEqual(questions[1]["image_data"], "data:image/png;base64,AAA2")
+
+    def test_no_artificial_page_breaks_in_worksheet_and_answer_key(self):
+        """Verify that generate_worksheet_html and generate_answer_key_html do not inject hard page-break-before."""
+        qs = [
+            {"number": i, "type": "mcq", "question": f"Câu hỏi số {i}", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A", "explanation": "Giải thích"}
+            for i in range(1, 11)
+        ]
+        ws_html = generate_worksheet_html("TEST TITLE", "", qs)
+        ans_html = generate_answer_key_html("TEST TITLE", "", qs)
+
+        self.assertNotIn("page-break-before", ws_html)
+        self.assertNotIn("page-break-before", ans_html)
+        self.assertIn("break-inside: avoid;", ws_html)
+        self.assertIn("break-inside: avoid;", ans_html)
+
 
 if __name__ == "__main__":
     unittest.main()

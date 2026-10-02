@@ -352,9 +352,10 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
             xref = img[0]
             for r in page.get_image_rects(xref):
                 rect = pymupdf.Rect(r)
-                if rect.width > pw * 0.92 and rect.height > ph * 0.92:
+                if rect.width > pw * 0.95 and rect.height > ph * 0.95:
                     continue
-                if rect.width < 35 or rect.height < 35 or (rect.width * rect.height < 1400):
+                # Relaxed size filter: allow wide but short reaction formulas or diagrams
+                if ((rect.width < 12 and rect.height < 12) or (rect.width * rect.height < 180)):
                     continue
                 candidate_rects.append(rect)
     except Exception:
@@ -366,25 +367,25 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
         valid_drawing_rects = []
         for d in drawings:
             dr = pymupdf.Rect(d.get("rect", (0, 0, 0, 0)))
-            if dr.width > pw * 0.92 and dr.height > ph * 0.92:
+            if dr.width > pw * 0.95 and dr.height > ph * 0.95:
                 continue
-            if dr.height <= 2.5 and dr.width > 80:
+            if dr.height <= 2.0 and dr.width > 80:
                 continue
-            if dr.width <= 2.5 and dr.height > 80:
+            if dr.width <= 2.0 and dr.height > 80:
                 continue
-            if dr.width < 3 and dr.height < 3:
+            if dr.width < 2 and dr.height < 2:
                 continue
             valid_drawing_rects.append(dr)
 
         drawing_clusters = cluster_rects(valid_drawing_rects, margin=10.0)
         for cr in drawing_clusters:
-            if cr.width >= 35 and cr.height >= 35 and (cr.width * cr.height >= 1600):
-                if cr.width <= pw * 0.94 and cr.height <= ph * 0.94:
+            if cr.width >= 18 and cr.height >= 12 and (cr.width * cr.height >= 250):
+                if cr.width <= pw * 0.95 and cr.height <= ph * 0.95:
                     candidate_rects.append(cr)
     except Exception:
         pass
 
-    merged_rects = cluster_rects(candidate_rects, margin=6.0)
+    merged_rects = cluster_rects(candidate_rects, margin=2.5)
     merged_rects.sort(key=lambda r: (round(r.y0, 1), round(r.x0, 1)))
 
     for idx, rect in enumerate(merged_rects, start=1):
@@ -397,7 +398,7 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
         )
         try:
             pix = page.get_pixmap(clip=padded_rect, dpi=200)
-            if pix.width < 35 or pix.height < 35:
+            if pix.width < 15 and pix.height < 15:
                 continue
             png_bytes = pix.tobytes("png")
             b64_data = f"data:image/png;base64,{base64.b64encode(png_bytes).decode('ascii')}"
@@ -427,11 +428,21 @@ def clean_image_markers(text: str) -> str:
     return re.sub(r"\[IMAGE_REF:\s*[^\]]+\]", "", str(text)).strip()
 
 
-def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_question_map: dict = None) -> None:
+def link_assets_to_questions(
+    questions: list[dict],
+    assets: list[dict],
+    asset_question_map: dict = None,
+    source_question_nums: list[int] = None
+) -> None:
     """
-    Link extracted visual assets to question objects.
-    Combines: Direct AI match -> Layout Spatial Map -> Marker Match -> Proximity Fallback.
-    Always cleans internal markers and sets base64 data_uri.
+    Link extracted visual assets to question objects with 100% deterministic fidelity.
+    Combines:
+    1. Direct AI match (q['image_ref'])
+    2. Sequential Index Mapping (k-th output question <-> k-th source question)
+    3. Layout Spatial Map (mapped_q_num == q['number'])
+    4. Text marker match ([IMAGE_REF: ...])
+    5. Keyword proximity fallback
+    Finally purges internal [IMAGE_REF: ...] markers from all fields.
     """
     assets_by_id = {}
     for a in assets:
@@ -440,6 +451,7 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_qu
             assets_by_id[a_id] = a
             assets_by_id[f"{a_id}.png"] = a
     asset_map = asset_question_map or {}
+    source_nums = source_question_nums or []
 
     # 1. Direct AI match
     for q in questions:
@@ -455,8 +467,20 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_qu
             else:
                 q["image_ref"] = None
 
-    # 2. Layout Spatial Map: match asset mapped to question number in layout order
     assigned_assets = {str(q.get("image_ref", "")).replace(".png", "") for q in questions if q.get("image_data")}
+
+    # 2. Sequential Index Mapping: question at index k was source_nums[k] in the source PDF!
+    for idx, q in enumerate(questions):
+        if not q.get("image_data") and idx < len(source_nums):
+            orig_q_num = source_nums[idx]
+            for a_id, mapped_num in asset_map.items():
+                if mapped_num == orig_q_num and a_id in assets_by_id and a_id not in assigned_assets:
+                    q["image_ref"] = f"{a_id}.png"
+                    q["image_data"] = assets_by_id[a_id].get("data_uri")
+                    assigned_assets.add(a_id)
+                    break
+
+    # 3. Layout Spatial Map: match asset mapped to question number when numbers align
     for q in questions:
         if not q.get("image_data"):
             q_num = q.get("number")
@@ -467,7 +491,7 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_qu
                     assigned_assets.add(a_id)
                     break
 
-    # 3. Text marker match: if [IMAGE_REF: ...] was embedded in question text, options, or statements
+    # 4. Text marker match: if [IMAGE_REF: ...] was embedded in question text, options, or statements
     for q in questions:
         if not q.get("image_data"):
             full_q_text = str(q.get("question", "")) + " " + json.dumps(q.get("options", {})) + " " + json.dumps(q.get("statements", {}))
@@ -479,7 +503,7 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_qu
                     q["image_data"] = assets_by_id[asset_id].get("data_uri")
                     assigned_assets.add(asset_id)
 
-    # 4. Keyword proximity fallback: assign remaining unassigned assets to questions mentioning figures
+    # 5. Keyword proximity fallback: assign remaining unassigned assets to questions mentioning figures
     unassigned_assets = [
         a for a in assets
         if str(a.get("id") or a.get("name", "")).replace(".png", "").strip() not in assigned_assets
@@ -488,7 +512,7 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_qu
         for q in questions:
             if not q.get("image_data"):
                 q_text = str(q.get("question", "")).lower()
-                if any(w in q_text for w in ["hình vẽ", "hình bên", "hình dưới", "đồ thị", "thí nghiệm", "sơ đồ", "bảng sau", "hình sau"]):
+                if any(w in q_text for w in ["hình vẽ", "hình bên", "hình dưới", "đồ thị", "thí nghiệm", "sơ đồ", "bảng sau", "hình sau", "phổ", "cấu tạo"]):
                     if unassigned_assets:
                         chosen = unassigned_assets.pop(0)
                         chosen_id = str(chosen.get("id") or chosen.get("name", "")).replace(".png", "").strip()
@@ -499,6 +523,14 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_qu
     # Final cleanup: clean markers from all question fields and sanitize image_ref
     for q in questions:
         q["question"] = clean_image_markers(q.get("question", ""))
+        if isinstance(q.get("options"), dict):
+            for opt_k in q["options"]:
+                q["options"][opt_k] = clean_image_markers(q["options"][opt_k])
+        if isinstance(q.get("statements"), dict):
+            for st_k in q["statements"]:
+                if isinstance(q["statements"][st_k], dict):
+                    q["statements"][st_k]["text"] = clean_image_markers(q["statements"][st_k].get("text", ""))
+        q["explanation"] = clean_image_markers(q.get("explanation", ""))
         if not q.get("image_data"):
             q["image_ref"] = None
 
@@ -737,7 +769,15 @@ def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tu
             "Tài liệu có thể là ảnh scan thuần túy. Vui lòng chọn trang có lớp chữ hoặc OCR trước."
         )
 
-    return stitched_text, actual_pages, all_assets, all_asset_map
+    # Collect ordered list of distinct question numbers found in the stitched text
+    q_matches = list(re.finditer(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", stitched_text))
+    source_q_nums = []
+    for m in q_matches:
+        n = int(m.group(1) or m.group(2))
+        if not source_q_nums or source_q_nums[-1] != n:
+            source_q_nums.append(n)
+
+    return stitched_text, actual_pages, all_assets, all_asset_map, source_q_nums
 
 
 # ==============================================================================
@@ -876,7 +916,11 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
     q["type"] = q_type
 
     # Question stem
-    q["question"] = clean_image_markers(str(q.get("question", "")))
+    raw_question = str(q.get("question", ""))
+    if not q.get("image_ref"):
+        ref_m = re.search(r"\[IMAGE_REF:\s*([^\]]+)\]", raw_question)
+        if ref_m:
+            q["image_ref"] = ref_m.group(1).strip()
 
     # Image ref
     img_ref = q.get("image_ref")
@@ -889,8 +933,8 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
     else:
         q["image_ref"] = None
 
-    # Explanation
-    q["explanation"] = clean_image_markers(str(q.get("explanation", "")))
+    q["question"] = raw_question
+    q["explanation"] = str(q.get("explanation", ""))
 
     # MCQ options normalization
     if q_type == "mcq":
@@ -989,9 +1033,10 @@ def parse_and_standardize_questions(
         "   - 'short_answer': Numerical or short phrase answer (answer is string like '88' or '12.5').\n"
         "3. Standardize chemical formulas using HTML tags: indices to <sub> (e.g. C<sub>2</sub>H<sub>5</sub>OH, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup> (e.g. Fe<sup>3+</sup>).\n"
         "4. Standardize mathematical expressions using KaTeX/LaTeX delimiters: inline math between $...$ (e.g. $E = mc^2$, $\\int_0^1 f(x)dx$, $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$).\n"
-        "5. Preserve visual assets: If the question contains an image marker '[IMAGE_REF: fig_pX_Y]' or refers to a figure/diagram in the text, preserve 'image_ref': 'fig_pX_Y.png'. If none, set 'image_ref': null.\n"
-        "6. In 'explanation', provide a concise, accurate scientific explanation strictly in Vietnamese (1-3 sentences).\n"
-        "7. Return ONLY a valid JSON object matching this schema:\n"
+        "5. Preserve visual assets: If the question contains an image marker '[IMAGE_REF: fig_pX_Y]' or refers to a figure, diagram, reaction scheme, chart, or spectrum, you MUST preserve 'image_ref': 'fig_pX_Y.png'. If none, set 'image_ref': null.\n"
+        "6. Preserve structured tables: If the question or options contain a Markdown table (e.g. | col1 | col2 | ...), you MUST PRESERVE the entire Markdown table verbatim inside 'question' or 'explanation'. Do NOT flatten, compress, or convert tables into plain text.\n"
+        "7. In 'explanation', provide a concise, accurate scientific explanation strictly in Vietnamese (1-3 sentences).\n"
+        "8. Return ONLY a valid JSON object matching this schema:\n"
         "{\n"
         '  "questions": [\n'
         "    {\n"
@@ -1224,11 +1269,10 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
             elif q_type == "short_answer":
                 items_html.append('<div class="section-banner">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>')
 
-        break_class = " page-break-before" if (idx > 1 and (idx - 1) % questions_per_page == 0) else ""
         content = render_question_content_html(q)
 
         item = f"""
-  <div class="question-item{break_class}">
+  <div class="question-item">
     <span class="q-num">Câu {num}:</span>
 {content}
   </div>"""
@@ -1253,7 +1297,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 <style>
   @page {{
     size: A4 portrait;
-    margin: 12mm 14mm 12mm 14mm;
+    margin: 10mm 12mm 10mm 12mm;
     @bottom-right {{
       content: "Trang " counter(page) " / " counter(pages);
       font-size: 8.5pt;
@@ -1331,14 +1375,9 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
   }}
 
   .question-item {{
-    margin-bottom: 10px;
+    margin-bottom: 9px;
     page-break-inside: avoid;
     break-inside: avoid;
-  }}
-
-  .page-break-before {{
-    page-break-before: always;
-    break-before: page;
   }}
 
   .q-num {{
@@ -1576,7 +1615,6 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
         q_type = q.get("type", "mcq")
         ans = q.get("answer", "-")
         expl = format_tables_in_text(clean_image_markers(q.get("explanation", "")))
-        break_class = " page-break-before" if (idx > 1 and (idx - 1) % questions_per_page == 0) else ""
 
         img_html = ""
         img_src = q.get("image_data")
@@ -1597,20 +1635,20 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
                 stmt_lines.append(f'<div><b>{k})</b> <span class="{tag_class}">[{s_tag}]</span> {s_text}</div>')
             stmts_detail = "\n      ".join(stmt_lines)
             sol = f"""
-  <div class="sol-item{break_class}">
+  <div class="sol-item">
     <div class="sol-head"><span class="sol-num">Câu {num}:</span> <span class="sol-ans">{ans}</span></div>
     <div class="sol-stmts">{stmts_detail}</div>{img_html}
     <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
   </div>"""
         elif q_type == "short_answer":
             sol = f"""
-  <div class="sol-item{break_class}">
+  <div class="sol-item">
     <div class="sol-head"><span class="sol-num">Câu {num}:</span> Đáp án: <span class="sol-ans">{ans}</span></div>{img_html}
     <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
   </div>"""
         else:
             sol = f"""
-  <div class="sol-item{break_class}">
+  <div class="sol-item">
     <div class="sol-head"><span class="sol-num">Câu {num}:</span> Chọn <span class="sol-ans">{ans}</span></div>{img_html}
     <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
   </div>"""
@@ -1721,18 +1759,13 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
   }}
 
   .sol-item {{
-    margin-bottom: 6px;
+    margin-bottom: 7px;
     padding: 5px 8px;
     background: #f8fafc;
     border-left: 3px solid #16a34a;
     border-radius: 0 4px 4px 0;
     page-break-inside: avoid;
     break-inside: avoid;
-  }}
-
-  .page-break-before {{
-    page-break-before: always;
-    break-before: page;
   }}
 
   .sol-head {{
@@ -1997,7 +2030,7 @@ def run_pipeline(
         pdf_local = download_gdrive_if_needed(input_source, temp_dir)
 
         emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
-        raw_text, actual_pages, extracted_assets, asset_map = extract_raw_pages(pdf_local, pages, temp_assets_dir)
+        raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = extract_raw_pages(pdf_local, pages, temp_assets_dir)
 
         emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")
         questions = parse_and_standardize_questions(
@@ -2005,7 +2038,7 @@ def run_pipeline(
         )
 
         # Link visual assets to questions using AI match, layout spatial map, and fallbacks
-        link_assets_to_questions(questions, extracted_assets, asset_map)
+        link_assets_to_questions(questions, extracted_assets, asset_map, source_q_nums)
 
         # Compute question type breakdown
         mcq_count = sum(1 for q in questions if q.get("type", "mcq") == "mcq")
@@ -2013,9 +2046,8 @@ def run_pipeline(
         sa_count = sum(1 for q in questions if q.get("type") == "short_answer")
 
         emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
-        q_per_page = 10 if count >= 15 else (count // 2 if count > 6 else count)
-        worksheet_html = generate_worksheet_html(title, subtitle, questions, questions_per_page=q_per_page)
-        answer_html = generate_answer_key_html(title, subtitle, questions, questions_per_page=q_per_page)
+        worksheet_html = generate_worksheet_html(title, subtitle, questions)
+        answer_html = generate_answer_key_html(title, subtitle, questions)
 
         with open(ws_html_path, "w", encoding="utf-8") as f:
             f.write(worksheet_html)
