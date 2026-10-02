@@ -66,8 +66,8 @@ export function renderQuizConfigPanel(state) {
                 <i data-lucide="upload-cloud" class="w-4 h-4"></i>
               </div>
               <div class="text-left">
-                <p class="text-xs sm:text-sm font-medium text-zinc-300">Chọn hoặc kéo thả tệp PDF tài liệu</p>
-                <p class="text-[11px] text-zinc-500 font-mono">Định dạng .pdf</p>
+                <p class="text-xs sm:text-sm font-medium text-zinc-300">Chọn hoặc kéo thả tệp PDF</p>
+                <p class="text-[11px] text-zinc-500 font-mono">PDF</p>
               </div>
             </div>
           `
@@ -77,7 +77,7 @@ export function renderQuizConfigPanel(state) {
         <!-- Divider -->
         <div class="flex items-center gap-3 my-1">
           <div class="flex-1 h-px bg-zinc-800/80"></div>
-          <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Hoặc dán liên kết Google Drive</span>
+          <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Hoặc Google Drive</span>
           <div class="flex-1 h-px bg-zinc-800/80"></div>
         </div>
 
@@ -87,14 +87,14 @@ export function renderQuizConfigPanel(state) {
         </div>
       </div>
 
-      <!-- Natural Language Prompt Box (Zero fluff, no 0ms regex badge) -->
+      <!-- Natural Language Prompt Box (Zero fluff) -->
       <div class="space-y-2 bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/60">
         <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
           <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
           <span>Nhận diện lệnh tự nhiên</span>
         </label>
         <div class="flex gap-2">
-          <input type="text" id="quizPromptInput" placeholder="Ví dụ: Làm trắc nghiệm từ trang 11 từ câu 1 đến câu 20" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500/50 transition" />
+          <input type="text" id="quizPromptInput" placeholder="Ví dụ: Trang 11, 20 câu, từ câu 1" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500/50 transition" />
           <button type="button" id="btnQuizParsePrompt" class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition shrink-0">
             Phân tích
           </button>
@@ -106,8 +106,8 @@ export function renderQuizConfigPanel(state) {
         <!-- Pages Input -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-zinc-300">Trang trích xuất (Bắt buộc)</label>
-            <span class="text-[11px] text-zinc-500 font-mono">vd: 11 hoặc 11-15 hoặc 4,5,6</span>
+            <label class="text-xs font-medium text-zinc-300">Trang trích xuất</label>
+            <span class="text-[11px] text-zinc-500 font-mono">vd: 11 hoặc 11-15</span>
           </div>
           <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="11" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
         </div>
@@ -136,7 +136,7 @@ export function renderQuizConfigPanel(state) {
         <!-- Header Title -->
         <div class="space-y-1.5">
           <label class="text-xs font-medium text-zinc-300">Tiêu đề in đầu trang</label>
-          <input type="text" id="quizTitleInput" value="${escapeHtml(state.title)}" placeholder="BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden focus:border-zinc-600 transition" />
+          <input type="text" id="quizTitleInput" value="${escapeHtml(state.title)}" placeholder="BÀI TẬP TRẮC NGHIỆM" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden focus:border-zinc-600 transition" />
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export function renderQuizConfigPanel(state) {
       : 'bg-zinc-900 text-zinc-600 border border-zinc-800/80 cursor-not-allowed'
   }">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span>${state.isProcessing ? 'Đang tạo bài tập trắc nghiệm...' : 'Tạo 2 bản PDF A4 (Đề bài & Đáp án)'}</span>
+          <span>${state.isProcessing ? 'Đang tạo bài tập trắc nghiệm...' : 'Tạo Đề bài & Đáp án A4'}</span>
         </button>
       </div>
     </div>

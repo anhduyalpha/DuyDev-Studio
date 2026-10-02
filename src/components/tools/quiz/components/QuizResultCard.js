@@ -44,7 +44,7 @@ function renderProcessingState(state) {
       </div>
 
       <div class="flex items-center justify-between pt-2">
-        <span class="text-[11px] text-zinc-500 font-mono">Agnes AI 3.0 + Headless Chrome A4 Pipeline</span>
+        <span class="text-[11px] text-zinc-500 font-mono">A4 PDF Pipeline</span>
         <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition">
           Hủy tác vụ
         </button>
@@ -64,7 +64,7 @@ function renderCompletedState(state) {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <h4 class="text-sm font-semibold text-zinc-100">Đã xuất bản thành công 2 tệp PDF A4</h4>
+          <h4 class="text-sm font-semibold text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
         </div>
         <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition">
           Làm bài tập khác
@@ -77,7 +77,7 @@ function renderCompletedState(state) {
         <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between space-y-4 hover:border-zinc-700 transition">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Tờ Đề Bài</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
               <span class="text-xs text-zinc-500 font-mono">${ws.pageCount || 1} trang A4</span>
             </div>
             <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ws.name || '')}">${escapeHtml(ws.name || 'DeBai.pdf')}</div>
@@ -102,7 +102,7 @@ function renderCompletedState(state) {
         <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between space-y-4 hover:border-zinc-700 transition">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Tờ Đáp Án & Lời Giải</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
               <span class="text-xs text-zinc-500 font-mono">${ans.pageCount || 1} trang A4</span>
             </div>
             <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ans.name || '')}">${escapeHtml(ans.name || 'DapAn.pdf')}</div>
@@ -132,7 +132,7 @@ function renderErrorState(state) {
     <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 space-y-3">
       <div class="flex items-center gap-2 text-red-400 text-sm font-semibold">
         <i data-lucide="alert-circle" class="w-4 h-4"></i>
-        <span>Không thể hoàn thành bài tập</span>
+        <span>Lỗi tạo bài tập</span>
       </div>
       <p class="text-xs text-red-300/90 leading-relaxed">${escapeHtml(state.error)}</p>
       <button type="button" id="btnQuizReset" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/30 transition">
@@ -144,20 +144,15 @@ function renderErrorState(state) {
 
 function renderEmptyPlaceholder() {
   return `
-    <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-6 text-center space-y-3">
-      <div class="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
-        <i data-lucide="file-check-2" class="w-6 h-6"></i>
+    <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-6 text-center space-y-2">
+      <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
+        <i data-lucide="file-check-2" class="w-5 h-5"></i>
       </div>
       <div>
-        <h4 class="text-sm font-semibold text-zinc-200">Chuẩn in ấn A4 Portrait hoàn hảo</h4>
-        <p class="text-xs text-zinc-400 max-w-sm mx-auto mt-1 leading-relaxed">
-          Tự động cân bằng phân trang, không tách đôi câu hỏi, tối ưu bảng ma trận đáp án nhanh và lời giải chi tiết.
+        <h4 class="text-sm font-semibold text-zinc-200">Đề bài & Đáp án A4</h4>
+        <p class="text-xs text-zinc-500 max-w-sm mx-auto mt-0.5">
+          Tệp PDF đề bài và đáp án chi tiết sẽ hiển thị tại đây sau khi hoàn tất.
         </p>
-      </div>
-      <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
-        <span class="px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">Headless Chrome 154</span>
-        <span class="px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">Agnes 3.0 Flash</span>
-        <span class="px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">PyMuPDF 1.28</span>
       </div>
     </div>
   `.trim();
