@@ -23,6 +23,7 @@ import { renderArchiveCompressWorkspace, attachArchiveCompressListeners } from '
 import { renderConverterWorkspace, attachConverterListeners } from '../components/tools/converter/ConverterWorkspace.js';
 import { renderStudocuWorkspace, attachStudocuListeners } from '../components/tools/studocu/StudocuWorkspace.js';
 import { renderStoragePage, attachStoragePageListeners } from './StoragePage.js';
+import { renderQuizWorkspace, attachQuizListeners } from '../components/tools/quiz/QuizWorkspace.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
@@ -62,6 +63,10 @@ export function renderToolPage(toolId = 'pdf-convert', subTab = null) {
 
     case 'storage':
       return renderStoragePage();
+
+    case 'quiz-generator':
+    case 'quiz':
+      return renderQuizWorkspace();
 
     case 'pdf-studio':
     case 'pdf-merge':
@@ -115,6 +120,10 @@ export function attachToolPageListeners(onReRender) {
 
     case 'storage':
       return attachStoragePageListeners(onReRender);
+
+    case 'quiz-generator':
+    case 'quiz':
+      return attachQuizListeners(onReRender);
 
     case 'pdf-studio':
     case 'pdf-merge':

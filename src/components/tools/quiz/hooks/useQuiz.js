@@ -1,0 +1,256 @@
+/**
+ * useQuiz Hook & State Manager (< 240 lines)
+ * Reactive state machine for Quiz Generator with defensive resource cleanup.
+ */
+
+import { uploadQuizFile, parsePromptApi, generateQuizJob, connectJobEvents } from './quizApi.js';
+import { showToast } from '../../../../utilities/toast.js';
+
+class QuizManager {
+  constructor() {
+    this.state = {
+      sourceMode: 'file', // 'file' | 'gdrive'
+      file: null,
+      fileId: null,
+      gdriveUrl: '',
+      pages: '',
+      count: 20,
+      start: 1,
+      title: 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
+      subtitle: '',
+      prefix: 'Quiz_A4',
+      isProcessing: false,
+      progress: 0,
+      stage: '',
+      jobId: null,
+      result: null, // { worksheet, answer, questionsCount }
+      error: null
+    };
+
+    this.listeners = new Set();
+    this.disconnectEvents = null;
+    this.uploadAbortController = null;
+  }
+
+  getState() {
+    return { ...this.state };
+  }
+
+  subscribe(fn) {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  notify(event) {
+    for (const fn of this.listeners) {
+      try {
+        fn(this.getState(), event);
+      } catch (err) {
+        console.error('QuizManager listener error:', err);
+      }
+    }
+  }
+
+  setSourceMode(mode) {
+    this.state.sourceMode = mode;
+    this.notify('source-mode-changed');
+  }
+
+  async setFile(file) {
+    if (this.uploadAbortController) {
+      this.uploadAbortController.abort();
+      this.uploadAbortController = null;
+    }
+
+    if (!file) {
+      this.state.file = null;
+      this.state.fileId = null;
+      this.notify('file-cleared');
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      showToast('Chỉ chấp nhận tệp định dạng PDF', 'error');
+      return;
+    }
+
+    this.state.file = {
+      name: file.name,
+      size: file.size,
+      status: 'uploading',
+      uploadProgress: 0
+    };
+    this.state.fileId = null;
+    this.state.error = null;
+    this.notify('file-selected');
+
+    this.uploadAbortController = new AbortController();
+    try {
+      const upRes = await uploadQuizFile(file, {
+        signal: this.uploadAbortController.signal,
+        onProgress: (p) => {
+          if (this.state.file) {
+            this.state.file.uploadProgress = Math.round(p.percentage || 0);
+            this.notify('file-upload-progress');
+          }
+        },
+        onStage: (s) => {
+          if (this.state.file) {
+            this.state.file.stage = s;
+            this.notify('file-upload-progress');
+          }
+        }
+      });
+
+      this.state.fileId = upRes.fileId;
+      this.state.file.status = 'ready';
+      this.notify('file-uploaded');
+      showToast('Đã nạp tệp PDF nguồn', 'success');
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      this.state.file.status = 'error';
+      this.state.error = err.message;
+      this.notify('file-upload-error');
+      showToast(err.message || 'Lỗi tải tệp PDF lên', 'error');
+    }
+  }
+
+  setGdriveUrl(url) {
+    this.state.gdriveUrl = (url || '').trim();
+    this.notify('gdrive-changed');
+  }
+
+  setParams(params = {}) {
+    if (params.pages !== undefined) this.state.pages = String(params.pages).trim();
+    if (params.count !== undefined) this.state.count = Math.max(1, Math.min(100, Number(params.count) || 20));
+    if (params.start !== undefined) this.state.start = Math.max(1, Number(params.start) || 1);
+    if (params.title !== undefined) this.state.title = String(params.title).trim();
+    if (params.subtitle !== undefined) this.state.subtitle = String(params.subtitle).trim();
+    if (params.prefix !== undefined) this.state.prefix = String(params.prefix).trim() || 'Quiz_A4';
+    this.notify('params-changed');
+  }
+
+  async parsePrompt(promptText) {
+    if (!promptText || !promptText.trim()) return;
+    try {
+      const parsed = await parsePromptApi(promptText);
+      if (parsed) {
+        if (parsed.pages) this.state.pages = parsed.pages;
+        if (parsed.count) this.state.count = parsed.count;
+        if (parsed.start) this.state.start = parsed.start;
+        this.notify('prompt-parsed');
+        showToast(`Đã nhận diện: Trang ${parsed.pages}, ${parsed.count} câu (từ câu ${parsed.start})`, 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Không thể nhận diện prompt', 'warning');
+    }
+  }
+
+  async startGeneration() {
+    if (this.state.isProcessing) return;
+
+    if (this.state.sourceMode === 'file') {
+      if (!this.state.fileId) {
+        showToast('Vui lòng đợi tệp PDF tải lên hoàn tất', 'warning');
+        return;
+      }
+    } else {
+      if (!this.state.gdriveUrl) {
+        showToast('Vui lòng nhập liên kết Google Drive', 'warning');
+        return;
+      }
+    }
+
+    if (!this.state.pages) {
+      showToast('Vui lòng nhập số trang hoặc dải trang cần lấy câu hỏi', 'warning');
+      return;
+    }
+
+    this.state.isProcessing = true;
+    this.state.progress = 5;
+    this.state.stage = 'Khởi tạo tác vụ tạo bài tập...';
+    this.state.result = null;
+    this.state.error = null;
+    this.notify('job-started');
+
+    try {
+      const payload = {
+        pages: this.state.pages,
+        count: this.state.count,
+        startNum: this.state.start,
+        title: this.state.title || 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
+        subtitle: this.state.subtitle || '',
+        prefix: this.state.prefix || 'Quiz_A4'
+      };
+
+      if (this.state.sourceMode === 'file') {
+        payload.fileId = this.state.fileId;
+      } else {
+        payload.gdriveUrl = this.state.gdriveUrl;
+      }
+
+      const jobData = await generateQuizJob(payload);
+      this.state.jobId = jobData.jobId;
+      this.notify('job-enqueued');
+
+      if (this.disconnectEvents) {
+        this.disconnectEvents();
+      }
+
+      this.disconnectEvents = connectJobEvents(jobData.jobId, {
+        onProgress: (evt) => {
+          this.state.progress = Math.max(this.state.progress, Math.min(99, evt.percentage || 0));
+          this.state.stage = evt.stage || 'Đang xử lý tài liệu và kết xuất PDF...';
+          this.notify('job-progress');
+        },
+        onCompleted: (evt) => {
+          this.state.isProcessing = false;
+          this.state.progress = 100;
+          this.state.stage = 'Hoàn tất xuất bản 2 tệp PDF A4!';
+          this.state.result = evt.data || null;
+          this.notify('job-completed');
+          showToast('Tạo bài tập và đáp án A4 thành công!', 'success');
+        },
+        onError: (err) => {
+          this.state.isProcessing = false;
+          this.state.error = err.message || 'Tác vụ tạo bài tập thất bại';
+          this.notify('job-error');
+          showToast(this.state.error, 'error');
+        }
+      });
+    } catch (err) {
+      this.state.isProcessing = false;
+      this.state.error = err.message || 'Lỗi gửi yêu cầu tạo bài tập';
+      this.notify('job-error');
+      showToast(this.state.error, 'error');
+    }
+  }
+
+  cancelJob() {
+    if (this.disconnectEvents) {
+      this.disconnectEvents();
+      this.disconnectEvents = null;
+    }
+    this.state.isProcessing = false;
+    this.notify('job-cancelled');
+  }
+
+  clearResult() {
+    this.state.result = null;
+    this.state.error = null;
+    this.notify('result-cleared');
+  }
+
+  teardown() {
+    if (this.disconnectEvents) {
+      this.disconnectEvents();
+      this.disconnectEvents = null;
+    }
+    if (this.uploadAbortController) {
+      this.uploadAbortController.abort();
+      this.uploadAbortController = null;
+    }
+  }
+}
+
+export const quizManager = new QuizManager();

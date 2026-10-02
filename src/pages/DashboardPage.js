@@ -60,6 +60,10 @@ export function renderDashboardPage() {
             <span class="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"></span>
             <span>PDF Studio</span>
           </a>
+          <a href="#tool/quiz-generator" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-purple-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-purple-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400"></span>
+            <span>Tạo Bài Tập</span>
+          </a>
           <a href="#tool/universal-converter" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-indigo-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-indigo-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
             <span class="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
             <span>File Converter</span>

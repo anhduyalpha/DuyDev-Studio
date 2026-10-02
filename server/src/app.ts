@@ -28,10 +28,12 @@ import { studocuRoute } from './api/routes/studocu.route.js';
 import { authRoute } from './api/routes/auth.route.js';
 import { storageRoute } from './api/routes/storage.route.js';
 import { viewerRoute } from './api/routes/viewer.route.js';
+import { quizRoute } from './api/routes/quiz.route.js';
 import { JanitorService } from './services/janitor.service.js';
 import { StudocuDaemonService } from './services/studocu-daemon.service.js';
 import { getPdfWorker, closePdfWorker } from './workers/pdf.worker.js';
 import { getConverterWorker, closeConverterWorker } from './workers/converter.worker.js';
+import { getQuizWorker, closeQuizWorker } from './workers/quiz.worker.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -101,6 +103,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authRoute);
   await app.register(storageRoute);
   await app.register(viewerRoute);
+  await app.register(quizRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)
@@ -251,6 +254,8 @@ async function startServer(): Promise<void> {
     logger.info('⚙️ PDF Processing BullMQ Worker initialized');
     getConverterWorker();
     logger.info('⚙️ Universal Converter BullMQ Worker initialized');
+    getQuizWorker();
+    logger.info('⚙️ AI Quiz BullMQ Worker initialized');
     StudocuDaemonService.ensureDaemonRunning().catch((err) => {
       logger.warn({ err }, 'Background Studocu daemon startup warning');
     });
@@ -297,6 +302,7 @@ async function startServer(): Promise<void> {
         await Promise.allSettled([
           closePdfWorker(),
           closeConverterWorker(),
+          closeQuizWorker(),
           StudocuDaemonService.stopDaemon()
         ]);
         await server.close();

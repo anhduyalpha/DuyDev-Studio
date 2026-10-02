@@ -17,6 +17,19 @@ const DEFAULT_TOOLS = [
     route: '#tool/pdf-studio',
     tags: ['pdf', 'ghép', 'tách', 'xoay', 'ảnh sang pdf', 'nén', 'mật khẩu', 'watermark', 'trích ảnh', 'xem pdf', 'merge', 'split', 'rotate']
   },
+  {
+    id: 'quiz-generator',
+    title: 'Tạo Bài Tập',
+    description: 'Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.',
+    category: 'pdf',
+    icon: 'graduation-cap',
+    badge: 'AI A4 PDF',
+    featured: true,
+    specs: ['Đề bài A4', 'Đáp án & Lời giải', 'Agnes AI'],
+    color: '#8B5CF6',
+    route: '#tool/quiz-generator',
+    tags: ['quiz', 'bài tập', 'tạo bài tập', 'đề thi', 'trắc nghiệm', 'hóa học', 'toán', 'lý', 'pdf', 'a4', 'agnes', 'ai']
+  },
 
   // 2. Archive Inspector (.ZIP / .RAR)
   {

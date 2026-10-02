@@ -340,6 +340,8 @@ class App {
       dispatchTool('universal-converter');
     } else if (hash === '#studocu' || hash === '#studocu-dl') {
       dispatchTool('studocu-dl');
+    } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap') {
+      dispatchTool('quiz-generator');
     } else if (hash === '#archive' || hash === '#archive-inspect') {
       setView(renderArchivePage(), () => attachArchivePageListeners(onSoftReRender));
     } else if (hash === '#server-archive' || hash === '#compress-archive') {
