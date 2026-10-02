@@ -9,6 +9,7 @@ import { renderConverterQueueList } from '../components/ConverterQueueList.js';
 import { renderConverterResult } from '../components/ConverterResult.js';
 import { bindConverterHistory, updateConverterHistoryDom } from '../components/ConverterHistoryList.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
+import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 
 /**
  * Safely refreshes Lucide icons if available in current runtime environment.
@@ -415,8 +416,17 @@ export function attachConverterListeners(manager) {
           showToast('Đang tải tệp lên máy chủ, vui lòng đợi hoàn tất!', 'warning');
           return;
         }
-        manager.clearQueue();
-        updateConverterHistoryDom(manager);
+        openSlideConfirmModal({
+          title: 'Xóa hàng đợi chuyển đổi',
+          description: 'Hủy và xóa toàn bộ các tệp trong danh sách đang xử lý.',
+          warningText: 'Các tệp chưa chuyển đổi xong sẽ bị hủy.',
+          actionText: 'Kéo sang phải để xóa hàng đợi',
+          confirmingText: 'Đang xóa...',
+          onConfirm: () => {
+            manager.clearQueue();
+            updateConverterHistoryDom(manager);
+          }
+        });
         return;
       }
     };
@@ -505,8 +515,17 @@ export function attachConverterListeners(manager) {
         return;
       }
       if (e.target.closest('#btnClearAllConverterResults')) {
-        manager.clearQueue();
-        updateConverterHistoryDom(manager);
+        openSlideConfirmModal({
+          title: 'Xóa danh sách kết quả',
+          description: 'Xóa toàn bộ các tệp kết quả trong danh sách hiện tại.',
+          warningText: 'Các tệp đã lưu trong lịch sử vẫn được giữ nguyên.',
+          actionText: 'Kéo sang phải để xóa tất cả',
+          confirmingText: 'Đang xóa...',
+          onConfirm: () => {
+            manager.clearQueue();
+            updateConverterHistoryDom(manager);
+          }
+        });
         return;
       }
     };

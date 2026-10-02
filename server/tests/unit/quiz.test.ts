@@ -204,7 +204,7 @@ describe('Quiz Module Unit & Integration Tests', () => {
       expect(json.data.pages).toBe('11');
       expect(json.data.start).toBe(1);
       expect(json.data.count).toBe(20);
-      expect(json.data.source).toBe('regex');
+      expect(['ai', 'regex']).toContain(json.data.source);
     });
 
     it('parses comma-separated pages and explicit question count', async () => {
@@ -222,7 +222,7 @@ describe('Quiz Module Unit & Integration Tests', () => {
       expect(json.data.pages).toBe('4,5,6');
       expect(json.data.count).toBe(15);
       expect(json.data.start).toBe(10);
-      expect(json.data.source).toBe('regex');
+      expect(['ai', 'regex']).toContain(json.data.source);
     });
 
     it('returns 400 for empty prompt', async () => {

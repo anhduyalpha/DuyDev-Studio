@@ -101,7 +101,7 @@ function renderCompletedState(state) {
       <!-- Dual Cards Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Worksheet Card -->
-        <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between space-y-4 hover:border-zinc-700 transition">
+        <div class="bg-[#111114] border border-blue-500/30 hover:border-blue-500/50 rounded-2xl p-4 flex flex-col justify-between space-y-4 transition">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
@@ -116,11 +116,11 @@ function renderCompletedState(state) {
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}">
+            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${ws.viewUrl || ''}" data-download-url="${wsDownloadUrl || ''}">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" target="_blank" rel="noopener noreferrer" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" target="_blank" rel="noopener noreferrer" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>
@@ -128,7 +128,7 @@ function renderCompletedState(state) {
         </div>
 
         <!-- Answer Key Card -->
-        <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between space-y-4 hover:border-zinc-700 transition">
+        <div class="bg-[#111114] border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl p-4 flex flex-col justify-between space-y-4 transition">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
@@ -142,11 +142,11 @@ function renderCompletedState(state) {
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}">
+            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ans.viewUrl || ''}" data-download-url="${ansDownloadUrl || ''}">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" target="_blank" rel="noopener noreferrer" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" target="_blank" rel="noopener noreferrer" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>

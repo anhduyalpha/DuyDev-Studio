@@ -185,7 +185,7 @@ export function resolveViewerUrls(item) {
   // 5. Storage records: strictly extract fileId only for /api/v1/files/(download|view)/:fileId
   if (!fileId && (downloadUrl || viewUrl)) {
     const rawTarget = (downloadUrl || viewUrl).trim();
-    const match = rawTarget.match(/\/api\/v1\/files\/(?:download|view)\/([^?#]+)/);
+    const match = rawTarget.match(/\/api\/v1\/files\/(?:download|view)\/([^/?#]+)/);
     if (match) fileId = match[1].trim();
   }
 

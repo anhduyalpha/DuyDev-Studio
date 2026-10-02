@@ -154,11 +154,13 @@ class QuizManager {
     try {
       const parsed = await parsePromptApi(promptText);
       if (parsed) {
-        if (parsed.pages) this.state.pages = parsed.pages;
-        if (parsed.count) this.state.count = parsed.count;
-        if (parsed.start) this.state.start = parsed.start;
+        if (parsed.pages !== undefined) this.state.pages = String(parsed.pages);
+        if (parsed.count !== undefined) this.state.count = Number(parsed.count);
+        if (parsed.start !== undefined) this.state.start = Number(parsed.start);
+        if (parsed.prefix) this.state.prefix = String(parsed.prefix);
+        if (parsed.title) this.state.title = String(parsed.title);
         this.notify('prompt-parsed');
-        showToast(`Đã nhận diện: Trang ${parsed.pages}, ${parsed.count} câu (từ câu ${parsed.start})`, 'success');
+        showToast(`Đã nhận diện: Trang ${parsed.pages || '—'}, ${parsed.count || 20} câu (từ câu ${parsed.start || 1})`, 'success');
       }
     } catch (err) {
       showToast(err.message || 'Không thể nhận diện prompt', 'warning');
@@ -277,23 +279,7 @@ class QuizManager {
             }
           }
 
-          this.state.result = res;
-          this.notify('job-completed');
-          showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
-
-          // Trigger native push notification if running inside Android APK
-          if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
-            try {
-              const quizName = this.state.prefix || 'PDF';
-              window.AndroidBridge.showNotification(
-                'Tạo bài tập hoàn tất',
-                `Đã tạo thành công Đề bài và Đáp án: ${quizName}`,
-                'quiz'
-              );
-            } catch (_) {}
-          }
-
-          // Sync completed items to local history
+          // Sync completed items to local history BEFORE notifying listeners
           if (res?.worksheet && res?.answer) {
             try {
               saveQuizHistoryPair({
@@ -328,6 +314,22 @@ class QuizManager {
                 downloadUrl: res.answer.downloadUrl || `/api/v1/files/download/${res.answer.fileId}`,
                 status: 'success'
               });
+            } catch (_) {}
+          }
+
+          this.state.result = res;
+          this.notify('job-completed');
+          showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
+
+          // Trigger native push notification if running inside Android APK
+          if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
+            try {
+              const quizName = this.state.prefix || 'PDF';
+              window.AndroidBridge.showNotification(
+                'Tạo bài tập hoàn tất',
+                `Đã tạo thành công Đề bài và Đáp án: ${quizName}`,
+                'quiz'
+              );
             } catch (_) {}
           }
         },

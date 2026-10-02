@@ -11,6 +11,7 @@ Tài liệu quản lý tri thức kỹ thuật (Knowledge Items - KIs) chuẩn h
 | [`KI-CON-001`](file:///docs/knowledge-base/KI-CON-001-ui-production-minimalism.md) | [Quy Chuẩn Thiết Kế Giao Diện Tối Giản Chuẩn Production & Cấm Chú Thích Thừa](file:///docs/knowledge-base/KI-CON-001-ui-production-minimalism.md) | `concept` | `frontend` | `verified` | Khi thiết kế hoặc chỉnh sửa giao diện; loại bỏ câu từ tiếp thị, chú thích giải thích hiển nhiên, giữ phong cách Linear/Vercel. |
 | [`KI-CON-002`](file:///docs/knowledge-base/KI-CON-002-native-zero-iframe-tool-module-integration.md) | [Kiến Trúc Tích Hợp Mô-Đun Thuần Native (Zero-Iframe) & Tính Mô-Đun Gắn Kết (Cohesive Modularity)](file:///docs/knowledge-base/KI-CON-002-native-zero-iframe-tool-module-integration.md) | `concept` | `frontend` | `verified` | Đưa web tool độc lập vào Studio dưới dạng native component thuần DOM, phân rã theo Single Responsibility & Cohesive Modularity. |
 | [`KI-CON-003`](file:///docs/knowledge-base/KI-CON-003-universal-extensible-multitasking-architecture.md) | [Kiến Trúc Đa Nhiệm Độc Lập Toàn Diện & Mở Rộng Tương Lai (Universal Extensible Multitasking)](file:///docs/knowledge-base/KI-CON-003-universal-extensible-multitasking-architecture.md) | `concept` | `frontend` | `verified` | Khi thiết kế hoặc thêm module mới cần chạy tác vụ ngầm bền vững, giám sát qua GlobalTaskDock và bắn thông báo hoàn tất mà không sửa router. |
+| [`KI-CON-004`](file:///docs/knowledge-base/KI-CON-004-two-column-continuous-flow-quiz-pdf-engine.md) | [Kiến Trúc Pipeline Trích Xuất & Biên Soạn Đề Thi Trắc Nghiệm A4 2 Cột Chống Tràn Trang (Quiz Pipeline V2)](file:///docs/knowledge-base/KI-CON-004-two-column-continuous-flow-quiz-pdf-engine.md) | `concept` | `fullstack` | `verified` | Khi thiết kế, mở rộng hoặc xử lý lỗi trong hệ thống trích xuất đề thi trắc nghiệm từ tài liệu (PDF, DOCX, TXT) và biên soạn tài liệu A4 2 cột chuyên nghiệp. |
 | [`KI-FIX-001`](file:///docs/knowledge-base/KI-FIX-001-persistent-browser-session-cloudflare.md) | [Fixing Cloudflare Turnstile Re-challenging and Concurrency Deadlocks](file:///docs/knowledge-base/KI-FIX-001-persistent-browser-session-cloudflare.md) | `troubleshoot` | `backend` | `verified` | Mỗi lần tải tài liệu bị bắt giải lại Turnstile (15-30s), xung đột kết nối CDP, hoặc bị Cloudflare chặn "Access Blocked". |
 | [`KI-FIX-002`](file:///docs/knowledge-base/KI-FIX-002-studocu-blank-pages-virtual-scroll.md) | [Fixing Blank White Page 1 and Offscreen Page Renders in Studocu Virtual DOM](file:///docs/knowledge-base/KI-FIX-002-studocu-blank-pages-virtual-scroll.md) | `troubleshoot` | `frontend` | `verified` | Trang 1 (bìa) hoặc các trang offscreen bị trắng xóa trong file PDF do inline style `display: none` trên `.page-content`. |
 | [`KI-FIX-003`](file:///docs/knowledge-base/KI-FIX-003-studocu-paywalled-blurred-pages-bypass.md) | [Bypassing Studocu Blurred Paywalled Pages via Selective Active Session Reset](file:///docs/knowledge-base/KI-FIX-003-studocu-paywalled-blurred-pages-bypass.md) | `troubleshoot` | `backend` | `verified` | Tài liệu bị giới hạn xem trước, xuất hiện ảnh mờ WebP (`blurred/page{n}.webp`), thiếu text layer, và banner Premium. |
@@ -27,6 +28,9 @@ Tài liệu quản lý tri thức kỹ thuật (Knowledge Items - KIs) chuẩn h
 | [`KI-FIX-014`](file:///docs/knowledge-base/KI-FIX-014-pdf-studio-thumbnail-pagination-lightbox-strict-filters.md) | [Phân Trang Thumbnail 4x2 Chống OOM, Lightbox Phóng To & Bộ Lọc File Khắt Khe Trong PDF Studio](file:///docs/knowledge-base/KI-FIX-014-pdf-studio-thumbnail-pagination-lightbox-strict-filters.md) | `troubleshoot` | `frontend` | `verified` | PDF nhiều trang gây tràn RAM canvas, khó xem chi tiết thumbnail, hoặc người dùng kéo nhầm định dạng file lạ vào tab PDF. |
 | [`KI-FIX-015`](file:///docs/knowledge-base/KI-FIX-015-decoupling-background-tasks-spa-dom-lifecycle.md) | [Tách Rời Vòng Đời Tác Vụ Ngầm Khỏi Vòng Đời Hủy DOM Của Router SPA](file:///docs/knowledge-base/KI-FIX-015-decoupling-background-tasks-spa-dom-lifecycle.md) | `troubleshoot` | `frontend` | `verified` | Upload tệp nén hoặc xử lý bị hủy đột ngột khi chuyển tab; giải quyết bằng Singleton Manager và dọn dẹp non-destructive. |
 | [`KI-FIX-016`](file:///docs/knowledge-base/KI-FIX-016-selective-dom-diffing-global-task-dock-flicker-prevention.md) | [Cơ Chế Selective In-Place DOM Diffing & Shallow-Diff Guard Triệt Tiêu Nhấp Nháy Tại GlobalTaskDock](file:///docs/knowledge-base/KI-FIX-016-selective-dom-diffing-global-task-dock-flicker-prevention.md) | `troubleshoot` | `frontend` | `verified` | Thanh dock tác vụ ngầm liên tục nhấp nháy, lặp animation mờ dần do xóa tạo lại innerHTML mỗi giây; giải quyết bằng In-Place Leaf Mutation. |
+| [`KI-FIX-017`](file:///docs/knowledge-base/KI-FIX-017-quiz-two-column-mid-banner-scramble-dangling-stitcher.md) | [Khắc Phục Lỗi Xáo Trộn Bố Cục 2 Cột, Rách Câu Hỏi Giữa Trang (Dangling Questions) & Khoảng Trắng Nhân Tạo Trong A4 PDF Paged Media](file:///docs/knowledge-base/KI-FIX-017-quiz-two-column-mid-banner-scramble-dangling-stitcher.md) | `troubleshoot` | `backend` | `verified` | Khi biên soạn đề thi trắc nghiệm A4 2 cột gặp hiện tượng: câu hỏi bị xáo trộn giữa 2 cột, tiêu đề phân đoạn đè lên nội dung, rách câu hỏi qua trang, hoặc xuất hiện khoảng trắng nhân tạo khổng lồ. |
+| [`KI-FIX-018`](file:///docs/knowledge-base/KI-FIX-018-android-native-bridge-background-downloads-push-notifications.md) | [Tích Hợp Android Native Bridge Xử Lý Download File Nền & Bắn Push Notification Kèm App Icon Trong PWA WebView](file:///docs/knowledge-base/KI-FIX-018-android-native-bridge-background-downloads-push-notifications.md) | `troubleshoot` | `mobile` | `verified` | Người dùng app Android bấm tải file PDF/APK nhưng WebView không phản hồi, tải ngầm bị hủy khi thoát app, hoặc thanh thông báo không hiện tiến độ kèm app icon. |
+| [`KI-FIX-019`](file:///docs/knowledge-base/KI-FIX-019-dual-result-pdf-delivery-split-history-sync.md) | [Đồng Bộ Lịch Sử 2 Cột, Xóa Thùng Rác (Trash Support) & Phân Phối File Kép (Dual Result Cards) Trong Quiz Workspace](file:///docs/knowledge-base/KI-FIX-019-dual-result-pdf-delivery-split-history-sync.md) | `troubleshoot` | `fullstack` | `verified` | Khi người dùng tạo đề thi trắc nghiệm và cần nhận cả 2 tệp riêng biệt (Đề bài & Đáp án), hiển thị thẻ kết quả kép, lưu trữ lịch sử theo cặp với thùng rác 2 chiều, và cập nhật trạng thái input không gây giật lag (zero layout shift). |
 | [`KI-HOWTO-001`](file:///docs/knowledge-base/KI-HOWTO-001-studocu-downloader-docker-casaos-deployment.md) | [Deploying Studocu Downloader with Integrated Web PDF Viewer on CasaOS Docker](file:///docs/knowledge-base/KI-HOWTO-001-studocu-downloader-docker-casaos-deployment.md) | `how-to` | `devops` | `verified` | Hướng dẫn triển khai dịch vụ lên Docker / CasaOS, tích hợp trình đọc PDF.js trực tiếp trên trình duyệt, mount volume bền vững. |
 | [`KI-HOWTO-002`](file:///docs/knowledge-base/KI-HOWTO-002-cloudflare-tunnel-docker-homeserver-https.md) | [Triển Khai Cloudflare Zero-Trust Tunnel Bằng Docker Cho Homeserver Để Cấp HTTPS Công Khai](file:///docs/knowledge-base/KI-HOWTO-002-cloudflare-tunnel-docker-homeserver-https.md) | `how-to` | `devops` | `verified` | Mở kết nối HTTPS công khai cho DD Studio từ Internet qua Cloudflare Tunnel không cần mở port modem hay cấu hình DDNS. |
 | [`KI-HOWTO-003`](file:///docs/knowledge-base/KI-HOWTO-003-pwa-service-worker-cache-invalidation-mobile.md) | [Quy Trình Quản Lý & Làm Mới Cache Service Worker Cho Ứng Dụng PWA Trên Thiết Bị Di Động](file:///docs/knowledge-base/KI-HOWTO-003-pwa-service-worker-cache-invalidation-mobile.md) | `how-to` | `frontend` | `verified` | Thiết bị di động không cập nhật code mới sau khi deploy (Zombie Service Worker), hoặc lỗi cache miss các file modular sub-components. |
@@ -39,6 +43,8 @@ Tài liệu quản lý tri thức kỹ thuật (Knowledge Items - KIs) chuẩn h
 graph TD
     UserPublic([Người dùng Internet / 4G]) -->|HTTPS Public| CF[Cloudflare Edge / Tunnel - KI-HOWTO-002]
     UserLAN([Người dùng LAN 192.168.2.x]) -->|Direct HTTP :3000 / HTTPS :3443| Gateway
+    UserAndroid([Người dùng Android Native Wrapper]) -->|WebView Bridge - KI-FIX-018| NativeBridge[AndroidBridge & DownloadHelper]
+    NativeBridge -->|OkHttp Coroutine & MediaScanner| AndroidFS[(Public Downloads & Notif Tray)]
     
     CF -->|Host Network localhost:3000| Gateway[Fastify Gateway :3000]
     
@@ -53,6 +59,7 @@ graph TD
         UI -->|Phân trang 4x2 & Lightbox| PdfView[Paginated Thumbnails - KI-FIX-014]
         UI -->|Selective DOM Diffing chống giật lag| DiffEngine[O(1) Live Updates - KI-FIX-010]
         UI -->|Phòng ngừa lỗi ReferenceError| SafeRender[Safe Template & Smoke Tests - KI-FIX-011]
+        UI -->|Quiz Workspace & Paired History| QuizUI[Quiz Studio & Trash Sync - KI-FIX-019]
     end
 
     subgraph Fastify Gateway & Orchestrator
@@ -60,6 +67,7 @@ graph TD
         Gateway -->|Cưỡng chế Content-Type application/pdf & inline| StreamProxy[PDF Stream Proxy - KI-FIX-005]
         Gateway -->|Proxy API| PyServer[Python Studocu Engine :8090]
         Gateway -->|Background Worker| BullMQ[BullMQ / Redis Queue]
+        BullMQ -->|Quiz Job Worker| QuizWorker[quiz.worker.ts - KI-FIX-019]
     end
 
     subgraph Studocu Headless Extraction Engine
@@ -71,8 +79,19 @@ graph TD
         ChunkCapture -->|CDP Page.printToPDF| OutPDF[(Thư mục Downloads PDF)]
     end
 
+    subgraph Quiz Pipeline V2 (A4 2-Column Continuous Flow)
+        QuizWorker -->|Python CLI Bridge - KI-FIX-013| PyQuiz[quiz_pipeline.py - KI-CON-004]
+        PyQuiz -->|Spatial Layout & Assets| LayoutFix[Band Segmentation & Dangling Stitcher - KI-FIX-017]
+        PyQuiz -->|Sliding Window LLM & Cluster| LLMCluster[Asset Clustering & Schema Normalizer - KI-CON-004]
+        LayoutFix --> DualCSS[Dual A4 Paged Media Templates]
+        LLMCluster --> DualCSS
+        DualCSS -->|Headless Chrome Print| DualPDF[(Đề bài & Đáp án .pdf)]
+        DualPDF -->|Atomic Storage & SSE Dual Payload| QuizWorker
+    end
+
     OutPDF --> StreamProxy
     StreamProxy --> Viewer
+    QuizUI -->|Tải file qua Native Bridge| NativeBridge
 ```
 
 ---

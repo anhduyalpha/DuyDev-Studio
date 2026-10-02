@@ -1263,11 +1263,11 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
         if is_multi_part and q_type != current_part:
             current_part = q_type
             if q_type == "mcq":
-                items_html.append('<div class="section-banner">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>')
+                items_html.append('<div class="section-banner notranslate katex-ignore">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>')
             elif q_type == "true_false_group":
-                items_html.append('<div class="section-banner">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG / SAI</div>')
+                items_html.append('<div class="section-banner notranslate katex-ignore">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG / SAI</div>')
             elif q_type == "short_answer":
-                items_html.append('<div class="section-banner">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>')
+                items_html.append('<div class="section-banner notranslate katex-ignore">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>')
 
         content = render_question_content_html(q)
 
@@ -1282,7 +1282,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
     sub_html = f'\n    <div class="sub-title">{subtitle}</div>' if subtitle and subtitle.strip() else ""
 
     top_banner = (
-        f'<div class="section-banner">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN ({len(questions)} CÂU)</div>'
+        f'<div class="section-banner notranslate katex-ignore">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN ({len(questions)} CÂU)</div>'
         if not is_multi_part else ""
     )
 
@@ -1511,7 +1511,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 </head>
 <body>
 
-  <div class="header-box">
+  <div class="header-box notranslate katex-ignore">
     <div class="main-title">{title}</div>{sub_html}
     <div class="info-bar">
       <span>Họ và tên: .................................................................................</span>
@@ -1531,9 +1531,11 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
           delimiters: [
             {{left: '$$', right: '$$', display: true}},
             {{left: '$', right: '$', display: false}},
-            {{left: '\\(', right: '\\)', display: false}},
+            {{left: '\\\\(', right: '\\\\)', display: false}},
             {{left: '\\[', right: '\\]', display: true}}
           ],
+          ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
+          ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
           throwOnError: false
         }});
       }}
@@ -1563,8 +1565,8 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
             rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
         table_html = "\n  ".join(rows)
         matrix_blocks.append(f"""
-  <div class="section-banner">I. BẢNG ĐÁP ÁN TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>
-  <table class="matrix-table">
+  <div class="section-banner notranslate katex-ignore">I. BẢNG ĐÁP ÁN TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>
+  <table class="matrix-table notranslate katex-ignore">
     {table_html}
   </table>""")
 
@@ -1585,8 +1587,8 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
             rows.append(f"<tr><th>Câu {num}</th>{''.join(cells)}</tr>")
         tf_matrix_html = "\n    ".join(rows)
         matrix_blocks.append(f"""
-  <div class="section-banner">II. BẢNG ĐÁP ÁN TRẮC NGHIỆM ĐÚNG / SAI</div>
-  <table class="matrix-table">
+  <div class="section-banner notranslate katex-ignore">II. BẢNG ĐÁP ÁN TRẮC NGHIỆM ĐÚNG / SAI</div>
+  <table class="matrix-table notranslate katex-ignore">
     {tf_matrix_html}
   </table>""")
 
@@ -1601,8 +1603,8 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
             rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
         sa_matrix_html = "\n  ".join(rows)
         matrix_blocks.append(f"""
-  <div class="section-banner">III. BẢNG ĐÁP ÁN TRẢ LỜI NGẮN</div>
-  <table class="matrix-table">
+  <div class="section-banner notranslate katex-ignore">III. BẢNG ĐÁP ÁN TRẢ LỜI NGẮN</div>
+  <table class="matrix-table notranslate katex-ignore">
     {sa_matrix_html}
   </table>""")
 
@@ -1847,13 +1849,13 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 </head>
 <body>
 
-  <div class="header-box">
+  <div class="header-box notranslate katex-ignore">
     <div class="main-title">ĐÁP ÁN & HƯỚNG DẪN GIẢI CHI TIẾT</div>{sub_html}
   </div>
 
 {matrix_content}
 
-  <div class="section-banner">HƯỚNG DẪN GIẢI CHI TIẾT TỪNG CÂU</div>
+  <div class="section-banner notranslate katex-ignore">HƯỚNG DẪN GIẢI CHI TIẾT TỪNG CÂU</div>
 
 {sols_rendered}
 
@@ -1864,9 +1866,11 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
           delimiters: [
             {{left: '$$', right: '$$', display: true}},
             {{left: '$', right: '$', display: false}},
-            {{left: '\\(', right: '\\)', display: false}},
+            {{left: '\\\\(', right: '\\\\)', display: false}},
             {{left: '\\[', right: '\\]', display: true}}
           ],
+          ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
+          ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
           throwOnError: false
         }});
       }}

@@ -23,6 +23,7 @@ import {
 } from '../utilities/quizHistoryHelper.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
+import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 
 export function attachQuizListeners() {
   if (window.lucide?.createIcons) window.lucide.createIcons();
@@ -175,6 +176,9 @@ export function attachQuizListeners() {
 
     if (event === 'job-completed') {
       renderAndBindHistory();
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        document.getElementById('quizResultContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     if (window.lucide?.createIcons) window.lucide.createIcons();
@@ -327,15 +331,17 @@ export function attachQuizListeners() {
       btn.onclick = () => {
         const fileId = btn.dataset.fileId;
         const fileName = btn.dataset.fileName;
-        if (fileId && fileId !== 'undefined') {
+        const viewUrl = btn.dataset.viewUrl;
+        const downloadUrl = btn.dataset.downloadUrl;
+        if ((fileId && fileId !== 'undefined') || viewUrl) {
           ViewerConnector.preview({
-            id: fileId,
+            id: fileId || fileName,
             fileId: fileId,
             name: fileName,
             fileName: fileName,
             mimeType: 'application/pdf',
-            viewUrl: `/api/v1/files/view/${fileId}`,
-            downloadUrl: `/api/v1/files/download/${fileId}`
+            viewUrl: viewUrl || `/api/v1/files/view/${fileId}`,
+            downloadUrl: downloadUrl || `/api/v1/files/download/${fileId}`
           });
         }
       };
@@ -445,9 +451,18 @@ export function attachQuizListeners() {
     const btnTrashAll = document.getElementById('btnQuizTrashAll');
     if (btnTrashAll) {
       btnTrashAll.onclick = () => {
-        moveAllQuizPairsToTrash();
-        renderAndBindHistory();
-        showToast('Đã chuyển tất cả bộ đề vào thùng rác', 'success');
+        openSlideConfirmModal({
+          title: 'Chuyển tất cả vào thùng rác',
+          description: 'Chuyển toàn bộ danh sách bộ đề trong lịch sử vào thùng rác.',
+          warningText: 'Bạn có thể khôi phục lại từ tab Thùng rác bất cứ lúc nào.',
+          actionText: 'Kéo sang phải để chuyển tất cả',
+          confirmingText: 'Đang chuyển...',
+          onConfirm: () => {
+            moveAllQuizPairsToTrash();
+            renderAndBindHistory();
+            showToast('Đã chuyển tất cả bộ đề vào thùng rác', 'success');
+          }
+        });
       };
     }
 
@@ -463,9 +478,18 @@ export function attachQuizListeners() {
     const btnEmptyTrash = document.getElementById('btnQuizEmptyTrash');
     if (btnEmptyTrash) {
       btnEmptyTrash.onclick = () => {
-        emptyQuizTrashPermanently();
-        renderAndBindHistory();
-        showToast('Đã dọn sạch thùng rác', 'success');
+        openSlideConfirmModal({
+          title: 'Dọn sạch thùng rác bộ đề',
+          description: 'Xóa vĩnh viễn toàn bộ các bộ đề trong thùng rác.',
+          warningText: 'Hành động này không thể hoàn tác.',
+          actionText: 'Kéo sang phải để xóa vĩnh viễn',
+          confirmingText: 'Đang dọn sạch...',
+          onConfirm: () => {
+            emptyQuizTrashPermanently();
+            renderAndBindHistory();
+            showToast('Đã dọn sạch thùng rác', 'success');
+          }
+        });
       };
     }
 

@@ -15,7 +15,7 @@ export function renderHeroPasteCard(state) {
           <span>Studocu Downloader</span>
         </h2>
         <p class="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto">
-          Trích xuất tài liệu Studocu sang PDF và Markdown.
+          Trích xuất tài liệu Studocu sang PDF.
         </p>
       </div>
 

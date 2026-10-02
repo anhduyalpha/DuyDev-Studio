@@ -133,12 +133,12 @@ const DEFAULT_TOOLS = [
   {
     id: 'studocu-dl',
     title: 'Studocu Downloader',
-    description: 'Trích xuất tài liệu Studocu sang PDF và Markdown.',
+    description: 'Trích xuất tài liệu Studocu sang PDF.',
     category: 'system',
     icon: 'file-down',
     badge: '',
     featured: false,
-    specs: ['PDF & MD'],
+    specs: ['PDF'],
     color: '#6366F1',
     route: '#tool/studocu-dl',
     tags: ['studocu', 'tài liệu', 'tiện ích', 'download', 'pdf', 'slide', 'bài giảng']

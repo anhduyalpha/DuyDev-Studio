@@ -94,8 +94,8 @@ export function getQuizHistoryList() {
       }
 
       for (const group of legacyGroups.values()) {
-        const ws = group.items.find((i) => (i.fileName || '').includes('_DeBai')) || group.items[0];
-        const ans = group.items.find((i) => (i.fileName || '').includes('_DapAn')) || group.items[1] || ws;
+        const ws = group.items.find((i) => (i.fileName || '').includes('_DeBai')) || group.items.find((i) => !(i.fileName || '').includes('_DapAn')) || group.items[0];
+        const ans = group.items.find((i) => (i.fileName || '').includes('_DapAn')) || group.items.find((i) => i !== ws) || ws;
         const paired = normalizeQuizPair({
           id: `legacy_${ws?.resultFileId || Date.now()}`,
           timestamp: new Date(group.createdAt || 0).getTime(),

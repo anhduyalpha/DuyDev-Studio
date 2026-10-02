@@ -8,6 +8,7 @@ import { formatBytes, formatRelativeTime } from '../../../../utilities/formatter
 import { showToast } from '../../../../utilities/toast.js';
 import { copyText } from '../../../../utilities/clipboard.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
+import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 
 export function getConverterHistoryItems(limit = 5) {
   return storage.getLocalHistory().filter(i => {
@@ -113,11 +114,21 @@ export function bindConverterHistory(manager) {
 
   const btnClear = el.querySelector('#btnClearConverterHistory');
   if (btnClear) {
-    btnClear.onclick = async () => {
+    btnClear.onclick = () => {
       const items = getConverterHistoryItems(100);
-      for (const it of items) await storage.moveToTrash(it.id);
-      showToast('Đã xóa lịch sử', 'info');
-      updateConverterHistoryDom(manager);
+      if (items.length === 0) return;
+      openSlideConfirmModal({
+        title: 'Xóa lịch sử chuyển đổi',
+        description: `Chuyển toàn bộ ${items.length} tệp trong lịch sử chuyển đổi vào thùng rác.`,
+        warningText: 'Bạn có thể khôi phục lại từ Thùng rác hệ thống bất cứ lúc nào.',
+        actionText: 'Kéo sang phải để xóa lịch sử',
+        confirmingText: 'Đang chuyển...',
+        onConfirm: async () => {
+          for (const it of items) await storage.moveToTrash(it.id);
+          showToast('Đã chuyển lịch sử vào thùng rác', 'info');
+          updateConverterHistoryDom(manager);
+        }
+      });
     };
   }
 

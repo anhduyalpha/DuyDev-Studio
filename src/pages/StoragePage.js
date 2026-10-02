@@ -9,6 +9,7 @@ import { ViewerConnector } from '../components/common/viewer/FileViewerConnector
 import { isAdminAuthenticated, verifyAdminPassword, lockAdminSession } from '../utilities/adminAuth.js';
 import { formatBytes, formatRelativeTime } from '../utilities/formatters.js';
 import { showToast } from '../utilities/toast.js';
+import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
 
 // Internal controller state
 const state = {
@@ -956,21 +957,23 @@ function handleRenameItem(itemPath, oldName, onComplete) {
 let isDeletingStorageItem = false;
 
 /**
- * Handles Item Deletion with immediate user confirmation
+ * Handles Item Deletion with slide-to-confirm modal
  */
-async function handleDeleteItem(itemPath, itemName, onComplete) {
-  if (isDeletingStorageItem) return;
-  isDeletingStorageItem = true;
-  try {
-    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa "${itemName}" không?`);
-    if (!confirmed) return;
-
-    await StorageService.deleteItem(itemPath);
-    showToast(`Đã xóa "${itemName}"`, 'success');
-    if (typeof onComplete === 'function') onComplete();
-  } catch (err) {
-    showToast(err.message || 'Lỗi khi xóa', 'error');
-  } finally {
-    isDeletingStorageItem = false;
-  }
+function handleDeleteItem(itemPath, itemName, onComplete) {
+  openSlideConfirmModal({
+    title: 'Xóa mục lưu trữ',
+    description: `Xóa vĩnh viễn "${itemName}" khỏi hệ thống lưu trữ.`,
+    warningText: 'Hành động này không thể hoàn tác.',
+    actionText: 'Kéo sang phải để xóa vĩnh viễn',
+    confirmingText: 'Đang xóa...',
+    onConfirm: async () => {
+      try {
+        await StorageService.deleteItem(itemPath);
+        showToast(`Đã xóa "${itemName}"`, 'success');
+        if (typeof onComplete === 'function') onComplete();
+      } catch (err) {
+        showToast(err.message || 'Lỗi khi xóa', 'error');
+      }
+    }
+  });
 }
