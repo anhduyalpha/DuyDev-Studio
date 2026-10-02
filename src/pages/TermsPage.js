@@ -150,11 +150,6 @@ export function renderTermsPage() {
               <p class="text-xs text-zinc-400 mt-0.5">Một ly trà đá hay gói bim bim cũng đủ làm dev cảm động rớt nước mắt.</p>
             </div>
           </div>
-
-          <a href="#tool/qr-multi" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-white font-medium transition cursor-pointer border border-white/10 self-start sm:self-auto">
-            <i data-lucide="qr-code" class="w-4 h-4 text-indigo-400"></i>
-            <span>Mở QR Studio</span>
-          </a>
         </div>
 
         <!-- Bank Card & QR Display Grid -->
@@ -194,13 +189,42 @@ export function renderTermsPage() {
               </div>
             </div>
 
-            <div class="pt-3 border-t border-white/5 flex flex-wrap gap-2">
-              <button type="button" id="btnQuickCopy5k" class="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-300 text-xs font-medium cursor-pointer transition flex items-center gap-1.5">
-                <span>☕</span> <span>Sao chép STK (10.000đ)</span>
-              </button>
-              <button type="button" id="btnQuickCopy20k" class="px-3 py-1.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-500/30 text-indigo-300 text-xs font-medium cursor-pointer transition flex items-center gap-1.5">
-                <span>🍜</span> <span>Sao chép STK (30.000đ)</span>
-              </button>
+            <!-- Định giá tiền & QR tự cập nhật -->
+            <div class="pt-3 border-t border-white/5 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-zinc-400 font-medium">Chọn số tiền (QR tự cập nhật):</span>
+                <span id="labelCurrentDonateAmount" class="font-mono text-xs font-bold text-amber-400">10.000 VNĐ</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button type="button" class="btn-donate-tier px-3 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer text-center bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30" data-amount="10000">
+                  <span>☕</span> <span>10.000đ</span>
+                </button>
+                <button type="button" class="btn-donate-tier px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-medium transition cursor-pointer text-center" data-amount="20000">
+                  <span>🥪</span> <span>20.000đ</span>
+                </button>
+                <button type="button" class="btn-donate-tier px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-medium transition cursor-pointer text-center" data-amount="50000">
+                  <span>🍜</span> <span>50.000đ</span>
+                </button>
+                <button type="button" class="btn-donate-tier px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-medium transition cursor-pointer text-center" data-amount="100000">
+                  <span>⚡</span> <span>100.000đ</span>
+                </button>
+              </div>
+              <div class="flex items-center gap-2 pt-0.5">
+                <div class="relative flex-1">
+                  <input
+                    type="number"
+                    id="inputCustomDonateAmount"
+                    min="1000"
+                    step="1000"
+                    placeholder="Nhập số tiền khác..."
+                    class="w-full bg-zinc-900/90 border border-white/10 rounded-xl pl-3 pr-11 py-1.5 text-xs text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-indigo-500 transition"
+                  />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-500">VNĐ</span>
+                </div>
+                <button type="button" id="btnCustomTuyuTam" class="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition cursor-pointer whitespace-nowrap" data-amount="0">
+                  Tùy tâm
+                </button>
+              </div>
             </div>
           </div>
 
@@ -208,16 +232,17 @@ export function renderTermsPage() {
           <div class="md:col-span-5 flex flex-col items-center justify-center p-5 rounded-2xl border border-white/10 bg-black/40 text-center space-y-3">
             <div class="relative p-2.5 bg-white rounded-2xl shadow-xl max-w-[210px] w-full">
               <img
+                id="vietQrImg"
                 src="https://img.vietqr.io/image/ACB-36646437-compact2.png?amount=10000&addInfo=Nuoi%20server%20DDStudio&accountName=DANG%20HOANG%20ANH%20DUY"
                 alt="VietQR Donate ACB 36646437 - ĐẶNG HOÀNG ANH DUY"
-                class="w-full h-auto aspect-square object-contain rounded-xl"
+                class="w-full h-auto aspect-square object-contain rounded-xl transition-opacity duration-200"
                 loading="lazy"
                 onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'py-12 text-zinc-800 text-xs font-mono font-bold\'>ACB - 36646437<br>DANG HOANG ANH DUY</div>';"
               />
             </div>
             <div class="space-y-1">
-              <p class="text-xs font-semibold text-zinc-200">Mã VietQR Napas 24/7</p>
-              <p class="text-[11px] text-zinc-400">Quét bằng mọi ứng dụng ngân hàng hoặc ví điện tử</p>
+              <p id="labelQrAmountTitle" class="text-xs font-semibold text-zinc-200">Mã VietQR: 10.000 VNĐ</p>
+              <p id="labelQrAmountSub" class="text-[11px] text-zinc-400">Quét bằng mọi ứng dụng ngân hàng hoặc ví điện tử</p>
             </div>
           </div>
         </div>
@@ -241,22 +266,108 @@ export function renderTermsPage() {
 export function attachTermsPageListeners() {
   const btnCopyStk = document.getElementById('btnCopyStk');
   const donateStk = document.getElementById('donateStk');
+  const vietQrImg = document.getElementById('vietQrImg');
+  const labelCurrentAmount = document.getElementById('labelCurrentDonateAmount');
+  const labelQrTitle = document.getElementById('labelQrAmountTitle');
+  const customInput = document.getElementById('inputCustomDonateAmount');
+  const btnCustomTuyuTam = document.getElementById('btnCustomTuyuTam');
 
-  const handleCopy = async (note = '') => {
+  let currentAmount = 10000;
+  let debounceTimer = null;
+
+  const setDonateAmount = (amount, updateInput = true) => {
+    currentAmount = Math.max(0, Number(amount) || 0);
+
+    // 1. Update text labels
+    if (labelCurrentAmount) {
+      labelCurrentAmount.textContent = currentAmount > 0
+        ? `${currentAmount.toLocaleString('vi-VN')} VNĐ`
+        : 'Tùy tâm';
+    }
+    if (labelQrTitle) {
+      labelQrTitle.textContent = currentAmount > 0
+        ? `Mã VietQR: ${currentAmount.toLocaleString('vi-VN')} VNĐ`
+        : 'Mã VietQR Napas 24/7 (Tùy tâm)';
+    }
+
+    // 2. Update QR Image
+    if (vietQrImg) {
+      const base = 'https://img.vietqr.io/image/ACB-36646437-compact2.png';
+      const params = new URLSearchParams({
+        addInfo: 'Nuoi server DDStudio',
+        accountName: 'DANG HOANG ANH DUY'
+      });
+      if (currentAmount > 0) {
+        params.set('amount', String(currentAmount));
+      }
+      vietQrImg.src = `${base}?${params.toString()}`;
+    }
+
+    // 3. Update button active states
+    document.querySelectorAll('.btn-donate-tier').forEach((btn) => {
+      const btnAmount = Number(btn.dataset.amount);
+      const isActive = btnAmount === currentAmount;
+      if (isActive) {
+        btn.className = 'btn-donate-tier px-3 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer text-center bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30';
+      } else {
+        btn.className = 'btn-donate-tier px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-medium transition cursor-pointer text-center';
+      }
+    });
+
+    if (btnCustomTuyuTam) {
+      btnCustomTuyuTam.className = currentAmount === 0
+        ? 'px-3.5 py-1.5 rounded-xl border bg-indigo-600 border-indigo-500 text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap shadow-sm shadow-indigo-600/30'
+        : 'px-3.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition cursor-pointer whitespace-nowrap';
+    }
+
+    if (updateInput && customInput) {
+      const isPreset = [10000, 20000, 50000, 100000, 0].includes(currentAmount);
+      customInput.value = isPreset ? '' : String(currentAmount);
+    }
+  };
+
+  // Preset buttons click
+  document.querySelectorAll('.btn-donate-tier').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const amount = Number(btn.dataset.amount);
+      setDonateAmount(amount, true);
+    });
+  });
+
+  // Tùy tâm button click
+  btnCustomTuyuTam?.addEventListener('click', () => {
+    setDonateAmount(0, true);
+  });
+
+  // Custom amount input (debounced)
+  customInput?.addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const rawVal = e.target.value.trim();
+      if (!rawVal) {
+        setDonateAmount(10000, false);
+        return;
+      }
+      const val = parseInt(rawVal, 10);
+      if (!isNaN(val) && val >= 0) {
+        setDonateAmount(val, false);
+      }
+    }, 200);
+  });
+
+  // Copy STK
+  const handleCopy = async () => {
     const stk = donateStk?.textContent?.trim() || '36646437';
     const success = await copyText(stk);
     if (success) {
-      showToast(note ? `Đã sao chép STK: ${stk} (${note})! Cảm ơn bạn ❤️` : `Đã sao chép STK ACB: ${stk}! Cảm ơn bạn ❤️`, 'success');
+      showToast(`Đã sao chép STK ACB: ${stk}! Cảm ơn bạn ❤️`, 'success');
     } else {
       showToast(`STK: ${stk} - ACB (ĐẶNG HOÀNG ANH DUY)`, 'info');
     }
   };
-
-  btnCopyStk?.addEventListener('click', () => handleCopy());
-  document.getElementById('btnQuickCopy5k')?.addEventListener('click', () => handleCopy('Ly trà đá'));
-  document.getElementById('btnQuickCopy20k')?.addEventListener('click', () => handleCopy('Tô hủ tiếu'));
+  btnCopyStk?.addEventListener('click', handleCopy);
 
   return () => {
-    // Teardown cleanup if needed
+    clearTimeout(debounceTimer);
   };
 }
