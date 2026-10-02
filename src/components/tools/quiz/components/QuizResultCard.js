@@ -24,23 +24,23 @@ function renderProcessingState(state) {
   const pct = Math.max(5, Math.min(100, state.progress || 0));
 
   return `
-    <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-6 space-y-5 shadow-sm animate-fadeIn">
+    <div id="quizProcessingBox" class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-6 space-y-5 shadow-sm">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center animate-pulse">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
             <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
           </div>
-          <div>
+          <div class="min-w-0">
             <h4 class="text-sm font-semibold text-zinc-100">Đang biên soạn đề bài & đáp án</h4>
-            <p class="text-xs text-zinc-400">${escapeHtml(state.stage || 'Đang xử lý...')}</p>
+            <p id="quizProgressStage" class="text-xs text-zinc-400 truncate">${escapeHtml(state.stage || 'Đang xử lý...')}</p>
           </div>
         </div>
-        <span class="text-sm font-mono font-semibold text-zinc-200">${pct}%</span>
+        <span id="quizProgressText" class="text-sm font-mono font-semibold text-zinc-200 shrink-0">${pct}%</span>
       </div>
 
       <!-- Progress bar -->
       <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
-        <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+        <div id="quizProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
       </div>
 
       <div class="flex items-center justify-between pt-2">

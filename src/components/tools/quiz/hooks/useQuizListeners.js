@@ -45,6 +45,21 @@ export function attachQuizListeners() {
     const resultEl = document.getElementById('quizResultContainer');
     const state = quizManager.getState();
 
+    // In-place DOM update for continuous progress or status updates while processing to prevent box flickering
+    if (event === 'job-progress' || event === 'job-enqueued') {
+      const progressText = document.getElementById('quizProgressText');
+      const progressStage = document.getElementById('quizProgressStage');
+      const progressBar = document.getElementById('quizProgressBar');
+      if (progressText && progressStage && progressBar) {
+        const pct = Math.max(5, Math.min(100, state.progress || 0));
+        progressText.textContent = `${pct}%`;
+        progressStage.textContent = state.stage || 'Đang xử lý...';
+        progressBar.style.width = `${pct}%`;
+        syncGenerateButton();
+        return;
+      }
+    }
+
     // Preserve active focus and cursor position
     const activeEl = document.activeElement;
     const activeId = activeEl ? activeEl.id : null;

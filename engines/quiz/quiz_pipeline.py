@@ -14,6 +14,7 @@ import argparse
 import subprocess
 import urllib.request
 import urllib.error
+import http.client
 import threading
 import shutil
 import pymupdf
@@ -178,8 +179,16 @@ def extract_raw_pages(pdf_path: str, page_spec: str) -> tuple[str, list[int]]:
     return full_text, actual_pages
 
 
-def call_agnes_api(api_key: str, prompt: str, system_prompt: str, base_url: str = DEFAULT_API_BASE, model: str = DEFAULT_MODEL) -> dict:
-    """Send chat completion request to Agnes AI with JSON formatting and defensive response parsing."""
+def call_agnes_api(
+    api_key: str,
+    prompt: str,
+    system_prompt: str,
+    base_url: str = DEFAULT_API_BASE,
+    model: str = DEFAULT_MODEL,
+    timeout: int = 180,
+    max_retries: int = 2
+) -> dict:
+    """Send chat completion request to Agnes AI with JSON formatting, defensive retries, and timeout resilience."""
     payload = json.dumps({
         "model": model,
         "messages": [
@@ -187,7 +196,8 @@ def call_agnes_api(api_key: str, prompt: str, system_prompt: str, base_url: str 
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.1,
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
+        "max_tokens": 8192
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -200,22 +210,40 @@ def call_agnes_api(api_key: str, prompt: str, system_prompt: str, base_url: str 
         }
     )
 
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
-            
-            # Clean markdown JSON fences if present
-            cleaned = content.strip()
-            if cleaned.startswith("```"):
-                cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                cleaned = re.sub(r"\s*```$", "", cleaned)
-            return json.loads(cleaned)
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Agnes AI API error (HTTP {e.code}): {err_msg}")
-    except Exception as e:
-        raise RuntimeError(f"Không thể kết nối đến Agnes AI API: {e}")
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                content = data["choices"][0]["message"]["content"]
+                
+                # Clean markdown JSON fences if present
+                cleaned = content.strip()
+                if cleaned.startswith("```"):
+                    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+                    cleaned = re.sub(r"\s*```$", "", cleaned)
+                return json.loads(cleaned)
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode("utf-8", errors="replace")
+            last_err = RuntimeError(f"Agnes AI API error (HTTP {e.code}): {err_msg}")
+            if e.code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                time.sleep(2.0 * (attempt + 1))
+                continue
+            raise last_err
+        except (TimeoutError, urllib.error.URLError, http.client.RemoteDisconnected) as e:
+            last_err = RuntimeError(f"Không thể kết nối đến Agnes AI API (quá thời gian chờ {timeout}s hoặc lỗi mạng): {e}")
+            if attempt < max_retries:
+                time.sleep(2.0 * (attempt + 1))
+                continue
+            raise last_err
+        except Exception as e:
+            last_err = RuntimeError(f"Lỗi phản hồi Agnes AI API: {e}")
+            if attempt < max_retries:
+                time.sleep(2.0 * (attempt + 1))
+                continue
+            raise last_err
+
+    raise last_err or RuntimeError("Không thể kết nối đến Agnes AI API sau nhiều lần thử lại")
 
 
 def parse_and_standardize_questions(
@@ -226,7 +254,7 @@ def parse_and_standardize_questions(
     base_url: str = DEFAULT_API_BASE,
     model: str = DEFAULT_MODEL
 ) -> list[dict]:
-    """Parse raw text into structured question objects with HTML formatting and answers via Agnes AI."""
+    """Parse raw text into structured question objects with HTML formatting and answers via Agnes AI with intelligent batching."""
     system_prompt = (
         "You are an expert Vietnamese Chemistry teacher and exam editor.\n"
         "Your task is to extract, standardize, and format multiple-choice questions from the provided textbook text.\n"
@@ -236,9 +264,8 @@ def parse_and_standardize_questions(
         "always convert indices to <sub> (e.g. C<sub>15</sub>H<sub>31</sub>COOH, C<sub>2</sub>H<sub>5</sub>OH, "
         "C<sub>n</sub>H<sub>2n</sub>O<sub>2</sub>, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup>.\n"
         "3. Provide exactly 4 options A, B, C, D for each question.\n"
-        "4. In 'explanation', provide a rigorous and clear explanation strictly in Vietnamese (Tiếng Việt), "
-        "analyzing each option scientifically step-by-step to determine the strictly correct answer. "
-        "Verify all chemical facts carefully (molecular weight, scents/aromas, functional groups, saturation/unsaturation).\n"
+        "4. In 'explanation', provide a concise, accurate scientific explanation strictly in Vietnamese (1-3 sentences), "
+        "justifying why the chosen answer is correct and citing relevant chemical principles/formulas/reactions.\n"
         "5. Output the single uppercase letter ('A', 'B', 'C', or 'D') in 'answer' matching the result from your analysis.\n"
         "6. Return ONLY a valid JSON object matching this exact schema:\n"
         "{\n"
@@ -247,51 +274,95 @@ def parse_and_standardize_questions(
         '      "number": 1,\n'
         '      "question": "Question text...",\n'
         '      "options": {"A": "...", "B": "...", "C": "...", "D": "..."},\n'
-        '      "explanation": "Detailed scientific analysis proving why the choice is correct...",\n'
+        '      "explanation": "Concise scientific explanation proving why the choice is correct...",\n'
         '      "answer": "A"\n'
         "    }\n"
         "  ]\n"
         "}"
     )
 
-    user_prompt = (
-        f"Extract up to {count} multiple-choice questions starting from question number {start_num} "
-        f"from the following text:\n\n{raw_text}"
-    )
+    BATCH_SIZE = 12
+    # Prepare question ranges: if count > 15, split into batches to avoid token limits & timeouts
+    batches = []
+    curr_start = start_num
+    remaining = count
+    while remaining > 0:
+        b_count = min(remaining, BATCH_SIZE)
+        b_end = curr_start + b_count - 1
+        batches.append((curr_start, b_end, b_count))
+        curr_start += b_count
+        remaining -= b_count
 
-    res_holder = {}
-    err_holder = {}
+    total_batches = len(batches)
+    all_questions = []
 
-    def ai_worker():
-        try:
-            res_holder["data"] = call_agnes_api(api_key, user_prompt, system_prompt, base_url=base_url, model=model)
-        except Exception as e:
-            err_holder["err"] = e
+    start_progress = 45
+    max_ai_progress = 72
+    prog_step = (max_ai_progress - start_progress) / max(1, total_batches)
 
-    ai_thread = threading.Thread(target=ai_worker, daemon=True)
-    ai_thread.start()
+    for b_idx, (b_start, b_end, b_count) in enumerate(batches):
+        batch_prog_base = int(start_progress + b_idx * prog_step)
+        user_prompt = (
+            f"Extract up to {b_count} multiple-choice questions starting from question number {b_start} "
+            f"up to question number {b_end} from the following text:\n\n{raw_text}"
+        )
 
-    current_p = 45
-    elapsed = 0
-    while ai_thread.is_alive():
-        ai_thread.join(timeout=2.0)
-        elapsed += 2
-        if ai_thread.is_alive():
-            if current_p < 68:
-                current_p += 2
-            emit_progress(
-                current_p,
-                f"Agnes 3.0 Flash đang chuẩn hóa câu hỏi & giải chi tiết ({count} câu - {elapsed}s)..."
-            )
+        res_holder = {}
+        err_holder = {}
 
-    if "err" in err_holder:
-        raise err_holder["err"]
+        def ai_worker():
+            try:
+                res_holder["data"] = call_agnes_api(
+                    api_key, user_prompt, system_prompt, base_url=base_url, model=model, timeout=180
+                )
+            except Exception as e:
+                err_holder["err"] = e
 
-    res = res_holder.get("data", {})
-    questions = res.get("questions", [])
-    if not questions:
+        ai_thread = threading.Thread(target=ai_worker, daemon=True)
+        ai_thread.start()
+
+        elapsed = 0
+        current_p = batch_prog_base
+        batch_label = f"gói {b_idx + 1}/{total_batches} (Câu {b_start} - {b_end})" if total_batches > 1 else f"{count} câu"
+
+        while ai_thread.is_alive():
+            ai_thread.join(timeout=2.0)
+            elapsed += 2
+            if ai_thread.is_alive():
+                if current_p < int(batch_prog_base + prog_step - 2):
+                    current_p += 1
+                emit_progress(
+                    current_p,
+                    f"Agnes 3.0 Flash đang chuẩn hóa {batch_label} ({elapsed}s)..."
+                )
+
+        if "err" in err_holder:
+            raise err_holder["err"]
+
+        res = res_holder.get("data", {})
+        batch_qs = res.get("questions", [])
+        if not batch_qs:
+            # If later batch yields no more questions, stop gracefully if we already got some
+            if all_questions:
+                break
+            raise RuntimeError(f"Agnes AI không tìm thấy câu hỏi trắc nghiệm nào trong phạm vi câu {b_start} - {b_end}.")
+
+        # Normalize question numbering
+        for idx, q in enumerate(batch_qs):
+            target_num = b_start + idx
+            if "number" not in q or not isinstance(q["number"], int):
+                q["number"] = target_num
+            all_questions.append(q)
+
+        emit_progress(
+            int(start_progress + (b_idx + 1) * prog_step),
+            f"Đã chuẩn hóa xong {batch_label} ({len(all_questions)}/{count} câu)..."
+        )
+
+    if not all_questions:
         raise RuntimeError("Agnes AI không tìm thấy câu hỏi trắc nghiệm nào trong phạm vi trang đã chọn.")
-    return questions
+
+    return all_questions
 
 
 def determine_option_layout(options: dict) -> str:
