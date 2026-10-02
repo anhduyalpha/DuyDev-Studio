@@ -78,30 +78,61 @@ def download_gdrive_if_needed(url_or_path: str, temp_dir: str) -> str:
             raise FileNotFoundError(f"Tệp PDF nguồn không tồn tại: {url_or_path}")
         return url_or_path
 
-    match = re.search(r"/(?:d|id=)/([a-zA-Z0-9_-]+)", url_or_path) or re.search(r"id=([a-zA-Z0-9_-]+)", url_or_path)
+    match = (
+        re.search(r"/d/([a-zA-Z0-9_-]+)", url_or_path)
+        or re.search(r"[?&]id=([a-zA-Z0-9_-]+)", url_or_path)
+        or re.search(r"id=([a-zA-Z0-9_-]+)", url_or_path)
+    )
     file_id = match.group(1) if match else None
     if not file_id:
         raise ValueError(f"Không thể trích xuất File ID từ đường dẫn Google Drive: {url_or_path}")
 
-    download_url = f"https://drive.usercontent.google.com/download?id={file_id}&export=download"
     out_pdf = os.path.join(temp_dir, f"gdrive_{file_id}.pdf")
     if os.path.exists(out_pdf) and os.path.getsize(out_pdf) > 1000:
         return out_pdf
 
     emit_progress(15, f"Đang tải tài liệu từ Google Drive (ID: {file_id[:8]}...)...")
-    req = urllib.request.Request(download_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-    try:
-        with urllib.request.urlopen(req, timeout=35) as resp, open(out_pdf, "wb") as f:
-            f.write(resp.read())
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"Lỗi tải từ Google Drive (HTTP {e.code}). Vui lòng đảm bảo tệp được chia sẻ công khai ('Bất kỳ ai có liên kết').")
-    except Exception as e:
-        raise RuntimeError(f"Không thể kết nối tải tệp từ Google Drive: {e}")
+    download_urls = [
+        f"https://drive.google.com/uc?export=download&id={file_id}",
+        f"https://drive.usercontent.google.com/download?id={file_id}&export=download"
+    ]
 
-    if not os.path.exists(out_pdf) or os.path.getsize(out_pdf) < 500:
-        raise RuntimeError("Tệp tải về từ Google Drive không hợp lệ hoặc bị giới hạn quyền truy cập.")
+    last_error = None
+    for d_url in download_urls:
+        try:
+            req = urllib.request.Request(d_url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            })
+            with urllib.request.urlopen(req, timeout=35) as resp:
+                content = resp.read()
+                if b"%PDF" in content[:1024]:
+                    with open(out_pdf, "wb") as f:
+                        f.write(content)
+                    return out_pdf
 
-    return out_pdf
+                # Handle Google Drive large-file scan warning confirmation
+                confirm_match = re.search(r"confirm=([0-9A-Za-z_-]+)", content.decode("utf-8", errors="ignore"))
+                if confirm_match:
+                    confirm_code = confirm_match.group(1)
+                    confirm_url = f"{d_url}&confirm={confirm_code}"
+                    req2 = urllib.request.Request(confirm_url, headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    })
+                    with urllib.request.urlopen(req2, timeout=45) as resp2:
+                        c2 = resp2.read()
+                        if b"%PDF" in c2[:1024]:
+                            with open(out_pdf, "wb") as f:
+                                f.write(c2)
+                            return out_pdf
+        except urllib.error.HTTPError as e:
+            last_error = f"HTTP {e.code}"
+        except Exception as e:
+            last_error = str(e)
+
+    raise RuntimeError(
+        f"Không thể tải tệp từ Google Drive ({last_error or 'Không tìm thấy PDF'}). "
+        "Vui lòng đảm bảo tệp được chia sẻ công khai ('Bất kỳ ai có đường liên kết')."
+    )
 
 
 def extract_raw_pages(pdf_path: str, page_spec: str) -> tuple[str, list[int]]:
