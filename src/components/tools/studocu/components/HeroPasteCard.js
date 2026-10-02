@@ -14,8 +14,8 @@ export function renderHeroPasteCard(state) {
           <i data-lucide="file-down" class="w-5 h-5 text-sky-400"></i>
           <span>Studocu Downloader</span>
         </h2>
-        <p class="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto">
-          Trích xuất tài liệu Studocu sang PDF.
+        <p class="text-xs sm:text-sm text-zinc-400 max-w-lg mx-auto leading-relaxed">
+          Trích xuất tài liệu Studocu sang PDF. Bạn chỉ cần nhấn vào nút màu trắng để dán link Studocu hoặc bấm <kbd class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-200 font-mono text-[11px] border border-zinc-700">Ctrl + V</kbd> là tải về được liền nha! ✨
         </p>
       </div>
 
