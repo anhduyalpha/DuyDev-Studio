@@ -230,15 +230,23 @@ export function renderTermsPage() {
 
           <!-- Mã VietQR (5 cols) -->
           <div class="md:col-span-5 flex flex-col items-center justify-center p-5 rounded-2xl border border-white/10 bg-black/40 text-center space-y-3">
-            <div class="relative p-2.5 bg-white rounded-2xl shadow-xl max-w-[210px] w-full">
+            <div id="vietQrBox" class="relative p-2.5 bg-white rounded-2xl shadow-xl max-w-[210px] w-full aspect-square flex items-center justify-center overflow-hidden border border-white/10">
               <img
                 id="vietQrImg"
                 src="https://img.vietqr.io/image/ACB-36646437-compact2.png?amount=10000&addInfo=Nuoi%20server%20DDStudio&accountName=DANG%20HOANG%20ANH%20DUY"
                 alt="VietQR Donate ACB 36646437 - ĐẶNG HOÀNG ANH DUY"
                 class="w-full h-auto aspect-square object-contain rounded-xl transition-opacity duration-200"
                 loading="lazy"
-                onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'py-12 text-zinc-800 text-xs font-mono font-bold\'>ACB - 36646437<br>DANG HOANG ANH DUY</div>';"
               />
+              <div id="vietQrLoadingOverlay" class="absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center gap-2.5 z-10 transition-opacity duration-150 hidden pointer-events-none">
+                <div class="w-8 h-8 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+                <span class="text-[11px] font-mono text-zinc-400">Đang tạo mã QR...</span>
+              </div>
+              <div id="vietQrErrorState" class="absolute inset-0 bg-zinc-950 rounded-xl flex flex-col items-center justify-center p-3 text-center z-10 hidden">
+                <p class="text-zinc-300 text-xs font-mono font-bold">ACB - 36646437</p>
+                <p class="text-amber-400 text-[11px] font-mono font-semibold">DANG HOANG ANH DUY</p>
+                <span class="text-[10px] text-zinc-500 mt-1">Không thể tải QR trực tiếp</span>
+              </div>
             </div>
             <div class="space-y-1">
               <p id="labelQrAmountTitle" class="text-xs font-semibold text-zinc-200">Mã VietQR: 10.000 VNĐ</p>
@@ -267,13 +275,39 @@ export function attachTermsPageListeners() {
   const btnCopyStk = document.getElementById('btnCopyStk');
   const donateStk = document.getElementById('donateStk');
   const vietQrImg = document.getElementById('vietQrImg');
+  const vietQrLoadingOverlay = document.getElementById('vietQrLoadingOverlay');
+  const vietQrErrorState = document.getElementById('vietQrErrorState');
   const labelCurrentAmount = document.getElementById('labelCurrentDonateAmount');
   const labelQrTitle = document.getElementById('labelQrAmountTitle');
   const customInput = document.getElementById('inputCustomDonateAmount');
   const btnCustomTuyuTam = document.getElementById('btnCustomTuyuTam');
 
   let currentAmount = 10000;
+  let lastLoadedAmount = 10000;
+  let qrLoadToken = 0;
   let debounceTimer = null;
+
+  // Handle initial image load state
+  if (vietQrImg) {
+    if (!vietQrImg.complete || vietQrImg.naturalWidth === 0) {
+      vietQrImg.classList.add('opacity-0', 'pointer-events-none');
+      vietQrLoadingOverlay?.classList.remove('hidden');
+      vietQrLoadingOverlay?.classList.add('flex');
+      vietQrImg.addEventListener('load', () => {
+        vietQrLoadingOverlay?.classList.add('hidden');
+        vietQrLoadingOverlay?.classList.remove('flex');
+        vietQrImg.classList.remove('opacity-0', 'pointer-events-none');
+      }, { once: true });
+      vietQrImg.addEventListener('error', () => {
+        vietQrLoadingOverlay?.classList.add('hidden');
+        vietQrLoadingOverlay?.classList.remove('flex');
+        if (vietQrErrorState) {
+          vietQrErrorState.classList.remove('hidden');
+          vietQrErrorState.classList.add('flex');
+        }
+      }, { once: true });
+    }
+  }
 
   const setDonateAmount = (amount, updateInput = true) => {
     currentAmount = Math.max(0, Number(amount) || 0);
@@ -290,7 +324,7 @@ export function attachTermsPageListeners() {
         : 'Mã VietQR Napas 24/7 (Tùy tâm)';
     }
 
-    // 2. Update QR Image
+    // 2. Update QR Image with blackout overlay to prevent stale scanning/saving
     if (vietQrImg) {
       const base = 'https://img.vietqr.io/image/ACB-36646437-compact2.png';
       const params = new URLSearchParams({
@@ -300,7 +334,46 @@ export function attachTermsPageListeners() {
       if (currentAmount > 0) {
         params.set('amount', String(currentAmount));
       }
-      vietQrImg.src = `${base}?${params.toString()}`;
+      const newSrc = `${base}?${params.toString()}`;
+
+      if (currentAmount !== lastLoadedAmount || vietQrImg.src !== newSrc) {
+        lastLoadedAmount = currentAmount;
+        const currentToken = ++qrLoadToken;
+
+        // Darken / hide QR box immediately
+        vietQrImg.classList.add('opacity-0', 'pointer-events-none');
+        if (vietQrErrorState) {
+          vietQrErrorState.classList.add('hidden');
+          vietQrErrorState.classList.remove('flex');
+        }
+        if (vietQrLoadingOverlay) {
+          vietQrLoadingOverlay.classList.remove('hidden');
+          vietQrLoadingOverlay.classList.add('flex');
+        }
+
+        vietQrImg.onload = () => {
+          if (currentToken !== qrLoadToken) return;
+          if (vietQrLoadingOverlay) {
+            vietQrLoadingOverlay.classList.add('hidden');
+            vietQrLoadingOverlay.classList.remove('flex');
+          }
+          vietQrImg.classList.remove('opacity-0', 'pointer-events-none');
+        };
+
+        vietQrImg.onerror = () => {
+          if (currentToken !== qrLoadToken) return;
+          if (vietQrLoadingOverlay) {
+            vietQrLoadingOverlay.classList.add('hidden');
+            vietQrLoadingOverlay.classList.remove('flex');
+          }
+          if (vietQrErrorState) {
+            vietQrErrorState.classList.remove('hidden');
+            vietQrErrorState.classList.add('flex');
+          }
+        };
+
+        vietQrImg.src = newSrc;
+      }
     }
 
     // 3. Update button active states

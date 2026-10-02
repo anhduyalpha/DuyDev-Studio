@@ -4,7 +4,7 @@
  */
 
 export function renderQrPreviewCard(state) {
-  const { activeTab, format, dynamic, generatedResult } = state;
+  const { activeTab, format, dynamic, generatedResult, isGenerating } = state;
 
   return `
     <div class="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-white/[0.07] p-6 text-center space-y-5 shadow-sm">
@@ -15,7 +15,12 @@ export function renderQrPreviewCard(state) {
 
       ${activeTab === 'url' ? `
         <!-- DYNAMIC QR PREVIEW & TELEMETRY -->
-        ${dynamic.createdQr ? `
+        ${dynamic.isCreating ? `
+          <div class="p-5 bg-zinc-950 rounded-2xl border border-white/10 shadow-sm max-w-[280px] mx-auto flex flex-col items-center justify-center aspect-square gap-3">
+            <div class="w-8 h-8 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+            <span class="text-xs font-mono text-zinc-400">Đang tạo mã QR...</span>
+          </div>
+        ` : dynamic.createdQr ? `
           <div id="dynamicQrCanvasContainer" class="p-4 bg-white rounded-2xl border border-zinc-200 shadow-sm max-w-[280px] mx-auto flex items-center justify-center aspect-square">
             <!-- Mounted live via QRCodeStyling -->
           </div>
@@ -95,8 +100,13 @@ export function renderQrPreviewCard(state) {
             <div class="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-white/[0.03] border border-zinc-200/60 dark:border-white/[0.06] flex items-center justify-center text-zinc-400">
               <i data-lucide="qr-code" class="w-8 h-8 stroke-[1.5]"></i>
             </div>
-          </div>
         `}
+      ` : isGenerating ? `
+        <!-- STATIC QR LOADING BLACKOUT BOX -->
+        <div class="p-5 bg-zinc-950 rounded-2xl border border-white/10 shadow-sm max-w-[260px] mx-auto flex flex-col items-center justify-center aspect-square gap-3">
+          <div class="w-8 h-8 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+          <span class="text-xs font-mono text-zinc-400">Đang tạo mã QR...</span>
+        </div>
       ` : generatedResult ? `
         <!-- STATIC QR RESULT -->
         <div class="p-5 bg-white rounded-2xl border border-zinc-200 shadow-sm max-w-[260px] mx-auto flex items-center justify-center aspect-square">
