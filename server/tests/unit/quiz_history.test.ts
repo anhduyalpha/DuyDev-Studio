@@ -1,10 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getQuizHistoryList,
+  getQuizTrashList,
   saveQuizHistoryPair,
+  moveQuizPairToTrash,
+  restoreQuizPairFromTrash,
+  deleteQuizPairPermanently,
+  moveAllQuizPairsToTrash,
+  restoreAllQuizPairsFromTrash,
+  emptyQuizTrashPermanently,
   deleteQuizHistoryItem,
   clearAllQuizHistory,
-  QUIZ_HISTORY_KEY
+  QUIZ_HISTORY_KEY,
+  QUIZ_TRASH_KEY
 } from '../../src/../../src/components/tools/quiz/utilities/quizHistoryHelper.js';
 
 if (typeof globalThis.localStorage === 'undefined') {
@@ -19,15 +27,18 @@ if (typeof globalThis.localStorage === 'undefined') {
   } as any;
 }
 
-describe('Quiz History Helper Unit Tests', () => {
+describe('Quiz History & Trash Helper Unit Tests', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('initializes with empty history list when localStorage is empty', () => {
-    const list = getQuizHistoryList();
-    expect(Array.isArray(list)).toBe(true);
-    expect(list.length).toBe(0);
+  it('initializes with empty history and trash lists when localStorage is empty', () => {
+    const history = getQuizHistoryList();
+    const trash = getQuizTrashList();
+    expect(Array.isArray(history)).toBe(true);
+    expect(history.length).toBe(0);
+    expect(Array.isArray(trash)).toBe(true);
+    expect(trash.length).toBe(0);
   });
 
   it('correctly saves, normalizes, and retrieves a paired quiz history item', () => {
@@ -90,40 +101,115 @@ describe('Quiz History Helper Unit Tests', () => {
     expect(list[0].worksheet.fileName).toBe('De1_Updated.pdf');
   });
 
-  it('deletes a single quiz history item by ID', () => {
+  it('moves a single quiz pair to Trash with deletedAt timestamp', () => {
     saveQuizHistoryPair({
-      id: 'quiz_item_to_delete',
-      worksheet: { fileId: 'ws_del', fileName: 'DeBai.pdf' },
-      answer: { fileId: 'ans_del', fileName: 'DapAn.pdf' }
+      id: 'quiz_move_to_trash',
+      worksheet: { fileId: 'ws_trash', fileName: 'DeBai.pdf' },
+      answer: { fileId: 'ans_trash', fileName: 'DapAn.pdf' }
     });
     saveQuizHistoryPair({
-      id: 'quiz_item_to_keep',
-      worksheet: { fileId: 'ws_keep', fileName: 'DeBai2.pdf' },
-      answer: { fileId: 'ans_keep', fileName: 'DapAn2.pdf' }
+      id: 'quiz_stay_in_history',
+      worksheet: { fileId: 'ws_stay', fileName: 'DeBai2.pdf' },
+      answer: { fileId: 'ans_stay', fileName: 'DapAn2.pdf' }
     });
 
     expect(getQuizHistoryList().length).toBe(2);
+    expect(getQuizTrashList().length).toBe(0);
 
-    deleteQuizHistoryItem('quiz_item_to_delete');
+    const trashed = moveQuizPairToTrash('quiz_move_to_trash');
+    expect(trashed).not.toBeNull();
+    expect(trashed?.id).toBe('quiz_move_to_trash');
+    expect(trashed?.deletedAt).toBeDefined();
 
-    const updated = getQuizHistoryList();
-    expect(updated.length).toBe(1);
-    expect(updated[0].id).toBe('quiz_item_to_keep');
+    const history = getQuizHistoryList();
+    const trash = getQuizTrashList();
+
+    expect(history.length).toBe(1);
+    expect(history[0].id).toBe('quiz_stay_in_history');
+
+    expect(trash.length).toBe(1);
+    expect(trash[0].id).toBe('quiz_move_to_trash');
+    expect(trash[0].deletedAt).toBeTruthy();
   });
 
-  it('clears all quiz history entries', () => {
+  it('restores a quiz pair from Trash back to active History', () => {
     saveQuizHistoryPair({
-      id: 'pair_1',
-      worksheet: { fileId: 'ws_1' },
-      answer: { fileId: 'ans_1' }
+      id: 'quiz_to_restore',
+      worksheet: { fileId: 'ws_res', fileName: 'DeBaiRes.pdf' },
+      answer: { fileId: 'ans_res', fileName: 'DapAnRes.pdf' }
+    });
+
+    moveQuizPairToTrash('quiz_to_restore');
+    expect(getQuizHistoryList().length).toBe(0);
+    expect(getQuizTrashList().length).toBe(1);
+
+    const restored = restoreQuizPairFromTrash('quiz_to_restore');
+    expect(restored).not.toBeNull();
+    expect(restored?.id).toBe('quiz_to_restore');
+    expect(restored?.deletedAt).toBeUndefined();
+
+    expect(getQuizHistoryList().length).toBe(1);
+    expect(getQuizTrashList().length).toBe(0);
+  });
+
+  it('permanently deletes a quiz pair from Trash without resurrecting', () => {
+    saveQuizHistoryPair({
+      id: 'quiz_perm_del',
+      worksheet: { fileId: 'ws_perm', fileName: 'DeBaiPerm.pdf' },
+      answer: { fileId: 'ans_perm', fileName: 'DapAnPerm.pdf' }
+    });
+
+    moveQuizPairToTrash('quiz_perm_del');
+    expect(getQuizTrashList().length).toBe(1);
+
+    deleteQuizPairPermanently('quiz_perm_del');
+    expect(getQuizTrashList().length).toBe(0);
+    expect(getQuizHistoryList().length).toBe(0);
+  });
+
+  it('handles bulk actions: moveAllQuizPairsToTrash, restoreAllQuizPairsFromTrash, emptyQuizTrashPermanently', () => {
+    saveQuizHistoryPair({
+      id: 'bulk_1',
+      worksheet: { fileId: 'ws_bulk_1' },
+      answer: { fileId: 'ans_bulk_1' }
     });
     saveQuizHistoryPair({
-      id: 'pair_2',
-      worksheet: { fileId: 'ws_2' },
-      answer: { fileId: 'ans_2' }
+      id: 'bulk_2',
+      worksheet: { fileId: 'ws_bulk_2' },
+      answer: { fileId: 'ans_bulk_2' }
     });
 
     expect(getQuizHistoryList().length).toBe(2);
+
+    // 1. Move all to trash
+    moveAllQuizPairsToTrash();
+    expect(getQuizHistoryList().length).toBe(0);
+    expect(getQuizTrashList().length).toBe(2);
+
+    // 2. Restore all from trash
+    restoreAllQuizPairsFromTrash();
+    expect(getQuizHistoryList().length).toBe(2);
+    expect(getQuizTrashList().length).toBe(0);
+
+    // 3. Move all to trash again, then empty permanently
+    moveAllQuizPairsToTrash();
+    expect(getQuizTrashList().length).toBe(2);
+    emptyQuizTrashPermanently();
+    expect(getQuizTrashList().length).toBe(0);
+    expect(getQuizHistoryList().length).toBe(0);
+  });
+
+  it('supports backward-compatibility aliases deleteQuizHistoryItem and clearAllQuizHistory', () => {
+    saveQuizHistoryPair({
+      id: 'compat_item',
+      worksheet: { fileId: 'ws_compat' },
+      answer: { fileId: 'ans_compat' }
+    });
+
+    expect(getQuizHistoryList().length).toBe(1);
+    deleteQuizHistoryItem('compat_item');
+    expect(getQuizHistoryList().length).toBe(0);
+    expect(getQuizTrashList().length).toBe(1);
 
     clearAllQuizHistory();
     expect(getQuizHistoryList().length).toBe(0);

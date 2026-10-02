@@ -1,19 +1,16 @@
 /**
- * Quiz History Helper (< 180 lines)
- * Manages paired Quiz history (Worksheet + Solution pairs) in localStorage
- * with automatic fallback to global storage and server history.
- * Adhering to Rule 1 & Rule 3 (UI Minimalism, Single Responsibility).
+ * Quiz History & Trash Helper (< 220 lines)
+ * Manages paired Quiz history & trash (Worksheet + Solution pairs) in localStorage
+ * with full synchronization to DD Studio's global trash system and header indicator.
+ * Adheres to Rule 1 & Rule 3 (UI Minimalism, Single Responsibility).
  */
 
 import { storage } from '../../../../utilities/storage.js';
+import { updateHeaderTrashIndicator } from '../../../layout/Header.js';
 
 export const QUIZ_HISTORY_KEY = 'ds_quiz_history_v1';
+export const QUIZ_TRASH_KEY = 'ds_quiz_trash_v1';
 
-/**
- * Normalizes and validates a paired quiz history item.
- * @param {object} item
- * @returns {object|null}
- */
 function normalizeQuizPair(item) {
   if (!item || typeof item !== 'object') return null;
   const ws = item.worksheet || {};
@@ -27,6 +24,7 @@ function normalizeQuizPair(item) {
     id: item.id || `quiz_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     timestamp: Number(item.timestamp) || Date.now(),
     createdAt: item.createdAt || new Date().toISOString(),
+    deletedAt: item.deletedAt || null,
     prefix: item.prefix || item.title || 'Bài tập',
     title: item.title || 'Bài tập trắc nghiệm',
     count: Number(item.count) || 20,
@@ -50,52 +48,56 @@ function normalizeQuizPair(item) {
   };
 }
 
+function safeGet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(normalizeQuizPair).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function safeSet(key, list) {
+  try {
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 50)));
+  } catch (e) {
+    console.warn(`Failed to write ${key} to localStorage`, e);
+  }
+}
+
 /**
- * Retrieves the list of paired quiz history items, sorted newest first.
- * @returns {Array<object>}
+ * Retrieves the list of active paired quiz history items.
+ * Performs a one-time migration from global history only on initial start.
  */
 export function getQuizHistoryList() {
-  let list = [];
-  try {
-    const raw = localStorage.getItem(QUIZ_HISTORY_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        list = parsed.map(normalizeQuizPair).filter(Boolean);
+  let list = safeGet(QUIZ_HISTORY_KEY);
+
+  // One-time initial migration only if key has never been set
+  if (list === null) {
+    list = [];
+    try {
+      const globalHistory = storage.getLocalHistory() || [];
+      const quizItems = globalHistory.filter((i) => i.toolId === 'quiz-generator' || (i.fileName && (i.fileName.endsWith('_DeBai.pdf') || i.fileName.endsWith('_DapAn.pdf'))));
+
+      const legacyGroups = new Map();
+      for (const item of quizItems) {
+        const name = item.fileName || '';
+        const prefix = name.replace(/_(DeBai|DapAn)\.pdf$/i, '');
+        const key = `${prefix}_${Math.floor(new Date(item.createdAt || 0).getTime() / 60000)}`;
+
+        if (!legacyGroups.has(key)) {
+          legacyGroups.set(key, { prefix, createdAt: item.createdAt, items: [] });
+        }
+        legacyGroups.get(key).items.push(item);
       }
-    }
-  } catch (e) {
-    console.warn('Failed to read quiz history from localStorage', e);
-  }
 
-  // Fallback discovery: Scan global history for legacy quiz items not yet paired
-  try {
-    const globalHistory = storage.getLocalHistory() || [];
-    const quizItems = globalHistory.filter((i) => i.toolId === 'quiz-generator' || (i.fileName && (i.fileName.endsWith('_DeBai.pdf') || i.fileName.endsWith('_DapAn.pdf'))));
-
-    const existingIds = new Set(list.map((p) => p.worksheet.fileId || p.worksheet.downloadUrl));
-
-    // Group legacy items by prefix or base time
-    const legacyGroups = new Map();
-    for (const item of quizItems) {
-      const name = item.fileName || '';
-      const prefix = name.replace(/_(DeBai|DapAn)\.pdf$/i, '');
-      const key = `${prefix}_${Math.floor(new Date(item.createdAt || 0).getTime() / 60000)}`;
-
-      if (!legacyGroups.has(key)) {
-        legacyGroups.set(key, { prefix, createdAt: item.createdAt, items: [] });
-      }
-      legacyGroups.get(key).items.push(item);
-    }
-
-    for (const group of legacyGroups.values()) {
-      const ws = group.items.find((i) => (i.fileName || '').includes('_DeBai')) || group.items[0];
-      const ans = group.items.find((i) => (i.fileName || '').includes('_DapAn')) || group.items[1] || ws;
-
-      const wsKey = ws?.resultFileId || ws?.downloadUrl;
-      if (wsKey && !existingIds.has(wsKey)) {
+      for (const group of legacyGroups.values()) {
+        const ws = group.items.find((i) => (i.fileName || '').includes('_DeBai')) || group.items[0];
+        const ans = group.items.find((i) => (i.fileName || '').includes('_DapAn')) || group.items[1] || ws;
         const paired = normalizeQuizPair({
-          id: `legacy_${wsKey}`,
+          id: `legacy_${ws?.resultFileId || Date.now()}`,
           timestamp: new Date(group.createdAt || 0).getTime(),
           createdAt: group.createdAt,
           prefix: group.prefix,
@@ -116,60 +118,175 @@ export function getQuizHistoryList() {
             viewUrl: ans?.resultFileId ? `/api/v1/files/view/${ans.resultFileId}` : ans?.downloadUrl
           }
         });
-        if (paired) {
-          list.push(paired);
-          existingIds.add(wsKey);
-        }
+        if (paired) list.push(paired);
       }
-    }
-  } catch (e) {
-    console.warn('Fallback quiz pairing scan error', e);
+    } catch {}
+    safeSet(QUIZ_HISTORY_KEY, list);
   }
 
-  // Sort descending by timestamp
   list.sort((a, b) => b.timestamp - a.timestamp);
-  return list.slice(0, 50);
+  return list;
 }
 
 /**
- * Appends or updates a paired quiz history item and synchronizes with storage.
- * @param {object} rawPair
+ * Retrieves the list of trashed paired quiz items.
+ */
+export function getQuizTrashList() {
+  const list = safeGet(QUIZ_TRASH_KEY) || [];
+  list.sort((a, b) => (new Date(b.deletedAt || 0).getTime()) - (new Date(a.deletedAt || 0).getTime()));
+  return list;
+}
+
+/**
+ * Saves a new completed quiz pair into history.
  */
 export function saveQuizHistoryPair(rawPair) {
   const pair = normalizeQuizPair(rawPair);
   if (!pair) return;
 
-  try {
-    const list = getQuizHistoryList();
-    // Deduplicate by id or fileIds
-    const filtered = list.filter((p) => p.id !== pair.id && p.worksheet.fileId !== pair.worksheet.fileId);
-    filtered.unshift(pair);
-    localStorage.setItem(QUIZ_HISTORY_KEY, JSON.stringify(filtered.slice(0, 50)));
-  } catch (e) {
-    console.warn('Failed to save quiz history pair', e);
-  }
+  const history = getQuizHistoryList().filter((p) => p.id !== pair.id && p.worksheet.fileId !== pair.worksheet.fileId);
+  history.unshift(pair);
+  safeSet(QUIZ_HISTORY_KEY, history);
 }
 
 /**
- * Removes a specific quiz pair from history.
- * @param {string} id
+ * Moves a quiz pair to Trash, synchronizing with DD Studio's global trash.
  */
-export function deleteQuizHistoryItem(id) {
+export function moveQuizPairToTrash(pairId) {
+  const history = getQuizHistoryList();
+  const idx = history.findIndex((p) => p.id === pairId);
+  if (idx === -1) return null;
+
+  const pair = history.splice(idx, 1)[0];
+  pair.deletedAt = new Date().toISOString();
+  safeSet(QUIZ_HISTORY_KEY, history);
+
+  const trash = getQuizTrashList().filter((p) => p.id !== pairId);
+  trash.unshift(pair);
+  safeSet(QUIZ_TRASH_KEY, trash);
+
+  // Sync with global storage trash
   try {
-    const list = getQuizHistoryList().filter((p) => p.id !== id);
-    localStorage.setItem(QUIZ_HISTORY_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn('Failed to delete quiz history item', e);
-  }
+    if (pair.worksheet.fileId) storage.moveToTrashSync(pair.worksheet.fileId);
+    if (pair.answer.fileId) storage.moveToTrashSync(pair.answer.fileId);
+    updateHeaderTrashIndicator();
+  } catch {}
+
+  return pair;
 }
 
 /**
- * Clears all quiz history entries.
+ * Restores a quiz pair from Trash back to active History.
  */
-export function clearAllQuizHistory() {
+export function restoreQuizPairFromTrash(pairId) {
+  const trash = getQuizTrashList();
+  const idx = trash.findIndex((p) => p.id === pairId);
+  if (idx === -1) return null;
+
+  const pair = trash.splice(idx, 1)[0];
+  delete pair.deletedAt;
+  safeSet(QUIZ_TRASH_KEY, trash);
+
+  const history = getQuizHistoryList().filter((p) => p.id !== pairId);
+  history.unshift(pair);
+  safeSet(QUIZ_HISTORY_KEY, history);
+
+  // Sync restore with global storage
   try {
-    localStorage.removeItem(QUIZ_HISTORY_KEY);
-  } catch (e) {
-    console.warn('Failed to clear quiz history', e);
-  }
+    if (pair.worksheet.fileId) storage.restoreTrashItemSync(pair.worksheet.fileId);
+    if (pair.answer.fileId) storage.restoreTrashItemSync(pair.answer.fileId);
+    updateHeaderTrashIndicator();
+  } catch {}
+
+  return pair;
 }
+
+/**
+ * Permanently deletes a quiz pair from Trash.
+ */
+export function deleteQuizPairPermanently(pairId) {
+  const trash = getQuizTrashList();
+  const target = trash.find((p) => p.id === pairId);
+  const remaining = trash.filter((p) => p.id !== pairId);
+  safeSet(QUIZ_TRASH_KEY, remaining);
+
+  // Also remove from active history just in case
+  const history = getQuizHistoryList().filter((p) => p.id !== pairId);
+  safeSet(QUIZ_HISTORY_KEY, history);
+
+  // Sync permanent purge with global storage
+  try {
+    if (target?.worksheet?.fileId) storage.permanentlyDeleteTrashItemSync(target.worksheet.fileId);
+    if (target?.answer?.fileId) storage.permanentlyDeleteTrashItemSync(target.answer.fileId);
+    updateHeaderTrashIndicator();
+  } catch {}
+}
+
+/**
+ * Moves all active history pairs to Trash.
+ */
+export function moveAllQuizPairsToTrash() {
+  const history = getQuizHistoryList();
+  const now = new Date().toISOString();
+  const newlyTrashed = history.map((p) => ({ ...p, deletedAt: now }));
+
+  safeSet(QUIZ_HISTORY_KEY, []);
+
+  const trash = getQuizTrashList();
+  safeSet(QUIZ_TRASH_KEY, [...newlyTrashed, ...trash]);
+
+  try {
+    for (const p of history) {
+      if (p.worksheet.fileId) storage.moveToTrashSync(p.worksheet.fileId);
+      if (p.answer.fileId) storage.moveToTrashSync(p.answer.fileId);
+    }
+    updateHeaderTrashIndicator();
+  } catch {}
+}
+
+/**
+ * Restores all trashed quiz pairs back to History.
+ */
+export function restoreAllQuizPairsFromTrash() {
+  const trash = getQuizTrashList();
+  const restored = trash.map((p) => {
+    const c = { ...p };
+    delete c.deletedAt;
+    return c;
+  });
+
+  safeSet(QUIZ_TRASH_KEY, []);
+
+  const history = getQuizHistoryList();
+  safeSet(QUIZ_HISTORY_KEY, [...restored, ...history]);
+
+  try {
+    for (const p of trash) {
+      if (p.worksheet.fileId) storage.restoreTrashItemSync(p.worksheet.fileId);
+      if (p.answer.fileId) storage.restoreTrashItemSync(p.answer.fileId);
+    }
+    updateHeaderTrashIndicator();
+  } catch {}
+}
+
+/**
+ * Permanently purges all items in Quiz Trash.
+ */
+export function emptyQuizTrashPermanently() {
+  const trash = getQuizTrashList();
+  safeSet(QUIZ_TRASH_KEY, []);
+
+  try {
+    for (const p of trash) {
+      if (p.worksheet.fileId) storage.permanentlyDeleteTrashItemSync(p.worksheet.fileId);
+      if (p.answer.fileId) storage.permanentlyDeleteTrashItemSync(p.answer.fileId);
+    }
+    updateHeaderTrashIndicator();
+  } catch {}
+}
+
+/**
+ * Backward compatibility aliases
+ */
+export const deleteQuizHistoryItem = moveQuizPairToTrash;
+export const clearAllQuizHistory = moveAllQuizPairsToTrash;

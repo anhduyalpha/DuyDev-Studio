@@ -7,9 +7,20 @@
 import { quizManager } from './useQuiz.js';
 import { renderQuizConfigPanel } from '../components/QuizConfigPanel.js';
 import { renderQuizResultCard } from '../components/QuizResultCard.js';
-import { renderQuizHistoryList } from '../components/QuizHistoryList.js';
-import { deleteQuizHistoryItem, clearAllQuizHistory } from '../utilities/quizHistoryHelper.js';
-import { copyText } from '../../../../utilities/clipboard.js';
+import {
+  renderQuizHistoryList,
+  setQuizHistoryTab,
+  getQuizHistoryTab,
+  toggleQuizDropbox
+} from '../components/QuizHistoryList.js';
+import {
+  moveQuizPairToTrash,
+  restoreQuizPairFromTrash,
+  deleteQuizPairPermanently,
+  moveAllQuizPairsToTrash,
+  restoreAllQuizPairsFromTrash,
+  emptyQuizTrashPermanently
+} from '../utilities/quizHistoryHelper.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 
@@ -356,12 +367,113 @@ export function attachQuizListeners() {
     }
   }
 
-  // Attach History Handlers
+  // Attach History & Trash Handlers
   function attachHistoryHandlers() {
-    // 1. History Preview buttons
+    // 1. Tab Switching (Lịch sử vs Thùng rác)
+    const btnTabHistory = document.getElementById('btnQuizTabHistory');
+    if (btnTabHistory) {
+      btnTabHistory.onclick = () => {
+        setQuizHistoryTab('history');
+        renderAndBindHistory();
+      };
+    }
+
+    const btnTabTrash = document.getElementById('btnQuizTabTrash');
+    if (btnTabTrash) {
+      btnTabTrash.onclick = () => {
+        setQuizHistoryTab('trash');
+        renderAndBindHistory();
+      };
+    }
+
+    // 2. Dropbox Accordion Toggle (Click on Header expands/collapses 2-column files)
+    const dropboxHeaders = document.querySelectorAll('.quiz-dropbox-header');
+    dropboxHeaders.forEach((header) => {
+      header.onclick = (e) => {
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        const pairId = header.dataset.pairId;
+        if (pairId) {
+          toggleQuizDropbox(pairId);
+          renderAndBindHistory();
+        }
+      };
+    });
+
+    // 3. Move Single Pair to Trash (History Tab)
+    const trashSingleBtns = document.querySelectorAll('.btn-quiz-trash-single');
+    trashSingleBtns.forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const pairId = btn.dataset.pairId;
+        if (pairId) {
+          moveQuizPairToTrash(pairId);
+          renderAndBindHistory();
+          showToast('Đã chuyển bộ đề vào thùng rác', 'success');
+        }
+      };
+    });
+
+    // 4. Restore Single Pair from Trash (Trash Tab)
+    const restoreSingleBtns = document.querySelectorAll('.btn-quiz-restore-single');
+    restoreSingleBtns.forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const pairId = btn.dataset.pairId;
+        if (pairId) {
+          restoreQuizPairFromTrash(pairId);
+          renderAndBindHistory();
+          showToast('Đã khôi phục bộ đề về lịch sử', 'success');
+        }
+      };
+    });
+
+    // 5. Permanently Delete Single Pair (Trash Tab)
+    const deletePermBtns = document.querySelectorAll('.btn-quiz-delete-perm-single');
+    deletePermBtns.forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const pairId = btn.dataset.pairId;
+        if (pairId) {
+          deleteQuizPairPermanently(pairId);
+          renderAndBindHistory();
+          showToast('Đã xóa vĩnh viễn bộ đề', 'success');
+        }
+      };
+    });
+
+    // 6. Global History / Trash Actions
+    const btnTrashAll = document.getElementById('btnQuizTrashAll');
+    if (btnTrashAll) {
+      btnTrashAll.onclick = () => {
+        moveAllQuizPairsToTrash();
+        renderAndBindHistory();
+        showToast('Đã chuyển tất cả bộ đề vào thùng rác', 'success');
+      };
+    }
+
+    const btnRestoreAll = document.getElementById('btnQuizRestoreAllTrash');
+    if (btnRestoreAll) {
+      btnRestoreAll.onclick = () => {
+        restoreAllQuizPairsFromTrash();
+        renderAndBindHistory();
+        showToast('Đã khôi phục tất cả bộ đề về lịch sử', 'success');
+      };
+    }
+
+    const btnEmptyTrash = document.getElementById('btnQuizEmptyTrash');
+    if (btnEmptyTrash) {
+      btnEmptyTrash.onclick = () => {
+        emptyQuizTrashPermanently();
+        renderAndBindHistory();
+        showToast('Đã dọn sạch thùng rác', 'success');
+      };
+    }
+
+    // 7. Preview Buttons (Inside expanded Dropbox)
     const historyPreviewBtns = document.querySelectorAll('.btn-quiz-history-preview');
     historyPreviewBtns.forEach((btn) => {
-      btn.onclick = () => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const fileId = btn.dataset.fileId;
         const fileName = btn.dataset.fileName;
         const viewUrl = btn.dataset.viewUrl;
@@ -380,47 +492,14 @@ export function attachQuizListeners() {
       };
     });
 
-    // 2. History Download buttons
+    // 8. Download Buttons (Inside expanded Dropbox)
     const historyDownloadBtns = document.querySelectorAll('.btn-quiz-history-download');
     historyDownloadBtns.forEach((btn) => {
-      btn.onclick = (e) => handleQuizDownload(e, btn);
-    });
-
-    // 3. History Copy link buttons
-    const copyBtns = document.querySelectorAll('.btn-quiz-history-copy');
-    copyBtns.forEach((btn) => {
-      btn.onclick = async () => {
-        const relUrl = btn.dataset.copyUrl;
-        if (relUrl) {
-          const fullUrl = relUrl.startsWith('http') ? relUrl : `${window.location.origin}${relUrl}`;
-          await copyText(fullUrl);
-          showToast('Đã sao chép liên kết tải về', 'success');
-        }
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        handleQuizDownload(e, btn);
       };
     });
-
-    // 4. Delete single history pair
-    const deletePairBtns = document.querySelectorAll('.btn-quiz-delete-pair');
-    deletePairBtns.forEach((btn) => {
-      btn.onclick = () => {
-        const pairId = btn.dataset.pairId;
-        if (pairId) {
-          deleteQuizHistoryItem(pairId);
-          renderAndBindHistory();
-          showToast('Đã xóa bộ đề khỏi lịch sử', 'success');
-        }
-      };
-    });
-
-    // 5. Clear all history
-    const btnClearAll = document.getElementById('btnQuizClearHistory');
-    if (btnClearAll) {
-      btnClearAll.onclick = () => {
-        clearAllQuizHistory();
-        renderAndBindHistory();
-        showToast('Đã xóa toàn bộ lịch sử tạo bài tập', 'success');
-      };
-    }
   }
 
   function renderAndBindHistory() {
