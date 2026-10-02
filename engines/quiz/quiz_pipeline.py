@@ -1,7 +1,8 @@
 """
-Quiz PDF Generator Pipeline
-Deterministic AI-powered pipeline to ingest PDF/docs, extract & standardize quiz questions
-via Agnes 3.0 Flash API, and compile high-fidelity A4 Portrait worksheets and standalone answer keys.
+Quiz PDF Generator Pipeline v2.0
+Deterministic AI-powered pipeline to ingest PDF/docs, extract & standardize multi-format quiz questions
+via Agnes 3.0 Flash API, and compile high-fidelity A4 Portrait worksheets and standalone answer keys
+with full support for visual assets (diagrams/graphs/images), 2-column flow, structured tables, and KaTeX math.
 """
 
 import sys
@@ -18,10 +19,11 @@ import http.client
 import threading
 import shutil
 import uuid
+import base64
 import concurrent.futures
 import pymupdf
 
-# Reconfigure stdout/stderr for UTF-8
+# Reconfigure stdout/stderr for UTF-8 on Windows
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -66,13 +68,11 @@ def find_chrome_path() -> str:
             if os.path.exists(c):
                 return c
         else:
-            # Check PATH
             from shutil import which
             found = which(c)
             if found:
                 return found
 
-    # Fallback to default
     return "google-chrome" if sys.platform != "win32" else candidates[5]
 
 
@@ -115,7 +115,6 @@ def download_gdrive_if_needed(url_or_path: str, temp_dir: str) -> str:
                         f.write(content)
                     return out_pdf
 
-                # Handle Google Drive large-file scan warning confirmation
                 confirm_match = re.search(r"confirm=([0-9A-Za-z_-]+)", content.decode("utf-8", errors="ignore"))
                 if confirm_match:
                     confirm_code = confirm_match.group(1)
@@ -140,8 +139,457 @@ def download_gdrive_if_needed(url_or_path: str, temp_dir: str) -> str:
     )
 
 
-def extract_raw_pages(pdf_path: str, page_spec: str) -> tuple[str, list[int]]:
-    """Extract raw text from PDF for specified pages (1-indexed)."""
+# ==============================================================================
+# MODULE 1.1: 2-COLUMN LAYOUT READING ORDER
+# ==============================================================================
+
+def is_running_header_or_footer(block_text: str, y0: float, y1: float, page_h: float) -> bool:
+    """Detect running headers/footers (page numbers, exam codes, repeated school headers) to purge."""
+    text = block_text.strip()
+    if not text:
+        return False
+
+    header_footer_regex = re.compile(
+        r"^(?:trang\s*\d+(?:\s*[\/\-]\s*\d+)?|mã\s*đề(?:\s*thi)?\s*[:\d]+|sở\s*gd|phòng\s*gd|bộ\s*giáo\s*dục|"
+        r"kỳ\s*thi\s*tốt\s*nghiệp|đề\s*thi\s*thử|họ\s*(?:và\s*)?tên\s*:|số\s*báo\s*danh\s*:|hết|---\s*hết\s*---)$",
+        re.IGNORECASE
+    )
+
+    # Check top 8% of page
+    if y1 < page_h * 0.08:
+        if header_footer_regex.search(text) or (len(text) < 45 and ("trang" in text.lower() or "mã đề" in text.lower())):
+            return True
+    # Check bottom 8% of page
+    if y0 > page_h * 0.92:
+        if header_footer_regex.search(text) or (len(text) < 45 and ("trang" in text.lower() or "hết" in text.lower())):
+            return True
+    return False
+
+
+def sort_blocks_by_layout(page: pymupdf.Page, blocks: list = None) -> list:
+    """
+    Sort page blocks into natural human reading order.
+    Detects 2-column gutter and orders: Header -> Column 1 (top-to-bottom) -> Column 2 (top-to-bottom) -> Footer.
+    Eliminates horizontal interleaving between columns.
+    """
+    pw = page.rect.width
+    ph = page.rect.height
+
+    if blocks is None:
+        raw_blocks = page.get_text("blocks")
+        blocks = [b for b in raw_blocks if (len(b) > 6 and b[6] == 0) or (len(b) > 4 and str(b[4]).strip())]
+
+    if not blocks:
+        return []
+
+    # Clean out running headers and footers
+    filtered_blocks = []
+    for b in blocks:
+        x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], str(b[4])
+        # Skip special image/table marker blocks from header/footer filter
+        if text.startswith("\n[IMAGE_REF:") or text.startswith("\n|"):
+            filtered_blocks.append(b)
+            continue
+        if not is_running_header_or_footer(text, y0, y1, ph):
+            filtered_blocks.append(b)
+
+    if not filtered_blocks:
+        return blocks
+
+    # Analyze column distribution
+    col1_candidates = []
+    col2_candidates = []
+    spanning_candidates = []
+
+    mid_x = pw / 2.0
+    gutter_left = mid_x - pw * 0.04
+    gutter_right = mid_x + pw * 0.04
+
+    for b in filtered_blocks:
+        x0, y0, x1, y1 = b[0], b[1], b[2], b[3]
+        b_mid = (x0 + x1) / 2.0
+        b_width = x1 - x0
+
+        # Spanning banner if wide enough across the middle
+        if b_width > pw * 0.62 or (x0 < gutter_left and x1 > gutter_right):
+            spanning_candidates.append(b)
+        elif b_mid < mid_x and x1 <= gutter_right:
+            col1_candidates.append(b)
+        elif b_mid >= mid_x and x0 >= gutter_left:
+            col2_candidates.append(b)
+        else:
+            if b_mid < mid_x:
+                col1_candidates.append(b)
+            else:
+                col2_candidates.append(b)
+
+    is_two_column = (
+        len(col1_candidates) >= 2
+        and len(col2_candidates) >= 2
+        and len(spanning_candidates) <= max(2, int(0.35 * (len(col1_candidates) + len(col2_candidates))))
+    )
+
+    if not is_two_column:
+        # Standard 1-column layout: sort purely by y0 ascending, then x0
+        return sorted(filtered_blocks, key=lambda b: (round(b[1], 1), round(b[0], 1)))
+
+    col_min_y = min(
+        min((b[1] for b in col1_candidates), default=ph),
+        min((b[1] for b in col2_candidates), default=ph)
+    )
+    col_max_y = max(
+        max((b[3] for b in col1_candidates), default=0),
+        max((b[3] for b in col2_candidates), default=0)
+    )
+
+    top_banners = []
+    bottom_banners = []
+    remaining_col1 = list(col1_candidates)
+    remaining_col2 = list(col2_candidates)
+
+    for b in spanning_candidates:
+        if b[3] <= col_min_y + 15:
+            top_banners.append(b)
+        elif b[1] >= col_max_y - 15:
+            bottom_banners.append(b)
+        else:
+            if (b[0] + b[2]) / 2.0 < mid_x:
+                remaining_col1.append(b)
+            else:
+                remaining_col2.append(b)
+
+    top_banners.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+    remaining_col1.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+    remaining_col2.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+    bottom_banners.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+
+    return top_banners + remaining_col1 + remaining_col2 + bottom_banners
+
+
+# ==============================================================================
+# MODULE 1.2: VISUAL ASSET EXTRACTOR & BOUNDING-BOX LINKER
+# ==============================================================================
+
+def cluster_rects(rect_list: list[pymupdf.Rect], margin: float = 12.0) -> list[pymupdf.Rect]:
+    """Group overlapping or nearby rectangles into connected cluster bounding boxes."""
+    if not rect_list:
+        return []
+    clusters = [pymupdf.Rect(r) for r in rect_list]
+    changed = True
+    while changed:
+        changed = False
+        new_clusters = []
+        skip = set()
+        for i in range(len(clusters)):
+            if i in skip:
+                continue
+            curr = pymupdf.Rect(clusters[i])
+            for j in range(i + 1, len(clusters)):
+                if j in skip:
+                    continue
+                exp_curr = pymupdf.Rect(curr.x0 - margin, curr.y0 - margin, curr.x1 + margin, curr.y1 + margin)
+                if exp_curr.intersects(clusters[j]):
+                    curr = curr | clusters[j]
+                    skip.add(j)
+                    changed = True
+            new_clusters.append(curr)
+        clusters = new_clusters
+    return clusters
+
+
+def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: str) -> list[dict]:
+    """
+    Extract raster images and vector diagrams from the page.
+    Filters out borders, hairline rules, and tiny decorative icons (< 40x40 px).
+    Groups connected vector drawings into diagram bounding boxes.
+    Renders crisp pixmaps (dpi=200) and saves as PNG and base64 data URI.
+    """
+    pw = page.rect.width
+    ph = page.rect.height
+    assets = []
+    candidate_rects = []
+
+    # 1. Raster images
+    try:
+        image_list = page.get_images(full=True)
+        for img in image_list:
+            xref = img[0]
+            for r in page.get_image_rects(xref):
+                rect = pymupdf.Rect(r)
+                if rect.width > pw * 0.92 and rect.height > ph * 0.92:
+                    continue
+                if rect.width < 35 or rect.height < 35 or (rect.width * rect.height < 1400):
+                    continue
+                candidate_rects.append(rect)
+    except Exception:
+        pass
+
+    # 2. Vector drawings (diagrams, graphs, circuits, chemical bonds)
+    try:
+        drawings = page.get_drawings()
+        valid_drawing_rects = []
+        for d in drawings:
+            dr = pymupdf.Rect(d.get("rect", (0, 0, 0, 0)))
+            if dr.width > pw * 0.92 and dr.height > ph * 0.92:
+                continue
+            if dr.height <= 2.5 and dr.width > 80:
+                continue
+            if dr.width <= 2.5 and dr.height > 80:
+                continue
+            if dr.width < 3 and dr.height < 3:
+                continue
+            valid_drawing_rects.append(dr)
+
+        drawing_clusters = cluster_rects(valid_drawing_rects, margin=10.0)
+        for cr in drawing_clusters:
+            if cr.width >= 35 and cr.height >= 35 and (cr.width * cr.height >= 1600):
+                if cr.width <= pw * 0.94 and cr.height <= ph * 0.94:
+                    candidate_rects.append(cr)
+    except Exception:
+        pass
+
+    merged_rects = cluster_rects(candidate_rects, margin=6.0)
+    merged_rects.sort(key=lambda r: (round(r.y0, 1), round(r.x0, 1)))
+
+    for idx, rect in enumerate(merged_rects, start=1):
+        asset_id = f"fig_p{page_num}_{idx}"
+        padded_rect = pymupdf.Rect(
+            max(0, rect.x0 - 3),
+            max(0, rect.y0 - 3),
+            min(pw, rect.x1 + 3),
+            min(ph, rect.y1 + 3)
+        )
+        try:
+            pix = page.get_pixmap(clip=padded_rect, dpi=200)
+            if pix.width < 35 or pix.height < 35:
+                continue
+            png_bytes = pix.tobytes("png")
+            b64_data = f"data:image/png;base64,{base64.b64encode(png_bytes).decode('ascii')}"
+
+            png_file = os.path.join(temp_assets_dir, f"{asset_id}.png")
+            with open(png_file, "wb") as pf:
+                pf.write(png_bytes)
+
+            assets.append({
+                "id": asset_id,
+                "page": page_num,
+                "rect": (rect.x0, rect.y0, rect.x1, rect.y1),
+                "data_uri": b64_data,
+                "file_path": png_file
+            })
+        except Exception:
+            continue
+
+    return assets
+
+
+def link_assets_to_questions(questions: list[dict], assets: list[dict]) -> None:
+    """
+    Link extracted visual assets to question objects.
+    Preserves AI-assigned image_ref, or uses Spatial & Marker Fallbacks.
+    Attaches base64 data_uri to question['image_data'].
+    """
+    assets_by_id = {a["id"]: a for a in assets}
+
+    # 1. Direct AI match
+    for q in questions:
+        ref = q.get("image_ref")
+        if ref:
+            clean_ref = str(ref).replace(".png", "").strip()
+            if clean_ref in assets_by_id:
+                q["image_ref"] = f"{clean_ref}.png"
+                q["image_data"] = assets_by_id[clean_ref]["data_uri"]
+            elif ref in assets_by_id:
+                q["image_ref"] = f"{ref}.png"
+                q["image_data"] = assets_by_id[ref]["data_uri"]
+
+    # 2. Text marker match: if [IMAGE_REF: ...] was embedded in question text
+    for q in questions:
+        if not q.get("image_data"):
+            q_text = str(q.get("question", ""))
+            marker_match = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)(?:\.png)?\]", q_text)
+            if marker_match:
+                asset_id = marker_match.group(1)
+                if asset_id in assets_by_id:
+                    q["image_ref"] = f"{asset_id}.png"
+                    q["image_data"] = assets_by_id[asset_id]["data_uri"]
+                    q["question"] = re.sub(r"\[IMAGE_REF:\s*fig_p\d+_\d+(?:\.png)?\]", "", q_text).strip()
+
+    # 3. Spatial proximity fallback: assign remaining unassigned assets to questions mentioning figures
+    assigned_assets = {str(q.get("image_ref", "")).replace(".png", "") for q in questions if q.get("image_ref")}
+    unassigned_assets = [a for a in assets if a["id"] not in assigned_assets]
+
+    if unassigned_assets:
+        for q in questions:
+            if not q.get("image_data"):
+                q_text = str(q.get("question", "")).lower()
+                if any(w in q_text for w in ["hình vẽ", "hình bên", "hình dưới", "đồ thị", "thí nghiệm", "sơ đồ", "bảng sau"]):
+                    if unassigned_assets:
+                        chosen = unassigned_assets.pop(0)
+                        q["image_ref"] = f"{chosen['id']}.png"
+                        q["image_data"] = chosen["data_uri"]
+
+
+# ==============================================================================
+# MODULE 1.3: STRUCTURED TABLE EXTRACTOR
+# ==============================================================================
+
+def table_to_markdown(rows: list[list[str]]) -> str:
+    """Convert a 2D matrix of cell strings to a standard Markdown table."""
+    if not rows or len(rows) < 2:
+        return ""
+    cleaned = [[(c or "").strip().replace("\n", " ") for c in row] for row in rows]
+    if not any(any(c for c in row) for row in cleaned):
+        return ""
+    cols = max(len(r) for r in cleaned)
+    if cols < 2:
+        return ""
+    norm = [r + [""] * (cols - len(r)) for r in cleaned]
+    header = "| " + " | ".join(norm[0]) + " |"
+    sep = "| " + " | ".join([":---"] * cols) + " |"
+    data = ["| " + " | ".join(r) + " |" for r in norm[1:]]
+    return "\n" + "\n".join([header, sep] + data) + "\n"
+
+
+def extract_tables_with_structure(page: pymupdf.Page) -> list[dict]:
+    """
+    Detect data tables using PyMuPDF's page.find_tables().
+    Converts tables into structured Markdown tables with bounding boxes.
+    """
+    results = []
+    try:
+        tabs = page.find_tables()
+        for tab in getattr(tabs, "tables", []):
+            bbox = pymupdf.Rect(tab.bbox)
+            data = tab.extract()
+            md = table_to_markdown(data)
+            if md:
+                results.append({
+                    "bbox": (bbox.x0, bbox.y0, bbox.x1, bbox.y1),
+                    "markdown": md
+                })
+    except Exception:
+        pass
+    return results
+
+
+def format_tables_in_text(text: str) -> str:
+    """Convert markdown tables in question text to HTML tables for printing."""
+    def _md_table_replacer(match):
+        lines = [l.strip() for l in match.group(0).strip().split("\n") if l.strip()]
+        if len(lines) < 2:
+            return match.group(0)
+        headers = [c.strip() for c in lines[0].strip("|").split("|")]
+        data_rows = lines[2:]
+        html = ['<table class="q-table">', '<thead><tr>' + ''.join(f'<th>{c}</th>' for c in headers) + '</tr></thead>', '<tbody>']
+        for dr in data_rows:
+            cells = [c.strip() for c in dr.strip("|").split("|")]
+            html.append('<tr>' + ''.join(f'<td>{c}</td>' for c in cells) + '</tr>')
+        html.append('</tbody></table>')
+        return "\n".join(html)
+
+    table_pattern = re.compile(r'(\|[^\r\n]+\|\r?\n\|[\s:\-|]+\|\r?\n(?:\|[^\r\n]+\|\r?\n?)+)')
+    return table_pattern.sub(_md_table_replacer, text)
+
+
+# ==============================================================================
+# MODULE 1.4: CROSS-PAGE QUESTION STITCHER & CONTENT ASSEMBLER
+# ==============================================================================
+
+def is_question_dangling(text: str) -> bool:
+    """Check if text ends with an incomplete question waiting for options or ending."""
+    trimmed = text.strip()
+    q_matches = list(re.finditer(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)\s*[\.\:])", trimmed))
+    if not q_matches:
+        return False
+    last_q_start = q_matches[-1].start()
+    last_q_text = trimmed[last_q_start:]
+
+    has_a = bool(re.search(r"(?:^|\s)A[\.\:]", last_q_text))
+    has_b = bool(re.search(r"(?:^|\s)B[\.\:]", last_q_text))
+    has_c = bool(re.search(r"(?:^|\s)C[\.\:]", last_q_text))
+    has_d = bool(re.search(r"(?:^|\s)D[\.\:]", last_q_text))
+
+    if has_a and (not has_c or not has_d):
+        return True
+
+    last_line = last_q_text.strip().split("\n")[-1].strip()
+    if last_line.endswith((":", ",", "là", "thì", "gồm", "được", "có")):
+        return True
+    return False
+
+
+def stitch_cross_page_text(pages_text: list[str]) -> str:
+    """
+    Remove running headers/footers and stitch dangling questions across page breaks.
+    """
+    if not pages_text:
+        return ""
+    if len(pages_text) == 1:
+        return pages_text[0]
+
+    stitched = pages_text[0]
+    for p_idx in range(1, len(pages_text)):
+        curr_p = pages_text[p_idx].strip()
+        if not curr_p:
+            continue
+
+        if is_question_dangling(stitched):
+            starts_with_new_q = bool(re.match(r"^(?:Câu\s*\d+|\d+\s*[\.\:])", curr_p))
+            if not starts_with_new_q:
+                stitched = stitched + "\n" + curr_p
+                continue
+
+        stitched = stitched + f"\n\n--- PAGE BREAK ---\n\n" + curr_p
+
+    return stitched
+
+
+def extract_structured_page_content(
+    page: pymupdf.Page,
+    page_num: int,
+    temp_assets_dir: str
+) -> tuple[str, list[dict]]:
+    """
+    Assemble text blocks, structured Markdown tables, and visual assets on a page
+    in natural layout order (Module 1.1 + 1.2 + 1.3).
+    """
+    tables = extract_tables_with_structure(page)
+    assets = extract_visual_assets(page, page_num, temp_assets_dir)
+
+    raw_blocks = page.get_text("blocks")
+    content_blocks = []
+
+    table_rects = [pymupdf.Rect(t["bbox"]) for t in tables]
+
+    for b in raw_blocks:
+        x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], str(b[4])
+        b_rect = pymupdf.Rect(x0, y0, x1, y1)
+        inside_table = False
+        for tr in table_rects:
+            if tr.contains(b_rect) or (tr.intersects(b_rect) and (tr & b_rect).get_area() > 0.6 * b_rect.get_area()):
+                inside_table = True
+                break
+        if not inside_table and text.strip():
+            content_blocks.append(b)
+
+    for t in tables:
+        bx0, by0, bx1, by1 = t["bbox"]
+        content_blocks.append((bx0, by0, bx1, by1, t["markdown"], -1, 0))
+
+    for a in assets:
+        ax0, ay0, ax1, ay1 = a["rect"]
+        marker = f"\n[IMAGE_REF: {a['id']}]\n"
+        content_blocks.append((ax0, ay0, ax1, ay1, marker, -2, 0))
+
+    sorted_blocks = sort_blocks_by_layout(page, content_blocks)
+    page_text = "\n".join(str(b[4]).strip() for b in sorted_blocks if str(b[4]).strip())
+
+    return page_text, assets
+
+
+def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tuple[str, list[int], list[dict]]:
+    """Extract structured text, tables, and visual assets from PDF for specified pages (1-indexed)."""
     try:
         doc = pymupdf.open(pdf_path)
     except Exception as e:
@@ -150,7 +598,6 @@ def extract_raw_pages(pdf_path: str, page_spec: str) -> tuple[str, list[int]]:
     total_pages = len(doc)
     page_nums = []
 
-    # Parse page spec: e.g. "11", "11,12", "11-12", "36-38"
     for part in page_spec.split(","):
         part = part.strip()
         if "-" in part:
@@ -159,27 +606,34 @@ def extract_raw_pages(pdf_path: str, page_spec: str) -> tuple[str, list[int]]:
         elif part:
             page_nums.append(int(part))
 
-    extracted_texts = []
+    extracted_pages = []
     actual_pages = []
+    all_assets = []
+
     for p in page_nums:
         if 1 <= p <= total_pages:
             idx = p - 1
-            text = doc[idx].get_text()
-            extracted_texts.append(f"--- PAGE {p} ---\n" + text)
+            page_text, page_assets = extract_structured_page_content(doc[idx], p, temp_assets_dir)
+            extracted_pages.append(page_text)
             actual_pages.append(p)
+            all_assets.extend(page_assets)
         else:
             raise ValueError(f"Trang {p} vượt quá tổng số {total_pages} trang của tài liệu PDF.")
 
-    full_text = "\n\n".join(extracted_texts)
-    clean_len = len(re.sub(r"\s+", "", full_text))
+    stitched_text = stitch_cross_page_text(extracted_pages)
+    clean_len = len(re.sub(r"\s+", "", stitched_text))
     if clean_len < 50:
         raise ValueError(
             f"Trang được chọn ({', '.join(map(str, actual_pages))}) không chứa văn bản dạng số/vector. "
             "Tài liệu có thể là ảnh scan thuần túy. Vui lòng chọn trang có lớp chữ hoặc OCR trước."
         )
 
-    return full_text, actual_pages
+    return stitched_text, actual_pages, all_assets
 
+
+# ==============================================================================
+# MODULE 1.5 & 1.6: AI INGESTION & SLIDING-WINDOW CHUNKING
+# ==============================================================================
 
 def call_agnes_api(
     api_key: str,
@@ -208,7 +662,7 @@ def call_agnes_api(
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "DDStudio-QuizPipeline/1.0"
+            "User-Agent": "DDStudio-QuizPipeline/2.0"
         }
     )
 
@@ -218,8 +672,6 @@ def call_agnes_api(
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 content = data["choices"][0]["message"]["content"]
-                
-                # Clean markdown JSON fences if present
                 cleaned = content.strip()
                 if cleaned.startswith("```"):
                     cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
@@ -248,6 +700,36 @@ def call_agnes_api(
     raise last_err or RuntimeError("Không thể kết nối đến Agnes AI API sau nhiều lần thử lại")
 
 
+def chunk_questions_sliding_window(full_text: str, target_count: int, window_size: int = 10) -> list[tuple[int, int, str]]:
+    """
+    Pre-split candidate text into windows with 1-question overlap buffer
+    to prevent Lost-in-the-Middle and token overflow on long exams.
+    Returns list of (start_num, end_num, window_text).
+    """
+    pattern = re.compile(r"(?:^|\n)(?=(?:Câu\s*\d+|\b\d+\s*[\.\:]\s*[A-ZÀ-Ỹ]))", re.IGNORECASE)
+    splits = pattern.split(full_text)
+    segments = [s.strip() for s in splits if s and len(s.strip()) > 15]
+
+    if len(segments) <= window_size:
+        return [(1, target_count, full_text)]
+
+    windows = []
+    total_segs = min(len(segments), target_count)
+    curr = 0
+
+    while curr < total_segs:
+        w_start = curr
+        w_end = min(curr + window_size, total_segs)
+        buf_start = max(0, w_start - 1) if w_start > 0 else 0
+        buf_end = min(len(segments), w_end + 1) if w_end < len(segments) else len(segments)
+
+        window_text = "\n\n".join(segments[buf_start:buf_end])
+        windows.append((w_start + 1, w_end, window_text))
+        curr = w_end
+
+    return windows
+
+
 def parse_and_standardize_questions(
     raw_text: str,
     api_key: str,
@@ -256,36 +738,63 @@ def parse_and_standardize_questions(
     base_url: str = DEFAULT_API_BASE,
     model: str = DEFAULT_MODEL
 ) -> list[dict]:
-    """Parse raw text into structured question objects with HTML formatting and answers via Agnes AI with intelligent batching."""
+    """
+    Parse raw text into structured question objects with multi-format support (GDPT 2018),
+    HTML sub/sup for chemistry, KaTeX math formatting, and image linking via Agnes AI.
+    """
     system_prompt = (
-        "You are an expert Vietnamese Chemistry teacher and exam editor.\n"
-        "Your task is to extract, standardize, and format multiple-choice questions from the provided textbook text.\n"
+        "You are an expert Vietnamese exam editor and master teacher.\n"
+        "Your task is to extract, standardize, and format quiz questions from the provided textbook/exam text.\n"
         "Requirements:\n"
-        "1. Identify questions from 'Câu X' or 'X.' accurately, regardless of their original numbering in the source text.\n"
-        "2. Standardize all chemical formulas, subscripts, and superscripts using HTML tags: "
-        "always convert indices to <sub> (e.g. C<sub>15</sub>H<sub>31</sub>COOH, C<sub>2</sub>H<sub>5</sub>OH, "
-        "C<sub>n</sub>H<sub>2n</sub>O<sub>2</sub>, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup>.\n"
-        "3. Provide exactly 4 options A, B, C, D for each question.\n"
-        "4. In 'explanation', provide a concise, accurate scientific explanation strictly in Vietnamese (1-3 sentences), "
-        "justifying why the chosen answer is correct and citing relevant chemical principles/formulas/reactions.\n"
-        "5. Output the single uppercase letter ('A', 'B', 'C', or 'D') in 'answer' matching the result from your analysis.\n"
-        "6. Return ONLY a valid JSON object matching this exact schema:\n"
+        "1. Identify questions from 'Câu X' or 'X.' accurately in order of appearance.\n"
+        "2. Support 3 question types (Vietnamese GDPT 2018 format):\n"
+        "   - 'mcq': Standard 4-option multiple-choice (options A, B, C, D; answer is 'A', 'B', 'C', or 'D').\n"
+        "   - 'true_false_group': True/False 4 statements (statements a, b, c, d each with 'text' and 'is_correct' boolean; answer is summary like 'a-Đ, b-S, c-Đ, d-Đ').\n"
+        "   - 'short_answer': Numerical or short phrase answer (answer is string like '88' or '12.5').\n"
+        "3. Standardize chemical formulas using HTML tags: indices to <sub> (e.g. C<sub>2</sub>H<sub>5</sub>OH, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup> (e.g. Fe<sup>3+</sup>).\n"
+        "4. Standardize mathematical expressions using KaTeX/LaTeX delimiters: inline math between $...$ (e.g. $E = mc^2$, $\\int_0^1 f(x)dx$, $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$).\n"
+        "5. Preserve visual assets: If the question contains an image marker '[IMAGE_REF: fig_pX_Y]' or refers to a figure/diagram in the text, preserve 'image_ref': 'fig_pX_Y.png'. If none, set 'image_ref': null.\n"
+        "6. In 'explanation', provide a concise, accurate scientific explanation strictly in Vietnamese (1-3 sentences).\n"
+        "7. Return ONLY a valid JSON object matching this schema:\n"
         "{\n"
         '  "questions": [\n'
         "    {\n"
         '      "number": 1,\n'
+        '      "type": "mcq",\n'
         '      "question": "Question text...",\n'
+        '      "image_ref": "fig_p1_1.png",\n'
         '      "options": {"A": "...", "B": "...", "C": "...", "D": "..."},\n'
-        '      "explanation": "Concise scientific explanation proving why the choice is correct...",\n'
+        '      "explanation": "Concise scientific explanation...",\n'
         '      "answer": "A"\n'
+        "    },\n"
+        "    {\n"
+        '      "number": 2,\n'
+        '      "type": "true_false_group",\n'
+        '      "question": "Question text...",\n'
+        '      "image_ref": null,\n'
+        '      "statements": {\n'
+        '        "a": {"text": "...", "is_correct": true},\n'
+        '        "b": {"text": "...", "is_correct": false},\n'
+        '        "c": {"text": "...", "is_correct": true},\n'
+        '        "d": {"text": "...", "is_correct": false}\n'
+        "      },\n"
+        '      "explanation": "Concise explanation...",\n'
+        '      "answer": "a-Đ, b-S, c-Đ, d-S"\n'
+        "    },\n"
+        "    {\n"
+        '      "number": 3,\n'
+        '      "type": "short_answer",\n'
+        '      "question": "Question text...",\n'
+        '      "image_ref": null,\n'
+        '      "answer": "88",\n'
+        '      "explanation": "Concise explanation..."\n'
         "    }\n"
         "  ]\n"
         "}\n"
-        "7. If there are NO multiple-choice questions in the provided text, return {\"questions\": []}."
+        "8. If there are NO questions in the provided text, return {\"questions\": []}."
     )
 
     BATCH_SIZE = 12
-    # Prepare question ranges: if count > 15, split into batches to avoid token limits & timeouts
     batches = []
     curr_start = start_num
     remaining = count
@@ -303,11 +812,17 @@ def parse_and_standardize_questions(
     max_ai_progress = 72
     prog_step = (max_ai_progress - start_progress) / max(1, total_batches)
 
+    # Use sliding window chunking to slice context
+    windows = chunk_questions_sliding_window(raw_text, target_count=count, window_size=BATCH_SIZE)
+
     for b_idx, (b_start, b_end, b_count) in enumerate(batches):
         batch_prog_base = int(start_progress + b_idx * prog_step)
+        
+        # Pick corresponding window text or full text
+        w_text = windows[b_idx][2] if b_idx < len(windows) else raw_text
         user_prompt = (
-            f"Extract up to {b_count} multiple-choice questions from the following text. "
-            f"Extract them sequentially in order of appearance in the text and assign sequential numbers from {b_start} to {b_end}:\n\n{raw_text}"
+            f"Extract up to {b_count} questions from the following text. "
+            f"Extract them sequentially in order of appearance and assign sequential numbers from {b_start} to {b_end}:\n\n{w_text}"
         )
 
         res_holder = {}
@@ -334,10 +849,7 @@ def parse_and_standardize_questions(
             if ai_thread.is_alive():
                 if current_p < int(batch_prog_base + prog_step - 2):
                     current_p += 1
-                emit_progress(
-                    current_p,
-                    f"Đang chuẩn hóa {batch_label} ({elapsed}s)..."
-                )
+                emit_progress(current_p, f"Đang chuẩn hóa {batch_label} ({elapsed}s)...")
 
         if "err" in err_holder:
             raise err_holder["err"]
@@ -345,16 +857,17 @@ def parse_and_standardize_questions(
         res = res_holder.get("data", {})
         batch_qs = res.get("questions", [])
         if not batch_qs:
-            # If later batch yields no more questions, stop gracefully if we already got some
             if all_questions:
                 break
             raise RuntimeError("Không có câu hỏi trong trang, vui lòng chọn lại.")
 
-        # Normalize question numbering
         for idx, q in enumerate(batch_qs):
             target_num = b_start + idx
             if "number" not in q or not isinstance(q["number"], int):
                 q["number"] = target_num
+            # Default question type to 'mcq' if missing
+            if not q.get("type"):
+                q["type"] = "mcq"
             all_questions.append(q)
 
         emit_progress(
@@ -368,6 +881,10 @@ def parse_and_standardize_questions(
     return all_questions
 
 
+# ==============================================================================
+# MODULE 1.7: A4 PRINT HTML TEMPLATES & KATEX
+# ==============================================================================
+
 def determine_option_layout(options: dict) -> str:
     """Determine best grid layout (opt-col-4, opt-col-2, opt-col-1) based on text length."""
     max_len = max(len(re.sub(r"<[^>]+>", "", str(v))) for v in options.values()) if options else 0
@@ -379,41 +896,127 @@ def determine_option_layout(options: dict) -> str:
         return "opt-col-1"
 
 
-def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
-    """Generate printable HTML worksheet with balanced pagination."""
-    items_html = []
-    for idx, q in enumerate(questions, start=1):
-        num = q.get("number", idx)
-        q_text = q.get("question", "")
+def render_question_content_html(q: dict) -> str:
+    """Render question stem, embedded image (if any), and options/statements according to type."""
+    q_type = q.get("type", "mcq")
+    raw_text = q.get("question", "")
+    q_text_formatted = format_tables_in_text(raw_text)
+
+    # Embedded image box
+    img_html = ""
+    img_src = q.get("image_data") or q.get("image_ref")
+    if img_src:
+        img_html = f"""
+    <div class="q-image-box">
+      <img src="{img_src}" alt="Hình minh họa" />
+    </div>"""
+
+    if q_type == "true_false_group":
+        stmts = q.get("statements", {})
+        stmt_rows = []
+        for key in ["a", "b", "c", "d"]:
+            stmt_val = stmts.get(key, {})
+            text = stmt_val.get("text", "") if isinstance(stmt_val, dict) else str(stmt_val)
+            stmt_rows.append(f"""
+        <tr>
+          <td class="tf-text"><b>{key})</b> {text}</td>
+          <td class="tf-cell"></td>
+          <td class="tf-cell"></td>
+        </tr>""")
+        rendered_stmts = "\n".join(stmt_rows)
+        body = f"""
+    <div class="q-content">{q_text_formatted}</div>{img_html}
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th style="width: 76%; text-align: left; padding-left: 8px;">Lệnh hỏi / Phát biểu</th>
+          <th style="width: 12%;">Đúng</th>
+          <th style="width: 12%;">Sai</th>
+        </tr>
+      </thead>
+      <tbody>
+{rendered_stmts}
+      </tbody>
+    </table>"""
+        return body
+
+    elif q_type == "short_answer":
+        body = f"""
+    <div class="q-content">{q_text_formatted}</div>{img_html}
+    <div class="sa-box">
+      <span class="sa-label">Đáp án:</span>
+      <span class="sa-fill"></span>
+    </div>"""
+        return body
+
+    else:
+        # Standard MCQ
         opts = q.get("options", {})
         col_class = determine_option_layout(opts)
-
-        break_class = " page-break-before" if (idx > 1 and (idx - 1) % questions_per_page == 0) else ""
-
         opt_items = []
         for key in ["A", "B", "C", "D"]:
             val = opts.get(key, "")
             opt_items.append(f'<div class="opt-item"><span class="opt-letter">{key}.</span> {val}</div>')
         opts_rendered = "\n      ".join(opt_items)
+        body = f"""
+    <div class="q-content">{q_text_formatted}</div>{img_html}
+    <div class="options-grid {col_class}">
+      {opts_rendered}
+    </div>"""
+        return body
+
+
+def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
+    """Generate printable HTML worksheet with multi-format question support and KaTeX rendering."""
+    # Group questions by type for clean pedagogical banners
+    has_mcq = any(q.get("type", "mcq") == "mcq" for q in questions)
+    has_tf = any(q.get("type") == "true_false_group" for q in questions)
+    has_sa = any(q.get("type") == "short_answer" for q in questions)
+    is_multi_part = (has_mcq and (has_tf or has_sa)) or (has_tf and has_sa)
+
+    items_html = []
+    current_part = None
+
+    for idx, q in enumerate(questions, start=1):
+        num = q.get("number", idx)
+        q_type = q.get("type", "mcq")
+
+        # Insert section banner if multi-part exam
+        if is_multi_part and q_type != current_part:
+            current_part = q_type
+            if q_type == "mcq":
+                items_html.append('<div class="section-banner">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>')
+            elif q_type == "true_false_group":
+                items_html.append('<div class="section-banner">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG / SAI</div>')
+            elif q_type == "short_answer":
+                items_html.append('<div class="section-banner">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>')
+
+        break_class = " page-break-before" if (idx > 1 and (idx - 1) % questions_per_page == 0) else ""
+        content = render_question_content_html(q)
 
         item = f"""
   <div class="question-item{break_class}">
     <span class="q-num">Câu {num}:</span>
-    <div class="q-content">{q_text}</div>
-    <div class="options-grid {col_class}">
-      {opts_rendered}
-    </div>
+{content}
   </div>"""
         items_html.append(item)
 
     body_content = "\n".join(items_html)
     sub_html = f'\n    <div class="sub-title">{subtitle}</div>' if subtitle and subtitle.strip() else ""
 
+    top_banner = (
+        f'<div class="section-banner">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN ({len(questions)} CÂU)</div>'
+        if not is_multi_part else ""
+    )
+
     return f"""<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <title>{title}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body, {{delimiters: [{{left: '$$', right: '$$', display: true}}, {{left: '$', right: '$', display: false}}, {{left: '\\\\(', right: '\\\\)', display: false}}, {{left: '\\\\[', right: '\\\\]', display: true}}]}});"></script>
 <style>
   @page {{
     size: A4 portrait;
@@ -488,14 +1091,14 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
     font-weight: 700;
     font-size: 9.5pt;
     text-transform: uppercase;
-    margin-top: 6px;
+    margin-top: 7px;
     margin-bottom: 9px;
     page-break-after: avoid;
     break-after: avoid;
   }}
 
   .question-item {{
-    margin-bottom: 9px;
+    margin-bottom: 10px;
     page-break-inside: avoid;
     break-inside: avoid;
   }}
@@ -515,6 +1118,41 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
     display: inline;
   }}
 
+  /* Visual Asset Image Box */
+  .q-image-box {{
+    margin: 6px auto;
+    text-align: center;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }}
+  .q-image-box img {{
+    max-width: 85%;
+    max-height: 180px;
+    object-fit: contain;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 3px;
+    background: #ffffff;
+  }}
+
+  /* Structured Markdown/HTML Table inside Question */
+  .q-table {{
+    border-collapse: collapse;
+    margin: 6px auto;
+    font-size: 9pt;
+  }}
+  .q-table th, .q-table td {{
+    border: 1px solid #cbd5e1;
+    padding: 3px 8px;
+    text-align: center;
+  }}
+  .q-table th {{
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #334155;
+  }}
+
+  /* Multiple Choice Layout */
   .options-grid {{
     display: grid;
     margin-top: 3px;
@@ -522,30 +1160,66 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
     row-gap: 3px;
     column-gap: 8px;
   }}
-
-  .opt-col-4 {{
-    grid-template-columns: repeat(4, 1fr);
-  }}
-
-  .opt-col-2 {{
-    grid-template-columns: repeat(2, 1fr);
-  }}
-
-  .opt-col-1 {{
-    grid-template-columns: 1fr;
-  }}
+  .opt-col-4 {{ grid-template-columns: repeat(4, 1fr); }}
+  .opt-col-2 {{ grid-template-columns: repeat(2, 1fr); }}
+  .opt-col-1 {{ grid-template-columns: 1fr; }}
 
   .opt-item {{
     display: flex;
     align-items: baseline;
     font-size: 9.8pt;
   }}
-
   .opt-letter {{
     font-weight: 700;
     color: #0369a1;
     margin-right: 4px;
     min-width: 16px;
+  }}
+
+  /* True/False Table Layout */
+  .tf-table {{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 5px;
+    margin-bottom: 4px;
+    font-size: 9.2pt;
+  }}
+  .tf-table th, .tf-table td {{
+    border: 1px solid #cbd5e1;
+    padding: 3px 6px;
+  }}
+  .tf-table th {{
+    background: #f8fafc;
+    font-weight: 600;
+    color: #334155;
+    text-align: center;
+  }}
+  .tf-text {{
+    padding-left: 8px;
+  }}
+  .tf-cell {{
+    text-align: center;
+    width: 48px;
+  }}
+
+  /* Short Answer Layout */
+  .sa-box {{
+    margin-top: 5px;
+    margin-left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 9.5pt;
+  }}
+  .sa-label {{
+    font-weight: 600;
+    color: #475569;
+  }}
+  .sa-fill {{
+    display: inline-block;
+    width: 160px;
+    height: 20px;
+    border-bottom: 1.5px dashed #94a3b8;
   }}
 
   sub, sup {{
@@ -556,6 +1230,11 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
   }}
   sup {{ top: -0.5em; }}
   sub {{ bottom: -0.25em; }}
+
+  /* KaTeX font fallback */
+  .katex, .katex-html {{
+    font-family: 'KaTeX_Main', 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }}
 </style>
 </head>
 <body>
@@ -569,7 +1248,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
     </div>
   </div>
 
-  <div class="section-banner">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN ({len(questions)} CÂU)</div>
+  {top_banner}
 
 {body_content}
 
@@ -579,27 +1258,109 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 
 
 def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
-    """Generate printable HTML standalone answer key with quick matrix and explanations."""
-    chunk_size = 10
-    chunks = [questions[i:i + chunk_size] for i in range(0, len(questions), chunk_size)]
-    table_rows = []
-    for c in chunks:
-        th_cells = "".join(f"<th>{q.get('number', i+1)}</th>" for i, q in enumerate(c))
-        td_cells = "".join(f"<td>{q.get('answer', '-')}</td>" for q in c)
-        table_rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
-    table_content = "\n  ".join(table_rows)
+    """Generate printable HTML standalone answer key with quick matrix tables and multi-format solutions."""
+    mcq_qs = [q for q in questions if q.get("type", "mcq") == "mcq"]
+    tf_qs = [q for q in questions if q.get("type") == "true_false_group"]
+    sa_qs = [q for q in questions if q.get("type") == "short_answer"]
 
+    matrix_blocks = []
+
+    # 1. Part I: MCQ Matrix Table
+    if mcq_qs:
+        chunk_size = 10
+        chunks = [mcq_qs[i:i + chunk_size] for i in range(0, len(mcq_qs), chunk_size)]
+        rows = []
+        for c in chunks:
+            th_cells = "".join(f"<th>{q.get('number', i+1)}</th>" for i, q in enumerate(c))
+            td_cells = "".join(f"<td>{q.get('answer', '-')}</td>" for q in c)
+            rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
+        table_html = "\n  ".join(rows)
+        matrix_blocks.append(f"""
+  <div class="section-banner">I. BẢNG ĐÁP ÁN TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>
+  <table class="matrix-table">
+    {table_html}
+  </table>""")
+
+    # 2. Part II: True/False Matrix Table
+    if tf_qs:
+        rows = ["<tr><th style='width: 15%'>Câu</th><th style='width: 21%'>Ý a</th><th style='width: 21%'>Ý b</th><th style='width: 21%'>Ý c</th><th style='width: 21%'>Ý d</th></tr>"]
+        for q in tf_qs:
+            num = q.get("number", "-")
+            stmts = q.get("statements", {})
+            cells = []
+            for k in ["a", "b", "c", "d"]:
+                s = stmts.get(k, {})
+                is_cor = s.get("is_correct") if isinstance(s, dict) else None
+                tag = "Đ" if is_cor is True else ("S" if is_cor is False else "-")
+                cells.append(f"<td><b>{tag}</b></td>")
+            rows.append(f"<tr><th>Câu {num}</th>{''.join(cells)}</tr>")
+        tf_matrix_html = "\n    ".join(rows)
+        matrix_blocks.append(f"""
+  <div class="section-banner">II. BẢNG ĐÁP ÁN TRẮC NGHIỆM ĐÚNG / SAI</div>
+  <table class="matrix-table">
+    {tf_matrix_html}
+  </table>""")
+
+    # 3. Part III: Short Answer Matrix Table
+    if sa_qs:
+        chunk_size = 10
+        chunks = [sa_qs[i:i + chunk_size] for i in range(0, len(sa_qs), chunk_size)]
+        rows = []
+        for c in chunks:
+            th_cells = "".join(f"<th>{q.get('number', i+1)}</th>" for i, q in enumerate(c))
+            td_cells = "".join(f"<td>{q.get('answer', '-')}</td>" for q in c)
+            rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
+        sa_matrix_html = "\n  ".join(rows)
+        matrix_blocks.append(f"""
+  <div class="section-banner">III. BẢNG ĐÁP ÁN TRẢ LỜI NGẮN</div>
+  <table class="matrix-table">
+    {sa_matrix_html}
+  </table>""")
+
+    matrix_content = "\n".join(matrix_blocks)
+
+    # Detailed Explanations
     sols_html = []
     for idx, q in enumerate(questions, start=1):
         num = q.get("number", idx)
+        q_type = q.get("type", "mcq")
         ans = q.get("answer", "-")
-        expl = q.get("explanation", "")
+        expl = format_tables_in_text(q.get("explanation", ""))
         break_class = " page-break-before" if (idx > 1 and (idx - 1) % questions_per_page == 0) else ""
 
-        sol = f"""
+        img_html = ""
+        img_src = q.get("image_data") or q.get("image_ref")
+        if img_src:
+            img_html = f'<div class="sol-img"><img src="{img_src}" alt="Hình minh họa" /></div>'
+
+        if q_type == "true_false_group":
+            stmts = q.get("statements", {})
+            stmt_lines = []
+            for k in ["a", "b", "c", "d"]:
+                s = stmts.get(k, {})
+                s_text = s.get("text", "") if isinstance(s, dict) else str(s)
+                is_cor = s.get("is_correct") if isinstance(s, dict) else None
+                s_tag = "ĐÚNG" if is_cor is True else ("SAI" if is_cor is False else "")
+                tag_class = "tag-true" if is_cor is True else "tag-false"
+                stmt_lines.append(f'<div><b>{k})</b> <span class="{tag_class}">[{s_tag}]</span> {s_text}</div>')
+            stmts_detail = "\n      ".join(stmt_lines)
+            sol = f"""
   <div class="sol-item{break_class}">
-    <div class="sol-head"><span class="sol-num">Câu {num}:</span> Chọn <span class="sol-ans">{ans}</span></div>
-    <div class="sol-body"><b>Giải thích:</b> {expl}</div>
+    <div class="sol-head"><span class="sol-num">Câu {num}:</span> <span class="sol-ans">{ans}</span></div>
+    <div class="sol-stmts">{stmts_detail}</div>{img_html}
+    <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
+  </div>"""
+        elif q_type == "short_answer":
+            sol = f"""
+  <div class="sol-item{break_class}">
+    <div class="sol-head"><span class="sol-num">Câu {num}:</span> Đáp án: <span class="sol-ans">{ans}</span></div>{img_html}
+    <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
+  </div>"""
+        else:
+            sol = f"""
+  <div class="sol-item{break_class}">
+    <div class="sol-head"><span class="sol-num">Câu {num}:</span> Chọn <span class="sol-ans">{ans}</span></div>{img_html}
+    <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
   </div>"""
         sols_html.append(sol)
 
@@ -611,6 +1372,9 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 <head>
 <meta charset="UTF-8">
 <title>ĐÁP ÁN & LỜI GIẢI CHI TIẾT - {title}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body, {{delimiters: [{{left: '$$', right: '$$', display: true}}, {{left: '$', right: '$', display: false}}, {{left: '\\\\(', right: '\\\\)', display: false}}, {{left: '\\\\[', right: '\\\\]', display: true}}]}});"></script>
 <style>
   @page {{
     size: A4 portrait;
@@ -688,18 +1452,15 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
     text-align: center;
     font-size: 8.8pt;
   }}
-
   .matrix-table th, .matrix-table td {{
     border: 1px solid #cbd5e1;
     padding: 3px 2px;
   }}
-
   .matrix-table th {{
     background: #f1f5f9;
     color: #334155;
     font-weight: 600;
   }}
-
   .matrix-table td {{
     font-weight: 700;
     color: #15803d;
@@ -708,8 +1469,8 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
   }}
 
   .sol-item {{
-    margin-bottom: 5.5px;
-    padding: 4px 8px;
+    margin-bottom: 6px;
+    padding: 5px 8px;
     background: #f8fafc;
     border-left: 3px solid #16a34a;
     border-radius: 0 4px 4px 0;
@@ -726,20 +1487,62 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
     font-weight: 700;
     margin-bottom: 2px;
   }}
-
   .sol-num {{
     color: #1e3a8a;
   }}
-
   .sol-ans {{
     color: #15803d;
     font-weight: 800;
     margin-left: 4px;
   }}
 
+  .sol-stmts {{
+    font-size: 8.9pt;
+    margin: 3px 0 3px 8px;
+    color: #1e293b;
+    line-height: 1.35;
+  }}
+  .tag-true {{
+    color: #15803d;
+    font-weight: 700;
+  }}
+  .tag-false {{
+    color: #b91c1c;
+    font-weight: 700;
+  }}
+
   .sol-body {{
     color: #334155;
     font-size: 9.1pt;
+  }}
+
+  .sol-img {{
+    margin: 4px auto;
+    text-align: center;
+  }}
+  .sol-img img {{
+    max-width: 60%;
+    max-height: 120px;
+    object-fit: contain;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px;
+  }}
+
+  /* Structured Markdown/HTML Table inside Solution */
+  .q-table {{
+    border-collapse: collapse;
+    margin: 4px auto;
+    font-size: 8.8pt;
+  }}
+  .q-table th, .q-table td {{
+    border: 1px solid #cbd5e1;
+    padding: 2px 6px;
+    text-align: center;
+  }}
+  .q-table th {{
+    background: #f1f5f9;
+    font-weight: 600;
   }}
 
   sub, sup {{
@@ -750,6 +1553,11 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
   }}
   sup {{ top: -0.5em; }}
   sub {{ bottom: -0.25em; }}
+
+  /* KaTeX font fallback */
+  .katex, .katex-html {{
+    font-family: 'KaTeX_Main', 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  }}
 </style>
 </head>
 <body>
@@ -758,12 +1566,9 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
     <div class="main-title">ĐÁP ÁN & HƯỚNG DẪN GIẢI CHI TIẾT</div>{sub_html}
   </div>
 
-  <div class="section-banner">I. BẢNG ĐÁP ÁN NHANH</div>
-  <table class="matrix-table">
-    {table_content}
-  </table>
+{matrix_content}
 
-  <div class="section-banner">II. HƯỚNG DẪN GIẢI CHI TIẾT TỪNG CÂU</div>
+  <div class="section-banner">HƯỚNG DẪN GIẢI CHI TIẾT TỪNG CÂU</div>
 
 {sols_rendered}
 
@@ -771,6 +1576,10 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 </html>
 """
 
+
+# ==============================================================================
+# PDF COMPILATION & VERIFICATION
+# ==============================================================================
 
 def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
     """Compile HTML to PDF using Google Chrome Headless with active file polling and graceful process termination."""
@@ -820,7 +1629,6 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
 
         proc = subprocess.Popen(cmd, **popen_kwargs)
 
-        # Actively poll for the PDF file being generated and flushed
         start_time = time.time()
         while time.time() - start_time < 30:
             if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
@@ -858,7 +1666,6 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
 
     success = run_chrome_worker("--headless=new")
     if not success:
-        # Fallback to legacy headless if --headless=new didn't create the file
         success = run_chrome_worker("--headless")
 
     try:
@@ -887,6 +1694,10 @@ def sanitize_filename_prefix(prefix: str) -> str:
     return clean
 
 
+# ==============================================================================
+# PIPELINE ENTRYPOINT
+# ==============================================================================
+
 def run_pipeline(
     input_source: str,
     pages: str,
@@ -900,31 +1711,36 @@ def run_pipeline(
     output_dir: str = "./quiz_output",
     filename_prefix: str = ""
 ) -> dict:
-    """Execute the complete end-to-end quiz generation pipeline with real-time SSE progress."""
+    """Execute the complete end-to-end Quiz Pipeline v2.0 with real-time SSE progress."""
     clean_prefix = sanitize_filename_prefix(filename_prefix)
     os.makedirs(output_dir, exist_ok=True)
     temp_dir = tempfile.gettempdir()
+    temp_assets_dir = os.path.join(temp_dir, f"quiz_assets_{uuid.uuid4().hex[:8]}")
+    os.makedirs(temp_assets_dir, exist_ok=True)
 
-    # 1. API Key check
     key = api_key or DEFAULT_API_KEY
     if not key:
         raise ValueError("Thiếu API Key của Agnes AI! Vui lòng cung cấp trong tham số hoặc biến môi trường.")
 
     emit_progress(10, "Đang nạp tài liệu & kiểm tra định dạng PDF...")
-
-    # 2. Ingest PDF
     pdf_local = download_gdrive_if_needed(input_source, temp_dir)
-    
-    emit_progress(25, "Đang trích xuất nội dung văn bản từ các trang chỉ định...")
-    raw_text, actual_pages = extract_raw_pages(pdf_local, pages)
 
-    # 3. AI Extraction & Answer Ingestion
-    emit_progress(45, f"Đang chuẩn hóa câu hỏi & giải chi tiết ({count} câu)...")
+    emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
+    raw_text, actual_pages, extracted_assets = extract_raw_pages(pdf_local, pages, temp_assets_dir)
+
+    emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")
     questions = parse_and_standardize_questions(
         raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model
     )
 
-    # 4. Generate HTML templates in temp directory
+    # Link visual assets to questions
+    link_assets_to_questions(questions, extracted_assets)
+
+    # Compute question type breakdown
+    mcq_count = sum(1 for q in questions if q.get("type", "mcq") == "mcq")
+    tf_count = sum(1 for q in questions if q.get("type") == "true_false_group")
+    sa_count = sum(1 for q in questions if q.get("type") == "short_answer")
+
     emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
     q_per_page = 10 if count >= 15 else (count // 2 if count > 6 else count)
     worksheet_html = generate_worksheet_html(title, subtitle, questions, questions_per_page=q_per_page)
@@ -937,8 +1753,7 @@ def run_pipeline(
     with open(ans_html_path, "w", encoding="utf-8") as f:
         f.write(answer_html)
 
-    # 5. Compile to PDF via Chrome concurrently
-    emit_progress(80, "Google Chrome Headless đang khởi tạo in ấn tệp PDF Đề bài và Đáp án...")
+    emit_progress(80, "Google Chrome Headless đang in ấn tệp PDF Đề bài và Đáp án...")
     chrome = find_chrome_path()
     ws_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
     ans_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.pdf")
@@ -959,12 +1774,11 @@ def run_pipeline(
         f_ws.result()
         f_ans.result()
 
-    # 6. Verify page integrity
     emit_progress(95, "Đang kiểm tra tính toàn vẹn của tệp PDF xuất ra...")
     ws_pages = verify_pdf_pages(ws_pdf_path)
     ans_pages = verify_pdf_pages(ans_pdf_path)
 
-    # 7. Cleanup intermediate files
+    # Cleanup temp HTML and temp asset PNGs
     for temp_f in [ws_html_path, ans_html_path]:
         try:
             if os.path.exists(temp_f):
@@ -972,7 +1786,12 @@ def run_pipeline(
         except Exception:
             pass
 
-    emit_progress(100, "Hoàn tất tạo Đề bài và Đáp án chi tiết!")
+    try:
+        shutil.rmtree(temp_assets_dir, ignore_errors=True)
+    except Exception:
+        pass
+
+    emit_progress(100, "Hoàn tất tạo Đề bài và Đáp án chi tiết v2.0!")
 
     result = {
         "success": True,
@@ -980,16 +1799,21 @@ def run_pipeline(
         "answer_pdf": ans_pdf_path,
         "worksheet_pages": ws_pages,
         "answer_pages": ans_pages,
-        "questions_count": len(questions)
+        "questions_count": len(questions),
+        "extracted_images_count": len(extracted_assets),
+        "question_types": {
+            "mcq": mcq_count,
+            "true_false": tf_count,
+            "short_answer": sa_count
+        }
     }
 
-    # Output final JSON line for caller process
     print(json.dumps(result, ensure_ascii=False), flush=True)
     return result
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Agnes 3.0 Flash Quiz PDF Generator Pipeline")
+    parser = argparse.ArgumentParser(description="Quiz PDF Generator Pipeline v2.0")
     parser.add_argument("input", help="Path to PDF or Google Drive URL")
     parser.add_argument("--pages", required=True, help="Pages to process, e.g. '11', '11,12', '11-12'")
     parser.add_argument("--count", type=int, default=20, help="Number of questions to extract (default: 20)")

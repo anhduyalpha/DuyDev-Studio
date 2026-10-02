@@ -57,6 +57,8 @@ function renderCompletedState(state) {
   const ws = res.worksheet || {};
   const ans = res.answer || {};
   const count = res.questionsCount || state.count || 20;
+  const imagesCount = res.extractedImagesCount || 0;
+  const qTypes = res.questionTypes || null;
 
   const wsId = ws.fileId || ws.id || '';
   const wsName = ws.fileName || ws.name || 'DeBai.pdf';
@@ -71,6 +73,18 @@ function renderCompletedState(state) {
   const ansSize = ans.sizeBytes || ans.size || 0;
   const ansEncoded = encodeURIComponent(ansName);
   const ansDownloadUrl = ans.downloadUrl || (ansId ? `/api/v1/files/download/${ansId}/${ansEncoded}?filename=${ansEncoded}` : '#');
+
+  const imgBadge = imagesCount > 0
+    ? `<span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">${imagesCount} hình vẽ/ảnh</span>`
+    : '';
+
+  const typeBadges = qTypes && (qTypes.true_false > 0 || qTypes.short_answer > 0)
+    ? `
+      <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${qTypes.mcq || 0} MCQ</span>
+      ${qTypes.true_false > 0 ? `<span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${qTypes.true_false} Đ/S</span>` : ''}
+      ${qTypes.short_answer > 0 ? `<span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${qTypes.short_answer} TLN</span>` : ''}
+    `
+    : '';
 
   return `
     <div class="space-y-4 animate-fadeIn">
@@ -96,6 +110,8 @@ function renderCompletedState(state) {
             <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(wsName)}">${escapeHtml(wsName)}</div>
             <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
               <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${count} câu</span>
+              ${imgBadge}
+              ${typeBadges}
               <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(wsSize)}</span>
             </div>
           </div>
@@ -121,6 +137,7 @@ function renderCompletedState(state) {
             <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ansName)}">${escapeHtml(ansName)}</div>
             <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
               <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">Ma trận + Lời giải</span>
+              ${imgBadge}
               <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ansSize)}</span>
             </div>
           </div>
@@ -139,6 +156,7 @@ function renderCompletedState(state) {
     </div>
   `.trim();
 }
+
 
 function renderErrorState(state) {
   let errorMsg = state.error || 'Đã xảy ra lỗi khi tạo bài tập.';

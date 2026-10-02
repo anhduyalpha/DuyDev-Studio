@@ -62,7 +62,14 @@ interface PythonProgressEvent {
   worksheet_pages?: number;
   answer_pages?: number;
   questions_count?: number;
+  extracted_images_count?: number;
+  question_types?: {
+    mcq: number;
+    true_false: number;
+    short_answer: number;
+  };
 }
+
 
 function cleanQuizErrorMessage(rawErr: string): string {
   if (!rawErr) return 'Đã xảy ra lỗi không xác định khi tạo bài tập.';
@@ -296,8 +303,15 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
         downloadUrl: `/api/v1/files/download/${ansFileId}/${ansEncodedName}?filename=${ansEncodedName}`,
         viewUrl: `/api/v1/files/view/${ansFileId}/${ansEncodedName}`
       },
-      questionsCount: resultMeta.questions_count || count
+      questionsCount: resultMeta.questions_count || count,
+      extractedImagesCount: resultMeta.extracted_images_count || 0,
+      questionTypes: resultMeta.question_types || {
+        mcq: resultMeta.questions_count || count,
+        true_false: 0,
+        short_answer: 0
+      }
     };
+
 
     let currentOptions: Record<string, unknown> = {};
     try {

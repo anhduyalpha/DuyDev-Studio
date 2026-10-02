@@ -30,3 +30,55 @@ export const parsePromptSchema = z.object({
 });
 
 export type ParsePromptInput = z.infer<typeof parsePromptSchema>;
+
+export const questionTypeSchema = z.enum(['mcq', 'true_false_group', 'short_answer']);
+export type QuestionType = z.infer<typeof questionTypeSchema>;
+
+export const trueFalseStatementSchema = z.object({
+  text: z.string(),
+  is_correct: z.boolean()
+});
+
+export const quizQuestionSchema = z.object({
+  number: z.number().int(),
+  type: questionTypeSchema.default('mcq'),
+  question: z.string(),
+  image_ref: z.string().nullable().optional(),
+  options: z.record(z.string()).optional(),
+  statements: z.record(trueFalseStatementSchema).optional(),
+  answer: z.string(),
+  explanation: z.string().optional()
+});
+
+export type QuizQuestion = z.infer<typeof quizQuestionSchema>;
+
+export const quizJobResultSchema = z.object({
+  jobId: z.string(),
+  percentage: z.number(),
+  worksheet: z.object({
+    fileId: z.string(),
+    fileName: z.string(),
+    sizeBytes: z.number(),
+    pages: z.number(),
+    downloadUrl: z.string(),
+    viewUrl: z.string()
+  }),
+  answer: z.object({
+    fileId: z.string(),
+    fileName: z.string(),
+    sizeBytes: z.number(),
+    pages: z.number(),
+    downloadUrl: z.string(),
+    viewUrl: z.string()
+  }),
+  questionsCount: z.number(),
+  extractedImagesCount: z.number().default(0),
+  questionTypes: z.object({
+    mcq: z.number().default(0),
+    true_false: z.number().default(0),
+    short_answer: z.number().default(0)
+  })
+});
+
+export type QuizJobResult = z.infer<typeof quizJobResultSchema>;
+

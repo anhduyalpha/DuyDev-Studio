@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createQuizJobSchema, parsePromptSchema } from '../../src/schemas/quiz.schema.js';
+import {
+  createQuizJobSchema,
+  parsePromptSchema,
+  quizQuestionSchema,
+  quizJobResultSchema
+} from '../../src/schemas/quiz.schema.js';
 import { buildApp } from '../../src/app.js';
 import { FastifyInstance } from 'fastify';
 
@@ -101,7 +106,87 @@ describe('Quiz Module Unit & Integration Tests', () => {
       expect(parsePromptSchema.safeParse({ prompt: '' }).success).toBe(false);
       expect(parsePromptSchema.safeParse({}).success).toBe(false);
     });
+
+    it('validates multi-format question schemas (MCQ, True/False, Short Answer)', () => {
+      // 1. MCQ
+      const mcq = {
+        number: 1,
+        type: 'mcq',
+        question: 'Este nào sau đây có mùi chuối chín?',
+        image_ref: 'fig_p1_1.png',
+        options: { A: 'Isoamyl axetat', B: 'Etyl fomat', C: 'Benzyl axetat', D: 'Metyl acrylat' },
+        answer: 'A',
+        explanation: 'Isoamyl axetat có mùi chuối chín đặc trưng.'
+      };
+      expect(quizQuestionSchema.safeParse(mcq).success).toBe(true);
+
+      // 2. True/False Group
+      const tf = {
+        number: 2,
+        type: 'true_false_group',
+        question: 'Cho các phát biểu sau về kim loại kiềm:',
+        image_ref: null,
+        statements: {
+          a: { text: 'Đều có mạng tinh thể lập phương tâm khối', is_correct: true },
+          b: { text: 'Nhiệt độ nóng chảy tăng dần từ Li đến Cs', is_correct: false },
+          c: { text: 'Đều có tính khử mạnh', is_correct: true },
+          d: { text: 'Phản ứng mãnh liệt với nước', is_correct: true }
+        },
+        answer: 'a-Đ, b-S, c-Đ, d-Đ',
+        explanation: 'Nhiệt độ nóng chảy giảm dần từ Li đến Cs.'
+      };
+      expect(quizQuestionSchema.safeParse(tf).success).toBe(true);
+
+      // 3. Short Answer
+      const sa = {
+        number: 3,
+        type: 'short_answer',
+        question: 'Tính khối lượng mol phân tử (g/mol) của C4H8O2.',
+        answer: '88',
+        explanation: 'M = 12*4 + 8 + 32 = 88.'
+      };
+      expect(quizQuestionSchema.safeParse(sa).success).toBe(true);
+    });
+
+    it('validates full quizJobResultSchema with telemetry metrics', () => {
+      const resultPayload = {
+        jobId: 'job_test_123',
+        percentage: 100,
+        worksheet: {
+          fileId: 'fil_ws_1',
+          fileName: 'HoaHoc12_DeBai.pdf',
+          sizeBytes: 120450,
+          pages: 3,
+          downloadUrl: '/api/v1/files/download/fil_ws_1/HoaHoc12_DeBai.pdf',
+          viewUrl: '/api/v1/files/view/fil_ws_1'
+        },
+        answer: {
+          fileId: 'fil_ans_1',
+          fileName: 'HoaHoc12_DapAn.pdf',
+          sizeBytes: 95000,
+          pages: 2,
+          downloadUrl: '/api/v1/files/download/fil_ans_1/HoaHoc12_DapAn.pdf',
+          viewUrl: '/api/v1/files/view/fil_ans_1'
+        },
+        questionsCount: 28,
+        extractedImagesCount: 4,
+        questionTypes: {
+          mcq: 18,
+          true_false: 4,
+          short_answer: 6
+        }
+      };
+      const parsed = quizJobResultSchema.safeParse(resultPayload);
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.extractedImagesCount).toBe(4);
+        expect(parsed.data.questionTypes.mcq).toBe(18);
+        expect(parsed.data.questionTypes.true_false).toBe(4);
+        expect(parsed.data.questionTypes.short_answer).toBe(6);
+      }
+    });
   });
+
 
   describe('Prompt Intent Parser Endpoint', () => {
     it('parses page, start, and end range via Vietnamese regex', async () => {
