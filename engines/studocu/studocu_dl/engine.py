@@ -811,16 +811,16 @@ class StudocuDownloader:
                 md_items = await page_client.eval(get_chunk_extract_markdown_js(b_start, b_end)) or []
                 all_md_items.extend(md_items)
 
-            # Giai đoạn 3: Kết xuất PDF Vector cho khối này
+            # Giai đoạn 3: Xuất PDF Vector cho khối này
             if self.fmt in ("pdf", "both"):
                 self._log(
-                    f"     🖨️  Đang kết xuất & gộp PDF: Trang {b_start + 1} - {b_end}/{total_pages}...",
+                    f"     🖨️  Đang xuất & gộp PDF: Trang {b_start + 1} - {b_end}/{total_pages}...",
                     progress={
                         "phase": "rendering",
                         "current_page": b_end,
                         "total_pages": total_pages,
                         "percent": min(95, int((b_end / total_pages) * 95)),
-                        "message": f"Kết xuất & gộp PDF: {b_end}/{total_pages} trang ({int(b_end/total_pages*100)}%)",
+                        "message": f"Xuất & gộp PDF: {b_end}/{total_pages} trang ({int(b_end/total_pages*100)}%)",
                     },
                 )
                 await page_client.eval(get_chunk_mount_js(b_start, b_end))

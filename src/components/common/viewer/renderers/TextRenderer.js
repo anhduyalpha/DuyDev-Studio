@@ -81,7 +81,7 @@ export function renderTextViewer(state) {
       <!-- Markdown Formatted Pane (for md files) -->
       ${isMd ? `
         <div id="markdownFormattedPane" class="p-5 rounded-xl bg-white dark:bg-[#0E0E12] border border-zinc-200/80 dark:border-white/[0.06] overflow-auto custom-scrollbar max-h-[68vh] text-zinc-800 dark:text-zinc-200 select-text leading-relaxed">
-          Đang kết xuất tài liệu...
+          Đang xuất tài liệu...
         </div>
       ` : ''}
 

@@ -223,7 +223,11 @@ class QuizManager {
       this.disconnectEvents = connectJobEvents(jobData.jobId, {
         onProgress: (evt) => {
           this.state.progress = Math.max(this.state.progress, Math.min(99, evt.percentage || 0));
-          this.state.stage = evt.stage || 'Đang xử lý tài liệu và kết xuất PDF...';
+          if (evt.stage) {
+            this.state.stage = evt.stage;
+          } else if (!this.state.stage) {
+            this.state.stage = 'Đang xử lý tài liệu và xuất PDF...';
+          }
           this.notify('job-progress');
         },
         onCompleted: (evt) => {

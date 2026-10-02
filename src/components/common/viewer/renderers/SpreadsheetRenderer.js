@@ -52,7 +52,7 @@ export function renderSpreadsheetViewer(state) {
         <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center mx-auto">
           <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
         </div>
-        <p class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">Đang kết xuất bảng tính...</p>
+        <p class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">Đang xuất bảng tính...</p>
       </div>
 
       <!-- Table Viewport -->

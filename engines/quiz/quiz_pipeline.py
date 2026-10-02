@@ -17,6 +17,8 @@ import urllib.error
 import http.client
 import threading
 import shutil
+import uuid
+import concurrent.futures
 import pymupdf
 
 # Reconfigure stdout/stderr for UTF-8
@@ -412,8 +414,6 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 <meta charset="UTF-8">
 <title>{title}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap');
-
   @page {{
     size: A4 portrait;
     margin: 12mm 14mm 12mm 14mm;
@@ -421,13 +421,13 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
       content: "Trang " counter(page) " / " counter(pages);
       font-size: 8.5pt;
       color: #64748b;
-      font-family: 'Roboto', sans-serif;
+      font-family: 'Roboto', 'Liberation Sans', 'DejaVu Sans', sans-serif;
     }}
     @bottom-left {{
       content: "{title}";
       font-size: 8.5pt;
       color: #64748b;
-      font-family: 'Roboto', sans-serif;
+      font-family: 'Roboto', 'Liberation Sans', 'DejaVu Sans', sans-serif;
     }}
   }}
 
@@ -438,7 +438,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
   }}
 
   body {{
-    font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    font-family: 'Roboto', 'Liberation Sans', 'DejaVu Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-size: 10pt;
     line-height: 1.45;
     color: #1e293b;
@@ -611,8 +611,6 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 <meta charset="UTF-8">
 <title>ĐÁP ÁN & LỜI GIẢI CHI TIẾT - {title}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap');
-
   @page {{
     size: A4 portrait;
     margin: 10mm 14mm 10mm 14mm;
@@ -620,13 +618,13 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
       content: "Trang " counter(page) " / " counter(pages);
       font-size: 8.5pt;
       color: #64748b;
-      font-family: 'Roboto', sans-serif;
+      font-family: 'Roboto', 'Liberation Sans', 'DejaVu Sans', sans-serif;
     }}
     @bottom-left {{
       content: "Đáp án & Lời giải chi tiết — {title}";
       font-size: 8.5pt;
       color: #64748b;
-      font-family: 'Roboto', sans-serif;
+      font-family: 'Roboto', 'Liberation Sans', 'DejaVu Sans', sans-serif;
     }}
   }}
 
@@ -637,7 +635,7 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
   }}
 
   body {{
-    font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    font-family: 'Roboto', 'Liberation Sans', 'DejaVu Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-size: 10pt;
     line-height: 1.45;
     color: #1e293b;
@@ -785,7 +783,7 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
         except Exception:
             pass
 
-    temp_profile = os.path.join(tempfile.gettempdir(), f"chrome_pdf_{os.getpid()}_{int(time.time()*1000)%100000}")
+    temp_profile = os.path.join(tempfile.gettempdir(), f"chrome_pdf_{os.getpid()}_{uuid.uuid4().hex[:8]}")
     os.makedirs(temp_profile, exist_ok=True)
 
     file_url = f"file:///{abs_html.replace(os.sep, '/')}" if sys.platform == "win32" else f"file://{abs_html}"
@@ -938,16 +936,30 @@ def run_pipeline(
     with open(ans_html_path, "w", encoding="utf-8") as f:
         f.write(answer_html)
 
-    # 5. Compile to PDF via Chrome
-    emit_progress(85, "Google Chrome Headless đang in ấn tệp PDF Đề bài và Đáp án...")
+    # 5. Compile to PDF via Chrome concurrently
+    emit_progress(80, "Google Chrome Headless đang khởi tạo in ấn tệp PDF Đề bài và Đáp án...")
     chrome = find_chrome_path()
     ws_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
     ans_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.pdf")
-    compile_pdf(chrome, ws_html_path, ws_pdf_path)
-    compile_pdf(chrome, ans_html_path, ans_pdf_path)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        f_ws = executor.submit(compile_pdf, chrome, ws_html_path, ws_pdf_path)
+        f_ans = executor.submit(compile_pdf, chrome, ans_html_path, ans_pdf_path)
+
+        curr_p = 82
+        elapsed = 0
+        while not (f_ws.done() and f_ans.done()):
+            time.sleep(1.0)
+            elapsed += 1
+            if curr_p < 93:
+                curr_p += 1
+            emit_progress(curr_p, f"Đang xuất tệp PDF Đề bài và Đáp án qua Chrome ({elapsed}s)...")
+
+        f_ws.result()
+        f_ans.result()
 
     # 6. Verify page integrity
-    emit_progress(95, "Đang kiểm tra tính toàn vẹn của tệp PDF kết xuất...")
+    emit_progress(95, "Đang kiểm tra tính toàn vẹn của tệp PDF xuất ra...")
     ws_pages = verify_pdf_pages(ws_pdf_path)
     ans_pages = verify_pdf_pages(ans_pdf_path)
 

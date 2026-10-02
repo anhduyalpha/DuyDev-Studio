@@ -69,8 +69,8 @@ Hệ thống được thiết kế hướng tới hiệu năng tối đa:
 
 ### 5. 👁️ Universal File Viewer Core
 Trình xem tệp nhúng trực tiếp đa năng:
-- **Tài liệu Word**: Kết xuất `.docx` trực tiếp trên client với `docx-preview`.
-- **Bảng tính Excel**: Kết xuất `.xlsx`, `.csv`, `.tsv` thành bảng Tailwind tương tác với `SheetJS`.
+- **Tài liệu Word**: Xuất `.docx` trực tiếp trên client với `docx-preview`.
+- **Bảng tính Excel**: Xuất `.xlsx`, `.csv`, `.tsv` thành bảng Tailwind tương tác với `SheetJS`.
 - **Mã nguồn & Văn bản**: Highlight cú pháp đa ngôn ngữ kèm chế độ xem Markdown kép.
 - **Tệp Nhị phân**: Chế độ Hex Dump inspector 16KB (Offset | Hex | ASCII).
 
