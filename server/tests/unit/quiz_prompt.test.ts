@@ -84,6 +84,60 @@ describe('Quiz Prompt Intent Extraction Unit Tests', () => {
     expect(json.data.count).toBe(20);
   });
 
+  it('correctly handles Vietnamese variations with repeated "câu": "từ câu 18 đến câu 28 trang 12"', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/quiz/parse-prompt',
+      payload: {
+        prompt: 'từ câu 18 đến câu 28 trang 12'
+      }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.success).toBe(true);
+    expect(json.data.pages).toBe('12');
+    expect(json.data.start).toBe(18);
+    expect(json.data.count).toBe(11);
+    expect(json.data.prefix).toBe('Trang_12_Cau_18_28');
+  });
+
+  it('correctly handles Vietnamese variation with "tới": "câu 18 tới 28 trang 12"', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/quiz/parse-prompt',
+      payload: {
+        prompt: 'câu 18 tới 28 trang 12'
+      }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.success).toBe(true);
+    expect(json.data.pages).toBe('12');
+    expect(json.data.start).toBe(18);
+    expect(json.data.count).toBe(11);
+    expect(json.data.prefix).toBe('Trang_12_Cau_18_28');
+  });
+
+  it('defensively normalizes reversed question range bounds: "câu 28 đến 18 trang 12"', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/quiz/parse-prompt',
+      payload: {
+        prompt: 'câu 28 đến 18 trang 12'
+      }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.success).toBe(true);
+    expect(json.data.pages).toBe('12');
+    expect(json.data.start).toBe(18);
+    expect(json.data.count).toBe(11);
+    expect(json.data.prefix).toBe('Trang_12_Cau_18_28');
+  });
+
   it('rejects empty prompt with 400 validation error', async () => {
     const res = await app.inject({
       method: 'POST',

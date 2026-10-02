@@ -144,7 +144,7 @@ export function saveQuizHistoryPair(rawPair) {
   const pair = normalizeQuizPair(rawPair);
   if (!pair) return;
 
-  const history = getQuizHistoryList().filter((p) => p.id !== pair.id && p.worksheet.fileId !== pair.worksheet.fileId);
+  const history = getQuizHistoryList().filter((p) => p.id !== pair.id && (!pair.worksheet?.fileId || p.worksheet?.fileId !== pair.worksheet.fileId));
   history.unshift(pair);
   safeSet(QUIZ_HISTORY_KEY, history);
 }

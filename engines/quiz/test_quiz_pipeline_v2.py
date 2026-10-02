@@ -364,6 +364,25 @@ class TestQuizPipelineV2(unittest.TestCase):
         self.assertIn("break-inside: avoid;", ws_html)
         self.assertIn("break-inside: avoid;", ans_html)
 
+    def test_katex_delimiters_and_ignored_classes(self):
+        """Verify KaTeX delimiters in HTML have proper double backslashes and ignoredClasses."""
+        qs = [
+            {"number": 1, "type": "mcq", "question": "Câu 1: [A] hoặc (10 CÂU)", "options": {"A": "1"}, "answer": "A", "explanation": "Giải thích"}
+        ]
+        ws_html = generate_worksheet_html("TEST TITLE", "", qs)
+        ans_html = generate_answer_key_html("TEST TITLE", "", qs)
+
+        for html in (ws_html, ans_html):
+            # Verify JS string literal delimiters in the generated script block
+            self.assertIn(r"{left: '\\(', right: '\\)', display: false}", html)
+            self.assertIn(r"{left: '\\[', right: '\\]', display: true}", html)
+            # Verify ignoredClasses contains critical classes
+            self.assertIn('"section-banner"', html)
+            self.assertIn('"katex-ignore"', html)
+            self.assertIn('"notranslate"', html)
+            # Verify banner has katex-ignore class
+            self.assertIn('section-banner notranslate katex-ignore', html)
+
 
 if __name__ == "__main__":
     unittest.main()

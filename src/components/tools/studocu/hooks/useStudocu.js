@@ -250,10 +250,129 @@ class StudocuManager {
     }
   }
 
-  async moveToTrash(filename) { if (await moveToTrashApi(filename)) await this.fetchFiles(); }
-  async restoreFromTrash(filename) { if (await restoreFromTrashApi(filename)) await this.fetchFiles(); }
-  async deletePermanent(filename) { if (await deletePermanentApi(filename)) await this.fetchFiles(); }
-  async emptyTrash() { if (await emptyTrashApi()) await this.fetchFiles(); }
+  async moveToTrash(filename) {
+    if (!filename) return;
+    const targetIdx = this.files.findIndex(f => (f.name || f.title) === filename);
+    const item = targetIdx !== -1 ? this.files[targetIdx] : null;
+    if (!item) return;
+
+    const prevFiles = [...this.files];
+    const prevTrash = [...this.trash];
+
+    // Optimistic UI: remove immediately from active list, add to trash
+    this.files = this.files.filter((_, i) => i !== targetIdx);
+    const trashedItem = {
+      ...item,
+      status: 'trashed',
+      trashed_at: Date.now(),
+      trashed_time: new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      mtime: Date.now()
+    };
+    this.trash = [trashedItem, ...this.trash.filter(f => (f.name || f.title) !== filename)];
+    this.notify();
+    showToast('Đã chuyển tệp vào thùng rác', 'success');
+
+    try {
+      const ok = await moveToTrashApi(filename);
+      if (!ok) {
+        this.files = prevFiles;
+        this.trash = prevTrash;
+        this.notify();
+        showToast('Không thể chuyển tệp vào thùng rác', 'error');
+      }
+    } catch (_) {
+      this.files = prevFiles;
+      this.trash = prevTrash;
+      this.notify();
+      showToast('Lỗi khi chuyển tệp vào thùng rác', 'error');
+    }
+  }
+
+  async restoreFromTrash(filename) {
+    if (!filename) return;
+    const targetIdx = this.trash.findIndex(f => (f.name || f.title) === filename);
+    const item = targetIdx !== -1 ? this.trash[targetIdx] : null;
+    if (!item) return;
+
+    const prevFiles = [...this.files];
+    const prevTrash = [...this.trash];
+
+    // Optimistic UI: remove immediately from trash, add back to active list
+    this.trash = this.trash.filter((_, i) => i !== targetIdx);
+    const restoredItem = {
+      ...item,
+      status: 'active',
+      mtime: Date.now()
+    };
+    this.files = [restoredItem, ...this.files.filter(f => (f.name || f.title) !== filename)];
+    this.notify();
+    showToast('Đã khôi phục tài liệu', 'success');
+
+    try {
+      const ok = await restoreFromTrashApi(filename);
+      if (!ok) {
+        this.files = prevFiles;
+        this.trash = prevTrash;
+        this.notify();
+        showToast('Không thể khôi phục tài liệu', 'error');
+      }
+    } catch (_) {
+      this.files = prevFiles;
+      this.trash = prevTrash;
+      this.notify();
+      showToast('Lỗi khi khôi phục tài liệu', 'error');
+    }
+  }
+
+  async deletePermanent(filename) {
+    if (!filename) return;
+    const prevFiles = [...this.files];
+    const prevTrash = [...this.trash];
+
+    // Optimistic UI: remove immediately from trash list
+    this.trash = this.trash.filter(f => (f.name || f.title) !== filename);
+    this.files = this.files.filter(f => (f.name || f.title) !== filename);
+    this.notify();
+    showToast('Đã xóa vĩnh viễn tài liệu', 'success');
+
+    try {
+      const ok = await deletePermanentApi(filename);
+      if (!ok) {
+        this.files = prevFiles;
+        this.trash = prevTrash;
+        this.notify();
+        showToast('Không thể xóa vĩnh viễn tài liệu', 'error');
+      }
+    } catch (_) {
+      this.files = prevFiles;
+      this.trash = prevTrash;
+      this.notify();
+      showToast('Lỗi khi xóa vĩnh viễn', 'error');
+    }
+  }
+
+  async emptyTrash() {
+    if (this.trash.length === 0) return;
+    const prevTrash = [...this.trash];
+
+    // Optimistic UI: clear trash list immediately
+    this.trash = [];
+    this.notify();
+    showToast('Đã dọn sạch thùng rác', 'success');
+
+    try {
+      const ok = await emptyTrashApi();
+      if (!ok) {
+        this.trash = prevTrash;
+        this.notify();
+        showToast('Không thể dọn sạch thùng rác', 'error');
+      }
+    } catch (_) {
+      this.trash = prevTrash;
+      this.notify();
+      showToast('Lỗi khi dọn thùng rác', 'error');
+    }
+  }
 
   getActiveTasks() {
     if (!this.isDownloading) return [];

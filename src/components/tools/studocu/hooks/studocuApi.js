@@ -3,8 +3,6 @@
  * Manages remote file system operations and active job persistence.
  */
 
-import { showToast } from '../../../../utilities/toast.js';
-
 const ACTIVE_JOB_KEY = 'ds_studocu_active_job';
 
 export function saveActiveJob(data) {
@@ -56,26 +54,34 @@ export async function cancelJobApi(jobId) {
 }
 
 export async function moveToTrashApi(filename) {
-  const res = await fetch(`/api/v1/studocu/files/${encodeURIComponent(filename)}`, { method: 'DELETE' }).catch(() => null);
-  if (res?.ok) showToast('Đã chuyển tệp vào thùng rác');
+  const res = await fetch(`/api/v1/studocu/files/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    keepalive: true
+  }).catch(() => null);
   return res?.ok;
 }
 
 export async function restoreFromTrashApi(filename) {
-  const res = await fetch(`/api/v1/studocu/trash/restore/${encodeURIComponent(filename)}`, { method: 'POST' }).catch(() => null);
-  if (res?.ok) showToast('Đã khôi phục tài liệu');
+  const res = await fetch(`/api/v1/studocu/trash/restore/${encodeURIComponent(filename)}`, {
+    method: 'POST',
+    keepalive: true
+  }).catch(() => null);
   return res?.ok;
 }
 
 export async function deletePermanentApi(filename) {
-  const res = await fetch(`/api/v1/studocu/trash/${encodeURIComponent(filename)}`, { method: 'DELETE' }).catch(() => null);
-  if (res?.ok) showToast('Đã xóa vĩnh viễn tài liệu');
+  const res = await fetch(`/api/v1/studocu/trash/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    keepalive: true
+  }).catch(() => null);
   return res?.ok;
 }
 
 export async function emptyTrashApi() {
-  const res = await fetch('/api/v1/studocu/trash/empty', { method: 'DELETE' }).catch(() => null);
-  if (res?.ok) showToast('Đã dọn sạch thùng rác');
+  const res = await fetch('/api/v1/studocu/trash/empty', {
+    method: 'DELETE',
+    keepalive: true
+  }).catch(() => null);
   return res?.ok;
 }
 

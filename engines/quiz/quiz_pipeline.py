@@ -1532,7 +1532,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
             {{left: '$$', right: '$$', display: true}},
             {{left: '$', right: '$', display: false}},
             {{left: '\\\\(', right: '\\\\)', display: false}},
-            {{left: '\\[', right: '\\]', display: true}}
+            {{left: '\\\\[', right: '\\\\]', display: true}}
           ],
           ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
           ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
@@ -1867,7 +1867,7 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
             {{left: '$$', right: '$$', display: true}},
             {{left: '$', right: '$', display: false}},
             {{left: '\\\\(', right: '\\\\)', display: false}},
-            {{left: '\\[', right: '\\]', display: true}}
+            {{left: '\\\\[', right: '\\\\]', display: true}}
           ],
           ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
           ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],

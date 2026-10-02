@@ -76,11 +76,16 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       pages = pageMatch[1].replace(/\s+/g, '');
     }
 
-    // 2. Regex parsing for question range: "từ câu 18 đến 28", "câu 18 đến 28", "câu 18 - 28"
-    const rangeMatch = input.match(/(?:từ\s*)?câu\s*(\d+)\s*(?:đến|-|–)\s*(\d+)/i);
+    // 2. Regex parsing for question range: "từ câu 18 đến 28", "câu 18 đến câu 28", "câu 18 tới 28", "câu 18 - câu 28"
+    const rangeMatch = input.match(/(?:từ\s*)?câu\s*(\d+)\s*(?:đến|tới|-|–|—|->)\s*(?:câu\s*)?(\d+)/i);
     if (rangeMatch) {
       start = parseInt(rangeMatch[1], 10);
       end = parseInt(rangeMatch[2], 10);
+      if (start > end) {
+        const tmp = start;
+        start = end;
+        end = tmp;
+      }
       count = Math.max(1, end - start + 1);
     } else {
       // Regex for question count: "20 câu", "lấy 25 câu", "làm 15 câu"
@@ -163,10 +168,11 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
           const parsed = JSON.parse(rawContent);
           const regexDefaults = extractWithRegex(text);
           const pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
-          const startRes = Number(parsed.start) || regexDefaults.start || 1;
-          const countRes = Number(parsed.count) || regexDefaults.count || 20;
+          const startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
+          const countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
           const titleRes = String(parsed.title || regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM').trim();
-          const prefixRes = String(parsed.prefix || regexDefaults.prefix || (pagesRes ? `Trang_${pagesRes}` : 'BaiTap')).trim();
+          const rawPrefix = String(parsed.prefix || regexDefaults.prefix || (pagesRes ? `Trang_${pagesRes}` : 'BaiTap')).trim();
+          const prefixRes = rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') || 'BaiTap';
 
           return reply.send({
             success: true,
