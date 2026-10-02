@@ -51,7 +51,7 @@ function renderGroupPills(formats, currentTarget, groupExt) {
     return `
       <button type="button" data-group-ext="${groupExt}" data-format="${fmt.id}" data-recommended="${isRecommended}" class="btn-group-format-pill py-2 px-2.5 rounded-xl transition text-center flex items-center justify-center relative cursor-pointer active:scale-95 ${pillClass}">
         <span class="font-mono text-xs flex items-center gap-1">
-          ${fmt.name}${isRecommended ? '<span class="${isSelected ? \'text-amber-300\' : \'text-amber-500\'} text-xs">★</span>' : ''}
+          ${fmt.name}${isRecommended ? `<span class="${isSelected ? 'text-amber-300' : 'text-amber-500'} text-xs">★</span>` : ''}
         </span>
       </button>
     `;

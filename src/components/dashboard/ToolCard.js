@@ -29,10 +29,12 @@ export function renderToolCard(tool, isSpotlight = false) {
   if (isSpotlight || tool.featured) {
     return `
       <div onclick="window.location.hash = '${tool.route}'"
-           class="tool-card group relative p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#131317] border border-zinc-200/90 dark:border-white/[0.12] hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-50/80 dark:hover:bg-[#18181f] transition-all duration-200 cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-lg hover:-translate-y-1 active:scale-[0.99] select-none"
+           class="tool-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-zinc-50/70 dark:from-[#15151a] dark:to-[#111115] border border-zinc-200/90 dark:border-white/[0.12] hover:border-zinc-300 dark:hover:border-white/30 transition-all duration-200 cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] select-none"
            data-tool-id="${tool.id}"
            style="--accent: ${accent}; --accent-contrast: ${contrastColor};">
         
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
         <div>
           <!-- Header: Icon & Badge -->
           <div class="flex items-center justify-between mb-3.5">

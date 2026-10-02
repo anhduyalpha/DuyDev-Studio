@@ -19,10 +19,10 @@ export function renderConverterDropzone(state) {
         <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm">Hỗ trợ đa tệp đồng thời: Hình ảnh, Video, Âm thanh, Tài liệu</p>
         
         <div class="flex flex-wrap items-center justify-center gap-1.5 mt-3">
-          <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">Ảnh (PNG, JPG, WEBP, SVG)</span>
-          <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">Video (MP4, MKV, GIF)</span>
-          <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">Nhạc (MP3, WAV, AAC)</span>
-          <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">Tài liệu (DOCX, PDF, XLSX)</span>
+          <span class="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/[0.06]">PNG, JPG, WEBP, SVG</span>
+          <span class="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/[0.06]">MP4, MKV, AVI, GIF</span>
+          <span class="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/[0.06]">MP3, WAV, FLAC, AAC</span>
+          <span class="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/[0.06]">PDF, DOCX, XLSX, TXT</span>
         </div>
 
         <div class="mt-5 flex items-center gap-2">

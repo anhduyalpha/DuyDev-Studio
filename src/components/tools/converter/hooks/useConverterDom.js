@@ -121,6 +121,13 @@ export function updateBatchButton(manager) {
 
     refreshLucide(iconElement);
   }
+
+  const btnClearQueue = document.getElementById('btnClearConverterQueue');
+  if (btnClearQueue) {
+    btnClearQueue.disabled = isUploading;
+    btnClearQueue.title = isUploading ? 'Đang tải tệp lên máy chủ...' : 'Xóa tất cả tệp';
+    btnClearQueue.className = `text-xs ${isUploading ? 'opacity-40 cursor-not-allowed text-zinc-400' : 'text-zinc-500 hover:text-red-500 transition cursor-pointer'} flex items-center gap-1`;
+  }
 }
 
 /**
@@ -265,40 +272,41 @@ export function attachConverterListeners(manager) {
     }
   };
 
-  const fileInputEl = document.getElementById('converterDropzone_input');
-  const addMoreInputEl = document.getElementById('converterAddMoreInput');
-  const dropzoneEl = document.getElementById('dropzoneIdleView');
   const dropzoneContainer = document.getElementById('converterDropzoneContainer');
 
-  if (fileInputEl) {
-    fileInputEl.onchange = (e) => onFilesSelected(e.target.files);
-  }
-  if (addMoreInputEl) {
-    addMoreInputEl.onchange = (e) => onFilesSelected(e.target.files);
-  }
-
   if (dropzoneContainer) {
+    // Delegated change listener ensures file inputs trigger file addition even after innerHTML re-renders
+    dropzoneContainer.addEventListener('change', (e) => {
+      if (e.target && e.target.type === 'file') {
+        onFilesSelected(e.target.files);
+        e.target.value = '';
+      }
+    });
+
+    // Delegated click listener queries active DOM elements dynamically
     dropzoneContainer.onclick = (e) => {
       if (e.target.closest('#btnBrowseConverterFile')) {
-        fileInputEl?.click();
+        dropzoneContainer.querySelector('#converterDropzone_input')?.click();
       } else if (e.target.closest('#btnAddMoreConverterFiles')) {
-        addMoreInputEl?.click();
+        dropzoneContainer.querySelector('#converterAddMoreInput')?.click();
       } else if (e.target.closest('#dropzoneIdleView') && !e.target.closest('button')) {
-        fileInputEl?.click();
+        dropzoneContainer.querySelector('#converterDropzone_input')?.click();
       }
     };
+
+    const getActiveDropzone = () => dropzoneContainer.querySelector('#dropzoneIdleView, #dropzoneCompactView');
 
     ['dragenter', 'dragover'].forEach((ev) => {
       dropzoneContainer.addEventListener(ev, (e) => {
         e.preventDefault();
-        dropzoneEl?.classList.add('border-indigo-500');
+        getActiveDropzone()?.classList.add('border-indigo-500', 'bg-indigo-500/[0.04]');
       });
     });
 
     ['dragleave', 'drop'].forEach((ev) => {
       dropzoneContainer.addEventListener(ev, (e) => {
         e.preventDefault();
-        dropzoneEl?.classList.remove('border-indigo-500');
+        getActiveDropzone()?.classList.remove('border-indigo-500', 'bg-indigo-500/[0.04]');
       });
     });
 

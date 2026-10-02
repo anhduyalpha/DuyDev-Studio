@@ -66,7 +66,7 @@ export function renderPdfRotateWorkspace({ file, pageRotations = {}, totalPages 
           </button>
           <button id="btnResetRotations" type="button" class="min-h-[40px] px-3 py-2 rounded-lg text-zinc-500 hover:text-red-500 dark:text-zinc-400 dark:hover:text-red-400 text-xs font-medium flex items-center gap-1 transition cursor-pointer ${rotatedCount > 0 ? '' : 'hidden'}">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            <span>Đặt lại</span>
+            <span>Khôi phục xoay</span>
           </button>
         </div>
       </div>

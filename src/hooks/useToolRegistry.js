@@ -10,7 +10,7 @@ const DEFAULT_TOOLS = [
     description: 'Ghép, tách, xoay, nén, đóng dấu và xem PDF chuyên nghiệp.',
     category: 'pdf',
     icon: 'file-text',
-    badge: '9-in-1 Suite',
+    badge: '10-in-1 Suite',
     featured: true,
     specs: ['Nén & Ghép', 'Tách & Xoay', 'Watermark'],
     color: '#F59E0B',
