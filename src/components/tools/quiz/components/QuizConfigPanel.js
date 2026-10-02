@@ -12,7 +12,6 @@ export function renderQuizConfigPanel(state) {
   const hasValidPages = Boolean(state.pages?.trim());
 
   const isReadyToGenerate = (isFileReady || hasDriveUrl) && hasValidPages && hasValidPrefix && !state.isProcessing;
-  const countPills = [5, 10, 15, 20, 25, 30];
 
   return `
     <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-5 space-y-5 shadow-sm">
@@ -113,25 +112,13 @@ export function renderQuizConfigPanel(state) {
           <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="11" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
         </div>
 
-        <!-- Question Count & Quick Pills -->
-        <div class="space-y-2">
+        <!-- Question Count Input -->
+        <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label class="text-xs font-medium text-zinc-300">Số lượng câu hỏi</label>
-            <span class="text-xs font-mono text-zinc-400">${state.count} câu</span>
+            <span class="text-[11px] text-zinc-500 font-mono">vd: 20, 23, 37...</span>
           </div>
-          <div class="grid grid-cols-6 gap-1.5">
-            ${countPills
-              .map(
-                (n) => `
-              <button type="button" data-count="${n}" class="btn-quiz-count-pill py-1.5 rounded-lg text-xs font-mono transition border ${
-                  state.count === n
-                    ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
-                }">${n}</button>
-            `
-              )
-              .join('')}
-          </div>
+          <input type="number" id="quizCountInput" min="1" max="200" value="${state.count || 20}" placeholder="20" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
         </div>
 
         <!-- Start Number & Mandatory File Name Box -->

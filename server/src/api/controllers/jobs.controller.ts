@@ -128,9 +128,18 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
   subscriber.on('message', messageHandler);
 
   let isCleanedUp = false;
+  const keepAliveTimer = setInterval(() => {
+    try {
+      reply.raw.write(': keepalive\n\n');
+    } catch {
+      cleanup();
+    }
+  }, 12000);
+
   const cleanup = async () => {
     if (isCleanedUp) return;
     isCleanedUp = true;
+    clearInterval(keepAliveTimer);
     try {
       subscriber.off('message', messageHandler);
       await subscriber.unsubscribe(channel);

@@ -131,12 +131,20 @@ class QuizManager {
 
   setParams(params = {}) {
     if (params.pages !== undefined) this.state.pages = String(params.pages).trim();
-    if (params.count !== undefined) this.state.count = Math.max(1, Math.min(100, Number(params.count) || 20));
+    if (params.count !== undefined) this.state.count = Math.max(1, Math.min(200, Number(params.count) || 20));
     if (params.start !== undefined) this.state.start = Math.max(1, Number(params.start) || 1);
     if (params.title !== undefined) this.state.title = String(params.title).trim();
     if (params.subtitle !== undefined) this.state.subtitle = String(params.subtitle).trim();
     if (params.prefix !== undefined) this.state.prefix = String(params.prefix).trim();
     this.notify('params-changed');
+  }
+
+  setCount(val) {
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num > 0) {
+      this.state.count = Math.max(1, Math.min(200, num));
+      this.notify('params-changed');
+    }
   }
 
   async parsePrompt(promptText) {

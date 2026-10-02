@@ -14,6 +14,8 @@ import argparse
 import subprocess
 import urllib.request
 import urllib.error
+import threading
+import shutil
 import pymupdf
 
 # Reconfigure stdout/stderr for UTF-8
@@ -257,7 +259,35 @@ def parse_and_standardize_questions(
         f"from the following text:\n\n{raw_text}"
     )
 
-    res = call_agnes_api(api_key, user_prompt, system_prompt, base_url=base_url, model=model)
+    res_holder = {}
+    err_holder = {}
+
+    def ai_worker():
+        try:
+            res_holder["data"] = call_agnes_api(api_key, user_prompt, system_prompt, base_url=base_url, model=model)
+        except Exception as e:
+            err_holder["err"] = e
+
+    ai_thread = threading.Thread(target=ai_worker, daemon=True)
+    ai_thread.start()
+
+    current_p = 45
+    elapsed = 0
+    while ai_thread.is_alive():
+        ai_thread.join(timeout=2.0)
+        elapsed += 2
+        if ai_thread.is_alive():
+            if current_p < 68:
+                current_p += 2
+            emit_progress(
+                current_p,
+                f"Agnes 3.0 Flash đang chuẩn hóa câu hỏi & giải chi tiết ({count} câu - {elapsed}s)..."
+            )
+
+    if "err" in err_holder:
+        raise err_holder["err"]
+
+    res = res_holder.get("data", {})
     questions = res.get("questions", [])
     if not questions:
         raise RuntimeError("Agnes AI không tìm thấy câu hỏi trắc nghiệm nào trong phạm vi trang đã chọn.")
@@ -673,7 +703,7 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 
 
 def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
-    """Compile HTML to PDF using Google Chrome Headless with isolated profile and retry polling."""
+    """Compile HTML to PDF using Google Chrome Headless with active file polling and graceful process termination."""
     abs_html = os.path.abspath(html_path)
     abs_pdf = os.path.abspath(pdf_path)
 
@@ -687,54 +717,88 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
     temp_profile = os.path.join(tempfile.gettempdir(), f"chrome_pdf_{os.getpid()}_{int(time.time()*1000)%100000}")
     os.makedirs(temp_profile, exist_ok=True)
 
-    cmd = [
-        chrome_path,
-        "--headless=new",
-        "--disable-gpu",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        f"--user-data-dir={temp_profile}",
-        "--no-pdf-header-footer",
-        f"--print-to-pdf={abs_pdf}",
-        abs_html
-    ]
+    file_url = f"file:///{abs_html.replace(os.sep, '/')}" if sys.platform == "win32" else f"file://{abs_html}"
 
-    res = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
-
-    # Wait/poll up to 10 seconds for the file to be flushed and closed by Chrome
-    for _ in range(20):
-        if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
-            break
-        time.sleep(0.5)
-
-    if not os.path.exists(abs_pdf) or os.path.getsize(abs_pdf) == 0:
-        # Fallback to legacy headless if --headless=new didn't create the file
-        fallback_cmd = [
+    def run_chrome_worker(headless_flag: str) -> bool:
+        cmd = [
             chrome_path,
-            "--headless",
+            headless_flag,
             "--disable-gpu",
             "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-crash-reporter",
+            "--disable-breakpad",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-background-networking",
+            "--disable-extensions",
+            "--disable-default-apps",
+            "--disable-sync",
+            "--mute-audio",
             f"--user-data-dir={temp_profile}",
             "--no-pdf-header-footer",
             f"--print-to-pdf={abs_pdf}",
-            abs_html
+            file_url
         ]
-        res_fallback = subprocess.run(fallback_cmd, capture_output=True, text=True, timeout=35)
-        for _ in range(20):
-            if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
-                break
-            time.sleep(0.5)
 
-    # Cleanup temp profile
+        popen_kwargs = {
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL
+        }
+        if sys.platform != "win32":
+            popen_kwargs["start_new_session"] = True
+
+        proc = subprocess.Popen(cmd, **popen_kwargs)
+
+        # Actively poll for the PDF file being generated and flushed
+        start_time = time.time()
+        while time.time() - start_time < 30:
+            if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
+                time.sleep(0.3)
+                if proc.poll() is None:
+                    try:
+                        proc.terminate()
+                        proc.wait(timeout=2)
+                    except Exception:
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+                return True
+
+            if proc.poll() is not None:
+                time.sleep(0.5)
+                if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
+                    return True
+                break
+
+            time.sleep(0.3)
+
+        if proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=2)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+
+        return os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000
+
+    success = run_chrome_worker("--headless=new")
+    if not success:
+        # Fallback to legacy headless if --headless=new didn't create the file
+        success = run_chrome_worker("--headless")
+
     try:
-        import shutil
-        shutil.rmtree(temp_profile, ignore_errors=True)
+        if os.path.exists(temp_profile):
+            shutil.rmtree(temp_profile, ignore_errors=True)
     except Exception:
         pass
 
-    if not os.path.exists(abs_pdf):
-        err_detail = res.stderr or (res_fallback.stderr if 'res_fallback' in locals() else 'No stderr')
-        raise RuntimeError(f"Chrome không thể biên dịch PDF tại {abs_pdf}. Chi tiết: {err_detail}")
+    if not success or not os.path.exists(abs_pdf) or os.path.getsize(abs_pdf) == 0:
+        raise RuntimeError(f"Google Chrome không thể xuất tệp PDF từ {os.path.basename(html_path)}")
 
 
 def verify_pdf_pages(pdf_path: str) -> int:

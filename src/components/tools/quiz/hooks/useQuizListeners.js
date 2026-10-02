@@ -173,14 +173,16 @@ export function attachQuizListeners() {
       titleInput.oninput = (e) => quizManager.setParams({ title: e.target.value });
     }
 
-    // Count pills
-    const pills = document.querySelectorAll('.btn-quiz-count-pill');
-    pills.forEach((btn) => {
-      btn.onclick = () => {
-        const val = Number(btn.dataset.count);
-        if (val) quizManager.setParams({ count: val });
+    // Question Count Input
+    const countInput = document.getElementById('quizCountInput');
+    if (countInput) {
+      countInput.oninput = (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (!isNaN(val) && val > 0) {
+          quizManager.setParams({ count: val });
+        }
       };
-    });
+    }
 
     // Primary Action Button
     const btnGen = document.getElementById('btnQuizGenerate');
