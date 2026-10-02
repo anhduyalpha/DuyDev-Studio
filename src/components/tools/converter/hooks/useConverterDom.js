@@ -413,6 +413,10 @@ export function attachConverterListeners(manager) {
       if (badge) {
         badge.textContent = `${val}%`;
       }
+      const summarySub = document.getElementById('labelOptionsSummarySubtitle');
+      if (summarySub && manager.selectedCategory === 'image') {
+        summarySub.textContent = `${val}% chất lượng`;
+      }
     };
   }
 

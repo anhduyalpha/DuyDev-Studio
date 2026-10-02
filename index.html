@@ -95,9 +95,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=16.4">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=16.4">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=16.4">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=16.5">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=16.5">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=16.5">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -147,25 +147,11 @@
 
     // 3. Autonomous Self-Healing Error Boundary
     window.addEventListener('error', function(e) {
+      if (e.target && e.target !== window) return;
       console.error('[Global Error]', e.error || e.message);
       var app = document.getElementById('app');
       if (app && !app.querySelector('main')) {
-        // Automatic single retry with cache purge to heal stale bytecode transparently
-        if (!sessionStorage.getItem('ds_auto_recovered')) {
-          sessionStorage.setItem('ds_auto_recovered', 'true');
-          if ('caches' in window) {
-            caches.keys().then(function(keys) {
-              Promise.all(keys.map(function(k) { return caches.delete(k); })).then(function() {
-                window.location.replace(window.location.origin + window.location.pathname + '?heal=' + Date.now());
-              });
-            });
-          } else {
-            window.location.replace(window.location.origin + window.location.pathname + '?heal=' + Date.now());
-          }
-          return;
-        }
-
-        // Persistent failure UI
+        // Persistent failure UI with manual action button instead of auto-reloading loop
         app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4 bg-zinc-950 text-white font-mono">' +
           '<div class="max-w-md w-full p-6 rounded-2xl bg-zinc-900 border border-red-500/30 text-center space-y-4 shadow-xl">' +
           '<h2 class="text-red-400 font-bold text-base">Khởi động giao diện thất bại</h2>' +

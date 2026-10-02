@@ -18,6 +18,8 @@ export function isStandaloneMode() {
   );
 }
 
+export const CURRENT_PWA_VERSION = 'duydev-studio-v16.5';
+
 /**
  * Read the current local version from CacheStorage or fallback constant.
  * @returns {Promise<string>}
@@ -32,7 +34,7 @@ export async function getCurrentVersion() {
       console.warn('[PWA] Error reading cache keys:', err);
     }
   }
-  return 'duydev-studio-v16.3';
+  return CURRENT_PWA_VERSION;
 }
 
 /**
@@ -62,9 +64,9 @@ export async function getSwVersion() {
 }
 
 /**
- * Deterministic update check:
+ * Silent update check:
  * Compares the live server version from ./sw.js against local CacheStorage.
- * If server version differs from local, triggers update and auto-reload.
+ * Triggers background SW update without forcing an unannounced page reload.
  * @returns {Promise<{ updated: boolean, message: string }>}
  */
 export async function checkForAppUpdate() {
@@ -77,12 +79,12 @@ export async function checkForAppUpdate() {
     console.log(`[PWA] Checking update: Local=${localVer}, Server=${serverVer}`);
 
     if (serverVer && serverVer !== localVer) {
-      // New version found! Trigger SW update
+      // New version found on server! Update Service Worker silently in background
       if (swRegistration) {
         swRegistration.update().catch(() => {});
       }
 
-      // Proactively clear stale cache keys so the new version loads clean
+      // Proactively clear stale cache keys so next launch loads fresh
       if ('caches' in window) {
         try {
           const keys = await caches.keys();
@@ -92,19 +94,9 @@ export async function checkForAppUpdate() {
         } catch {}
       }
 
-      // Schedule reload with cache buster
-      setTimeout(() => {
-        window.location.replace(
-          window.location.origin +
-            window.location.pathname +
-            `?v=${Date.now()}` +
-            window.location.hash
-        );
-      }, 1000);
-
       return {
         updated: true,
-        message: `Đã có bản cập nhật mới (${serverVer}). Đang tải và áp dụng...`
+        message: `Đã có bản cập nhật mới (${serverVer}). Bản cập nhật sẽ tự động kích hoạt ở phiên tiếp theo.`
       };
     }
 
@@ -165,21 +157,6 @@ export function registerServiceWorker() {
         swRegistration = reg;
         console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
         reg.update().catch(() => {});
-
-        reg.onupdatefound = () => {
-          const installingWorker = reg.installing;
-          if (!installingWorker) return;
-          installingWorker.addEventListener('statechange', () => {
-            if (
-              installingWorker.state === 'activated' ||
-              (installingWorker.state === 'installed' && navigator.serviceWorker.controller)
-            ) {
-              if (hadExistingController) {
-                performSafeReload('New version activated');
-              }
-            }
-          });
-        };
       })
       .catch((error) => {
         console.warn('[PWA] ServiceWorker registration failed:', error);
@@ -192,10 +169,17 @@ export function registerServiceWorker() {
     window.addEventListener('load', doRegister);
   }
 
-  // Auto-check for updates when app returns from background (foreground resume)
+  // Auto-check for updates only when app returns after being in the background for > 5 minutes.
+  // This completely eliminates unwanted reloads when returning from file picker dialogs or quick tab switches.
+  let lastBackgroundTime = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      checkForAppUpdate().catch(() => {});
+    if (document.visibilityState === 'hidden') {
+      lastBackgroundTime = Date.now();
+    } else if (document.visibilityState === 'visible') {
+      if (lastBackgroundTime > 0 && Date.now() - lastBackgroundTime > 300000) {
+        checkForAppUpdate().catch(() => {});
+      }
     }
   });
 }
+

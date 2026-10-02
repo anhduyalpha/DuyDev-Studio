@@ -27,7 +27,7 @@ const DEFAULT_TOOLS = [
     icon: 'archive',
     badge: 'Zero-Extraction',
     featured: true,
-    specs: ['.ZIP', '.RAR', '.7Z', 'Trích tức thì'],
+    specs: ['.ZIP', '.RAR', '.7Z', 'Trích xuất'],
     color: '#0EA5E9',
     route: '#archive',
     tags: ['zip', 'rar', 'nén', 'xem', 'preview', 'tree', 'extract']
@@ -40,7 +40,7 @@ const DEFAULT_TOOLS = [
     icon: 'folder-archive',
     badge: '',
     featured: false,
-    specs: ['ZIP archive'],
+    specs: ['ZIP'],
     color: '#0EA5E9',
     route: '#server-archive',
     tags: ['zip', 'archive', 'nén']
@@ -84,7 +84,7 @@ const DEFAULT_TOOLS = [
     icon: 'qr-code',
     badge: 'VietQR Napas',
     featured: true,
-    specs: ['VietQR 24/7', 'Wi-Fi & Link', 'Mẫu tùy chỉnh'],
+    specs: ['VietQR', 'Wi-Fi & Link', 'Tùy biến'],
     color: '#10B981',
     route: '#tool/qr-multi',
     tags: ['qr', 'qrcode', 'wifi', 'vietqr', 'vcard', 'tạo mã']
@@ -138,7 +138,7 @@ const DEFAULT_TOOLS = [
     icon: 'hard-drive',
     badge: 'Cá nhân',
     featured: false,
-    specs: ['Cloud Drive', 'Tải lên / về'],
+    specs: ['Cloud Drive', 'Truyền tệp'],
     color: '#6366F1',
     route: '#storage',
     tags: ['storage', 'drive', 'files', 'lưu trữ', 'casaos', 'tập tin', 'upload', 'download']

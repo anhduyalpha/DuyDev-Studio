@@ -17,15 +17,15 @@ export function renderConverterQueueList(state) {
   return `
     <div class="rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.07] shadow-sm overflow-hidden space-y-3 p-4 sm:p-5">
       <div class="flex items-center justify-between gap-3 border-b border-zinc-100 dark:border-white/[0.05] pb-3">
-        <div class="flex items-center gap-2">
-          <i data-lucide="layers" class="w-4 h-4 text-indigo-500"></i>
-          <h4 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Hàng đợi chuyển đổi</h4>
-          <span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-zinc-100 dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-400">
+        <div class="flex items-center gap-2 min-w-0">
+          <i data-lucide="layers" class="w-4 h-4 text-indigo-500 shrink-0"></i>
+          <h4 class="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider shrink-0 whitespace-nowrap">Hàng đợi chuyển đổi</h4>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 shrink-0 whitespace-nowrap">
             ${items.length} tệp
           </span>
         </div>
-        <button id="btnClearConverterQueue" type="button" ${isUploading ? 'disabled title="Đang tải tệp lên máy chủ..."' : 'title="Xóa tất cả tệp"'} class="text-xs ${isUploading ? 'opacity-40 cursor-not-allowed text-zinc-400' : 'text-zinc-500 hover:text-red-500 transition cursor-pointer'} flex items-center gap-1">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa tất cả
+        <button id="btnClearConverterQueue" type="button" ${isUploading ? 'disabled title="Đang tải tệp lên máy chủ..."' : 'title="Xóa tất cả tệp"'} class="text-xs shrink-0 whitespace-nowrap ${isUploading ? 'opacity-40 cursor-not-allowed text-zinc-400' : 'text-zinc-500 hover:text-red-500 transition cursor-pointer'} flex items-center gap-1">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5 shrink-0"></i> <span>Xóa tất cả</span>
         </button>
       </div>
 
@@ -106,27 +106,27 @@ function renderQueueItem(it, idx, isConverting) {
               <span class="text-[10px] font-mono text-indigo-500 shrink-0">${it.progress}%</span>
             </div>
           ` : it.uploadStatus === 'uploading' ? `
-            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
-              <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>
-              Đang tải lên ${it.uploadProgress || 0}%
+            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 shrink-0 whitespace-nowrap">
+              <i data-lucide="loader-2" class="w-3 h-3 animate-spin shrink-0"></i>
+              <span>Đang tải lên ${it.uploadProgress || 0}%</span>
             </span>
           ` : (it.uploadStatus === 'uploaded' || it.fileId) ? `
-            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40" title="Đã sẵn sàng">
-              <i data-lucide="check" class="w-3 h-3"></i>
-              Đã sẵn sàng
+            <span class="badge-upload-status inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 shrink-0 whitespace-nowrap" title="Đã sẵn sàng">
+              <i data-lucide="check" class="w-3 h-3 shrink-0"></i>
+              <span>Đã sẵn sàng</span>
             </span>
           ` : it.uploadStatus === 'error' ? `
-            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40" title="${it.uploadError || 'Tải lên ngầm thất bại'}">
-              <i data-lucide="alert-circle" class="w-3 h-3"></i>
-              Lỗi tải lên
+            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 shrink-0 whitespace-nowrap" title="${it.uploadError || 'Tải lên ngầm thất bại'}">
+              <i data-lucide="alert-circle" class="w-3 h-3 shrink-0"></i>
+              <span>Lỗi tải lên</span>
             </span>
           ` : (it.status === 'stale' || it.uploadStatus === 'expired') ? `
-            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40" title="Phiên làm việc cũ. Vui lòng nạp lại tệp.">
-              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-              Cần nạp lại
+            <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 shrink-0 whitespace-nowrap" title="Phiên làm việc cũ. Vui lòng nạp lại tệp.">
+              <i data-lucide="refresh-cw" class="w-3 h-3 shrink-0"></i>
+              <span>Cần nạp lại</span>
             </span>
           ` : `
-            <span class="badge-upload-status text-[11px] font-mono text-zinc-400 dark:text-zinc-500">Chờ lệnh</span>
+            <span class="badge-upload-status text-[11px] font-mono text-zinc-400 dark:text-zinc-500 shrink-0 whitespace-nowrap">Chờ lệnh</span>
           `}
         </div>
 
