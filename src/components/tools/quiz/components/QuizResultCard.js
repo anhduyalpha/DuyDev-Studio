@@ -43,8 +43,7 @@ function renderProcessingState(state) {
         <div id="quizProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
       </div>
 
-      <div class="flex items-center justify-between pt-2">
-        <span class="text-[11px] text-zinc-500 font-mono">A4 PDF Pipeline</span>
+      <div class="flex items-center justify-end pt-2">
         <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition">
           Hủy tác vụ
         </button>
