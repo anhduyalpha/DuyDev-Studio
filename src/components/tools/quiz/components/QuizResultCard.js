@@ -59,6 +59,18 @@ function renderCompletedState(state) {
   const ans = res.answer || {};
   const count = res.questionsCount || state.count || 20;
 
+  const wsId = ws.fileId || ws.id || '';
+  const wsName = ws.fileName || ws.name || 'DeBai.pdf';
+  const wsPages = ws.pages || ws.pageCount || 1;
+  const wsSize = ws.sizeBytes || ws.size || 0;
+  const wsDownloadUrl = ws.downloadUrl || (wsId ? `/api/v1/files/download/${wsId}` : '#');
+
+  const ansId = ans.fileId || ans.id || '';
+  const ansName = ans.fileName || ans.name || 'DapAn.pdf';
+  const ansPages = ans.pages || ans.pageCount || 1;
+  const ansSize = ans.sizeBytes || ans.size || 0;
+  const ansDownloadUrl = ans.downloadUrl || (ansId ? `/api/v1/files/download/${ansId}` : '#');
+
   return `
     <div class="space-y-4 animate-fadeIn">
       <div class="flex items-center justify-between">
@@ -78,20 +90,20 @@ function renderCompletedState(state) {
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
-              <span class="text-xs text-zinc-500 font-mono">${ws.pageCount || 1} trang A4</span>
+              <span class="text-xs text-zinc-500 font-mono">${wsPages} trang A4</span>
             </div>
-            <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ws.name || '')}">${escapeHtml(ws.name || 'DeBai.pdf')}</div>
+            <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(wsName)}">${escapeHtml(wsName)}</div>
             <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
               <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${count} câu</span>
-              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ws.sizeBytes)}</span>
+              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(wsSize)}</span>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition" data-file-id="${ws.id}" data-file-name="${escapeHtml(ws.name || '')}">
+            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${ws.downloadUrl || `/api/v1/files/${ws.id}/download`}" download="${escapeHtml(ws.name || 'DeBai.pdf')}" class="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" class="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>
@@ -103,20 +115,20 @@ function renderCompletedState(state) {
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
-              <span class="text-xs text-zinc-500 font-mono">${ans.pageCount || 1} trang A4</span>
+              <span class="text-xs text-zinc-500 font-mono">${ansPages} trang A4</span>
             </div>
-            <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ans.name || '')}">${escapeHtml(ans.name || 'DapAn.pdf')}</div>
+            <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ansName)}">${escapeHtml(ansName)}</div>
             <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
               <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">Ma trận + Lời giải</span>
-              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ans.sizeBytes)}</span>
+              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ansSize)}</span>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition" data-file-id="${ans.id}" data-file-name="${escapeHtml(ans.name || '')}">
+            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${ans.downloadUrl || `/api/v1/files/${ans.id}/download`}" download="${escapeHtml(ans.name || 'DapAn.pdf')}" class="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" class="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>

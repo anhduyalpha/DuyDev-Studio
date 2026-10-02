@@ -5,6 +5,7 @@
 
 import { uploadQuizFile, parsePromptApi, generateQuizJob, connectJobEvents } from './quizApi.js';
 import { showToast } from '../../../../utilities/toast.js';
+import { storage } from '../../../../utilities/storage.js';
 
 class QuizManager {
   constructor() {
@@ -234,9 +235,70 @@ class QuizManager {
           this.state.isProcessing = false;
           this.state.progress = 100;
           this.state.stage = 'Hoàn tất xuất bản 2 tệp PDF A4!';
-          this.state.result = evt.data || null;
+
+          let res = null;
+          if (evt && evt.worksheet && evt.answer) {
+            res = evt;
+          } else if (evt && evt.result && evt.result.worksheet) {
+            res = evt.result;
+          } else if (evt && evt.data && evt.data.worksheet) {
+            res = evt.data;
+          } else if (evt && Array.isArray(evt.files)) {
+            const wsF = evt.files.find(f => (f.originalName || '').includes('_DeBai') || (f.fileName || '').includes('_DeBai') || (f.fileId || '').endsWith('_ws'));
+            const ansF = evt.files.find(f => (f.originalName || '').includes('_DapAn') || (f.fileName || '').includes('_DapAn') || (f.fileId || '').endsWith('_ans'));
+            if (wsF && ansF) {
+              res = {
+                jobId: evt.jobId,
+                worksheet: {
+                  fileId: wsF.fileId || wsF.id,
+                  fileName: wsF.originalName || wsF.fileName || 'DeBai.pdf',
+                  sizeBytes: wsF.sizeBytes || 0,
+                  pages: 1,
+                  downloadUrl: `/api/v1/files/download/${wsF.fileId || wsF.id}`,
+                  viewUrl: `/api/v1/files/view/${wsF.fileId || wsF.id}`
+                },
+                answer: {
+                  fileId: ansF.fileId || ansF.id,
+                  fileName: ansF.originalName || ansF.fileName || 'DapAn.pdf',
+                  sizeBytes: ansF.sizeBytes || 0,
+                  pages: 1,
+                  downloadUrl: `/api/v1/files/download/${ansF.fileId || ansF.id}`,
+                  viewUrl: `/api/v1/files/view/${ansF.fileId || ansF.id}`
+                },
+                questionsCount: this.state.count || 20
+              };
+            }
+          }
+
+          this.state.result = res;
           this.notify('job-completed');
           showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
+
+          // Sync completed items to local history
+          if (res?.worksheet && res?.answer) {
+            try {
+              storage.addHistoryItem({
+                toolId: 'quiz-generator',
+                toolTitle: 'Tạo Bài Tập Trắc Nghiệm',
+                fileName: res.worksheet.fileName || 'DeBai.pdf',
+                originalSize: res.worksheet.sizeBytes,
+                resultSize: res.worksheet.sizeBytes,
+                resultFileId: res.worksheet.fileId,
+                downloadUrl: res.worksheet.downloadUrl || `/api/v1/files/download/${res.worksheet.fileId}`,
+                status: 'success'
+              });
+              storage.addHistoryItem({
+                toolId: 'quiz-generator',
+                toolTitle: 'Tạo Bài Tập Trắc Nghiệm',
+                fileName: res.answer.fileName || 'DapAn.pdf',
+                originalSize: res.answer.sizeBytes,
+                resultSize: res.answer.sizeBytes,
+                resultFileId: res.answer.fileId,
+                downloadUrl: res.answer.downloadUrl || `/api/v1/files/download/${res.answer.fileId}`,
+                status: 'success'
+              });
+            } catch (_) {}
+          }
         },
         onError: (err) => {
           this.state.isProcessing = false;

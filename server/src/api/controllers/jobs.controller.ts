@@ -81,15 +81,25 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
   // If already completed or failed, emit current state and exit
   if (job.status === 'COMPLETED') {
     const artifact = job.files.find((f) => f.purpose === 'PROCESSED_ARTIFACT') || job.files[0];
-    reply.raw.write(
-      `event: completed\ndata: ${JSON.stringify({
-        jobId,
-        percentage: 100,
-        resultFileId: artifact?.id || null,
-        resultSizeBytes: artifact ? Number(artifact.sizeBytes) : 0,
-        downloadUrl: artifact ? `/api/v1/files/download/${artifact.id}` : null
-      })}\n\n`
-    );
+    let completedPayload: Record<string, unknown> = {
+      jobId,
+      percentage: 100,
+      resultFileId: artifact?.id || null,
+      resultSizeBytes: artifact ? Number(artifact.sizeBytes) : 0,
+      downloadUrl: artifact ? `/api/v1/files/download/${artifact.id}` : null
+    };
+
+    try {
+      const opts = JSON.parse(job.optionsJson || '{}');
+      if (opts.result) {
+        completedPayload = {
+          ...completedPayload,
+          ...opts.result
+        };
+      }
+    } catch {}
+
+    reply.raw.write(`event: completed\ndata: ${JSON.stringify(completedPayload)}\n\n`);
     reply.raw.end();
     return;
   }
@@ -172,6 +182,42 @@ export async function getJobStatus(request: FastifyRequest, reply: FastifyReply)
     throw new NotFoundError(`Job with ID ${jobId} not found`);
   }
 
+  let resultPayload: unknown = null;
+  try {
+    const opts = JSON.parse(job.optionsJson || '{}');
+    if (opts.result) {
+      resultPayload = opts.result;
+    }
+  } catch {}
+
+  // If quiz job completed but result not in optionsJson, reconstruct from files
+  if (!resultPayload && job.status === 'COMPLETED' && job.type === 'quiz_generate') {
+    const wsFile = job.files.find((f) => f.originalName.includes('_DeBai') || f.id.endsWith('_ws'));
+    const ansFile = job.files.find((f) => f.originalName.includes('_DapAn') || f.id.endsWith('_ans'));
+    if (wsFile && ansFile) {
+      resultPayload = {
+        jobId: job.id,
+        percentage: 100,
+        worksheet: {
+          fileId: wsFile.id,
+          fileName: wsFile.originalName,
+          sizeBytes: Number(wsFile.sizeBytes),
+          pages: 1,
+          downloadUrl: `/api/v1/files/download/${wsFile.id}`,
+          viewUrl: `/api/v1/files/view/${wsFile.id}`
+        },
+        answer: {
+          fileId: ansFile.id,
+          fileName: ansFile.originalName,
+          sizeBytes: Number(ansFile.sizeBytes),
+          pages: 1,
+          downloadUrl: `/api/v1/files/download/${ansFile.id}`,
+          viewUrl: `/api/v1/files/view/${ansFile.id}`
+        }
+      };
+    }
+  }
+
   return reply.send({
     success: true,
     data: {
@@ -183,6 +229,7 @@ export async function getJobStatus(request: FastifyRequest, reply: FastifyReply)
       createdAt: job.createdAt.toISOString(),
       startedAt: job.startedAt?.toISOString() || null,
       completedAt: job.completedAt?.toISOString() || null,
+      result: resultPayload,
       files: job.files.map((file) => ({
         fileId: file.id,
         purpose: file.purpose,

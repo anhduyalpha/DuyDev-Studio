@@ -228,15 +228,15 @@ export function attachQuizListeners() {
       btn.onclick = () => {
         const fileId = btn.dataset.fileId;
         const fileName = btn.dataset.fileName;
-        if (fileId) {
+        if (fileId && fileId !== 'undefined') {
           ViewerConnector.preview({
             id: fileId,
             fileId: fileId,
             name: fileName,
             fileName: fileName,
             mimeType: 'application/pdf',
-            viewUrl: `/api/v1/files/${fileId}/download?inline=true`,
-            downloadUrl: `/api/v1/files/${fileId}/download`
+            viewUrl: `/api/v1/files/view/${fileId}`,
+            downloadUrl: `/api/v1/files/download/${fileId}`
           });
         }
       };

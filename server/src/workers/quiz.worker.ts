@@ -154,6 +154,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     const pythonBin = resolvePythonBin();
     const scriptPath = resolveQuizScript();
 
+    const cleanPrefix = prefix.trim().replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') || 'quiz';
     const pyArgs = [
       inputSource,
       '--pages', pages,
@@ -161,7 +162,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       '--start', String(startNum),
       '--title', title || 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
       '--subtitle', subtitle || '',
-      '--prefix', prefix,
+      '--prefix', cleanPrefix,
       '--output-dir', tmpOutputDir
     ];
 
@@ -179,8 +180,8 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     await emitProgress(5, 'Đang khởi chạy tiến trình trích xuất câu hỏi...');
     const resultMeta = await executeQuizEngine(pythonBin, scriptPath, pyArgs, emitProgress);
 
-    const wsTmpPath = resultMeta.worksheet_pdf || path.join(tmpOutputDir, `${prefix}_DeBai.pdf`);
-    const ansTmpPath = resultMeta.answer_pdf || path.join(tmpOutputDir, `${prefix}_DapAn.pdf`);
+    const wsTmpPath = resultMeta.worksheet_pdf || path.join(tmpOutputDir, `${cleanPrefix}_DeBai.pdf`);
+    const ansTmpPath = resultMeta.answer_pdf || path.join(tmpOutputDir, `${cleanPrefix}_DapAn.pdf`);
 
     if (!existsSync(wsTmpPath) || !existsSync(ansTmpPath)) {
       throw new Error('Tệp PDF Đề bài hoặc Đáp án không được tạo ra từ pipeline');
@@ -264,34 +265,65 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       questionsCount: resultMeta.questions_count || count
     };
 
+    let currentOptions: Record<string, unknown> = {};
+    try {
+      const existingJob = await prisma.job.findUnique({ where: { id: jobId } });
+      if (existingJob?.optionsJson) {
+        currentOptions = JSON.parse(existingJob.optionsJson);
+      }
+    } catch {}
+
     await prisma.job.update({
       where: { id: jobId },
       data: {
         status: 'COMPLETED',
         progress: 100,
-        completedAt: new Date()
+        completedAt: new Date(),
+        optionsJson: JSON.stringify({
+          ...currentOptions,
+          result: resultPayload
+        })
       }
     });
 
-    const historyItem = await prisma.historyRecord.create({
-      data: {
-        toolId: 'quiz-generator',
-        toolTitle: 'Tạo Bài Tập Trắc Nghiệm',
-        fileName: `${prefix} (Đề bài & Đáp án)`,
-        originalSize: BigInt(originalSizeBytes || wsStats.size + ansStats.size),
-        resultSize: BigInt(wsStats.size + ansStats.size),
-        resultFileId: wsFileId,
-        downloadUrl: `/api/v1/files/download/${wsFileId}`,
-        status: 'success'
-      }
-    }).catch((e) => {
-      logger.warn({ e }, 'Failed to record quiz history');
-      return null;
-    });
+    // Create TWO separate history records: one for Worksheet PDF and one for Answer PDF
+    const [wsHistory, ansHistory] = await Promise.all([
+      prisma.historyRecord.create({
+        data: {
+          toolId: 'quiz-generator',
+          toolTitle: 'Tạo Bài Tập Trắc Nghiệm',
+          fileName: wsFileName,
+          originalSize: BigInt(originalSizeBytes || wsStats.size),
+          resultSize: BigInt(wsStats.size),
+          resultFileId: wsFileId,
+          downloadUrl: `/api/v1/files/download/${wsFileId}`,
+          status: 'success'
+        }
+      }).catch((e) => {
+        logger.warn({ e }, 'Failed to record worksheet quiz history');
+        return null;
+      }),
+      prisma.historyRecord.create({
+        data: {
+          toolId: 'quiz-generator',
+          toolTitle: 'Tạo Bài Tập Trắc Nghiệm',
+          fileName: ansFileName,
+          originalSize: BigInt(originalSizeBytes || ansStats.size),
+          resultSize: BigInt(ansStats.size),
+          resultFileId: ansFileId,
+          downloadUrl: `/api/v1/files/download/${ansFileId}`,
+          status: 'success'
+        }
+      }).catch((e) => {
+        logger.warn({ e }, 'Failed to record answer quiz history');
+        return null;
+      })
+    ]);
 
     await publishJobEvent(jobId, 'completed', {
       ...resultPayload,
-      historyId: historyItem?.id || null
+      historyId: wsHistory?.id || null,
+      answerHistoryId: ansHistory?.id || null
     });
 
     // Cleanup temp directory
