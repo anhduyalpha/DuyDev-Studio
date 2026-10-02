@@ -84,42 +84,62 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
   });
 
   // 7. Move file to trash (soft delete)
-  app.delete('/api/v1/studocu/files/*', async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
+  const handleMoveToTrash = async (req: FastifyRequest<{ Params?: { '*'?: string }; Body?: { filename?: string; file?: string } }>, reply: FastifyReply) => {
     try {
-      const filename = encodeURIComponent(req.params['*']);
-      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/files/${filename}`, { method: 'DELETE' });
-      return reply.status(status).send(data);
-    } catch (err: any) {
-      return reply.status(502).send({ error: 'Studocu engine unavailable: ' + err.message });
-    }
-  });
-
-  // 8. Restore file from trash
-  app.post('/api/v1/studocu/trash/restore/*', async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
-    try {
-      const filename = encodeURIComponent(req.params['*']);
-      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash/restore/${filename}`, {
-        method: 'POST',
+      const rawName = (req.body as any)?.filename || (req.body as any)?.file || req.params?.['*'] || '';
+      const filename = encodeURIComponent(rawName);
+      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/files/${filename}`, {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify({ filename: rawName })
       });
       return reply.status(status).send(data);
     } catch (err: any) {
       return reply.status(502).send({ error: 'Studocu engine unavailable: ' + err.message });
     }
-  });
+  };
 
-  // 9. Permanent delete or empty trash
-  app.delete('/api/v1/studocu/trash/*', async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
+  app.delete('/api/v1/studocu/files/*', handleMoveToTrash);
+  app.post('/api/v1/studocu/files/trash', handleMoveToTrash);
+
+  // 8. Restore file from trash
+  const handleRestore = async (req: FastifyRequest<{ Params?: { '*'?: string }; Body?: { filename?: string; file?: string } }>, reply: FastifyReply) => {
     try {
-      const param = req.params['*'];
-      const target = param === 'empty' ? 'empty' : encodeURIComponent(param);
-      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash/${target}`, { method: 'DELETE' });
+      const rawName = (req.body as any)?.filename || (req.body as any)?.file || req.params?.['*'] || '';
+      const filename = encodeURIComponent(rawName);
+      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash/restore/${filename}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: rawName })
+      });
       return reply.status(status).send(data);
     } catch (err: any) {
       return reply.status(502).send({ error: 'Studocu engine unavailable: ' + err.message });
     }
-  });
+  };
+
+  app.post('/api/v1/studocu/trash/restore/*', handleRestore);
+  app.post('/api/v1/studocu/trash/restore', handleRestore);
+
+  // 9. Permanent delete or empty trash
+  const handleDeletePermanent = async (req: FastifyRequest<{ Params?: { '*'?: string }; Body?: { filename?: string; file?: string } }>, reply: FastifyReply) => {
+    try {
+      const param = req.params?.['*'];
+      const rawName = param || (req.body as any)?.filename || (req.body as any)?.file || '';
+      const target = rawName === 'empty' ? 'empty' : encodeURIComponent(rawName);
+      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash/${target}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: rawName })
+      });
+      return reply.status(status).send(data);
+    } catch (err: any) {
+      return reply.status(502).send({ error: 'Studocu engine unavailable: ' + err.message });
+    }
+  };
+
+  app.delete('/api/v1/studocu/trash/*', handleDeletePermanent);
+  app.post('/api/v1/studocu/trash/delete', handleDeletePermanent);
 
   // 10. Document Stream with Range Support (Universal Viewer & Tab preview compatible)
   async function handleDocumentStream(req: FastifyRequest<{ Params?: { '*'?: string }; Querystring: { id?: string; file?: string } }>, reply: FastifyReply) {

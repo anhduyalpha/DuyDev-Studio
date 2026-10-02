@@ -240,8 +240,7 @@ describe('Quiz Module Unit & Integration Tests', () => {
       expect(json.data.pages).toBe('12');
       expect(json.data.count).toBe(11);
       expect(json.data.start).toBe(18);
-      expect(typeof json.data.prefix).toBe('string');
-      expect(json.data.prefix.length).toBeGreaterThan(0);
+      expect(json.data.prefix).toMatch(/Ester/i);
       expect(json.data.title).toMatch(/BÀI TẬP TRẮC NGHIỆM.*12/i);
     });
 

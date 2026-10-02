@@ -7,6 +7,10 @@
 import { isValidDriveUrl } from '../hooks/useQuiz.js';
 
 export function renderQuizConfigPanel(state) {
+  if (state.isProcessing) {
+    return '';
+  }
+
   const hasFile = Boolean(state.file);
   const isFileReady = state.file?.status === 'ready';
   const hasDriveUrl = Boolean(state.gdriveUrl?.trim());

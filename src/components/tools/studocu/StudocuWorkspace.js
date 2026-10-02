@@ -87,6 +87,9 @@ export function attachStudocuListeners() {
     const heroCancel = document.getElementById('studocuHeroCancelBtn');
     if (heroCancel) heroCancel.onclick = () => studocuManager.cancelJob();
 
+    const form = document.getElementById('studocuDownloadForm');
+    if (form) form.onsubmit = (e) => { e.preventDefault(); return false; };
+
     const pasteBtn = document.getElementById('studocuPasteBtn');
     if (pasteBtn && !pasteBtn.disabled) {
       pasteBtn.onclick = async () => {
@@ -204,7 +207,8 @@ export function attachStudocuListeners() {
     }
 
     const itemsEl = document.getElementById('studocuItemsContainer');
-    const structureKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}`;
+    const topItemId = state.filteredItems?.[0]?.name || state.filteredItems?.[0]?.id || '';
+    const structureKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}:${topItemId}`;
 
     if (listEl && structureKey !== prevStructureKey) {
       prevStructureKey = structureKey;

@@ -15,6 +15,7 @@ import shutil
 import tempfile
 import threading
 import time
+import unicodedata
 import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -260,22 +261,65 @@ class DocumentStore:
             active_docs.sort(key=lambda x: x.get("mtime", 0), reverse=True)
             return active_docs
 
+    def _find_in_dir(self, directory: Path, filename: str) -> Optional[Path]:
+        """Tìm file trong thư mục với fallback URL-unquote, NFC/NFD unicode, và metadata ID/Title."""
+        if not filename:
+            return None
+        # 1. Exact match
+        p = directory / filename
+        if p.exists() and p.is_file():
+            return p
+        # 2. URL-unquoted match
+        unquoted = urllib.parse.unquote(filename)
+        p = directory / unquoted
+        if p.exists() and p.is_file():
+            return p
+        double_unquoted = urllib.parse.unquote(unquoted)
+        p = directory / double_unquoted
+        if p.exists() and p.is_file():
+            return p
+
+        # 3. Unicode normalization (NFC & NFD) & Metadata matching
+        norm_nfc = unicodedata.normalize('NFC', filename)
+        norm_nfd = unicodedata.normalize('NFD', filename)
+        norm_unq_nfc = unicodedata.normalize('NFC', unquoted)
+        norm_unq_nfd = unicodedata.normalize('NFD', unquoted)
+
+        data = self._load_metadata()
+        files_map = data.get("files", {})
+
+        for item in directory.glob("*.*"):
+            if not item.is_file():
+                continue
+            item_nfc = unicodedata.normalize('NFC', item.name)
+            item_nfd = unicodedata.normalize('NFD', item.name)
+            meta = files_map.get(item.name, {})
+
+            if (item_nfc in (norm_nfc, norm_unq_nfc) or
+                item_nfd in (norm_nfd, norm_unq_nfd) or
+                meta.get("id") == filename or
+                meta.get("title") == filename or
+                item.name.lower() in (filename.lower(), unquoted.lower())):
+                return item
+        return None
+
     def move_to_trash(self, filename: str, deleted_by: Optional[str] = None) -> bool:
         """Chuyển tài liệu vào Thùng rác (.trash)."""
         with STORE_LOCK:
-            src = self.root_dir / filename
-            if not src.exists() or not src.is_file():
+            src = self._find_in_dir(self.root_dir, filename)
+            if not src or not src.is_file():
                 return False
 
-            dst = self.trash_dir / filename
+            actual_filename = src.name
+            dst = self.trash_dir / actual_filename
             shutil.move(str(src), str(dst))
 
             data = self._load_metadata()
-            if filename in data.get("files", {}):
-                data["files"][filename]["status"] = "trashed"
-                data["files"][filename]["trashed_at"] = time.time()
-                data["files"][filename]["trashed_time"] = time.strftime("%d/%m/%Y %H:%M")
-                data["files"][filename]["trashed_by"] = deleted_by or "Người dùng"
+            if actual_filename in data.get("files", {}):
+                data["files"][actual_filename]["status"] = "trashed"
+                data["files"][actual_filename]["trashed_at"] = time.time()
+                data["files"][actual_filename]["trashed_time"] = time.strftime("%d/%m/%Y %H:%M")
+                data["files"][actual_filename]["trashed_by"] = deleted_by or "Người dùng"
                 self._save_metadata(data)
 
             return True
@@ -283,24 +327,26 @@ class DocumentStore:
     def restore_from_trash(self, filename: str) -> bool:
         """Khôi phục tài liệu từ Thùng rác về thư mục chính."""
         with STORE_LOCK:
-            src = self.trash_dir / filename
-            if not src.exists() or not src.is_file():
+            src = self._find_in_dir(self.trash_dir, filename)
+            if not src or not src.is_file():
                 return False
 
-            dst = self.root_dir / filename
+            actual_filename = src.name
+            dst = self.root_dir / actual_filename
             shutil.move(str(src), str(dst))
 
             data = self._load_metadata()
-            if filename in data.get("files", {}):
-                data["files"][filename]["status"] = "active"
-                data["files"][filename].pop("trashed_at", None)
-                data["files"][filename].pop("trashed_time", None)
-                data["files"][filename].pop("trashed_by", None)
+            if actual_filename in data.get("files", {}):
+                data["files"][actual_filename]["status"] = "active"
+                data["files"][actual_filename].pop("trashed_at", None)
+                data["files"][actual_filename].pop("trashed_time", None)
+                data["files"][actual_filename].pop("trashed_by", None)
             else:
                 stat = dst.stat()
-                data.setdefault("files", {})[filename] = {
-                    "id": get_doc_id(filename),
-                    "name": filename,
+                data.setdefault("files", {})[actual_filename] = {
+                    "id": get_doc_id(actual_filename),
+                    "name": actual_filename,
+                    "title": actual_filename,
                     "format": "pdf" if dst.suffix.lower() == ".pdf" else "md",
                     "size_bytes": stat.st_size,
                     "size": format_bytes(stat.st_size),
@@ -317,16 +363,23 @@ class DocumentStore:
         """Xóa vĩnh viễn tệp tin khỏi đĩa và khỏi metadata."""
         with STORE_LOCK:
             deleted = False
-            for p in (self.trash_dir / filename, self.root_dir / filename):
-                if p.exists() and p.is_file():
-                    p.unlink()
-                    deleted = True
+            for d in (self.trash_dir, self.root_dir):
+                target = self._find_in_dir(d, filename)
+                if target and target.is_file():
+                    try:
+                        target.unlink()
+                        deleted = True
+                    except Exception:
+                        pass
 
             data = self._load_metadata()
-            if filename in data.get("files", {}):
-                del data["files"][filename]
+            for k in list(data.get("files", {}).keys()):
+                meta = data["files"][k]
+                if k == filename or meta.get("id") == filename or meta.get("title") == filename:
+                    del data["files"][k]
+                    deleted = True
+            if deleted:
                 self._save_metadata(data)
-                deleted = True
 
             return deleted
 
@@ -345,7 +398,10 @@ class DocumentStore:
                     is_pdf = item.suffix.lower() == ".pdf"
 
                     trashed.append({
+                        "id": meta.get("id") or get_doc_id(item.name),
                         "name": item.name,
+                        "title": meta.get("title") or item.name,
+                        "format": meta.get("format") or ("pdf" if is_pdf else "md"),
                         "size": format_bytes(size_bytes),
                         "size_bytes": size_bytes,
                         "size_mb": round(size_bytes / (1024 * 1024), 2),

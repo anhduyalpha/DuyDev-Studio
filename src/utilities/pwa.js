@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v18.4';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v18.5';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -148,8 +148,13 @@ export function registerServiceWorker() {
       return;
     }
     // Never disrupt in-flight tasks or active downloads
-    if (window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
       console.log('[PWA] Tasks are active in background. Skipping reload.');
+      return;
+    }
+    const activeJob = localStorage.getItem('ds_studocu_active_job');
+    if (activeJob) {
+      console.log('[PWA] Studocu job active. Skipping reload.');
       return;
     }
     performSafeReload('Controller updated');

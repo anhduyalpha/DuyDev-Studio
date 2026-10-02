@@ -39,7 +39,6 @@ class StudocuManager {
     this.sortOption = 'newest';
     this.subscribers = new Set();
     this.pollInterval = null;
-    this.pollTimeout = null;
     this.timerInterval = null;
     this.orbInstance = null;
   }
@@ -195,31 +194,33 @@ class StudocuManager {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
+    this.isPolling = false;
   }
 
   startPolling(jobId) {
     this.stopPolling();
+    this.isPolling = true;
     let isPollingTick = false;
 
     const pollTick = async () => {
-      if (!this.isDownloading || this.currentJobId !== jobId) return;
+      if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
       if (isPollingTick) return;
       isPollingTick = true;
 
       try {
         const res = await fetch(`/api/v1/studocu/status/${jobId}`);
-        if (!this.isDownloading || this.currentJobId !== jobId) return;
+        if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
         if (!res.ok) {
-          if (this.isDownloading && this.currentJobId === jobId) {
-            this.pollTimeout = setTimeout(pollTick, 1000);
+          if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
+            this.pollTimeout = setTimeout(pollTick, 1200);
           }
           return;
         }
         const job = await res.json().catch(() => null);
-        if (!this.isDownloading || this.currentJobId !== jobId) return;
+        if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
         if (!job || job.error) {
-          if (this.isDownloading && this.currentJobId === jobId) {
-            this.pollTimeout = setTimeout(pollTick, 1000);
+          if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
+            this.pollTimeout = setTimeout(pollTick, 1200);
           }
           return;
         }
@@ -241,12 +242,15 @@ class StudocuManager {
 
         if (job.status === 'completed' || job.status === 'success') {
           this.progress = 100;
+          this.stopPolling();
           this.finishJob(true, 'Tải hoàn tất');
           return;
         } else if (job.status === 'error' || job.status === 'failed') {
+          this.stopPolling();
           this.finishJob(false, job.error || 'Quá trình trích xuất gặp lỗi');
           return;
         } else if (job.status === 'cancelled') {
+          this.stopPolling();
           this.finishJob(false, 'Tiến trình đã bị hủy');
           return;
         } else {
@@ -255,7 +259,7 @@ class StudocuManager {
       } catch (_) {
       } finally {
         isPollingTick = false;
-        if (this.isDownloading && this.currentJobId === jobId) {
+        if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
           this.pollTimeout = setTimeout(pollTick, 800);
         }
       }
@@ -268,8 +272,8 @@ class StudocuManager {
     if (!this.isDownloading && !this.currentJobId) return;
     this.isDownloading = false;
     this.currentJobId = null;
-    saveActiveJob(null);
     this.stopPolling();
+    saveActiveJob(null);
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
@@ -290,94 +294,121 @@ class StudocuManager {
 
   async cancelJob() {
     if (this.currentJobId) {
+      const jobId = this.currentJobId;
       saveActiveJob(null);
-      await cancelJobApi(this.currentJobId);
+      this.stopPolling();
+      await cancelJobApi(jobId);
       this.finishJob(false, 'Đã hủy tải');
     }
   }
 
   async moveToTrash(filename) {
     if (!filename) return;
-    const targetIdx = this.files.findIndex(f => (f.name || f.title) === filename);
+    const norm = (s) => (s || '').normalize('NFC').trim();
+    const targetIdx = this.files.findIndex(f =>
+      norm(f.name) === norm(filename) ||
+      norm(f.title) === norm(filename) ||
+      f.id === filename
+    );
     const item = targetIdx !== -1 ? this.files[targetIdx] : null;
-    if (!item) return;
 
     const prevFiles = [...this.files];
     const prevTrash = [...this.trash];
 
-    // Optimistic UI: remove immediately from active list, add to trash
-    this.files = this.files.filter((_, i) => i !== targetIdx);
-    const trashedItem = {
-      ...item,
-      status: 'trashed',
-      trashed_at: Date.now(),
-      trashed_time: new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      mtime: Date.now()
-    };
-    this.trash = [trashedItem, ...this.trash.filter(f => (f.name || f.title) !== filename)];
-    this.notify();
+    if (item) {
+      // Optimistic UI: remove immediately from active list, add to trash
+      this.files = this.files.filter((_, i) => i !== targetIdx);
+      const trashedItem = {
+        ...item,
+        status: 'trashed',
+        trashed_at: Date.now(),
+        trashed_time: new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        mtime: Date.now()
+      };
+      this.trash = [trashedItem, ...this.trash.filter(f => norm(f.name || f.title) !== norm(filename))];
+      this.notify();
+    }
     showToast('Đã chuyển tệp vào thùng rác', 'success');
 
     try {
       const ok = await moveToTrashApi(filename);
       if (!ok) {
+        if (item) {
+          this.files = prevFiles;
+          this.trash = prevTrash;
+          this.notify();
+        }
+        showToast('Không thể chuyển tệp vào thùng rác', 'error');
+      } else {
+        this.fetchFiles();
+      }
+    } catch (_) {
+      if (item) {
         this.files = prevFiles;
         this.trash = prevTrash;
         this.notify();
-        showToast('Không thể chuyển tệp vào thùng rác', 'error');
       }
-    } catch (_) {
-      this.files = prevFiles;
-      this.trash = prevTrash;
-      this.notify();
       showToast('Lỗi khi chuyển tệp vào thùng rác', 'error');
     }
   }
 
   async restoreFromTrash(filename) {
     if (!filename) return;
-    const targetIdx = this.trash.findIndex(f => (f.name || f.title) === filename);
+    const norm = (s) => (s || '').normalize('NFC').trim();
+    const targetIdx = this.trash.findIndex(f =>
+      norm(f.name) === norm(filename) ||
+      norm(f.title) === norm(filename) ||
+      f.id === filename
+    );
     const item = targetIdx !== -1 ? this.trash[targetIdx] : null;
-    if (!item) return;
 
     const prevFiles = [...this.files];
     const prevTrash = [...this.trash];
 
-    // Optimistic UI: remove immediately from trash, add back to active list
-    this.trash = this.trash.filter((_, i) => i !== targetIdx);
-    const restoredItem = {
-      ...item,
-      status: 'active',
-      mtime: Date.now()
-    };
-    this.files = [restoredItem, ...this.files.filter(f => (f.name || f.title) !== filename)];
-    this.notify();
-    showToast('Đã khôi phục tài liệu', 'success');
+    if (item) {
+      // Optimistic UI: remove immediately from trash, add back to active list
+      this.trash = this.trash.filter((_, i) => i !== targetIdx);
+      const restoredItem = {
+        ...item,
+        status: 'active',
+        mtime: Date.now()
+      };
+      this.files = [restoredItem, ...this.files.filter(f => norm(f.name || f.title) !== norm(filename))];
+      this.notify();
+    }
 
     try {
       const ok = await restoreFromTrashApi(filename);
-      if (!ok) {
-        this.files = prevFiles;
-        this.trash = prevTrash;
-        this.notify();
+      if (ok) {
+        showToast('Đã khôi phục tài liệu', 'success');
+        await this.fetchFiles();
+      } else {
+        if (item) {
+          this.files = prevFiles;
+          this.trash = prevTrash;
+          this.notify();
+        }
         showToast('Không thể khôi phục tài liệu', 'error');
       }
     } catch (_) {
-      this.files = prevFiles;
-      this.trash = prevTrash;
-      this.notify();
+      if (item) {
+        this.files = prevFiles;
+        this.trash = prevTrash;
+        this.notify();
+      }
       showToast('Lỗi khi khôi phục tài liệu', 'error');
     }
   }
 
   async deletePermanent(filename) {
     if (!filename) return;
+    const norm = (s) => (s || '').normalize('NFC').trim();
     const prevFiles = [...this.files];
     const prevTrash = [...this.trash];
 
     // Optimistic UI: remove immediately from trash list
-    this.trash = this.trash.filter(f => (f.name || f.title) !== filename);
-    this.files = this.files.filter(f => (f.name || f.title) !== filename);
+    this.trash = this.trash.filter(f => norm(f.name || f.title) !== norm(filename) && f.id !== filename);
+    this.files = this.files.filter(f => norm(f.name || f.title) !== norm(filename) && f.id !== filename);
     this.notify();
     showToast('Đã xóa vĩnh viễn tài liệu', 'success');
 
@@ -388,6 +419,8 @@ class StudocuManager {
         this.trash = prevTrash;
         this.notify();
         showToast('Không thể xóa vĩnh viễn tài liệu', 'error');
+      } else {
+        this.fetchFiles();
       }
     } catch (_) {
       this.files = prevFiles;

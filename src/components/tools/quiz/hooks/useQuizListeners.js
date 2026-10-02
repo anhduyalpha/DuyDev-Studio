@@ -182,14 +182,24 @@ export function attachQuizListeners() {
       'prompt-analysis-finished',
       'job-started',
       'job-completed',
-      'job-error'
+      'job-cancelled',
+      'job-error',
+      'result-cleared'
     ];
 
-    if (configEl && reRenderEvents.includes(event)) {
-      configEl.innerHTML = renderQuizConfigPanel(state);
-      attachConfigHandlers();
-    } else {
-      syncGenerateButton();
+    if (configEl) {
+      if (state.isProcessing) {
+        configEl.classList.add('hidden');
+        configEl.innerHTML = '';
+      } else {
+        configEl.classList.remove('hidden');
+        if (reRenderEvents.includes(event)) {
+          configEl.innerHTML = renderQuizConfigPanel(state);
+          attachConfigHandlers();
+        } else {
+          syncGenerateButton();
+        }
+      }
     }
 
     if (resultEl) {

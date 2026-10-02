@@ -58,35 +58,38 @@ export async function cancelJobApi(jobId) {
 }
 
 export async function moveToTrashApi(filename) {
+  if (!filename) return false;
   const res = await fetch(`/api/v1/studocu/files/${encodeURIComponent(filename)}`, {
     method: 'DELETE',
-    keepalive: true
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename })
   }).catch(() => null);
   return res?.ok;
 }
 
 export async function restoreFromTrashApi(filename) {
+  if (!filename) return false;
   const res = await fetch(`/api/v1/studocu/trash/restore/${encodeURIComponent(filename)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-    keepalive: true
+    body: JSON.stringify({ filename })
   }).catch(() => null);
   return res?.ok;
 }
 
 export async function deletePermanentApi(filename) {
+  if (!filename) return false;
   const res = await fetch(`/api/v1/studocu/trash/${encodeURIComponent(filename)}`, {
     method: 'DELETE',
-    keepalive: true
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename })
   }).catch(() => null);
   return res?.ok;
 }
 
 export async function emptyTrashApi() {
   const res = await fetch('/api/v1/studocu/trash/empty', {
-    method: 'DELETE',
-    keepalive: true
+    method: 'DELETE'
   }).catch(() => null);
   return res?.ok;
 }

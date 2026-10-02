@@ -79,7 +79,7 @@ describe('Studocu Document Stream Hardened Headers', () => {
     expect(res.headers['content-disposition']).not.toContain('filename=');
   });
 
-  it('handles trash restore POST with empty body and undefined content-type without 415 error', async () => {
+  it('handles trash restore POST with empty body, json body, and wildcard params', async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.includes('/api/trash/restore/')) {
         return new Response(JSON.stringify({ success: true, action: 'restored' }), {
@@ -90,16 +90,23 @@ describe('Studocu Document Stream Hardened Headers', () => {
       return originalFetch(url, init);
     });
 
-    // Send POST without Content-Type header or body
-    const res = await app.inject({
+    // 1. Send POST with wildcard URL param
+    const res1 = await app.inject({
       method: 'POST',
       url: '/api/v1/studocu/trash/restore/testdoc.pdf'
     });
+    expect(res1.statusCode).toBe(200);
+    expect(JSON.parse(res1.body).success).toBe(true);
 
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.success).toBe(true);
-    expect(body.action).toBe('restored');
+    // 2. Send POST with JSON body
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/v1/studocu/trash/restore',
+      headers: { 'Content-Type': 'application/json' },
+      payload: { filename: 'testdoc.pdf' }
+    });
+    expect(res2.statusCode).toBe(200);
+    expect(JSON.parse(res2.body).success).toBe(true);
   });
 
   it('enforces attachment Content-Disposition on file download route', async () => {

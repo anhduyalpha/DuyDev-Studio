@@ -198,7 +198,7 @@ class QuizManager {
         if (parsed.pages !== undefined) this.state.pages = String(parsed.pages);
         if (parsed.count !== undefined) this.state.count = Number(parsed.count);
         if (parsed.start !== undefined) this.state.start = Number(parsed.start);
-        if (parsed.prefix) this.state.prefix = String(parsed.prefix);
+        // Smart prompt recognition does NOT auto-set file name (user provides manually)
         if (parsed.title) this.state.title = String(parsed.title);
         this.state.step = 3;
         this.notify('prompt-parsed');
@@ -367,14 +367,11 @@ class QuizManager {
             } catch (_) {}
           }
 
-          this.state.result = res;
-          this.notify('job-completed');
-          showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
+          const quizName = this.state.prefix || 'PDF';
 
           // Trigger native push notification if running inside Android APK
           if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
             try {
-              const quizName = this.state.prefix || 'PDF';
               window.AndroidBridge.showNotification(
                 'Tạo bài tập hoàn tất',
                 `Đã tạo thành công Đề bài và Đáp án: ${quizName}`,
@@ -382,6 +379,23 @@ class QuizManager {
               );
             } catch (_) {}
           }
+
+          // Reset form fields to Step 1 for the next document per user request
+          this.state.file = null;
+          this.state.fileId = null;
+          this.state.gdriveUrl = '';
+          this.state.pages = '';
+          this.state.prefix = '';
+          this.state.count = 20;
+          this.state.start = 1;
+          this.state.title = 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12';
+          this.state.step = 1;
+          this.state.isProcessing = false;
+          this.state.progress = 100;
+          this.state.result = res;
+
+          this.notify('job-completed');
+          showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
         },
         onError: (err) => {
           this.state.isProcessing = false;

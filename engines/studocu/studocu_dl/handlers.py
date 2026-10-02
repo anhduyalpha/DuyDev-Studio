@@ -573,8 +573,26 @@ class StudocuHTTPRequestHandler(SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"ok": True, "message": msg}, ensure_ascii=False).encode("utf-8"))
             return
 
-        elif path.startswith("/api/trash/restore/"):
-            filename = urllib.parse.unquote(path.replace("/api/trash/restore/", ""))
+        elif path.startswith("/api/trash/restore/") or path in ("/api/trash/restore", "/api/trash/restore/"):
+            filename = ""
+            if path.startswith("/api/trash/restore/"):
+                clean = path.replace("/api/trash/restore/", "").split("?")[0].strip()
+                filename = urllib.parse.unquote(clean)
+
+            if not filename:
+                length = int(self.headers.get("Content-Length", 0))
+                if length > 0:
+                    try:
+                        raw_body = self.rfile.read(length).decode("utf-8")
+                        b = json.loads(raw_body)
+                        filename = b.get("filename") or b.get("file") or ""
+                    except Exception:
+                        pass
+
+            if not filename:
+                qp = urllib.parse.parse_qs(parsed.query)
+                filename = qp.get("file", [""])[0].strip() or qp.get("filename", [""])[0].strip()
+
             ok = DocumentStore.get_instance().restore_from_trash(filename)
             if ok:
                 self.send_response(HTTPStatus.OK)

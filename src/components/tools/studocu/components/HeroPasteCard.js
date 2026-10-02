@@ -19,7 +19,7 @@ export function renderHeroPasteCard(state) {
         </p>
       </div>
 
-      <form id="studocuDownloadForm" class="pt-1" onsubmit="return false;">
+      <form id="studocuDownloadForm" class="pt-1" onsubmit="event.preventDefault(); return false;">
         <input type="hidden" id="studocuUrlInput" name="url" value="" />
 
         <!-- Centered Petite Pill Paste Button -->

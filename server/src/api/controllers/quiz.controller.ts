@@ -71,7 +71,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     let end: number | null = null;
 
     // 1. Regex parsing for pages: "trang 11", "trang 11,12", "trang 4,5,6", "trang 36-38", "page 12"
-    const pageMatch = input.match(/(?:trang|page)\s*(\d+(?:\s*[-–]\s*\d+|\s*,\s*(?!\d+\s*(?:câu|cau|từ|tu|bài|bai))\d+)*)/i);
+    const pageMatch = input.match(/(?:trang|page)\s*(\d+(?:\s*[-–]\s*\d+|\s*,\s*\d+(?!\d*\s*câu))*)/i);
     if (pageMatch) {
       pages = pageMatch[1].replace(/\s+/g, '');
     }
@@ -122,17 +122,6 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       }
     }
 
-    // Fallback prefix generation if still empty
-    if (!prefix) {
-      if (pages && end !== null) {
-        prefix = `Trang_${pages.replace(/,/g, '_')}_Cau_${start}_${end}`;
-      } else if (pages && start > 1) {
-        prefix = `Trang_${pages.replace(/,/g, '_')}_Cau_${start}_${start + count - 1}`;
-      } else if (pages) {
-        prefix = `Trang_${pages.replace(/,/g, '_')}_${count}Cau`;
-      }
-    }
-
     const title = pages ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pages}` : (prefix ? `BÀI TẬP TRẮC NGHIỆM ${prefix.toUpperCase()}` : 'BÀI TẬP TRẮC NGHIỆM');
 
     return {
@@ -173,7 +162,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
                 '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18),\n' +
                 '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, calculate count = Y - X + 1, e.g. from 18 to 28 inclusive is 11),\n' +
                 '  "title": string (formal Vietnamese exam uppercase title, e.g. "BÀI TẬP TRẮC NGHIỆM TRANG 12"),\n' +
-                '  "prefix": string (short clean file identifier without spaces or special characters, e.g. "Trang_12_Cau_18_28")\n' +
+                '  "prefix": string (optional short clean topic or file name if explicitly mentioned in prompt, otherwise empty string "")\n' +
                 '}'
             },
             {
@@ -194,8 +183,8 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
           const startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
           const countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
           const titleRes = String(parsed.title || regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM').trim();
-          const rawPrefix = String(parsed.prefix || regexDefaults.prefix || (pagesRes ? `Trang_${pagesRes}` : 'BaiTap')).trim();
-          const prefixRes = rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') || 'BaiTap';
+          const rawPrefix = String(parsed.prefix || regexDefaults.prefix || '').trim();
+          const prefixRes = rawPrefix ? rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') : '';
 
           return reply.send({
             success: true,
