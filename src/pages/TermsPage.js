@@ -221,8 +221,8 @@ export function renderTermsPage() {
                   />
                   <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-500">VNĐ</span>
                 </div>
-                <button type="button" id="btnCustomTuyuTam" class="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition cursor-pointer whitespace-nowrap" data-amount="0">
-                  Tùy tâm
+                <button type="button" id="btnCustomTuyuTam" class="px-3.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition cursor-pointer whitespace-nowrap active:scale-95" title="Random số tiền từ 10.000đ đến 100.000đ">
+                  <span>🎲 Tùy tâm</span>
                 </button>
               </div>
             </div>
@@ -304,6 +304,7 @@ export function attachTermsPageListeners() {
     }
 
     // 3. Update button active states
+    const isStandardPreset = [10000, 20000, 50000, 100000].includes(currentAmount);
     document.querySelectorAll('.btn-donate-tier').forEach((btn) => {
       const btnAmount = Number(btn.dataset.amount);
       const isActive = btnAmount === currentAmount;
@@ -315,14 +316,14 @@ export function attachTermsPageListeners() {
     });
 
     if (btnCustomTuyuTam) {
-      btnCustomTuyuTam.className = currentAmount === 0
-        ? 'px-3.5 py-1.5 rounded-xl border bg-indigo-600 border-indigo-500 text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap shadow-sm shadow-indigo-600/30'
-        : 'px-3.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition cursor-pointer whitespace-nowrap';
+      const isRandomOrCustom = !isStandardPreset && currentAmount > 0;
+      btnCustomTuyuTam.className = isRandomOrCustom
+        ? 'px-3.5 py-1.5 rounded-xl border bg-indigo-600 border-indigo-500 text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap shadow-sm shadow-indigo-600/30 active:scale-95'
+        : 'px-3.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-medium transition cursor-pointer whitespace-nowrap active:scale-95';
     }
 
     if (updateInput && customInput) {
-      const isPreset = [10000, 20000, 50000, 100000, 0].includes(currentAmount);
-      customInput.value = isPreset ? '' : String(currentAmount);
+      customInput.value = isStandardPreset ? '' : String(currentAmount);
     }
   };
 
@@ -334,9 +335,12 @@ export function attachTermsPageListeners() {
     });
   });
 
-  // Tùy tâm button click
+  // Tùy tâm button click -> Random amount from 10,000 to 100,000 VNĐ
   btnCustomTuyuTam?.addEventListener('click', () => {
-    setDonateAmount(0, true);
+    const randomThousand = Math.floor(Math.random() * 91) + 10; // 10 to 100
+    const randomAmount = randomThousand * 1000;
+    setDonateAmount(randomAmount, true);
+    showToast(`🎲 Số tiền tùy tâm may mắn: ${randomAmount.toLocaleString('vi-VN')} VNĐ`, 'info');
   });
 
   // Custom amount input (debounced)
