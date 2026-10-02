@@ -261,7 +261,7 @@ def parse_and_standardize_questions(
         "You are an expert Vietnamese Chemistry teacher and exam editor.\n"
         "Your task is to extract, standardize, and format multiple-choice questions from the provided textbook text.\n"
         "Requirements:\n"
-        "1. Identify questions from 'Câu X' accurately.\n"
+        "1. Identify questions from 'Câu X' or 'X.' accurately, regardless of their original numbering in the source text.\n"
         "2. Standardize all chemical formulas, subscripts, and superscripts using HTML tags: "
         "always convert indices to <sub> (e.g. C<sub>15</sub>H<sub>31</sub>COOH, C<sub>2</sub>H<sub>5</sub>OH, "
         "C<sub>n</sub>H<sub>2n</sub>O<sub>2</sub>, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup>.\n"
@@ -280,7 +280,8 @@ def parse_and_standardize_questions(
         '      "answer": "A"\n'
         "    }\n"
         "  ]\n"
-        "}"
+        "}\n"
+        "7. If there are NO multiple-choice questions in the provided text, return {\"questions\": []}."
     )
 
     BATCH_SIZE = 12
@@ -305,8 +306,8 @@ def parse_and_standardize_questions(
     for b_idx, (b_start, b_end, b_count) in enumerate(batches):
         batch_prog_base = int(start_progress + b_idx * prog_step)
         user_prompt = (
-            f"Extract up to {b_count} multiple-choice questions starting from question number {b_start} "
-            f"up to question number {b_end} from the following text:\n\n{raw_text}"
+            f"Extract up to {b_count} multiple-choice questions from the following text. "
+            f"Extract them sequentially in order of appearance in the text and assign sequential numbers from {b_start} to {b_end}:\n\n{raw_text}"
         )
 
         res_holder = {}
@@ -347,7 +348,7 @@ def parse_and_standardize_questions(
             # If later batch yields no more questions, stop gracefully if we already got some
             if all_questions:
                 break
-            raise RuntimeError(f"Agnes AI không tìm thấy câu hỏi trắc nghiệm nào trong phạm vi câu {b_start} - {b_end}.")
+            raise RuntimeError("Không có câu hỏi trong trang, vui lòng chọn lại.")
 
         # Normalize question numbering
         for idx, q in enumerate(batch_qs):
@@ -362,7 +363,7 @@ def parse_and_standardize_questions(
         )
 
     if not all_questions:
-        raise RuntimeError("Agnes AI không tìm thấy câu hỏi trắc nghiệm nào trong phạm vi trang đã chọn.")
+        raise RuntimeError("Không có câu hỏi trong trang, vui lòng chọn lại.")
 
     return all_questions
 
@@ -1002,19 +1003,27 @@ def main():
     parser.add_argument("--prefix", required=True, help="Tên file xuất ra (bắt buộc, ví dụ: 'De_Kiem_Tra_1')")
     args = parser.parse_args()
 
-    run_pipeline(
-        input_source=args.input,
-        pages=args.pages,
-        count=args.count,
-        start_q=args.start,
-        title=args.title,
-        subtitle=args.subtitle,
-        api_key=args.api_key,
-        base_url=args.base_url,
-        model=args.model,
-        output_dir=args.output_dir,
-        filename_prefix=args.prefix
-    )
+    try:
+        run_pipeline(
+            input_source=args.input,
+            pages=args.pages,
+            count=args.count,
+            start_q=args.start,
+            title=args.title,
+            subtitle=args.subtitle,
+            api_key=args.api_key,
+            base_url=args.base_url,
+            model=args.model,
+            output_dir=args.output_dir,
+            filename_prefix=args.prefix
+        )
+    except Exception as e:
+        err_msg = str(e).strip()
+        if any(k in err_msg.lower() for k in ["không có câu hỏi", "không tìm thấy câu hỏi", "no questions"]):
+            sys.stderr.write("Không có câu hỏi trong trang, vui lòng chọn lại.\n")
+        else:
+            sys.stderr.write(f"{err_msg}\n")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -142,13 +142,31 @@ function renderCompletedState(state) {
 }
 
 function renderErrorState(state) {
+  let errorMsg = state.error || 'Đã xảy ra lỗi khi tạo bài tập.';
+  const lower = errorMsg.toLowerCase();
+  if (
+    lower.includes('không có câu hỏi') ||
+    lower.includes('không tìm thấy câu hỏi') ||
+    lower.includes('no questions')
+  ) {
+    errorMsg = 'Không có câu hỏi trong trang, vui lòng chọn lại.';
+  } else if (errorMsg.includes('Traceback (most recent call last):')) {
+    const lines = errorMsg.trim().split('\n');
+    const lastLine = lines[lines.length - 1].trim();
+    if (lastLine.includes(':')) {
+      errorMsg = lastLine.split(':').slice(1).join(':').trim() || lastLine;
+    } else {
+      errorMsg = lastLine;
+    }
+  }
+
   return `
     <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 space-y-3">
       <div class="flex items-center gap-2 text-red-400 text-sm font-semibold">
         <i data-lucide="alert-circle" class="w-4 h-4"></i>
         <span>Lỗi tạo bài tập</span>
       </div>
-      <p class="text-xs text-red-300/90 leading-relaxed">${escapeHtml(state.error)}</p>
+      <p class="text-xs text-red-300/90 leading-relaxed font-medium">${escapeHtml(errorMsg)}</p>
       <button type="button" id="btnQuizReset" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/30 transition">
         Thử lại
       </button>

@@ -64,6 +64,38 @@ interface PythonProgressEvent {
   questions_count?: number;
 }
 
+function cleanQuizErrorMessage(rawErr: string): string {
+  if (!rawErr) return 'Đã xảy ra lỗi không xác định khi tạo bài tập.';
+  const lowerErr = rawErr.toLowerCase();
+  if (
+    lowerErr.includes('không có câu hỏi') ||
+    lowerErr.includes('không tìm thấy câu hỏi') ||
+    lowerErr.includes('no questions')
+  ) {
+    return 'Không có câu hỏi trong trang, vui lòng chọn lại.';
+  }
+  if (lowerErr.includes('không chứa văn bản dạng số/vector') || lowerErr.includes('ảnh scan thuần túy')) {
+    return 'Trang đã chọn không chứa văn bản trắc nghiệm. Vui lòng chọn trang có lớp chữ hoặc OCR trước.';
+  }
+  if (lowerErr.includes('vượt quá tổng số')) {
+    const lastLine = rawErr.trim().split('\n').pop() || '';
+    return lastLine.replace(/^ValueError:\s*/, '').trim() || lastLine.trim();
+  }
+
+  // Strip Python tracebacks if present
+  if (rawErr.includes('Traceback (most recent call last):')) {
+    const lines = rawErr.trim().split('\n');
+    const lastLine = lines[lines.length - 1].trim();
+    if (lastLine.includes(':')) {
+      const parts = lastLine.split(':');
+      const clean = parts.slice(1).join(':').trim();
+      if (clean) return clean;
+    }
+    return lastLine;
+  }
+  return rawErr.trim();
+}
+
 function executeQuizEngine(
   pythonBin: string,
   scriptPath: string,
@@ -101,11 +133,8 @@ function executeQuizEngine(
       if (code === 0 && finalResult) return resolve(finalResult);
       if (code === 0) return resolve({ success: true });
 
-      const lowerErr = stderr.toLowerCase();
-      if (lowerErr.includes('không chứa văn bản') || lowerErr.includes('không hợp lệ')) {
-        return reject(new FileCorruptedError(stderr.trim()));
-      }
-      return reject(new Error(stderr.trim() || `Tiến trình Python gặp lỗi với mã thoát ${code}`));
+      const cleaned = cleanQuizErrorMessage(stderr);
+      return reject(new Error(cleaned || `Tiến trình Python gặp lỗi với mã thoát ${code}`));
     });
 
     child.on('error', (err) => {
@@ -338,7 +367,8 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     return resultPayload;
   } catch (err: unknown) {
     isFinished = true;
-    const errorMessage = err instanceof Error ? err.message : String(err);
+    const rawMessage = err instanceof Error ? err.message : String(err);
+    const errorMessage = cleanQuizErrorMessage(rawMessage);
     await prisma.job.update({
       where: { id: jobId },
       data: { status: 'FAILED', errorMessage }
@@ -348,8 +378,8 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       error: errorMessage,
       timestamp: Math.floor(Date.now() / 1000)
     });
-    logger.error({ jobId, err }, 'Quiz job execution failed');
-    throw err;
+    logger.error({ jobId, err, errorMessage }, 'Quiz job execution failed');
+    throw new Error(errorMessage);
   }
 }
 

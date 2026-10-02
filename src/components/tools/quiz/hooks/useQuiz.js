@@ -320,7 +320,20 @@ class QuizManager {
         },
         onError: (err) => {
           this.state.isProcessing = false;
-          this.state.error = err.message || 'Tác vụ tạo bài tập trắc nghiệm thất bại';
+          let errorMsg = err?.message || 'Tác vụ tạo bài tập trắc nghiệm thất bại';
+          const lower = errorMsg.toLowerCase();
+          if (
+            lower.includes('không có câu hỏi') ||
+            lower.includes('không tìm thấy câu hỏi') ||
+            lower.includes('no questions')
+          ) {
+            errorMsg = 'Không có câu hỏi trong trang, vui lòng chọn lại.';
+          } else if (errorMsg.includes('Traceback (most recent call last):')) {
+            const lines = errorMsg.trim().split('\n');
+            const lastLine = lines[lines.length - 1].trim();
+            errorMsg = lastLine.includes(':') ? lastLine.split(':').slice(1).join(':').trim() || lastLine : lastLine;
+          }
+          this.state.error = errorMsg;
           this.notify('job-error');
           showToast(this.state.error, 'error');
 

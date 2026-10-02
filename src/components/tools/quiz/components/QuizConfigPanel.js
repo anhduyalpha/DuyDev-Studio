@@ -21,19 +21,23 @@ export function renderQuizConfigPanel(state) {
           <label class="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
             <span>Nguồn tài liệu</span>
             <span class="text-rose-500 font-bold">*</span>
-            ${
-              !(isFileReady || hasDriveUrl)
-                ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
-                : ''
-            }
+            <span id="quizSourceStatus">
+              ${
+                (isFileReady || hasDriveUrl)
+                  ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>`
+                  : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
+              }
+            </span>
           </label>
-          ${
-            isFileReady
-              ? `<span class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i data-lucide="check" class="w-3 h-3"></i> Tệp PDF sẵn sàng</span>`
-              : hasDriveUrl
-              ? `<span class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20"><i data-lucide="link" class="w-3 h-3"></i> Google Drive</span>`
-              : `<span class="text-[11px] text-zinc-500 font-mono">Tệp PDF hoặc Drive</span>`
-          }
+          <div id="quizSourceDetail">
+            ${
+              isFileReady
+                ? `<span class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i data-lucide="check" class="w-3 h-3"></i> Tệp PDF sẵn sàng</span>`
+                : hasDriveUrl
+                ? `<span class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20"><i data-lucide="link" class="w-3 h-3"></i> Google Drive</span>`
+                : `<span class="text-[11px] text-zinc-500 font-mono">Tệp PDF hoặc Drive</span>`
+            }
+          </div>
         </div>
 
         <!-- 1. PDF File Dropzone -->
@@ -96,7 +100,11 @@ export function renderQuizConfigPanel(state) {
         <!-- 2. Google Drive Link Input -->
         <div class="relative">
           <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="https://drive.google.com/file/d/.../view" class="w-full bg-zinc-950 border ${
-            !hasFile && !hasDriveUrl ? 'border-rose-500/20 focus:border-rose-500/50' : 'border-zinc-800 focus:border-zinc-600'
+            hasDriveUrl
+              ? 'border-emerald-500/40 focus:border-emerald-500'
+              : !hasFile
+              ? 'border-rose-500/20 focus:border-rose-500/50'
+              : 'border-zinc-800 focus:border-zinc-600'
           } rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-hidden transition" />
         </div>
       </div>
@@ -123,12 +131,18 @@ export function renderQuizConfigPanel(state) {
             <label class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
               <span>Trang trích xuất</span>
               <span class="text-rose-500 font-bold">*</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>
+              <span id="quizPagesStatus">
+                ${
+                  hasValidPages
+                    ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>`
+                    : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
+                }
+              </span>
             </label>
             <span class="text-[11px] text-zinc-500 font-mono">vd: 11 hoặc 11-15</span>
           </div>
           <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="11" class="w-full bg-zinc-950 border ${
-            !hasValidPages ? 'border-rose-500/40 focus:border-rose-500' : 'border-zinc-800 focus:border-zinc-600'
+            hasValidPages ? 'border-emerald-500/40 focus:border-emerald-500' : 'border-rose-500/40 focus:border-rose-500'
           } rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden transition" />
         </div>
 
@@ -151,10 +165,16 @@ export function renderQuizConfigPanel(state) {
             <label class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
               <span>Tên file</span>
               <span class="text-rose-500 font-bold">*</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>
+              <span id="quizPrefixStatus">
+                ${
+                  hasValidPrefix
+                    ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>`
+                    : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
+                }
+              </span>
             </label>
             <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: bài tập Lipid,..." class="w-full bg-zinc-950 border ${
-              !hasValidPrefix ? 'border-rose-500/40 focus:border-rose-500' : 'border-zinc-800 focus:border-zinc-600'
+              hasValidPrefix ? 'border-emerald-500/40 focus:border-emerald-500' : 'border-rose-500/40 focus:border-rose-500'
             } rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden transition" />
           </div>
         </div>

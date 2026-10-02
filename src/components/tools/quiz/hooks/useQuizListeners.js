@@ -37,6 +37,80 @@ export function attachQuizListeners() {
     }
   }
 
+  function syncValidationUI() {
+    const state = quizManager.getState();
+    const isFileReady = state.file?.status === 'ready';
+    const hasDrive = Boolean(state.gdriveUrl?.trim());
+    const hasPages = Boolean(state.pages?.trim());
+    const hasPrefix = Boolean(state.prefix?.trim());
+
+    // 1. Source validation & badge
+    const srcStatus = document.getElementById('quizSourceStatus');
+    const dropzone = document.getElementById('quizDropzone');
+    const driveInput = document.getElementById('quizDriveInput');
+    if (srcStatus) {
+      if (isFileReady || hasDrive) {
+        srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+        if (dropzone && !state.file) {
+          dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
+          dropzone.classList.add('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
+        }
+        if (driveInput) {
+          if (hasDrive) {
+            driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600');
+            driveInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
+          } else {
+            driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500');
+            driveInput.classList.add('border-zinc-800', 'focus:border-zinc-600');
+          }
+        }
+      } else {
+        srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+        if (dropzone && !state.file) {
+          dropzone.classList.remove('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
+          dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
+        }
+        if (driveInput) {
+          driveInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+          driveInput.classList.add('border-rose-500/20', 'focus:border-rose-500/50');
+        }
+      }
+    }
+
+    // 2. Pages validation & badge
+    const pagesStatus = document.getElementById('quizPagesStatus');
+    const pagesInput = document.getElementById('quizPagesInput');
+    if (pagesStatus && pagesInput) {
+      if (hasPages) {
+        pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+        pagesInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
+        pagesInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
+      } else {
+        pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+        pagesInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+        pagesInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
+      }
+    }
+
+    // 3. Prefix validation & badge
+    const prefixStatus = document.getElementById('quizPrefixStatus');
+    const prefixInput = document.getElementById('quizPrefixInput');
+    if (prefixStatus && prefixInput) {
+      if (hasPrefix) {
+        prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+        prefixInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
+        prefixInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
+      } else {
+        prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+        prefixInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+        prefixInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
+      }
+    }
+
+    if (window.lucide?.createIcons) window.lucide.createIcons();
+    syncGenerateButton();
+  }
+
   // Selective re-rendering helper
   function updateDom(event) {
     if (isTornDown) return;
@@ -44,6 +118,12 @@ export function attachQuizListeners() {
     const configEl = document.getElementById('quizConfigContainer');
     const resultEl = document.getElementById('quizResultContainer');
     const state = quizManager.getState();
+
+    // In-place validation update for parameter / prompt changes without replacing DOM
+    if (event === 'params-changed' || event === 'gdrive-changed') {
+      syncValidationUI();
+      return;
+    }
 
     // In-place DOM update for continuous progress or status updates while processing to prevent box flickering
     if (event === 'job-progress' || event === 'job-enqueued') {
@@ -144,7 +224,7 @@ export function attachQuizListeners() {
     if (driveInput) {
       driveInput.oninput = (e) => {
         quizManager.setGdriveUrl(e.target.value);
-        syncGenerateButton();
+        syncValidationUI();
       };
     }
 
@@ -166,7 +246,7 @@ export function attachQuizListeners() {
     if (pagesInput) {
       pagesInput.oninput = (e) => {
         quizManager.setParams({ pages: e.target.value });
-        syncGenerateButton();
+        syncValidationUI();
       };
     }
 
@@ -179,7 +259,7 @@ export function attachQuizListeners() {
     if (prefixInput) {
       prefixInput.oninput = (e) => {
         quizManager.setParams({ prefix: e.target.value });
-        syncGenerateButton();
+        syncValidationUI();
       };
     }
 
@@ -207,7 +287,7 @@ export function attachQuizListeners() {
       };
     }
 
-    syncGenerateButton();
+    syncValidationUI();
   }
 
   // Attach Result Handlers
