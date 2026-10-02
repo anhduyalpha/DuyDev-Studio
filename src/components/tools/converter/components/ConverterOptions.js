@@ -15,7 +15,7 @@ export function renderConverterOptions(state) {
 
   let summarySubtitle = 'Mặc định';
   if (isImage) {
-    summarySubtitle = `${options.quality || 80}% chất lượng`;
+    summarySubtitle = `Chất lượng nén ${options.quality || 80}%`;
   } else if (isVideo) {
     summarySubtitle = `${options.resolution || 'Gốc'} • ${options.fps || 'Gốc'} FPS`;
   } else if (isAudio) {

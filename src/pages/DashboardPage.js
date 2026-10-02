@@ -14,44 +14,18 @@ import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 
-function renderToolsContent(toolsList, isAllDefault) {
-  if (isAllDefault) {
-    const featured = toolsList.filter(t => t.featured);
-    const secondary = toolsList.filter(t => !t.featured);
-
+function renderToolsContent(toolsList) {
+  if (!toolsList || toolsList.length === 0) {
     return `
-      <div class="space-y-6">
-        <!-- Spotlight Core Tools -->
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-              <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">Tâm điểm tác vụ</h2>
-            </div>
-            <span class="text-xs font-mono text-zinc-400">4 bộ công cụ chính</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-            ${featured.map(t => renderToolCard(t, true)).join('')}
-          </div>
-        </div>
-
-        <!-- Secondary Utility Tools -->
-        <div class="space-y-3 pt-1">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tiện ích & Công cụ hỗ trợ</h3>
-            <span class="text-xs font-mono text-zinc-400">${secondary.length} công cụ</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
-            ${secondary.map(t => renderToolCard(t, false)).join('')}
-          </div>
-        </div>
+      <div class="py-12 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs">
+        Không tìm thấy công cụ nào phù hợp.
       </div>
     `.trim();
   }
 
   return `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
-      ${toolsList.map(t => renderToolCard(t, true)).join('')}
+      ${toolsList.map(t => renderToolCard(t)).join('')}
     </div>
   `.trim();
 }
@@ -120,7 +94,7 @@ export function renderDashboardPage() {
         </div>
 
         <div id="toolsGridContainer">
-          ${renderToolsContent(tools, isAllDefault)}
+          ${renderToolsContent(tools)}
         </div>
       </div>
 
@@ -161,7 +135,7 @@ export function attachDashboardListeners(onReRender) {
     const isAll = cat === 'all' && !toolRegistry.searchQuery;
 
     if (gridEl) {
-      gridEl.innerHTML = renderToolsContent(filteredTools, isAll);
+      gridEl.innerHTML = renderToolsContent(filteredTools);
       if (window.lucide) window.lucide.createIcons({ root: gridEl });
     }
     if (countEl) {

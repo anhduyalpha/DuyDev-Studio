@@ -41,6 +41,25 @@ export function syncCategoryUI(activeCategory) {
   document.querySelectorAll('.converter-opt-section').forEach((sectionElement) => {
     sectionElement.classList.toggle('hidden', sectionElement.id !== `optionsSection_${activeCategory}`);
   });
+
+  const summarySub = document.getElementById('labelOptionsSummarySubtitle');
+  if (summarySub) {
+    if (activeCategory === 'image') {
+      const qInput = document.getElementById('inputQualityRange');
+      const qVal = qInput?.value || 80;
+      summarySub.textContent = `Chất lượng nén ${qVal}%`;
+    } else if (activeCategory === 'video') {
+      const vRes = document.getElementById('selectVideoRes')?.value || 'Gốc';
+      const vFps = document.getElementById('selectVideoFps')?.value || 'Gốc';
+      summarySub.textContent = `${vRes} • ${vFps === 'original' ? 'Gốc' : vFps + ' FPS'}`;
+    } else if (activeCategory === 'audio') {
+      const aBit = document.getElementById('selectAudioBitrate')?.value || '320k';
+      summarySub.textContent = `${aBit}`;
+    } else if (activeCategory === 'document') {
+      const ocr = document.getElementById('checkOcrFeature')?.checked;
+      summarySub.textContent = ocr ? 'Nhận dạng OCR' : 'Mặc định';
+    }
+  }
 }
 
 /**
@@ -415,7 +434,7 @@ export function attachConverterListeners(manager) {
       }
       const summarySub = document.getElementById('labelOptionsSummarySubtitle');
       if (summarySub && manager.selectedCategory === 'image') {
-        summarySub.textContent = `${val}% chất lượng`;
+        summarySub.textContent = `Chất lượng nén ${val}%`;
       }
     };
   }
