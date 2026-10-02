@@ -71,7 +71,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     let end: number | null = null;
 
     // 1. Regex parsing for pages: "trang 11", "trang 11,12", "trang 4,5,6", "trang 36-38", "page 12"
-    const pageMatch = input.match(/(?:trang|page)\s*(\d+(?:\s*[-–,]\s*\d+)*)/i);
+    const pageMatch = input.match(/(?:trang|page)\s*(\d+(?:\s*[-–]\s*\d+|\s*,\s*(?!\d+\s*(?:câu|cau|từ|tu|bài|bai))\d+)*)/i);
     if (pageMatch) {
       pages = pageMatch[1].replace(/\s+/g, '');
     }
@@ -100,17 +100,40 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       }
     }
 
-    // Auto-generate prefix
+    // 3. Regex parsing for prefix/topic if mentioned (e.g. "tên file Ester Lipid", "bài tập Ester Lipid", "Ester Lipid")
     let prefix = '';
-    if (pages && end !== null) {
-      prefix = `Trang_${pages.replace(/,/g, '_')}_Cau_${start}_${end}`;
-    } else if (pages && start > 1) {
-      prefix = `Trang_${pages.replace(/,/g, '_')}_Cau_${start}_${start + count - 1}`;
-    } else if (pages) {
-      prefix = `Trang_${pages.replace(/,/g, '_')}_${count}Cau`;
+    const topicMatch = input.match(/(?:tên\s*file|file|chủ\s*đề|chuyên\s*đề|bài\s*tập|đề)\s*[:=]?\s*([a-zA-Z0-9À-ỹ_\s-]+?)(?:,|$|\.|\n)/i);
+    if (topicMatch) {
+      prefix = topicMatch[1].trim();
+    } else {
+      // Check trailing non-keyword part like "Trang 12, 11 câu, từ câu 18, Ester Lipid"
+      const parts = input.split(/[,;\n]/).map((p) => p.trim()).filter(Boolean);
+      for (const part of parts) {
+        if (
+          !part.match(/(?:trang|page)/i) &&
+          !part.match(/(?:câu|cau)/i) &&
+          !part.match(/(?:bắt\s*đầu|lấy|làm|tạo|trích)/i) &&
+          part.length >= 2 &&
+          !part.match(/^\d+$/)
+        ) {
+          prefix = part;
+          break;
+        }
+      }
     }
 
-    const title = pages ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pages}` : 'BÀI TẬP TRẮC NGHIỆM';
+    // Fallback prefix generation if still empty
+    if (!prefix) {
+      if (pages && end !== null) {
+        prefix = `Trang_${pages.replace(/,/g, '_')}_Cau_${start}_${end}`;
+      } else if (pages && start > 1) {
+        prefix = `Trang_${pages.replace(/,/g, '_')}_Cau_${start}_${start + count - 1}`;
+      } else if (pages) {
+        prefix = `Trang_${pages.replace(/,/g, '_')}_${count}Cau`;
+      }
+    }
+
+    const title = pages ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pages}` : (prefix ? `BÀI TẬP TRẮC NGHIỆM ${prefix.toUpperCase()}` : 'BÀI TẬP TRẮC NGHIỆM');
 
     return {
       pages,

@@ -225,6 +225,26 @@ describe('Quiz Module Unit & Integration Tests', () => {
       expect(['ai', 'regex']).toContain(json.data.source);
     });
 
+    it('parses topic prefix and generates title from prompt', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/quiz/parse-prompt',
+        payload: {
+          prompt: 'Trang 12, 11 câu, từ câu 18, Ester Lipid'
+        }
+      });
+
+      expect(res.statusCode).toBe(200);
+      const json = JSON.parse(res.body);
+      expect(json.success).toBe(true);
+      expect(json.data.pages).toBe('12');
+      expect(json.data.count).toBe(11);
+      expect(json.data.start).toBe(18);
+      expect(typeof json.data.prefix).toBe('string');
+      expect(json.data.prefix.length).toBeGreaterThan(0);
+      expect(json.data.title).toMatch(/BÀI TẬP TRẮC NGHIỆM.*12/i);
+    });
+
     it('returns 400 for empty prompt', async () => {
       const res = await app.inject({
         method: 'POST',

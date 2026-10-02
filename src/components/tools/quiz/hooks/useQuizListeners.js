@@ -4,7 +4,7 @@
  * Adheres to Rule 1 (Explicit resource cleanup) and Rule 3 (Minimalism).
  */
 
-import { quizManager } from './useQuiz.js';
+import { quizManager, isValidDriveUrl } from './useQuiz.js';
 import { renderQuizConfigPanel } from '../components/QuizConfigPanel.js';
 import { renderQuizResultCard } from '../components/QuizResultCard.js';
 import {
@@ -38,7 +38,9 @@ export function attachQuizListeners() {
     const btnGen = document.getElementById('btnQuizGenerate');
     if (!btnGen) return;
 
-    const isReady = (Boolean(state.file?.status === 'ready') || Boolean(state.gdriveUrl?.trim())) &&
+    const isDriveValid = isValidDriveUrl(state.gdriveUrl);
+    const isSourceReady = Boolean(state.file?.status === 'ready') || isDriveValid;
+    const isReady = isSourceReady &&
                     Boolean(state.pages?.trim()) &&
                     Boolean(state.prefix?.trim()) &&
                     !state.isProcessing;
@@ -56,7 +58,9 @@ export function attachQuizListeners() {
   function syncValidationUI() {
     const state = quizManager.getState();
     const isFileReady = state.file?.status === 'ready';
+    const isDriveValid = isValidDriveUrl(state.gdriveUrl);
     const hasDrive = Boolean(state.gdriveUrl?.trim());
+    const isSourceReady = isFileReady || isDriveValid;
     const hasPages = Boolean(state.pages?.trim());
     const hasPrefix = Boolean(state.prefix?.trim());
 
@@ -65,15 +69,15 @@ export function attachQuizListeners() {
     const dropzone = document.getElementById('quizDropzone');
     const driveInput = document.getElementById('quizDriveInput');
     if (srcStatus) {
-      if (isFileReady || hasDrive) {
+      if (isSourceReady) {
         srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
         if (dropzone && !state.file) {
           dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
           dropzone.classList.add('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
         }
         if (driveInput) {
-          if (hasDrive) {
-            driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600');
+          if (isDriveValid) {
+            driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/40', 'focus:border-rose-500');
             driveInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
           } else {
             driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500');
@@ -87,8 +91,13 @@ export function attachQuizListeners() {
           dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
         }
         if (driveInput) {
-          driveInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
-          driveInput.classList.add('border-rose-500/20', 'focus:border-rose-500/50');
+          if (hasDrive) {
+            driveInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
+            driveInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
+          } else {
+            driveInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'focus:border-rose-500');
+            driveInput.classList.add('border-zinc-800', 'focus:border-zinc-600');
+          }
         }
       }
     }
@@ -162,7 +171,21 @@ export function attachQuizListeners() {
     const selStart = activeEl && 'selectionStart' in activeEl ? activeEl.selectionStart : null;
     const selEnd = activeEl && 'selectionEnd' in activeEl ? activeEl.selectionEnd : null;
 
-    if (configEl && (event === 'file-selected' || event === 'file-uploaded' || event === 'file-cleared' || event === 'file-upload-error' || event === 'prompt-parsed' || event === 'job-started' || event === 'job-completed' || event === 'job-error')) {
+    const reRenderEvents = [
+      'file-selected',
+      'file-uploaded',
+      'file-cleared',
+      'file-upload-error',
+      'step-changed',
+      'prompt-analyzing',
+      'prompt-parsed',
+      'prompt-analysis-finished',
+      'job-started',
+      'job-completed',
+      'job-error'
+    ];
+
+    if (configEl && reRenderEvents.includes(event)) {
       configEl.innerHTML = renderQuizConfigPanel(state);
       attachConfigHandlers();
     } else {
@@ -249,6 +272,12 @@ export function attachQuizListeners() {
         quizManager.setGdriveUrl(e.target.value);
         syncValidationUI();
       };
+      driveInput.onpaste = () => {
+        setTimeout(() => {
+          quizManager.setGdriveUrl(driveInput.value);
+          syncValidationUI();
+        }, 0);
+      };
     }
 
     // Prompt Box
@@ -262,6 +291,11 @@ export function attachQuizListeners() {
           quizManager.parsePrompt(promptInput.value);
         }
       };
+    }
+
+    const btnSkipPrompt = document.getElementById('btnQuizSkipPrompt');
+    if (btnSkipPrompt) {
+      btnSkipPrompt.onclick = () => quizManager.skipToManualParams();
     }
 
     // Parameters

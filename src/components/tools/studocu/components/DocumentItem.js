@@ -65,6 +65,8 @@ export function renderDocumentItem(doc, isTrash = false) {
           <a
             href="${downloadUrl}"
             download
+            target="_blank"
+            rel="noopener noreferrer"
             class="btn-action btn-dl"
             title="Tải về"
           >

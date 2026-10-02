@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v16.5';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v18.4';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -145,6 +145,11 @@ export function registerServiceWorker() {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadExistingController) {
       console.log('[PWA] Initial Service Worker activated. Skipping reload.');
+      return;
+    }
+    // Never disrupt in-flight tasks or active downloads
+    if (window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+      console.log('[PWA] Tasks are active in background. Skipping reload.');
       return;
     }
     performSafeReload('Controller updated');

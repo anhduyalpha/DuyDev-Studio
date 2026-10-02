@@ -49,7 +49,11 @@ export async function fetchFilesAndTrash() {
 
 export async function cancelJobApi(jobId) {
   if (!jobId) return false;
-  const res = await fetch(`/api/v1/studocu/cancel/${jobId}`, { method: 'POST' }).catch(() => null);
+  const res = await fetch(`/api/v1/studocu/cancel/${jobId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  }).catch(() => null);
   return res?.ok;
 }
 
@@ -64,6 +68,8 @@ export async function moveToTrashApi(filename) {
 export async function restoreFromTrashApi(filename) {
   const res = await fetch(`/api/v1/studocu/trash/restore/${encodeURIComponent(filename)}`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
     keepalive: true
   }).catch(() => null);
   return res?.ok;

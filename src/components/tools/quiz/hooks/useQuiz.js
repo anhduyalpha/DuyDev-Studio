@@ -8,6 +8,18 @@ import { showToast } from '../../../../utilities/toast.js';
 import { storage } from '../../../../utilities/storage.js';
 import { saveQuizHistoryPair } from '../utilities/quizHistoryHelper.js';
 
+export function isValidDriveUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const clean = url.trim();
+  if (!clean.startsWith('http://') && !clean.startsWith('https://')) return false;
+  try {
+    const parsed = new URL(clean);
+    return parsed.hostname.includes('drive.google.com') || parsed.hostname.includes('docs.google.com');
+  } catch {
+    return false;
+  }
+}
+
 class QuizManager {
   constructor() {
     this.state = {
@@ -20,6 +32,8 @@ class QuizManager {
       title: 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
       subtitle: '',
       prefix: '',
+      step: 1, // 1: Nguồn tài liệu, 2: Nhận diện thông minh, 3: Thông số chi tiết & Tạo đề
+      isAnalyzingPrompt: false,
       isProcessing: false,
       progress: 0,
       stage: '',
@@ -61,6 +75,9 @@ class QuizManager {
     if (!file) {
       this.state.file = null;
       this.state.fileId = null;
+      if (!isValidDriveUrl(this.state.gdriveUrl)) {
+        this.state.step = 1;
+      }
       this.notify('file-cleared');
       return;
     }
@@ -102,6 +119,7 @@ class QuizManager {
 
       this.state.fileId = upRes.fileId;
       this.state.file.status = 'ready';
+      this.state.step = Math.max(this.state.step, 2);
       this.notify('file-uploaded');
       showToast('Đã nạp tệp PDF nguồn', 'success');
     } catch (err) {
@@ -128,7 +146,22 @@ class QuizManager {
         this.state.fileId = null;
       }
     }
-    this.notify('gdrive-changed');
+
+    const prevStep = this.state.step;
+    const isDriveValid = isValidDriveUrl(clean);
+
+    if (isDriveValid) {
+      if (this.state.step < 2) {
+        this.state.step = 2;
+      }
+    } else if (!this.state.file || this.state.file.status !== 'ready') {
+      if (this.state.step !== 1) {
+        this.state.step = 1;
+      }
+    }
+
+    const stepChanged = this.state.step !== prevStep;
+    this.notify(stepChanged ? 'step-changed' : 'gdrive-changed');
   }
 
   setParams(params = {}) {
@@ -150,7 +183,15 @@ class QuizManager {
   }
 
   async parsePrompt(promptText) {
-    if (!promptText || !promptText.trim()) return;
+    if (!promptText || !promptText.trim()) {
+      showToast('Vui lòng nhập câu lệnh nhận diện', 'warning');
+      return;
+    }
+    if (this.state.isAnalyzingPrompt) return;
+
+    this.state.isAnalyzingPrompt = true;
+    this.notify('prompt-analyzing');
+
     try {
       const parsed = await parsePromptApi(promptText);
       if (parsed) {
@@ -159,12 +200,21 @@ class QuizManager {
         if (parsed.start !== undefined) this.state.start = Number(parsed.start);
         if (parsed.prefix) this.state.prefix = String(parsed.prefix);
         if (parsed.title) this.state.title = String(parsed.title);
+        this.state.step = 3;
         this.notify('prompt-parsed');
         showToast(`Đã nhận diện: Trang ${parsed.pages || '—'}, ${parsed.count || 20} câu (từ câu ${parsed.start || 1})`, 'success');
       }
     } catch (err) {
       showToast(err.message || 'Không thể nhận diện prompt', 'warning');
+    } finally {
+      this.state.isAnalyzingPrompt = false;
+      this.notify('prompt-analysis-finished');
     }
+  }
+
+  skipToManualParams() {
+    this.state.step = 3;
+    this.notify('step-changed');
   }
 
   async startGeneration() {

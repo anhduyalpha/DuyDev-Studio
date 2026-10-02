@@ -5,6 +5,7 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Readable } from 'stream';
+import path from 'path';
 import { StudocuDaemonService } from '../../services/studocu-daemon.service.js';
 
 const BACKEND_URL = 'http://127.0.0.1:8090';
@@ -97,7 +98,11 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
   app.post('/api/v1/studocu/trash/restore/*', async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
     try {
       const filename = encodeURIComponent(req.params['*']);
-      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash/restore/${filename}`, { method: 'POST' });
+      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash/restore/${filename}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
       return reply.status(status).send(data);
     } catch (err: any) {
       return reply.status(502).send({ error: 'Studocu engine unavailable: ' + err.message });
@@ -179,11 +184,14 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
         const lower = key.toLowerCase();
         if (
           !lower.startsWith('access-control-') &&
-          !['transfer-encoding', 'connection'].includes(lower)
+          !['transfer-encoding', 'connection', 'content-disposition'].includes(lower)
         ) {
           reply.header(key, val);
         }
       });
+
+      const cleanName = path.basename(filename);
+      reply.header('Content-Disposition', `attachment; filename="${cleanName}"; filename*=UTF-8''${encodeURIComponent(cleanName)}`);
 
       if (res.body) {
         const stream = Readable.fromWeb(res.body as any);

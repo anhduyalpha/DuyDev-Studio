@@ -75,8 +75,26 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   );
 
-  // 4. Register Request Logging Hook
+  // 3.2. Resilient JSON Parser (Gracefully handles empty body without syntax error)
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || (typeof body === 'string' && body.trim() === '')) {
+      done(null, {});
+      return;
+    }
+    try {
+      const json = JSON.parse(body as string);
+      done(null, json);
+    } catch (err: any) {
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  });
+
+  // 4. Register Request Logging & Default Content-Type Hook
   app.addHook('onRequest', async (req) => {
+    if (!req.headers['content-type'] && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      req.headers['content-type'] = 'application/json';
+    }
     logger.debug({ reqId: req.id, method: req.method, url: req.url }, 'Incoming request');
   });
 

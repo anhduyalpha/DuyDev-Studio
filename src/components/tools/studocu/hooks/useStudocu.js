@@ -39,6 +39,7 @@ class StudocuManager {
     this.sortOption = 'newest';
     this.subscribers = new Set();
     this.pollInterval = null;
+    this.pollTimeout = null;
     this.timerInterval = null;
     this.orbInstance = null;
   }
@@ -185,14 +186,43 @@ class StudocuManager {
     }
   }
 
+  stopPolling() {
+    if (this.pollTimeout) {
+      clearTimeout(this.pollTimeout);
+      this.pollTimeout = null;
+    }
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+
   startPolling(jobId) {
-    clearInterval(this.pollInterval);
-    this.pollInterval = setInterval(async () => {
+    this.stopPolling();
+    let isPollingTick = false;
+
+    const pollTick = async () => {
+      if (!this.isDownloading || this.currentJobId !== jobId) return;
+      if (isPollingTick) return;
+      isPollingTick = true;
+
       try {
         const res = await fetch(`/api/v1/studocu/status/${jobId}`);
-        if (!res.ok) return;
+        if (!this.isDownloading || this.currentJobId !== jobId) return;
+        if (!res.ok) {
+          if (this.isDownloading && this.currentJobId === jobId) {
+            this.pollTimeout = setTimeout(pollTick, 1000);
+          }
+          return;
+        }
         const job = await res.json().catch(() => null);
-        if (!job || job.error) return;
+        if (!this.isDownloading || this.currentJobId !== jobId) return;
+        if (!job || job.error) {
+          if (this.isDownloading && this.currentJobId === jobId) {
+            this.pollTimeout = setTimeout(pollTick, 1000);
+          }
+          return;
+        }
 
         if (Array.isArray(job.logs)) {
           this.logs = job.logs;
@@ -212,22 +242,38 @@ class StudocuManager {
         if (job.status === 'completed' || job.status === 'success') {
           this.progress = 100;
           this.finishJob(true, 'Tải hoàn tất');
+          return;
         } else if (job.status === 'error' || job.status === 'failed') {
           this.finishJob(false, job.error || 'Quá trình trích xuất gặp lỗi');
+          return;
         } else if (job.status === 'cancelled') {
           this.finishJob(false, 'Tiến trình đã bị hủy');
+          return;
         } else {
           this.notify();
         }
-      } catch (_) {}
-    }, 800);
+      } catch (_) {
+      } finally {
+        isPollingTick = false;
+        if (this.isDownloading && this.currentJobId === jobId) {
+          this.pollTimeout = setTimeout(pollTick, 800);
+        }
+      }
+    };
+
+    this.pollTimeout = setTimeout(pollTick, 800);
   }
 
   finishJob(isSuccess, message) {
-    saveActiveJob(null);
-    clearInterval(this.pollInterval);
-    clearInterval(this.timerInterval);
+    if (!this.isDownloading && !this.currentJobId) return;
     this.isDownloading = false;
+    this.currentJobId = null;
+    saveActiveJob(null);
+    this.stopPolling();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
     this.hasError = !isSuccess;
     this.stopThinkingOrbs();
 

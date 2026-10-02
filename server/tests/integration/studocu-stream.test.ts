@@ -78,4 +78,51 @@ describe('Studocu Document Stream Hardened Headers', () => {
     expect(res.headers['content-disposition']).toBe('inline');
     expect(res.headers['content-disposition']).not.toContain('filename=');
   });
+
+  it('handles trash restore POST with empty body and undefined content-type without 415 error', async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/trash/restore/')) {
+        return new Response(JSON.stringify({ success: true, action: 'restored' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return originalFetch(url, init);
+    });
+
+    // Send POST without Content-Type header or body
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/studocu/trash/restore/testdoc.pdf'
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.action).toBe('restored');
+  });
+
+  it('enforces attachment Content-Disposition on file download route', async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/downloads/')) {
+        return new Response(Buffer.from('%PDF-1.4 dummy pdf'), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Length': '19'
+          }
+        });
+      }
+      return originalFetch(url, init);
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/studocu/download/testdoc.pdf'
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-disposition']).toContain('attachment');
+    expect(res.headers['content-disposition']).toContain('filename="testdoc.pdf"');
+  });
 });
