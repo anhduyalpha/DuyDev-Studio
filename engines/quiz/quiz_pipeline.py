@@ -150,27 +150,61 @@ def is_running_header_or_footer(block_text: str, y0: float, y1: float, page_h: f
         return False
 
     header_footer_regex = re.compile(
-        r"^(?:trang\s*\d+(?:\s*[\/\-]\s*\d+)?|mã\s*đề(?:\s*thi)?\s*[:\d]+|sở\s*gd|phòng\s*gd|bộ\s*giáo\s*dục|"
-        r"kỳ\s*thi\s*tốt\s*nghiệp|đề\s*thi\s*thử|họ\s*(?:và\s*)?tên\s*:|số\s*báo\s*danh\s*:|hết|---\s*hết\s*---)$",
+        r"(?:trang\s*\d+(?:\s*[\/\-]\s*\d+)?|mã\s*đề(?:\s*thi)?\s*[:\d]+|sở\s*gd|phòng\s*gd|bộ\s*giáo\s*dục|"
+        r"kỳ\s*thi|đề\s*thi\s*thử|đề\s*chính\s*thức|họ\s*(?:và\s*)?tên|số\s*báo\s*danh|---\s*hết\s*---|\bhết\b)",
         re.IGNORECASE
     )
 
     # Check top 8% of page
     if y1 < page_h * 0.08:
-        if header_footer_regex.search(text) or (len(text) < 45 and ("trang" in text.lower() or "mã đề" in text.lower())):
+        if header_footer_regex.search(text) or (len(text) < 60 and ("trang" in text.lower() or "mã đề" in text.lower())):
             return True
     # Check bottom 8% of page
     if y0 > page_h * 0.92:
-        if header_footer_regex.search(text) or (len(text) < 45 and ("trang" in text.lower() or "hết" in text.lower())):
+        if header_footer_regex.search(text) or (len(text) < 60 and ("trang" in text.lower() or "hết" in text.lower())):
             return True
     return False
+
+
+def detect_column_gutter(page: pymupdf.Page, blocks: list) -> float:
+    """
+    Detect the vertical 2-column gutter boundary (x_split) from block coordinate distribution.
+    Returns x_split coordinate (defaults to page width / 2.0 if layout is single-column or ambiguous).
+    """
+    pw = page.rect.width
+    mid_x = pw / 2.0
+    if not blocks:
+        return mid_x
+
+    col1_rights = []
+    col2_lefts = []
+    for b in blocks:
+        x0, x1 = b[0], b[2]
+        b_w = x1 - x0
+        b_mid = (x0 + x1) / 2.0
+        # Ignore full-width spanning blocks
+        if b_w > pw * 0.65:
+            continue
+        if b_mid < mid_x and x1 <= mid_x + pw * 0.1:
+            col1_rights.append(x1)
+        elif b_mid >= mid_x and x0 >= mid_x - pw * 0.1:
+            col2_lefts.append(x0)
+
+    if col1_rights and col2_lefts:
+        r_max = max(col1_rights)
+        l_min = min(col2_lefts)
+        if r_max <= l_min and (0.35 * pw <= (r_max + l_min) / 2.0 <= 0.65 * pw):
+            return (r_max + l_min) / 2.0
+
+    return mid_x
 
 
 def sort_blocks_by_layout(page: pymupdf.Page, blocks: list = None) -> list:
     """
     Sort page blocks into natural human reading order.
-    Detects 2-column gutter and orders: Header -> Column 1 (top-to-bottom) -> Column 2 (top-to-bottom) -> Footer.
-    Eliminates horizontal interleaving between columns.
+    Detects 2-column gutter and orders text with band-based segmentation:
+    Spanning headers -> [Col 1 (top-to-bottom) then Col 2 (top-to-bottom)] -> Spanning mid-banners -> Footer.
+    Eliminates both horizontal interleaving and mid-page banner scrambles.
     """
     pw = page.rect.width
     ph = page.rect.height
@@ -196,14 +230,12 @@ def sort_blocks_by_layout(page: pymupdf.Page, blocks: list = None) -> list:
     if not filtered_blocks:
         return blocks
 
-    # Analyze column distribution
+    x_split = detect_column_gutter(page, filtered_blocks)
+    gutter_margin = pw * 0.03
+
     col1_candidates = []
     col2_candidates = []
     spanning_candidates = []
-
-    mid_x = pw / 2.0
-    gutter_left = mid_x - pw * 0.04
-    gutter_right = mid_x + pw * 0.04
 
     for b in filtered_blocks:
         x0, y0, x1, y1 = b[0], b[1], b[2], b[3]
@@ -211,59 +243,63 @@ def sort_blocks_by_layout(page: pymupdf.Page, blocks: list = None) -> list:
         b_width = x1 - x0
 
         # Spanning banner if wide enough across the middle
-        if b_width > pw * 0.62 or (x0 < gutter_left and x1 > gutter_right):
+        if b_width > pw * 0.62 or (x0 < (x_split - gutter_margin) and x1 > (x_split + gutter_margin)):
             spanning_candidates.append(b)
-        elif b_mid < mid_x and x1 <= gutter_right:
+        elif b_mid < x_split:
             col1_candidates.append(b)
-        elif b_mid >= mid_x and x0 >= gutter_left:
-            col2_candidates.append(b)
         else:
-            if b_mid < mid_x:
-                col1_candidates.append(b)
-            else:
-                col2_candidates.append(b)
+            col2_candidates.append(b)
 
     is_two_column = (
-        len(col1_candidates) >= 2
-        and len(col2_candidates) >= 2
-        and len(spanning_candidates) <= max(2, int(0.35 * (len(col1_candidates) + len(col2_candidates))))
+        len(col1_candidates) >= 1
+        and len(col2_candidates) >= 1
+        and len(spanning_candidates) <= max(3, int(0.5 * (len(col1_candidates) + len(col2_candidates))))
     )
 
     if not is_two_column:
         # Standard 1-column layout: sort purely by y0 ascending, then x0
         return sorted(filtered_blocks, key=lambda b: (round(b[1], 1), round(b[0], 1)))
 
-    col_min_y = min(
-        min((b[1] for b in col1_candidates), default=ph),
-        min((b[1] for b in col2_candidates), default=ph)
-    )
-    col_max_y = max(
-        max((b[3] for b in col1_candidates), default=0),
-        max((b[3] for b in col2_candidates), default=0)
-    )
+    # Sort spanning banners vertically
+    spanning_candidates.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
 
-    top_banners = []
-    bottom_banners = []
-    remaining_col1 = list(col1_candidates)
-    remaining_col2 = list(col2_candidates)
+    # Build vertical bands separated by spanning banners
+    ordered_result = []
 
-    for b in spanning_candidates:
-        if b[3] <= col_min_y + 15:
-            top_banners.append(b)
-        elif b[1] >= col_max_y - 15:
-            bottom_banners.append(b)
-        else:
-            if (b[0] + b[2]) / 2.0 < mid_x:
-                remaining_col1.append(b)
-            else:
-                remaining_col2.append(b)
+    # If no spanning banners, standard 2-column sort: Col 1 top-to-bottom, then Col 2 top-to-bottom
+    if not spanning_candidates:
+        col1_candidates.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+        col2_candidates.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+        return col1_candidates + col2_candidates
 
-    top_banners.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+    # Partition column blocks into bands defined by spanning elements
+    prev_y = -1.0
+    for span_b in spanning_candidates:
+        span_y0 = span_b[1]
+        span_y1 = span_b[3]
+
+        # Blocks strictly above this spanning block (and below previous spanning block)
+        band_col1 = [b for b in col1_candidates if prev_y <= b[1] < span_y0 + 5]
+        band_col2 = [b for b in col2_candidates if prev_y <= b[1] < span_y0 + 5]
+
+        band_col1.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+        band_col2.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+
+        ordered_result.extend(band_col1)
+        ordered_result.extend(band_col2)
+        ordered_result.append(span_b)
+
+        prev_y = max(prev_y, span_y1 - 5)
+
+    # Remaining blocks below the last spanning banner
+    remaining_col1 = [b for b in col1_candidates if b[1] >= prev_y]
+    remaining_col2 = [b for b in col2_candidates if b[1] >= prev_y]
     remaining_col1.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
     remaining_col2.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
-    bottom_banners.sort(key=lambda b: (round(b[1], 1), round(b[0], 1)))
+    ordered_result.extend(remaining_col1)
+    ordered_result.extend(remaining_col2)
 
-    return top_banners + remaining_col1 + remaining_col2 + bottom_banners
+    return ordered_result
 
 
 # ==============================================================================
@@ -372,6 +408,7 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
 
             assets.append({
                 "id": asset_id,
+                "name": f"{asset_id}.png",
                 "page": page_num,
                 "rect": (rect.x0, rect.y0, rect.x1, rect.y1),
                 "data_uri": b64_data,
@@ -383,13 +420,26 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
     return assets
 
 
-def link_assets_to_questions(questions: list[dict], assets: list[dict]) -> None:
+def clean_image_markers(text: str) -> str:
+    """Purge internal [IMAGE_REF: ...] markers from human-facing text."""
+    if not text:
+        return ""
+    return re.sub(r"\[IMAGE_REF:\s*[^\]]+\]", "", str(text)).strip()
+
+
+def link_assets_to_questions(questions: list[dict], assets: list[dict], asset_question_map: dict = None) -> None:
     """
     Link extracted visual assets to question objects.
-    Preserves AI-assigned image_ref, or uses Spatial & Marker Fallbacks.
-    Attaches base64 data_uri to question['image_data'].
+    Combines: Direct AI match -> Layout Spatial Map -> Marker Match -> Proximity Fallback.
+    Always cleans internal markers and sets base64 data_uri.
     """
-    assets_by_id = {a["id"]: a for a in assets}
+    assets_by_id = {}
+    for a in assets:
+        a_id = str(a.get("id") or a.get("name", "")).replace(".png", "").strip()
+        if a_id:
+            assets_by_id[a_id] = a
+            assets_by_id[f"{a_id}.png"] = a
+    asset_map = asset_question_map or {}
 
     # 1. Direct AI match
     for q in questions:
@@ -398,36 +448,59 @@ def link_assets_to_questions(questions: list[dict], assets: list[dict]) -> None:
             clean_ref = str(ref).replace(".png", "").strip()
             if clean_ref in assets_by_id:
                 q["image_ref"] = f"{clean_ref}.png"
-                q["image_data"] = assets_by_id[clean_ref]["data_uri"]
+                q["image_data"] = assets_by_id[clean_ref].get("data_uri")
             elif ref in assets_by_id:
                 q["image_ref"] = f"{ref}.png"
-                q["image_data"] = assets_by_id[ref]["data_uri"]
+                q["image_data"] = assets_by_id[ref].get("data_uri")
+            else:
+                q["image_ref"] = None
 
-    # 2. Text marker match: if [IMAGE_REF: ...] was embedded in question text
+    # 2. Layout Spatial Map: match asset mapped to question number in layout order
+    assigned_assets = {str(q.get("image_ref", "")).replace(".png", "") for q in questions if q.get("image_data")}
     for q in questions:
         if not q.get("image_data"):
-            q_text = str(q.get("question", ""))
-            marker_match = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)(?:\.png)?\]", q_text)
+            q_num = q.get("number")
+            for a_id, mapped_q_num in asset_map.items():
+                if mapped_q_num == q_num and a_id in assets_by_id and a_id not in assigned_assets:
+                    q["image_ref"] = f"{a_id}.png"
+                    q["image_data"] = assets_by_id[a_id].get("data_uri")
+                    assigned_assets.add(a_id)
+                    break
+
+    # 3. Text marker match: if [IMAGE_REF: ...] was embedded in question text, options, or statements
+    for q in questions:
+        if not q.get("image_data"):
+            full_q_text = str(q.get("question", "")) + " " + json.dumps(q.get("options", {})) + " " + json.dumps(q.get("statements", {}))
+            marker_match = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)(?:\.png)?\]", full_q_text)
             if marker_match:
                 asset_id = marker_match.group(1)
-                if asset_id in assets_by_id:
+                if asset_id in assets_by_id and asset_id not in assigned_assets:
                     q["image_ref"] = f"{asset_id}.png"
-                    q["image_data"] = assets_by_id[asset_id]["data_uri"]
-                    q["question"] = re.sub(r"\[IMAGE_REF:\s*fig_p\d+_\d+(?:\.png)?\]", "", q_text).strip()
+                    q["image_data"] = assets_by_id[asset_id].get("data_uri")
+                    assigned_assets.add(asset_id)
 
-    # 3. Spatial proximity fallback: assign remaining unassigned assets to questions mentioning figures
-    assigned_assets = {str(q.get("image_ref", "")).replace(".png", "") for q in questions if q.get("image_ref")}
-    unassigned_assets = [a for a in assets if a["id"] not in assigned_assets]
-
+    # 4. Keyword proximity fallback: assign remaining unassigned assets to questions mentioning figures
+    unassigned_assets = [
+        a for a in assets
+        if str(a.get("id") or a.get("name", "")).replace(".png", "").strip() not in assigned_assets
+    ]
     if unassigned_assets:
         for q in questions:
             if not q.get("image_data"):
                 q_text = str(q.get("question", "")).lower()
-                if any(w in q_text for w in ["hình vẽ", "hình bên", "hình dưới", "đồ thị", "thí nghiệm", "sơ đồ", "bảng sau"]):
+                if any(w in q_text for w in ["hình vẽ", "hình bên", "hình dưới", "đồ thị", "thí nghiệm", "sơ đồ", "bảng sau", "hình sau"]):
                     if unassigned_assets:
                         chosen = unassigned_assets.pop(0)
-                        q["image_ref"] = f"{chosen['id']}.png"
-                        q["image_data"] = chosen["data_uri"]
+                        chosen_id = str(chosen.get("id") or chosen.get("name", "")).replace(".png", "").strip()
+                        q["image_ref"] = f"{chosen_id}.png"
+                        q["image_data"] = chosen.get("data_uri")
+                        assigned_assets.add(chosen_id)
+
+    # Final cleanup: clean markers from all question fields and sanitize image_ref
+    for q in questions:
+        q["question"] = clean_image_markers(q.get("question", ""))
+        if not q.get("image_data"):
+            q["image_ref"] = None
 
 
 # ==============================================================================
@@ -505,16 +578,22 @@ def is_question_dangling(text: str) -> bool:
     last_q_start = q_matches[-1].start()
     last_q_text = trimmed[last_q_start:]
 
-    has_a = bool(re.search(r"(?:^|\s)A[\.\:]", last_q_text))
-    has_b = bool(re.search(r"(?:^|\s)B[\.\:]", last_q_text))
-    has_c = bool(re.search(r"(?:^|\s)C[\.\:]", last_q_text))
-    has_d = bool(re.search(r"(?:^|\s)D[\.\:]", last_q_text))
+    # Check standard 4-option MCQ: A, B, C, D (supports '.' and ')')
+    has_mcq_a = bool(re.search(r"(?:^|\s)[A][\.\)\:]", last_q_text))
+    has_mcq_c = bool(re.search(r"(?:^|\s)[C][\.\)\:]", last_q_text))
+    has_mcq_d = bool(re.search(r"(?:^|\s)[D][\.\)\:]", last_q_text))
+    if has_mcq_a and (not has_mcq_c or not has_mcq_d):
+        return True
 
-    if has_a and (not has_c or not has_d):
+    # Check GDPT 2018 True/False: statements a, b, c, d (supports '.' and ')')
+    has_tf_a = bool(re.search(r"(?:^|\s)[aA][\.\)\:]", last_q_text))
+    has_tf_c = bool(re.search(r"(?:^|\s)[cC][\.\)\:]", last_q_text))
+    has_tf_d = bool(re.search(r"(?:^|\s)[dD][\.\)\:]", last_q_text))
+    if has_tf_a and (not has_tf_c or not has_tf_d):
         return True
 
     last_line = last_q_text.strip().split("\n")[-1].strip()
-    if last_line.endswith((":", ",", "là", "thì", "gồm", "được", "có")):
+    if last_line.endswith((":", ",", "là", "thì", "gồm", "được", "có", "sau:", "dưới đây:")):
         return True
     return False
 
@@ -549,10 +628,11 @@ def extract_structured_page_content(
     page: pymupdf.Page,
     page_num: int,
     temp_assets_dir: str
-) -> tuple[str, list[dict]]:
+) -> tuple[str, list[dict], dict]:
     """
     Assemble text blocks, structured Markdown tables, and visual assets on a page
     in natural layout order (Module 1.1 + 1.2 + 1.3).
+    Returns (page_text, assets, asset_question_map).
     """
     tables = extract_tables_with_structure(page)
     assets = extract_visual_assets(page, page_num, temp_assets_dir)
@@ -563,6 +643,9 @@ def extract_structured_page_content(
     table_rects = [pymupdf.Rect(t["bbox"]) for t in tables]
 
     for b in raw_blocks:
+        # Only process text blocks (block_type == 0)
+        if len(b) > 6 and b[6] != 0:
+            continue
         x0, y0, x1, y1, text = b[0], b[1], b[2], b[3], str(b[4])
         b_rect = pymupdf.Rect(x0, y0, x1, y1)
         inside_table = False
@@ -585,10 +668,34 @@ def extract_structured_page_content(
     sorted_blocks = sort_blocks_by_layout(page, content_blocks)
     page_text = "\n".join(str(b[4]).strip() for b in sorted_blocks if str(b[4]).strip())
 
-    return page_text, assets
+    # Build spatial mapping: link each image marker to the adjacent question in layout order
+    page_asset_map = {}
+    curr_q_num = None
+    for b in sorted_blocks:
+        text = str(b[4]).strip()
+        q_m = re.search(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", text)
+        if q_m:
+            curr_q_num = int(q_m.group(1) or q_m.group(2))
+        m_img = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)\]", text)
+        if m_img and curr_q_num is not None:
+            page_asset_map[m_img.group(1)] = curr_q_num
+
+    # For any assets not yet mapped (e.g. image placed immediately above question stem), look ahead
+    for i, b in enumerate(sorted_blocks):
+        text = str(b[4]).strip()
+        m_img = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)\]", text)
+        if m_img and m_img.group(1) not in page_asset_map:
+            for next_b in sorted_blocks[i + 1:i + 4]:
+                next_text = str(next_b[4]).strip()
+                next_qm = re.search(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", next_text)
+                if next_qm:
+                    page_asset_map[m_img.group(1)] = int(next_qm.group(1) or next_qm.group(2))
+                    break
+
+    return page_text, assets, page_asset_map
 
 
-def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tuple[str, list[int], list[dict]]:
+def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tuple[str, list[int], list[dict], dict]:
     """Extract structured text, tables, and visual assets from PDF for specified pages (1-indexed)."""
     try:
         doc = pymupdf.open(pdf_path)
@@ -609,14 +716,16 @@ def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tu
     extracted_pages = []
     actual_pages = []
     all_assets = []
+    all_asset_map = {}
 
     for p in page_nums:
         if 1 <= p <= total_pages:
             idx = p - 1
-            page_text, page_assets = extract_structured_page_content(doc[idx], p, temp_assets_dir)
+            page_text, page_assets, page_asset_map = extract_structured_page_content(doc[idx], p, temp_assets_dir)
             extracted_pages.append(page_text)
             actual_pages.append(p)
             all_assets.extend(page_assets)
+            all_asset_map.update(page_asset_map)
         else:
             raise ValueError(f"Trang {p} vượt quá tổng số {total_pages} trang của tài liệu PDF.")
 
@@ -628,7 +737,7 @@ def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tu
             "Tài liệu có thể là ảnh scan thuần túy. Vui lòng chọn trang có lớp chữ hoặc OCR trước."
         )
 
-    return stitched_text, actual_pages, all_assets
+    return stitched_text, actual_pages, all_assets, all_asset_map
 
 
 # ==============================================================================
@@ -702,16 +811,29 @@ def call_agnes_api(
 
 def chunk_questions_sliding_window(full_text: str, target_count: int, window_size: int = 10) -> list[tuple[int, int, str]]:
     """
-    Pre-split candidate text into windows with 1-question overlap buffer
-    to prevent Lost-in-the-Middle and token overflow on long exams.
+    Pre-split candidate text into windows with clean question boundaries.
+    Filters out document headers/preambles so question indexing is aligned.
     Returns list of (start_num, end_num, window_text).
     """
-    pattern = re.compile(r"(?:^|\n)(?=(?:Câu\s*\d+|\b\d+\s*[\.\:]\s*[A-ZÀ-Ỹ]))", re.IGNORECASE)
+    pattern = re.compile(r"(?:^|\n)(?=(?:Câu\s*\d+[\.\:\s]|\b\d+[\.\:]\s+))", re.IGNORECASE)
     splits = pattern.split(full_text)
-    segments = [s.strip() for s in splits if s and len(s.strip()) > 15]
+
+    segments = []
+    preamble = ""
+    for s in splits:
+        trimmed = s.strip()
+        if not trimmed:
+            continue
+        if re.match(r"^(?:Câu\s*\d+[\.\:\s]|\b\d+[\.\:]\s+)", trimmed, re.IGNORECASE):
+            segments.append(trimmed)
+        elif not segments and len(trimmed) > 10:
+            preamble = trimmed
+
+    if not segments:
+        return [(1, target_count, full_text)]
 
     if len(segments) <= window_size:
-        return [(1, target_count, full_text)]
+        return [(1, min(len(segments), target_count), full_text)]
 
     windows = []
     total_segs = min(len(segments), target_count)
@@ -720,14 +842,128 @@ def chunk_questions_sliding_window(full_text: str, target_count: int, window_siz
     while curr < total_segs:
         w_start = curr
         w_end = min(curr + window_size, total_segs)
-        buf_start = max(0, w_start - 1) if w_start > 0 else 0
-        buf_end = min(len(segments), w_end + 1) if w_end < len(segments) else len(segments)
-
-        window_text = "\n\n".join(segments[buf_start:buf_end])
+        window_text = "\n\n".join(segments[w_start:w_end])
         windows.append((w_start + 1, w_end, window_text))
         curr = w_end
 
     return windows
+
+
+def normalize_question(q: dict, fallback_num: int = 1) -> dict:
+    """Defensively validate, sanitize, and normalize multi-format question schema."""
+    if not isinstance(q, dict):
+        q = {}
+
+    # Number
+    num = q.get("number")
+    if not isinstance(num, int):
+        m = re.search(r"\d+", str(num))
+        if m:
+            num = int(m.group(0))
+        else:
+            num = fallback_num
+    q["number"] = num
+
+    # Type
+    q_type = str(q.get("type", "mcq")).lower().strip()
+    if q_type not in ("mcq", "true_false_group", "short_answer"):
+        if "statements" in q:
+            q_type = "true_false_group"
+        elif "options" in q:
+            q_type = "mcq"
+        else:
+            q_type = "mcq"
+    q["type"] = q_type
+
+    # Question stem
+    q["question"] = clean_image_markers(str(q.get("question", "")))
+
+    # Image ref
+    img_ref = q.get("image_ref")
+    if img_ref:
+        s_ref = str(img_ref).strip()
+        if s_ref.lower() in ("null", "none", "", "undefined"):
+            q["image_ref"] = None
+        else:
+            q["image_ref"] = s_ref
+    else:
+        q["image_ref"] = None
+
+    # Explanation
+    q["explanation"] = clean_image_markers(str(q.get("explanation", "")))
+
+    # MCQ options normalization
+    if q_type == "mcq":
+        raw_opts = q.get("options")
+        norm_opts = {}
+        if isinstance(raw_opts, list):
+            keys = ["A", "B", "C", "D"]
+            for i, val in enumerate(raw_opts[:4]):
+                clean_val = clean_image_markers(str(val))
+                clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
+                norm_opts[keys[i]] = clean_val
+        elif isinstance(raw_opts, dict):
+            for k, val in raw_opts.items():
+                upper_k = str(k).upper().strip()
+                if upper_k in ("A", "B", "C", "D"):
+                    clean_val = clean_image_markers(str(val))
+                    clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
+                    norm_opts[upper_k] = clean_val
+        for k in ["A", "B", "C", "D"]:
+            if k not in norm_opts:
+                norm_opts[k] = ""
+        q["options"] = norm_opts
+        ans = str(q.get("answer", "")).upper().strip()
+        ans_m = re.search(r"\b([A-D])\b", ans)
+        q["answer"] = ans_m.group(1) if ans_m else (ans[:1] if ans in ("A", "B", "C", "D") else "A")
+
+    # True/False statements normalization
+    elif q_type == "true_false_group":
+        raw_stmts = q.get("statements")
+        norm_stmts = {}
+        tf_keys = ["a", "b", "c", "d"]
+        if isinstance(raw_stmts, list):
+            for i, item in enumerate(raw_stmts[:4]):
+                k = tf_keys[i]
+                if isinstance(item, dict):
+                    raw_txt = item.get("text") or item.get("statement") or item.get("content") or ""
+                    txt = clean_image_markers(str(raw_txt))
+                    txt = re.sub(r"^[a-dA-D][\.\)\:\s]+", "", txt).strip()
+                    is_cor = item.get("is_correct") if "is_correct" in item else (item.get("isCorrect") if "isCorrect" in item else item.get("correct"))
+                    norm_stmts[k] = {
+                        "text": txt,
+                        "is_correct": True if (is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")) else False
+                    }
+                else:
+                    norm_stmts[k] = {"text": clean_image_markers(str(item)), "is_correct": False}
+        elif isinstance(raw_stmts, dict):
+            for k, item in raw_stmts.items():
+                lower_k = str(k).lower().strip()
+                if lower_k in tf_keys:
+                    if isinstance(item, dict):
+                        raw_txt = item.get("text") or item.get("statement") or item.get("content") or ""
+                        txt = clean_image_markers(str(raw_txt))
+                        txt = re.sub(r"^[a-dA-D][\.\)\:\s]+", "", txt).strip()
+                        is_cor = item.get("is_correct") if "is_correct" in item else (item.get("isCorrect") if "isCorrect" in item else item.get("correct"))
+                        norm_stmts[lower_k] = {
+                            "text": txt,
+                            "is_correct": True if (is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")) else False
+                        }
+                    else:
+                        norm_stmts[lower_k] = {"text": clean_image_markers(str(item)), "is_correct": False}
+        for k in tf_keys:
+            if k not in norm_stmts:
+                norm_stmts[k] = {"text": "", "is_correct": False}
+        q["statements"] = norm_stmts
+        if not q.get("answer"):
+            tags = [f"{k}-{'Đ' if norm_stmts[k]['is_correct'] else 'S'}" for k in tf_keys]
+            q["answer"] = ", ".join(tags)
+
+    # Short answer normalization
+    elif q_type == "short_answer":
+        q["answer"] = str(q.get("answer", "-")).strip()
+
+    return q
 
 
 def parse_and_standardize_questions(
@@ -863,12 +1099,8 @@ def parse_and_standardize_questions(
 
         for idx, q in enumerate(batch_qs):
             target_num = b_start + idx
-            if "number" not in q or not isinstance(q["number"], int):
-                q["number"] = target_num
-            # Default question type to 'mcq' if missing
-            if not q.get("type"):
-                q["type"] = "mcq"
-            all_questions.append(q)
+            norm_q = normalize_question(q, fallback_num=target_num)
+            all_questions.append(norm_q)
 
         emit_progress(
             int(start_progress + (b_idx + 1) * prog_step),
@@ -899,13 +1131,13 @@ def determine_option_layout(options: dict) -> str:
 def render_question_content_html(q: dict) -> str:
     """Render question stem, embedded image (if any), and options/statements according to type."""
     q_type = q.get("type", "mcq")
-    raw_text = q.get("question", "")
+    raw_text = clean_image_markers(q.get("question", ""))
     q_text_formatted = format_tables_in_text(raw_text)
 
-    # Embedded image box
+    # Embedded image box (guarded against null strings)
     img_html = ""
-    img_src = q.get("image_data") or q.get("image_ref")
-    if img_src:
+    img_src = q.get("image_data")
+    if img_src and str(img_src).lower() not in ("null", "none", "", "undefined"):
         img_html = f"""
     <div class="q-image-box">
       <img src="{img_src}" alt="Hình minh họa" />
@@ -917,6 +1149,7 @@ def render_question_content_html(q: dict) -> str:
         for key in ["a", "b", "c", "d"]:
             stmt_val = stmts.get(key, {})
             text = stmt_val.get("text", "") if isinstance(stmt_val, dict) else str(stmt_val)
+            text = clean_image_markers(text)
             stmt_rows.append(f"""
         <tr>
           <td class="tf-text"><b>{key})</b> {text}</td>
@@ -955,7 +1188,7 @@ def render_question_content_html(q: dict) -> str:
         col_class = determine_option_layout(opts)
         opt_items = []
         for key in ["A", "B", "C", "D"]:
-            val = opts.get(key, "")
+            val = clean_image_markers(str(opts.get(key, "")))
             opt_items.append(f'<div class="opt-item"><span class="opt-letter">{key}.</span> {val}</div>')
         opts_rendered = "\n      ".join(opt_items)
         body = f"""
@@ -1016,7 +1249,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 <title>{title}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body, {{delimiters: [{{left: '$$', right: '$$', display: true}}, {{left: '$', right: '$', display: false}}, {{left: '\\\\(', right: '\\\\)', display: false}}, {{left: '\\\\[', right: '\\\\]', display: true}}]}});"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 <style>
   @page {{
     size: A4 portrait;
@@ -1252,6 +1485,21 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 
 {body_content}
 
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {{
+      if (typeof renderMathInElement === 'function') {{
+        renderMathInElement(document.body, {{
+          delimiters: [
+            {{left: '$$', right: '$$', display: true}},
+            {{left: '$', right: '$', display: false}},
+            {{left: '\\(', right: '\\)', display: false}},
+            {{left: '\\[', right: '\\]', display: true}}
+          ],
+          throwOnError: false
+        }});
+      }}
+    }});
+  </script>
 </body>
 </html>
 """
@@ -1290,8 +1538,10 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
             cells = []
             for k in ["a", "b", "c", "d"]:
                 s = stmts.get(k, {})
-                is_cor = s.get("is_correct") if isinstance(s, dict) else None
-                tag = "Đ" if is_cor is True else ("S" if is_cor is False else "-")
+                is_cor = s.get("is_correct") if isinstance(s, dict) else s
+                is_truthy = is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")
+                is_falsy = is_cor is False or str(is_cor).lower() in ("false", "0", "s", "sai")
+                tag = "Đ" if is_truthy else ("S" if is_falsy else "-")
                 cells.append(f"<td><b>{tag}</b></td>")
             rows.append(f"<tr><th>Câu {num}</th>{''.join(cells)}</tr>")
         tf_matrix_html = "\n    ".join(rows)
@@ -1325,12 +1575,12 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
         num = q.get("number", idx)
         q_type = q.get("type", "mcq")
         ans = q.get("answer", "-")
-        expl = format_tables_in_text(q.get("explanation", ""))
+        expl = format_tables_in_text(clean_image_markers(q.get("explanation", "")))
         break_class = " page-break-before" if (idx > 1 and (idx - 1) % questions_per_page == 0) else ""
 
         img_html = ""
-        img_src = q.get("image_data") or q.get("image_ref")
-        if img_src:
+        img_src = q.get("image_data")
+        if img_src and str(img_src).lower() not in ("null", "none", "", "undefined"):
             img_html = f'<div class="sol-img"><img src="{img_src}" alt="Hình minh họa" /></div>'
 
         if q_type == "true_false_group":
@@ -1339,9 +1589,11 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
             for k in ["a", "b", "c", "d"]:
                 s = stmts.get(k, {})
                 s_text = s.get("text", "") if isinstance(s, dict) else str(s)
-                is_cor = s.get("is_correct") if isinstance(s, dict) else None
-                s_tag = "ĐÚNG" if is_cor is True else ("SAI" if is_cor is False else "")
-                tag_class = "tag-true" if is_cor is True else "tag-false"
+                s_text = clean_image_markers(s_text)
+                is_cor = s.get("is_correct") if isinstance(s, dict) else s
+                is_truthy = is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")
+                s_tag = "ĐÚNG" if is_truthy else "SAI"
+                tag_class = "tag-true" if is_truthy else "tag-false"
                 stmt_lines.append(f'<div><b>{k})</b> <span class="{tag_class}">[{s_tag}]</span> {s_text}</div>')
             stmts_detail = "\n      ".join(stmt_lines)
             sol = f"""
@@ -1374,7 +1626,7 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 <title>ĐÁP ÁN & LỜI GIẢI CHI TIẾT - {title}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body, {{delimiters: [{{left: '$$', right: '$$', display: true}}, {{left: '$', right: '$', display: false}}, {{left: '\\\\(', right: '\\\\)', display: false}}, {{left: '\\\\[', right: '\\\\]', display: true}}]}});"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 <style>
   @page {{
     size: A4 portrait;
@@ -1572,6 +1824,21 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 
 {sols_rendered}
 
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {{
+      if (typeof renderMathInElement === 'function') {{
+        renderMathInElement(document.body, {{
+          delimiters: [
+            {{left: '$$', right: '$$', display: true}},
+            {{left: '$', right: '$', display: false}},
+            {{left: '\\(', right: '\\)', display: false}},
+            {{left: '\\[', right: '\\]', display: true}}
+          ],
+          throwOnError: false
+        }});
+      }}
+    }});
+  </script>
 </body>
 </html>
 """
@@ -1718,98 +1985,102 @@ def run_pipeline(
     temp_assets_dir = os.path.join(temp_dir, f"quiz_assets_{uuid.uuid4().hex[:8]}")
     os.makedirs(temp_assets_dir, exist_ok=True)
 
+    ws_html_path = os.path.join(temp_dir, f"{clean_prefix}_DeBai.html")
+    ans_html_path = os.path.join(temp_dir, f"{clean_prefix}_DapAn.html")
+
     key = api_key or DEFAULT_API_KEY
     if not key:
         raise ValueError("Thiếu API Key của Agnes AI! Vui lòng cung cấp trong tham số hoặc biến môi trường.")
 
-    emit_progress(10, "Đang nạp tài liệu & kiểm tra định dạng PDF...")
-    pdf_local = download_gdrive_if_needed(input_source, temp_dir)
+    try:
+        emit_progress(10, "Đang nạp tài liệu & kiểm tra định dạng PDF...")
+        pdf_local = download_gdrive_if_needed(input_source, temp_dir)
 
-    emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
-    raw_text, actual_pages, extracted_assets = extract_raw_pages(pdf_local, pages, temp_assets_dir)
+        emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
+        raw_text, actual_pages, extracted_assets, asset_map = extract_raw_pages(pdf_local, pages, temp_assets_dir)
 
-    emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")
-    questions = parse_and_standardize_questions(
-        raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model
-    )
+        emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")
+        questions = parse_and_standardize_questions(
+            raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model
+        )
 
-    # Link visual assets to questions
-    link_assets_to_questions(questions, extracted_assets)
+        # Link visual assets to questions using AI match, layout spatial map, and fallbacks
+        link_assets_to_questions(questions, extracted_assets, asset_map)
 
-    # Compute question type breakdown
-    mcq_count = sum(1 for q in questions if q.get("type", "mcq") == "mcq")
-    tf_count = sum(1 for q in questions if q.get("type") == "true_false_group")
-    sa_count = sum(1 for q in questions if q.get("type") == "short_answer")
+        # Compute question type breakdown
+        mcq_count = sum(1 for q in questions if q.get("type", "mcq") == "mcq")
+        tf_count = sum(1 for q in questions if q.get("type") == "true_false_group")
+        sa_count = sum(1 for q in questions if q.get("type") == "short_answer")
 
-    emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
-    q_per_page = 10 if count >= 15 else (count // 2 if count > 6 else count)
-    worksheet_html = generate_worksheet_html(title, subtitle, questions, questions_per_page=q_per_page)
-    answer_html = generate_answer_key_html(title, subtitle, questions, questions_per_page=q_per_page)
+        emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
+        q_per_page = 10 if count >= 15 else (count // 2 if count > 6 else count)
+        worksheet_html = generate_worksheet_html(title, subtitle, questions, questions_per_page=q_per_page)
+        answer_html = generate_answer_key_html(title, subtitle, questions, questions_per_page=q_per_page)
 
-    ws_html_path = os.path.join(temp_dir, f"{clean_prefix}_DeBai.html")
-    ans_html_path = os.path.join(temp_dir, f"{clean_prefix}_DapAn.html")
-    with open(ws_html_path, "w", encoding="utf-8") as f:
-        f.write(worksheet_html)
-    with open(ans_html_path, "w", encoding="utf-8") as f:
-        f.write(answer_html)
+        with open(ws_html_path, "w", encoding="utf-8") as f:
+            f.write(worksheet_html)
+        with open(ans_html_path, "w", encoding="utf-8") as f:
+            f.write(answer_html)
 
-    emit_progress(80, "Google Chrome Headless đang in ấn tệp PDF Đề bài và Đáp án...")
-    chrome = find_chrome_path()
-    ws_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
-    ans_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.pdf")
+        emit_progress(80, "Google Chrome Headless đang in ấn tệp PDF Đề bài và Đáp án...")
+        chrome = find_chrome_path()
+        ws_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
+        ans_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.pdf")
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        f_ws = executor.submit(compile_pdf, chrome, ws_html_path, ws_pdf_path)
-        f_ans = executor.submit(compile_pdf, chrome, ans_html_path, ans_pdf_path)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            f_ws = executor.submit(compile_pdf, chrome, ws_html_path, ws_pdf_path)
+            f_ans = executor.submit(compile_pdf, chrome, ans_html_path, ans_pdf_path)
 
-        curr_p = 82
-        elapsed = 0
-        while not (f_ws.done() and f_ans.done()):
-            time.sleep(1.0)
-            elapsed += 1
-            if curr_p < 93:
-                curr_p += 1
-            emit_progress(curr_p, f"Đang xuất tệp PDF Đề bài và Đáp án qua Chrome ({elapsed}s)...")
+            curr_p = 82
+            elapsed = 0
+            while not (f_ws.done() and f_ans.done()):
+                time.sleep(1.0)
+                elapsed += 1
+                if curr_p < 93:
+                    curr_p += 1
+                emit_progress(curr_p, f"Đang xuất tệp PDF Đề bài và Đáp án qua Chrome ({elapsed}s)...")
 
-        f_ws.result()
-        f_ans.result()
+            f_ws.result()
+            f_ans.result()
 
-    emit_progress(95, "Đang kiểm tra tính toàn vẹn của tệp PDF xuất ra...")
-    ws_pages = verify_pdf_pages(ws_pdf_path)
-    ans_pages = verify_pdf_pages(ans_pdf_path)
+        emit_progress(95, "Đang kiểm tra tính toàn vẹn của tệp PDF xuất ra...")
+        ws_pages = verify_pdf_pages(ws_pdf_path)
+        ans_pages = verify_pdf_pages(ans_pdf_path)
 
-    # Cleanup temp HTML and temp asset PNGs
-    for temp_f in [ws_html_path, ans_html_path]:
+        emit_progress(100, "Hoàn tất tạo Đề bài và Đáp án chi tiết v2.0!")
+
+        result = {
+            "success": True,
+            "worksheet_pdf": ws_pdf_path,
+            "answer_pdf": ans_pdf_path,
+            "worksheet_pages": ws_pages,
+            "answer_pages": ans_pages,
+            "questions_count": len(questions),
+            "extracted_images_count": len(extracted_assets),
+            "question_types": {
+                "mcq": mcq_count,
+                "true_false": tf_count,
+                "short_answer": sa_count
+            }
+        }
+
+        print(json.dumps(result, ensure_ascii=False), flush=True)
+        return result
+
+    finally:
+        # Atomic cleanup of temporary HTML files and temporary visual assets
+        for temp_f in [ws_html_path, ans_html_path]:
+            try:
+                if os.path.exists(temp_f):
+                    os.remove(temp_f)
+            except Exception:
+                pass
+
         try:
-            if os.path.exists(temp_f):
-                os.remove(temp_f)
+            if os.path.exists(temp_assets_dir):
+                shutil.rmtree(temp_assets_dir, ignore_errors=True)
         except Exception:
             pass
-
-    try:
-        shutil.rmtree(temp_assets_dir, ignore_errors=True)
-    except Exception:
-        pass
-
-    emit_progress(100, "Hoàn tất tạo Đề bài và Đáp án chi tiết v2.0!")
-
-    result = {
-        "success": True,
-        "worksheet_pdf": ws_pdf_path,
-        "answer_pdf": ans_pdf_path,
-        "worksheet_pages": ws_pages,
-        "answer_pages": ans_pages,
-        "questions_count": len(questions),
-        "extracted_images_count": len(extracted_assets),
-        "question_types": {
-            "mcq": mcq_count,
-            "true_false": tf_count,
-            "short_answer": sa_count
-        }
-    }
-
-    print(json.dumps(result, ensure_ascii=False), flush=True)
-    return result
 
 
 def main():

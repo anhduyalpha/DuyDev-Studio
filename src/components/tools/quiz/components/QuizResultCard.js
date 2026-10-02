@@ -75,7 +75,7 @@ function renderCompletedState(state) {
   const ansDownloadUrl = ans.downloadUrl || (ansId ? `/api/v1/files/download/${ansId}/${ansEncoded}?filename=${ansEncoded}` : '#');
 
   const imgBadge = imagesCount > 0
-    ? `<span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">${imagesCount} hình vẽ/ảnh</span>`
+    ? `<span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">${imagesCount} hình vẽ</span>`
     : '';
 
   const typeBadges = qTypes && (qTypes.true_false > 0 || qTypes.short_answer > 0)

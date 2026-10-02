@@ -34,7 +34,10 @@ from quiz_pipeline import (
     link_assets_to_questions,
     format_tables_in_text,
     generate_worksheet_html,
-    generate_answer_key_html
+    generate_answer_key_html,
+    normalize_question,
+    clean_image_markers,
+    is_running_header_or_footer
 )
 
 
@@ -204,6 +207,128 @@ class TestQuizPipelineV2(unittest.TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    def test_2_column_mid_page_banner_sorting(self):
+        doc = pymupdf.open()
+        page = doc.new_page(width=600, height=800)
+        # Layout:
+        # Band 1:
+        # Top banner: y0=20, y1=60, x0=50, x1=550
+        # Col 1: Q1 (x0=50, x1=250, y0=100, y1=180), Q2 (x0=50, x1=250, y0=200, y1=280)
+        # Col 2: Q3 (x0=350, x1=550, y0=100, y1=180), Q4 (x0=350, x1=550, y0=200, y1=280)
+        # Band 2:
+        # Mid-page banner: "PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI" (spanning full width x0=50, x1=550, y0=320, y1=360)
+        # Band 3:
+        # Col 1: Q5 (x0=50, x1=250, y0=400, y1=480)
+        # Col 2: Q6 (x0=350, x1=550, y0=400, y1=480)
+        blocks = [
+            (50, 20, 550, 60, "BÀI TẬP ÔN TẬP ĐẦU KỲ", 0, 0),
+            (350, 100, 550, 180, "Câu 3: Chất nào tác dụng với HCl?", 1, 0),
+            (50, 100, 250, 180, "Câu 1: Kim loại nhẹ nhất là Li.", 2, 0),
+            (50, 400, 250, 480, "Câu 5: Cho các mệnh đề sau về ancol...", 3, 0),
+            (350, 200, 550, 280, "Câu 4: Đồng có tính dẫn điện cao.", 4, 0),
+            (50, 200, 250, 280, "Câu 2: Glucozơ có nhiều trong nho.", 5, 0),
+            (50, 320, 550, 360, "PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI", 6, 0),
+            (350, 400, 550, 480, "Câu 6: Cho các mệnh đề sau về phenol...", 7, 0),
+        ]
+        sorted_blocks = sort_blocks_by_layout(page, blocks)
+        texts = [b[4].strip() for b in sorted_blocks]
+
+        # In naive 2-col sort: Câu 1 -> Câu 2 -> Câu 5 would come before Câu 3 -> Câu 4!
+        # In band-based sort: Top Banner -> Câu 1 -> Câu 2 -> Câu 3 -> Câu 4 -> PHẦN II -> Câu 5 -> Câu 6
+        self.assertIn("BÀI TẬP", texts[0])
+        self.assertIn("Câu 1", texts[1])
+        self.assertIn("Câu 2", texts[2])
+        self.assertIn("Câu 3", texts[3])
+        self.assertIn("Câu 4", texts[4])
+        self.assertIn("PHẦN II", texts[5])
+        self.assertIn("Câu 5", texts[6])
+        self.assertIn("Câu 6", texts[7])
+
+    def test_school_header_filtering(self):
+        doc = pymupdf.open()
+        page = doc.new_page(width=600, height=800)
+        blocks = [
+            (50, 15, 550, 35, "SỞ GD&ĐT TỈNH BẮC GIANG - KỲ THI THỬ TỐT NGHIỆP THPT", 0, 0),
+            (50, 35, 550, 50, "Họ và tên thí sinh: Nguyễn Văn A - Số báo danh: 123456", 1, 0),
+            (50, 100, 550, 200, "Câu 1: Kim loại kiềm có hóa trị mấy?", 2, 0),
+            (50, 780, 550, 795, "Trang 1/4 - Mã đề thi 101", 3, 0),
+        ]
+        sorted_blocks = sort_blocks_by_layout(page, blocks)
+        texts = [b[4].strip() for b in sorted_blocks]
+        self.assertEqual(len(texts), 1)
+        self.assertIn("Câu 1", texts[0])
+
+    def test_true_false_and_parenthesis_cross_page_stitching(self):
+        # Case 1: GDPT 2018 True/False split across pages
+        p1_tf = "Câu 4: Cho các phát biểu sau về peptit:\na) Tất cả các peptit đều có phản ứng màu biure."
+        p2_tf = "b) Thủy phân hoàn toàn peptit đơn giản thu được các amino axit.\nc) Peptit mạch hở chứa n gốc có n-1 liên kết peptit."
+        stitched_tf = stitch_cross_page_text([p1_tf, p2_tf])
+        self.assertNotIn("--- PAGE BREAK ---", stitched_tf)
+        self.assertIn("biure.\nb) Thủy phân", stitched_tf)
+
+        # Case 2: Parenthesized options A), B) dangling
+        p1_opt = "Câu 10: Cho hỗn hợp gồm Cu và Fe vào dung dịch HNO3 loãng dư thu được V lít khí NO.\nA) 2,24 lít.          B) 4,48 lít."
+        p2_opt = "C) 6,72 lít.          D) 8,96 lít.\nCâu 11: Dung dịch nào sau đây làm quỳ tím hóa đỏ?"
+        stitched_opt = stitch_cross_page_text([p1_opt, p2_opt])
+        self.assertNotIn("--- PAGE BREAK ---", stitched_opt)
+        self.assertIn("B) 4,48 lít.\nC) 6,72 lít.", stitched_opt)
+
+    def test_defensive_question_normalization(self):
+        # 1. Options given as array/list instead of dict
+        raw_mcq = {
+            "number": "Câu 5",
+            "type": "mcq",
+            "question": "Nồng độ mol của dung dịch là gì?",
+            "options": ["A. 1,0 M", "B. 2,0 M", "C. 3,0 M", "D. 4,0 M"],
+            "answer": "A. 1,0 M"
+        }
+        norm_mcq = normalize_question(raw_mcq)
+        self.assertEqual(norm_mcq["number"], 5)
+        self.assertEqual(norm_mcq["options"]["A"], "1,0 M")
+        self.assertEqual(norm_mcq["options"]["B"], "2,0 M")
+        self.assertEqual(norm_mcq["answer"], "A")
+
+        # 2. Statements given as list with boolean string
+        raw_tf = {
+            "number": 6,
+            "type": "true_false_group",
+            "question": "Các phát biểu sau:",
+            "statements": [
+                {"statement": "a) Xenlulozơ tan nhiều trong nước.", "is_correct": "false"},
+                {"statement": "b) Tinh bột thuộc loại polisaccarit.", "is_correct": True}
+            ],
+            "answer": "a: S, b: Đ"
+        }
+        norm_tf = normalize_question(raw_tf)
+        self.assertIsInstance(norm_tf["statements"], dict)
+        self.assertIn("a", norm_tf["statements"])
+        self.assertEqual(norm_tf["statements"]["a"]["text"], "Xenlulozơ tan nhiều trong nước.")
+        self.assertFalse(norm_tf["statements"]["a"]["is_correct"])
+        self.assertTrue(norm_tf["statements"]["b"]["is_correct"])
+
+    def test_marker_purged_on_direct_match(self):
+        questions = [
+            {
+                "number": 7,
+                "type": "mcq",
+                "question": "Hình vẽ dưới đây mô tả thí nghiệm điều chế khí nào?\n[IMAGE_REF: fig_p1_1]\nChọn phương án đúng.",
+                "image_ref": "fig_p1_1"
+            }
+        ]
+        assets = [
+            {
+                "name": "fig_p1_1.png",
+                "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "file_path": "/fake/fig_p1_1.png",
+                "page": 1,
+                "bbox": [50, 100, 200, 250]
+            }
+        ]
+        link_assets_to_questions(questions, assets)
+        self.assertEqual(questions[0]["image_ref"], "fig_p1_1.png")
+        self.assertNotIn("[IMAGE_REF:", questions[0]["question"])
+        self.assertIn("Chọn phương án đúng.", questions[0]["question"])
+        self.assertIsNotNone(questions[0].get("image_data"))
 
 
 if __name__ == "__main__":

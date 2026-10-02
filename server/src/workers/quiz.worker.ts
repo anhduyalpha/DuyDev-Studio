@@ -155,6 +155,7 @@ function executeQuizEngine(
 export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
   const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, apiKey } = payload;
   let isFinished = false;
+  let tmpOutputDir: string | null = null;
 
   try {
     await prisma.job.update({
@@ -186,7 +187,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       throw new Error('Không tìm thấy nguồn tài liệu đầu vào (fileId hoặc gdriveUrl)');
     }
 
-    const tmpOutputDir = path.resolve(process.cwd(), 'data', 'temp', `quiz_${jobId}`);
+    tmpOutputDir = path.resolve(process.cwd(), 'data', 'temp', `quiz_${jobId}`);
     await fs.mkdir(tmpOutputDir, { recursive: true });
 
     const pythonBin = resolvePythonBin();
@@ -374,11 +375,6 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       answerHistoryId: ansHistory?.id || null
     });
 
-    // Cleanup temp directory
-    try {
-      await fs.rm(tmpOutputDir, { recursive: true, force: true });
-    } catch {}
-
     logger.info({ jobId, wsFileId, ansFileId, questionsCount: resultPayload.questionsCount }, 'Quiz job completed successfully');
     return resultPayload;
   } catch (err: unknown) {
@@ -396,6 +392,10 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     });
     logger.error({ jobId, err, errorMessage }, 'Quiz job execution failed');
     throw new Error(errorMessage);
+  } finally {
+    if (tmpOutputDir) {
+      await fs.rm(tmpOutputDir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 }
 
