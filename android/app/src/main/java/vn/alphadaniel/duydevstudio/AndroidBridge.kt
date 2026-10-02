@@ -486,4 +486,42 @@ class AndroidBridge(
             activity.requestNotificationPermission()
         }
     }
+
+    /**
+     * Download file natively with explicit filename and push notification featuring the app icon.
+     */
+    @JavascriptInterface
+    fun downloadFile(url: String, fileName: String, mimeType: String) {
+        val fullUrl = if (url.startsWith("http://") || url.startsWith("https://")) {
+            url
+        } else {
+            val base = getActiveHost().trimEnd('/')
+            val path = if (url.startsWith('/')) url else "/$url"
+            "$base$path"
+        }
+        activity.runOnUiThread {
+            vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
+                activity,
+                fullUrl,
+                fileName,
+                mimeType,
+                "DuyDevStudioNative/${getAppVersion()}"
+            )
+        }
+    }
+
+    /**
+     * Show general push notification with official app icon.
+     */
+    @JavascriptInterface
+    fun showNotification(title: String, message: String, type: String = "general") {
+        activity.runOnUiThread {
+            vn.alphadaniel.duydevstudio.download.DownloadNotificationManager.showPushNotification(
+                activity,
+                title,
+                message,
+                type
+            )
+        }
+    }
 }

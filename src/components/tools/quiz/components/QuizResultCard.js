@@ -63,13 +63,15 @@ function renderCompletedState(state) {
   const wsName = ws.fileName || ws.name || 'DeBai.pdf';
   const wsPages = ws.pages || ws.pageCount || 1;
   const wsSize = ws.sizeBytes || ws.size || 0;
-  const wsDownloadUrl = ws.downloadUrl || (wsId ? `/api/v1/files/download/${wsId}` : '#');
+  const wsEncoded = encodeURIComponent(wsName);
+  const wsDownloadUrl = ws.downloadUrl || (wsId ? `/api/v1/files/download/${wsId}/${wsEncoded}?filename=${wsEncoded}` : '#');
 
   const ansId = ans.fileId || ans.id || '';
   const ansName = ans.fileName || ans.name || 'DapAn.pdf';
   const ansPages = ans.pages || ans.pageCount || 1;
   const ansSize = ans.sizeBytes || ans.size || 0;
-  const ansDownloadUrl = ans.downloadUrl || (ansId ? `/api/v1/files/download/${ansId}` : '#');
+  const ansEncoded = encodeURIComponent(ansName);
+  const ansDownloadUrl = ans.downloadUrl || (ansId ? `/api/v1/files/download/${ansId}/${ansEncoded}?filename=${ansEncoded}` : '#');
 
   return `
     <div class="space-y-4 animate-fadeIn">
@@ -103,7 +105,7 @@ function renderCompletedState(state) {
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" class="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>
@@ -128,7 +130,7 @@ function renderCompletedState(state) {
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" class="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>

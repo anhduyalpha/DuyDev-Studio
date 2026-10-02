@@ -18,7 +18,15 @@ export function renderQuizConfigPanel(state) {
       <!-- Unified Source Section -->
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Nguồn tài liệu</span>
+          <label class="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+            <span>Nguồn tài liệu</span>
+            <span class="text-rose-500 font-bold">*</span>
+            ${
+              !(isFileReady || hasDriveUrl)
+                ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
+                : ''
+            }
+          </label>
           ${
             isFileReady
               ? `<span class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i data-lucide="check" class="w-3 h-3"></i> Tệp PDF sẵn sàng</span>`
@@ -30,7 +38,11 @@ export function renderQuizConfigPanel(state) {
 
         <!-- 1. PDF File Dropzone -->
         <div id="quizDropzone" class="relative group border-2 border-dashed ${
-          hasFile ? 'border-zinc-700 bg-zinc-900/40' : 'border-zinc-800 hover:border-zinc-600 bg-zinc-950/40'
+          hasFile
+            ? 'border-zinc-700 bg-zinc-900/40'
+            : hasDriveUrl
+            ? 'border-zinc-800 hover:border-zinc-600 bg-zinc-950/40'
+            : 'border-rose-500/30 hover:border-rose-500/50 bg-rose-950/5'
         } rounded-xl p-4 transition flex flex-col items-center justify-center text-center cursor-pointer">
           <input type="file" id="quizFileInput" accept=".pdf,application/pdf" class="hidden" />
           ${
@@ -83,7 +95,9 @@ export function renderQuizConfigPanel(state) {
 
         <!-- 2. Google Drive Link Input -->
         <div class="relative">
-          <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="https://drive.google.com/file/d/.../view" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-hidden focus:border-zinc-600 transition" />
+          <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="https://drive.google.com/file/d/.../view" class="w-full bg-zinc-950 border ${
+            !hasFile && !hasDriveUrl ? 'border-rose-500/20 focus:border-rose-500/50' : 'border-zinc-800 focus:border-zinc-600'
+          } rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-hidden transition" />
         </div>
       </div>
 
@@ -103,13 +117,19 @@ export function renderQuizConfigPanel(state) {
 
       <!-- Generation Parameters -->
       <div class="space-y-4">
-        <!-- Pages Input -->
+        <!-- Pages Input (Mandatory) -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-zinc-300">Trang trích xuất</label>
+            <label class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+              <span>Trang trích xuất</span>
+              <span class="text-rose-500 font-bold">*</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>
+            </label>
             <span class="text-[11px] text-zinc-500 font-mono">vd: 11 hoặc 11-15</span>
           </div>
-          <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="11" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
+          <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="11" class="w-full bg-zinc-950 border ${
+            !hasValidPages ? 'border-rose-500/40 focus:border-rose-500' : 'border-zinc-800 focus:border-zinc-600'
+          } rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden transition" />
         </div>
 
         <!-- Question Count Input -->
@@ -128,8 +148,14 @@ export function renderQuizConfigPanel(state) {
             <input type="number" id="quizStartInput" min="1" max="500" value="${state.start}" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
           </div>
           <div class="sm:col-span-8 space-y-1.5">
-            <label class="text-xs font-medium text-zinc-300">Tên File ( Bắt Buộc )</label>
-            <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: bài tập Lipid,..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden focus:border-zinc-600 transition" />
+            <label class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+              <span>Tên file</span>
+              <span class="text-rose-500 font-bold">*</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>
+            </label>
+            <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: bài tập Lipid,..." class="w-full bg-zinc-950 border ${
+              !hasValidPrefix ? 'border-rose-500/40 focus:border-rose-500' : 'border-zinc-800 focus:border-zinc-600'
+            } rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden transition" />
           </div>
         </div>
 

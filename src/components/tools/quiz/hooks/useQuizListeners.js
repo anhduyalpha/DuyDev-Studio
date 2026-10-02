@@ -241,6 +241,19 @@ export function attachQuizListeners() {
         }
       };
     });
+
+    // Native APK download buttons
+    const downloadBtns = document.querySelectorAll('.btn-quiz-download');
+    downloadBtns.forEach((btn) => {
+      btn.onclick = (e) => {
+        if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+          e.preventDefault();
+          const fileUrl = btn.dataset.fileUrl || btn.getAttribute('href');
+          const fileName = btn.dataset.fileName || btn.getAttribute('download') || 'document.pdf';
+          window.AndroidBridge.downloadFile(fileUrl, fileName);
+        }
+      };
+    });
   }
 
   // Initial handler binding

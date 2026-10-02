@@ -7,6 +7,8 @@ export async function filesRoute(app: FastifyInstance) {
   app.post('/api/v1/files/presign', presignTransitUpload);
   app.post('/api/v1/files/complete-transit', completeTransitUpload);
   app.get('/api/v1/files/download/:fileId', downloadFile);
+  app.get('/api/v1/files/download/:fileId/:filename', downloadFile);
   app.get('/api/v1/files/view/:fileId', viewFile);
+  app.get('/api/v1/files/view/:fileId/:filename', viewFile);
   app.get('/api/v1/files/:fileId', downloadFile);
 }

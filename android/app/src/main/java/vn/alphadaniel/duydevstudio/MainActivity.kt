@@ -316,28 +316,16 @@ class MainActivity : AppCompatActivity() {
             })
         }
 
-        // Native download listener for file conversion outputs
+        // Native download listener with accurate filename extraction and app icon notification
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
-            try {
-                val request = android.app.DownloadManager.Request(Uri.parse(url)).apply {
-                    setMimeType(mimetype)
-                    addRequestHeader("User-Agent", userAgent)
-                    setDescription("Downloading file...")
-                    setTitle(android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype))
-                    setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    setDestinationInExternalPublicDir(
-                        android.os.Environment.DIRECTORY_DOWNLOADS,
-                        android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype)
-                    )
-                }
-                val dm = getSystemService(DOWNLOAD_SERVICE) as? android.app.DownloadManager
-                dm?.enqueue(request)
-            } catch (_: Exception) {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    startActivity(intent)
-                } catch (_: Exception) {}
-            }
+            val fileName = resolveDownloadFileName(url, contentDisposition, mimetype)
+            vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
+                this,
+                url,
+                fileName,
+                mimetype ?: "application/octet-stream",
+                userAgent
+            )
         }
 
         // Inject Native Javascript Interface
@@ -659,5 +647,41 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             webView.evaluateJavascript(script, null)
         }
+    }
+
+    /**
+     * Resolves the true intended file name from download URL parameters,
+     * Content-Disposition headers, and URL path segments.
+     */
+    private fun resolveDownloadFileName(url: String, contentDisposition: String?, mimeType: String?): String {
+        try {
+            val uri = Uri.parse(url)
+
+            // 1. Check query parameter filename or fileName
+            val queryName = uri.getQueryParameter("filename") ?: uri.getQueryParameter("fileName")
+            if (!queryName.isNullOrBlank()) {
+                return java.net.URLDecoder.decode(queryName, "UTF-8")
+            }
+
+            // 2. Check Content-Disposition header if present
+            if (!contentDisposition.isNullOrBlank()) {
+                val matchStar = Regex("filename\\*=(?:UTF-8''|utf-8'')([^;]+)", RegexOption.IGNORE_CASE).find(contentDisposition)
+                if (matchStar != null) {
+                    return java.net.URLDecoder.decode(matchStar.groupValues[1].trim('"', '\''), "UTF-8")
+                }
+                val matchNormal = Regex("filename=\"?([^\";]+)\"?", RegexOption.IGNORE_CASE).find(contentDisposition)
+                if (matchNormal != null) {
+                    return matchNormal.groupValues[1].trim()
+                }
+            }
+
+            // 3. Check trailing path segment if it contains an extension and is not an internal ID
+            val lastSegment = uri.lastPathSegment
+            if (!lastSegment.isNullOrBlank() && lastSegment.contains(".") && !lastSegment.startsWith("cuid_") && !lastSegment.startsWith("fil_")) {
+                return java.net.URLDecoder.decode(lastSegment, "UTF-8")
+            }
+        } catch (_: Exception) {}
+
+        return android.webkit.URLUtil.guessFileName(url, contentDisposition, mimeType)
     }
 }

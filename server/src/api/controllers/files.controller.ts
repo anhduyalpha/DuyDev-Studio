@@ -95,6 +95,10 @@ export async function uploadFile(request: FastifyRequest, reply: FastifyReply) {
 
 async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forceInline = false) {
   const { fileId } = fileIdParamSchema.parse(request.params);
+  const rawParams = request.params as Record<string, string | undefined>;
+  const rawQuery = (request.query || {}) as Record<string, string | undefined>;
+  const requestedName = (rawParams.filename || rawQuery.filename || '').trim();
+
   const { inline } = fileDownloadQuerySchema.parse(request.query || {});
   const isInline = forceInline || inline;
 
@@ -127,13 +131,14 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
 
   const stat = await fs.promises.stat(fileRecord.storagePath);
   const totalSize = stat.size;
-  const ext = path.extname(fileRecord.originalName).toLowerCase();
+  const effectiveName = requestedName || fileRecord.originalName;
+  const ext = path.extname(effectiveName).toLowerCase() || path.extname(fileRecord.originalName).toLowerCase();
   const mimeType = (fileRecord.mimeType && fileRecord.mimeType !== 'application/octet-stream')
     ? fileRecord.mimeType
     : getMimeTypeForExt(ext);
 
-  const encodedFilename = encodeURIComponent(fileRecord.originalName);
-  const asciiName = fileRecord.originalName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+  const encodedFilename = encodeURIComponent(effectiveName);
+  const asciiName = effectiveName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
   reply.header('Content-Type', mimeType);
   if (isInline) {
     reply.header('Content-Disposition', 'inline');

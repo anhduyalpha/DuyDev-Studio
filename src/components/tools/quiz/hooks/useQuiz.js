@@ -247,23 +247,29 @@ class QuizManager {
             const wsF = evt.files.find(f => (f.originalName || '').includes('_DeBai') || (f.fileName || '').includes('_DeBai') || (f.fileId || '').endsWith('_ws'));
             const ansF = evt.files.find(f => (f.originalName || '').includes('_DapAn') || (f.fileName || '').includes('_DapAn') || (f.fileId || '').endsWith('_ans'));
             if (wsF && ansF) {
+              const wsName = wsF.originalName || wsF.fileName || 'DeBai.pdf';
+              const ansName = ansF.originalName || ansF.fileName || 'DapAn.pdf';
+              const wsId = wsF.fileId || wsF.id;
+              const ansId = ansF.fileId || ansF.id;
+              const wsEncoded = encodeURIComponent(wsName);
+              const ansEncoded = encodeURIComponent(ansName);
               res = {
                 jobId: evt.jobId,
                 worksheet: {
-                  fileId: wsF.fileId || wsF.id,
-                  fileName: wsF.originalName || wsF.fileName || 'DeBai.pdf',
+                  fileId: wsId,
+                  fileName: wsName,
                   sizeBytes: wsF.sizeBytes || 0,
                   pages: 1,
-                  downloadUrl: `/api/v1/files/download/${wsF.fileId || wsF.id}`,
-                  viewUrl: `/api/v1/files/view/${wsF.fileId || wsF.id}`
+                  downloadUrl: `/api/v1/files/download/${wsId}/${wsEncoded}?filename=${wsEncoded}`,
+                  viewUrl: `/api/v1/files/view/${wsId}/${wsEncoded}`
                 },
                 answer: {
-                  fileId: ansF.fileId || ansF.id,
-                  fileName: ansF.originalName || ansF.fileName || 'DapAn.pdf',
+                  fileId: ansId,
+                  fileName: ansName,
                   sizeBytes: ansF.sizeBytes || 0,
                   pages: 1,
-                  downloadUrl: `/api/v1/files/download/${ansF.fileId || ansF.id}`,
-                  viewUrl: `/api/v1/files/view/${ansF.fileId || ansF.id}`
+                  downloadUrl: `/api/v1/files/download/${ansId}/${ansEncoded}?filename=${ansEncoded}`,
+                  viewUrl: `/api/v1/files/view/${ansId}/${ansEncoded}`
                 },
                 questionsCount: this.state.count || 20
               };
@@ -273,6 +279,18 @@ class QuizManager {
           this.state.result = res;
           this.notify('job-completed');
           showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
+
+          // Trigger native push notification if running inside Android APK
+          if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
+            try {
+              const quizName = this.state.prefix || 'PDF';
+              window.AndroidBridge.showNotification(
+                'Tạo bài tập hoàn tất',
+                `Đã tạo thành công Đề bài và Đáp án: ${quizName}`,
+                'quiz'
+              );
+            } catch (_) {}
+          }
 
           // Sync completed items to local history
           if (res?.worksheet && res?.answer) {
@@ -305,6 +323,16 @@ class QuizManager {
           this.state.error = err.message || 'Tác vụ tạo bài tập trắc nghiệm thất bại';
           this.notify('job-error');
           showToast(this.state.error, 'error');
+
+          if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
+            try {
+              window.AndroidBridge.showNotification(
+                'Lỗi tạo bài tập',
+                this.state.error,
+                'quiz_error'
+              );
+            } catch (_) {}
+          }
         }
       });
     } catch (err) {

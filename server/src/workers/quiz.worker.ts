@@ -243,6 +243,9 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
 
     isFinished = true;
 
+    const wsEncodedName = encodeURIComponent(wsFileName);
+    const ansEncodedName = encodeURIComponent(ansFileName);
+
     const resultPayload = {
       jobId,
       percentage: 100,
@@ -251,16 +254,16 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
         fileName: wsFileName,
         sizeBytes: wsStats.size,
         pages: resultMeta.worksheet_pages || 1,
-        downloadUrl: `/api/v1/files/download/${wsFileId}`,
-        viewUrl: `/api/v1/files/view/${wsFileId}`
+        downloadUrl: `/api/v1/files/download/${wsFileId}/${wsEncodedName}?filename=${wsEncodedName}`,
+        viewUrl: `/api/v1/files/view/${wsFileId}/${wsEncodedName}`
       },
       answer: {
         fileId: ansFileId,
         fileName: ansFileName,
         sizeBytes: ansStats.size,
         pages: resultMeta.answer_pages || 1,
-        downloadUrl: `/api/v1/files/download/${ansFileId}`,
-        viewUrl: `/api/v1/files/view/${ansFileId}`
+        downloadUrl: `/api/v1/files/download/${ansFileId}/${ansEncodedName}?filename=${ansEncodedName}`,
+        viewUrl: `/api/v1/files/view/${ansFileId}/${ansEncodedName}`
       },
       questionsCount: resultMeta.questions_count || count
     };
@@ -296,7 +299,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
           originalSize: BigInt(originalSizeBytes || wsStats.size),
           resultSize: BigInt(wsStats.size),
           resultFileId: wsFileId,
-          downloadUrl: `/api/v1/files/download/${wsFileId}`,
+          downloadUrl: `/api/v1/files/download/${wsFileId}/${wsEncodedName}?filename=${wsEncodedName}`,
           status: 'success'
         }
       }).catch((e) => {
@@ -311,7 +314,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
           originalSize: BigInt(originalSizeBytes || ansStats.size),
           resultSize: BigInt(ansStats.size),
           resultFileId: ansFileId,
-          downloadUrl: `/api/v1/files/download/${ansFileId}`,
+          downloadUrl: `/api/v1/files/download/${ansFileId}/${ansEncodedName}?filename=${ansEncodedName}`,
           status: 'success'
         }
       }).catch((e) => {

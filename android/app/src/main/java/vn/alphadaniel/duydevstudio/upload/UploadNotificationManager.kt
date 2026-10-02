@@ -96,8 +96,11 @@ object UploadNotificationManager {
         val totalStr = formatBytes(totalBytes)
         val contentText = "$progress% • $uploadedStr / $totalStr • $speedStr"
 
+        val appIcon = android.graphics.BitmapFactory.decodeResource(context.resources, vn.alphadaniel.duydevstudio.R.mipmap.ic_launcher)
+
         val notification = NotificationCompat.Builder(context, CHANNEL_PROGRESS_ID)
-            .setSmallIcon(android.R.drawable.stat_sys_upload)
+            .setSmallIcon(vn.alphadaniel.duydevstudio.R.drawable.ic_notification)
+            .setLargeIcon(appIcon)
             .setContentTitle("Đang tải lên: $fileName")
             .setContentText(contentText)
             .setProgress(100, progress, false)
@@ -143,10 +146,11 @@ object UploadNotificationManager {
         } else {
             "$fileName: ${errorMsg ?: "Lỗi không xác định"}"
         }
-        val icon = if (isSuccess) android.R.drawable.stat_sys_upload_done else android.R.drawable.stat_notify_error
+        val appIcon = android.graphics.BitmapFactory.decodeResource(context.resources, vn.alphadaniel.duydevstudio.R.mipmap.ic_launcher)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_STATUS_ID)
-            .setSmallIcon(icon)
+            .setSmallIcon(vn.alphadaniel.duydevstudio.R.drawable.ic_notification)
+            .setLargeIcon(appIcon)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
