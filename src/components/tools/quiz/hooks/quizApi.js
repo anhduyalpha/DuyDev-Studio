@@ -39,7 +39,7 @@ export async function generateQuizJob(payload) {
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || 'Không thể khởi tạo tiến trình tạo bài tập');
+    throw new Error(errData.message || 'Không thể khởi tạo tiến trình tạo bài tập trắc nghiệm');
   }
 
   const json = await res.json();

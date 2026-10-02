@@ -183,7 +183,7 @@ class QuizManager {
 
     this.state.isProcessing = true;
     this.state.progress = 5;
-    this.state.stage = 'Khởi tạo tác vụ tạo bài tập...';
+    this.state.stage = 'Khởi tạo tác vụ tạo bài tập trắc nghiệm...';
     this.state.result = null;
     this.state.error = null;
     this.notify('job-started');
@@ -224,18 +224,18 @@ class QuizManager {
           this.state.stage = 'Hoàn tất xuất bản 2 tệp PDF A4!';
           this.state.result = evt.data || null;
           this.notify('job-completed');
-          showToast('Tạo bài tập và đáp án A4 thành công!', 'success');
+          showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
         },
         onError: (err) => {
           this.state.isProcessing = false;
-          this.state.error = err.message || 'Tác vụ tạo bài tập thất bại';
+          this.state.error = err.message || 'Tác vụ tạo bài tập trắc nghiệm thất bại';
           this.notify('job-error');
           showToast(this.state.error, 'error');
         }
       });
     } catch (err) {
       this.state.isProcessing = false;
-      this.state.error = err.message || 'Lỗi gửi yêu cầu tạo bài tập';
+      this.state.error = err.message || 'Lỗi gửi yêu cầu tạo bài tập trắc nghiệm';
       this.notify('job-error');
       showToast(this.state.error, 'error');
     }

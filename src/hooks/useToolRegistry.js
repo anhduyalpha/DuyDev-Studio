@@ -19,7 +19,7 @@ const DEFAULT_TOOLS = [
   },
   {
     id: 'quiz-generator',
-    title: 'Tạo Bài Tập',
+    title: 'Tạo Bài Tập Trắc Nghiệm',
     description: 'Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.',
     category: 'pdf',
     icon: 'graduation-cap',
@@ -28,7 +28,7 @@ const DEFAULT_TOOLS = [
     specs: ['Đề bài A4', 'Đáp án & Lời giải', 'Agnes AI'],
     color: '#8B5CF6',
     route: '#tool/quiz-generator',
-    tags: ['quiz', 'bài tập', 'tạo bài tập', 'đề thi', 'trắc nghiệm', 'hóa học', 'toán', 'lý', 'pdf', 'a4', 'agnes', 'ai']
+    tags: ['quiz', 'bài tập', 'tạo bài tập', 'tạo bài tập trắc nghiệm', 'đề thi', 'trắc nghiệm', 'hóa học', 'toán', 'lý', 'pdf', 'a4', 'agnes', 'ai']
   },
 
   // 2. Archive Inspector (.ZIP / .RAR)

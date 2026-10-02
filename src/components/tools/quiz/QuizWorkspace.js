@@ -21,7 +21,7 @@ export function renderQuizWorkspace() {
             <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
           </a>
           <span class="text-zinc-600">/</span>
-          <span class="text-zinc-200 font-semibold truncate">Tạo Bài Tập A4 (AI Quiz)</span>
+          <span class="text-zinc-200 font-semibold truncate">Tạo Bài Tập Trắc Nghiệm</span>
         </div>
       </div>
 

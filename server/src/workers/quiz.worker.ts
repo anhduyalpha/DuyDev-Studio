@@ -276,7 +276,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     const historyItem = await prisma.historyRecord.create({
       data: {
         toolId: 'quiz-generator',
-        toolTitle: 'Tạo Bài Tập',
+        toolTitle: 'Tạo Bài Tập Trắc Nghiệm',
         fileName: `${prefix} (Đề bài & Đáp án)`,
         originalSize: BigInt(originalSizeBytes || wsStats.size + ansStats.size),
         resultSize: BigInt(wsStats.size + ansStats.size),

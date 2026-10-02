@@ -340,7 +340,7 @@ class App {
       dispatchTool('universal-converter');
     } else if (hash === '#studocu' || hash === '#studocu-dl') {
       dispatchTool('studocu-dl');
-    } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap') {
+    } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {
       dispatchTool('quiz-generator');
     } else if (hash === '#archive' || hash === '#archive-inspect') {
       setView(renderArchivePage(), () => attachArchivePageListeners(onSoftReRender));

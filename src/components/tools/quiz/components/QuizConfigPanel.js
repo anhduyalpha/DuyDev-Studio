@@ -161,7 +161,7 @@ export function renderQuizConfigPanel(state) {
       : 'bg-zinc-900 text-zinc-600 border border-zinc-800/80 cursor-not-allowed'
   }">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span>${state.isProcessing ? 'Đang tạo bài tập...' : 'Tạo 2 bản PDF A4 (Đề bài & Đáp án)'}</span>
+          <span>${state.isProcessing ? 'Đang tạo bài tập trắc nghiệm...' : 'Tạo 2 bản PDF A4 (Đề bài & Đáp án)'}</span>
         </button>
       </div>
     </div>
