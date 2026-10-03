@@ -245,10 +245,12 @@ class DocumentStore:
                 stream_url = f"/api/document-stream?id={meta.get('id', '')}"
                 viewer_url = f"/pdfjs/web/viewer.html?file={urllib.parse.quote(stream_url, safe='')}"
 
-                doc_copy = dict(meta)
-                sb = doc_copy.get("size_bytes", 0)
+                orig_url = meta.get("url", "")
                 doc_copy.update({
                     "size_mb": doc_copy.get("size_mb") or round(sb / (1024 * 1024), 2),
+                    "original_url": orig_url,
+                    "source_url": orig_url,
+                    "download_url": f"/downloads/{quoted_name}",
                     "url": f"/downloads/{quoted_name}",
                     "view_url": viewer_url if is_pdf else f"/view/{quoted_name}",
                     "stream_url": stream_url,
