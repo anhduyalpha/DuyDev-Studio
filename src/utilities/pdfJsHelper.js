@@ -16,18 +16,32 @@ export function ensurePdfJsLoaded() {
   if (pdfJsPromise) return pdfJsPromise;
 
   pdfJsPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = '/pdfjs/build/pdf.js';
-    script.onload = () => {
-      if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.js';
-        resolve(window.pdfjsLib);
-      } else {
-        reject(new Error('PDF.js library failed to initialize'));
-      }
+    const loadScript = (src, isFallback = false) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => {
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = isFallback
+            ? 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+            : '/pdfjs/build/pdf.worker.js';
+          resolve(window.pdfjsLib);
+        } else if (!isFallback) {
+          loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', true);
+        } else {
+          reject(new Error('PDF.js library failed to initialize'));
+        }
+      };
+      script.onerror = () => {
+        if (!isFallback) {
+          loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', true);
+        } else {
+          reject(new Error('Failed to load PDF.js engine from both local and CDN'));
+        }
+      };
+      document.head.appendChild(script);
     };
-    script.onerror = () => reject(new Error('Failed to load /pdfjs/build/pdf.js'));
-    document.head.appendChild(script);
+
+    loadScript('/pdfjs/build/pdf.js');
   });
 
   return pdfJsPromise;
