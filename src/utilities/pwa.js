@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v18.7';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v18.8';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -63,6 +63,82 @@ export async function getSwVersion() {
   return getCurrentVersion();
 }
 
+// Controlled update state management
+let userRequestedReload = false;
+let updateToastShown = false;
+
+/**
+ * Inspection helper for testing and update state verification.
+ * @returns {boolean}
+ */
+export function getUserRequestedReload() {
+  return userRequestedReload;
+}
+
+/**
+ * Mutator helper for testing and manual update triggers.
+ * @param {boolean} val
+ */
+export function setUserRequestedReload(val) {
+  userRequestedReload = Boolean(val);
+}
+
+/**
+ * Resets the update toast state (useful for test suites or re-prompting).
+ */
+export function resetUpdateToastShown() {
+  updateToastShown = false;
+}
+
+/**
+ * Prompts the user with an actionable toast to apply the pending update.
+ * @param {ServiceWorker | null} waitingWorker
+ */
+export function promptUserToApplyUpdate(waitingWorker) {
+  if (updateToastShown || !waitingWorker) return;
+  updateToastShown = true;
+
+  import('./toast.js')
+    .then(({ showActionableToast }) => {
+      showActionableToast('Đã có bản cập nhật mới', {
+        type: 'info',
+        actionText: 'Cập nhật',
+        duration: 12000,
+        onAction: () => {
+          userRequestedReload = true;
+          waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    })
+    .catch(() => {});
+}
+
+/**
+ * Listens for waiting or newly installed workers without hijacking the active session.
+ * @param {ServiceWorkerRegistration | null} reg
+ */
+export function listenForWaitingWorker(reg) {
+  if (!reg) return;
+
+  // If a waiting worker already exists and the page is controlled by an active worker
+  if (reg.waiting && navigator.serviceWorker?.controller) {
+    promptUserToApplyUpdate(reg.waiting);
+    return;
+  }
+
+  // Listen for worker installation transitions
+  reg.addEventListener('updatefound', () => {
+    const installingWorker = reg.installing;
+    if (!installingWorker) return;
+
+    installingWorker.addEventListener('statechange', () => {
+      if (installingWorker.state === 'installed' && navigator.serviceWorker?.controller) {
+        promptUserToApplyUpdate(installingWorker);
+      }
+    });
+  });
+}
+
 /**
  * Silent update check:
  * Compares the live server version from ./sw.js against local CacheStorage.
@@ -82,16 +158,9 @@ export async function checkForAppUpdate() {
       // New version found on server! Update Service Worker silently in background
       if (swRegistration) {
         swRegistration.update().catch(() => {});
-      }
-
-      // Proactively clear stale cache keys so next launch loads fresh
-      if ('caches' in window) {
-        try {
-          const keys = await caches.keys();
-          await Promise.all(
-            keys.filter((k) => k !== serverVer).map((k) => caches.delete(k))
-          );
-        } catch {}
+        if (swRegistration.waiting && navigator.serviceWorker?.controller) {
+          promptUserToApplyUpdate(swRegistration.waiting);
+        }
       }
 
       return {
@@ -103,6 +172,9 @@ export async function checkForAppUpdate() {
     // Already on latest version
     if (swRegistration) {
       swRegistration.update().catch(() => {});
+      if (swRegistration.waiting && navigator.serviceWorker?.controller) {
+        promptUserToApplyUpdate(swRegistration.waiting);
+      }
     }
 
     return {
@@ -141,23 +213,28 @@ export function registerServiceWorker() {
     window.location.reload();
   };
 
-  // When a new SW takes over, reload to apply new assets ONLY if an older SW was controlling the page
+  // When a new SW takes over, reload to apply new assets ONLY if an older SW was controlling the page AND user explicitly confirmed
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadExistingController) {
       console.log('[PWA] Initial Service Worker activated. Skipping reload.');
       return;
     }
-    // Never disrupt in-flight tasks or active downloads
-    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
-      console.log('[PWA] Tasks are active in background. Skipping reload.');
-      return;
+    // Reload only when the user explicitly confirmed the update
+    if (userRequestedReload) {
+      // Never disrupt in-flight tasks or active downloads
+      if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+        console.log('[PWA] Tasks are active in background. Skipping reload.');
+        return;
+      }
+      const activeJob = localStorage.getItem('ds_studocu_active_job');
+      if (activeJob) {
+        console.log('[PWA] Studocu job active. Skipping reload.');
+        return;
+      }
+      performSafeReload('User confirmed update');
+    } else {
+      console.log('[PWA] Service Worker controller updated in background. Will apply on next session.');
     }
-    const activeJob = localStorage.getItem('ds_studocu_active_job');
-    if (activeJob) {
-      console.log('[PWA] Studocu job active. Skipping reload.');
-      return;
-    }
-    performSafeReload('Controller updated');
   });
 
   const doRegister = () => {
@@ -166,6 +243,7 @@ export function registerServiceWorker() {
       .then((reg) => {
         swRegistration = reg;
         console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
+        listenForWaitingWorker(reg);
         reg.update().catch(() => {});
       })
       .catch((error) => {

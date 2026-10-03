@@ -9,16 +9,16 @@ const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=18.7',
-  './src/styles/studocu.css?v=18.7',
-  './src/styles/highlight-theme.css?v=18.7',
+  './src/styles/stitch-tokens.css?v=18.8',
+  './src/styles/studocu.css?v=18.8',
+  './src/styles/highlight-theme.css?v=18.8',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=18.7',
+  './src/app.js?v=18.8',
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',
@@ -218,6 +218,9 @@ self.addEventListener('message', (event) => {
       type: 'VERSION_INFO',
       version: CACHE_NAME
     });
+  } else if (event.data?.type === 'SKIP_WAITING') {
+    console.log('[SW] SKIP_WAITING received from client. Activating now...');
+    self.skipWaiting();
   }
 });
 
@@ -242,7 +245,6 @@ self.addEventListener('install', (event) => {
       }
     })
   );
-  self.skipWaiting();
 });
 
 // Activate Event: Clean ALL old caches immediately & prune orphaned shares
