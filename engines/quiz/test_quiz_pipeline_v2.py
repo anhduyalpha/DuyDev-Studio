@@ -138,7 +138,7 @@ class TestQuizPipelineV2(unittest.TestCase):
         self.assertEqual(chunks[1][0], 11)
         self.assertEqual(chunks[1][1], 20)
 
-    def test_html_generation_multi_format(self):
+    def test_html_generation_mcq(self):
         questions = [
             {
                 "number": 1,
@@ -150,38 +150,27 @@ class TestQuizPipelineV2(unittest.TestCase):
             },
             {
                 "number": 2,
-                "type": "true_false_group",
-                "question": "Khi nói về kim loại kiềm, các phát biểu sau đúng hay sai?",
-                "statements": {
-                    "a": {"text": "Đều có mạng tinh thể lập phương tâm khối.", "is_correct": True},
-                    "b": {"text": "Nhiệt độ nóng chảy tăng dần từ Li đến Cs.", "is_correct": False},
-                    "c": {"text": "Đều có tính khử mạnh.", "is_correct": True},
-                    "d": {"text": "Phản ứng mãnh liệt với nước.", "is_correct": True}
+                "type": "mcq",
+                "question": "Khi nói về kim loại kiềm, phát biểu nào sau đây đúng?",
+                "options": {
+                    "A": "Đều có mạng tinh thể lập phương tâm khối.",
+                    "B": "Nhiệt độ nóng chảy tăng dần từ Li đến Cs.",
+                    "C": "Đều có tính oxy hóa mạnh.",
+                    "D": "Không phản ứng với nước."
                 },
-                "answer": "a-Đ, b-S, c-Đ, d-Đ",
-                "explanation": "Nhiệt độ nóng chảy giảm dần từ Li đến Cs."
-            },
-            {
-                "number": 3,
-                "type": "short_answer",
-                "question": "Tính khối lượng mol phân tử (g/mol) của este no đơn chức mạch hở chứa 4 nguyên tử cacbon.",
-                "answer": "88",
-                "explanation": "Công thức este là C4H8O2, M = 88."
+                "answer": "A",
+                "explanation": "Kim loại kiềm đều có mạng tinh thể lập phương tâm khối."
             }
         ]
 
         ws_html = generate_worksheet_html("ĐỀ KIỂM TRA", "HÓA HỌC 12", questions)
-        self.assertIn("PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN", ws_html)
-        self.assertIn("PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG / SAI", ws_html)
-        self.assertIn("PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN", ws_html)
+        self.assertIn("CÂU HỎI TRẮC NGHIỆM", ws_html)
         self.assertIn("katex", ws_html)
-        self.assertIn("tf-table", ws_html)
-        self.assertIn("sa-box", ws_html)
+        self.assertIn("options-grid", ws_html)
 
         ans_html = generate_answer_key_html("ĐỀ KIỂM TRA", "HÓA HỌC 12", questions)
-        self.assertIn("I. BẢNG ĐÁP ÁN TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN", ans_html)
-        self.assertIn("II. BẢNG ĐÁP ÁN TRẮC NGHIỆM ĐÚNG / SAI", ans_html)
-        self.assertIn("III. BẢNG ĐÁP ÁN TRẢ LỜI NGẮN", ans_html)
+        self.assertIn("BẢNG ĐÁP ÁN", ans_html)
+        self.assertIn("matrix-table", ans_html)
 
     def test_visual_assets_extraction_and_linking(self):
         doc = pymupdf.open()
@@ -290,23 +279,23 @@ class TestQuizPipelineV2(unittest.TestCase):
         self.assertEqual(norm_mcq["options"]["B"], "2,0 M")
         self.assertEqual(norm_mcq["answer"], "A")
 
-        # 2. Statements given as list with boolean string
-        raw_tf = {
+        # 2. Options given with lowercase keys and letter prefixes
+        raw_mcq2 = {
             "number": 6,
-            "type": "true_false_group",
             "question": "Các phát biểu sau:",
-            "statements": [
-                {"statement": "a) Xenlulozơ tan nhiều trong nước.", "is_correct": "false"},
-                {"statement": "b) Tinh bột thuộc loại polisaccarit.", "is_correct": True}
-            ],
-            "answer": "a: S, b: Đ"
+            "options": {
+                "a": "A. Xenlulozơ tan nhiều trong nước.",
+                "b": "B. Tinh bột thuộc loại polisaccarit.",
+                "c": "C. Glucozơ có phản ứng tráng bạc.",
+                "d": "D. Saccarozơ là đisaccarit."
+            },
+            "answer": "b"
         }
-        norm_tf = normalize_question(raw_tf)
-        self.assertIsInstance(norm_tf["statements"], dict)
-        self.assertIn("a", norm_tf["statements"])
-        self.assertEqual(norm_tf["statements"]["a"]["text"], "Xenlulozơ tan nhiều trong nước.")
-        self.assertFalse(norm_tf["statements"]["a"]["is_correct"])
-        self.assertTrue(norm_tf["statements"]["b"]["is_correct"])
+        norm_mcq2 = normalize_question(raw_mcq2)
+        self.assertEqual(norm_mcq2["type"], "mcq")
+        self.assertEqual(norm_mcq2["options"]["A"], "Xenlulozơ tan nhiều trong nước.")
+        self.assertEqual(norm_mcq2["options"]["B"], "Tinh bột thuộc loại polisaccarit.")
+        self.assertEqual(norm_mcq2["answer"], "B")
 
     def test_marker_purged_on_direct_match(self):
         questions = [

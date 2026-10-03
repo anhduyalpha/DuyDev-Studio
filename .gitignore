@@ -38,6 +38,7 @@ temp/
 *.tmp
 .tmp/
 .tmp*
+downloads/
 scratch/
 engines/studocu/downloads/
 engines/studocu/**/.session/

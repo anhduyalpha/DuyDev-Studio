@@ -978,16 +978,8 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
             num = fallback_num
     q["number"] = num
 
-    # Type
-    q_type = str(q.get("type", "mcq")).lower().strip()
-    if q_type not in ("mcq", "true_false_group", "short_answer"):
-        if "statements" in q:
-            q_type = "true_false_group"
-        elif "options" in q:
-            q_type = "mcq"
-        else:
-            q_type = "mcq"
-    q["type"] = q_type
+    # Type: Strictly MCQ
+    q["type"] = "mcq"
 
     # Question stem
     raw_question = strip_section_banner(str(q.get("question", "")))
@@ -1011,79 +1003,32 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
     raw_exp = str(q.get("explanation", ""))
     q["explanation"] = strip_section_banner(raw_exp)
 
-    # MCQ options normalization
-    if q_type == "mcq":
-        raw_opts = q.get("options")
-        norm_opts = {}
-        banner_clean = lambda s: strip_section_banner(str(s))
-        if isinstance(raw_opts, list):
-            keys = ["A", "B", "C", "D"]
-            for i, val in enumerate(raw_opts[:4]):
+    # MCQ options normalization (A, B, C, D)
+    raw_opts = q.get("options")
+    norm_opts = {}
+    banner_clean = lambda s: strip_section_banner(str(s))
+    if isinstance(raw_opts, list):
+        keys = ["A", "B", "C", "D"]
+        for i, val in enumerate(raw_opts[:4]):
+            clean_val = clean_image_markers(str(val))
+            clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
+            clean_val = banner_clean(clean_val)
+            norm_opts[keys[i]] = clean_val
+    elif isinstance(raw_opts, dict):
+        for k, val in raw_opts.items():
+            upper_k = str(k).upper().strip()
+            if upper_k in ("A", "B", "C", "D"):
                 clean_val = clean_image_markers(str(val))
                 clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
                 clean_val = banner_clean(clean_val)
-                norm_opts[keys[i]] = clean_val
-        elif isinstance(raw_opts, dict):
-            for k, val in raw_opts.items():
-                upper_k = str(k).upper().strip()
-                if upper_k in ("A", "B", "C", "D"):
-                    clean_val = clean_image_markers(str(val))
-                    clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
-                    clean_val = banner_clean(clean_val)
-                    norm_opts[upper_k] = clean_val
-        for k in ["A", "B", "C", "D"]:
-            if k not in norm_opts:
-                norm_opts[k] = ""
-        q["options"] = norm_opts
-        ans = str(q.get("answer", "")).upper().strip()
-        ans_m = re.search(r"\b([A-D])\b", ans)
-        q["answer"] = ans_m.group(1) if ans_m else (ans[:1] if ans in ("A", "B", "C", "D") else "A")
-
-    # True/False statements normalization
-    elif q_type == "true_false_group":
-        raw_stmts = q.get("statements")
-        norm_stmts = {}
-        tf_keys = ["a", "b", "c", "d"]
-        if isinstance(raw_stmts, list):
-            for i, item in enumerate(raw_stmts[:4]):
-                k = tf_keys[i]
-                if isinstance(item, dict):
-                    raw_txt = item.get("text") or item.get("statement") or item.get("content") or ""
-                    txt = clean_image_markers(str(raw_txt))
-                    txt = re.sub(r"^[a-dA-D][\.\)\:\s]+", "", txt).strip()
-                    is_cor = item.get("is_correct") if "is_correct" in item else (item.get("isCorrect") if "isCorrect" in item else item.get("correct"))
-                    norm_stmts[k] = {
-                        "text": txt,
-                        "is_correct": True if (is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")) else False
-                    }
-                else:
-                    norm_stmts[k] = {"text": clean_image_markers(str(item)), "is_correct": False}
-        elif isinstance(raw_stmts, dict):
-            for k, item in raw_stmts.items():
-                lower_k = str(k).lower().strip()
-                if lower_k in tf_keys:
-                    if isinstance(item, dict):
-                        raw_txt = item.get("text") or item.get("statement") or item.get("content") or ""
-                        txt = clean_image_markers(str(raw_txt))
-                        txt = re.sub(r"^[a-dA-D][\.\)\:\s]+", "", txt).strip()
-                        is_cor = item.get("is_correct") if "is_correct" in item else (item.get("isCorrect") if "isCorrect" in item else item.get("correct"))
-                        norm_stmts[lower_k] = {
-                            "text": txt,
-                            "is_correct": True if (is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")) else False
-                        }
-                    else:
-                        norm_stmts[lower_k] = {"text": clean_image_markers(str(item)), "is_correct": False}
-        for k in tf_keys:
-            if k not in norm_stmts:
-                norm_stmts[k] = {"text": "", "is_correct": False}
-        q["statements"] = norm_stmts
-        if not q.get("answer"):
-            tags = [f"{k}-{'Đ' if norm_stmts[k]['is_correct'] else 'S'}" for k in tf_keys]
-            q["answer"] = ", ".join(tags)
-
-    # Short answer normalization
-    elif q_type == "short_answer":
-        q["answer"] = str(q.get("answer", "-")).strip()
+                norm_opts[upper_k] = clean_val
+    for k in ["A", "B", "C", "D"]:
+        if k not in norm_opts:
+            norm_opts[k] = ""
+    q["options"] = norm_opts
+    ans = str(q.get("answer", "")).upper().strip()
+    ans_m = re.search(r"\b([A-D])\b", ans)
+    q["answer"] = ans_m.group(1) if ans_m else (ans[:1] if ans in ("A", "B", "C", "D") else "A")
 
     return q
 
@@ -1097,18 +1042,15 @@ def parse_and_standardize_questions(
     model: str = DEFAULT_MODEL
 ) -> list[dict]:
     """
-    Parse raw text into structured question objects with multi-format support (GDPT 2018),
+    Parse raw text into structured multiple-choice questions (4 options A, B, C, D),
     HTML sub/sup for chemistry, KaTeX math formatting, and image linking via Agnes AI.
     """
     system_prompt = (
         "You are an expert Vietnamese exam editor and master teacher.\n"
-        "Your task is to extract, standardize, and format quiz questions from the provided textbook/exam text.\n"
+        "Your task is to extract, standardize, and format multiple-choice quiz questions from the provided textbook/exam text.\n"
         "Requirements:\n"
         "1. Identify questions from 'Câu X' or 'X.' accurately in order of appearance.\n"
-        "2. Support 3 question types (Vietnamese GDPT 2018 format):\n"
-        "   - 'mcq': Standard 4-option multiple-choice (options A, B, C, D; answer is 'A', 'B', 'C', or 'D').\n"
-        "   - 'true_false_group': True/False 4 statements (statements a, b, c, d each with 'text' and 'is_correct' boolean; answer is summary like 'a-Đ, b-S, c-Đ, d-Đ').\n"
-        "   - 'short_answer': Numerical or short phrase answer (answer is string like '88' or '12.5').\n"
+        "2. All questions are standard multiple-choice questions (MCQ) with 4 options: A, B, C, D. The answer MUST be 'A', 'B', 'C', or 'D'.\n"
         "3. Standardize chemical formulas using HTML tags: indices to <sub> (e.g. C<sub>2</sub>H<sub>5</sub>OH, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup> (e.g. Fe<sup>3+</sup>).\n"
         "4. Standardize mathematical expressions using KaTeX/LaTeX delimiters: inline math between $...$ (e.g. $E = mc^2$, $\\int_0^1 f(x)dx$, $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$).\n"
         "5. Preserve visual assets: If the question contains an image marker '[IMAGE_REF: fig_pX_Y]' or refers to a figure, diagram, reaction scheme, chart, or spectrum, you MUST preserve 'image_ref': 'fig_pX_Y.png'. If none, set 'image_ref': null.\n"
@@ -1125,32 +1067,10 @@ def parse_and_standardize_questions(
         '      "options": {"A": "...", "B": "...", "C": "...", "D": "..."},\n'
         '      "explanation": "Concise scientific explanation...",\n'
         '      "answer": "A"\n'
-        "    },\n"
-        "    {\n"
-        '      "number": 2,\n'
-        '      "type": "true_false_group",\n'
-        '      "question": "Question text...",\n'
-        '      "image_ref": null,\n'
-        '      "statements": {\n'
-        '        "a": {"text": "...", "is_correct": true},\n'
-        '        "b": {"text": "...", "is_correct": false},\n'
-        '        "c": {"text": "...", "is_correct": true},\n'
-        '        "d": {"text": "...", "is_correct": false}\n'
-        "      },\n"
-        '      "explanation": "Concise explanation...",\n'
-        '      "answer": "a-Đ, b-S, c-Đ, d-S"\n'
-        "    },\n"
-        "    {\n"
-        '      "number": 3,\n'
-        '      "type": "short_answer",\n'
-        '      "question": "Question text...",\n'
-        '      "image_ref": null,\n'
-        '      "answer": "88",\n'
-        '      "explanation": "Concise explanation..."\n'
         "    }\n"
         "  ]\n"
         "}\n"
-        "8. If there are NO questions in the provided text, return {\"questions\": []}."
+        "9. If there are NO questions in the provided text, return {\"questions\": []}."
     )
 
     BATCH_SIZE = 12
@@ -1266,87 +1186,28 @@ def render_question_content_html(q: dict) -> str:
       <img src="{img_src}" alt="Hình minh họa" />
     </div>"""
 
-    if q_type == "true_false_group":
-        stmts = q.get("statements", {})
-        stmt_rows = []
-        for key in ["a", "b", "c", "d"]:
-            stmt_val = stmts.get(key, {})
-            text = stmt_val.get("text", "") if isinstance(stmt_val, dict) else str(stmt_val)
-            text = clean_image_markers(text)
-            stmt_rows.append(f"""
-        <tr>
-          <td class="tf-text"><b>{key})</b> {text}</td>
-          <td class="tf-cell"></td>
-          <td class="tf-cell"></td>
-        </tr>""")
-        rendered_stmts = "\n".join(stmt_rows)
-        body = f"""
-    <div class="q-content">{q_text_formatted}</div>{img_html}
-    <table class="tf-table">
-      <thead>
-        <tr>
-          <th style="width: 76%; text-align: left; padding-left: 8px;">Lệnh hỏi / Phát biểu</th>
-          <th style="width: 12%;">Đúng</th>
-          <th style="width: 12%;">Sai</th>
-        </tr>
-      </thead>
-      <tbody>
-{rendered_stmts}
-      </tbody>
-    </table>"""
-        return body
-
-    elif q_type == "short_answer":
-        body = f"""
-    <div class="q-content">{q_text_formatted}</div>{img_html}
-    <div class="sa-box">
-      <span class="sa-label">Đáp án:</span>
-      <span class="sa-fill"></span>
-    </div>"""
-        return body
-
-    else:
-        # Standard MCQ
-        opts = q.get("options", {})
-        col_class = determine_option_layout(opts)
-        opt_items = []
-        for key in ["A", "B", "C", "D"]:
-            val = clean_image_markers(str(opts.get(key, "")))
-            opt_items.append(f'<div class="opt-item"><span class="opt-letter">{key}.</span> {val}</div>')
-        opts_rendered = "\n      ".join(opt_items)
-        body = f"""
+    # Standard MCQ
+    opts = q.get("options", {})
+    col_class = determine_option_layout(opts)
+    opt_items = []
+    for key in ["A", "B", "C", "D"]:
+        val = clean_image_markers(str(opts.get(key, "")))
+        opt_items.append(f'<div class="opt-item"><span class="opt-letter">{key}.</span> {val}</div>')
+    opts_rendered = "\n      ".join(opt_items)
+    body = f"""
     <div class="q-content">{q_text_formatted}</div>{img_html}
     <div class="options-grid {col_class}">
       {opts_rendered}
     </div>"""
-        return body
+    return body
 
 
 def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
-    """Generate printable HTML worksheet with multi-format question support and KaTeX rendering."""
-    # Group questions by type for clean pedagogical banners
-    has_mcq = any(q.get("type", "mcq") == "mcq" for q in questions)
-    has_tf = any(q.get("type") == "true_false_group" for q in questions)
-    has_sa = any(q.get("type") == "short_answer" for q in questions)
-    is_multi_part = (has_mcq and (has_tf or has_sa)) or (has_tf and has_sa)
-
+    """Generate printable HTML worksheet with multiple-choice question support and KaTeX rendering."""
     items_html = []
-    current_part = None
 
     for idx, q in enumerate(questions, start=1):
         num = q.get("number", idx)
-        q_type = q.get("type", "mcq")
-
-        # Insert section banner if multi-part exam
-        if is_multi_part and q_type != current_part:
-            current_part = q_type
-            if q_type == "mcq":
-                items_html.append('<div class="section-banner notranslate katex-ignore">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>')
-            elif q_type == "true_false_group":
-                items_html.append('<div class="section-banner notranslate katex-ignore">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG / SAI</div>')
-            elif q_type == "short_answer":
-                items_html.append('<div class="section-banner notranslate katex-ignore">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>')
-
         content = render_question_content_html(q)
 
         item = f"""
@@ -1359,10 +1220,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
     body_content = "\n".join(items_html)
     sub_html = f'\n    <div class="sub-title">{subtitle}</div>' if subtitle and subtitle.strip() else ""
 
-    top_banner = (
-        f'<div class="section-banner notranslate katex-ignore">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN ({len(questions)} CÂU)</div>'
-        if not is_multi_part else ""
-    )
+    top_banner = f'<div class="section-banner notranslate katex-ignore">CÂU HỎI TRẮC NGHIỆM ({len(questions)} CÂU)</div>'
 
     return f"""<!DOCTYPE html>
 <html lang="vi">
@@ -1625,74 +1483,26 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 
 
 def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
-    """Generate printable HTML standalone answer key with quick matrix tables and multi-format solutions."""
-    mcq_qs = [q for q in questions if q.get("type", "mcq") == "mcq"]
-    tf_qs = [q for q in questions if q.get("type") == "true_false_group"]
-    sa_qs = [q for q in questions if q.get("type") == "short_answer"]
-
-    matrix_blocks = []
-
-    # 1. Part I: MCQ Matrix Table
-    if mcq_qs:
-        chunk_size = 10
-        chunks = [mcq_qs[i:i + chunk_size] for i in range(0, len(mcq_qs), chunk_size)]
-        rows = []
-        for c in chunks:
-            th_cells = "".join(f"<th>{q.get('number', i+1)}</th>" for i, q in enumerate(c))
-            td_cells = "".join(f"<td>{q.get('answer', '-')}</td>" for q in c)
-            rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
-        table_html = "\n  ".join(rows)
-        matrix_blocks.append(f"""
-  <div class="section-banner notranslate katex-ignore">I. BẢNG ĐÁP ÁN TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>
+    """Generate printable HTML standalone answer key with quick matrix table and multiple-choice solutions."""
+    # MCQ Matrix Table (chunks of 10)
+    chunk_size = 10
+    chunks = [questions[i:i + chunk_size] for i in range(0, len(questions), chunk_size)]
+    rows = []
+    for c in chunks:
+        th_cells = "".join(f"<th>{q.get('number', i+1)}</th>" for i, q in enumerate(c))
+        td_cells = "".join(f"<td>{q.get('answer', '-')}</td>" for q in c)
+        rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
+    table_html = "\n  ".join(rows)
+    matrix_content = f"""
+  <div class="section-banner notranslate katex-ignore">BẢNG ĐÁP ÁN</div>
   <table class="matrix-table notranslate katex-ignore">
     {table_html}
-  </table>""")
-
-    # 2. Part II: True/False Matrix Table
-    if tf_qs:
-        rows = ["<tr><th style='width: 15%'>Câu</th><th style='width: 21%'>Ý a</th><th style='width: 21%'>Ý b</th><th style='width: 21%'>Ý c</th><th style='width: 21%'>Ý d</th></tr>"]
-        for q in tf_qs:
-            num = q.get("number", "-")
-            stmts = q.get("statements", {})
-            cells = []
-            for k in ["a", "b", "c", "d"]:
-                s = stmts.get(k, {})
-                is_cor = s.get("is_correct") if isinstance(s, dict) else s
-                is_truthy = is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")
-                is_falsy = is_cor is False or str(is_cor).lower() in ("false", "0", "s", "sai")
-                tag = "Đ" if is_truthy else ("S" if is_falsy else "-")
-                cells.append(f"<td><b>{tag}</b></td>")
-            rows.append(f"<tr><th>Câu {num}</th>{''.join(cells)}</tr>")
-        tf_matrix_html = "\n    ".join(rows)
-        matrix_blocks.append(f"""
-  <div class="section-banner notranslate katex-ignore">II. BẢNG ĐÁP ÁN TRẮC NGHIỆM ĐÚNG / SAI</div>
-  <table class="matrix-table notranslate katex-ignore">
-    {tf_matrix_html}
-  </table>""")
-
-    # 3. Part III: Short Answer Matrix Table
-    if sa_qs:
-        chunk_size = 10
-        chunks = [sa_qs[i:i + chunk_size] for i in range(0, len(sa_qs), chunk_size)]
-        rows = []
-        for c in chunks:
-            th_cells = "".join(f"<th>{q.get('number', i+1)}</th>" for i, q in enumerate(c))
-            td_cells = "".join(f"<td>{q.get('answer', '-')}</td>" for q in c)
-            rows.append(f"<tr><th>Câu</th>{th_cells}</tr>\n    <tr><th>Đ/A</th>{td_cells}</tr>")
-        sa_matrix_html = "\n  ".join(rows)
-        matrix_blocks.append(f"""
-  <div class="section-banner notranslate katex-ignore">III. BẢNG ĐÁP ÁN TRẢ LỜI NGẮN</div>
-  <table class="matrix-table notranslate katex-ignore">
-    {sa_matrix_html}
-  </table>""")
-
-    matrix_content = "\n".join(matrix_blocks)
+  </table>"""
 
     # Detailed Explanations
     sols_html = []
     for idx, q in enumerate(questions, start=1):
         num = q.get("number", idx)
-        q_type = q.get("type", "mcq")
         ans = q.get("answer", "-")
         expl = format_tables_in_text(clean_image_markers(q.get("explanation", "")))
 
@@ -1701,33 +1511,7 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
         if img_src and str(img_src).lower() not in ("null", "none", "", "undefined"):
             img_html = f'<div class="sol-img"><img src="{img_src}" alt="Hình minh họa" /></div>'
 
-        if q_type == "true_false_group":
-            stmts = q.get("statements", {})
-            stmt_lines = []
-            for k in ["a", "b", "c", "d"]:
-                s = stmts.get(k, {})
-                s_text = s.get("text", "") if isinstance(s, dict) else str(s)
-                s_text = clean_image_markers(s_text)
-                is_cor = s.get("is_correct") if isinstance(s, dict) else s
-                is_truthy = is_cor is True or str(is_cor).lower() in ("true", "1", "đ", "đúng", "dung")
-                s_tag = "ĐÚNG" if is_truthy else "SAI"
-                tag_class = "tag-true" if is_truthy else "tag-false"
-                stmt_lines.append(f'<div><b>{k})</b> <span class="{tag_class}">[{s_tag}]</span> {s_text}</div>')
-            stmts_detail = "\n      ".join(stmt_lines)
-            sol = f"""
-  <div class="sol-item">
-    <div class="sol-head"><span class="sol-num">Câu {num}:</span> <span class="sol-ans">{ans}</span></div>
-    <div class="sol-stmts">{stmts_detail}</div>{img_html}
-    <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
-  </div>"""
-        elif q_type == "short_answer":
-            sol = f"""
-  <div class="sol-item">
-    <div class="sol-head"><span class="sol-num">Câu {num}:</span> Đáp án: <span class="sol-ans">{ans}</span></div>{img_html}
-    <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
-  </div>"""
-        else:
-            sol = f"""
+        sol = f"""
   <div class="sol-item">
     <div class="sol-head"><span class="sol-num">Câu {num}:</span> Chọn <span class="sol-ans">{ans}</span></div>{img_html}
     <div class="sol-body"><b>Hướng dẫn giải:</b> {expl}</div>
@@ -2123,9 +1907,9 @@ def run_pipeline(
         link_assets_to_questions(questions, extracted_assets, asset_map, source_q_nums)
 
         # Compute question type breakdown
-        mcq_count = sum(1 for q in questions if q.get("type", "mcq") == "mcq")
-        tf_count = sum(1 for q in questions if q.get("type") == "true_false_group")
-        sa_count = sum(1 for q in questions if q.get("type") == "short_answer")
+        mcq_count = len(questions)
+        tf_count = 0
+        sa_count = 0
 
         emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
         worksheet_html = generate_worksheet_html(title, subtitle, questions)
