@@ -5,6 +5,14 @@ studocu_dl
 Studocu Downloader - Thư viện và CLI tải tài liệu Studocu chất lượng cao sang PDF A4 Vector & Markdown.
 """
 
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 __version__ = "2.2.0"
 
 from .engine import StudocuDownloader

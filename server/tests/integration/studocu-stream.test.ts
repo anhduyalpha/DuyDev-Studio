@@ -173,6 +173,7 @@ describe('Studocu Document Stream Hardened Headers', () => {
     expect(body.status).toBe('completed');
     expect(body.job_id).toBe('cached_doc123456');
     expect(body.result.title).toBe('Giáo Trình Kinh Tế Vi Mô');
+    expect(body.result.pdf).toBeDefined();
 
     // 2. Query status for cached job ID
     const statusRes = await app.inject({
@@ -184,5 +185,22 @@ describe('Studocu Document Stream Hardened Headers', () => {
     expect(statusBody.status).toBe('completed');
     expect(statusBody.from_cache).toBe(true);
     expect(statusBody.progress.percent).toBe(100);
+    expect(statusBody.progress.total_pages).toBe(45);
+    expect(statusBody.result).toBeDefined();
+    expect(statusBody.result.title).toBe('Giáo Trình Kinh Tế Vi Mô');
+
+    // 3. Substring document ID must NOT match (e.g. 8899 should NOT match 88997766)
+    const missRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/studocu/download',
+      headers: { 'Content-Type': 'application/json' },
+      payload: {
+        url: 'https://www.studocu.com/vn/document/truong-dai-hoc-kinh-te/kinh-te-vi-mo/8899'
+      }
+    });
+    // Should forward to engine (which mocks 200 or 502 depending on engine mock)
+    // Most importantly, should NOT return from_cache: true
+    const missBody = JSON.parse(missRes.body);
+    expect(missBody.from_cache).toBeUndefined();
   });
 });

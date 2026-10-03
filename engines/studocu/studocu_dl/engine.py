@@ -699,32 +699,36 @@ class StudocuDownloader:
             },
         )
 
-        concurrent_jobs = 1
-        try:
-            from .job_worker import ACTIVE_JOB_IDS
-            concurrent_jobs = len(ACTIVE_JOB_IDS)
-        except Exception:
-            pass
-
-        base_block = 15 if concurrent_jobs > 1 else 25
-        BLOCK_SIZE = base_block if pymupdf else total_pages
-        if concurrent_jobs > 1 and pymupdf:
-            self._log(
-                f"  ⚡ Tự động điều chỉnh kích thước khối: {BLOCK_SIZE} trang/khối ({concurrent_jobs} tác vụ đang chạy đồng thời để bảo vệ bộ nhớ RAM)..."
-            )
         master_pdf_doc = pymupdf.open() if pymupdf else None
         single_pdf_bytes = b""
         all_md_items = []
         total_captured_count = 0
         t_start_processing = time.time()
+        last_logged_block_size = None
 
-        for b_start in range(0, total_pages, BLOCK_SIZE):
+        b_start = 0
+        while b_start < total_pages:
             if self.is_cancelled:
                 if master_pdf_doc is not None:
                     master_pdf_doc.close()
                 raise asyncio.CancelledError("Tiến trình đã bị người dùng hủy.")
 
-            b_end = min(b_start + BLOCK_SIZE, total_pages)
+            concurrent_jobs = 1
+            try:
+                from .job_worker import ACTIVE_JOB_IDS
+                concurrent_jobs = len(ACTIVE_JOB_IDS)
+            except Exception:
+                pass
+
+            base_block = 15 if concurrent_jobs > 1 else 25
+            block_size = base_block if pymupdf else total_pages
+            if concurrent_jobs > 1 and pymupdf and block_size != last_logged_block_size:
+                self._log(
+                    f"  ⚡ Tự động điều chỉnh kích thước khối: {block_size} trang/khối ({concurrent_jobs} tác vụ đang chạy đồng thời để bảo vệ bộ nhớ RAM)..."
+                )
+                last_logged_block_size = block_size
+
+            b_end = min(b_start + block_size, total_pages)
 
             # Giai đoạn 1: Cào nội dung DOM khối này
             self._log(
@@ -877,6 +881,7 @@ class StudocuDownloader:
 
             # Giai đoạn 4: Giải phóng triệt để RAM DOM của khối vừa in
             await page_client.eval(get_clear_block_captures_js(b_start, b_end))
+            b_start = b_end
 
         if total_captured_count == 0:
             if master_pdf_doc is not None:
@@ -1033,10 +1038,10 @@ class StudocuDownloader:
                 pass
 
             # Tiêu hủy Tab ảo vừa dùng để giải phóng 100% DOM, ảnh, canvas khỏi RAM
-            if created_target_id:
+            if self.created_target_id:
                 try:
-                    close_tab(self.port, created_target_id)
-                    self._log(f"  🧹 Đã đóng Tab ảo (Target ID: {created_target_id[:8]}...), giải phóng toàn bộ RAM!")
+                    close_tab(self.port, self.created_target_id)
+                    self._log(f"  🧹 Đã đóng Tab ảo (Target ID: {self.created_target_id[:8]}...), giải phóng toàn bộ RAM!")
                 except Exception:
                     pass
                 self.created_target_id = None

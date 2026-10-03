@@ -182,13 +182,13 @@ def _send_browser_cdp(port: int, method: str, params: Optional[dict] = None) -> 
     ws_url = get_browser_ws_url(port)
     try:
         from websockets.sync.client import connect as sync_connect
-        with sync_connect(ws_url, max_size=None, close_timeout=5.0) as ws:
+        with sync_connect(ws_url, max_size=None, open_timeout=5.0, close_timeout=5.0) as ws:
             payload = {"id": 1, "method": method}
             if params:
                 payload["params"] = params
             ws.send(json.dumps(payload))
             while True:
-                msg = json.loads(ws.recv())
+                msg = json.loads(ws.recv(timeout=10.0))
                 if msg.get("id") == 1:
                     if "error" in msg:
                         raise RuntimeError(f"CDP Browser Error ({method}): {msg['error']}")
@@ -198,20 +198,20 @@ def _send_browser_cdp(port: int, method: str, params: Optional[dict] = None) -> 
         from concurrent.futures import ThreadPoolExecutor
         def _runner():
             async def _async_call():
-                async with websockets.connect(ws_url, max_size=None) as ws:
+                async with websockets.connect(ws_url, max_size=None, open_timeout=5.0, close_timeout=5.0) as ws:
                     payload = {"id": 1, "method": method}
                     if params:
                         payload["params"] = params
                     await ws.send(json.dumps(payload))
                     while True:
-                        msg = json.loads(await ws.recv())
+                        msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=10.0))
                         if msg.get("id") == 1:
                             if "error" in msg:
                                 raise RuntimeError(f"CDP Browser Error ({method}): {msg['error']}")
                             return msg.get("result", {})
             return asyncio.run(_async_call())
         with ThreadPoolExecutor(max_workers=1) as ex:
-            return ex.submit(_runner).result(timeout=10.0)
+            return ex.submit(_runner).result(timeout=12.0)
 
 
 def create_browser_context(port: int) -> str:

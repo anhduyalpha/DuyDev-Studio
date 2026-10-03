@@ -23,6 +23,35 @@ async function safeJsonFetch(url: string, init?: RequestInit): Promise<{ status:
   return { status: res.status, data };
 }
 
+const CACHED_JOB_RESULTS = new Map<string, any>();
+
+function matchesDocumentId(file: any, targetDocId: string): boolean {
+  if (!file || !targetDocId) return false;
+
+  // 1. Direct ID match
+  if (file.id === targetDocId) return true;
+
+  // 2. Exact doc ID match from source/original URL
+  const urlsToCheck = [file.original_url, file.source_url];
+  if (typeof file.url === 'string' && (file.url.startsWith('http://') || file.url.startsWith('https://'))) {
+    urlsToCheck.push(file.url);
+  }
+  for (const u of urlsToCheck) {
+    if (typeof u === 'string') {
+      const m = u.match(/\/(\d{5,15})(?:[/?#]|$)/);
+      if (m && m[1] === targetDocId) return true;
+    }
+  }
+
+  // 3. Exact bounded numeric match in filename (prevents substring collisions like 12345 in 12345678)
+  if (typeof file.name === 'string') {
+    const boundaryRegex = new RegExp(`(^|\\D)${targetDocId}(\\D|$)`);
+    if (boundaryRegex.test(file.name)) return true;
+  }
+
+  return false;
+}
+
 export async function studocuRoute(app: FastifyInstance): Promise<void> {
   // 1. Health & status check
   app.get('/api/v1/studocu/status', async () => {
@@ -45,33 +74,48 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
           try {
             const filesRes = await safeJsonFetch(`${BACKEND_URL}/api/files`);
             if (filesRes.status === 200 && Array.isArray(filesRes.data)) {
-              const matched = filesRes.data.find((f: any) =>
-                (f.url && f.url.includes(docId)) ||
-                (f.name && f.name.includes(docId)) ||
-                (f.title && f.title.includes(docId)) ||
-                (f.original_url && f.original_url.includes(docId))
-              );
+              const matched = filesRes.data.find((f: any) => matchesDocumentId(f, docId));
 
               if (matched) {
-                const resultPayload = {
+                const isPdf = matched.format === 'pdf' || matched.is_pdf || matched.name?.toLowerCase().endsWith('.pdf');
+                const resultPayload: any = {
                   title: matched.title || matched.name,
                   pages: matched.pages,
-                  from_cache: true,
-                  pdf: {
+                  from_cache: true
+                };
+
+                if (isPdf) {
+                  resultPayload.pdf = {
                     id: matched.id,
                     name: matched.name,
-                    download_url: matched.url || `/downloads/${encodeURIComponent(matched.name)}`,
+                    download_url: matched.download_url || matched.url || `/downloads/${encodeURIComponent(matched.name)}`,
                     view_url: matched.view_url,
                     stream_url: matched.stream_url,
                     viewer_url: matched.viewer_url,
                     size_mb: matched.size_mb
-                  }
-                };
+                  };
+                } else {
+                  resultPayload.md = {
+                    id: matched.id,
+                    name: matched.name,
+                    download_url: matched.download_url || matched.url || `/downloads/${encodeURIComponent(matched.name)}`,
+                    view_url: matched.view_url,
+                    size_kb: matched.size_bytes ? Math.round(matched.size_bytes / 1024) : undefined
+                  };
+                }
+
+                const cachedJobId = `cached_${matched.id || docId}`;
+                // Keep cache bounded to 100 entries
+                if (CACHED_JOB_RESULTS.size > 100) {
+                  const firstKey = CACHED_JOB_RESULTS.keys().next().value;
+                  if (firstKey) CACHED_JOB_RESULTS.delete(firstKey);
+                }
+                CACHED_JOB_RESULTS.set(cachedJobId, resultPayload);
 
                 return reply.status(200).send({
                   success: true,
                   from_cache: true,
-                  job_id: `cached_${matched.id || docId}`,
+                  job_id: cachedJobId,
                   status: 'completed',
                   result: resultPayload
                 });
@@ -99,14 +143,17 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
     try {
       const jobId = req.params.jobId;
       if (jobId.startsWith('cached_')) {
+        const cachedResult = CACHED_JOB_RESULTS.get(jobId);
+        const pageCount = cachedResult?.pages || cachedResult?.pdf?.pages || 0;
         return reply.status(200).send({
           id: jobId,
           status: 'completed',
           from_cache: true,
+          result: cachedResult,
           progress: {
             phase: 'completed',
-            current_page: 0,
-            total_pages: 0,
+            current_page: pageCount,
+            total_pages: pageCount,
             percent: 100,
             message: 'Tài liệu đã có sẵn trên máy chủ'
           },

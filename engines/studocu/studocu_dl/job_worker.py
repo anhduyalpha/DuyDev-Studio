@@ -186,81 +186,82 @@ def run_download_job(
 
     # 2. CHỐNG TẢI TRÙNG LẶP (IN-FLIGHT URL DEDUPLICATION)
     doc_id = extract_studocu_doc_id(url)
-    is_secondary = False
-    primary_job_id = None
-    completion_event = None
 
     if not force_reload:
-        with IN_FLIGHT_LOCK:
-            if doc_id in IN_FLIGHT_JOBS:
-                primary_job_id = IN_FLIGHT_JOBS[doc_id]
+        while True:
+            is_secondary = False
+            primary_job_id = None
+            completion_event = None
+
+            with IN_FLIGHT_LOCK:
+                if doc_id in IN_FLIGHT_JOBS:
+                    candidate_id = IN_FLIGHT_JOBS[doc_id]
+                    if candidate_id != job_id:
+                        candidate_job = JOBS.get(candidate_id)
+                        if candidate_job and candidate_job.get("status") in ("running", "queued", "init"):
+                            is_secondary = True
+                            primary_job_id = candidate_id
+                            completion_event = IN_FLIGHT_EVENTS.get(doc_id)
+                if not is_secondary:
+                    IN_FLIGHT_JOBS[doc_id] = job_id
+                    completion_event = threading.Event()
+                    IN_FLIGHT_EVENTS[doc_id] = completion_event
+                    break
+
+            if is_secondary and primary_job_id and completion_event:
+                job["status"] = "running"
+                job["logs"].append(
+                    f"ℹ️ Phát hiện tài liệu đang được tải đồng thời bởi tác vụ [{primary_job_id}]. "
+                    "Đang liên kết chia sẻ luồng và tái sử dụng kết quả..."
+                )
+                # Chờ kết quả từ primary job
+                while not completion_event.wait(timeout=0.5):
+                    if job.get("status") == "cancelled":
+                        job["logs"].append("🛑 Tiến trình đã bị người dùng hủy.")
+                        return
+                    primary_job = JOBS.get(primary_job_id)
+                    if not primary_job or primary_job.get("status") not in ("running", "queued", "init"):
+                        break
+                    if primary_job.get("progress"):
+                        job["progress"] = dict(primary_job["progress"])
+
+                # Sau khi primary job hoàn thành
                 primary_job = JOBS.get(primary_job_id)
-                # Chỉ gắn vào chờ nếu primary job vẫn đang chạy hoặc trong hàng đợi
-                if primary_job and primary_job.get("status") in ("running", "queued", "init"):
-                    is_secondary = True
-                    completion_event = IN_FLIGHT_EVENTS.get(doc_id)
-            if not is_secondary:
-                IN_FLIGHT_JOBS[doc_id] = job_id
-                completion_event = threading.Event()
-                IN_FLIGHT_EVENTS[doc_id] = completion_event
+                if primary_job and primary_job.get("status") == "completed":
+                    job["result"] = primary_job.get("result")
+                    job["status"] = "completed"
+                    job["from_cache"] = True
+                    job["progress"] = primary_job.get("progress")
+                    job["logs"].append(
+                        f"✅ Tải thành công từ luồng chia sẻ [{primary_job_id}]: '{primary_job.get('result', {}).get('title', '')}'!"
+                    )
+                    if downloaded_by:
+                        try:
+                            from .storage import DocumentStore
+                            store = DocumentStore.get_instance()
+                            pdf_info = (job.get("result") or {}).get("pdf", {})
+                            if pdf_info.get("name"):
+                                store.register_document(
+                                    file_path=downloads_dir / pdf_info["name"],
+                                    url=url,
+                                    title=job.get("result", {}).get("title", ""),
+                                    pages=pdf_info.get("pages"),
+                                    downloaded_by=downloaded_by,
+                                )
+                        except Exception:
+                            pass
+                    return
+                elif primary_job and primary_job.get("status") == "failed":
+                    job["status"] = "failed"
+                    job["error"] = primary_job.get("error", "Tiến trình gốc gặp lỗi")
+                    job["logs"].append(f"❌ THẤT BẠI: {job['error']}")
+                    return
+                elif job.get("status") == "cancelled":
+                    return
 
-    if is_secondary and primary_job_id and completion_event:
-        job["status"] = "running"
-        job["logs"].append(
-            f"ℹ️ Phát hiện tài liệu đang được tải đồng thời bởi tác vụ [{primary_job_id}]. "
-            "Đang liên kết chia sẻ luồng và tái sử dụng kết quả..."
-        )
-        # Chờ kết quả từ primary job
-        while not completion_event.wait(timeout=0.5):
-            if job.get("status") == "cancelled":
-                job["logs"].append("🛑 Tiến trình đã bị người dùng hủy.")
-                return
-            primary_job = JOBS.get(primary_job_id)
-            if not primary_job or primary_job.get("status") not in ("running", "queued", "init"):
-                break
-            if primary_job.get("progress"):
-                job["progress"] = dict(primary_job["progress"])
-
-        # Sau khi primary job hoàn thành
-        primary_job = JOBS.get(primary_job_id)
-        if primary_job and primary_job.get("status") == "completed":
-            job["result"] = primary_job.get("result")
-            job["status"] = "completed"
-            job["from_cache"] = True
-            job["progress"] = primary_job.get("progress")
-            job["logs"].append(
-                f"✅ Tải thành công từ luồng chia sẻ [{primary_job_id}]: '{primary_job.get('result', {}).get('title', '')}'!"
-            )
-            if downloaded_by:
-                try:
-                    from .storage import DocumentStore
-                    store = DocumentStore.get_instance()
-                    pdf_info = (job.get("result") or {}).get("pdf", {})
-                    if pdf_info.get("name"):
-                        store.register_document(
-                            file_path=downloads_dir / pdf_info["name"],
-                            url=url,
-                            title=job.get("result", {}).get("title", ""),
-                            pages=pdf_info.get("pages"),
-                            downloaded_by=downloaded_by,
-                        )
-                except Exception:
-                    pass
-            return
-        elif primary_job and primary_job.get("status") == "failed":
-            job["status"] = "failed"
-            job["error"] = primary_job.get("error", "Tiến trình gốc gặp lỗi")
-            job["logs"].append(f"❌ THẤT BẠI: {job['error']}")
-            return
-        elif job.get("status") == "cancelled":
-            return
-
-        # Nếu primary job bị hủy hoặc kết thúc không trọn vẹn, tự mình tải độc lập
-        job["logs"].append("⚠️ Tiến trình liên kết bị gián đoạn, tự động khởi tạo luồng tải độc lập...")
-        with IN_FLIGHT_LOCK:
-            IN_FLIGHT_JOBS[doc_id] = job_id
-            completion_event = threading.Event()
-            IN_FLIGHT_EVENTS[doc_id] = completion_event
+                # Nếu primary job bị hủy hoặc kết thúc không trọn vẹn, lặp lại để trở thành primary hoặc chờ primary mới
+                job["logs"].append("⚠️ Tiến trình liên kết bị gián đoạn, tự động chuyển tiếp luồng tải...")
+                continue
 
     try:
         # 3. XẾP HÀNG ĐỢI NẾU HỆ THỐNG ĐANG BẬN

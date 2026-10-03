@@ -38,6 +38,9 @@ temp/
 .tmp/
 .tmp*
 scratch/
+engines/studocu/downloads/
+engines/studocu/**/.session/
+engines/studocu/**/.cache/
 
 # Loose root test artifacts & temporary scripts
 /*.docx
