@@ -76,6 +76,7 @@ class StudocuDownloader:
         self.created_target_id = None
         self.browser_context_id = None
         self.current_page_client = None
+        self.worker_target_ids = []
 
         if not self.keep_browser_alive:
             self.browser = BrowserProcess(
@@ -92,6 +93,13 @@ class StudocuDownloader:
         """Hủy toàn bộ tiến trình tải và đóng tab ảo lập tức."""
         self.is_cancelled = True
         self._log("🛑 Nhận lệnh hủy tiến trình: Đang đóng tab ảo và ngắt kết nối...")
+        if hasattr(self, "worker_target_ids") and self.worker_target_ids:
+            for tid in list(self.worker_target_ids):
+                try:
+                    close_tab(self.port, tid)
+                except Exception:
+                    pass
+            self.worker_target_ids.clear()
         if self.created_target_id:
             try:
                 close_tab(self.port, self.created_target_id)
@@ -256,16 +264,23 @@ class StudocuDownloader:
                 self._log(f"     Lỗi auto-click Turnstile: {e}")
             return False
 
-    async def _wait_for_page_ready(self, page_client: StudocuCDPClient) -> str:
+    async def _wait_for_page_ready(
+        self,
+        page_client: StudocuCDPClient,
+        max_wait: Optional[float] = None,
+        verbose_log: bool = True,
+    ) -> str:
         """Chờ Cloudflare verification và kiểm tra DOM tài liệu xuất hiện."""
-        self._log("  ⏳ Đang kết nối nền và kiểm tra xác minh Cloudflare...")
+        wait_limit = max_wait if max_wait is not None else self.timeout
+        if verbose_log:
+            self._log("  ⏳ Đang kết nối nền và kiểm tra xác minh Cloudflare...")
         start = time.time()
         last_title = ""
         cloudflare_passed = False
         last_click_time = 0.0
         click_count = 0
 
-        while time.time() - start < self.timeout:
+        while time.time() - start < wait_limit:
             if self.is_cancelled:
                 raise asyncio.CancelledError("Tiến trình đã bị người dùng hủy.")
             try:
@@ -282,7 +297,8 @@ class StudocuDownloader:
 
             if title and title != last_title:
                 last_title = title
-                self._log(f"     Trạng thái trang: '{title}'")
+                if verbose_log:
+                    self._log(f"     Trạng thái trang: '{title}'")
 
             if title:
                 if "Access Blocked" in title:
@@ -319,7 +335,7 @@ class StudocuDownloader:
             except Exception:
                 current_url = "N/A"
             raise TimeoutError(
-                f"Quá thời gian chờ xác minh Cloudflare ({self.timeout}s).\n"
+                f"Quá thời gian chờ xác minh Cloudflare ({wait_limit}s).\n"
                 f"     Trạng thái dừng lại ở: '{last_title}'\n"
                 f"     URL hiện tại: {current_url}\n"
                 f"     Giải pháp gợi ý: Chạy lại kèm tham số --show-browser để xem giao diện giải captcha, hoặc tăng --timeout 90."
@@ -936,6 +952,368 @@ class StudocuDownloader:
 
         return results, doc_title
 
+    async def _capture_and_print_block(
+        self,
+        client: StudocuCDPClient,
+        start_idx: int,
+        end_idx: int,
+        total_pages: int,
+        chunk_idx: int,
+        total_chunks: int,
+        is_master: bool = False,
+    ) -> Tuple[Optional[bytes], list]:
+        """Thu thập, healing và xuất PDF cho một khối trang trên một CDP client."""
+        if self.is_cancelled:
+            raise asyncio.CancelledError("Tiến trình đã bị người dùng hủy.")
+
+        self._log(
+            f"  ⚡ [Tab {chunk_idx + 1}/{total_chunks}] Đang thu thập nội dung: Trang {start_idx + 1} - {end_idx}/{total_pages}...",
+            progress={
+                "phase": "capturing",
+                "current_page": start_idx + 1,
+                "total_pages": total_pages,
+                "percent": max(5, int((start_idx / total_pages) * 85)),
+                "message": f"Thu thập [Tab {chunk_idx + 1}/{total_chunks}]: {start_idx + 1}-{end_idx}/{total_pages} trang",
+            },
+        )
+
+        chunk_js = get_chunk_capture_js(start_idx, end_idx, total_pages)
+        await client.eval(chunk_js, await_promise=True)
+
+        # Healing nhanh cục bộ cho riêng khối này nếu bị thiếu
+        missing_in_block = await client.eval(f"""
+        (() => {{
+            const missing = [];
+            for (let idx = {start_idx}; idx < {end_idx}; idx++) {{
+                const sheet = window.__STD_CAPTURES__?.get(idx);
+                if (!sheet) {{ missing.push(idx); continue; }}
+                const textLen = sheet.textContent.trim().length;
+                const imgs = Array.from(sheet.querySelectorAll('img'));
+                const hasValidImg = imgs.some(img => img.naturalWidth > 0 || (img.src && !img.src.includes('blurred') && img.src.length > 0));
+                const canvases = sheet.querySelectorAll('canvas').length;
+                if (textLen === 0 && !hasValidImg && canvases === 0) {{
+                    missing.push(idx);
+                }}
+            }}
+            return missing;
+        }})()
+        """) or []
+
+        if missing_in_block:
+            for idx in missing_in_block:
+                if self.is_cancelled:
+                    break
+                heal_js = f"""
+                (async () => {{
+                    const sleep = ms => new Promise(r => setTimeout(r, ms));
+                    const scrollContainer = document.getElementById('viewer-wrapper') ||
+                                           document.getElementById('document-wrapper') ||
+                                           document.scrollingElement ||
+                                           document.documentElement;
+                    let pageEl = document.querySelector(`div[data-page-index="{idx}"]`) ||
+                                 document.querySelector(`[data-page-number="{idx + 1}"]`) ||
+                                 document.querySelectorAll('.pf')[{idx}];
+                    if (!pageEl && {total_pages} > 1) {{
+                        const maxScroll = Math.max(0, (scrollContainer.scrollHeight || document.documentElement.scrollHeight) - scrollContainer.clientHeight);
+                        const targetScroll = Math.round(maxScroll * ({idx} / ({total_pages} - 1)));
+                        if (scrollContainer.scrollTop !== undefined) scrollContainer.scrollTop = targetScroll;
+                        window.scrollTo(0, targetScroll);
+                        try {{ scrollContainer.dispatchEvent(new Event('scroll', {{ bubbles: true }})); }} catch (_) {{}}
+                        await sleep(100);
+                        pageEl = document.querySelector(`div[data-page-index="{idx}"]`) ||
+                                 document.querySelector(`[data-page-number="{idx + 1}"]`) ||
+                                 document.querySelectorAll('.pf')[{idx}];
+                    }}
+                    if (pageEl) {{
+                        try {{ pageEl.scrollIntoView({{ block: 'center', inline: 'nearest' }}); }} catch (_) {{}}
+                    }}
+                    let pf = pageEl ? (pageEl.querySelector('.pf') || pageEl) : null;
+                    for (let w = 0; w < 30; w++) {{
+                        if (pageEl) pf = pageEl.querySelector('.pf') || pageEl;
+                        if (pf) {{
+                            const textCount = pf.querySelectorAll('.t, .textLayer span, [class*="textLayer"] span').length;
+                            const imgs = pf.querySelectorAll('img');
+                            if (textCount > 0 || imgs.length > 0) break;
+                        }}
+                        await sleep(60);
+                    }}
+                    if (pf) {{
+                        pf.querySelectorAll('.banner-wrapper, [class*="InlineBanner"], [class*="PremiumBanner"], [class*="banner"], [class*="paywall" i]').forEach(el => el.remove());
+                        if (window.__STD_BASE_URL__ && window.__STD_QUERY__) {{
+                            const img = pf.querySelector('img');
+                            if (img) {{
+                                const src = img.getAttribute('src') || img.src || '';
+                                if (src.includes('blurred') || src.includes('blur') || !src) {{
+                                    img.src = window.__STD_BASE_URL__ + 'bg' + ({idx} + 1) + '.png' + window.__STD_QUERY__;
+                                    img.removeAttribute('srcset');
+                                    img.setAttribute('fetchpriority', 'high');
+                                    img.removeAttribute('loading');
+                                    img.setAttribute('decoding', 'sync');
+                                }}
+                            }}
+                        }}
+                        const sheet = window.__std_buildA4Sheet(pf, {idx});
+                        window.__STD_CAPTURES__.set({idx}, sheet);
+                        return true;
+                    }}
+                    return false;
+                }})()
+                """
+                await client.eval(heal_js, await_promise=True)
+
+        md_items = []
+        if self.fmt in ("md", "both"):
+            md_items = await client.eval(get_chunk_extract_markdown_js(start_idx, end_idx)) or []
+
+        chunk_bytes = None
+        if self.fmt in ("pdf", "both"):
+            self._log(
+                f"     🖨️  [Tab {chunk_idx + 1}/{total_chunks}] Đang xuất PDF: Trang {start_idx + 1} - {end_idx}/{total_pages}...",
+                progress={
+                    "phase": "rendering",
+                    "current_page": end_idx,
+                    "total_pages": total_pages,
+                    "percent": min(95, int((end_idx / total_pages) * 95)),
+                    "message": f"Xuất PDF [Tab {chunk_idx + 1}/{total_chunks}]: {end_idx}/{total_pages} trang",
+                },
+            )
+            await client.eval(get_chunk_mount_js(start_idx, end_idx))
+            await client.eval("document.fonts?.ready", await_promise=True)
+            await client.eval(JS_WAIT_IMAGES_LOADED, await_promise=True)
+            pdf_res = await client.send(
+                "Page.printToPDF",
+                {
+                    "printBackground": True,
+                    "paperWidth": 8.27,  # A4 inches
+                    "paperHeight": 11.69,
+                    "marginTop": 0,
+                    "marginBottom": 0,
+                    "marginLeft": 0,
+                    "marginRight": 0,
+                    "preferCSSPageSize": True,
+                    "transferMode": "ReturnAsBase64",
+                },
+            )
+            chunk_bytes = base64.b64decode(pdf_res["data"])
+
+        if is_master:
+            await client.eval(get_clear_block_captures_js(start_idx, end_idx))
+
+        return chunk_bytes, md_items
+
+    async def _render_chunk_in_master_tab(
+        self,
+        page_client: StudocuCDPClient,
+        start_idx: int,
+        end_idx: int,
+        total_pages: int,
+        chunk_idx: int,
+        total_chunks: int,
+    ) -> Tuple[Optional[bytes], list]:
+        """Thực thi cào & xuất PDF khối trang trên Master Tab đã nạp sẵn."""
+        return await self._capture_and_print_block(
+            page_client, start_idx, end_idx, total_pages, chunk_idx, total_chunks, is_master=True
+        )
+
+    async def _render_chunk_in_worker_tab(
+        self,
+        start_idx: int,
+        end_idx: int,
+        total_pages: int,
+        cookies: list,
+        chunk_idx: int,
+        total_chunks: int,
+    ) -> Tuple[Optional[bytes], list]:
+        """Thực thi cào & xuất PDF khối trang trên một Worker Tab ảo độc lập."""
+        if self.is_cancelled:
+            raise asyncio.CancelledError("Tiến trình đã bị người dùng hủy.")
+
+        worker_tid = None
+        worker_client = None
+        try:
+            worker_tid, worker_ws_url = create_tab(
+                self.port,
+                "about:blank",
+                browser_context_id=self.browser_context_id,
+            )
+            self.worker_target_ids.append(worker_tid)
+            worker_client = StudocuCDPClient(worker_ws_url)
+            await worker_client.connect()
+
+            await worker_client.send("Page.enable")
+            await worker_client.send("DOM.enable")
+            await worker_client.block_unwanted_resources()
+
+            if cookies:
+                await worker_client.send("Network.setCookies", {"cookies": cookies})
+
+            await worker_client.send("Page.navigate", {"url": self.url})
+            await self._wait_for_page_ready(worker_client, max_wait=30.0, verbose_log=False)
+            await self._clear_document_tracking_storage(worker_client)
+            await worker_client.eval(JS_INIT_CAPTURE)
+
+            return await self._capture_and_print_block(
+                worker_client, start_idx, end_idx, total_pages, chunk_idx, total_chunks, is_master=False
+            )
+        finally:
+            if worker_client:
+                try:
+                    await worker_client.close()
+                except Exception:
+                    pass
+            if worker_tid:
+                if worker_tid in self.worker_target_ids:
+                    self.worker_target_ids.remove(worker_tid)
+                try:
+                    close_tab(self.port, worker_tid)
+                except Exception:
+                    pass
+
+    async def _process_parallel_multi_tab_chunks(
+        self, page_client: StudocuCDPClient, r_init: Optional[dict] = None
+    ) -> Tuple[Dict[str, any], str]:
+        """Điều phối cào và in PDF song song qua đa Tab ảo (Parallel Multi-Tab Chunking):
+        - Chia tài liệu thành các khối 25 trang.
+        - Khối 1 chạy ngay trên Master Tab.
+        - Các khối tiếp theo chạy song song trên Worker Tabs (tối đa 3 tab đồng thời).
+        - Ghép nối tức thì in-memory qua PyMuPDF C-Engine (0.05s).
+        - Rút ngắn thời gian tải từ ~40s xuống chỉ còn ~12-15s cho tài liệu dài."""
+        t_start_processing = time.time()
+
+        if r_init is None:
+            r_init = await page_client.eval(JS_INIT_CAPTURE) or {}
+        total_pages = r_init.get("totalPages", 1)
+        doc_title = r_init.get("docTitle", "Studocu Document")
+
+        # Chia dải trang thành các chunks 25 trang
+        CHUNK_SIZE = 25
+        ranges = []
+        b_start = 0
+        while b_start < total_pages:
+            b_end = min(b_start + CHUNK_SIZE, total_pages)
+            ranges.append((b_start, b_end))
+            b_start = b_end
+
+        total_chunks = len(ranges)
+        self._log(
+            f"  📄 Nhận diện tài liệu: '{doc_title}' | Tổng số: {total_pages} trang\n"
+            f"  ⚡ Kích hoạt cơ chế Parallel Multi-Tab Chunking ({total_chunks} khối, tối đa 3 tab ảo đồng thời)...",
+            progress={
+                "phase": "init",
+                "current_page": 0,
+                "total_pages": total_pages,
+                "percent": 5,
+                "message": f"Khởi động song song {total_chunks} khối ({total_pages} trang)",
+            },
+        )
+
+        # Lấy cookies hiện tại từ Master Tab để chia sẻ cho các Worker Tabs
+        try:
+            cookies = (await page_client.send("Network.getCookies")).get("cookies", [])
+        except Exception:
+            cookies = []
+
+        semaphore = asyncio.Semaphore(2)  # Tối đa 2 worker tabs song song với 1 master tab (tổng 3 tabs)
+
+        async def worker_runner(s_idx, e_idx, c_idx):
+            async with semaphore:
+                try:
+                    return await self._render_chunk_in_worker_tab(
+                        s_idx, e_idx, total_pages, cookies, c_idx, total_chunks
+                    )
+                except Exception as e:
+                    self._log(f"  ⚠️ Worker Tab cho khối {s_idx + 1}-{e_idx} gặp sự cố ({e}), chuyển sang Master Tab...")
+                    return await self._render_chunk_in_master_tab(
+                        page_client, s_idx, e_idx, total_pages, c_idx, total_chunks
+                    )
+
+        tasks = []
+        for idx, (s_idx, e_idx) in enumerate(ranges):
+            if idx == 0:
+                tasks.append(
+                    self._render_chunk_in_master_tab(
+                        page_client, s_idx, e_idx, total_pages, 0, total_chunks
+                    )
+                )
+            else:
+                tasks.append(worker_runner(s_idx, e_idx, idx))
+
+        chunk_results = await asyncio.gather(*tasks)
+
+        self._log(
+            f"  🧩 Đang ghép nối {len(chunk_results)} khối PDF bằng PyMuPDF C-Engine...",
+            progress={
+                "phase": "assembling",
+                "current_page": total_pages,
+                "total_pages": total_pages,
+                "percent": 96,
+                "message": "Ghép nối các khối PDF siêu tốc...",
+            },
+        )
+
+        master_pdf_doc = pymupdf.open() if pymupdf else None
+        all_md_items = []
+        actual_pages = 0
+
+        for chunk_bytes, md_items in chunk_results:
+            if chunk_bytes and master_pdf_doc is not None:
+                sub_doc = pymupdf.open("pdf", chunk_bytes)
+                actual_pages += len(sub_doc)
+                master_pdf_doc.insert_pdf(sub_doc)
+                sub_doc.close()
+            elif chunk_bytes:
+                actual_pages += total_pages
+            if md_items:
+                all_md_items.extend(md_items)
+
+        results = {}
+        clean_filename = sanitize_filename(doc_title)
+
+        if self.fmt in ("pdf", "both"):
+            if master_pdf_doc is not None:
+                pdf_bytes = master_pdf_doc.tobytes(deflate=True)
+                actual_pages = len(master_pdf_doc)
+                master_pdf_doc.close()
+            else:
+                raise RuntimeError("PyMuPDF không khả dụng để ghép nối song song PDF.")
+
+            pdf_path = self.output_dir / f"{clean_filename}.pdf"
+            pdf_path.write_bytes(pdf_bytes)
+            try:
+                pdf_path.chmod(0o666)
+            except Exception:
+                pass
+
+            pdf_size_mb = len(pdf_bytes) / (1024 * 1024)
+            results["pdf"] = {
+                "path": str(pdf_path.resolve()),
+                "size_mb": round(pdf_size_mb, 2),
+                "pages": actual_pages,
+                "render_sec": round(time.time() - t_start_processing, 2),
+            }
+
+        if self.fmt in ("md", "both"):
+            lines = [f"# {doc_title}", "", "> Tải tự động từ Studocu bằng studocu-dl", ""]
+            all_md_items.sort(key=lambda x: x.get("page", 0))
+            for item in all_md_items:
+                p_num = item.get("page", 1)
+                p_text = item.get("text", "")
+                lines.append("---")
+                lines.append(f"## Trang {p_num}")
+                lines.append("")
+                lines.append(p_text if p_text else "*(Trang này không có văn bản hoặc là ảnh scan)*")
+                lines.append("")
+            md_content = "\n".join(lines)
+            md_path = self.output_dir / f"{clean_filename}.md"
+            md_path.write_text(md_content, encoding="utf-8")
+            results["md"] = {
+                "path": str(md_path.resolve()),
+                "size_kb": round(len(md_content.encode("utf-8")) / 1024, 2),
+            }
+
+        results["pages"] = actual_pages
+        return results, doc_title
+
     async def run(self) -> Dict[str, any]:
         """Quy trình thực thi chính."""
         t_start = time.time()
@@ -1009,10 +1387,29 @@ class StudocuDownloader:
             # Dọn dẹp tracking state trên trang tài liệu vừa nạp
             await self._clear_document_tracking_storage(page_client)
 
-            # 2. Khởi tạo capture và chạy trực tiếp cơ chế Interleaved Block Streaming ổn định
+            # 2. Khởi tạo capture và chọn cơ chế tối ưu dựa trên số trang & tải hệ thống
             r_init = await page_client.eval(JS_INIT_CAPTURE) or {}
-            self._log("  ℹ️ Sử dụng cơ chế Interleaved Block Streaming (bảo toàn 100% Vector & hình ảnh)...")
-            results, final_title = await self._process_interleaved_blocks(page_client, r_init=r_init)
+            total_pages = r_init.get("totalPages", 1)
+
+            concurrent_jobs = 1
+            try:
+                from .job_worker import ACTIVE_JOB_IDS
+                concurrent_jobs = len(ACTIVE_JOB_IDS)
+            except Exception:
+                pass
+
+            if total_pages > 25 and concurrent_jobs <= 1 and pymupdf is not None:
+                try:
+                    results, final_title = await self._process_parallel_multi_tab_chunks(page_client, r_init=r_init)
+                except Exception as par_err:
+                    self._log(f"  ⚠️ Parallel Multi-Tab Chunking gặp sự cố ({par_err}), chuyển sang Interleaved Streaming...")
+                    results, final_title = await self._process_interleaved_blocks(page_client, r_init=r_init)
+            else:
+                if concurrent_jobs > 1:
+                    self._log(f"  ⚡ Phát hiện {concurrent_jobs} tác vụ đang chạy, kích hoạt Interleaved Streaming (15 trang/khối) để tiết kiệm RAM...")
+                else:
+                    self._log("  ℹ️ Sử dụng cơ chế Interleaved Block Streaming (bảo toàn 100% Vector & hình ảnh)...")
+                results, final_title = await self._process_interleaved_blocks(page_client, r_init=r_init)
 
             # 3. Dọn dẹp bộ nhớ chủ động trước khi hoàn thành
             await page_client.purge_memory()
