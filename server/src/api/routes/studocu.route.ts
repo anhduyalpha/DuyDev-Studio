@@ -7,8 +7,9 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Readable } from 'stream';
 import path from 'path';
 import { StudocuDaemonService } from '../../services/studocu-daemon.service.js';
+import { env } from '../../config/env.config.js';
 
-const BACKEND_URL = 'http://127.0.0.1:8090';
+const BACKEND_URL = env.STUDOCU_API_URL;
 
 async function safeJsonFetch(url: string, init?: RequestInit): Promise<{ status: number; data: any }> {
   const res = await fetch(url, init);

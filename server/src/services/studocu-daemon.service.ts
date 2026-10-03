@@ -7,10 +7,18 @@ import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import { existsSync } from 'fs';
 import { logger } from '../lib/logger.js';
+import { env } from '../config/env.config.js';
 
 export class StudocuDaemonService {
   private static process: ChildProcess | null = null;
-  private static port = 8090;
+  private static get port(): number {
+    try {
+      const parsedPort = new URL(env.STUDOCU_API_URL).port;
+      return parsedPort ? parseInt(parsedPort, 10) : 8090;
+    } catch {
+      return 8090;
+    }
+  }
 
   private static getEngineDir(): string {
     const candidates = [
