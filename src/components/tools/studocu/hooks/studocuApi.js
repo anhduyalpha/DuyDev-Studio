@@ -96,7 +96,7 @@ export async function emptyTrashApi() {
 
 export function playCompleteSound() {
   try {
-    const audio = new Audio('src/assets/audio/complete.wav');
+    const audio = new Audio('/src/assets/audio/complete.wav');
     audio.volume = 0.2;
     audio.play().catch(() => {});
   } catch (_) {}
