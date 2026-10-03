@@ -77,11 +77,11 @@ export function attachQuizListeners() {
         }
         if (driveInput) {
           if (isDriveValid) {
-            driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/40', 'focus:border-rose-500');
-            driveInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
+            driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+            driveInput.classList.add('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500');
           } else {
-            driveInput.classList.remove('border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'focus:border-rose-500');
-            driveInput.classList.add('border-zinc-800', 'focus:border-zinc-600');
+            driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+            driveInput.classList.add('border-solid', 'border-zinc-800', 'focus:border-zinc-600');
           }
         }
       } else {
@@ -91,8 +91,8 @@ export function attachQuizListeners() {
           dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
         }
         if (driveInput) {
-          driveInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
-          driveInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
+          driveInput.classList.remove('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
+          driveInput.classList.add('border-dashed', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
         }
       }
     }

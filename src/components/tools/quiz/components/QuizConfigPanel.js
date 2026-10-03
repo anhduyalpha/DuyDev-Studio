@@ -112,12 +112,12 @@ export function renderQuizConfigPanel(state) {
 
         <!-- 2. Google Drive Link Input (Tự động nhận diện) -->
         <div class="relative">
-          <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="https://drive.google.com/file/d/.../view" class="w-full bg-zinc-950 border ${
+          <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="https://drive.google.com/file/d/.../view" class="w-full bg-zinc-950 border-2 ${
             isDriveValid
-              ? 'border-emerald-500/40 focus:border-emerald-500'
+              ? 'border-solid border-emerald-500/40 focus:border-emerald-500'
               : isFileReady
-              ? 'border-zinc-800 focus:border-zinc-600'
-              : 'border-rose-500/40 focus:border-rose-500'
+              ? 'border-solid border-zinc-800 focus:border-zinc-600'
+              : 'border-dashed border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-950/5'
           } rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-hidden transition" />
         </div>
       </div>
