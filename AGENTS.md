@@ -20,6 +20,12 @@ It handles:
 
 ## 2. Core Agent Constraints (MANDATORY RULES)
 
+### Rule 0: Code Intelligence Mandate — CodeGraph First
+- **Zero-Keyword Trigger**: Prioritize CodeGraph (`codegraph_explore` / `codegraph explore`) as the FIRST and PRIMARY step for symbols, architecture, function flows, and tracing dependencies even if "codegraph" is not in the prompt.
+- **Pass projectPath (Issue #501 fix)**: Always supply `projectPath: "C:\\Users\\AnhDuy\\Code\\Project\\DD Studio"` when calling `codegraph_explore`.
+- **Pragmatic Fallback**: Seamlessly fall back to `ripgrep` (`rg`) / `grep` / `view_file` for raw text search, error logs, UI strings, and non-code configs (`.env`, `.json`, `.yaml`).
+- **Smart Affected Testing**: Use `git diff --name-only | codegraph affected -p "C:\\Users\\AnhDuy\\Code\\Project\\DD Studio" --stdin -q` before running test suites.
+
 ### Rule 1: Single Responsibility & Cohesive Modularity (Anti-Monolith & Anti-Fragmentation)
 - **Strict Separation of Concerns**:
   - **Presentation Layer (`components/`)**: Focus exclusively on UI layout, markup rendering, and user event dispatching. Do not embed heavy business logic, raw network polling, or direct database access.
@@ -51,19 +57,24 @@ It handles:
 - Do NOT introduce artificial rate-limiting, captcha, or tight file size caps.
 - Bind server to `0.0.0.0` and allow all local network and Cloudflare origins.
 
-### Rule 5: Local Coding, Git Push & Remote Server Testing Workflow
-- **Code on Local Machine**:
-  - All coding, refactoring, and file modifications are done strictly on the local machine (`c:\Users\AnhDuy\Code\Project\DD Studio`).
-  - **FORBIDDEN**: Using WinSCP, `scp`, or editing code directly on the remote server.
-  - Once code changes are made, create Conventional Commits and push to GitHub (`git push origin main`).
-- **Deploy & Test on Homeserver via SSH**:
-  - Production runs on the homeserver (`192.168.2.171` / `duydevstudio.alphadaniel.io.vn`).
-  - Do NOT run background test servers on local machine unless asked.
-  - SSH into the server to pull from Git and restart:
+### Rule 5: Dual-Environment Workflow (Dev on Port 3001 vs Production on Port 3000)
+- **Local Machine (`dev` branch)**:
+  - All coding, debugging, and experimentation are done on the `dev` branch.
+  - **FORBIDDEN**: Modifying code directly on the remote server or committing experimental/untested code directly to `main`.
+- **Dev Deployment & Testing (`dd-studio-dev`, Port 3001)**:
+  - Push to `origin/dev` and deploy to the Dev server:
     ```powershell
-    ssh anhduy@192.168.2.171 "cd /home/anhduy/dd-studio && git pull origin main && cd server && npm run build && sudo systemctl restart dd-studio.service && systemctl status dd-studio.service --no-pager"
+    .\scripts\deploy-dev.ps1
+    # or via SSH:
+    ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio-dev/scripts/deploy-dev.sh"
     ```
-  - Verify live features on the actual production web app.
+  - Test and verify thoroughly on `http://192.168.2.171:3001`.
+- **Production Promotion (`main` branch, Port 3000 / HTTPS)**:
+  - Only when features are verified 100% on the Dev server, promote to production:
+    ```powershell
+    .\scripts\promote-to-prod.ps1
+    ```
+  - Production runs at `/home/anhduy/dd-studio` on port 3000 (`dd-studio.service`), serving `https://duydevstudio.alphadaniel.io.vn`.
 
 ---
 
