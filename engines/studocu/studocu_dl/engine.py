@@ -22,7 +22,14 @@ except ImportError:
     pymupdf = None
 
 from .browser import BrowserProcess
-from .cdp import StudocuCDPClient, get_page_ws_url, create_tab, close_tab
+from .cdp import (
+    StudocuCDPClient,
+    get_page_ws_url,
+    create_tab,
+    close_tab,
+    create_browser_context,
+    dispose_browser_context,
+)
 from .dom_scripts import (
     JS_EXTRACT_MARKDOWN,
     JS_INIT_CAPTURE,
@@ -67,6 +74,7 @@ class StudocuDownloader:
         self.keep_browser_alive = keep_browser_alive
         self.is_cancelled = False
         self.created_target_id = None
+        self.browser_context_id = None
         self.current_page_client = None
 
         if not self.keep_browser_alive:
@@ -88,6 +96,12 @@ class StudocuDownloader:
             try:
                 close_tab(self.port, self.created_target_id)
                 self.created_target_id = None
+            except Exception:
+                pass
+        if self.browser_context_id:
+            try:
+                dispose_browser_context(self.port, self.browser_context_id)
+                self.browser_context_id = None
             except Exception:
                 pass
         if self.current_page_client:
@@ -685,7 +699,19 @@ class StudocuDownloader:
             },
         )
 
-        BLOCK_SIZE = 25 if pymupdf else total_pages
+        concurrent_jobs = 1
+        try:
+            from .job_worker import ACTIVE_JOB_IDS
+            concurrent_jobs = len(ACTIVE_JOB_IDS)
+        except Exception:
+            pass
+
+        base_block = 15 if concurrent_jobs > 1 else 25
+        BLOCK_SIZE = base_block if pymupdf else total_pages
+        if concurrent_jobs > 1 and pymupdf:
+            self._log(
+                f"  ⚡ Tự động điều chỉnh kích thước khối: {BLOCK_SIZE} trang/khối ({concurrent_jobs} tác vụ đang chạy đồng thời để bảo vệ bộ nhớ RAM)..."
+            )
         master_pdf_doc = pymupdf.open() if pymupdf else None
         single_pdf_bytes = b""
         all_md_items = []
@@ -916,9 +942,22 @@ class StudocuDownloader:
         self._log(f"  🎯 Định dạng: {self.fmt.upper()}")
 
         created_target_id = None
+        self.browser_context_id = None
         if self.keep_browser_alive:
             try:
-                created_target_id, page_ws_url = create_tab(self.port, "about:blank")
+                # Tạo BrowserContext ẩn danh riêng cho job này để cách ly hoàn toàn session/storage
+                try:
+                    self.browser_context_id = create_browser_context(self.port)
+                    self._log(f"  🔒 Đã khởi tạo Incognito BrowserContext ({self.browser_context_id[:8]}...)")
+                except Exception as ctx_err:
+                    self._log(f"  ⚠️ Không thể tạo Incognito Context ({ctx_err}), fallback Default Profile...")
+                    self.browser_context_id = None
+
+                created_target_id, page_ws_url = create_tab(
+                    self.port,
+                    "about:blank",
+                    browser_context_id=self.browser_context_id,
+                )
                 self.created_target_id = created_target_id
                 self._log(f"  📑 Đã khởi tạo Tab ảo độc lập (Target ID: {created_target_id[:8]}...)")
             except Exception as e:
@@ -1001,6 +1040,15 @@ class StudocuDownloader:
                 except Exception:
                     pass
                 self.created_target_id = None
+
+            # Giải phóng BrowserContext để xóa bỏ toàn bộ Isolated Cache & Storage
+            if self.browser_context_id:
+                try:
+                    dispose_browser_context(self.port, self.browser_context_id)
+                    self._log(f"  🛡️ Đã hủy Incognito BrowserContext ({self.browser_context_id[:8]}...), dọn sạch RAM session!")
+                except Exception:
+                    pass
+                self.browser_context_id = None
 
             if not self.keep_browser_alive and self.browser:
                 self.browser.stop()

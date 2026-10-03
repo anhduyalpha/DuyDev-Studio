@@ -19,5 +19,8 @@ npm run build
 echo "🔄 [DEV DEPLOY] Restarting dd-studio-dev.service..."
 systemctl --user restart dd-studio-dev.service
 
+echo "🐳 [DEV DEPLOY] Restarting studocu-dl-dev container..."
+docker restart studocu-dl-dev
+
 echo "✅ [DEV DEPLOY] Complete! Service status:"
 systemctl --user status dd-studio-dev.service --no-pager

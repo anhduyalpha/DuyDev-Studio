@@ -132,4 +132,57 @@ describe('Studocu Document Stream Hardened Headers', () => {
     expect(res.headers['content-disposition']).toContain('attachment');
     expect(res.headers['content-disposition']).toContain('filename="testdoc.pdf"');
   });
+
+  it('performs fast cache hit pre-check for document ID before calling engine', async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/files')) {
+        return new Response(JSON.stringify([
+          {
+            id: 'doc123456',
+            name: 'GiaoTrinhKinhTeViMo.pdf',
+            title: 'Giáo Trình Kinh Tế Vi Mô',
+            url: 'https://www.studocu.com/vn/document/truong-dai-hoc-kinh-te/kinh-te-vi-mo/88997766',
+            pages: 45,
+            size_mb: 3.5,
+            view_url: '/pdfjs/web/viewer.html?file=%2Fapi%2Fdocument-stream%3Fid%3Ddoc123456',
+            stream_url: '/api/document-stream?id=doc123456',
+            viewer_url: '/pdfjs/web/viewer.html?file=%2Fapi%2Fdocument-stream%3Fid%3Ddoc123456'
+          }
+        ]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      return originalFetch(url, init);
+    });
+
+    // 1. Cache hit request
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/studocu/download',
+      headers: { 'Content-Type': 'application/json' },
+      payload: {
+        url: 'https://www.studocu.com/vn/document/truong-dai-hoc-kinh-te/kinh-te-vi-mo/88997766'
+      }
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.success).toBe(true);
+    expect(body.from_cache).toBe(true);
+    expect(body.status).toBe('completed');
+    expect(body.job_id).toBe('cached_doc123456');
+    expect(body.result.title).toBe('Giáo Trình Kinh Tế Vi Mô');
+
+    // 2. Query status for cached job ID
+    const statusRes = await app.inject({
+      method: 'GET',
+      url: `/api/v1/studocu/status/${body.job_id}`
+    });
+    expect(statusRes.statusCode).toBe(200);
+    const statusBody = JSON.parse(statusRes.body);
+    expect(statusBody.status).toBe('completed');
+    expect(statusBody.from_cache).toBe(true);
+    expect(statusBody.progress.percent).toBe(100);
+  });
 });

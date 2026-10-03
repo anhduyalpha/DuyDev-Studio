@@ -162,8 +162,92 @@ async def get_page_ws_url(port: int, max_wait: float = 25.0) -> str:
     )
 
 
-def create_tab(port: int, url: str = "about:blank") -> tuple[str, str]:
-    """Mở một tab mới độc lập và trả về (target_id, ws_url)."""
+def get_browser_ws_url(port: int) -> str:
+    """Lấy WebSocket URL cấp trình duyệt (/devtools/browser/...) qua /json/version."""
+    endpoint = f"http://127.0.0.1:{port}/json/version"
+    try:
+        req = urllib.request.Request(endpoint)
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            data = json.loads(resp.read().decode())
+            ws_url = data.get("webSocketDebuggerUrl")
+            if not ws_url:
+                raise RuntimeError("Không tìm thấy 'webSocketDebuggerUrl' trong /json/version")
+            return ws_url
+    except Exception as e:
+        raise RuntimeError(f"Lỗi khi lấy browser WebSocket URL từ cổng {port}: {e}")
+
+
+def _send_browser_cdp(port: int, method: str, params: Optional[dict] = None) -> dict:
+    """Gửi một lệnh CDP trực tiếp tới WebSocket cấp trình duyệt (Browser-Level Target)."""
+    ws_url = get_browser_ws_url(port)
+    try:
+        from websockets.sync.client import connect as sync_connect
+        with sync_connect(ws_url, max_size=None, close_timeout=5.0) as ws:
+            payload = {"id": 1, "method": method}
+            if params:
+                payload["params"] = params
+            ws.send(json.dumps(payload))
+            while True:
+                msg = json.loads(ws.recv())
+                if msg.get("id") == 1:
+                    if "error" in msg:
+                        raise RuntimeError(f"CDP Browser Error ({method}): {msg['error']}")
+                    return msg.get("result", {})
+    except ImportError:
+        # Fallback cho môi trường không có websockets.sync.client (chạy qua ThreadPool riêng an toàn)
+        from concurrent.futures import ThreadPoolExecutor
+        def _runner():
+            async def _async_call():
+                async with websockets.connect(ws_url, max_size=None) as ws:
+                    payload = {"id": 1, "method": method}
+                    if params:
+                        payload["params"] = params
+                    await ws.send(json.dumps(payload))
+                    while True:
+                        msg = json.loads(await ws.recv())
+                        if msg.get("id") == 1:
+                            if "error" in msg:
+                                raise RuntimeError(f"CDP Browser Error ({method}): {msg['error']}")
+                            return msg.get("result", {})
+            return asyncio.run(_async_call())
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            return ex.submit(_runner).result(timeout=10.0)
+
+
+def create_browser_context(port: int) -> str:
+    """Tạo một BrowserContext (Incognito isolation) mới và trả về context_id."""
+    res = _send_browser_cdp(port, "Target.createBrowserContext")
+    context_id = res.get("browserContextId")
+    if not context_id:
+        raise RuntimeError(f"Không nhận được browserContextId từ Chromium: {res}")
+    return context_id
+
+
+def dispose_browser_context(port: int, context_id: Optional[str]) -> bool:
+    """Hủy một BrowserContext và đóng sạch toàn bộ tab cùng bộ nhớ đệm ẩn danh liên kết."""
+    if not context_id:
+        return False
+    try:
+        _send_browser_cdp(port, "Target.disposeBrowserContext", {"browserContextId": context_id})
+        return True
+    except Exception:
+        return False
+
+
+def create_tab(port: int, url: str = "about:blank", browser_context_id: Optional[str] = None) -> tuple[str, str]:
+    """Mở một tab mới độc lập (tuỳ chọn gán vào browser_context_id) và trả về (target_id, ws_url)."""
+    if browser_context_id:
+        try:
+            params = {"url": url, "browserContextId": browser_context_id}
+            res = _send_browser_cdp(port, "Target.createTarget", params)
+            target_id = res.get("targetId", "")
+            if not target_id:
+                raise RuntimeError(f"Không nhận được targetId từ Target.createTarget: {res}")
+            ws_url = f"ws://127.0.0.1:{port}/devtools/page/{target_id}"
+            return target_id, ws_url
+        except Exception as e:
+            print(f"[CDP] Warning: Lỗi tạo tab trong browser_context ({e}), thử mở tab thông thường...", flush=True)
+
     import urllib.parse
     encoded_url = urllib.parse.quote(url, safe=":/%?=&")
     endpoint = f"http://127.0.0.1:{port}/json/new?{encoded_url}"
@@ -176,6 +260,11 @@ def create_tab(port: int, url: str = "about:blank") -> tuple[str, str]:
             return target_id, ws_url
     except Exception as e:
         raise RuntimeError(f"Lỗi khi mở tab mới qua CDP: {e}")
+
+
+def create_tab_in_context(port: int, browser_context_id: str, url: str = "about:blank") -> tuple[str, str]:
+    """Alias mở tab bên trong một BrowserContext xác định."""
+    return create_tab(port, url=url, browser_context_id=browser_context_id)
 
 
 def close_tab(port: int, target_id: str) -> bool:

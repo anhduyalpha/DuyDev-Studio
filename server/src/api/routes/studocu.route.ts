@@ -33,6 +33,56 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
   // 2. Start download job
   app.post('/api/v1/studocu/download', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
+      const body = (req.body || {}) as any;
+      const url = typeof body.url === 'string' ? body.url.trim() : '';
+      const forceReload = Boolean(body.force_reload || body.bypass_cache);
+
+      // Fast pre-check: if doc ID exists in URL and not force_reload, check active files cache
+      if (url && !forceReload) {
+        const docIdMatch = url.match(/\/(\d{5,15})(?:[/?#]|$)/);
+        if (docIdMatch) {
+          const docId = docIdMatch[1];
+          try {
+            const filesRes = await safeJsonFetch(`${BACKEND_URL}/api/files`);
+            if (filesRes.status === 200 && Array.isArray(filesRes.data)) {
+              const matched = filesRes.data.find((f: any) =>
+                (f.url && f.url.includes(docId)) ||
+                (f.name && f.name.includes(docId)) ||
+                (f.title && f.title.includes(docId)) ||
+                (f.original_url && f.original_url.includes(docId))
+              );
+
+              if (matched) {
+                const resultPayload = {
+                  title: matched.title || matched.name,
+                  pages: matched.pages,
+                  from_cache: true,
+                  pdf: {
+                    id: matched.id,
+                    name: matched.name,
+                    download_url: matched.url || `/downloads/${encodeURIComponent(matched.name)}`,
+                    view_url: matched.view_url,
+                    stream_url: matched.stream_url,
+                    viewer_url: matched.viewer_url,
+                    size_mb: matched.size_mb
+                  }
+                };
+
+                return reply.status(200).send({
+                  success: true,
+                  from_cache: true,
+                  job_id: `cached_${matched.id || docId}`,
+                  status: 'completed',
+                  result: resultPayload
+                });
+              }
+            }
+          } catch {
+            // Fail open: continue to forward to python engine
+          }
+        }
+      }
+
       const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +97,23 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
   // 3. Get job status
   app.get('/api/v1/studocu/status/:jobId', async (req: FastifyRequest<{ Params: { jobId: string } }>, reply: FastifyReply) => {
     try {
-      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/status/${req.params.jobId}`);
+      const jobId = req.params.jobId;
+      if (jobId.startsWith('cached_')) {
+        return reply.status(200).send({
+          id: jobId,
+          status: 'completed',
+          from_cache: true,
+          progress: {
+            phase: 'completed',
+            current_page: 0,
+            total_pages: 0,
+            percent: 100,
+            message: 'Tài liệu đã có sẵn trên máy chủ'
+          },
+          logs: ['Tài liệu đã có sẵn trên máy chủ']
+        });
+      }
+      const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/status/${jobId}`);
       return reply.status(status).send(data);
     } catch (err: any) {
       return reply.status(502).send({ error: 'Studocu engine unavailable: ' + err.message });
