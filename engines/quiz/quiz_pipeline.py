@@ -166,6 +166,41 @@ def is_running_header_or_footer(block_text: str, y0: float, y1: float, page_h: f
     return False
 
 
+def is_section_banner(text: str) -> bool:
+    """
+    Detect if text is a section divider or banner (e.g. 'PHẦN I', 'PHẦN II', 'PHẦN 1',
+    'PHẦN II. Câu trắc nghiệm đúng sai.', 'CÂU TRẮC NGHIỆM ĐÚNG SAI', 'BẢNG ĐÁP ÁN', 'HƯỚNG DẪN GIẢI').
+    Such banners are structural layout dividers and must never be extracted as images,
+    nor merged into the preceding question's body.
+    """
+    if not text:
+        return False
+    t = text.strip()
+    if re.match(r"^\s*(?:câu\s*\d+|\d+[\.\:])", t, re.IGNORECASE):
+        return False
+    if re.search(r"^\s*(?:[-•*]\s*)?PH[ẦAÀẢÃẠÂẦẤẨẪẬa-z\ufffd\W]*N\s*[:\.]?\s*(?:[IVXLCDM]+|\d+)", t, re.IGNORECASE):
+        return True
+    if re.search(r"tr[ắa\ufffd\W]?c\s*nghi[ệe\ufffd\W]?m\s*(?:[đd\ufffd\W]?[úu\ufffd\W]?ng\s*sai|nhi[ềe\ufffd\W]?u|tr[ảa\ufffd\W]?\s*l[ờo\ufffd\W]?i)", t, re.IGNORECASE):
+        return True
+    if re.search(r"^\s*(?:[-•*]\s*)?(?:B[ẢA\ufffd\W]?NG\s*Đ[ÁA\ufffd\W]?P\s*[ÁA\ufffd\W]?N|H[ƯU\ufffd\W]?ỚNG\s*D[ẪA\ufffd\W]?N\s*GI[ẢA\ufffd\W]?I|L[ỜO\ufffd\W]?I\s*GI[ẢA\ufffd\W]?I\s*CHI\s*TI[ẾE\ufffd\W]?T|Đ[ÁA\ufffd\W]?P\s*[ÁA\ufffd\W]?N\s*CHI\s*TI[ẾE\ufffd\W]?T)\b", t, re.IGNORECASE):
+        return True
+    if re.search(r"^\s*(?:[-•*]\s*)?(?:MỤC|MUC|CHUY[ÊE\ufffd\W]?N\s*Đ[ỀE\ufffd\W]?)\s*[:\.]?\s*(?:[IVXLCDM]+|\d+)", t, re.IGNORECASE):
+        return True
+    return False
+
+
+def strip_section_banner(text: str) -> str:
+    """Strip any trailing or embedded section divider banners from text."""
+    if not text:
+        return ""
+    pattern = (
+        r"(?:^|\n)\s*(?:(?:[-•*]\s*)?PH[ẦAÀẢÃẠÂẦẤẨẪẬa-z\ufffd\W]*N\s*[:\.]?\s*(?:[IVXLCDM]+|\d+)|"
+        r"tr[ắa\ufffd\W]?c\s*nghi[ệe\ufffd\W]?m\s*(?:[đd\ufffd\W]?[úu\ufffd\W]?ng\s*sai|nhi[ềe\ufffd\W]?u|tr[ảa\ufffd\W]?\s*l[ờo\ufffd\W]?i)|"
+        r"B[ẢA\ufffd\W]?NG\s*Đ[ÁA\ufffd\W]?P\s*[ÁA\ufffd\W]?N|H[ƯU\ufffd\W]?ỚNG\s*D[ẪA\ufffd\W]?N\s*GI[ẢA\ufffd\W]?I\b).*$"
+    )
+    return re.sub(pattern, "", str(text), flags=re.IGNORECASE | re.MULTILINE).strip()
+
+
 def detect_column_gutter(page: pymupdf.Page, blocks: list) -> float:
     """
     Detect the vertical 2-column gutter boundary (x_split) from block coordinate distribution.
@@ -333,10 +368,15 @@ def cluster_rects(rect_list: list[pymupdf.Rect], margin: float = 12.0) -> list[p
     return clusters
 
 
-def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: str) -> list[dict]:
+def extract_visual_assets(
+    page: pymupdf.Page,
+    page_num: int,
+    temp_assets_dir: str,
+    table_rects: list = None
+) -> list[dict]:
     """
     Extract raster images and vector diagrams from the page.
-    Filters out borders, hairline rules, and tiny decorative icons (< 40x40 px).
+    Filters out borders, hairline rules, tables, section banners, and tiny decorative icons (< 40x40 px).
     Groups connected vector drawings into diagram bounding boxes.
     Renders crisp pixmaps (dpi=200) and saves as PNG and base64 data URI.
     """
@@ -390,12 +430,34 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
 
     for idx, rect in enumerate(merged_rects, start=1):
         asset_id = f"fig_p{page_num}_{idx}"
+        # Filter 1: Skip if rect is inside or heavily overlaps a structured table
+        if table_rects:
+            is_table_rect = False
+            for tr in table_rects:
+                t_rect = pymupdf.Rect(tr)
+                if t_rect.contains(rect) or (t_rect.intersects(rect) and (t_rect & rect).get_area() > 0.45 * rect.get_area()):
+                    is_table_rect = True
+                    break
+            if is_table_rect:
+                continue
+
         padded_rect = pymupdf.Rect(
             max(0, rect.x0 - 3),
             max(0, rect.y0 - 3),
             min(pw, rect.x1 + 3),
             min(ph, rect.y1 + 3)
         )
+
+        # Filter 2: Skip if rect text contains a section divider banner or running header/footer
+        clip_text = page.get_text("text", clip=padded_rect).strip()
+        if is_section_banner(clip_text) or is_running_header_or_footer(clip_text, rect.y0, rect.y1, ph):
+            continue
+
+        # Filter 3: Skip wide horizontal strip (banner / divider shape) with banner keywords
+        if rect.width > pw * 0.5 and rect.height < 45:
+            if is_section_banner(clip_text) or any(k in clip_text.lower() for k in ["phần", "câu trắc nghiệm", "đáp án", "đề thi", "chuyên đề"]):
+                continue
+
         try:
             pix = page.get_pixmap(clip=padded_rect, dpi=200)
             if pix.width < 15 and pix.height < 15:
@@ -413,7 +475,8 @@ def extract_visual_assets(page: pymupdf.Page, page_num: int, temp_assets_dir: st
                 "page": page_num,
                 "rect": (rect.x0, rect.y0, rect.x1, rect.y1),
                 "data_uri": b64_data,
-                "file_path": png_file
+                "file_path": png_file,
+                "text_inside": clip_text
             })
         except Exception:
             continue
@@ -446,6 +509,8 @@ def link_assets_to_questions(
     """
     assets_by_id = {}
     for a in assets:
+        if a.get("is_banner") or is_section_banner(a.get("text_inside", "")):
+            continue
         a_id = str(a.get("id") or a.get("name", "")).replace(".png", "").strip()
         if a_id:
             assets_by_id[a_id] = a
@@ -667,12 +732,11 @@ def extract_structured_page_content(
     Returns (page_text, assets, asset_question_map).
     """
     tables = extract_tables_with_structure(page)
-    assets = extract_visual_assets(page, page_num, temp_assets_dir)
+    table_rects = [pymupdf.Rect(t["bbox"]) for t in tables]
+    assets = extract_visual_assets(page, page_num, temp_assets_dir, table_rects=table_rects)
 
     raw_blocks = page.get_text("blocks")
     content_blocks = []
-
-    table_rects = [pymupdf.Rect(t["bbox"]) for t in tables]
 
     for b in raw_blocks:
         # Only process text blocks (block_type == 0)
@@ -705,6 +769,10 @@ def extract_structured_page_content(
     curr_q_num = None
     for b in sorted_blocks:
         text = str(b[4]).strip()
+        # Reset question context on section divider banner so subsequent assets aren't linked to preceding questions
+        if is_section_banner(text):
+            curr_q_num = None
+            continue
         q_m = re.search(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", text)
         if q_m:
             curr_q_num = int(q_m.group(1) or q_m.group(2))
@@ -719,6 +787,9 @@ def extract_structured_page_content(
         if m_img and m_img.group(1) not in page_asset_map:
             for next_b in sorted_blocks[i + 1:i + 4]:
                 next_text = str(next_b[4]).strip()
+                # Stop looking ahead across section boundaries
+                if is_section_banner(next_text):
+                    break
                 next_qm = re.search(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", next_text)
                 if next_qm:
                     page_asset_map[m_img.group(1)] = int(next_qm.group(1) or next_qm.group(2))
@@ -865,7 +936,9 @@ def chunk_questions_sliding_window(full_text: str, target_count: int, window_siz
         if not trimmed:
             continue
         if re.match(r"^(?:Câu\s*\d+[\.\:\s]|\b\d+[\.\:]\s+)", trimmed, re.IGNORECASE):
-            segments.append(trimmed)
+            # Clean any trailing section banner that got attached to the end of this question
+            cleaned_seg = strip_section_banner(trimmed)
+            segments.append(cleaned_seg if cleaned_seg else trimmed)
         elif not segments and len(trimmed) > 10:
             preamble = trimmed
 
@@ -873,7 +946,8 @@ def chunk_questions_sliding_window(full_text: str, target_count: int, window_siz
         return [(1, target_count, full_text)]
 
     if len(segments) <= window_size:
-        return [(1, min(len(segments), target_count), full_text)]
+        clean_full = "\n\n".join(segments[:target_count])
+        return [(1, min(len(segments), target_count), clean_full)]
 
     windows = []
     total_segs = min(len(segments), target_count)
@@ -916,7 +990,7 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
     q["type"] = q_type
 
     # Question stem
-    raw_question = str(q.get("question", ""))
+    raw_question = strip_section_banner(str(q.get("question", "")))
     if not q.get("image_ref"):
         ref_m = re.search(r"\[IMAGE_REF:\s*([^\]]+)\]", raw_question)
         if ref_m:
@@ -934,17 +1008,20 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
         q["image_ref"] = None
 
     q["question"] = raw_question
-    q["explanation"] = str(q.get("explanation", ""))
+    raw_exp = str(q.get("explanation", ""))
+    q["explanation"] = strip_section_banner(raw_exp)
 
     # MCQ options normalization
     if q_type == "mcq":
         raw_opts = q.get("options")
         norm_opts = {}
+        banner_clean = lambda s: strip_section_banner(str(s))
         if isinstance(raw_opts, list):
             keys = ["A", "B", "C", "D"]
             for i, val in enumerate(raw_opts[:4]):
                 clean_val = clean_image_markers(str(val))
                 clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
+                clean_val = banner_clean(clean_val)
                 norm_opts[keys[i]] = clean_val
         elif isinstance(raw_opts, dict):
             for k, val in raw_opts.items():
@@ -952,6 +1029,7 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
                 if upper_k in ("A", "B", "C", "D"):
                     clean_val = clean_image_markers(str(val))
                     clean_val = re.sub(r"^[A-D][\.\)\:\s]+", "", clean_val).strip()
+                    clean_val = banner_clean(clean_val)
                     norm_opts[upper_k] = clean_val
         for k in ["A", "B", "C", "D"]:
             if k not in norm_opts:

@@ -122,6 +122,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       }
     }
 
+    const sanitizedPrefix = prefix ? prefix.replace(/[\\/*?:"<>|]/g, '').trim().replace(/\s+/g, '_') : '';
     const title = pages ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pages}` : (prefix ? `BÀI TẬP TRẮC NGHIỆM ${prefix.toUpperCase()}` : 'BÀI TẬP TRẮC NGHIỆM');
 
     return {
@@ -129,7 +130,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       count,
       start,
       title,
-      prefix,
+      prefix: sanitizedPrefix,
       source: 'regex'
     };
   }
@@ -180,8 +181,12 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
           const parsed = JSON.parse(rawContent);
           const regexDefaults = extractWithRegex(text);
           const pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
-          const startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
-          const countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
+          let startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
+          let countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
+          if (regexDefaults.start && regexDefaults.start < startRes) {
+            startRes = regexDefaults.start;
+            countRes = regexDefaults.count;
+          }
           const titleRes = String(parsed.title || regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM').trim();
           const rawPrefix = String(parsed.prefix || regexDefaults.prefix || '').trim();
           const prefixRes = rawPrefix ? rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') : '';

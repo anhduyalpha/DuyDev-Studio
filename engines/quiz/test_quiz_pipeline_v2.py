@@ -37,7 +37,9 @@ from quiz_pipeline import (
     generate_answer_key_html,
     normalize_question,
     clean_image_markers,
-    is_running_header_or_footer
+    is_running_header_or_footer,
+    is_section_banner,
+    extract_structured_page_content
 )
 
 
@@ -382,6 +384,108 @@ class TestQuizPipelineV2(unittest.TestCase):
             self.assertIn('"notranslate"', html)
             # Verify banner has katex-ignore class
             self.assertIn('section-banner notranslate katex-ignore', html)
+
+    def test_is_section_banner_detection(self):
+        """Verify deterministic detection of Vietnamese exam section dividers and banners."""
+        self.assertTrue(is_section_banner("PHẦN II. Câu trắc nghiệm đúng sai."))
+        self.assertTrue(is_section_banner("PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN"))
+        self.assertTrue(is_section_banner("PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN"))
+        self.assertTrue(is_section_banner("Phần 1: Trắc nghiệm"))
+        self.assertTrue(is_section_banner("BẢNG ĐÁP ÁN THAM KHẢO"))
+        self.assertTrue(is_section_banner("HƯỚNG DẪN GIẢI CHI TIẾT"))
+        self.assertTrue(is_section_banner("MỤC II. CÁC DẠNG BÀI TẬP"))
+        self.assertFalse(is_section_banner("Câu 60: Methyl salicylate dùng làm thuốc xoa bóp..."))
+        self.assertFalse(is_section_banner("A. 4. B. 1. C. 3. D. 2."))
+        self.assertFalse(is_section_banner("Cho phản ứng hóa học sau:"))
+
+    def test_extract_visual_assets_filters_banners_and_tables(self):
+        """Verify that section banners and structured tables are never extracted as visual assets."""
+        import tempfile
+        import shutil
+
+        doc = pymupdf.open()
+        page = doc.new_page(width=600, height=800)
+
+        # 1. Real diagram (should be extracted)
+        page.draw_circle(pymupdf.Point(100, 150), 30, color=(0, 1, 0), fill=(0, 0, 1))
+
+        # 2. Pink section banner (wide horizontal strip with 'PHẦN II' text, should be filtered)
+        banner_rect = pymupdf.Rect(50, 400, 550, 425)
+        page.draw_rect(banner_rect, color=(0.9, 0.8, 0.9), fill=(0.9, 0.8, 0.9))
+        page.insert_text(pymupdf.Point(55, 418), "PHẦN II. Câu trắc nghiệm đúng sai.", fontsize=11)
+
+        # 3. Table area (passed in table_rects, should be filtered)
+        table_rect = pymupdf.Rect(50, 500, 550, 600)
+        page.draw_rect(table_rect, color=(0, 0, 0))
+
+        temp_dir = tempfile.mkdtemp()
+        try:
+            assets = extract_visual_assets(page, 1, temp_dir, table_rects=[table_rect])
+            self.assertEqual(len(assets), 1)
+            # The only asset extracted should be the circle diagram around y=150
+            self.assertAlmostEqual(assets[0]["rect"][1], 120, delta=10)
+            self.assertNotEqual(assets[0].get("text_inside"), "PHẦN II. Câu trắc nghiệm đúng sai.")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_chunk_questions_sliding_window_strips_trailing_section_banner(self):
+        """Verify that trailing section banners at the end of a question are cleanly trimmed."""
+        sample_text = (
+            "Câu 60: Methyl salicylate...\n"
+            "A. 4.\n"
+            "B. 1.\n"
+            "C. 3.\n"
+            "D. 2.\n\n"
+            "PHẦN II. Câu trắc nghiệm đúng sai.\n\n"
+            "Câu 1: Cho các thông tin trong bảng sau:\n"
+            "a) Đúng\n"
+            "b) Sai\n"
+        )
+        windows = chunk_questions_sliding_window(sample_text, target_count=2, window_size=5)
+        window_text = windows[0][2]
+        # Ensure PHẦN II is not attached to Câu 60
+        self.assertNotIn("PHẦN II. Câu trắc nghiệm đúng sai.", window_text.split("Câu 1:")[0])
+
+    def test_normalize_question_sanitizes_section_banner(self):
+        """Verify that normalize_question purges any stray section banner lines."""
+        q = {
+            "number": 60,
+            "type": "mcq",
+            "question": "Methyl salicylate...\n\nPHẦN II. Câu trắc nghiệm đúng sai.",
+            "options": {
+                "A": "4.",
+                "B": "1.",
+                "C": "3.",
+                "D": "2.\nPHẦN II. Câu trắc nghiệm đúng sai."
+            },
+            "explanation": "Giải thích...\nPHẦN II. Câu trắc nghiệm đúng sai."
+        }
+        norm = normalize_question(q, fallback_num=60)
+        self.assertNotIn("PHẦN II", norm["question"])
+        self.assertNotIn("PHẦN II", norm["options"]["D"])
+        self.assertNotIn("PHẦN II", norm["explanation"])
+
+    def test_spatial_asset_map_resets_on_section_banner(self):
+        """Verify that spatial asset mapping does not link post-banner images to pre-banner questions."""
+        import tempfile
+        import shutil
+
+        doc = pymupdf.open()
+        page = doc.new_page(width=600, height=800)
+        page.insert_text(pymupdf.Point(50, 100), "Câu 60: Nội dung câu 60", fontsize=11)
+        page.insert_text(pymupdf.Point(50, 200), "PHẦN II. Câu trắc nghiệm đúng sai.", fontsize=11)
+        # Diagram after banner
+        page.draw_circle(pymupdf.Point(100, 300), 20, color=(1, 0, 0), fill=(1, 0, 0))
+        page.insert_text(pymupdf.Point(50, 400), "Câu 1: Nội dung câu 1", fontsize=11)
+
+        temp_dir = tempfile.mkdtemp()
+        try:
+            _, _, asset_map = extract_structured_page_content(page, 1, temp_dir)
+            # The diagram after PHẦN II should NOT be mapped to Câu 60!
+            for a_id, mapped_q in asset_map.items():
+                self.assertNotEqual(mapped_q, 60, f"Asset {a_id} should not be linked to pre-banner Câu 60")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
