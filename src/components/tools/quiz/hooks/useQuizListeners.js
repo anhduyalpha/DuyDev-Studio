@@ -25,6 +25,11 @@ import { showToast } from '../../../../utilities/toast.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 export function attachQuizListeners() {
   if (window.lucide?.createIcons) window.lucide.createIcons();
 
@@ -34,101 +39,133 @@ export function attachQuizListeners() {
   let isTornDown = false;
 
   function syncGenerateButton() {
-    const state = quizManager.getState();
-    const btnGen = document.getElementById('btnQuizGenerate');
-    if (!btnGen) return;
+    try {
+      const state = quizManager.getState();
+      const btnGen = document.getElementById('btnQuizGenerate');
+      if (!btnGen) return;
 
-    const isDriveValid = isValidDriveUrl(state.gdriveUrl);
-    const isSourceReady = Boolean(state.file?.status === 'ready') || isDriveValid;
-    const isReady = isSourceReady &&
-                    Boolean(state.pages?.trim()) &&
-                    Boolean(state.prefix?.trim()) &&
-                    !state.isProcessing;
+      const driveInput = document.getElementById('quizDriveInput');
+      const pagesInput = document.getElementById('quizPagesInput');
+      const prefixInput = document.getElementById('quizPrefixInput');
 
-    btnGen.disabled = !isReady;
-    if (isReady) {
-      btnGen.classList.remove('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
-      btnGen.classList.add('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
-    } else {
-      btnGen.classList.add('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
-      btnGen.classList.remove('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+      const domDrive = driveInput ? driveInput.value.trim() : '';
+      const isDriveValid = isValidDriveUrl(domDrive || state.gdriveUrl);
+      const isSourceReady = Boolean(state.file?.status === 'ready') || isDriveValid;
+
+      const domPages = pagesInput ? pagesInput.value.trim() : '';
+      const effectivePages = domPages || state.pages?.trim() || '';
+      const hasPages = Boolean(effectivePages);
+
+      const domPrefix = prefixInput ? prefixInput.value.trim() : '';
+      const effectivePrefix = domPrefix || state.prefix?.trim() || '';
+      const hasPrefix = Boolean(effectivePrefix);
+
+      const isReady = isSourceReady && hasPages && hasPrefix && !state.isProcessing;
+
+      btnGen.disabled = !isReady;
+      if (isReady) {
+        btnGen.classList.remove('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
+        btnGen.classList.add('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+      } else {
+        btnGen.classList.add('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
+        btnGen.classList.remove('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+      }
+    } catch (err) {
+      console.warn('syncGenerateButton warning:', err);
     }
   }
 
   function syncValidationUI() {
-    const state = quizManager.getState();
-    const isFileReady = state.file?.status === 'ready';
-    const isDriveValid = isValidDriveUrl(state.gdriveUrl);
-    const hasDrive = Boolean(state.gdriveUrl?.trim());
-    const isSourceReady = isFileReady || isDriveValid;
-    const hasPages = Boolean(state.pages?.trim());
-    const hasPrefix = Boolean(state.prefix?.trim());
+    try {
+      const state = quizManager.getState();
+      const isFileReady = state.file?.status === 'ready';
+      const driveInput = document.getElementById('quizDriveInput');
+      const pagesInput = document.getElementById('quizPagesInput');
+      const prefixInput = document.getElementById('quizPrefixInput');
 
-    // 1. Source validation & badge
-    const srcStatus = document.getElementById('quizSourceStatus');
-    const dropzone = document.getElementById('quizDropzone');
-    const driveInput = document.getElementById('quizDriveInput');
-    if (srcStatus) {
-      if (isSourceReady) {
-        srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
-        if (dropzone && !state.file) {
-          dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
-          dropzone.classList.add('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
-        }
-        if (driveInput) {
-          if (isDriveValid) {
-            driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
-            driveInput.classList.add('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500');
-          } else {
-            driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
-            driveInput.classList.add('border-solid', 'border-zinc-800', 'focus:border-zinc-600');
+      const domDrive = driveInput ? driveInput.value.trim() : '';
+      const isDriveValid = isValidDriveUrl(domDrive || state.gdriveUrl);
+      const isSourceReady = isFileReady || isDriveValid;
+
+      const domPages = pagesInput ? pagesInput.value.trim() : '';
+      const effectivePages = domPages || state.pages?.trim() || '';
+      const hasPages = Boolean(effectivePages);
+      if (domPages && state.pages !== domPages) {
+        quizManager.state.pages = domPages;
+      }
+
+      const domPrefix = prefixInput ? prefixInput.value.trim() : '';
+      const effectivePrefix = domPrefix || state.prefix?.trim() || '';
+      const hasPrefix = Boolean(effectivePrefix);
+      if (domPrefix && state.prefix !== domPrefix) {
+        quizManager.state.prefix = domPrefix;
+      }
+
+      // 1. Source validation & badge
+      const srcStatus = document.getElementById('quizSourceStatus');
+      const dropzone = document.getElementById('quizDropzone');
+      if (srcStatus) {
+        if (isSourceReady) {
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+          if (dropzone && !state.file) {
+            dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
+            dropzone.classList.add('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
+          }
+          if (driveInput) {
+            if (isDriveValid) {
+              driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+              driveInput.classList.add('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500');
+            } else {
+              driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+              driveInput.classList.add('border-solid', 'border-zinc-800', 'focus:border-zinc-600');
+            }
+          }
+        } else {
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+          if (dropzone && !state.file) {
+            dropzone.classList.remove('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
+            dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
+          }
+          if (driveInput) {
+            driveInput.classList.remove('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
+            driveInput.classList.add('border-dashed', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
           }
         }
-      } else {
-        srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
-        if (dropzone && !state.file) {
-          dropzone.classList.remove('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
-          dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
+      }
+
+      // 2. Pages validation & badge
+      const pagesStatus = document.getElementById('quizPagesStatus');
+      if (pagesStatus && pagesInput) {
+        if (hasPages) {
+          pagesStatus.innerHTML = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(effectivePages)}</span>`;
+          pagesInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
+          pagesInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
+        } else {
+          pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+          pagesInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+          pagesInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
         }
-        if (driveInput) {
-          driveInput.classList.remove('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
-          driveInput.classList.add('border-dashed', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+      }
+
+      // 3. Prefix validation & badge
+      const prefixStatus = document.getElementById('quizPrefixStatus');
+      if (prefixStatus && prefixInput) {
+        if (hasPrefix) {
+          prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+          prefixInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
+          prefixInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
+        } else {
+          prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+          prefixInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+          prefixInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
         }
       }
-    }
 
-    // 2. Pages validation & badge
-    const pagesStatus = document.getElementById('quizPagesStatus');
-    const pagesInput = document.getElementById('quizPagesInput');
-    if (pagesStatus && pagesInput) {
-      if (hasPages) {
-        pagesStatus.innerHTML = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(state.pages)}</span>`;
-        pagesInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
-        pagesInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
-      } else {
-        pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
-        pagesInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
-        pagesInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
-      }
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+      syncGenerateButton();
+    } catch (err) {
+      console.warn('syncValidationUI warning:', err);
     }
-
-    // 3. Prefix validation & badge
-    const prefixStatus = document.getElementById('quizPrefixStatus');
-    const prefixInput = document.getElementById('quizPrefixInput');
-    if (prefixStatus && prefixInput) {
-      if (hasPrefix) {
-        prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
-        prefixInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
-        prefixInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
-      } else {
-        prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
-        prefixInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
-        prefixInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
-      }
-    }
-
-    if (window.lucide?.createIcons) window.lucide.createIcons();
-    syncGenerateButton();
   }
 
   // Selective re-rendering helper
@@ -303,49 +340,83 @@ export function attachQuizListeners() {
       btnSkipPrompt.onclick = () => quizManager.skipToManualParams();
     }
 
+    // Helper to bind all input/interaction events to handle autocomplete, paste, IME, and typing
+    const bindInputEvents = (el, handler) => {
+      if (!el) return;
+      ['input', 'change', 'paste', 'keyup', 'blur', 'compositionend'].forEach((evt) => {
+        el.addEventListener(evt, handler);
+      });
+    };
+
     // Parameters
     const pagesInput = document.getElementById('quizPagesInput');
     if (pagesInput) {
-      pagesInput.oninput = (e) => {
-        quizManager.setParams({ pages: e.target.value });
+      const handlePages = () => {
+        const val = pagesInput.value.trim();
+        quizManager.setParams({ pages: val });
         syncValidationUI();
       };
+      bindInputEvents(pagesInput, handlePages);
     }
 
     const startInput = document.getElementById('quizStartInput');
     if (startInput) {
-      startInput.onchange = (e) => quizManager.setParams({ start: e.target.value });
+      const handleStart = () => {
+        const val = parseInt(startInput.value, 10);
+        if (!isNaN(val) && val > 0) {
+          quizManager.setParams({ start: val });
+        }
+        syncValidationUI();
+      };
+      bindInputEvents(startInput, handleStart);
     }
 
     const prefixInput = document.getElementById('quizPrefixInput');
     if (prefixInput) {
-      prefixInput.oninput = (e) => {
-        quizManager.setParams({ prefix: e.target.value });
+      const handlePrefix = () => {
+        const val = prefixInput.value.trim();
+        quizManager.setParams({ prefix: val });
         syncValidationUI();
       };
+      bindInputEvents(prefixInput, handlePrefix);
     }
 
     const titleInput = document.getElementById('quizTitleInput');
     if (titleInput) {
-      titleInput.oninput = (e) => quizManager.setParams({ title: e.target.value });
+      const handleTitle = () => {
+        quizManager.setParams({ title: titleInput.value.trim() });
+      };
+      bindInputEvents(titleInput, handleTitle);
     }
 
     // Question Count Input
     const countInput = document.getElementById('quizCountInput');
     if (countInput) {
-      countInput.oninput = (e) => {
-        const val = parseInt(e.target.value, 10);
+      const handleCount = () => {
+        const val = parseInt(countInput.value, 10);
         if (!isNaN(val) && val > 0) {
           quizManager.setParams({ count: val });
         }
+        syncValidationUI();
       };
+      bindInputEvents(countInput, handleCount);
     }
 
     // Primary Action Button
     const btnGen = document.getElementById('btnQuizGenerate');
     if (btnGen) {
-      btnGen.onclick = () => {
-        if (!btnGen.disabled) quizManager.startGeneration();
+      const preFlightSync = () => {
+        syncValidationUI();
+      };
+      ['mouseenter', 'pointerenter', 'touchstart', 'focus'].forEach((evt) => {
+        btnGen.addEventListener(evt, preFlightSync);
+      });
+      btnGen.onclick = (e) => {
+        e.preventDefault();
+        syncValidationUI();
+        if (!btnGen.disabled) {
+          quizManager.startGeneration();
+        }
       };
     }
 
@@ -579,9 +650,27 @@ export function attachQuizListeners() {
   attachResultHandlers();
   attachHistoryHandlers();
 
+  // Root-level delegated listener for global form synchronizations across any dynamic DOM updates or autofills
+  const handleDelegatedInteraction = (e) => {
+    if (isTornDown) return;
+    const target = e.target;
+    if (!target) return;
+    if (target.id === 'quizPrefixInput' || target.id === 'quizPagesInput' || target.id === 'quizDriveInput') {
+      syncValidationUI();
+    }
+  };
+
+  const delegatedEvents = ['input', 'change', 'paste', 'keyup', 'focusout'];
+  delegatedEvents.forEach((evt) => {
+    root.addEventListener(evt, handleDelegatedInteraction);
+  });
+
   // Return clean teardown function
   return () => {
     isTornDown = true;
+    delegatedEvents.forEach((evt) => {
+      root.removeEventListener(evt, handleDelegatedInteraction);
+    });
     unsubscribe();
     quizManager.teardown();
   };

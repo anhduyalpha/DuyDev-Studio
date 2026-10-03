@@ -211,7 +211,7 @@ export function renderQuizConfigPanel(state) {
                   }
                 </span>
               </label>
-              <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: Ester Lipid,..." class="w-full bg-zinc-950 border ${
+              <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: Ester Lipid,..." autocomplete="off" spellcheck="false" class="w-full bg-zinc-950 border ${
                 hasValidPrefix ? 'border-emerald-500/40 focus:border-emerald-500' : 'border-rose-500/40 focus:border-rose-500'
               } rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden transition" />
             </div>

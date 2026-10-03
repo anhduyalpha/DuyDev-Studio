@@ -229,6 +229,33 @@ class QuizManager {
   async startGeneration() {
     if (this.state.isProcessing) return;
 
+    // Defensive pre-flight synchronization directly from DOM inputs
+    if (typeof document !== 'undefined') {
+      const domPrefix = document.getElementById('quizPrefixInput')?.value?.trim();
+      if (domPrefix) this.state.prefix = domPrefix;
+
+      const domPages = document.getElementById('quizPagesInput')?.value?.trim();
+      if (domPages) this.state.pages = domPages;
+
+      const domTitle = document.getElementById('quizTitleInput')?.value?.trim();
+      if (domTitle) this.state.title = domTitle;
+
+      const domDrive = document.getElementById('quizDriveInput')?.value?.trim();
+      if (domDrive) this.state.gdriveUrl = domDrive;
+
+      const domCount = document.getElementById('quizCountInput')?.value;
+      if (domCount) {
+        const parsedCount = parseInt(domCount, 10);
+        if (!isNaN(parsedCount) && parsedCount > 0) this.state.count = parsedCount;
+      }
+
+      const domStart = document.getElementById('quizStartInput')?.value;
+      if (domStart) {
+        const parsedStart = parseInt(domStart, 10);
+        if (!isNaN(parsedStart) && parsedStart > 0) this.state.start = parsedStart;
+      }
+    }
+
     const hasFile = Boolean(this.state.fileId);
     const hasDrive = Boolean(this.state.gdriveUrl);
 
