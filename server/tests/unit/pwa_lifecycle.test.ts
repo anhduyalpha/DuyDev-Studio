@@ -9,7 +9,8 @@ import {
   promptUserToApplyUpdate,
   listenForWaitingWorker,
   registerServiceWorker,
-  checkForAppUpdate
+  checkForAppUpdate,
+  getCurrentVersion
 } from '../../../src/utilities/pwa.js';
 
 describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
@@ -306,6 +307,80 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
 
       expect(toastSpy).not.toHaveBeenCalled();
       toastSpy.mockRestore();
+    });
+
+    it('listenForWaitingWorker STILL registers updatefound listener even if reg.waiting is present', async () => {
+      const mockPostMessage = vi.fn();
+      const mockAddEventListener = vi.fn();
+      const mockReg: any = {
+        waiting: { postMessage: mockPostMessage },
+        addEventListener: mockAddEventListener
+      };
+
+      listenForWaitingWorker(mockReg);
+      expect(mockAddEventListener).toHaveBeenCalledWith('updatefound', expect.any(Function));
+    });
+
+    it('listenForWaitingWorker monitors reg.installing if already present during registration', async () => {
+      let stateChangeCb: Function | null = null;
+      const mockInstalling: any = {
+        state: 'installing',
+        addEventListener: vi.fn((evt: string, cb: Function) => {
+          if (evt === 'statechange') stateChangeCb = cb;
+        })
+      };
+      const mockReg: any = {
+        waiting: null,
+        installing: mockInstalling,
+        addEventListener: vi.fn()
+      };
+
+      const toastMod = await import('../../../src/utilities/toast.js');
+      const toastSpy = vi.spyOn(toastMod, 'showActionableToast').mockImplementation(() => {});
+
+      listenForWaitingWorker(mockReg);
+      expect(mockInstalling.addEventListener).toHaveBeenCalledWith('statechange', expect.any(Function));
+
+      // Simulate transition to installed
+      mockInstalling.state = 'installed';
+      expect(stateChangeCb).toBeTypeOf('function');
+      stateChangeCb!();
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(toastSpy).toHaveBeenCalled();
+      toastSpy.mockRestore();
+    });
+
+    it('controllerchange triggers reload even if lastReload occurred within 10s when user explicitly requested reload', () => {
+      registerServiceWorker();
+      setUserRequestedReload(true);
+
+      // Simulate a recent reload 2 seconds ago
+      (globalThis as any).sessionStorage.setItem('ds_sw_just_reloaded', String(Date.now() - 2000));
+
+      const controllerChangeCb = listeners['controllerchange'][0];
+      controllerChangeCb();
+
+      // Must NOT be blocked by 10s cooldown because user explicitly commanded the reload
+      expect(reloadMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('getCurrentVersion returns CURRENT_PWA_VERSION if present or newest version from cache keys', async () => {
+      // Mock CacheStorage with multiple versions
+      (globalThis as any).caches = {
+        keys: vi.fn().mockResolvedValue(['duydev-studio-v17.4', 'duydev-studio-v18.7', 'duydev-studio-v18.8'])
+      };
+
+      const ver1 = await getCurrentVersion();
+      expect(ver1).toBe('duydev-studio-v18.8');
+
+      // When CURRENT_PWA_VERSION not yet present, returns newest
+      (globalThis as any).caches = {
+        keys: vi.fn().mockResolvedValue(['duydev-studio-v16.0', 'duydev-studio-v17.4', 'duydev-studio-v18.7'])
+      };
+
+      const ver2 = await getCurrentVersion();
+      expect(ver2).toBe('duydev-studio-v18.7');
     });
   });
 

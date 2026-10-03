@@ -25,11 +25,18 @@ export const CURRENT_PWA_VERSION = 'duydev-studio-v18.8';
  * @returns {Promise<string>}
  */
 export async function getCurrentVersion() {
-  if ('caches' in window) {
+  const cacheStorage = typeof caches !== 'undefined' ? caches : (typeof window !== 'undefined' ? window.caches : null);
+  if (cacheStorage) {
     try {
-      const keys = await caches.keys();
-      const pwaKey = keys.find((k) => k.startsWith('duydev-studio-'));
-      if (pwaKey) return pwaKey;
+      const keys = await cacheStorage.keys();
+      if (keys.includes(CURRENT_PWA_VERSION)) {
+        return CURRENT_PWA_VERSION;
+      }
+      const pwaKeys = keys.filter((k) => k.startsWith('duydev-studio-'));
+      if (pwaKeys.length > 0) {
+        pwaKeys.sort().reverse();
+        return pwaKeys[0];
+      }
     } catch (err) {
       console.warn('[PWA] Error reading cache keys:', err);
     }
@@ -93,10 +100,16 @@ export function resetUpdateToastShown() {
 /**
  * Prompts the user with an actionable toast to apply the pending update.
  * @param {ServiceWorker | null} waitingWorker
+ * @param {boolean} [force=false]
  */
-export function promptUserToApplyUpdate(waitingWorker) {
-  if (updateToastShown || !waitingWorker) return;
+export function promptUserToApplyUpdate(waitingWorker, force = false) {
+  if ((updateToastShown && !force) || !waitingWorker) return;
   updateToastShown = true;
+
+  // Auto-reset debounce after 15s so future updates or manual checks can re-prompt
+  setTimeout(() => {
+    updateToastShown = false;
+  }, 15000);
 
   import('./toast.js')
     .then(({ showActionableToast }) => {
@@ -120,22 +133,28 @@ export function promptUserToApplyUpdate(waitingWorker) {
 export function listenForWaitingWorker(reg) {
   if (!reg) return;
 
-  // If a waiting worker already exists and the page is controlled by an active worker
-  if (reg.waiting && navigator.serviceWorker?.controller) {
-    promptUserToApplyUpdate(reg.waiting);
-    return;
-  }
-
-  // Listen for worker installation transitions
-  reg.addEventListener('updatefound', () => {
-    const installingWorker = reg.installing;
-    if (!installingWorker) return;
-
-    installingWorker.addEventListener('statechange', () => {
-      if (installingWorker.state === 'installed' && navigator.serviceWorker?.controller) {
-        promptUserToApplyUpdate(installingWorker);
+  function trackInstalling(worker) {
+    if (!worker) return;
+    worker.addEventListener('statechange', () => {
+      if (worker.state === 'installed' && navigator.serviceWorker?.controller) {
+        promptUserToApplyUpdate(worker);
       }
     });
+  }
+
+  // 1. If a waiting worker already exists and the page is controlled by an active worker
+  if (reg.waiting && navigator.serviceWorker?.controller) {
+    promptUserToApplyUpdate(reg.waiting);
+  }
+
+  // 2. If a worker is currently installing when registration resolves
+  if (reg.installing) {
+    trackInstalling(reg.installing);
+  }
+
+  // 3. Listen for worker installation transitions for future updates
+  reg.addEventListener('updatefound', () => {
+    trackInstalling(reg.installing);
   });
 }
 
@@ -154,12 +173,17 @@ export async function checkForAppUpdate() {
 
     console.log(`[PWA] Checking update: Local=${localVer}, Server=${serverVer}`);
 
+    const reg = swRegistration || (await navigator.serviceWorker?.getRegistration?.()) || null;
+    if (reg) {
+      listenForWaitingWorker(reg);
+    }
+
     if (serverVer && serverVer !== localVer) {
       // New version found on server! Update Service Worker silently in background
-      if (swRegistration) {
-        swRegistration.update().catch(() => {});
-        if (swRegistration.waiting && navigator.serviceWorker?.controller) {
-          promptUserToApplyUpdate(swRegistration.waiting);
+      if (reg) {
+        reg.update().catch(() => {});
+        if (reg.waiting && navigator.serviceWorker?.controller) {
+          promptUserToApplyUpdate(reg.waiting, true);
         }
       }
 
@@ -170,10 +194,10 @@ export async function checkForAppUpdate() {
     }
 
     // Already on latest version
-    if (swRegistration) {
-      swRegistration.update().catch(() => {});
-      if (swRegistration.waiting && navigator.serviceWorker?.controller) {
-        promptUserToApplyUpdate(swRegistration.waiting);
+    if (reg) {
+      reg.update().catch(() => {});
+      if (reg.waiting && navigator.serviceWorker?.controller) {
+        promptUserToApplyUpdate(reg.waiting, true);
       }
     }
 
@@ -200,10 +224,10 @@ export function registerServiceWorker() {
   const hadExistingController = Boolean(navigator.serviceWorker.controller);
   let refreshing = false;
 
-  const performSafeReload = (reason) => {
+  const performSafeReload = (reason, isUserConfirmed = false) => {
     if (refreshing) return;
     const lastReload = sessionStorage.getItem('ds_sw_just_reloaded');
-    if (lastReload && Date.now() - Number(lastReload) < 10000) {
+    if (!isUserConfirmed && lastReload && Date.now() - Number(lastReload) < 10000) {
       console.log(`[PWA] Skipping reload (${reason}): already reloaded recently`);
       return;
     }
@@ -231,7 +255,7 @@ export function registerServiceWorker() {
         console.log('[PWA] Studocu job active. Skipping reload.');
         return;
       }
-      performSafeReload('User confirmed update');
+      performSafeReload('User confirmed update', true);
     } else {
       console.log('[PWA] Service Worker controller updated in background. Will apply on next session.');
     }

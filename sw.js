@@ -218,7 +218,7 @@ self.addEventListener('message', (event) => {
       type: 'VERSION_INFO',
       version: CACHE_NAME
     });
-  } else if (event.data?.type === 'SKIP_WAITING') {
+  } else if (event.data?.type === 'SKIP_WAITING' || event.data === 'SKIP_WAITING') {
     console.log('[SW] SKIP_WAITING received from client. Activating now...');
     self.skipWaiting();
   }
