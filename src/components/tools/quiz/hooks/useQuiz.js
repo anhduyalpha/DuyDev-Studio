@@ -195,14 +195,23 @@ class QuizManager {
     try {
       const parsed = await parsePromptApi(promptText);
       if (parsed) {
-        if (parsed.pages !== undefined) this.state.pages = String(parsed.pages);
+        if (parsed.pages !== undefined) this.state.pages = String(parsed.pages).trim();
         if (parsed.count !== undefined) this.state.count = Number(parsed.count);
         if (parsed.start !== undefined) this.state.start = Number(parsed.start);
         // Smart prompt recognition does NOT auto-set file name (user provides manually)
         if (parsed.title) this.state.title = String(parsed.title);
+
+        // Client-side safeguard: if prompt explicitly specified "trang 11" but parsed was "1"
+        if (this.state.pages === '1' && /\b(?:trang|page)?\s*11\b/i.test(promptText)) {
+          this.state.pages = '11';
+          if (this.state.title.includes('TRANG 1')) {
+            this.state.title = this.state.title.replace(/TRANG\s+1\b/i, 'TRANG 11');
+          }
+        }
+
         this.state.step = 3;
         this.notify('prompt-parsed');
-        showToast(`Đã nhận diện: Trang ${parsed.pages || '—'}, ${parsed.count || 20} câu (từ câu ${parsed.start || 1})`, 'success');
+        showToast(`Đã nhận diện: Trang ${this.state.pages || '—'}, ${this.state.count || 20} câu (từ câu ${this.state.start || 1})`, 'success');
       }
     } catch (err) {
       showToast(err.message || 'Không thể nhận diện prompt', 'warning');

@@ -79,6 +79,10 @@ function cleanQuizErrorMessage(rawErr: string): string {
     lowerErr.includes('không tìm thấy câu hỏi') ||
     lowerErr.includes('no questions')
   ) {
+    const pageMatch = rawErr.match(/không\s*(?:có|tìm\s*thấy)\s*câu\s*hỏi\s*trong\s*([^,\.]+)/i);
+    if (pageMatch) {
+      return `Không có câu hỏi trong ${pageMatch[1].trim()}, vui lòng chọn lại.`;
+    }
     return 'Không có câu hỏi trong trang, vui lòng chọn lại.';
   }
   if (lowerErr.includes('không chứa văn bản dạng số/vector') || lowerErr.includes('ảnh scan thuần túy')) {

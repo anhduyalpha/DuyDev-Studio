@@ -70,14 +70,24 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     let start = 1;
     let end: number | null = null;
 
-    // 1. Regex parsing for pages: "trang 11", "trang 11,12", "trang 4,5,6", "trang 36-38", "page 12"
-    const pageMatch = input.match(/(?:trang|page)\s*(\d+(?:\s*[-–]\s*\d+|\s*,\s*\d+(?!\d*\s*câu))*)/i);
-    if (pageMatch) {
-      pages = pageMatch[1].replace(/\s+/g, '');
+    // Pre-normalize spaced digits after "trang" or "page", e.g. "trang 1 1" -> "trang 11"
+    let s = input.replace(/\b(?:trang|page)\s+(\d)\s+(\d)\b/gi, 'trang $1$2');
+
+    // 1. Regex parsing for pages:
+    // Range format: "trang 11-15", "trang 11 đến 15", "trang 11 tới 15", "từ trang 11 đến 15"
+    const pageRangeMatch = s.match(/(?:(?:ở|tại|từ)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)[\s:]*(\d+)\s*(?:đến|tới|[-–—]|->)\s*(\d+)(?!\s*câu)/i);
+    if (pageRangeMatch) {
+      pages = `${pageRangeMatch[1]}-${pageRangeMatch[2]}`;
+    } else {
+      // Single or comma-separated: "trang 11", "trang số 11", "trang 11,12", "page 11"
+      const pageListMatch = s.match(/(?:(?:ở|tại|từ)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)[\s:]*(\d+(?:\s*[-–—]\s*\d+|\s*,\s*\d+(?!\d*\s*câu))*)/i);
+      if (pageListMatch) {
+        pages = pageListMatch[1].replace(/\s+/g, '');
+      }
     }
 
     // 2. Regex parsing for question range: "từ câu 18 đến 28", "câu 18 đến câu 28", "câu 18 tới 28", "câu 18 - câu 28"
-    const rangeMatch = input.match(/(?:từ\s*)?câu\s*(\d+)\s*(?:đến|tới|-|–|—|->)\s*(?:câu\s*)?(\d+)/i);
+    const rangeMatch = s.match(/(?:từ\s*)?câu\s*(\d+)\s*(?:đến|tới|-|–|—|->)\s*(?:câu\s*)?(\d+)/i);
     if (rangeMatch) {
       start = parseInt(rangeMatch[1], 10);
       end = parseInt(rangeMatch[2], 10);
@@ -89,12 +99,12 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       count = Math.max(1, end - start + 1);
     } else {
       // Regex for question count: "20 câu", "lấy 25 câu", "làm 15 câu"
-      const countMatch = input.match(/(?:lấy|làm|tạo|trích)?\s*(\d+)\s*câu/i);
+      const countMatch = s.match(/(?:lấy|làm|tạo|trích)?\s*(\d+)\s*câu/i);
       if (countMatch) {
         count = parseInt(countMatch[1], 10);
       }
       // Regex for start number: "bắt đầu từ câu 5", "từ câu 5"
-      const startMatch = input.match(/(?:bắt\s*đầu\s*)?(?:từ\s*)?câu\s*(\d+)/i);
+      const startMatch = s.match(/(?:bắt\s*đầu\s*)?(?:từ\s*)?câu\s*(\d+)/i);
       if (startMatch) {
         start = parseInt(startMatch[1], 10);
       }
@@ -102,12 +112,12 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
 
     // 3. Regex parsing for prefix/topic if mentioned (e.g. "tên file Ester Lipid", "bài tập Ester Lipid", "Ester Lipid")
     let prefix = '';
-    const topicMatch = input.match(/(?:tên\s*file|file|chủ\s*đề|chuyên\s*đề|bài\s*tập|đề)\s*[:=]?\s*([a-zA-Z0-9À-ỹ_\s-]+?)(?:,|$|\.|\n)/i);
+    const topicMatch = s.match(/(?:tên\s*file|file|chủ\s*đề|chuyên\s*đề|bài\s*tập|đề)\s*[:=]?\s*([a-zA-Z0-9À-ỹ_\s-]+?)(?:,|$|\.|\n)/i);
     if (topicMatch) {
       prefix = topicMatch[1].trim();
     } else {
       // Check trailing non-keyword part like "Trang 12, 11 câu, từ câu 18, Ester Lipid"
-      const parts = input.split(/[,;\n]/).map((p) => p.trim()).filter(Boolean);
+      const parts = s.split(/[,;\n]/).map((p) => p.trim()).filter(Boolean);
       for (const part of parts) {
         if (
           !part.match(/(?:trang|page)/i) &&
@@ -159,10 +169,10 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
               content:
                 'You are an expert Vietnamese exam parameter extractor for a quiz generator tool. Given a user request, extract parameters and respond strictly with JSON having this schema:\n' +
                 '{\n' +
-                '  "pages": string (e.g. "12", "12-15", "4,5,6" - only the page number(s) or ranges, empty string if not mentioned),\n' +
-                '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18),\n' +
-                '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, calculate count = Y - X + 1, e.g. from 18 to 28 inclusive is 11),\n' +
-                '  "title": string (formal Vietnamese exam uppercase title, e.g. "BÀI TẬP TRẮC NGHIỆM TRANG 12"),\n' +
+                '  "pages": string (e.g. "11", "11-15", "4,5,6" - only the page number(s) or ranges, empty string if not mentioned. IMPORTANT: Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
+                '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18, "câu 1 đến 16" -> 1),\n' +
+                '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, calculate count = Y - X + 1, e.g. from 18 to 28 inclusive is 11, from 1 to 16 inclusive is 16),\n' +
+                '  "title": string (formal Vietnamese exam uppercase title, e.g. "BÀI TẬP TRẮC NGHIỆM TRANG 11"),\n' +
                 '  "prefix": string (optional short clean topic or file name if explicitly mentioned in prompt, otherwise empty string "")\n' +
                 '}'
             },
@@ -180,16 +190,34 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
         if (rawContent) {
           const parsed = JSON.parse(rawContent);
           const regexDefaults = extractWithRegex(text);
-          const pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
+          let pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
+
+          // CRITICAL SAFEGUARD: Reconcile pages between AI and Regex
+          // If regex explicitly identified a valid page (e.g. "11" or "11-15") from "trang ...",
+          // but AI mistakenly returned "1" or dropped digits (often confusing question 1 with page 11):
+          if (regexDefaults.pages && regexDefaults.pages !== pagesRes) {
+            if (regexDefaults.pages.includes(pagesRes) || pagesRes === '1' || !pagesRes) {
+              logger.info({ aiPages: pagesRes, regexPages: regexDefaults.pages }, 'Correcting AI page misparse using regex');
+              pagesRes = regexDefaults.pages;
+            }
+          }
+
           let startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
           let countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
           if (regexDefaults.start && regexDefaults.start < startRes) {
             startRes = regexDefaults.start;
             countRes = regexDefaults.count;
           }
-          const titleRes = String(parsed.title || regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM').trim();
+
+          let titleRes = String(parsed.title || '').trim();
+          if (!titleRes || titleRes === 'BÀI TẬP TRẮC NGHIỆM' || (pagesRes && titleRes.match(/TRANG\s+1$/i) && pagesRes !== '1')) {
+            titleRes = pagesRes ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pagesRes}` : (regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM');
+          }
+
           const rawPrefix = String(parsed.prefix || regexDefaults.prefix || '').trim();
           const prefixRes = rawPrefix ? rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') : '';
+
+          logger.info({ prompt: text, result: { pages: pagesRes, count: countRes, start: startRes, title: titleRes } }, 'Quiz prompt parsed');
 
           return reply.send({
             success: true,

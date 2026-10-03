@@ -1039,7 +1039,8 @@ def parse_and_standardize_questions(
     count: int = 20,
     start_num: int = 1,
     base_url: str = DEFAULT_API_BASE,
-    model: str = DEFAULT_MODEL
+    model: str = DEFAULT_MODEL,
+    pages_desc: str = ""
 ) -> list[dict]:
     """
     Parse raw text into structured multiple-choice questions (4 options A, B, C, D),
@@ -1138,7 +1139,8 @@ def parse_and_standardize_questions(
         if not batch_qs:
             if all_questions:
                 break
-            raise RuntimeError("Không có câu hỏi trong trang, vui lòng chọn lại.")
+            desc = pages_desc if pages_desc else "trang đã chọn"
+            raise RuntimeError(f"Không có câu hỏi trong {desc}, vui lòng chọn lại.")
 
         for idx, q in enumerate(batch_qs):
             target_num = b_start + idx
@@ -1897,10 +1899,11 @@ def run_pipeline(
 
         emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
         raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = extract_raw_pages(pdf_local, pages, temp_assets_dir)
+        pages_desc = f"Trang {', '.join(map(str, actual_pages))}" if actual_pages else f"Trang {pages}"
 
         emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")
         questions = parse_and_standardize_questions(
-            raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model
+            raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model, pages_desc=pages_desc
         )
 
         # Link visual assets to questions using AI match, layout spatial map, and fallbacks

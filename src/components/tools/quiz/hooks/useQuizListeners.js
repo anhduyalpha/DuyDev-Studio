@@ -102,7 +102,7 @@ export function attachQuizListeners() {
     const pagesInput = document.getElementById('quizPagesInput');
     if (pagesStatus && pagesInput) {
       if (hasPages) {
-        pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+        pagesStatus.innerHTML = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(state.pages)}</span>`;
         pagesInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
         pagesInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
       } else {

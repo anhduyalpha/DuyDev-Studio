@@ -172,14 +172,14 @@ export function renderQuizConfigPanel(state) {
                 <span id="quizPagesStatus">
                   ${
                     hasValidPages
-                      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>`
+                      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(state.pages)}</span>`
                       : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
                   }
                 </span>
               </label>
               <span class="text-[11px] text-zinc-500 font-mono">vd: 11 hoặc 11-15</span>
             </div>
-            <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="11" class="w-full bg-zinc-950 border ${
+            <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="Ví dụ: 11 hoặc 11-15" class="w-full bg-zinc-950 border ${
               hasValidPages ? 'border-emerald-500/40 focus:border-emerald-500' : 'border-rose-500/40 focus:border-rose-500'
             } rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden transition" />
           </div>
