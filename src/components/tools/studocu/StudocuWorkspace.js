@@ -191,7 +191,7 @@ export function attachStudocuListeners() {
       if (window.lucide?.createIcons) window.lucide.createIcons();
     }
 
-    const shouldShowTerminal = state.isDownloading || (state.logs && state.logs.length > 0);
+    const shouldShowTerminal = state.isDownloading;
     if (termCard) {
       termCard.classList.toggle('hidden', !shouldShowTerminal);
       const screenEl = document.getElementById('studocuTerminalScreen');

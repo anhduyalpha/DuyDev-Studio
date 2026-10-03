@@ -52,7 +52,7 @@ export function renderTerminalLogs(logs) {
 }
 
 export function renderLiveTerminalCard(state) {
-  const isVisible = state.isDownloading || (state.logs && state.logs.length > 0);
+  const isVisible = state.isDownloading;
   const isRunning = state.isDownloading;
   const statusBadge = isRunning
     ? '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">ĐANG TẢI</span>'
