@@ -133,7 +133,10 @@ export function attachStudocuListeners() {
         const id = btn.getAttribute('data-doc-id');
         const name = btn.getAttribute('data-doc-name');
         const isPdf = !name.toLowerCase().endsWith('.md');
-        const streamUrl = `/api/v1/studocu/stream?id=${encodeURIComponent(id)}&file=${encodeURIComponent(name)}`;
+        const hasHexId = Boolean(id && /^[0-9a-f]{16}$/i.test(id));
+        const streamUrl = hasHexId
+          ? `/api/v1/studocu/stream?id=${encodeURIComponent(id)}`
+          : `/api/v1/studocu/stream?file=${encodeURIComponent(name)}`;
         ViewerConnector.preview({
           id, name, fileName: name,
           category: isPdf ? 'pdf' : 'text',

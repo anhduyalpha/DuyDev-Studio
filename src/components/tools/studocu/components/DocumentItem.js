@@ -13,12 +13,15 @@ function escapeHtml(str) {
 
 export function renderDocumentItem(doc, isTrash = false) {
   const isPdf = Boolean(doc.is_pdf ?? (doc.format === 'pdf' || (doc.name && doc.name.toLowerCase().endsWith('.pdf'))));
-  const docId = doc.id || doc.name;
+  const hasHexId = Boolean(doc.id && /^[0-9a-f]{16}$/i.test(doc.id));
+  const docId = hasHexId ? doc.id : (doc.name || 'document');
   const docName = doc.name || 'Tài liệu không tên';
   const docSize = doc.size || (doc.size_mb ? `${doc.size_mb} MB` : (doc.size_bytes ? `${(doc.size_bytes / (1024 * 1024)).toFixed(2)} MB` : ''));
   const timeStr = doc.time || '';
   const uploader = doc.downloaded_by?.name || doc.downloaded_by?.device || doc.uploader || 'Web';
-  const streamUrl = `/api/v1/studocu/stream?id=${encodeURIComponent(docId)}&file=${encodeURIComponent(docName)}`;
+  const streamUrl = hasHexId
+    ? `/api/v1/studocu/stream?id=${encodeURIComponent(doc.id)}`
+    : `/api/v1/studocu/stream?file=${encodeURIComponent(docName)}`;
   const downloadUrl = `/api/v1/studocu/download/${encodeURIComponent(docName)}`;
 
   return `
@@ -64,9 +67,7 @@ export function renderDocumentItem(doc, isTrash = false) {
           </button>
           <a
             href="${downloadUrl}"
-            download
-            target="_blank"
-            rel="noopener noreferrer"
+            download="${escapeHtml(docName)}"
             class="btn-action btn-dl"
             title="Tải về"
           >

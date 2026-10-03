@@ -303,11 +303,23 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
     }
   }
 
+function formatContentDisposition(filename: string): string {
+  const cleanName = path.basename(filename);
+  const asciiFallback = cleanName
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/["\\]/g, '_') || 'document';
+  const rfc5987Encoded = encodeURIComponent(cleanName)
+    .replace(/['()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${rfc5987Encoded}`;
+}
+
   app.get('/api/v1/studocu/stream', handleDocumentStream);
   app.get('/api/v1/studocu/stream/*', handleDocumentStream);
+  app.head('/api/v1/studocu/stream', handleDocumentStream);
+  app.head('/api/v1/studocu/stream/*', handleDocumentStream);
 
   // 11. Download File Attachment
-  app.get('/api/v1/studocu/download/*', async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
+  const handleDownload = async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
     try {
       const filename = req.params['*'];
       const res = await fetch(`${BACKEND_URL}/downloads/${encodeURIComponent(filename)}`);
@@ -324,8 +336,11 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
         }
       });
 
-      const cleanName = path.basename(filename);
-      reply.header('Content-Disposition', `attachment; filename="${cleanName}"; filename*=UTF-8''${encodeURIComponent(cleanName)}`);
+      reply.header('Content-Disposition', formatContentDisposition(filename));
+
+      if (req.method === 'HEAD') {
+        return reply.send();
+      }
 
       if (res.body) {
         const stream = Readable.fromWeb(res.body as any);
@@ -335,7 +350,10 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
     } catch (err: any) {
       return reply.status(502).send('Download error: ' + err.message);
     }
-  });
+  };
+
+  app.get('/api/v1/studocu/download/*', handleDownload);
+  app.head('/api/v1/studocu/download/*', handleDownload);
 
   // 12. Reset Session
   app.post('/api/v1/studocu/reset-session', async (_req, reply: FastifyReply) => {

@@ -159,7 +159,7 @@ export function resolveViewerUrls(item) {
 
     if (!finalDl.includes('/api/v1/studocu/download/')) {
       const fnMatch = finalView.match(/[?&]file=([^&#]+)/) || finalDl.match(/\/([^/?#]+)$/);
-      const fn = fnMatch ? fnMatch[1] : '';
+      const fn = fnMatch ? fnMatch[1] : (fileName ? encodeURIComponent(fileName) : '');
       if (fn) finalDl = `/api/v1/studocu/download/${fn}`;
     }
 
