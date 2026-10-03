@@ -350,6 +350,12 @@ def get_chunk_capture_js(start_idx: int, end_idx: int, total_pages: int) -> str:
                 waits++;
             }}
 
+            // [NEW] Cấp 300ms buffer để PDF.js kịp hoàn tất vẽ vector lên Canvas
+            await sleep(300);
+            
+            // [NEW] Kích hoạt load font sơ bộ ngay tại lúc capture (nếu có)
+            try {{ await document.fonts.ready; }} catch (_) {{}}
+
             // 3. Tự động gỡ bỏ banner rác và thay thế ảnh mờ bằng asset bg sạch nếu có CloudFront signed URL
             if (pf) {{
                 pf.querySelectorAll('.banner-wrapper, [class*="InlineBanner"], [class*="PremiumBanner"], [class*="banner"], [class*="paywall" i]').forEach(el => el.remove());
@@ -416,7 +422,14 @@ def get_chunk_mount_js(c_start: int, c_end: int) -> str:
             }}
             @media screen {{
                 #clean-viewer-container {{
-                    display: none !important;
+                    display: block !important;
+                    position: fixed !important;
+                    left: -99999px !important;
+                    top: 0 !important;
+                    width: 210mm !important;
+                    opacity: 0.01 !important;
+                    pointer-events: none !important;
+                    z-index: -9999 !important;
                 }}
             }}
             @media print {{
@@ -483,7 +496,14 @@ JS_MOUNT_AND_PRINT_CSS = """
         }
         @media screen {
             #clean-viewer-container {
-                display: none !important;
+                display: block !important;
+                position: fixed !important;
+                left: -99999px !important;
+                top: 0 !important;
+                width: 210mm !important;
+                opacity: 0.01 !important;
+                pointer-events: none !important;
+                z-index: -9999 !important;
             }
         }
         @media print {

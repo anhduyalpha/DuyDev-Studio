@@ -562,8 +562,11 @@ class StudocuDownloader:
                     scoping_class=scoping_class,
                 )
                 await page_client.eval(mount_js)
-                await page_client.eval(JS_WAIT_IMAGES_LOADED, await_promise=True)
+                # [NEW] Ép Chrome Reflow để lập tức phát hiện webfonts trong container
+                await page_client.eval("document.getElementById('clean-viewer-container').getBoundingClientRect();")
                 await page_client.eval("document.fonts?.ready", await_promise=True)
+                await page_client.eval(JS_WAIT_IMAGES_LOADED, await_promise=True)
+                await asyncio.sleep(0.5)
 
                 pdf_res = await page_client.send(
                     "Page.printToPDF",
@@ -863,9 +866,13 @@ class StudocuDownloader:
                     },
                 )
                 await page_client.eval(get_chunk_mount_js(b_start, b_end))
+                # [NEW] Ép Chrome Reflow để lập tức phát hiện webfonts trong container
+                await page_client.eval("document.getElementById('clean-viewer-container').getBoundingClientRect();")
                 await page_client.eval("document.fonts?.ready", await_promise=True)
                 # Đảm bảo 100% hình ảnh nền và ảnh vector giải mã xong hoàn toàn (Zero Blank Pages)
                 await page_client.eval(JS_WAIT_IMAGES_LOADED, await_promise=True)
+                # Buffer 500ms để Chrome apply font glyph phức tạp
+                await asyncio.sleep(0.5)
                 pdf_res = await page_client.send(
                     "Page.printToPDF",
                     {
