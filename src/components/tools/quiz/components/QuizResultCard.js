@@ -132,7 +132,7 @@ function renderCompletedState(state) {
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" target="_blank" rel="noopener noreferrer" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
+            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>
@@ -158,7 +158,7 @@ function renderCompletedState(state) {
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" target="_blank" rel="noopener noreferrer" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
+            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải về</span>
             </a>

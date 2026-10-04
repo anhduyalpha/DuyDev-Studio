@@ -75,7 +75,7 @@ export function attachPdfListeners(state, registerCleanup) {
         pdfDoc = await loadingTask.promise;
       } catch (streamErr) {
         console.warn('[PdfRenderer] Direct stream load failed, attempting binary buffer fetch:', streamErr);
-        const resp = await fetch(absoluteUrl);
+        const resp = await fetch(absoluteUrl, { cache: 'no-store' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
         const buf = await resp.arrayBuffer();
         if (isDestroyed) return;

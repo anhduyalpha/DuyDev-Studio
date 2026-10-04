@@ -146,7 +146,6 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
     reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedFilename}`);
   }
   reply.header('Accept-Ranges', 'bytes');
-  reply.header('Cache-Control', 'public, max-age=3600');
 
   // Handle Range requests (HTTP 206 Partial Content) according to RFC 7233
   const rangeHeader = request.headers.range;
@@ -182,9 +181,23 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
     reply.status(206);
     reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${totalSize}`);
     reply.header('Content-Length', chunkSize.toString());
+    reply.header('Cache-Control', 'no-cache');
+    if (fileRecord.hashSha256) {
+      reply.header('ETag', `"${fileRecord.hashSha256}"`);
+    }
     return reply.send(fs.createReadStream(fileRecord.storagePath, { start, end: clampedEnd }));
   }
 
+  // 200 OK Full content
+  if (fileRecord.hashSha256) {
+    const etag = `"${fileRecord.hashSha256}"`;
+    reply.header('ETag', etag);
+    if (request.headers['if-none-match'] === etag) {
+      reply.status(304);
+      return reply.send();
+    }
+  }
+  reply.header('Cache-Control', 'public, max-age=600, must-revalidate');
   reply.header('Content-Length', totalSize.toString());
   return reply.send(fs.createReadStream(fileRecord.storagePath));
 }

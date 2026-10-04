@@ -240,8 +240,6 @@ function renderDropboxItem(pair, isTrash) {
               <a
                 href="${ws.downloadUrl}"
                 download="${escapeHtml(ws.fileName)}"
-                target="_blank"
-                rel="noopener noreferrer"
                 data-file-url="${ws.downloadUrl}"
                 data-file-name="${escapeHtml(ws.fileName)}"
                 class="btn-quiz-history-download py-2 px-3 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
@@ -284,8 +282,6 @@ function renderDropboxItem(pair, isTrash) {
               <a
                 href="${ans.downloadUrl}"
                 download="${escapeHtml(ans.fileName)}"
-                target="_blank"
-                rel="noopener noreferrer"
                 data-file-url="${ans.downloadUrl}"
                 data-file-name="${escapeHtml(ans.fileName)}"
                 class="btn-quiz-history-download py-2 px-3 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
