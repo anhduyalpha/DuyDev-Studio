@@ -4,7 +4,7 @@ Assembles and normalizes ReconstructedQuestion items and AnswerKeyIR records int
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Any
 
 try:
     import pymupdf as fitz
