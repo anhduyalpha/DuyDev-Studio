@@ -24,10 +24,11 @@ function renderProcessingState(state) {
   const pct = Math.max(5, Math.min(100, state.progress || 0));
 
   return `
-    <div id="quizProcessingBox" class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-6 space-y-5 shadow-sm">
+    <div id="quizProcessingBox" class="relative overflow-hidden bg-gradient-to-b from-[#141419] to-[#0f0f13] border border-indigo-500/30 rounded-2xl p-6 space-y-5 shadow-lg">
+      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/25">
             <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
           </div>
           <div class="min-w-0">
@@ -44,7 +45,7 @@ function renderProcessingState(state) {
       </div>
 
       <div class="flex items-center justify-end pt-2">
-        <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition">
+        <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer">
           Hủy tác vụ
         </button>
       </div>
@@ -87,21 +88,30 @@ function renderCompletedState(state) {
     : '';
 
   return `
-    <div class="space-y-4 animate-fadeIn">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <h4 class="text-sm font-semibold text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
+    <div class="relative overflow-hidden rounded-2xl border border-zinc-700/80 bg-gradient-to-b from-[#141419] to-[#0f0f13] p-4 sm:p-5 space-y-4 shadow-lg animate-fadeIn">
+      <!-- Top Accent Line -->
+      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500"></div>
+
+      <!-- Result Header -->
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0"></span>
+          <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <h4 class="text-sm font-bold text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              Hoàn tất
+            </span>
+          </div>
         </div>
-        <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition">
+        <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer shrink-0">
           Làm bài tập khác
         </button>
       </div>
 
       <!-- Dual Cards Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         <!-- Worksheet Card -->
-        <div class="bg-[#111114] border border-blue-500/30 hover:border-blue-500/50 rounded-2xl p-4 flex flex-col justify-between space-y-4 transition">
+        <div class="bg-[#121217] border border-blue-500/30 hover:border-blue-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
@@ -128,7 +138,7 @@ function renderCompletedState(state) {
         </div>
 
         <!-- Answer Key Card -->
-        <div class="bg-[#111114] border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl p-4 flex flex-col justify-between space-y-4 transition">
+        <div class="bg-[#121217] border border-emerald-500/30 hover:border-emerald-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
@@ -184,7 +194,7 @@ function renderErrorState(state) {
         <span>Lỗi tạo bài tập</span>
       </div>
       <p class="text-xs text-red-300/90 leading-relaxed font-medium">${escapeHtml(errorMsg)}</p>
-      <button type="button" id="btnQuizReset" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/30 transition">
+      <button type="button" id="btnQuizReset" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/30 transition cursor-pointer">
         Thử lại
       </button>
     </div>
@@ -193,15 +203,35 @@ function renderErrorState(state) {
 
 function renderEmptyPlaceholder() {
   return `
-    <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-6 text-center space-y-2">
-      <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
-        <i data-lucide="file-check-2" class="w-5 h-5"></i>
-      </div>
-      <div>
-        <h4 class="text-sm font-semibold text-zinc-200">Đề bài & Đáp án A4</h4>
-        <p class="text-xs text-zinc-500 max-w-sm mx-auto mt-0.5">
-          Tệp PDF đề bài và đáp án chi tiết sẽ hiển thị tại đây sau khi hoàn tất.
-        </p>
+    <div class="relative overflow-hidden rounded-2xl border-2 border-dashed border-zinc-800/90 hover:border-zinc-700/80 bg-gradient-to-b from-zinc-900/25 via-[#111114]/40 to-zinc-950/70 p-6 sm:p-7 text-center transition-all">
+      <div class="flex flex-col items-center justify-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/80 border border-zinc-800 text-[11px] font-mono text-zinc-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+          <span>Khu vực xuất kết quả</span>
+        </div>
+
+        <div class="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-xs">
+          <i data-lucide="file-check-2" class="w-5 h-5"></i>
+        </div>
+
+        <div class="space-y-1">
+          <h4 class="text-sm font-semibold text-zinc-200">Đề bài & Đáp án A4</h4>
+          <p class="text-xs text-zinc-500 max-w-md mx-auto">
+            Tệp PDF đề bài và đáp án chi tiết sẽ tự động xuất hiện tại đây sau khi hoàn tất xử lý.
+          </p>
+        </div>
+
+        <!-- Visual Slot Previews (Dashed Ghost Cards) -->
+        <div class="grid grid-cols-2 gap-3 w-full max-w-md pt-1.5">
+          <div class="border border-dashed border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-500 text-xs font-mono">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>Đề bài (PDF)</span>
+          </div>
+          <div class="border border-dashed border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-500 text-xs font-mono">
+            <i data-lucide="check-square" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>Đáp án & Lời giải</span>
+          </div>
+        </div>
       </div>
     </div>
   `.trim();

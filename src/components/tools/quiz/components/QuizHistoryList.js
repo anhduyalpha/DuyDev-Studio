@@ -42,13 +42,13 @@ export function renderQuizHistoryList() {
   const currentList = isTrash ? trashItems : historyItems;
 
   return `
-    <div id="quizHistoryCard" class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm select-none">
+    <div id="quizHistoryCard" class="bg-[#0d0d10] border border-zinc-800/60 rounded-2xl p-4 sm:p-5 space-y-4 select-none">
       <!-- Header with Tabs & Global Actions -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-800/60">
         <!-- Segmented Tab: Lịch sử vs Thùng rác -->
-        <div class="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-semibold">
+        <div class="flex items-center gap-1 p-1 bg-zinc-950/80 border border-zinc-800/70 rounded-xl text-xs font-semibold">
           <button type="button" id="btnQuizTabHistory"
-            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${!isTrash ? 'bg-zinc-800 text-zinc-100 shadow-xs' : 'text-zinc-400 hover:text-zinc-200'}">
+            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${!isTrash ? 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/50 shadow-xs' : 'text-zinc-400 hover:text-zinc-200 border border-transparent'}">
             <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
             <span>Lịch sử</span>
             <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-zinc-950 text-zinc-300">
@@ -56,7 +56,7 @@ export function renderQuizHistoryList() {
             </span>
           </button>
           <button type="button" id="btnQuizTabTrash"
-            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${isTrash ? 'bg-zinc-800 text-zinc-100 shadow-xs' : 'text-zinc-400 hover:text-zinc-200'}">
+            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${isTrash ? 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/50 shadow-xs' : 'text-zinc-400 hover:text-zinc-200 border border-transparent'}">
             <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
             <span>Thùng rác</span>
             ${trashItems.length > 0 ? `
@@ -71,14 +71,14 @@ export function renderQuizHistoryList() {
         <div class="flex items-center gap-2 text-xs">
           ${!isTrash ? `
             ${historyItems.length > 0 ? `
-              <button type="button" id="btnQuizTrashAll" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 border border-zinc-800 hover:border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
+              <button type="button" id="btnQuizTrashAll" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 border border-zinc-800/80 hover:border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
                 <i data-lucide="trash-2" class="w-3 h-3"></i>
                 <span>Chuyển tất cả vào thùng rác</span>
               </button>
             ` : ''}
           ` : `
             ${trashItems.length > 0 ? `
-              <button type="button" id="btnQuizRestoreAllTrash" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-emerald-950/40 text-zinc-400 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/30 transition flex items-center gap-1.5 cursor-pointer">
+              <button type="button" id="btnQuizRestoreAllTrash" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-emerald-950/40 text-zinc-400 hover:text-emerald-400 border border-zinc-800/80 hover:border-emerald-500/30 transition flex items-center gap-1.5 cursor-pointer">
                 <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
                 <span>Khôi phục tất cả</span>
               </button>
@@ -141,10 +141,10 @@ function renderDropboxItem(pair, isTrash) {
   const timeStr = isTrash ? formatRelativeTime(pair.deletedAt || pair.createdAt) : formatRelativeTime(pair.createdAt);
 
   return `
-    <div class="quiz-dropbox border ${isOpen ? 'border-zinc-700 bg-zinc-900/60' : 'border-zinc-800/80 bg-zinc-900/40'} rounded-xl overflow-hidden transition-all duration-200">
+    <div class="quiz-dropbox border ${isOpen ? 'border-zinc-700/90 bg-zinc-900/70 shadow-md' : 'border-zinc-800/60 bg-zinc-900/30 hover:border-zinc-700/60 hover:bg-zinc-900/50'} rounded-xl overflow-hidden transition-all duration-200">
       <!-- Prominent Opaque Dropbox Header -->
       <div
-        class="quiz-dropbox-header cursor-pointer select-none bg-zinc-900/90 hover:bg-zinc-800/90 border-b ${isOpen ? 'border-zinc-800' : 'border-transparent'} p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors backdrop-blur-sm"
+        class="quiz-dropbox-header cursor-pointer select-none bg-zinc-900/70 hover:bg-zinc-800/80 border-b ${isOpen ? 'border-zinc-800' : 'border-transparent'} p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors"
         data-pair-id="${pair.id}"
       >
         <!-- Left: Prominent Filename Title & Meta -->
@@ -206,10 +206,10 @@ function renderDropboxItem(pair, isTrash) {
       </div>
 
       <!-- Collapsible Body (Revealed on Click) -->
-      <div class="quiz-dropbox-content ${isOpen ? 'block' : 'hidden'} p-3.5 sm:p-4 bg-zinc-950/40">
+      <div class="quiz-dropbox-content ${isOpen ? 'block' : 'hidden'} p-3.5 sm:p-4 bg-black/40 border-t border-zinc-800/70">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <!-- Cột 1: Đề bài Card -->
-          <div class="bg-[#121216] border border-blue-500/25 hover:border-blue-500/45 rounded-xl p-3.5 flex flex-col justify-between space-y-3 transition">
+          <div class="bg-[#101014] border border-blue-500/20 hover:border-blue-500/40 rounded-xl p-3.5 flex flex-col justify-between space-y-3 transition shadow-xs">
             <div class="space-y-1.5 min-w-0">
               <div class="flex items-center justify-between gap-1">
                 <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 uppercase tracking-wide">
@@ -253,7 +253,7 @@ function renderDropboxItem(pair, isTrash) {
           </div>
 
           <!-- Cột 2: Đáp án & Lời giải Card -->
-          <div class="bg-[#121216] border border-emerald-500/25 hover:border-emerald-500/45 rounded-xl p-3.5 flex flex-col justify-between space-y-3 transition">
+          <div class="bg-[#101014] border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl p-3.5 flex flex-col justify-between space-y-3 transition shadow-xs">
             <div class="space-y-1.5 min-w-0">
               <div class="flex items-center justify-between gap-1">
                 <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide">
