@@ -1,0 +1,188 @@
+diff --git a/engines/quiz/quiz_pipeline.py b/engines/quiz/quiz_pipeline.py
+--- a/engines/quiz/quiz_pipeline.py
++++ b/engines/quiz/quiz_pipeline.py
+@@ -1327,6 +1327,90 @@
+     return all_questions
+ 
+ 
++def generate_explanations(
++    questions: list[dict],
++    api_key: str,
++    base_url: str = DEFAULT_API_BASE,
++    model: str = DEFAULT_MODEL,
++    batch_size: int = 5,
++    max_workers: int = 4
++) -> None:
++    """
++    Sinh lời giải cho từng câu, mutate IN-PLACE q["explanation"].
++    Không raise khi một phần hoặc toàn bộ batch lỗi — các câu lỗi giữ explanation = "".
++    """
++    if not questions or not api_key:
++        return
++
++    batches = [questions[i:i + batch_size] for i in range(0, len(questions), batch_size)]
++    if not batches:
++        return
++
++    system_prompt = (
++        "You are an expert Vietnamese exam editor and master teacher.\n"
++        "Your task is to write concise, scientifically accurate step-by-step explanations for multiple-choice questions.\n"
++        "Format chemical formulas using HTML <sub> and <sup>, and math with $...$.\n"
++        "Return ONLY a valid JSON object: {\"explanations\": {\"<number>\": \"<explanation>\", ...}}"
++    )
++
++    def _build_phase2_prompt(batch: list[dict]) -> str:
++        items = [
++            {
++                "number": q.get("number"),
++                "question": q.get("question", ""),
++                "options": dict(q.get("options", {})),
++                "answer": q.get("answer", "")
++            }
++            for q in batch
++        ]
++        prompt = (
++            "Với mỗi câu hỏi trắc nghiệm dưới đây (đã biết đáp án đúng), hãy viết lời giải "
++            "ngắn gọn, chính xác về mặt khoa học, bằng tiếng Việt, 1-3 câu.\n"
++            "Dùng HTML <sub>/<sup> cho công thức hoá học và $...$ cho biểu thức toán.\n"
++            "Trả về ĐÚNG JSON: {\"explanations\": {\"<number>\": \"<lời giải>\", ...}}\n\n"
++            "INPUT:\n"
++            f"{json.dumps(items, ensure_ascii=False)}"
++        )
++        return prompt
++
++    def _run_exp_batch(b_idx: int) -> dict:
++        batch = batches[b_idx]
++        user_prompt = _build_phase2_prompt(batch)
++        res = call_agnes_api(
++            api_key, user_prompt, system_prompt,
++            base_url=base_url, model=model, timeout=90
++        )
++        return res
++
++    max_p = int(os.environ.get("QUIZ_AI_CONCURRENCY", str(max_workers)))
++    effective_workers = min(max_p, max(1, len(batches)))
++
++    try:
++        with concurrent.futures.ThreadPoolExecutor(max_workers=effective_workers) as ex:
++            fut_map = {ex.submit(_run_exp_batch, i): i for i in range(len(batches))}
++            done_n = 0
++            for fut in concurrent.futures.as_completed(fut_map):
++                b_idx = fut_map[fut]
++                batch = batches[b_idx]
++                try:
++                    res = fut.result()
++                    exps = res.get("explanations", {}) if isinstance(res, dict) else {}
++                    if isinstance(exps, dict):
++                        for q in batch:
++                            num = q.get("number")
++                            raw_e = exps.get(str(num)) if exps.get(str(num)) is not None else exps.get(num)
++                            if raw_e and isinstance(raw_e, str):
++                                q["explanation"] = strip_section_banner(raw_e.strip())
++                except Exception:
++                    pass
++                done_n += 1
++                emit_progress(
++                    int(72 + (done_n / len(batches)) * (80 - 72)),
++                    f"Đang tạo lời giải chi tiết {done_n}/{len(batches)} gói..."
++                )
++    except Exception:
++        pass
++
++
+ # ==============================================================================
+ # MODULE 1.7: A4 PRINT HTML TEMPLATES & KATEX
+ # ==============================================================================
+@@ -2028,6 +2112,28 @@
+     return clean
+ 
+ 
++def _build_and_compile_worksheet(
++    title: str,
++    subtitle: str,
++    questions: list[dict],
++    html_path: str,
++    chrome: str,
++    pdf_path: str
++) -> None:
++    """Build Worksheet HTML and compile to PDF using Google Chrome Headless."""
++    worksheet_html = generate_worksheet_html(title, subtitle, questions)
++    with open(html_path, "w", encoding="utf-8") as f:
++        f.write(worksheet_html)
++    compile_pdf(chrome, html_path, pdf_path)
++
++
++def _build_and_compile_answer(
++    title: str,
++    subtitle: str,
++    questions: list[dict],
++    html_path: str,
++    chrome: str,
++    pdf_path: str
++) -> None:
++    """Build Answer Key HTML and compile to PDF using Google Chrome Headless."""
++    answer_html = generate_answer_key_html(title, subtitle, questions)
++    with open(html_path, "w", encoding="utf-8") as f:
++        f.write(answer_html)
++    compile_pdf(chrome, html_path, pdf_path)
++
++
+ # ==============================================================================
+ # PIPELINE ENTRYPOINT
+ # ==============================================================================
+@@ -2096,25 +2202,32 @@
+         mcq_count = len(questions)
+         tf_count = 0
+         sa_count = 0
+ 
+-        emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
+-        worksheet_html = generate_worksheet_html(title, subtitle, questions)
+-        answer_html = generate_answer_key_html(title, subtitle, questions)
+-
+-        with open(ws_html_path, "w", encoding="utf-8") as f:
+-            f.write(worksheet_html)
+-        with open(ans_html_path, "w", encoding="utf-8") as f:
+-            f.write(answer_html)
+-
+-        emit_progress(80, "Google Chrome Headless đang in ấn tệp PDF Đề bài và Đáp án...")
++        emit_progress(72, "Đang khởi tạo tiến trình in ấn và tạo lời giải chi tiết...")
+         chrome = find_chrome_path()
+         ws_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
+         ans_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.pdf")
+ 
+         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+-            f_ws = executor.submit(compile_pdf, chrome, ws_html_path, ws_pdf_path)
+-            f_ans = executor.submit(compile_pdf, chrome, ans_html_path, ans_pdf_path)
++            # (1) Worksheet KHÔNG cần explanation -> build & in NGAY, chồng lấn với phase 2
++            f_ws = executor.submit(
++                _build_and_compile_worksheet,
++                title, subtitle, questions, ws_html_path, chrome, ws_pdf_path
++            )
++
++            # (2) Phase 2 chạy trên main thread, song song với Chrome đang in worksheet
++            if os.environ.get("QUIZ_SKIP_EXPLANATION") != "1":
++                try:
++                    generate_explanations(questions, key, base_url=base_url, model=model)
++                except Exception:
++                    pass
++
++            # (3) Answer key CẦN explanation -> chỉ submit SAU khi phase 2 xong
++            f_ans = executor.submit(
++                _build_and_compile_answer,
++                title, subtitle, questions, ans_html_path, chrome, ans_pdf_path
++            )
+ 
+             curr_p = 82
+             elapsed = 0
+             while not (f_ws.done() and f_ans.done()):
+-                time.sleep(1.0)
+-                elapsed += 1
+-                if curr_p < 93:
++                time.sleep(0.2)
++                elapsed += 0.2
++                if curr_p < 93 and int(elapsed * 5) % 5 == 0:
+                     curr_p += 1
+                 emit_progress(curr_p, f"Đang xuất tệp PDF Đề bài và Đáp án qua Chrome ({elapsed}s)...")
+ 
+             f_ws.result()
+             f_ans.result()

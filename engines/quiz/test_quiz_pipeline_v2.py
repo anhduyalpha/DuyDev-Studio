@@ -11,7 +11,12 @@ Unit tests for Quiz Pipeline v2.0 modules:
 import os
 import sys
 import unittest
+from unittest.mock import patch, MagicMock
 import pymupdf
+import shutil
+import tempfile
+import time
+import uuid
 
 # Reconfigure stdout for utf-8
 if sys.platform == "win32":
@@ -42,8 +47,25 @@ from quiz_pipeline import (
     extract_structured_page_content
 )
 
+SAMPLE_EXAM_TEXT = (
+    "Câu 1: Kim loại kiềm nào sau đây có tính khử mạnh nhất và tác dụng mãnh liệt với nước?\n"
+    "A. Liti (Li)\nB. Natri (Na)\nC. Kali (K)\nD. Xesi (Cs)\n"
+)
+
 
 class TestQuizPipelineV2(unittest.TestCase):
+
+    def setUp(self):
+        self._test_cache_dir = tempfile.mkdtemp(prefix="quiz_test_cache_")
+        self._orig_cache_dir = os.environ.get("QUIZ_CACHE_DIR")
+        os.environ["QUIZ_CACHE_DIR"] = self._test_cache_dir
+
+    def tearDown(self):
+        if self._orig_cache_dir is not None:
+            os.environ["QUIZ_CACHE_DIR"] = self._orig_cache_dir
+        else:
+            os.environ.pop("QUIZ_CACHE_DIR", None)
+        shutil.rmtree(self._test_cache_dir, ignore_errors=True)
 
     def test_2_column_layout_sorting(self):
         doc = pymupdf.open()
@@ -356,14 +378,23 @@ class TestQuizPipelineV2(unittest.TestCase):
         self.assertIn("break-inside: avoid;", ans_html)
 
     def test_katex_delimiters_and_ignored_classes(self):
-        """Verify KaTeX delimiters in HTML have proper double backslashes and ignoredClasses."""
+        """Verify KaTeX delimiters in HTML have proper double backslashes, ignoredClasses, and local assets."""
         qs = [
             {"number": 1, "type": "mcq", "question": "Câu 1: [A] hoặc (10 CÂU)", "options": {"A": "1"}, "answer": "A", "explanation": "Giải thích"}
         ]
         ws_html = generate_worksheet_html("TEST TITLE", "", qs)
         ans_html = generate_answer_key_html("TEST TITLE", "", qs)
 
+        # Verify local KaTeX assets and zero CDN dependencies
+        cdn_domain = "cdn" + ".jsdelivr.net"
+        self.assertNotIn(cdn_domain, ws_html)
+        self.assertNotIn(cdn_domain, ans_html)
+
         for html in (ws_html, ans_html):
+            self.assertIn('<link rel="stylesheet" href="./katex/katex.min.css">', html)
+            self.assertIn('<script src="./katex/katex.min.js"></script>', html)
+            self.assertIn('<script src="./katex/contrib/auto-render.min.js"></script>', html)
+
             # Verify JS string literal delimiters in the generated script block
             self.assertIn(r"{left: '\\(', right: '\\)', display: false}", html)
             self.assertIn(r"{left: '\\[', right: '\\]', display: true}", html)
@@ -476,6 +507,965 @@ class TestQuizPipelineV2(unittest.TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    from unittest.mock import patch
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_no_duplicate_questions_when_count_exceeds_available(self, mock_api):
+        """WP2: Verify clamping to available count and absence of duplicate questions."""
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = "\n\n".join(
+            f"Câu {i}: Nội dung câu hỏi số {i} về hóa học hữu cơ.\n"
+            f"A. Đáp án A của câu {i}\n"
+            f"B. Đáp án B của câu {i}\n"
+            f"C. Đáp án C của câu {i}\n"
+            f"D. Đáp án D của câu {i}"
+            for i in range(1, 11)
+        )
+
+        def side_effect(api_key, user_prompt, system_prompt, **kwargs):
+            if '"number": 6' in user_prompt or "from 6 to 10" in user_prompt:
+                qs = [
+                    {
+                        "number": i,
+                        "type": "mcq",
+                        "question": f"Nội dung câu hỏi số {i} về hóa học hữu cơ.",
+                        "options": {"A": f"A{i}", "B": f"B{i}", "C": f"C{i}", "D": f"D{i}"},
+                        "answer": "B",
+                        "explanation": f"Giải thích {i}"
+                    }
+                    for i in range(6, 11)
+                ]
+                return {"questions": qs}
+            else:
+                qs = [
+                    {
+                        "number": i,
+                        "type": "mcq",
+                        "question": f"Nội dung câu hỏi số {i} về hóa học hữu cơ.",
+                        "options": {"A": f"A{i}", "B": f"B{i}", "C": f"C{i}", "D": f"D{i}"},
+                        "answer": "A",
+                        "explanation": f"Giải thích {i}"
+                    }
+                    for i in range(1, 6)
+                ]
+                return {"questions": qs}
+
+        mock_api.side_effect = side_effect
+
+        result = parse_and_standardize_questions(
+            raw_text=raw_text,
+            api_key="mock_key",
+            count=20,
+            start_num=1
+        )
+
+        self.assertEqual(len(result), 10)
+        self.assertEqual([q["number"] for q in result], list(range(1, 11)))
+        stems = [q["question"] for q in result]
+        self.assertEqual(len(stems), len(set(stems)))
+        self.assertEqual(mock_api.call_count, 2)
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_sequential_numbering_overrides_ai_numbers(self, mock_api):
+        """WP2: Verify that random/erratic AI numbers are strictly overridden by sequential numbers."""
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = (
+            "Câu 1: Nội dung câu 1.\nA. 1\nB. 2\nC. 3\nD. 4\n\n"
+            "Câu 2: Nội dung câu 2.\nA. 1\nB. 2\nC. 3\nD. 4\n\n"
+            "Câu 3: Nội dung câu 3.\nA. 1\nB. 2\nC. 3\nD. 4"
+        )
+        mock_api.return_value = {
+            "questions": [
+                {"number": 5, "type": "mcq", "question": "Nội dung câu 1.", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"},
+                {"number": 99, "type": "mcq", "question": "Nội dung câu 2.", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "B"},
+                {"number": 2, "type": "mcq", "question": "Nội dung câu 3.", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "C"}
+            ]
+        }
+
+        # Case 1: start_num = 1
+        res1 = parse_and_standardize_questions(raw_text=raw_text, api_key="mock_key", count=3, start_num=1)
+        self.assertEqual([q["number"] for q in res1], [1, 2, 3])
+
+        # Case 2: start_num = 18
+        res18 = parse_and_standardize_questions(raw_text=raw_text, api_key="mock_key", count=3, start_num=18)
+        self.assertEqual([q["number"] for q in res18], [18, 19, 20])
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_zero_questions_raises_before_any_api_call(self, mock_api):
+        """WP2: Verify fast-fail with Vietnamese RuntimeError and 0 API calls when text has no questions."""
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = "Lời mở đầu tài liệu. Giới thiệu tổng quan và mục lục, hoàn toàn không có câu trắc nghiệm."
+
+        with self.assertRaises(RuntimeError) as ctx:
+            parse_and_standardize_questions(
+                raw_text=raw_text,
+                api_key="mock_key",
+                count=10,
+                start_num=1,
+                pages_desc="Trang 1-2"
+            )
+
+        self.assertIn("Không có câu hỏi trong Trang 1-2, vui lòng chọn lại.", str(ctx.exception))
+        self.assertEqual(mock_api.call_count, 0)
+
+    # ==========================================================================
+    # WP3: Parallel Micro-Batching & Telemetry Unit Tests
+    # ==========================================================================
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_batches_run_in_parallel(self, mock_api):
+        """WP3: Verify that 4 batches run concurrently via ThreadPoolExecutor in < 2.0s."""
+        import time
+        import json
+        from unittest.mock import patch as local_patch
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = "\n\n".join(
+            f"Câu {i}: Đề bài câu hỏi số {i}.\nA. 1\nB. 2\nC. 3\nD. 4"
+            for i in range(1, 21)
+        )
+
+        def slow_api(api_key, user_prompt, system_prompt, **kwargs):
+            time.sleep(1.0)
+            input_idx = user_prompt.find("INPUT:\n")
+            if input_idx != -1:
+                items = json.loads(user_prompt[input_idx + 7:].strip())
+                return {
+                    "questions": [
+                        {
+                            "number": it["number"],
+                            "type": "mcq",
+                            "question": it["question"],
+                            "options": {"A": "1", "B": "2", "C": "3", "D": "4"},
+                            "answer": "A"
+                        }
+                        for it in items
+                    ]
+                }
+            return {"questions": []}
+
+        mock_api.side_effect = slow_api
+
+        with local_patch.dict(os.environ, {"QUIZ_AI_CONCURRENCY": "4"}):
+            start = time.time()
+            res = parse_and_standardize_questions(
+                raw_text=raw_text,
+                api_key="mock_key",
+                count=20,
+                start_num=1
+            )
+            elapsed = time.time() - start
+
+        self.assertEqual(len(res), 20)
+        self.assertEqual(mock_api.call_count, 4)
+        # 4 parallel workers finish in < 2.0s (~1.0s to 1.3s), while sequential would take >= 4.0s
+        self.assertLess(elapsed, 2.0)
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_result_order_independent_of_completion_order(self, mock_api):
+        """WP3: Verify that result ordering remains strictly sequential even if later batches finish earlier."""
+        import time
+        from unittest.mock import patch as local_patch
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = "\n\n".join(
+            f"Câu {i}: Đề bài câu hỏi số {i}.\nA. 1\nB. 2\nC. 3\nD. 4"
+            for i in range(1, 11)
+        )
+
+        def out_of_order_api(api_key, user_prompt, system_prompt, **kwargs):
+            # Batch 1 (questions 6-10) finishes immediately; Batch 0 (questions 1-5) sleeps 0.3s
+            if '"number": 6' in user_prompt:
+                qs = [
+                    {"number": i, "type": "mcq", "question": f"Đề bài câu hỏi số {i}.", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "B"}
+                    for i in range(6, 11)
+                ]
+            else:
+                time.sleep(0.3)
+                qs = [
+                    {"number": i, "type": "mcq", "question": f"Đề bài câu hỏi số {i}.", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"}
+                    for i in range(1, 6)
+                ]
+            return {"questions": qs}
+
+        mock_api.side_effect = out_of_order_api
+
+        with local_patch.dict(os.environ, {"QUIZ_AI_CONCURRENCY": "2"}):
+            res = parse_and_standardize_questions(
+                raw_text=raw_text,
+                api_key="mock_key",
+                count=10,
+                start_num=1
+            )
+
+        self.assertEqual(len(res), 10)
+        self.assertEqual([q["number"] for q in res], list(range(1, 11)))
+        self.assertEqual([q["question"] for q in res], [f"Đề bài câu hỏi số {i}." for i in range(1, 11)])
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_partial_batch_failure_degrades_gracefully(self, mock_api):
+        """WP3: Verify that 1 failing batch falls back to raw parsed blocks without aborting the job."""
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = "\n\n".join(
+            f"Câu {i}: Đề bài câu {i}.\nA. 1\nB. 2\nC. 3\nD. 4\nĐáp án: C"
+            for i in range(1, 11)
+        )
+
+        def partial_failure_api(api_key, user_prompt, system_prompt, **kwargs):
+            if '"number": 6' in user_prompt:
+                raise RuntimeError("Agnes API 500 Internal Server Error")
+            return {
+                "questions": [
+                    {"number": i, "type": "mcq", "question": f"Đề bài câu {i}.", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A", "explanation": f"Giải thích {i}"}
+                    for i in range(1, 6)
+                ]
+            }
+
+        mock_api.side_effect = partial_failure_api
+
+        res = parse_and_standardize_questions(
+            raw_text=raw_text,
+            api_key="mock_key",
+            count=10,
+            start_num=1
+        )
+
+        self.assertEqual(len(res), 10)
+        self.assertEqual([q["number"] for q in res], list(range(1, 11)))
+        # Batch 0 succeeded with explanation
+        for q in res[:5]:
+            self.assertIn("Giải thích", q["explanation"])
+            self.assertEqual(q["answer"], "A")
+        # Batch 1 degraded: empty explanation, answer guessed from raw regex as "C"
+        for q in res[5:]:
+            self.assertEqual(q["explanation"], "")
+            self.assertEqual(q["answer"], "C")
+            self.assertIn("Đề bài câu", q["question"])
+
+    @patch("quiz_pipeline.call_agnes_api")
+    def test_all_batches_failure_raises(self, mock_api):
+        """WP3: Verify that when all batches fail, the pipeline raises the underlying RuntimeError."""
+        from quiz_pipeline import parse_and_standardize_questions
+
+        raw_text = "\n\n".join(
+            f"Câu {i}: Đề bài câu {i}.\nA. 1\nB. 2\nC. 3\nD. 4"
+            for i in range(1, 11)
+        )
+        mock_api.side_effect = RuntimeError("Không thể kết nối đến máy chủ Agnes AI")
+
+        with self.assertRaises(RuntimeError) as ctx:
+            parse_and_standardize_questions(
+                raw_text=raw_text,
+                api_key="mock_key",
+                count=10,
+                start_num=1
+            )
+
+        self.assertIn("Không thể kết nối đến máy chủ Agnes AI", str(ctx.exception))
+
+    def test_emit_progress_is_thread_safe(self):
+        """WP3: Verify that concurrent calls to emit_progress from 50 threads do not interleave stdout JSON lines."""
+        import io
+        import json
+        import threading
+        from contextlib import redirect_stdout
+        from quiz_pipeline import emit_progress
+
+        f = io.StringIO()
+        num_threads = 50
+        barrier = threading.Barrier(num_threads)
+
+        def worker(idx):
+            barrier.wait()
+            emit_progress(idx, f"Đang tiến hành bước kiểm tra đa luồng số {idx}")
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(num_threads)]
+
+        with redirect_stdout(f):
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        lines = [line.strip() for line in f.getvalue().strip().split("\n") if line.strip()]
+        self.assertEqual(len(lines), num_threads)
+        for line in lines:
+            data = json.loads(line)
+            self.assertIn("progress", data)
+            self.assertIn("stage", data)
+            self.assertIn("Đang tiến hành bước kiểm tra đa luồng số", data["stage"])
+
+    # ==========================================================================
+    # WP8: Truncated JSON Salvage, Adaptive Retries & Security Unit Tests
+    # ==========================================================================
+
+    def test_salvage_truncated_json_recovers_complete_objects(self):
+        """WP8: Verify that truncated JSON recovers complete objects."""
+        from quiz_pipeline import _salvage_truncated_json
+
+        truncated_json = (
+            '{"questions": ['
+            '{"number": 1, "type": "mcq", "question": "Câu 1?", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"},'
+            '{"number": 2, "type": "mcq", "question": "Câu 2?", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "B"},'
+            '{"number": 3, "type": "mcq", "question": "Câu 3?", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "C"},'
+            '{"number": 4, "type": "mcq", "question": "Câu 4 đang dang dở..."'
+        )
+
+        salvaged = _salvage_truncated_json(truncated_json)
+        self.assertIsNotNone(salvaged)
+        self.assertIn("questions", salvaged)
+        self.assertEqual(len(salvaged["questions"]), 3)
+        self.assertEqual([q["number"] for q in salvaged["questions"]], [1, 2, 3])
+
+    def test_salvage_returns_none_on_unrecoverable(self):
+        """WP8: Verify that unrecoverable JSON returns None."""
+        from quiz_pipeline import _salvage_truncated_json
+
+        # Cut off inside the first question object
+        self.assertIsNone(_salvage_truncated_json('{"questions": [{"number": 1, "question": "dang_do'))
+        # No questions array / plain text
+        self.assertIsNone(_salvage_truncated_json("Bản giới thiệu giáo trình không có JSON"))
+        # Empty string
+        self.assertIsNone(_salvage_truncated_json(""))
+
+    @patch("urllib.request.urlopen")
+    @patch("time.sleep")
+    def test_retry_uses_zero_temperature_after_json_error(self, mock_sleep, mock_urlopen):
+        """WP8: Verify that invalid JSON causes retry with temperature: 0.0 and compact instruction."""
+        import json
+        from unittest.mock import MagicMock
+        from quiz_pipeline import call_agnes_api
+
+        # 1st response: Invalid JSON that cannot be salvaged
+        resp1_content = '{"choices": [{"message": {"content": "{\\"questions\\": [{\\"number\\": 1, \\"dang_do"}}]}}'
+        resp1 = MagicMock()
+        resp1.read.return_value = resp1_content.encode("utf-8")
+        resp1.__enter__.return_value = resp1
+
+        # 2nd response: Valid JSON
+        resp2_content = json.dumps({
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "questions": [{
+                            "number": 1,
+                            "type": "mcq",
+                            "question": "Q1",
+                            "options": {"A": "1", "B": "2", "C": "3", "D": "4"},
+                            "answer": "A"
+                        }]
+                    })
+                }
+            }]
+        })
+        resp2 = MagicMock()
+        resp2.read.return_value = resp2_content.encode("utf-8")
+        resp2.__enter__.return_value = resp2
+
+        mock_urlopen.side_effect = [resp1, resp2]
+
+        res = call_agnes_api(
+            api_key="mock_key",
+            prompt="Trích xuất câu hỏi 1",
+            system_prompt="System prompt",
+            timeout=90
+        )
+
+        self.assertEqual(mock_urlopen.call_count, 2)
+        req2 = mock_urlopen.call_args_list[1][0][0]
+        payload2 = json.loads(req2.data.decode("utf-8"))
+        self.assertEqual(payload2["temperature"], 0.0)
+        self.assertIn("Chỉ trả JSON compact", payload2["messages"][1]["content"])
+        self.assertEqual(len(res["questions"]), 1)
+
+    @patch("urllib.request.urlopen")
+    def test_http_401_does_not_retry(self, mock_urlopen):
+        """WP8: Verify that HTTP 401 raises immediately without retrying."""
+        import io
+        import urllib.error
+        from quiz_pipeline import call_agnes_api
+
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://apihub.agnes-ai.com/v1/chat/completions",
+            code=401,
+            msg="Unauthorized",
+            hdrs={},
+            fp=io.BytesIO(b"Invalid API Key")
+        )
+
+        with self.assertRaises(RuntimeError) as ctx:
+            call_agnes_api(
+                api_key="invalid_key",
+                prompt="Prompt",
+                system_prompt="System",
+                timeout=90
+            )
+
+        self.assertIn("HTTP 401", str(ctx.exception))
+        self.assertEqual(mock_urlopen.call_count, 1)
+
+    def test_no_hardcoded_api_key_in_source(self):
+        """WP8: Verify quiz_pipeline.py does not contain any hardcoded API keys."""
+        import re
+        pipeline_file = os.path.join(os.path.dirname(__file__), "quiz_pipeline.py")
+        with open(pipeline_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        matches = re.findall(r"sk-[A-Za-z0-9]{20,}", content)
+        self.assertEqual(matches, [], f"Found hardcoded API keys in quiz_pipeline.py: {matches}")
+
+    def test_katex_assets_exist_locally(self):
+        """WP5: Verify KaTeX vendor assets exist locally and only contain woff2 fonts."""
+        import quiz_pipeline
+        katex_dir = quiz_pipeline.KATEX_SRC_DIR
+        self.assertTrue(os.path.isdir(katex_dir), f"KATEX_SRC_DIR does not exist: {katex_dir}")
+        self.assertTrue(os.path.isfile(os.path.join(katex_dir, "katex.min.css")))
+        self.assertTrue(os.path.isfile(os.path.join(katex_dir, "katex.min.js")))
+        self.assertTrue(os.path.isfile(os.path.join(katex_dir, "contrib", "auto-render.min.js")))
+
+        fonts_dir = os.path.join(katex_dir, "fonts")
+        self.assertTrue(os.path.isdir(fonts_dir), f"fonts dir does not exist: {fonts_dir}")
+        font_files = os.listdir(fonts_dir)
+        self.assertGreaterEqual(len(font_files), 20)
+        self.assertTrue(all(f.endswith(".woff2") for f in font_files), f"Non-woff2 fonts found: {font_files}")
+
+    def test_run_pipeline_fails_fast_when_katex_missing(self):
+        """WP5: Verify run_pipeline fails fast when local KaTeX assets are missing."""
+        import quiz_pipeline
+        original_katex_dir = quiz_pipeline.KATEX_SRC_DIR
+        try:
+            quiz_pipeline.KATEX_SRC_DIR = os.path.join(tempfile.gettempdir(), "non_existent_katex_dir_12345")
+            with self.assertRaises(RuntimeError) as ctx:
+                quiz_pipeline.run_pipeline("dummy.pdf", "1", filename_prefix="test_prefix")
+            self.assertIn("Thiếu thư viện KaTeX cục bộ", str(ctx.exception))
+        finally:
+            quiz_pipeline.KATEX_SRC_DIR = original_katex_dir
+
+    def test_job_html_dir_cleaned_up_in_finally(self):
+        """WP5: Verify per-job HTML directory is cleaned up in finally block."""
+        import quiz_pipeline
+        created_job_dirs = []
+        original_copytree = shutil.copytree
+
+        def spy_copytree(src, dst, *args, **kwargs):
+            if os.path.abspath(src) == os.path.abspath(quiz_pipeline.KATEX_SRC_DIR):
+                parent_dir = os.path.dirname(dst)
+                created_job_dirs.append(parent_dir)
+            return original_copytree(src, dst, *args, **kwargs)
+
+        with patch("shutil.copytree", side_effect=spy_copytree):
+            with patch("quiz_pipeline.download_gdrive_if_needed", side_effect=RuntimeError("Simulated pipeline failure")):
+                with self.assertRaises(RuntimeError):
+                    quiz_pipeline.run_pipeline("dummy.pdf", "1", filename_prefix="cleanup_test", api_key="dummy_key")
+
+        self.assertEqual(len(created_job_dirs), 1)
+        job_dir = created_job_dirs[0]
+        self.assertFalse(os.path.exists(job_dir), f"job_html_dir was not cleaned up: {job_dir}")
+
+    # ==========================================================================
+    # MILESTONE 4: WP6 (SWEEP-LINE CLUSTER_RECTS) TESTS
+    # ==========================================================================
+
+    def test_cluster_rects_performance_2000_rects(self):
+        """WP6: Stress-test cluster_rects with 2000 rectangles, must finish under 1.5s."""
+        import random
+        random.seed(42)
+        test_rects = [
+            pymupdf.Rect(
+                random.uniform(0, 600),
+                random.uniform(0, 800),
+                random.uniform(0, 600) + 10,
+                random.uniform(0, 800) + 10
+            )
+            for _ in range(2000)
+        ]
+        t0 = time.time()
+        clusters = cluster_rects(test_rects, margin=10.0)
+        elapsed = time.time() - t0
+        self.assertLess(elapsed, 1.5, f"Elapsed time {elapsed:.3f}s exceeds 1.5s threshold")
+        self.assertGreater(len(clusters), 0)
+
+    def test_cluster_rects_equivalence_with_reference(self):
+        """WP6: Verify 100% equivalence between sweep-line union-find and reference implementation on clustered rects."""
+        import random
+
+        def _ref_cluster(rect_list, margin=10.0):
+            if not rect_list:
+                return []
+            clusters = [pymupdf.Rect(r) for r in rect_list]
+            changed = True
+            while changed:
+                changed = False
+                new_clusters = []
+                skip = set()
+                for i in range(len(clusters)):
+                    if i in skip:
+                        continue
+                    curr = pymupdf.Rect(clusters[i])
+                    for j in range(i + 1, len(clusters)):
+                        if j in skip:
+                            continue
+                        exp_curr = pymupdf.Rect(curr.x0 - margin, curr.y0 - margin, curr.x1 + margin, curr.y1 + margin)
+                        if exp_curr.intersects(clusters[j]):
+                            curr = curr | clusters[j]
+                            skip.add(j)
+                            changed = True
+                    new_clusters.append(curr)
+                clusters = new_clusters
+            return clusters
+
+        random.seed(42)
+        test_rects = []
+        centers = [(50, 50), (200, 50), (350, 50), (100, 300), (300, 300)]
+        for cx, cy in centers:
+            for _ in range(10):
+                x = cx + random.uniform(-20, 20)
+                y = cy + random.uniform(-20, 20)
+                w = random.uniform(2, 10)
+                h = random.uniform(2, 10)
+                test_rects.append(pymupdf.Rect(x, y, x + w, y + h))
+
+        ref_clusters = _ref_cluster(test_rects, margin=10.0)
+        new_clusters = cluster_rects(test_rects, margin=10.0)
+
+        ref_set = {(round(r.x0, 1), round(r.y0, 1), round(r.x1, 1), round(r.y1, 1)) for r in ref_clusters}
+        new_set = {(round(r.x0, 1), round(r.y0, 1), round(r.x1, 1), round(r.y1, 1)) for r in new_clusters}
+        self.assertEqual(ref_set, new_set)
+
+    def test_cluster_rects_transitive_bridging(self):
+        """WP6: Verify that transitive connectivity (A connects to B, B to C) forms 1 cluster."""
+        r_a = pymupdf.Rect(0, 0, 10, 10)
+        r_b = pymupdf.Rect(15, 0, 25, 10)  # distance to A is 5 <= margin 10
+        r_c = pymupdf.Rect(30, 0, 40, 10)  # distance to B is 5 <= margin 10
+
+        exp_a = pymupdf.Rect(r_a.x0 - 10, r_a.y0 - 10, r_a.x1 + 10, r_a.y1 + 10)
+        self.assertFalse(exp_a.intersects(r_c))  # A and C do not directly intersect
+
+        clusters = cluster_rects([r_a, r_b, r_c], margin=10.0)
+        self.assertEqual(len(clusters), 1)
+        expected = r_a | r_b | r_c
+        self.assertEqual(round(clusters[0].x0, 1), round(expected.x0, 1))
+        self.assertEqual(round(clusters[0].x1, 1), round(expected.x1, 1))
+        self.assertEqual(round(clusters[0].y0, 1), round(expected.y0, 1))
+        self.assertEqual(round(clusters[0].y1, 1), round(expected.y1, 1))
+
+    # ==========================================================================
+    # MILESTONE 4: WP4 (OVERLAPPED PRINTING & EXPLANATIONS) TESTS
+    # ==========================================================================
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_worksheet_compile_overlaps_explanation_phase(self, mock_compile, mock_api):
+        """WP4: Verify worksheet compile overlaps with Phase 2 explanation generation (elapsed < sum of times)."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            if "DeBai" in html_path:
+                time.sleep(1.2)
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        def fake_api(key, user_prompt, system_prompt, **kwargs):
+            if "explanations" in system_prompt or "Với mỗi câu hỏi" in user_prompt:
+                time.sleep(1.2)
+                return {"explanations": {"1": "Giải thích chi tiết câu 1"}}
+            return {
+                "questions": [{
+                    "number": 1, "type": "mcq", "question": "Q1?",
+                    "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+                }]
+            }
+
+        mock_compile.side_effect = fake_compile
+        mock_api.side_effect = fake_api
+
+        with tempfile.TemporaryDirectory() as tmp_out:
+            pdf_path = os.path.join(tmp_out, "dummy.pdf")
+            doc = pymupdf.open()
+            page = doc.new_page()
+            page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+            doc.save(pdf_path)
+            doc.close()
+
+            t0 = time.time()
+            res = quiz_pipeline.run_pipeline(
+                pdf_path, "1", count=1, filename_prefix="overlap_test",
+                api_key="mock_key", output_dir=tmp_out
+            )
+            elapsed = time.time() - t0
+
+        self.assertTrue(res["success"])
+        self.assertLess(elapsed, 2.2, f"Elapsed {elapsed:.2f}s should be < 2.2s due to concurrent overlap")
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_explanation_failure_does_not_fail_job(self, mock_compile, mock_api):
+        """WP4: Verify that complete Phase 2 API failure does not abort the job and answer PDF still compiles."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        def fake_api(key, user_prompt, system_prompt, **kwargs):
+            if "explanations" in system_prompt or "Với mỗi câu hỏi" in user_prompt:
+                raise RuntimeError("Phase 2 API Network Outage")
+            return {
+                "questions": [{
+                    "number": 1, "type": "mcq", "question": "Q1?",
+                    "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+                }]
+            }
+
+        mock_compile.side_effect = fake_compile
+        mock_api.side_effect = fake_api
+
+        with tempfile.TemporaryDirectory() as tmp_out:
+            pdf_path = os.path.join(tmp_out, "dummy.pdf")
+            doc = pymupdf.open()
+            page = doc.new_page()
+            page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+            doc.save(pdf_path)
+            doc.close()
+
+            res = quiz_pipeline.run_pipeline(
+                pdf_path, "1", count=1, filename_prefix="fail_exp_test",
+                api_key="mock_key", output_dir=tmp_out
+            )
+
+            self.assertTrue(res["success"])
+            self.assertTrue(os.path.exists(res["worksheet_pdf"]))
+            self.assertTrue(os.path.exists(res["answer_pdf"]))
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_skip_explanation_env_flag(self, mock_compile, mock_api):
+        """WP4: Verify that QUIZ_SKIP_EXPLANATION=1 skips Phase 2 explanation generation completely."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        mock_compile.side_effect = fake_compile
+        mock_api.return_value = {
+            "questions": [{
+                "number": 1, "type": "mcq", "question": "Q1?",
+                "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+            }]
+        }
+
+        with patch.dict(os.environ, {"QUIZ_SKIP_EXPLANATION": "1"}):
+            with tempfile.TemporaryDirectory() as tmp_out:
+                pdf_path = os.path.join(tmp_out, "dummy.pdf")
+                doc = pymupdf.open()
+                page = doc.new_page()
+                page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+                doc.save(pdf_path)
+                doc.close()
+
+                res = quiz_pipeline.run_pipeline(
+                    pdf_path, "1", count=1, filename_prefix="skip_exp_test",
+                    api_key="mock_key", output_dir=tmp_out
+                )
+
+        self.assertTrue(res["success"])
+        for call_item in mock_api.call_args_list:
+            prompt_arg = call_item[0][1]
+            self.assertNotIn("Với mỗi câu hỏi", prompt_arg)
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_answer_key_contains_explanations_when_phase2_succeeds(self, mock_compile, mock_api):
+        """WP4: Verify that generated Phase 2 explanations are rendered into Answer Key HTML."""
+        import quiz_pipeline
+
+        captured_answer_html = []
+
+        def spy_compile(chrome, html_path, pdf_path):
+            if "DapAn" in html_path:
+                with open(html_path, "r", encoding="utf-8") as f:
+                    captured_answer_html.append(f.read())
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        mock_compile.side_effect = spy_compile
+
+        expl_text = "Natri (Na) là kim loại kiềm thuộc nhóm IA."
+
+        def fake_api(key, user_prompt, system_prompt, **kwargs):
+            if "explanations" in system_prompt or "Với mỗi câu hỏi" in user_prompt:
+                return {"explanations": {"1": expl_text}}
+            return {
+                "questions": [{
+                    "number": 1, "type": "mcq", "question": "Kim loại nào là kim loại kiềm?",
+                    "options": {"A": "Na", "B": "Mg", "C": "Al", "D": "Fe"}, "answer": "A"
+                }]
+            }
+
+        mock_api.side_effect = fake_api
+
+        with tempfile.TemporaryDirectory() as tmp_out:
+            pdf_path = os.path.join(tmp_out, "dummy.pdf")
+            doc = pymupdf.open()
+            page = doc.new_page()
+            page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+            doc.save(pdf_path)
+            doc.close()
+
+            res = quiz_pipeline.run_pipeline(
+                pdf_path, "1", count=1, filename_prefix="ans_expl_test",
+                api_key="mock_key", output_dir=tmp_out
+            )
+
+        self.assertTrue(res["success"])
+        self.assertEqual(len(captured_answer_html), 1)
+        self.assertIn(expl_text, captured_answer_html[0])
+        self.assertIn("<b>Hướng dẫn giải:</b>", captured_answer_html[0])
+
+    # ==========================================================================
+    # MILESTONE 5: WP7 (MULTI-TIER CACHE) TESTS
+    # ==========================================================================
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_extract_cache_hit_skips_pymupdf(self, mock_compile, mock_api):
+        """WP7: Verify that repeated run with same PDF and page range skips extract_raw_pages."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        mock_compile.side_effect = fake_compile
+        mock_api.return_value = {
+            "questions": [{
+                "number": 1, "type": "mcq", "question": "Q1?",
+                "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+            }]
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_out:
+            pdf_path = os.path.join(tmp_out, "dummy.pdf")
+            doc = pymupdf.open()
+            page = doc.new_page()
+            page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+            doc.save(pdf_path)
+            doc.close()
+
+            with patch("quiz_pipeline.extract_raw_pages", wraps=quiz_pipeline.extract_raw_pages) as spy_extract:
+                res1 = quiz_pipeline.run_pipeline(
+                    pdf_path, "1", count=1, filename_prefix="cache1",
+                    api_key="mock_key", output_dir=tmp_out
+                )
+                self.assertEqual(spy_extract.call_count, 1)
+
+                res2 = quiz_pipeline.run_pipeline(
+                    pdf_path, "1", count=1, filename_prefix="cache2",
+                    api_key="mock_key", output_dir=tmp_out
+                )
+                # Second run must hit extract cache, call_count remains 1
+                self.assertEqual(spy_extract.call_count, 1)
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_ai_cache_hit_skips_api_call(self, mock_compile, mock_api):
+        """WP7: Verify that second run on same job hits AI cache and makes 0 new API calls."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        mock_compile.side_effect = fake_compile
+
+        def fake_api(key, user_prompt, system_prompt, **kwargs):
+            if "explanations" in system_prompt or "Với mỗi câu hỏi" in user_prompt:
+                return {"explanations": {"1": "Giải thích 1"}}
+            return {
+                "questions": [{
+                    "number": 1, "type": "mcq", "question": "Q1?",
+                    "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+                }]
+            }
+
+        mock_api.side_effect = fake_api
+
+        with tempfile.TemporaryDirectory() as tmp_out:
+            pdf_path = os.path.join(tmp_out, "dummy.pdf")
+            doc = pymupdf.open()
+            page = doc.new_page()
+            page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+            doc.save(pdf_path)
+            doc.close()
+
+            # Run 1: calls API for Phase 1 and Phase 2
+            res1 = quiz_pipeline.run_pipeline(
+                pdf_path, "1", count=1, filename_prefix="run1",
+                api_key="mock_key", output_dir=tmp_out
+            )
+            calls_run1 = mock_api.call_count
+            self.assertGreater(calls_run1, 0)
+
+            # Run 2: same PDF, same questions -> 0 new API calls
+            res2 = quiz_pipeline.run_pipeline(
+                pdf_path, "1", count=1, filename_prefix="run2",
+                api_key="mock_key", output_dir=tmp_out
+            )
+            self.assertEqual(mock_api.call_count, calls_run1)
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_prompt_version_bump_invalidates_cache(self, mock_compile, mock_api):
+        """WP7: Verify that bumping PROMPT_VERSION invalidates AI cache."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        mock_compile.side_effect = fake_compile
+        mock_api.return_value = {
+            "questions": [{
+                "number": 1, "type": "mcq", "question": "Q1?",
+                "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+            }]
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_out:
+            pdf_path = os.path.join(tmp_out, "dummy.pdf")
+            doc = pymupdf.open()
+            page = doc.new_page()
+            page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+            doc.save(pdf_path)
+            doc.close()
+
+            res1 = quiz_pipeline.run_pipeline(
+                pdf_path, "1", count=1, filename_prefix="pv1",
+                api_key="mock_key", output_dir=tmp_out
+            )
+            count1 = mock_api.call_count
+
+            # Bump PROMPT_VERSION
+            orig_pv = quiz_pipeline.PROMPT_VERSION
+            try:
+                quiz_pipeline.PROMPT_VERSION = "v3_bumped"
+                res2 = quiz_pipeline.run_pipeline(
+                    pdf_path, "1", count=1, filename_prefix="pv2",
+                    api_key="mock_key", output_dir=tmp_out
+                )
+                self.assertGreater(mock_api.call_count, count1)
+            finally:
+                quiz_pipeline.PROMPT_VERSION = orig_pv
+
+    @patch("quiz_pipeline.call_agnes_api")
+    @patch("quiz_pipeline.compile_pdf")
+    def test_cache_disabled_env_bypasses(self, mock_compile, mock_api):
+        """WP7: Verify that QUIZ_CACHE_DISABLED=1 bypasses caching on both runs."""
+        import quiz_pipeline
+
+        def fake_compile(chrome, html_path, pdf_path):
+            doc = pymupdf.open()
+            doc.new_page()
+            doc.save(pdf_path)
+            doc.close()
+
+        mock_compile.side_effect = fake_compile
+        mock_api.return_value = {
+            "questions": [{
+                "number": 1, "type": "mcq", "question": "Q1?",
+                "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A"
+            }]
+        }
+
+        with patch.dict(os.environ, {"QUIZ_CACHE_DISABLED": "1"}):
+            with tempfile.TemporaryDirectory() as tmp_out:
+                pdf_path = os.path.join(tmp_out, "dummy.pdf")
+                doc = pymupdf.open()
+                page = doc.new_page()
+                page.insert_text((50, 50), SAMPLE_EXAM_TEXT)
+                doc.save(pdf_path)
+                doc.close()
+
+                res1 = quiz_pipeline.run_pipeline(
+                    pdf_path, "1", count=1, filename_prefix="dis1",
+                    api_key="mock_key", output_dir=tmp_out
+                )
+                count1 = mock_api.call_count
+
+                res2 = quiz_pipeline.run_pipeline(
+                    pdf_path, "1", count=1, filename_prefix="dis2",
+                    api_key="mock_key", output_dir=tmp_out
+                )
+                self.assertGreater(mock_api.call_count, count1)
+
+    def test_corrupt_cache_entry_treated_as_miss(self):
+        """WP7: Verify corrupt non-JSON cache file returns None without crashing."""
+        import quiz_cache
+        corrupt_key = "corrupt_test_entry"
+        c_root = quiz_cache.cache_root()
+        corrupt_path = os.path.join(c_root, f"{corrupt_key}.json")
+        with open(corrupt_path, "w", encoding="utf-8") as f:
+            f.write("{this is not valid json!#$%^&*")
+
+        res = quiz_cache.read_json(corrupt_key)
+        self.assertIsNone(res)
+
+    def test_cached_assets_rebuild_data_uri(self):
+        """WP7: Verify cache hit rebuilds valid data:image/png;base64,... URI."""
+        import quiz_cache
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_png = os.path.join(tmp_dir, "test_fig.png")
+            # Minimal 1x1 PNG bytes
+            png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+            with open(src_png, "wb") as f:
+                f.write(png_bytes)
+
+            pdf_dummy = os.path.join(tmp_dir, "test.pdf")
+            with open(pdf_dummy, "wb") as f:
+                f.write(b"%PDF-1.4 mock")
+
+            extracted = [{
+                "id": "asset_1",
+                "name": "test_fig.png",
+                "page": 1,
+                "rect": [10.0, 20.0, 100.0, 200.0],
+                "data_uri": "mock",
+                "file_path": src_png,
+                "text_inside": ""
+            }]
+
+            quiz_cache.set_extract_cache(
+                pdf_dummy, "1", "raw text", [1], extracted, {"test_fig.png": 1}, [1]
+            )
+
+            out_assets_dir = os.path.join(tmp_dir, "rebuilt_assets")
+            hit = quiz_cache.get_extract_cache(pdf_dummy, "1", out_assets_dir)
+            self.assertIsNotNone(hit)
+            raw_text, pages, assets, asset_map, q_nums = hit
+            self.assertEqual(len(assets), 1)
+            self.assertTrue(assets[0]["data_uri"].startswith("data:image/png;base64,"))
+            self.assertTrue(os.path.isfile(assets[0]["file_path"]))
+
 
 if __name__ == "__main__":
     unittest.main()
+

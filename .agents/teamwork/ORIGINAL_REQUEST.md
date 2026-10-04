@@ -202,3 +202,143 @@ Hệ thống đã phục hồi quota và hoạt động trở lại. Tiếp tụ
 ## Follow-up — 2026-09-27T16:34:38Z
 
 Hệ thống vừa khởi động lại sau server restart. Hãy tiếp tục thực thi nhiệm vụ hoàn thiện toàn diện PDF Studio Pro từ `.agents/teamwork/orchestrator_pdf_v2`. Tiếp tục hoàn tất Milestone 3, tiến hành Milestone 4 (chạy toàn bộ kiểm thử npx tsc, npx vitest, đồng bộ lên homeserver 192.168.2.171 và khởi động lại dịch vụ) và bàn giao kết quả cuối cùng.
+
+
+## 2026-10-03T15:54:19Z
+
+# Teamwork Project Prompt
+
+> Requested team: [Full Team — Multi-agent engineering team for polyglot pipeline upgrade]
+
+Nâng cấp toàn diện kiến trúc module "Tạo Bài Tập Trắc Nghiệm" (Quiz Pipeline v3.0) của DuyDev Studio theo đặc tả chi tiết tại docs/QUIZ_PIPELINE_UPGRADE_PLAN.md, giải quyết triệt để 2 lỗi chặn phát hành P0 (sinh đề sai số câu, không in được PDF khi offline), tối ưu hóa tốc độ xử lý AI song song, giảm độ phức tạp thuật toán và tích hợp cơ chế cache đa tầng.
+
+Working directory: C:\Users\AnhDuy\Code\Project\DD Studio
+Branch: main
+Integrity mode: development
+Reference document: docs/QUIZ_PIPELINE_UPGRADE_PLAN.md
+
+## Requirements
+
+### R1. Pre-parser Deterministic & Fix Lỗi Nhân Đôi Câu Hỏi (WP1 & WP2 — P0)
+- Xây dựng module `engines/quiz/mcq_parser.py` và `engines/quiz/text_utils.py` để bóc tách cấu trúc câu hỏi (stem, options A/B/C/D, source_number) bằng regex thuần, không dùng AI, đảm bảo biết chính xác số câu thật `available` trước khi xử lý.
+- Sửa triệt để bug nhân đôi câu hỏi tại `parse_and_standardize_questions`:
+  - Clamp `effective_count = min(count, available)`.
+  - Tính batches từ `effective_count`, bỏ hoàn toàn nhánh fallback `else raw_text`.
+  - Cưỡng chế đánh số tuần tự `start_num .. start_num + n - 1` độc lập với số do AI trả về.
+  - Dedup nội dung câu hỏi bằng SHA1 hash của stem đã lọc bỏ thẻ HTML.
+  - Báo lỗi ngay lập tức bằng tiếng Việt nếu không tìm thấy câu hỏi nào trước khi gọi API.
+- Đóng băng tuyệt đối 22 test case hiện có trong `engines/quiz/test_quiz_pipeline_v2.py` (không được sửa, xoá hay skip).
+
+### R2. Micro-Batching Song Song & Xử Lý Lỗi Thông Minh (WP3 & WP8)
+- Giảm kích thước batch từ 12 câu xuống 5 câu để ngăn ngừa vượt ngưỡng `max_tokens: 8192`.
+- Thay thế cơ chế luồng tuần tự bằng `ThreadPoolExecutor` (mặc định 4 luồng song song qua `QUIZ_AI_CONCURRENCY`).
+- Đảm bảo `emit_progress` thread-safe với khóa `threading.Lock` để tránh làm hỏng stream JSON stdout lên Node.js worker.
+- Cài đặt cơ chế degradation có kiểm soát: nếu 1 batch AI thất bại, tự động fallback về cấu trúc thô từ pre-parser thay vì làm chết toàn bộ job.
+- Xóa bỏ hoàn toàn API key thật hardcode trong `engines/quiz/quiz_pipeline.py`.
+- Bổ sung cơ chế salvage JSON bị cắt cụt giữa chừng và retry có điều chỉnh (`temperature: 0.0`) thay vì lặp lại request lỗi.
+
+### R3. In PDF Offline Hoàn Toàn & Khử Phụ Thuộc CDN KaTeX (WP5 — P0)
+- Tải và vendor cục bộ trọn bộ KaTeX v0.16.11 (CSS, JS, auto-render, font files `.woff2`) vào `engines/quiz/assets/katex/`, đảm bảo không bị gitignore loại trừ.
+- Cấu hình per-job HTML directory trong temp dir, copy KaTeX asset cục bộ phục vụ việc in và tự động dọn dẹp sạch sẽ trong khối `finally`.
+- Cập nhật cả 2 template HTML (Worksheet và Answer Key) trỏ về `./katex/`, di chuyển script xuống cuối thẻ `<body>`, bỏ `defer` và `DOMContentLoaded` để loại bỏ race condition khi in PDF.
+- Bổ sung các cờ Chrome headless: `--allow-file-access-from-files`, `--virtual-time-budget=8000`, `--run-all-compositor-stages-before-draw`, `--disable-features=NetworkService` và giảm timeout chờ in từ 30s xuống 15s.
+- Ngoại lệ duy nhất cho phép sửa test: cập nhật assert đường dẫn CDN trong `test_katex_delimiters_and_ignored_classes` sang đường dẫn cục bộ `./katex/...`.
+
+### R4. Tối Ưu Phức Tạp Thuật Toán Vector & Chồng Lấn Tiến Trình In (WP6 & WP4)
+- Viết lại hàm `cluster_rects` từ O(n^3) về O(n log n) bằng thuật toán sweep-line kết hợp Union-Find (disjoint-set) và grid-bucketing khi số lượng rect > 1500. Giữ nguyên 100% semantics và public signature.
+- Tách việc sinh lời giải chi tiết (`explanation`) thành Phase 2 độc lập qua hàm `generate_explanations`, chỉ gửi stem + options + answer.
+- Thực hiện song song hóa chồng lấn trong `run_pipeline`: tiến hành compile PDF Worksheet ngay trên luồng nền trong khi AI đang viết lời giải cho Answer Key.
+
+### R5. Cache Đa Tầng Theo Content-Hash & Dọn Rác Janitor (WP7)
+- Xây dựng module `engines/quiz/quiz_cache.py` hỗ trợ 2 tầng cache: Extract PDF cache và AI batch cache dưới dạng JSON atomic write, TTL 7 ngày, kèm định danh phiên bản `PROMPT_VERSION = "v3"`.
+- Bổ sung hàm tĩnh `cleanupQuizCache()` vào `server/src/services/janitor.service.ts` khớp chính xác đường dẫn với Python để tự động quét dọn cache quá hạn trong chu kỳ bảo trì.
+- Đảm bảo TypeScript compilation và test suite phía server hoạt động trơn tru không lỗi.
+
+## Verification Resources & Commands
+
+Quá trình thi công từng Work Package bắt buộc thực hiện kiểm chứng khách quan:
+
+1. **Kiểm tra Unit Test Engine (Python)**:
+   ```bash
+   python engines/quiz/test_mcq_parser.py
+   python engines/quiz/test_quiz_pipeline_v2.py
+   ```
+   *Yêu cầu*: 22 test cũ giữ nguyên pass 100%, tất cả test case mới được bổ sung theo từng WP phải đạt 100% pass, 0 fail, 0 skip.
+
+2. **Kiểm tra Backend Gateway & Service (TypeScript / Fastify)**:
+   ```bash
+   cd server && npx tsc --noEmit
+   cd server && npx vitest run
+   ```
+   *Yêu cầu*: TypeScript biên dịch đạt đúng 0 lỗi; toàn bộ test suites vitest pass 100%.
+
+3. **Kiểm tra Tĩnh & Bảo Mật (Grep Audits)**:
+   ```bash
+   rg "cdn.jsdelivr" engines/quiz/
+   rg -n "sk-[A-Za-z0-9]{20,}" engines/quiz/
+   rg -n "TODO|FIXME|NotImplementedError" engines/quiz/
+   ```
+   *Yêu cầu*: Toàn bộ 3 lệnh đều phải trả về đúng 0 kết quả.
+
+4. **Smoke Test Thực Tế Offline**:
+   ```bash
+   python engines/quiz/quiz_pipeline.py <pdf_path> --pages 11 --count 20 --prefix smoke_test --output-dir ./.tmp/quiz_smoke
+   ```
+   *Yêu cầu*: Sinh đủ 2 tệp PDF hợp lệ (`DeBai.pdf` và `DapAn.pdf`), với tài liệu có 10 câu thì xuất ra chính xác 10 câu đánh số 1..10 không trùng lặp, mở PDF xem được công thức toán KaTeX khi ngắt mạng.
+
+## Acceptance Criteria
+
+### Tính Đúng Đắn & Khắc Phục Lỗi P0
+- [ ] Khi trích xuất trang có 10 câu với tham số `--count 20`, kết quả sinh ra đúng 10 câu, số thứ tự tuần tự từ 1 đến 10, không có bất kỳ câu nào trùng lặp nội dung stem.
+- [ ] Pipeline biên dịch thành công 2 file PDF A4 trong môi trường offline hoàn toàn (không có internet), công thức toán học và công thức hóa học được hiển thị chuẩn xác (0 ký tự `$` thô trong text layer).
+- [ ] Không còn bất kỳ đường dẫn CDN (`cdn.jsdelivr.net`) nào trong mã nguồn `engines/quiz/`.
+
+### Hiệu Năng & Ổn Định
+- [ ] Hàm `cluster_rects` xử lý 2000 rects ngẫu nhiên hoàn thành dưới 1.5 giây và cho kết quả bbox tương đương 100% so với thuật toán mẫu.
+- [ ] Quá trình gọi AI chuẩn hóa chạy song song 4 luồng, hoàn thành các batch với thời gian wall-clock giảm rõ rệt.
+- [ ] File PDF Worksheet được kích hoạt in song song ngay trong khi Phase 2 đang tạo lời giải cho Answer Key.
+- [ ] Cơ chế stream progress ra stdout được đồng bộ hóa với thread lock, không bao giờ sinh ra dòng JSON lỗi.
+
+### An Toàn Mã Nguồn & Chất Lượng Phần Mềm
+- [ ] Không còn API key nào hardcode trong mã nguồn `engines/quiz/`.
+- [ ] Toàn bộ 22 unit test ban đầu trong `test_quiz_pipeline_v2.py` pass nguyên vẹn (ngoại trừ assert CDN đã cập nhật đường dẫn local).
+- [ ] File test mới `test_mcq_parser.py` đạt tối thiểu 11 unit test bao phủ đầy đủ các edge cases định dạng đề thi.
+- [ ] `cd server && npx tsc --noEmit` đạt 0 lỗi.
+- [ ] `cd server && npx vitest run` pass 100%.
+- [ ] Janitor service tự động dọn sạch cache quiz cũ hơn 7 ngày mà không làm gián đoạn chu kỳ quét.
+- [ ] Thư mục tạm `./.tmp/quiz_smoke` được dọn sạch sau khi kiểm thử.
+
+
+## Follow-up — 2026-10-04T00:01:34Z
+
+# Teamwork Project Prompt — Resumed Execution
+
+> Requested team: [Full Team — Multi-agent engineering team for polyglot pipeline upgrade]
+
+Tiếp tục triển khai các task còn lại trong kế hoạch nâng cấp kiến trúc Quiz Pipeline v3.0 của DuyDev Studio theo docs/QUIZ_PIPELINE_UPGRADE_PLAN.md.
+
+LƯU Ý QUAN TRỌNG VỀ HIỆN TRẠNG ĐÃ THỰC HIỆN:
+1. Milestone 1 (R1: WP1 & WP2 — P0) ĐÃ HOÀN THÀNH 100% VÀ PASS TOÀN BỘ TEST:
+   - engines/quiz/text_utils.py đã tạo mới.
+   - engines/quiz/mcq_parser.py đã tạo mới với candidate tuple scoring (xử lý cả "Vitamin A.").
+   - test_mcq_parser.py (19/19 tests pass).
+   - test_adversarial_wp2.py (20/20 tests pass).
+   - test_quiz_pipeline_v2.py (25/25 tests pass).
+2. Milestone 2 (WP3 & WP8): Code trong engines/quiz/quiz_pipeline.py đã hoàn tất:
+   - Batch size 5 câu, ThreadPoolExecutor 4 luồng (QUIZ_AI_CONCURRENCY).
+   - _EMIT_LOCK thread-safe.
+   - DEFAULT_API_KEY không còn hardcode key thật.
+   - _salvage_truncated_json và retry temperature 0.0.
+   - Cần bổ sung 10 unit tests cho WP3 & WP8 vào test_quiz_pipeline_v2.py và chạy verify.
+
+Nhiệm vụ còn lại cần hoàn tất:
+- Hoàn tất verification Milestone 2 (WP3 & WP8) với 10 unit tests.
+- Thi công Milestone 3 (WP5 — P0): Vendor KaTeX v0.16.11 cục bộ vào engines/quiz/assets/katex/, per-job HTML dir, cập nhật 2 template HTML, cờ Chrome headless, 0 cdn.jsdelivr.
+- Thi công Milestone 4 (WP6 & WP4): Thuật toán cluster_rects sweep-line O(n log n) và Phase 2 generate_explanations chồng lấn in PDF Worksheet.
+- Thi công Milestone 5 (WP7): Hệ thống cache đa tầng content-hash quiz_cache.py và tích hợp cleanupQuizCache() vào server/src/services/janitor.service.ts.
+- Nghiệm thu toàn diện (DoD): tsc --noEmit 0 error, vitest 100%, 0 cdn, 0 sk-, offline smoke test.
+
+Working directory: C:\Users\AnhDuy\Code\Project\DD Studio
+Branch: main
+Integrity mode: development
+Reference document: docs/QUIZ_PIPELINE_UPGRADE_PLAN.md

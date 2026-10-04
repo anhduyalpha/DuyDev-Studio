@@ -92,3 +92,6 @@ Thumbs.db
 *.swp
 .gemini/
 .antigravity/
+
+# Quiz Engine Assets
+!engines/quiz/assets/**

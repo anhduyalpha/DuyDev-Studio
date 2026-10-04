@@ -52,6 +52,49 @@ export class JanitorService {
   }
 
   /**
+   * Removes quiz pipeline cache entries (extract + AI batch) older than 7 days
+   */
+  static async cleanupQuizCache(): Promise<number> {
+    const defaultCacheDir = existsSync(path.resolve(process.cwd(), 'data', 'cache', 'quiz'))
+      ? path.resolve(process.cwd(), 'data', 'cache', 'quiz')
+      : (existsSync(path.resolve(process.cwd(), '..', 'data', 'cache', 'quiz'))
+        ? path.resolve(process.cwd(), '..', 'data', 'cache', 'quiz')
+        : path.resolve(process.cwd(), 'data', 'cache', 'quiz'));
+
+    const cacheDir = process.env.QUIZ_CACHE_DIR ? path.resolve(process.env.QUIZ_CACHE_DIR) : defaultCacheDir;
+    if (!existsSync(cacheDir)) return 0;
+
+    let purgedCount = 0;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+
+    try {
+      const entries = await fs.readdir(cacheDir, { withFileTypes: true });
+      for (const entry of entries) {
+        const itemPath = path.join(cacheDir, entry.name);
+        try {
+          const isTargetFile = entry.isFile() && (entry.name.startsWith('extract_') || entry.name.startsWith('ai_')) && entry.name.endsWith('.json');
+          const isTargetDir = entry.isDirectory() && entry.name.startsWith('assets_');
+
+          if (isTargetFile || isTargetDir) {
+            const stats = await fs.stat(itemPath);
+            if (stats.mtimeMs < sevenDaysAgo) {
+              await fs.rm(itemPath, { recursive: true, force: true });
+              purgedCount++;
+              logger.info({ itemPath }, 'Janitor: Purged expired quiz cache entry');
+            }
+          }
+        } catch (err) {
+          logger.warn({ itemPath, err }, 'Janitor: Failed to stat/rm quiz cache item');
+        }
+      }
+    } catch (err) {
+      logger.warn({ cacheDir, err }, 'Janitor: Failed to read quiz cache directory');
+    }
+
+    return purgedCount;
+  }
+
+  /**
    * Cleans up orphaned objects in R2 transit/ prefix older than 1 hour
    */
   static async cleanOrphanedR2TransitObjects(): Promise<number> {
@@ -85,6 +128,7 @@ export class JanitorService {
     try {
       await this.cleanupOrphanedChunks();
       await this.cleanOrphanedR2TransitObjects();
+      await this.cleanupQuizCache();
 
       if (isPermanentRetention && !options.forceExpiredCheck) {
         logger.debug('Janitor: Permanent retention enabled, skipping file auto-purge');

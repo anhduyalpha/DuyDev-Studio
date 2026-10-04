@@ -21,7 +21,16 @@ import shutil
 import uuid
 import base64
 import concurrent.futures
+import hashlib
 import pymupdf
+
+from text_utils import is_section_banner, strip_section_banner, clean_image_markers
+from mcq_parser import parse_mcq_blocks, count_available_questions
+import quiz_cache
+
+# IMPORTANT: Any changes to Phase 1 or Phase 2 prompts MUST bump PROMPT_VERSION.
+# Bumping this constant invalidates all Layer 2 AI batch cache entries.
+PROMPT_VERSION = "v3"
 
 # Reconfigure stdout/stderr for UTF-8 on Windows
 if sys.platform == "win32":
@@ -34,14 +43,20 @@ if sys.platform == "win32":
 
 DEFAULT_API_BASE = os.environ.get("AGNES_AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
 DEFAULT_MODEL = os.environ.get("AGNES_AI_MODEL", "agnes-3.0-flash")
-DEFAULT_API_KEY = os.environ.get("AGNES_AI_API_KEY", "sk-zsaZ9jZjzOk9V5rQj4CxkWO3q5AOmRtG3puwUW5SiiI5NCoK")
+DEFAULT_API_KEY = os.environ.get("AGNES_AI_API_KEY", "")
+
+_EMIT_LOCK = threading.Lock()
+
+ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
+KATEX_SRC_DIR = os.path.join(ENGINE_DIR, "assets", "katex")
 
 
 def emit_progress(pct: int, stage: str) -> None:
-    """Emit JSON formatted progress to stdout for worker streaming."""
+    """Emit JSON formatted progress to stdout for worker streaming (thread-safe)."""
     try:
         payload = json.dumps({"progress": pct, "stage": stage}, ensure_ascii=False)
-        print(payload, flush=True)
+        with _EMIT_LOCK:
+            print(payload, flush=True)
     except Exception:
         pass
 
@@ -164,41 +179,6 @@ def is_running_header_or_footer(block_text: str, y0: float, y1: float, page_h: f
         if header_footer_regex.search(text) or (len(text) < 60 and ("trang" in text.lower() or "hết" in text.lower())):
             return True
     return False
-
-
-def is_section_banner(text: str) -> bool:
-    """
-    Detect if text is a section divider or banner (e.g. 'PHẦN I', 'PHẦN II', 'PHẦN 1',
-    'PHẦN II. Câu trắc nghiệm đúng sai.', 'CÂU TRẮC NGHIỆM ĐÚNG SAI', 'BẢNG ĐÁP ÁN', 'HƯỚNG DẪN GIẢI').
-    Such banners are structural layout dividers and must never be extracted as images,
-    nor merged into the preceding question's body.
-    """
-    if not text:
-        return False
-    t = text.strip()
-    if re.match(r"^\s*(?:câu\s*\d+|\d+[\.\:])", t, re.IGNORECASE):
-        return False
-    if re.search(r"^\s*(?:[-•*]\s*)?PH[ẦAÀẢÃẠÂẦẤẨẪẬa-z\ufffd\W]*N\s*[:\.]?\s*(?:[IVXLCDM]+|\d+)", t, re.IGNORECASE):
-        return True
-    if re.search(r"tr[ắa\ufffd\W]?c\s*nghi[ệe\ufffd\W]?m\s*(?:[đd\ufffd\W]?[úu\ufffd\W]?ng\s*sai|nhi[ềe\ufffd\W]?u|tr[ảa\ufffd\W]?\s*l[ờo\ufffd\W]?i)", t, re.IGNORECASE):
-        return True
-    if re.search(r"^\s*(?:[-•*]\s*)?(?:B[ẢA\ufffd\W]?NG\s*Đ[ÁA\ufffd\W]?P\s*[ÁA\ufffd\W]?N|H[ƯU\ufffd\W]?ỚNG\s*D[ẪA\ufffd\W]?N\s*GI[ẢA\ufffd\W]?I|L[ỜO\ufffd\W]?I\s*GI[ẢA\ufffd\W]?I\s*CHI\s*TI[ẾE\ufffd\W]?T|Đ[ÁA\ufffd\W]?P\s*[ÁA\ufffd\W]?N\s*CHI\s*TI[ẾE\ufffd\W]?T)\b", t, re.IGNORECASE):
-        return True
-    if re.search(r"^\s*(?:[-•*]\s*)?(?:MỤC|MUC|CHUY[ÊE\ufffd\W]?N\s*Đ[ỀE\ufffd\W]?)\s*[:\.]?\s*(?:[IVXLCDM]+|\d+)", t, re.IGNORECASE):
-        return True
-    return False
-
-
-def strip_section_banner(text: str) -> str:
-    """Strip any trailing or embedded section divider banners from text."""
-    if not text:
-        return ""
-    pattern = (
-        r"(?:^|\n)\s*(?:(?:[-•*]\s*)?PH[ẦAÀẢÃẠÂẦẤẨẪẬa-z\ufffd\W]*N\s*[:\.]?\s*(?:[IVXLCDM]+|\d+)|"
-        r"tr[ắa\ufffd\W]?c\s*nghi[ệe\ufffd\W]?m\s*(?:[đd\ufffd\W]?[úu\ufffd\W]?ng\s*sai|nhi[ềe\ufffd\W]?u|tr[ảa\ufffd\W]?\s*l[ờo\ufffd\W]?i)|"
-        r"B[ẢA\ufffd\W]?NG\s*Đ[ÁA\ufffd\W]?P\s*[ÁA\ufffd\W]?N|H[ƯU\ufffd\W]?ỚNG\s*D[ẪA\ufffd\W]?N\s*GI[ẢA\ufffd\W]?I\b).*$"
-    )
-    return re.sub(pattern, "", str(text), flags=re.IGNORECASE | re.MULTILINE).strip()
 
 
 def detect_column_gutter(page: pymupdf.Page, blocks: list) -> float:
@@ -342,30 +322,85 @@ def sort_blocks_by_layout(page: pymupdf.Page, blocks: list = None) -> list:
 # ==============================================================================
 
 def cluster_rects(rect_list: list[pymupdf.Rect], margin: float = 12.0) -> list[pymupdf.Rect]:
-    """Group overlapping or nearby rectangles into connected cluster bounding boxes."""
+    """Group overlapping or nearby rectangles into connected cluster bounding boxes using O(n log n) sweep-line union-find."""
     if not rect_list:
         return []
-    clusters = [pymupdf.Rect(r) for r in rect_list]
-    changed = True
-    while changed:
-        changed = False
-        new_clusters = []
-        skip = set()
-        for i in range(len(clusters)):
-            if i in skip:
+
+    # Stage 1: Dense Vector Guard (24pt Grid Pre-Bucketing for n > 1500)
+    if len(rect_list) > 1500:
+        grid: dict[tuple[int, int], pymupdf.Rect] = {}
+        for r in rect_list:
+            key = (int(r.x0 // 24.0), int(r.y0 // 24.0))
+            if key not in grid:
+                grid[key] = pymupdf.Rect(r)
+            else:
+                grid[key] = grid[key] | r
+        target_rects = list(grid.values())
+    else:
+        target_rects = [pymupdf.Rect(r) for r in rect_list]
+
+    n = len(target_rects)
+    if n <= 1:
+        return target_rects
+
+    # Stage 2: Disjoint-Set Union (Union-Find)
+    parent = list(range(n))
+    rank = [0] * n
+
+    def find(i: int) -> int:
+        root = i
+        while root != parent[root]:
+            root = parent[root]
+        curr = i
+        while curr != root:
+            nxt = parent[curr]
+            parent[curr] = root
+            curr = nxt
+        return root
+
+    def union(i: int, j: int) -> None:
+        root_i = find(i)
+        root_j = find(j)
+        if root_i == root_j:
+            return
+        if rank[root_i] < rank[root_j]:
+            parent[root_i] = root_j
+        elif rank[root_i] > rank[root_j]:
+            parent[root_j] = root_i
+        else:
+            parent[root_j] = root_i
+            rank[root_i] += 1
+
+    # Stage 3: Sweep-Line Traversal along X-axis
+    indexed = sorted(range(n), key=lambda i: target_rects[i].x0)
+    active: list[int] = []
+
+    for i in indexed:
+        new_r = target_rects[i]
+        new_active: list[int] = []
+        for j in active:
+            r_j = target_rects[j]
+            if r_j.x1 + margin < new_r.x0:
                 continue
-            curr = pymupdf.Rect(clusters[i])
-            for j in range(i + 1, len(clusters)):
-                if j in skip:
-                    continue
-                exp_curr = pymupdf.Rect(curr.x0 - margin, curr.y0 - margin, curr.x1 + margin, curr.y1 + margin)
-                if exp_curr.intersects(clusters[j]):
-                    curr = curr | clusters[j]
-                    skip.add(j)
-                    changed = True
-            new_clusters.append(curr)
-        clusters = new_clusters
-    return clusters
+            new_active.append(j)
+            if r_j.y1 + margin < new_r.y0 or new_r.y1 + margin < r_j.y0:
+                continue
+            exp_j = pymupdf.Rect(r_j.x0 - margin, r_j.y0 - margin, r_j.x1 + margin, r_j.y1 + margin)
+            if exp_j.intersects(new_r):
+                union(i, j)
+        new_active.append(i)
+        active = new_active
+
+    # Stage 4: Aggregate bounding boxes per connected component
+    groups: dict[int, pymupdf.Rect] = {}
+    for i in indexed:
+        root = find(i)
+        if root not in groups:
+            groups[root] = pymupdf.Rect(target_rects[i])
+        else:
+            groups[root] = groups[root] | target_rects[i]
+
+    return list(groups.values())
 
 
 def extract_visual_assets(
@@ -482,13 +517,6 @@ def extract_visual_assets(
             continue
 
     return assets
-
-
-def clean_image_markers(text: str) -> str:
-    """Purge internal [IMAGE_REF: ...] markers from human-facing text."""
-    if not text:
-        return ""
-    return re.sub(r"\[IMAGE_REF:\s*[^\]]+\]", "", str(text)).strip()
 
 
 def link_assets_to_questions(
@@ -855,51 +883,150 @@ def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tu
 # MODULE 1.5 & 1.6: AI INGESTION & SLIDING-WINDOW CHUNKING
 # ==============================================================================
 
+def _salvage_truncated_json(raw: str) -> dict | None:
+    """
+    Cứu JSON bị cắt giữa mảng 'questions': cắt tới object hoàn chỉnh cuối cùng,
+    đóng ngoặc ']}' rồi parse lại. Trả None nếu không cứu được.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    cleaned = cleaned.strip()
+
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict) and isinstance(data.get("questions"), list) and len(data["questions"]) > 0:
+            return data
+    except Exception:
+        pass
+
+    q_marker = cleaned.find('"questions"')
+    if q_marker == -1:
+        return None
+    arr_start = cleaned.find('[', q_marker)
+    if arr_start == -1:
+        return None
+
+    in_str = False
+    escape = False
+    brace_depth = 0
+    bracket_depth = 1
+    candidates = []
+
+    i = arr_start + 1
+    while i < len(cleaned):
+        ch = cleaned[i]
+        if escape:
+            escape = False
+        elif ch == '\\':
+            if in_str:
+                escape = True
+        elif ch == '"':
+            in_str = not in_str
+        elif not in_str:
+            if ch == '{':
+                brace_depth += 1
+            elif ch == '}':
+                if brace_depth == 1 and bracket_depth == 1:
+                    candidates.append(i)
+                brace_depth -= 1
+            elif ch == '[':
+                bracket_depth += 1
+            elif ch == ']':
+                bracket_depth -= 1
+                if bracket_depth == 0:
+                    break
+        i += 1
+
+    for idx in reversed(candidates):
+        candidate = cleaned[:idx + 1].rstrip().rstrip(",") + "\n]}"
+        try:
+            data = json.loads(candidate)
+            if isinstance(data, dict) and isinstance(data.get("questions"), list) and len(data["questions"]) > 0:
+                return data
+        except Exception:
+            continue
+    return None
+
+
 def call_agnes_api(
     api_key: str,
     prompt: str,
     system_prompt: str,
     base_url: str = DEFAULT_API_BASE,
     model: str = DEFAULT_MODEL,
-    timeout: int = 180,
+    timeout: int = 90,
     max_retries: int = 2
 ) -> dict:
     """Send chat completion request to Agnes AI with JSON formatting, defensive retries, and timeout resilience."""
-    payload = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.1,
-        "response_format": {"type": "json_object"},
-        "max_tokens": 8192
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        f"{base_url.rstrip('/')}/chat/completions",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "User-Agent": "DDStudio-QuizPipeline/2.0"
-        }
-    )
-
+    current_temp = 0.1
+    current_prompt = prompt
     last_err = None
+
     for attempt in range(max_retries + 1):
+        payload_data = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": current_prompt}
+            ],
+            "temperature": current_temp,
+            "response_format": {"type": "json_object"},
+            "max_tokens": 8192
+        }
+        payload = json.dumps(payload_data).encode("utf-8")
+
+        req = urllib.request.Request(
+            f"{base_url.rstrip('/')}/chat/completions",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "DDStudio-QuizPipeline/2.0"
+            }
+        )
+
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+                resp_bytes = resp.read()
+                data = json.loads(resp_bytes.decode("utf-8"))
                 content = data["choices"][0]["message"]["content"]
                 cleaned = content.strip()
                 if cleaned.startswith("```"):
                     cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
                     cleaned = re.sub(r"\s*```$", "", cleaned)
-                return json.loads(cleaned)
+                try:
+                    return json.loads(cleaned)
+                except json.JSONDecodeError as jde:
+                    salvaged = _salvage_truncated_json(cleaned)
+                    if salvaged is not None and isinstance(salvaged, dict) and salvaged.get("questions"):
+                        return salvaged
+                    if attempt < max_retries:
+                        current_temp = 0.0
+                        if "Chỉ trả JSON compact" not in current_prompt:
+                            current_prompt = current_prompt + "\n\nChỉ trả JSON compact, không markdown fence, không giải thích thêm."
+                        time.sleep(1.0 * (attempt + 1))
+                        continue
+                    raise RuntimeError(f"Lỗi phản hồi Agnes AI API (JSON không hợp lệ và không thể cứu): {jde}")
+        except json.JSONDecodeError as jde:
+            if attempt < max_retries:
+                current_temp = 0.0
+                if "Chỉ trả JSON compact" not in current_prompt:
+                    current_prompt = current_prompt + "\n\nChỉ trả JSON compact, không markdown fence, không giải thích thêm."
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise RuntimeError(f"Lỗi phản hồi Agnes AI API (JSON không hợp lệ): {jde}")
         except urllib.error.HTTPError as e:
             err_msg = e.read().decode("utf-8", errors="replace")
+            if api_key and api_key in err_msg:
+                err_msg = err_msg.replace(api_key, "[REDACTED_API_KEY]")
             last_err = RuntimeError(f"Agnes AI API error (HTTP {e.code}): {err_msg}")
+            if e.code == 401:
+                raise last_err
             if e.code in (429, 500, 502, 503, 504) and attempt < max_retries:
                 time.sleep(2.0 * (attempt + 1))
                 continue
@@ -1033,6 +1160,58 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
     return q
 
 
+def _stem_fingerprint(q: dict) -> str:
+    plain = re.sub(r"<[^>]+>", "", str(q.get("question", "")))
+    plain = re.sub(r"^\s*(?:câu\s*\d+[\.\:\s]*|\d+[\.\:]\s*)", "", plain, flags=re.IGNORECASE)
+    plain = re.sub(r"\s+", "", plain).lower()
+    return hashlib.sha1(plain.encode("utf-8")).hexdigest()
+
+
+def _guess_answer_from_raw(raw: str) -> str:
+    """Best-effort regex extraction of answer key from raw question segment. Defaults to 'A'."""
+    if not raw or not isinstance(raw, str):
+        return "A"
+    m = re.search(r"(?:đáp\s*án|answer)\s*[:\.]?\s*([A-D])\b", raw, re.IGNORECASE)
+    if m:
+        return m.group(1).upper()
+    return "A"
+
+
+def _build_phase1_prompt(blocks: list[dict], b_start: int) -> str:
+    """Build structured Phase 1 prompt for AI format standardization."""
+    payload_blocks = []
+    for off, blk in enumerate(blocks):
+        if isinstance(blk, dict):
+            item = {
+                "number": b_start + off,
+                "question": blk.get("stem", ""),
+                "options": dict(blk.get("options", {}))
+            }
+            if blk.get("confidence") == "low":
+                item["raw_fallback"] = blk.get("raw", "")
+        else:
+            item = {
+                "number": b_start + off,
+                "question": str(blk),
+                "options": {}
+            }
+        payload_blocks.append(item)
+
+    prompt = (
+        "Đã có sẵn cấu trúc câu hỏi dưới dạng JSON. Nhiệm vụ của bạn CHỈ LÀ:\n"
+        "1. Chuẩn hoá công thức hoá học bằng HTML <sub>/<sup> (ví dụ C<sub>2</sub>H<sub>5</sub>OH, Fe<sup>3+</sup>).\n"
+        "2. Chuẩn hoá biểu thức toán bằng $...$ (KaTeX).\n"
+        "3. Giữ NGUYÊN mọi marker [IMAGE_REF: ...] và mọi bảng Markdown.\n"
+        "4. Xác định đáp án đúng, trả về \"answer\" là một trong \"A\",\"B\",\"C\",\"D\".\n"
+        "5. Nếu một mục có \"raw_fallback\", hãy dùng nó để sửa lại \"question\"/\"options\" cho đúng.\n\n"
+        "KHÔNG viết lời giải. KHÔNG thêm câu. KHÔNG bớt câu. KHÔNG đổi giá trị \"number\".\n"
+        "Trả về ĐÚNG JSON: {\"questions\":[{\"number\":int,\"question\":str,\"options\":{\"A\":str,\"B\":str,\"C\":str,\"D\":str},\"answer\":str,\"image_ref\":str|null}]}\n\n"
+        "INPUT:\n"
+        f"{json.dumps(payload_blocks, ensure_ascii=False)}"
+    )
+    return prompt
+
+
 def parse_and_standardize_questions(
     raw_text: str,
     api_key: str,
@@ -1040,7 +1219,8 @@ def parse_and_standardize_questions(
     start_num: int = 1,
     base_url: str = DEFAULT_API_BASE,
     model: str = DEFAULT_MODEL,
-    pages_desc: str = ""
+    pages_desc: str = "",
+    parsed_blocks: list[dict] | None = None
 ) -> list[dict]:
     """
     Parse raw text into structured multiple-choice questions (4 options A, B, C, D),
@@ -1048,16 +1228,14 @@ def parse_and_standardize_questions(
     """
     system_prompt = (
         "You are an expert Vietnamese exam editor and master teacher.\n"
-        "Your task is to extract, standardize, and format multiple-choice quiz questions from the provided textbook/exam text.\n"
+        "Your task is to standardize and format multiple-choice quiz questions from the provided textbook/exam JSON payload.\n"
         "Requirements:\n"
-        "1. Identify questions from 'Câu X' or 'X.' accurately in order of appearance.\n"
-        "2. All questions are standard multiple-choice questions (MCQ) with 4 options: A, B, C, D. The answer MUST be 'A', 'B', 'C', or 'D'.\n"
-        "3. Standardize chemical formulas using HTML tags: indices to <sub> (e.g. C<sub>2</sub>H<sub>5</sub>OH, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup> (e.g. Fe<sup>3+</sup>).\n"
-        "4. Standardize mathematical expressions using KaTeX/LaTeX delimiters: inline math between $...$ (e.g. $E = mc^2$, $\\int_0^1 f(x)dx$, $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$).\n"
-        "5. Preserve visual assets: If the question contains an image marker '[IMAGE_REF: fig_pX_Y]' or refers to a figure, diagram, reaction scheme, chart, or spectrum, you MUST preserve 'image_ref': 'fig_pX_Y.png'. If none, set 'image_ref': null.\n"
-        "6. Preserve structured tables: If the question or options contain a Markdown table (e.g. | col1 | col2 | ...), you MUST PRESERVE the entire Markdown table verbatim inside 'question' or 'explanation'. Do NOT flatten, compress, or convert tables into plain text.\n"
-        "7. In 'explanation', provide a concise, accurate scientific explanation strictly in Vietnamese (1-3 sentences).\n"
-        "8. Return ONLY a valid JSON object matching this schema:\n"
+        "1. All questions are standard multiple-choice questions (MCQ) with 4 options: A, B, C, D. The answer MUST be 'A', 'B', 'C', or 'D'.\n"
+        "2. Standardize chemical formulas using HTML tags: indices to <sub> (e.g. C<sub>2</sub>H<sub>5</sub>OH, H<sub>2</sub>SO<sub>4</sub>) and charges to <sup> (e.g. Fe<sup>3+</sup>).\n"
+        "3. Standardize mathematical expressions using KaTeX/LaTeX delimiters: inline math between $...$ (e.g. $E = mc^2$, $\\int_0^1 f(x)dx$, $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$).\n"
+        "4. Preserve visual assets: If the question contains an image marker '[IMAGE_REF: fig_pX_Y]' or refers to a figure, diagram, reaction scheme, chart, or spectrum, you MUST preserve 'image_ref': 'fig_pX_Y.png'. If none, set 'image_ref': null.\n"
+        "5. Preserve structured tables: If the question or options contain a Markdown table (e.g. | col1 | col2 | ...), you MUST PRESERVE the entire Markdown table verbatim inside 'question'. Do NOT flatten, compress, or convert tables into plain text.\n"
+        "6. Return ONLY a valid JSON object matching this schema:\n"
         "{\n"
         '  "questions": [\n'
         "    {\n"
@@ -1066,18 +1244,27 @@ def parse_and_standardize_questions(
         '      "question": "Question text...",\n'
         '      "image_ref": "fig_p1_1.png",\n'
         '      "options": {"A": "...", "B": "...", "C": "...", "D": "..."},\n'
-        '      "explanation": "Concise scientific explanation...",\n'
         '      "answer": "A"\n'
         "    }\n"
         "  ]\n"
         "}\n"
-        "9. If there are NO questions in the provided text, return {\"questions\": []}."
+        "7. If there are NO questions in the provided text, return {\"questions\": []}."
     )
 
-    BATCH_SIZE = 12
+    # (1) Chốt số câu thật ngay đầu hàm, trước khi gọi AI
+    if parsed_blocks is None:
+        parsed_blocks = parse_mcq_blocks(raw_text)
+    available = len(parsed_blocks)
+    if available == 0:
+        desc = pages_desc or "trang đã chọn"
+        raise RuntimeError(f"Không có câu hỏi trong {desc}, vui lòng chọn lại.")
+    effective_count = min(count, available)
+
+    # (2) Tính batches từ effective_count với BATCH_SIZE = 5
+    BATCH_SIZE = 5
     batches = []
     curr_start = start_num
-    remaining = count
+    remaining = effective_count
     while remaining > 0:
         b_count = min(remaining, BATCH_SIZE)
         b_end = curr_start + b_count - 1
@@ -1092,70 +1279,291 @@ def parse_and_standardize_questions(
     max_ai_progress = 72
     prog_step = (max_ai_progress - start_progress) / max(1, total_batches)
 
-    # Use sliding window chunking to slice context
-    windows = chunk_questions_sliding_window(raw_text, target_count=count, window_size=BATCH_SIZE)
+    # (3) Slicing windows trực tiếp từ parsed_blocks
+    windows = [parsed_blocks[i:i + BATCH_SIZE] for i in range(0, effective_count, BATCH_SIZE)]
 
-    for b_idx, (b_start, b_end, b_count) in enumerate(batches):
-        batch_prog_base = int(start_progress + b_idx * prog_step)
-        
-        # Pick corresponding window text or full text
-        w_text = windows[b_idx][2] if b_idx < len(windows) else raw_text
-        user_prompt = (
-            f"Extract up to {b_count} questions from the following text. "
-            f"Extract them sequentially in order of appearance and assign sequential numbers from {b_start} to {b_end}:\n\n{w_text}"
+    # (4) Bắt buộc 1-1, bỏ hoàn toàn fallback else raw_text
+    assert len(windows) == len(batches), "windows và batches phải khớp 1-1"
+
+    MAX_PARALLEL = int(os.environ.get("QUIZ_AI_CONCURRENCY", "4"))
+
+    def _run_batch(b_idx: int) -> list[dict]:
+        """Gọi AI cho đúng một batch. Trả về list câu hỏi thô (chưa normalize)."""
+        b_start, b_end, b_count = batches[b_idx]
+        w_blocks = windows[b_idx]
+        user_prompt = _build_phase1_prompt(w_blocks, b_start)
+
+        # Check Layer 2 AI Cache
+        c_key = quiz_cache.ai_cache_key(model, PROMPT_VERSION, {"type": "phase1", "blocks": w_blocks, "start": b_start})
+        cached_res = quiz_cache.read_json(f"ai_{c_key}")
+        if cached_res and isinstance(cached_res, dict) and "questions" in cached_res:
+            return cached_res.get("questions", [])
+
+        res = call_agnes_api(
+            api_key, user_prompt, system_prompt,
+            base_url=base_url, model=model, timeout=90
         )
+        if res and isinstance(res, dict) and "questions" in res:
+            quiz_cache.write_json(f"ai_{c_key}", res)
+        return res.get("questions", []) if isinstance(res, dict) else []
 
-        res_holder = {}
-        err_holder = {}
+    results: list[list[dict] | None] = [None] * len(batches)
+    errors: dict[int, Exception] = {}
 
-        def ai_worker():
+    max_workers = min(MAX_PARALLEL, max(1, len(batches)))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        fut_map = {ex.submit(_run_batch, i): i for i in range(len(batches))}
+        done_n = 0
+        for fut in concurrent.futures.as_completed(fut_map):
+            i = fut_map[fut]
             try:
-                res_holder["data"] = call_agnes_api(
-                    api_key, user_prompt, system_prompt, base_url=base_url, model=model, timeout=180
-                )
+                res = fut.result()
+                if not res:
+                    errors[i] = RuntimeError(f"Gói câu hỏi số {i + 1} trả về danh sách rỗng.")
+                else:
+                    results[i] = res
             except Exception as e:
-                err_holder["err"] = e
+                errors[i] = e
+            done_n += 1
+            emit_progress(
+                int(start_progress + (done_n / len(batches)) * (max_ai_progress - start_progress)),
+                f"Đang chuẩn hóa {done_n}/{len(batches)} gói "
+                f"({min(done_n * BATCH_SIZE, effective_count)}/{effective_count} câu)..."
+            )
 
-        ai_thread = threading.Thread(target=ai_worker, daemon=True)
-        ai_thread.start()
-
-        elapsed = 0
-        current_p = batch_prog_base
-        batch_label = f"gói {b_idx + 1}/{total_batches} (Câu {b_start} - {b_end})" if total_batches > 1 else f"{count} câu"
-
-        while ai_thread.is_alive():
-            ai_thread.join(timeout=2.0)
-            elapsed += 2
-            if ai_thread.is_alive():
-                if current_p < int(batch_prog_base + prog_step - 2):
-                    current_p += 1
-                emit_progress(current_p, f"Đang chuẩn hóa {batch_label} ({elapsed}s)...")
-
-        if "err" in err_holder:
-            raise err_holder["err"]
-
-        res = res_holder.get("data", {})
-        batch_qs = res.get("questions", [])
-        if not batch_qs:
-            if all_questions:
-                break
-            desc = pages_desc if pages_desc else "trang đã chọn"
+    # Nếu tất cả các gói đều thất bại -> raise lỗi đầu tiên
+    if len(errors) == len(batches):
+        first_idx = min(errors.keys())
+        first_err = errors[first_idx]
+        if isinstance(first_err, RuntimeError) and "trả về danh sách rỗng" in str(first_err):
+            desc = pages_desc or "trang đã chọn"
             raise RuntimeError(f"Không có câu hỏi trong {desc}, vui lòng chọn lại.")
+        raise first_err
 
+    # Degradation có kiểm soát: lấp chỗ trống cho các batch bị lỗi
+    if errors:
+        for i, err in errors.items():
+            b_start, b_end, b_count = batches[i]
+            fallback = []
+            for off, blk in enumerate(windows[i]):
+                fallback.append({
+                    "number": b_start + off,
+                    "type": "mcq",
+                    "question": blk["stem"] if isinstance(blk, dict) and "stem" in blk else str(blk),
+                    "options": dict(blk["options"]) if isinstance(blk, dict) and "options" in blk else {"A": "", "B": "", "C": "", "D": ""},
+                    "answer": _guess_answer_from_raw(blk["raw"] if isinstance(blk, dict) and "raw" in blk else ""),
+                    "explanation": "",
+                    "image_ref": None
+                })
+            results[i] = fallback
+
+        emit_progress(72, f"Đã chuẩn hóa xong, {len(errors)} gói dùng bản trích xuất gốc...")
+
+    # Ghép kết quả theo thứ tự index gốc results[0..n]
+    for b_idx, batch_qs in enumerate(results):
+        if not batch_qs:
+            continue
+        b_start, b_end, b_count = batches[b_idx]
         for idx, q in enumerate(batch_qs):
             target_num = b_start + idx
             norm_q = normalize_question(q, fallback_num=target_num)
             all_questions.append(norm_q)
 
-        emit_progress(
-            int(start_progress + (b_idx + 1) * prog_step),
-            f"Đã chuẩn hóa xong {batch_label} ({len(all_questions)}/{count} câu)..."
-        )
+    # (5) Dedup theo SHA1 fingerprint của question stem
+    seen_stems = set()
+    deduped = []
+    for q in all_questions:
+        fp = _stem_fingerprint(q)
+        if fp in seen_stems:
+            continue
+        seen_stems.add(fp)
+        deduped.append(q)
+    all_questions = deduped
+
+    # (6) Clamp về effective_count
+    all_questions = all_questions[:effective_count]
+
+    # (7) Cưỡng chế đánh số tuần tự bắt đầu từ start_num
+    for i, q in enumerate(all_questions):
+        q["number"] = start_num + i
 
     if not all_questions:
-        raise RuntimeError("Không có câu hỏi trong trang, vui lòng chọn lại.")
+        desc = pages_desc or "trang đã chọn"
+        raise RuntimeError(f"Không có câu hỏi trong {desc}, vui lòng chọn lại.")
 
     return all_questions
+
+
+# ==============================================================================
+# PHASE 2: EXPLANATIONS GENERATION (WP4)
+# ==============================================================================
+
+def _build_phase2_prompt(batch_slice: list[dict]) -> str:
+    """Build compact Phase 2 prompt for explanation generation (stem + options + answer)."""
+    items = []
+    for q in batch_slice:
+        opts = q.get("options", {})
+        if not isinstance(opts, dict):
+            opts = {}
+        items.append({
+            "number": q.get("number"),
+            "question": q.get("question", ""),
+            "options": dict(opts),
+            "answer": q.get("answer", "")
+        })
+
+    prompt = (
+        "Với mỗi câu hỏi trắc nghiệm dưới đây (đã biết đáp án đúng), hãy viết lời giải "
+        "ngắn gọn, chính xác về mặt khoa học, bằng tiếng Việt, 1-3 câu.\n"
+        "Dùng HTML <sub>/<sup> cho công thức hoá học và $...$ cho biểu thức toán.\n"
+        'Trả về ĐÚNG JSON: {"explanations": {"<number>": "<lời giải>"}}\n\n'
+        "INPUT:\n"
+        f"{json.dumps(items, ensure_ascii=False)}"
+    )
+    return prompt
+
+
+def _parse_explanations_response(res: dict | None) -> dict[str, str]:
+    """
+    Safely parse AI response into a mapping of str(question_number) -> explanation text.
+    Handles standard {"explanations": {"<num>": "<text>"}}, list representations,
+    and number-prefixed keys like "Câu 1".
+    """
+    parsed_map: dict[str, str] = {}
+    if not res or not isinstance(res, dict):
+        return parsed_map
+
+    exp_data = None
+    if "explanations" in res:
+        exp_data = res["explanations"]
+    elif "questions" in res and isinstance(res["questions"], list):
+        for item in res["questions"]:
+            if isinstance(item, dict) and "number" in item:
+                num = item.get("number")
+                text = item.get("explanation") or item.get("text") or ""
+                parsed_map[str(num)] = str(text).strip()
+        return parsed_map
+    else:
+        exp_data = res
+
+    if isinstance(exp_data, dict):
+        for k, v in exp_data.items():
+            m = re.search(r"\d+", str(k))
+            clean_k = m.group(0) if m else str(k).strip()
+            if isinstance(v, str):
+                parsed_map[clean_k] = v.strip()
+            elif isinstance(v, dict):
+                text = v.get("explanation") or v.get("text") or v.get("content") or ""
+                parsed_map[clean_k] = str(text).strip()
+            elif v is not None:
+                parsed_map[clean_k] = str(v).strip()
+    elif isinstance(exp_data, list):
+        for item in exp_data:
+            if isinstance(item, dict):
+                num = item.get("number")
+                text = item.get("explanation") or item.get("text") or item.get("content") or ""
+                if num is not None:
+                    parsed_map[str(num)] = str(text).strip()
+
+    return parsed_map
+
+
+def generate_explanations(
+    questions: list[dict],
+    api_key: str,
+    base_url: str = DEFAULT_API_BASE,
+    model: str = DEFAULT_MODEL,
+    batch_size: int = 5,
+    max_workers: int = 4
+) -> None:
+    """
+    Generate detailed explanations for questions in Phase 2, mutating q["explanation"] IN-PLACE.
+    Never raises an exception on partial or total failure; failed questions retain explanation = "".
+    """
+    if not questions:
+        return
+
+    # Ensure all questions have an explanation field initialized
+    for q in questions:
+        if "explanation" not in q or q["explanation"] is None:
+            q["explanation"] = ""
+
+    if not api_key:
+        emit_progress(80, "Bỏ qua tạo lời giải chi tiết (thiếu API key)...")
+        return
+
+    system_prompt = (
+        "You are an expert Vietnamese exam editor and master teacher.\n"
+        "Your task is to write concise, scientifically accurate explanations in Vietnamese (1-3 sentences) "
+        "for the provided multiple-choice questions with known correct answers.\n"
+        "Use HTML <sub>/<sup> for chemical formulas and $...$ for mathematical expressions.\n"
+        'Return ONLY a valid JSON object matching: {"explanations": {"<number>": "<lời giải>"}}'
+    )
+
+    batches = [questions[i:i + batch_size] for i in range(0, len(questions), batch_size)]
+    total_batches = len(batches)
+    if total_batches == 0:
+        return
+
+    concurrency_env = os.environ.get("QUIZ_AI_CONCURRENCY")
+    effective_workers = int(concurrency_env) if concurrency_env else max_workers
+    actual_workers = min(max(1, effective_workers), total_batches)
+
+    def _run_exp_batch(b_idx: int) -> dict[str, str]:
+        b_slice = batches[b_idx]
+        user_prompt = _build_phase2_prompt(b_slice)
+
+        # Check Layer 2 AI Cache
+        c_key = quiz_cache.ai_cache_key(model, PROMPT_VERSION, {"type": "phase2", "items": b_slice})
+        cached_res = quiz_cache.read_json(f"ai_{c_key}")
+        if cached_res and isinstance(cached_res, dict):
+            return _parse_explanations_response(cached_res)
+
+        res = call_agnes_api(
+            api_key, user_prompt, system_prompt,
+            base_url=base_url, model=model, timeout=90
+        )
+        if res and isinstance(res, dict):
+            quiz_cache.write_json(f"ai_{c_key}", res)
+        return _parse_explanations_response(res)
+
+    errors: dict[int, Exception] = {}
+    start_prog = 72
+    max_prog = 80
+    prog_range = max_prog - start_prog
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=actual_workers) as ex:
+            fut_map = {ex.submit(_run_exp_batch, i): i for i in range(total_batches)}
+            done_n = 0
+            for fut in concurrent.futures.as_completed(fut_map):
+                b_idx = fut_map[fut]
+                try:
+                    exp_map = fut.result()
+                    for q in batches[b_idx]:
+                        q_num_str = str(q.get("number"))
+                        if q_num_str in exp_map and exp_map[q_num_str]:
+                            raw_exp = exp_map[q_num_str]
+                            q["explanation"] = strip_section_banner(raw_exp).strip()
+                except Exception as e:
+                    errors[b_idx] = e
+                done_n += 1
+                pct = int(start_prog + (done_n / total_batches) * prog_range)
+                emit_progress(
+                    pct,
+                    f"Đang viết lời giải chi tiết {done_n}/{total_batches} gói "
+                    f"({min(done_n * batch_size, len(questions))}/{len(questions)} câu)..."
+                )
+    except Exception:
+        emit_progress(80, "Không thể tạo lời giải chi tiết, dùng bảng đáp án rút gọn...")
+        return
+
+    if errors:
+        if len(errors) == total_batches:
+            emit_progress(80, "Không thể tạo lời giải chi tiết, dùng bảng đáp án rút gọn...")
+        else:
+            emit_progress(80, f"Đã viết xong lời giải, {len(errors)}/{total_batches} gói dùng đáp án rút gọn...")
 
 
 # ==============================================================================
@@ -1204,7 +1612,7 @@ def render_question_content_html(q: dict) -> str:
     return body
 
 
-def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
+def generate_worksheet_html(title: str, subtitle: str, questions: list[dict]) -> str:
     """Generate printable HTML worksheet with multiple-choice question support and KaTeX rendering."""
     items_html = []
 
@@ -1229,9 +1637,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 <head>
 <meta charset="UTF-8">
 <title>{title}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="./katex/katex.min.css">
 <style>
   @page {{
     size: A4 portrait;
@@ -1462,21 +1868,19 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 
 {body_content}
 
+  <script src="./katex/katex.min.js"></script>
+  <script src="./katex/contrib/auto-render.min.js"></script>
   <script>
-    window.addEventListener('DOMContentLoaded', function() {{
-      if (typeof renderMathInElement === 'function') {{
-        renderMathInElement(document.body, {{
-          delimiters: [
-            {{left: '$$', right: '$$', display: true}},
-            {{left: '$', right: '$', display: false}},
-            {{left: '\\\\(', right: '\\\\)', display: false}},
-            {{left: '\\\\[', right: '\\\\]', display: true}}
-          ],
-          ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
-          ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
-          throwOnError: false
-        }});
-      }}
+    renderMathInElement(document.body, {{
+      delimiters: [
+        {{left: '$$', right: '$$', display: true}},
+        {{left: '$', right: '$', display: false}},
+        {{left: '\\\\(', right: '\\\\)', display: false}},
+        {{left: '\\\\[', right: '\\\\]', display: true}}
+      ],
+      ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
+      ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+      throwOnError: false
     }});
   </script>
 </body>
@@ -1484,7 +1888,7 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict], qu
 """
 
 
-def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], questions_per_page: int = 10) -> str:
+def generate_answer_key_html(title: str, subtitle: str, questions: list[dict]) -> str:
     """Generate printable HTML standalone answer key with quick matrix table and multiple-choice solutions."""
     # MCQ Matrix Table (chunks of 10)
     chunk_size = 10
@@ -1528,9 +1932,7 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 <head>
 <meta charset="UTF-8">
 <title>ĐÁP ÁN & LỜI GIẢI CHI TIẾT - {title}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="./katex/katex.min.css">
 <style>
   @page {{
     size: A4 portrait;
@@ -1723,21 +2125,19 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict], q
 
 {sols_rendered}
 
+  <script src="./katex/katex.min.js"></script>
+  <script src="./katex/contrib/auto-render.min.js"></script>
   <script>
-    window.addEventListener('DOMContentLoaded', function() {{
-      if (typeof renderMathInElement === 'function') {{
-        renderMathInElement(document.body, {{
-          delimiters: [
-            {{left: '$$', right: '$$', display: true}},
-            {{left: '$', right: '$', display: false}},
-            {{left: '\\\\(', right: '\\\\)', display: false}},
-            {{left: '\\\\[', right: '\\\\]', display: true}}
-          ],
-          ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
-          ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
-          throwOnError: false
-        }});
-      }}
+    renderMathInElement(document.body, {{
+      delimiters: [
+        {{left: '$$', right: '$$', display: true}},
+        {{left: '$', right: '$', display: false}},
+        {{left: '\\\\(', right: '\\\\)', display: false}},
+        {{left: '\\\\[', right: '\\\\]', display: true}}
+      ],
+      ignoredClasses: ["section-banner", "main-title", "header-box", "q-num", "info-bar", "matrix-table", "notranslate", "katex-ignore"],
+      ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+      throwOnError: false
     }});
   </script>
 </body>
@@ -1782,6 +2182,10 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
             "--disable-default-apps",
             "--disable-sync",
             "--mute-audio",
+            "--allow-file-access-from-files",
+            "--virtual-time-budget=8000",
+            "--run-all-compositor-stages-before-draw",
+            "--disable-features=NetworkService",
             f"--user-data-dir={temp_profile}",
             "--no-pdf-header-footer",
             f"--print-to-pdf={abs_pdf}",
@@ -1798,7 +2202,7 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
         proc = subprocess.Popen(cmd, **popen_kwargs)
 
         start_time = time.time()
-        while time.time() - start_time < 30:
+        while time.time() - start_time < 15:
             if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
                 time.sleep(0.3)
                 if proc.poll() is None:
@@ -1862,6 +2266,36 @@ def sanitize_filename_prefix(prefix: str) -> str:
     return clean
 
 
+def _build_and_compile_worksheet(
+    title: str,
+    subtitle: str,
+    questions: list[dict],
+    html_path: str,
+    chrome: str,
+    pdf_path: str
+) -> None:
+    """Build Worksheet HTML and compile to PDF using Google Chrome Headless."""
+    worksheet_html = generate_worksheet_html(title, subtitle, questions)
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(worksheet_html)
+    compile_pdf(chrome, html_path, pdf_path)
+
+
+def _build_and_compile_answer(
+    title: str,
+    subtitle: str,
+    questions: list[dict],
+    html_path: str,
+    chrome: str,
+    pdf_path: str
+) -> None:
+    """Build Answer Key HTML and compile to PDF using Google Chrome Headless."""
+    answer_html = generate_answer_key_html(title, subtitle, questions)
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(answer_html)
+    compile_pdf(chrome, html_path, pdf_path)
+
+
 # ==============================================================================
 # PIPELINE ENTRYPOINT
 # ==============================================================================
@@ -1880,14 +2314,24 @@ def run_pipeline(
     filename_prefix: str = ""
 ) -> dict:
     """Execute the complete end-to-end Quiz Pipeline v2.0 with real-time SSE progress."""
+    if not os.path.isdir(KATEX_SRC_DIR):
+        raise RuntimeError(
+            "Thiếu thư viện KaTeX cục bộ tại engines/quiz/assets/katex. "
+            "Vui lòng cài đặt lại engine."
+        )
+
     clean_prefix = sanitize_filename_prefix(filename_prefix)
     os.makedirs(output_dir, exist_ok=True)
     temp_dir = tempfile.gettempdir()
     temp_assets_dir = os.path.join(temp_dir, f"quiz_assets_{uuid.uuid4().hex[:8]}")
     os.makedirs(temp_assets_dir, exist_ok=True)
 
-    ws_html_path = os.path.join(temp_dir, f"{clean_prefix}_DeBai.html")
-    ans_html_path = os.path.join(temp_dir, f"{clean_prefix}_DapAn.html")
+    job_html_dir = os.path.join(temp_dir, f"quiz_html_{uuid.uuid4().hex[:8]}")
+    os.makedirs(job_html_dir, exist_ok=True)
+    shutil.copytree(KATEX_SRC_DIR, os.path.join(job_html_dir, "katex"), dirs_exist_ok=True)
+
+    ws_html_path = os.path.join(job_html_dir, f"{clean_prefix}_DeBai.html")
+    ans_html_path = os.path.join(job_html_dir, f"{clean_prefix}_DapAn.html")
 
     key = api_key or DEFAULT_API_KEY
     if not key:
@@ -1898,48 +2342,65 @@ def run_pipeline(
         pdf_local = download_gdrive_if_needed(input_source, temp_dir)
 
         emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
-        raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = extract_raw_pages(pdf_local, pages, temp_assets_dir)
+        cached_extract = quiz_cache.get_extract_cache(pdf_local, str(pages), temp_assets_dir)
+        if cached_extract is not None:
+            raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = cached_extract
+        else:
+            raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = extract_raw_pages(pdf_local, pages, temp_assets_dir)
+            quiz_cache.set_extract_cache(pdf_local, str(pages), raw_text, actual_pages, extracted_assets, asset_map, source_q_nums)
         pages_desc = f"Trang {', '.join(map(str, actual_pages))}" if actual_pages else f"Trang {pages}"
 
         emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")
+        parsed_blocks = parse_mcq_blocks(raw_text)
         questions = parse_and_standardize_questions(
-            raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model, pages_desc=pages_desc
+            raw_text, key, count=count, start_num=start_q, base_url=base_url, model=model, pages_desc=pages_desc,
+            parsed_blocks=parsed_blocks
         )
 
+        effective_count = len(questions)
+        source_nums_for_assets = [b["source_number"] for b in parsed_blocks][:effective_count]
+
         # Link visual assets to questions using AI match, layout spatial map, and fallbacks
-        link_assets_to_questions(questions, extracted_assets, asset_map, source_q_nums)
+        link_assets_to_questions(questions, extracted_assets, asset_map, source_nums_for_assets)
 
         # Compute question type breakdown
         mcq_count = len(questions)
         tf_count = 0
         sa_count = 0
 
-        emit_progress(70, "Đang xây dựng bố cục A4 Portrait & bảng ma trận đáp án...")
-        worksheet_html = generate_worksheet_html(title, subtitle, questions)
-        answer_html = generate_answer_key_html(title, subtitle, questions)
-
-        with open(ws_html_path, "w", encoding="utf-8") as f:
-            f.write(worksheet_html)
-        with open(ans_html_path, "w", encoding="utf-8") as f:
-            f.write(answer_html)
-
-        emit_progress(80, "Google Chrome Headless đang in ấn tệp PDF Đề bài và Đáp án...")
+        emit_progress(72, "Đang khởi tạo tiến trình in ấn và tạo lời giải chi tiết...")
         chrome = find_chrome_path()
         ws_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
         ans_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.pdf")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            f_ws = executor.submit(compile_pdf, chrome, ws_html_path, ws_pdf_path)
-            f_ans = executor.submit(compile_pdf, chrome, ans_html_path, ans_pdf_path)
+            # (1) Worksheet KHÔNG cần explanation -> build & in NGAY, chồng lấn với phase 2
+            f_ws = executor.submit(
+                _build_and_compile_worksheet,
+                title, subtitle, questions, ws_html_path, chrome, ws_pdf_path
+            )
+
+            # (2) Phase 2 chạy trên main thread, song song với Chrome đang in worksheet
+            if os.environ.get("QUIZ_SKIP_EXPLANATION") != "1":
+                try:
+                    generate_explanations(questions, key, base_url=base_url, model=model)
+                except Exception:
+                    pass
+
+            # (3) Answer key CẦN explanation -> chỉ submit SAU khi phase 2 xong
+            f_ans = executor.submit(
+                _build_and_compile_answer,
+                title, subtitle, questions, ans_html_path, chrome, ans_pdf_path
+            )
 
             curr_p = 82
-            elapsed = 0
+            elapsed = 0.0
             while not (f_ws.done() and f_ans.done()):
-                time.sleep(1.0)
-                elapsed += 1
-                if curr_p < 93:
+                time.sleep(0.2)
+                elapsed += 0.2
+                if curr_p < 93 and int(elapsed * 5) % 5 == 0:
                     curr_p += 1
-                emit_progress(curr_p, f"Đang xuất tệp PDF Đề bài và Đáp án qua Chrome ({elapsed}s)...")
+                emit_progress(curr_p, f"Đang xuất tệp PDF Đề bài và Đáp án qua Chrome ({int(elapsed)}s)...")
 
             f_ws.result()
             f_ans.result()
@@ -1969,13 +2430,12 @@ def run_pipeline(
         return result
 
     finally:
-        # Atomic cleanup of temporary HTML files and temporary visual assets
-        for temp_f in [ws_html_path, ans_html_path]:
-            try:
-                if os.path.exists(temp_f):
-                    os.remove(temp_f)
-            except Exception:
-                pass
+        # Atomic cleanup of temporary per-job HTML directory and visual assets
+        try:
+            if os.path.exists(job_html_dir):
+                shutil.rmtree(job_html_dir, ignore_errors=True)
+        except Exception:
+            pass
 
         try:
             if os.path.exists(temp_assets_dir):
@@ -2015,10 +2475,7 @@ def main():
         )
     except Exception as e:
         err_msg = str(e).strip()
-        if any(k in err_msg.lower() for k in ["không có câu hỏi", "không tìm thấy câu hỏi", "no questions"]):
-            sys.stderr.write("Không có câu hỏi trong trang, vui lòng chọn lại.\n")
-        else:
-            sys.stderr.write(f"{err_msg}\n")
+        sys.stderr.write(f"{err_msg}\n")
         sys.exit(1)
 
 
