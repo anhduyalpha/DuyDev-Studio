@@ -1,0 +1,194 @@
+"""
+Question Reconstructor Module
+Orchestrates parallel multi-threaded batch execution via IAIProvider, isolated per-batch retries,
+and graceful code-based degradation fallbacks.
+"""
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+import re
+import time
+from typing import Optional
+
+from engines.quiz.provider.base import IAIProvider, ProviderError
+from engines.quiz.provider.prompt_builder import PromptBuilder
+
+from .models import (
+    BatchPayload,
+    BatchReconstructionResult,
+    ReconstructedQuestion,
+    QuestionType,
+    QuestionOption
+)
+
+logger = logging.getLogger("engines.quiz.reconstruction.reconstructor")
+
+
+class QuestionReconstructor:
+    """
+    Executes batched question reconstruction across multiple threads.
+    Guarantees isolated retries per batch and fallback degradation to code heuristics.
+    """
+
+    def __init__(self, ai_provider: IAIProvider, concurrency: int = 4, max_batch_retries: int = 3):
+        self.ai_provider = ai_provider
+        self.concurrency = max(1, concurrency)
+        self.max_batch_retries = max(1, max_batch_retries)
+
+    def reconstruct_batch(self, batch: BatchPayload) -> list[ReconstructedQuestion]:
+        """
+        Executes a single BatchPayload with bounded isolated retries and graceful fallback.
+        """
+        prompt_builder = (
+            PromptBuilder()
+            .set_role("Senior Vietnamese Examination Data Extractor & Layout Engineer")
+            .set_task(
+                "Reconstruct raw examination text blocks into structured question records. "
+                "Classify question sections (Part I MCQ, Part II True/False, Part III Short answer), "
+                "and stitch together any split questions that span across page boundaries."
+            )
+            .set_input({
+                "batch_id": batch.batch_id,
+                "target_question_numbers": batch.target_question_numbers,
+                "source_page_numbers": batch.page_numbers,
+                "text_content": batch.text_content,
+                "neighboring_prev_context": batch.neighboring_prev_context,
+                "neighboring_next_context": batch.neighboring_next_context
+            })
+            .add_rule("Never invent or hallucinate questions not found in the input text.")
+            .add_rule("Do NOT generate answers or explanations in this step (solving is handled in a later phase).")
+            .add_rule("Preserve all mathematical formulas in KaTeX/LaTeX format and chemical notations.")
+            .add_rule("Preserve image references [IMAGE_REF: ...].")
+            .add_rule(
+                "If a question begins at the end of the previous page context or options continue into "
+                "the next page context, stitch the stem and options together into ONE complete question."
+            )
+            .add_rule(
+                "Classify 'type' as 'part_i_mcq' (4 options A,B,C,D), 'part_ii_tf' (True/False 4 sub-statements), "
+                "or 'part_iii_short' (short answer). Ignore or omit section headers."
+            )
+            .set_schema(BatchReconstructionResult)
+            .set_uncertainty_policy(
+                "If a question is ambiguous or partially obscured, record evidence in 'warnings' "
+                "and set confidence < 0.8. Never guess missing options."
+            )
+        )
+
+        full_prompt = prompt_builder.build()
+
+        # Isolated Bounded Retry for this specific batch
+        last_error: Optional[Exception] = None
+        for attempt in range(1, self.max_batch_retries + 1):
+            try:
+                result: BatchReconstructionResult = self.ai_provider.generate_structured(
+                    task_name=f"reconstruct_{batch.batch_id}",
+                    user_prompt=full_prompt,
+                    system_prompt="You are an expert exam layout engineer. Respond strictly with JSON matching BatchReconstructionResult.",
+                    schema=BatchReconstructionResult,
+                    image_bytes=batch.image_bytes if batch.has_visuals else None,
+                    temperature=0.0
+                )
+                valid_questions = [
+                    q for q in result.questions
+                    if q.type != QuestionType.SECTION_HEADER
+                ]
+                for q in valid_questions:
+                    if not q.source_pages:
+                        q.source_pages = list(batch.page_numbers)
+                return valid_questions
+
+            except Exception as ex:
+                last_error = ex
+                logger.warning(
+                    f"Batch {batch.batch_id} attempt {attempt}/{self.max_batch_retries} failed: {ex}"
+                )
+                if attempt < self.max_batch_retries:
+                    time.sleep(1.0 * attempt)
+
+        # Fallback Graceful Degradation: parse using code regex heuristics
+        logger.error(
+            f"Batch {batch.batch_id} exhausted all {self.max_batch_retries} retries. "
+            f"Engaging code fallback. Reason: {last_error}"
+        )
+        return self._fallback_code_reconstruction(batch, str(last_error))
+
+    def reconstruct_all(self, batches: list[BatchPayload]) -> list[ReconstructedQuestion]:
+        """
+        Executes all planned batches concurrently using ThreadPoolExecutor.
+        Maintains order of completed batches.
+        """
+        if not batches:
+            return []
+
+        if len(batches) == 1:
+            return self.reconstruct_batch(batches[0])
+
+        all_questions: list[ReconstructedQuestion] = []
+        batch_results: dict[int, list[ReconstructedQuestion]] = {}
+
+        with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
+            future_to_idx = {
+                executor.submit(self.reconstruct_batch, batch): idx
+                for idx, batch in enumerate(batches)
+            }
+
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                try:
+                    questions = future.result()
+                    batch_results[idx] = questions
+                except Exception as ex:
+                    logger.error(f"Batch index {idx} failed with unhandled exception: {ex}")
+                    batch_results[idx] = self._fallback_code_reconstruction(batches[idx], str(ex))
+
+        # Re-assemble in original planned batch order
+        for idx in range(len(batches)):
+            if idx in batch_results:
+                all_questions.extend(batch_results[idx])
+
+        return all_questions
+
+    def _fallback_code_reconstruction(
+        self,
+        batch: BatchPayload,
+        error_msg: str
+    ) -> list[ReconstructedQuestion]:
+        """
+        Fallback deterministic parser extracting basic questions when AI batch fails completely.
+        Prevents full job failure (Graceful degradation).
+        """
+        fallback_questions: list[ReconstructedQuestion] = []
+        pat = re.compile(r"(?:^|\n)\s*(?:Câu|Bài|Question)\s*(\d+)[\s\.\:\)]", re.IGNORECASE)
+        matches = list(pat.finditer(batch.text_content))
+
+        opt_regex = re.compile(r"\b([A-D])[\.\)]\s*([^\n\rA-D\.]+)", re.IGNORECASE)
+
+        for i, m in enumerate(matches):
+            try:
+                q_num = int(m.group(1))
+            except ValueError:
+                q_num = i + 1
+
+            start_pos = m.end()
+            end_pos = matches[i + 1].start() if i + 1 < len(matches) else len(batch.text_content)
+            body = batch.text_content[start_pos:end_pos].strip()
+
+            options: list[QuestionOption] = []
+            for opt_label, opt_text in opt_regex.findall(body):
+                options.append(QuestionOption(label=opt_label.upper(), text=opt_text.strip()))
+
+            fallback_questions.append(
+                ReconstructedQuestion(
+                    id=f"fallback_b{batch.batch_id}_q{q_num}",
+                    number=q_num,
+                    source_number=q_num,
+                    type=QuestionType.PART_I_MCQ,
+                    stem=body,
+                    options=options,
+                    source_pages=list(batch.page_numbers),
+                    confidence=0.5,
+                    warnings=[f"Tạo bằng thuật toán dự phòng do AI thất bại: {error_msg}"]
+                )
+            )
+
+        return fallback_questions

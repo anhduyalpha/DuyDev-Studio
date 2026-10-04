@@ -28,11 +28,11 @@ import { studocuRoute } from './api/routes/studocu.route.js';
 import { authRoute } from './api/routes/auth.route.js';
 import { storageRoute } from './api/routes/storage.route.js';
 import { viewerRoute } from './api/routes/viewer.route.js';
-import { quizRoute } from './api/routes/quiz.route.js';
 import { JanitorService } from './services/janitor.service.js';
 import { StudocuDaemonService } from './services/studocu-daemon.service.js';
 import { getPdfWorker, closePdfWorker } from './workers/pdf.worker.js';
 import { getConverterWorker, closeConverterWorker } from './workers/converter.worker.js';
+import { quizRoute } from './api/routes/quiz.route.js';
 import { getQuizWorker, closeQuizWorker } from './workers/quiz.worker.js';
 
 export async function buildApp(): Promise<FastifyInstance> {

@@ -26,7 +26,59 @@ export interface QuizJobPayload {
   title: string;
   subtitle?: string;
   prefix: string;
+  stylePresetId?: string;
   apiKey?: string;
+}
+
+async function downloadGoogleDrivePdf(driveUrl: string, destPath: string): Promise<number> {
+  const match =
+    driveUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    driveUrl.match(/id=([a-zA-Z0-9_-]+)/) ||
+    driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!match) {
+    throw new Error('Đường dẫn Google Drive không hợp lệ hoặc không đúng định dạng');
+  }
+  const driveId = match[1];
+  const downloadUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+
+  const res = await fetch(downloadUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error('Không thể tải tài liệu từ Google Drive. Vui lòng kiểm tra quyền chia sẻ công khai.');
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('text/html')) {
+    const text = await res.text();
+    const confirmMatch =
+      text.match(/href="(\/uc\?export=download[^"]+)"/) ||
+      text.match(/confirm=([a-zA-Z0-9_-]+)/);
+    if (confirmMatch) {
+      const confirmUrl = confirmMatch[1].startsWith('http')
+        ? confirmMatch[1]
+        : `https://drive.google.com${confirmMatch[1].replace(/&amp;/g, '&')}`;
+      const res2 = await fetch(confirmUrl);
+      if (!res2.ok) {
+        throw new Error('Không thể tải tài liệu từ Google Drive sau bước xác nhận.');
+      }
+      const buffer = Buffer.from(await res2.arrayBuffer());
+      await fs.writeFile(destPath, buffer);
+      return buffer.length;
+    } else {
+      throw new Error('Không thể tải tài liệu từ Google Drive. Tệp có thể yêu cầu quyền truy cập hoặc bị giới hạn tải.');
+    }
+  }
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length < 100) {
+    throw new Error('Tệp tải từ Google Drive quá nhỏ hoặc không hợp lệ.');
+  }
+  await fs.writeFile(destPath, buffer);
+  return buffer.length;
 }
 
 function resolvePythonBin(): string {
@@ -74,6 +126,19 @@ interface PythonProgressEvent {
 function cleanQuizErrorMessage(rawErr: string): string {
   if (!rawErr) return 'Đã xảy ra lỗi không xác định khi tạo bài tập.';
   const lowerErr = rawErr.toLowerCase();
+
+  if (
+    lowerErr.includes('google drive') ||
+    lowerErr.includes('drive.google.com')
+  ) {
+    return 'Không thể tải tài liệu từ Google Drive. Vui lòng kiểm tra quyền chia sẻ công khai (Bất kỳ ai có đường liên kết).';
+  }
+  if (
+    lowerErr.includes('tệp nguồn') &&
+    (lowerErr.includes('không tồn tại') || lowerErr.includes('đã bị xóa') || lowerErr.includes('hết hạn'))
+  ) {
+    return 'Tệp PDF nguồn đã hết hạn hoặc không tồn tại. Vui lòng tải lại tệp.';
+  }
   if (
     lowerErr.includes('không có câu hỏi') ||
     lowerErr.includes('không tìm thấy câu hỏi') ||
@@ -81,12 +146,16 @@ function cleanQuizErrorMessage(rawErr: string): string {
   ) {
     const pageMatch = rawErr.match(/không\s*(?:có|tìm\s*thấy)\s*câu\s*hỏi\s*trong\s*([^,\.]+)/i);
     if (pageMatch) {
-      return `Không có câu hỏi trong ${pageMatch[1].trim()}, vui lòng chọn lại.`;
+      return `Không có câu hỏi trong ${pageMatch[1].trim()}, vui lòng kiểm tra lại số trang.`;
     }
-    return 'Không có câu hỏi trong trang, vui lòng chọn lại.';
+    return 'Không có câu hỏi trong trang đã chọn, vui lòng kiểm tra lại số trang.';
   }
-  if (lowerErr.includes('không chứa văn bản dạng số/vector') || lowerErr.includes('ảnh scan thuần túy')) {
-    return 'Trang đã chọn không chứa văn bản trắc nghiệm. Vui lòng chọn trang có lớp chữ hoặc OCR trước.';
+  if (
+    lowerErr.includes('không chứa văn bản') ||
+    lowerErr.includes('ảnh scan thuần túy') ||
+    lowerErr.includes('ảnh quét')
+  ) {
+    return 'Trang tài liệu dạng ảnh quét thuần túy không có lớp chữ số. Vui lòng chọn trang có văn bản rõ ràng.';
   }
   if (lowerErr.includes('vượt quá tổng số')) {
     const lastLine = rawErr.trim().split('\n').pop() || '';
@@ -111,13 +180,28 @@ function executeQuizEngine(
   pythonBin: string,
   scriptPath: string,
   args: string[],
-  onProgress: (pct: number, stage: string) => Promise<void>
+  onProgress: (pct: number, stage: string) => Promise<void>,
+  timeoutMs: number = 180000
 ): Promise<PythonProgressEvent> {
   return new Promise((resolve, reject) => {
     const child = spawn(pythonBin, [scriptPath, ...args]);
     let stderr = '';
     let finalResult: PythonProgressEvent | null = null;
     const pendingPromises: Promise<void>[] = [];
+    let isSettled = false;
+
+    const timer = setTimeout(() => {
+      if (!isSettled) {
+        isSettled = true;
+        child.kill('SIGTERM');
+        setTimeout(() => {
+          try {
+            child.kill('SIGKILL');
+          } catch {}
+        }, 3000);
+        reject(new Error('Quá trình xử lý bài tập trắc nghiệm vượt quá giới hạn thời gian (180s)'));
+      }
+    }, timeoutMs);
 
     const rl = readline.createInterface({ input: child.stdout });
     rl.on('line', (line) => {
@@ -142,22 +226,44 @@ function executeQuizEngine(
     });
 
     child.on('close', async (code) => {
+      clearTimeout(timer);
+      if (isSettled) return;
+      isSettled = true;
       await Promise.allSettled(pendingPromises);
       if (code === 0 && finalResult) return resolve(finalResult);
       if (code === 0) return resolve({ success: true });
+
+      // Check if stderr contains structured JSON error payload
+      try {
+        const lines = stderr.trim().split('\n').map((l) => l.trim()).filter(Boolean).reverse();
+        for (const line of lines) {
+          try {
+            const errJson = JSON.parse(line);
+            if (errJson && (errJson.error_code || errJson.message)) {
+              const customErr: any = new Error(errJson.message || cleanQuizErrorMessage(stderr));
+              customErr.errorCode = errJson.error_code || 'INTERNAL_ERROR';
+              customErr.diagnosticLayer = errJson.diagnostic_layer || null;
+              return reject(customErr);
+            }
+          } catch {}
+        }
+      } catch {}
 
       const cleaned = cleanQuizErrorMessage(stderr);
       return reject(new Error(cleaned || `Tiến trình Python gặp lỗi với mã thoát ${code}`));
     });
 
     child.on('error', (err) => {
+      clearTimeout(timer);
+      if (isSettled) return;
+      isSettled = true;
       reject(err);
     });
   });
 }
 
 export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
-  const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, apiKey } = payload;
+  const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, stylePresetId, apiKey } = payload;
   let isFinished = false;
   let tmpOutputDir: string | null = null;
 
@@ -176,7 +282,10 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       await publishJobEvent(jobId, 'progress', { jobId, percentage: pct, stage });
     };
 
-    let inputSource = gdriveUrl || '';
+    tmpOutputDir = path.resolve(process.cwd(), 'data', 'temp', `quiz_${jobId}`);
+    await fs.mkdir(tmpOutputDir, { recursive: true });
+
+    let inputSource = '';
     let originalSizeBytes = 0;
     if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
       const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
@@ -185,14 +294,16 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       }
       inputSource = fileRecord.storagePath;
       originalSizeBytes = Number(fileRecord.sizeBytes);
+    } else if (gdriveUrl && typeof gdriveUrl === 'string' && gdriveUrl.trim() !== '') {
+      await emitProgress(3, 'Đang tải tệp PDF từ Google Drive...');
+      const gdrivePdfPath = path.join(tmpOutputDir, 'gdrive_source.pdf');
+      originalSizeBytes = await downloadGoogleDrivePdf(gdriveUrl.trim(), gdrivePdfPath);
+      inputSource = gdrivePdfPath;
     }
 
     if (!inputSource) {
       throw new Error('Không tìm thấy nguồn tài liệu đầu vào (fileId hoặc gdriveUrl)');
     }
-
-    tmpOutputDir = path.resolve(process.cwd(), 'data', 'temp', `quiz_${jobId}`);
-    await fs.mkdir(tmpOutputDir, { recursive: true });
 
     const pythonBin = resolvePythonBin();
     const scriptPath = resolveQuizScript();
@@ -206,8 +317,13 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       '--title', title || 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
       '--subtitle', subtitle || '',
       '--prefix', cleanPrefix,
-      '--output-dir', tmpOutputDir
+      '--output-dir', tmpOutputDir,
+      '--job-id', jobId
     ];
+
+    if (stylePresetId) {
+      pyArgs.push('--style', stylePresetId);
+    }
 
     const effectiveKey = (apiKey || process.env.AGNES_AI_API_KEY || '').trim();
     if (effectiveKey) {
@@ -412,6 +528,8 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     isFinished = true;
     const rawMessage = err instanceof Error ? err.message : String(err);
     const errorMessage = cleanQuizErrorMessage(rawMessage);
+    const errorCode = (err as any)?.errorCode || 'INTERNAL_ERROR';
+    const diagnosticLayer = (err as any)?.diagnosticLayer || null;
     await prisma.job.update({
       where: { id: jobId },
       data: { status: 'FAILED', errorMessage }
@@ -419,9 +537,11 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     await publishJobEvent(jobId, 'failed', {
       jobId,
       error: errorMessage,
+      errorCode,
+      diagnosticLayer,
       timestamp: Math.floor(Date.now() / 1000)
     });
-    logger.error({ jobId, err, errorMessage }, 'Quiz job execution failed');
+    logger.error({ jobId, err, errorMessage, errorCode, diagnosticLayer }, 'Quiz job execution failed');
     throw new Error(errorMessage);
   } finally {
     if (tmpOutputDir) {

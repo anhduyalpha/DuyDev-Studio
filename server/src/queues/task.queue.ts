@@ -36,7 +36,16 @@ converterQueue.on('error', (err) => {
 });
 
 export const quizQueue = new Queue('ds-quiz-tasks', {
-  connection: redisConnection
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 2,
+    backoff: {
+      type: 'exponential',
+      delay: 3000
+    },
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 100 }
+  }
 });
 
 quizQueue.on('error', (err) => {

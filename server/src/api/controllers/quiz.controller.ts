@@ -3,23 +3,29 @@ import crypto from 'crypto';
 import { prisma } from '../../lib/prisma.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { createQuizJobSchema, parsePromptSchema } from '../../schemas/quiz.schema.js';
-import { enqueueQuizJob as enqueueToQuizQueue } from '../../queues/task.queue.js';
+import { enqueueQuizJob as enqueueQuizTask } from '../../queues/task.queue.js';
+import { isPermanentRetention } from '../../config/limits.config.js';
 import { logger } from '../../lib/logger.js';
 
 export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyReply) {
   const body = createQuizJobSchema.parse(request.body);
-  const { fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, apiKey } = body;
+  const { fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, stylePresetId } = body;
 
-  if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
+  let originalSizeBytes = 0;
+
+  if (fileId) {
     const fileRecord = await prisma.fileRecord.findUnique({
       where: { id: fileId }
     });
-    if (!fileRecord || fileRecord.isPurged) {
-      throw new NotFoundError(`Source file ${fileId} does not exist or has been deleted`);
+
+    if (!fileRecord || fileRecord.isPurged || (!isPermanentRetention && fileRecord.expiresAt <= new Date())) {
+      throw new NotFoundError(`Source file ${fileId} does not exist or has expired`);
     }
+
+    originalSizeBytes = Number(fileRecord.sizeBytes);
   }
 
-  const jobId = `job_quiz_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+  const jobId = `job_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
 
   const job = await prisma.job.create({
     data: {
@@ -27,12 +33,23 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
       type: 'quiz_generate',
       status: 'QUEUED',
       progress: 0,
-      optionsJson: JSON.stringify(body)
+      optionsJson: JSON.stringify({
+        fileId,
+        gdriveUrl,
+        pages,
+        count,
+        startNum,
+        title,
+        subtitle,
+        prefix,
+        stylePresetId: stylePresetId || 'blue_black_classic',
+        originalSizeBytes
+      })
     }
   });
 
   try {
-    await enqueueToQuizQueue({
+    await enqueueQuizTask({
       jobId: job.id,
       fileId,
       gdriveUrl,
@@ -42,7 +59,7 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
       title,
       subtitle,
       prefix,
-      apiKey
+      stylePresetId: stylePresetId || 'blue_black_classic'
     });
   } catch (queueErr) {
     logger.warn({ jobId: job.id, queueErr }, 'Queue enqueue failed, job remains QUEUED in database');
@@ -60,33 +77,30 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
 }
 
 export async function parsePromptIntent(request: FastifyRequest, reply: FastifyReply) {
-  const { prompt } = parsePromptSchema.parse(request.body);
-  const text = prompt.trim();
+  const body = parsePromptSchema.parse(request.body);
+  const text = (body.instruction || body.prompt || '').trim();
 
-  // Helper for deterministic offline regex extraction
+  // Helper for deterministic regex parsing
   function extractWithRegex(input: string) {
     let pages = '';
     let count = 20;
     let start = 1;
     let end: number | null = null;
 
-    // Pre-normalize spaced digits after "trang" or "page", e.g. "trang 1 1" -> "trang 11"
     let s = input.replace(/\b(?:trang|page)\s+(\d)\s+(\d)\b/gi, 'trang $1$2');
 
-    // 1. Regex parsing for pages:
-    // Range format: "trang 11-15", "trang 11 đến 15", "trang 11 tới 15", "từ trang 11 đến 15"
+    // 1. Regex parsing for pages
     const pageRangeMatch = s.match(/(?:(?:ở|tại|từ)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)[\s:]*(\d+)\s*(?:đến|tới|[-–—]|->)\s*(\d+)(?!\s*câu)/i);
     if (pageRangeMatch) {
       pages = `${pageRangeMatch[1]}-${pageRangeMatch[2]}`;
     } else {
-      // Single or comma-separated: "trang 11", "trang số 11", "trang 11,12", "page 11"
       const pageListMatch = s.match(/(?:(?:ở|tại|từ)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)[\s:]*(\d+(?:\s*[-–—]\s*\d+|\s*,\s*\d+(?!\d*\s*câu))*)/i);
       if (pageListMatch) {
         pages = pageListMatch[1].replace(/\s+/g, '');
       }
     }
 
-    // 2. Regex parsing for question range: "từ câu 18 đến 28", "câu 18 đến câu 28", "câu 18 tới 28", "câu 18 - câu 28"
+    // 2. Regex parsing for question range
     const rangeMatch = s.match(/(?:từ\s*)?câu\s*(\d+)\s*(?:đến|tới|-|–|—|->)\s*(?:câu\s*)?(\d+)/i);
     if (rangeMatch) {
       start = parseInt(rangeMatch[1], 10);
@@ -98,25 +112,22 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       }
       count = Math.max(1, end - start + 1);
     } else {
-      // Regex for question count: "20 câu", "lấy 25 câu", "làm 15 câu"
       const countMatch = s.match(/(?:lấy|làm|tạo|trích)?\s*(\d+)\s*câu/i);
       if (countMatch) {
         count = parseInt(countMatch[1], 10);
       }
-      // Regex for start number: "bắt đầu từ câu 5", "từ câu 5"
       const startMatch = s.match(/(?:bắt\s*đầu\s*)?(?:từ\s*)?câu\s*(\d+)/i);
       if (startMatch) {
         start = parseInt(startMatch[1], 10);
       }
     }
 
-    // 3. Regex parsing for prefix/topic if mentioned (e.g. "tên file Ester Lipid", "bài tập Ester Lipid", "Ester Lipid")
+    // 3. Regex parsing for prefix/topic
     let prefix = '';
     const topicMatch = s.match(/(?:tên\s*file|file|chủ\s*đề|chuyên\s*đề|bài\s*tập|đề)\s*[:=]?\s*([a-zA-Z0-9À-ỹ_\s-]+?)(?:,|$|\.|\n)/i);
     if (topicMatch) {
       prefix = topicMatch[1].trim();
     } else {
-      // Check trailing non-keyword part like "Trang 12, 11 câu, từ câu 18, Ester Lipid"
       const parts = s.split(/[,;\n]/).map((p) => p.trim()).filter(Boolean);
       for (const part of parts) {
         if (
@@ -133,7 +144,9 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     }
 
     const sanitizedPrefix = prefix ? prefix.replace(/[\\/*?:"<>|]/g, '').trim().replace(/\s+/g, '_') : '';
-    const title = pages ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pages}` : (prefix ? `BÀI TẬP TRẮC NGHIỆM ${prefix.toUpperCase()}` : 'BÀI TẬP TRẮC NGHIỆM');
+    const title = pages
+      ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pages}`
+      : (prefix ? `BÀI TẬP TRẮC NGHIỆM ${prefix.toUpperCase()}` : 'BÀI TẬP TRẮC NGHIỆM');
 
     return {
       pages,
@@ -141,12 +154,14 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       start,
       title,
       prefix: sanitizedPrefix,
+      confidence: 1.0,
+      warnings: [] as string[],
       source: 'regex'
     };
   }
 
-  // 1. AI-First: Delegate parsing to Agnes AI (agnes-3.0-flash)
-  const apiKey = process.env.AGNES_AI_API_KEY;
+  // 1. AI fallback if configured
+  const apiKey = process.env.AGNES_AI_API_KEY || process.env.AGNES_API_KEY;
   const baseUrl = process.env.AGNES_AI_BASE_URL || 'https://apihub.agnes-ai.com/v1';
   const model = process.env.AGNES_AI_MODEL || 'agnes-3.0-flash';
 
@@ -169,11 +184,11 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
               content:
                 'You are an expert Vietnamese exam parameter extractor for a quiz generator tool. Given a user request, extract parameters and respond strictly with JSON having this schema:\n' +
                 '{\n' +
-                '  "pages": string (e.g. "11", "11-15", "4,5,6" - only the page number(s) or ranges, empty string if not mentioned. IMPORTANT: Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
-                '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18, "câu 1 đến 16" -> 1),\n' +
-                '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, calculate count = Y - X + 1, e.g. from 18 to 28 inclusive is 11, from 1 to 16 inclusive is 16),\n' +
-                '  "title": string (formal Vietnamese exam uppercase title, e.g. "BÀI TẬP TRẮC NGHIỆM TRANG 11"),\n' +
-                '  "prefix": string (optional short clean topic or file name if explicitly mentioned in prompt, otherwise empty string "")\n' +
+                '  "pages": string (e.g. "11", "11-15", "4,5,6" - only the page number(s) or ranges. Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
+                '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18),\n' +
+                '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, count = Y - X + 1),\n' +
+                '  "title": string (formal Vietnamese exam uppercase title),\n' +
+                '  "prefix": string (optional short clean topic or file name if explicitly mentioned, otherwise "")\n' +
                 '}'
             },
             {
@@ -192,9 +207,6 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
           const regexDefaults = extractWithRegex(text);
           let pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
 
-          // CRITICAL SAFEGUARD: Reconcile pages between AI and Regex
-          // If regex explicitly identified a valid page (e.g. "11" or "11-15") from "trang ...",
-          // but AI mistakenly returned "1" or dropped digits (often confusing question 1 with page 11):
           if (regexDefaults.pages && regexDefaults.pages !== pagesRes) {
             if (regexDefaults.pages.includes(pagesRes) || pagesRes === '1' || !pagesRes) {
               logger.info({ aiPages: pagesRes, regexPages: regexDefaults.pages }, 'Correcting AI page misparse using regex');
@@ -209,15 +221,17 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
             countRes = regexDefaults.count;
           }
 
-          let titleRes = String(parsed.title || '').trim();
-          if (!titleRes || titleRes === 'BÀI TẬP TRẮC NGHIỆM' || (pagesRes && titleRes.match(/TRANG\s+1$/i) && pagesRes !== '1')) {
-            titleRes = pagesRes ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pagesRes}` : (regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM');
+          let titleRes = pagesRes
+            ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pagesRes}`
+            : (regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM');
+          if (text.match(/(?:tiêu\s*đề|title)/i) && parsed.title) {
+            titleRes = String(parsed.title).trim();
           }
 
           const rawPrefix = String(parsed.prefix || regexDefaults.prefix || '').trim();
           const prefixRes = rawPrefix ? rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') : '';
 
-          logger.info({ prompt: text, result: { pages: pagesRes, count: countRes, start: startRes, title: titleRes } }, 'Quiz prompt parsed');
+          logger.info({ prompt: text, result: { pages: pagesRes, count: countRes, start: startRes, title: titleRes } }, 'Quiz prompt parsed via AI');
 
           return reply.send({
             success: true,
@@ -227,6 +241,8 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
               start: startRes,
               title: titleRes,
               prefix: prefixRes,
+              confidence: 0.95,
+              warnings: [],
               source: 'ai'
             }
           });
@@ -237,7 +253,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     }
   }
 
-  // 2. Offline / Timeout Fallback: Enhanced Regex
+  // 2. Offline / Deterministic Regex
   const regexResult = extractWithRegex(text);
   return reply.send({
     success: true,

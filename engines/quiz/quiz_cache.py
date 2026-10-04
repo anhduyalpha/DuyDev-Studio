@@ -246,3 +246,37 @@ def set_extract_cache(
         write_json(f"extract_{key}", meta)
     except Exception:
         pass
+
+
+def get_perception_cache(pdf_path: str, page_range_spec: str) -> list[dict] | None:
+    """Retrieves cached DocumentRepresentation page dictionaries."""
+    if not is_cache_enabled():
+        return None
+    key = f"doc_rep_{extract_cache_key(pdf_path, page_range_spec)}"
+    data = read_json(key)
+    if data and isinstance(data, dict) and "pages" in data:
+        return data["pages"]
+    return None
+
+
+def set_perception_cache(pdf_path: str, page_range_spec: str, page_dicts: list[dict]) -> None:
+    """Saves DocumentRepresentation page dictionaries with 7-day TTL."""
+    if not is_cache_enabled():
+        return
+    key = f"doc_rep_{extract_cache_key(pdf_path, page_range_spec)}"
+    write_json(key, {"pages": page_dicts, "version": "v3.0.0"})
+
+
+def get_ai_reconstruct_cache(batch_hash: str) -> dict | None:
+    """Retrieves cached AI batch reconstruction response."""
+    if not is_cache_enabled():
+        return None
+    return read_json(f"ai_recon_{batch_hash}")
+
+
+def set_ai_reconstruct_cache(batch_hash: str, result_dict: dict) -> None:
+    """Saves AI batch reconstruction response with 7-day TTL."""
+    if not is_cache_enabled():
+        return
+    write_json(f"ai_recon_{batch_hash}", result_dict)
+

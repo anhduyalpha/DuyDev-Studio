@@ -4,7 +4,10 @@ Extracts questions (source_number, stem, options, confidence, raw) using regex w
 """
 
 import re
-from text_utils import is_section_banner, strip_section_banner, clean_image_markers
+try:
+    from text_utils import is_section_banner, strip_section_banner, clean_image_markers
+except ImportError:
+    from engines.quiz.text_utils import is_section_banner, strip_section_banner, clean_image_markers
 
 BOUNDARY = re.compile(r"(?:^|\n)(?=(?:Câu\s*\d+[\.\:\)\s]|\b\d+[\.\:]\s+))", re.IGNORECASE)
 NUM = re.compile(r"^\s*(?:Câu\s*)?(\d+)\s*(?:[\.\:\)]|\s+)", re.IGNORECASE)

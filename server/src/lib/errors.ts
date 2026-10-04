@@ -28,6 +28,19 @@ export const ErrorCodes = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 
+export const QuizErrorCodes = {
+  PDF_INVALID: 'PDF_INVALID',
+  SOURCE_FETCH_FAILED: 'SOURCE_FETCH_FAILED',
+  PDF_UNSUPPORTED: 'PDF_UNSUPPORTED',
+  PDF_SCAN_TOO_LOW_QUALITY: 'PDF_SCAN_TOO_LOW_QUALITY',
+  NO_QUESTIONS_FOUND: 'NO_QUESTIONS_FOUND',
+  AI_TIMEOUT: 'AI_TIMEOUT',
+  AI_RATE_LIMIT: 'AI_RATE_LIMIT',
+  AI_INVALID_OUTPUT: 'AI_INVALID_OUTPUT',
+  RENDER_FAILED: 'RENDER_FAILED',
+  QA_FAILED: 'QA_FAILED',
+} as const;
+
 export class BadRequestError extends AppError {
   constructor(message: string, details: unknown = null) {
     super(message, 400, ErrorCodes.BAD_REQUEST_PAYLOAD, details);
