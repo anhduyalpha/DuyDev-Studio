@@ -95,7 +95,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     if (!req.headers['content-type'] && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
       req.headers['content-type'] = 'application/json';
     }
-    logger.debug({ reqId: req.id, method: req.method, url: req.url }, 'Incoming request');
+    logger.debug({ reqId: req.id, method: req.method, url: req.url, range: req.headers.range }, 'Incoming request');
+  });
+
+  app.addHook('onResponse', async (req, reply) => {
+    if (req.url.startsWith('/api/v1/files/')) {
+      logger.info({
+        reqId: req.id,
+        method: req.method,
+        url: req.url,
+        status: reply.statusCode,
+        range: req.headers.range,
+        contentRange: reply.getHeader('content-range'),
+        contentLength: reply.getHeader('content-length'),
+        contentType: reply.getHeader('content-type')
+      }, 'Outgoing response');
+    }
   });
 
   // 5. Base Health Check Routes
