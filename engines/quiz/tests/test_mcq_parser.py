@@ -9,9 +9,19 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-sys.path.insert(0, os.path.dirname(__file__))
-from mcq_parser import parse_mcq_blocks, count_available_questions
-from text_utils import is_section_banner, strip_section_banner, clean_image_markers
+_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+_QUIZ_DIR = os.path.dirname(_TEST_DIR)
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_QUIZ_DIR))
+for p in (_QUIZ_DIR, _PROJECT_ROOT):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from engines.quiz.mcq_parser import parse_mcq_blocks, count_available_questions
+    from engines.quiz.text_utils import is_section_banner, strip_section_banner, clean_image_markers
+except ImportError:
+    from mcq_parser import parse_mcq_blocks, count_available_questions
+    from text_utils import is_section_banner, strip_section_banner, clean_image_markers
 
 
 class TestMCQParser(unittest.TestCase):
