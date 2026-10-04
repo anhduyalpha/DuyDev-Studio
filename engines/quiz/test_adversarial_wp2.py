@@ -30,6 +30,17 @@ from mcq_parser import parse_mcq_blocks
 
 
 class TestAdversarialQuizWP2(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._orig_cache_disabled = os.environ.get("QUIZ_CACHE_DISABLED")
+        os.environ["QUIZ_CACHE_DISABLED"] = "1"
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._orig_cache_disabled is not None:
+            os.environ["QUIZ_CACHE_DISABLED"] = cls._orig_cache_disabled
+        else:
+            os.environ.pop("QUIZ_CACHE_DISABLED", None)
 
     # =========================================================================
     # CATEGORY 1: SHA1 Dedup & Stem Normalization

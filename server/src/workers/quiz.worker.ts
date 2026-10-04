@@ -221,7 +221,34 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     }
 
     await emitProgress(5, 'Đang khởi chạy tiến trình trích xuất câu hỏi...');
-    const resultMeta = await executeQuizEngine(pythonBin, scriptPath, pyArgs, emitProgress);
+    let resultMeta: PythonProgressEvent;
+    try {
+      resultMeta = await executeQuizEngine(pythonBin, scriptPath, pyArgs, emitProgress);
+    } catch (engineErr) {
+      // Defensive recovery: If Python threw an error near completion (e.g. process termination race),
+      // check if both output PDF files were already written to disk and are non-empty.
+      const wsTmpFallback = path.join(tmpOutputDir, `${cleanPrefix}_DeBai.pdf`);
+      const ansTmpFallback = path.join(tmpOutputDir, `${cleanPrefix}_DapAn.pdf`);
+      if (existsSync(wsTmpFallback) && existsSync(ansTmpFallback)) {
+        const wsS = await fs.stat(wsTmpFallback).catch(() => null);
+        const ansS = await fs.stat(ansTmpFallback).catch(() => null);
+        if (wsS && wsS.size > 2000 && ansS && ansS.size > 2000) {
+          logger.warn({ jobId, engineErr }, 'Recovered quiz output files from disk despite engine exit error');
+          resultMeta = {
+            success: true,
+            worksheet_pdf: wsTmpFallback,
+            answer_pdf: ansTmpFallback,
+            worksheet_pages: 1,
+            answer_pages: 1,
+            questions_count: count
+          };
+        } else {
+          throw engineErr;
+        }
+      } else {
+        throw engineErr;
+      }
+    }
 
     const wsTmpPath = resultMeta.worksheet_pdf || path.join(tmpOutputDir, `${cleanPrefix}_DeBai.pdf`);
     const ansTmpPath = resultMeta.answer_pdf || path.join(tmpOutputDir, `${cleanPrefix}_DapAn.pdf`);

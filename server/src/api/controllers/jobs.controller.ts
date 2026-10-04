@@ -144,7 +144,7 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
     } catch {
       cleanup();
     }
-  }, 12000);
+  }, 5000);
 
   const cleanup = async () => {
     if (isCleanedUp) return;

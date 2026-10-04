@@ -13,6 +13,7 @@ import time
 import tempfile
 import argparse
 import subprocess
+import signal
 import urllib.request
 import urllib.error
 import http.client
@@ -64,6 +65,8 @@ def emit_progress(pct: int, stage: str) -> None:
 def find_chrome_path() -> str:
     """Auto-detect Google Chrome / Chromium executable path across Windows and Linux."""
     candidates = [
+        # Linux direct binary (avoids bash wrapper script and cat subshells)
+        "/opt/google/chrome/chrome",
         # Linux standard paths
         "/usr/bin/google-chrome",
         "/usr/bin/google-chrome-stable",
@@ -88,7 +91,7 @@ def find_chrome_path() -> str:
             if found:
                 return found
 
-    return "google-chrome" if sys.platform != "win32" else candidates[5]
+    return "/opt/google/chrome/chrome" if (sys.platform != "win32" and os.path.exists("/opt/google/chrome/chrome")) else ("google-chrome" if sys.platform != "win32" else candidates[6])
 
 
 def download_gdrive_if_needed(url_or_path: str, temp_dir: str) -> str:
@@ -2149,7 +2152,31 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict]) -
 # PDF COMPILATION & VERIFICATION
 # ==============================================================================
 
-def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
+def _terminate_proc_safely(p: subprocess.Popen) -> None:
+    """Defensively terminate process and its child processes on POSIX and Windows."""
+    if p.poll() is not None:
+        return
+    if sys.platform != "win32":
+        try:
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            p.wait(timeout=2)
+        except Exception:
+            try:
+                os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+            except Exception:
+                pass
+    else:
+        try:
+            p.terminate()
+            p.wait(timeout=2)
+        except Exception:
+            try:
+                p.kill()
+            except Exception:
+                pass
+
+
+def compile_pdf(chrome_path: str, html_path: str, pdf_path: str, timeout: float = None) -> None:
     """Compile HTML to PDF using Google Chrome Headless with active file polling and graceful process termination."""
     abs_html = os.path.abspath(html_path)
     abs_pdf = os.path.abspath(pdf_path)
@@ -2165,6 +2192,13 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
     os.makedirs(temp_profile, exist_ok=True)
 
     file_url = f"file:///{abs_html.replace(os.sep, '/')}" if sys.platform == "win32" else f"file://{abs_html}"
+
+    effective_timeout = timeout
+    if effective_timeout is None:
+        try:
+            effective_timeout = float(os.environ.get("QUIZ_CHROME_TIMEOUT", "45.0"))
+        except (ValueError, TypeError):
+            effective_timeout = 45.0
 
     def run_chrome_worker(headless_flag: str) -> bool:
         cmd = [
@@ -2183,7 +2217,6 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
             "--disable-sync",
             "--mute-audio",
             "--allow-file-access-from-files",
-            "--virtual-time-budget=8000",
             "--run-all-compositor-stages-before-draw",
             "--disable-features=NetworkService",
             f"--user-data-dir={temp_profile}",
@@ -2202,42 +2235,30 @@ def compile_pdf(chrome_path: str, html_path: str, pdf_path: str) -> None:
         proc = subprocess.Popen(cmd, **popen_kwargs)
 
         start_time = time.time()
-        while time.time() - start_time < 15:
+        while time.time() - start_time < effective_timeout:
+            # Active check if PDF has been generated with valid size (> 1000 bytes)
             if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
                 time.sleep(0.3)
-                if proc.poll() is None:
-                    try:
-                        proc.terminate()
-                        proc.wait(timeout=2)
-                    except Exception:
-                        try:
-                            proc.kill()
-                        except Exception:
-                            pass
+                _terminate_proc_safely(proc)
                 return True
 
+            # If Chrome process exited, give disk flushing grace period up to 6 seconds
             if proc.poll() is not None:
-                time.sleep(0.5)
-                if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
-                    return True
+                flush_start = time.time()
+                while time.time() - flush_start < 6.0:
+                    if os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000:
+                        return True
+                    time.sleep(0.2)
                 break
 
-            time.sleep(0.3)
+            time.sleep(0.25)
 
-        if proc.poll() is None:
-            try:
-                proc.terminate()
-                proc.wait(timeout=2)
-            except Exception:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
-
+        _terminate_proc_safely(proc)
         return os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000
 
     success = run_chrome_worker("--headless=new")
-    if not success:
+    if not success and not (os.path.exists(abs_pdf) and os.path.getsize(abs_pdf) > 1000):
+        # Fallback to --headless only if new headless failed to produce file
         success = run_chrome_worker("--headless")
 
     try:
