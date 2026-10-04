@@ -231,7 +231,7 @@ function renderDropboxItem(pair, isTrash) {
                 class="btn-quiz-history-preview py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center justify-center gap-1.5 border border-zinc-800 transition cursor-pointer"
                 data-file-id="${ws.fileId}"
                 data-file-name="${escapeHtml(ws.fileName)}"
-                data-view-url="${ws.viewUrl || ''}"
+                data-view-url="${ws.viewUrl || (ws.fileId ? `/api/v1/files/view/${ws.fileId}` : '')}"
                 data-download-url="${ws.downloadUrl || ''}"
               >
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
@@ -275,7 +275,7 @@ function renderDropboxItem(pair, isTrash) {
                 class="btn-quiz-history-preview py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center justify-center gap-1.5 border border-zinc-800 transition cursor-pointer"
                 data-file-id="${ans.fileId}"
                 data-file-name="${escapeHtml(ans.fileName)}"
-                data-view-url="${ans.viewUrl || ''}"
+                data-view-url="${ans.viewUrl || (ans.fileId ? `/api/v1/files/view/${ans.fileId}` : '')}"
                 data-download-url="${ans.downloadUrl || ''}"
               >
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>

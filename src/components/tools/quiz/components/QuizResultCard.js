@@ -67,6 +67,7 @@ function renderCompletedState(state) {
   const wsSize = ws.sizeBytes || ws.size || 0;
   const wsEncoded = encodeURIComponent(wsName);
   const wsDownloadUrl = ws.downloadUrl || (wsId ? `/api/v1/files/download/${wsId}/${wsEncoded}?filename=${wsEncoded}` : '#');
+  const wsViewUrl = ws.viewUrl || (wsId ? `/api/v1/files/view/${wsId}/${wsEncoded}` : '');
 
   const ansId = ans.fileId || ans.id || '';
   const ansName = ans.fileName || ans.name || 'DapAn.pdf';
@@ -74,6 +75,7 @@ function renderCompletedState(state) {
   const ansSize = ans.sizeBytes || ans.size || 0;
   const ansEncoded = encodeURIComponent(ansName);
   const ansDownloadUrl = ans.downloadUrl || (ansId ? `/api/v1/files/download/${ansId}/${ansEncoded}?filename=${ansEncoded}` : '#');
+  const ansViewUrl = ans.viewUrl || (ansId ? `/api/v1/files/view/${ansId}/${ansEncoded}` : '');
 
   const imgBadge = imagesCount > 0
     ? `<span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">${imagesCount} hình vẽ</span>`
@@ -126,7 +128,7 @@ function renderCompletedState(state) {
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${ws.viewUrl || ''}" data-download-url="${wsDownloadUrl || ''}">
+            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${wsViewUrl}" data-download-url="${wsDownloadUrl || ''}">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
@@ -152,7 +154,7 @@ function renderCompletedState(state) {
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ans.viewUrl || ''}" data-download-url="${ansDownloadUrl || ''}">
+            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ansViewUrl}" data-download-url="${ansDownloadUrl || ''}">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>

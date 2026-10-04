@@ -146,23 +146,43 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
     reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedFilename}`);
   }
   reply.header('Accept-Ranges', 'bytes');
+  reply.header('Cache-Control', 'public, max-age=3600');
 
-  // Handle Range requests (HTTP 206 Partial Content) for seeking & audio/video streams
+  // Handle Range requests (HTTP 206 Partial Content) according to RFC 7233
   const rangeHeader = request.headers.range;
   if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-    const parts = rangeHeader.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+    const parts = rangeHeader.replace(/bytes=/, '').trim().split('-');
+    let start: number;
+    let end: number;
 
-    if (!isNaN(start) && start < totalSize && end >= start) {
-      const clampedEnd = Math.min(end, totalSize - 1);
-      const chunkSize = (clampedEnd - start) + 1;
-
-      reply.status(206);
-      reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${totalSize}`);
-      reply.header('Content-Length', chunkSize.toString());
-      return reply.send(fs.createReadStream(fileRecord.storagePath, { start, end: clampedEnd }));
+    if (parts[0] === '' && parts[1]) {
+      // Suffix byte range: bytes=-N (e.g. bytes=-65536)
+      const suffix = parseInt(parts[1], 10);
+      if (isNaN(suffix) || suffix <= 0) {
+        reply.status(416);
+        reply.header('Content-Range', `bytes */${totalSize}`);
+        return reply.send();
+      }
+      start = Math.max(0, totalSize - suffix);
+      end = totalSize - 1;
+    } else {
+      start = parseInt(parts[0], 10);
+      end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
     }
+
+    if (isNaN(start) || isNaN(end) || start >= totalSize || end < start) {
+      reply.status(416);
+      reply.header('Content-Range', `bytes */${totalSize}`);
+      return reply.send();
+    }
+
+    const clampedEnd = Math.min(end, totalSize - 1);
+    const chunkSize = (clampedEnd - start) + 1;
+
+    reply.status(206);
+    reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${totalSize}`);
+    reply.header('Content-Length', chunkSize.toString());
+    return reply.send(fs.createReadStream(fileRecord.storagePath, { start, end: clampedEnd }));
   }
 
   reply.header('Content-Length', totalSize.toString());

@@ -98,20 +98,6 @@ export async function buildApp(): Promise<FastifyInstance> {
     logger.debug({ reqId: req.id, method: req.method, url: req.url, range: req.headers.range }, 'Incoming request');
   });
 
-  app.addHook('onResponse', async (req, reply) => {
-    if (req.url.startsWith('/api/v1/files/')) {
-      logger.info({
-        reqId: req.id,
-        method: req.method,
-        url: req.url,
-        status: reply.statusCode,
-        range: req.headers.range,
-        contentRange: reply.getHeader('content-range'),
-        contentLength: reply.getHeader('content-length'),
-        contentType: reply.getHeader('content-type')
-      }, 'Outgoing response');
-    }
-  });
 
   // 5. Base Health Check Routes
   app.get('/health', async () => ({ status: 'UP', timestamp: new Date().toISOString() }));
