@@ -89,6 +89,56 @@ class TestLayoutSolver(unittest.TestCase):
         self.assertIn("opt-col-1", css)
         self.assertIn("ĐỀ KIỂM TRA HÓA HỌC", css)
 
+        # Header title and metadata rules
+        self.assertIn(".exam-header-title", css)
+        self.assertIn("font-size: 15pt;", css)
+        self.assertIn("text-align: center;", css)
+        self.assertIn(".exam-header-meta", css)
+
+        # Obsolete purged rules must be absent
+        self.assertNotIn(".student-info-box", css)
+        self.assertNotIn(".section-instruction", css)
+
+    def test_plan_atomic_pagination_independent_of_student_info_preset(self):
+        from engines.quiz.ir.models import CanonicalDocumentIR, DocumentMetadataIR, SectionIR, SectionType
+        q_list = [
+            QuestionIR(
+                id=f"q_{i}",
+                number=i,
+                source_number=i,
+                stem=f"Câu hỏi số {i} nội dung tiêu chuẩn.",
+                type=SectionType.PART_I_MCQ,
+                options=[
+                    OptionIR(label="A", text="Phương án A"),
+                    OptionIR(label="B", text="Phương án B"),
+                    OptionIR(label="C", text="Phương án C"),
+                    OptionIR(label="D", text="Phương án D"),
+                ],
+            )
+            for i in range(1, 15)
+        ]
+        sec = SectionIR(
+            id="sec_1",
+            title="PHẦN I",
+            type=SectionType.PART_I_MCQ,
+            question_ids=[q.id for q in q_list],
+        )
+        doc_ir = CanonicalDocumentIR(
+            metadata=DocumentMetadataIR(title="KIỂM TRA", total_questions=14, created_at="2026-10-04T00:00:00Z"),
+            sections=[sec],
+            questions=q_list,
+        )
+
+        preset_false = BLUE_BLACK_CLASSIC_STYLE.model_copy(update={"show_student_info": False})
+        preset_true = BLUE_BLACK_CLASSIC_STYLE.model_copy(update={"show_student_info": True})
+
+        breaks_false = LayoutSolver.plan_atomic_pagination(doc_ir, preset_false)
+        breaks_true = LayoutSolver.plan_atomic_pagination(doc_ir, preset_true)
+
+        # Because student info box is completely removed from the DOM,
+        # pagination breaks must be identical regardless of show_student_info flag.
+        self.assertEqual(breaks_false, breaks_true)
+
 
 if __name__ == "__main__":
     unittest.main()

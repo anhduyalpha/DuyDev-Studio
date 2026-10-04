@@ -142,9 +142,17 @@ class TestDocumentHTMLRenderer(unittest.TestCase):
         self.assertIn("Mã đề: 101", worksheet_html)
         self.assertIn("45 phút", worksheet_html)
 
-        # Student info box
-        self.assertIn("Họ và tên thí sinh", worksheet_html)
-        self.assertIn("Số báo danh", worksheet_html)
+        # Centered Exam Title
+        self.assertIn('class="exam-header-title"', worksheet_html)
+
+        # Student info box must be completely removed
+        self.assertNotIn("Họ và tên thí sinh", worksheet_html)
+        self.assertNotIn("Số báo danh", worksheet_html)
+        self.assertNotIn("student-info-box", worksheet_html)
+
+        # Section instruction line must be completely removed
+        self.assertNotIn("section-instruction", worksheet_html)
+        self.assertNotIn("Thí sinh trả lời", worksheet_html)
 
         # Section banners
         self.assertIn("PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN", worksheet_html)

@@ -36,7 +36,7 @@ class StylePreset(BaseModel):
     line_height: float = 1.45
     
     # Components & Layout
-    show_student_info: bool = True
+    show_student_info: bool = False
     show_decor_lines: bool = True
     question_num_color: str = "#1e3a8a"
     option_letter_color: str = "#1e3a8a"
@@ -61,7 +61,7 @@ BLUE_BLACK_CLASSIC_STYLE = StylePreset(
     accent_border="#93c5fd",
     font_size_pt=10.0,
     line_height=1.45,
-    show_student_info=True,
+    show_student_info=False,
     show_decor_lines=True,
 )
 

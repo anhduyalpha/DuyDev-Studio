@@ -211,14 +211,13 @@ class TestGoldenRegression35To46(unittest.TestCase):
         self.assertNotIn("Câu 34:", full_text)
         self.assertNotIn("Câu 47:", full_text)
 
-        # 4. Dynamic Section Header Instruction Invariant
-        self.assertIn(
-            "từ câu 35 đến câu 46",
-            full_text,
-            "Header instruction must dynamically reflect bounds 'từ câu 35 đến câu 46'",
-        )
+        # 4. Section Instruction & Student Info Invariants: completely removed
+        self.assertNotIn("Thí sinh trả lời", full_text, "Found unwanted 'Thí sinh trả lời' instruction in rendered PDF")
+        self.assertNotIn("từ câu 35 đến câu 46", full_text, "Section bounds instruction line must be completely removed")
         self.assertNotIn("đến câu N", full_text, "Found unresolved 'N' placeholder in header")
         self.assertNotIn("câu 1 đến câu 12", full_text, "Header should not falsely state 'từ câu 1 đến câu 12'")
+        self.assertNotIn("Họ và tên thí sinh", full_text, "Student info box must be completely removed from PDF")
+        self.assertNotIn("Số báo danh", full_text, "Student info box must be completely removed from PDF")
 
         # 5. Question 41 Rich Visual Asset Invariant (PDF and Rendered Page)
         q41_page_idx = -1

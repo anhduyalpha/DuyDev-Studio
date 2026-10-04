@@ -119,7 +119,8 @@ class LayoutSolver:
         margin_bottom_pt = preset.margin_bottom_mm * pt_per_mm
 
         usable_height_pt = std_height_pt - (margin_top_pt + margin_bottom_pt) - 24.0
-        current_used_pt = 55.0 + (35.0 if preset.show_student_info else 0.0)
+        title_extra_pt = 18.0 if len(doc_ir.metadata.title) > 50 else 0.0
+        current_used_pt = 55.0 + title_extra_pt
 
         q_map = {q.id: q for q in doc_ir.questions}
         ordered_sections = doc_ir.sections or [
@@ -138,7 +139,7 @@ class LayoutSolver:
             if not sec_questions:
                 continue
 
-            banner_height = 28.0 + (16.0 if sec.instruction else 0.0)
+            banner_height = 28.0
 
             # Check if section banner + at least first question fits on current page
             first_q = sec_questions[0]
@@ -255,28 +256,38 @@ body {{
   page-break-inside: avoid !important;
 }}
 
-.section-instruction {{
-  break-after: avoid !important;
-  page-break-after: avoid !important;
-}}
 
 .exam-header {{
   break-after: avoid !important;
   page-break-after: avoid !important;
+  text-align: center;
   margin-bottom: 8pt;
   border-bottom: 1.5pt solid {preset.primary_color};
   padding-bottom: 6pt;
 }}
 
-.student-info-box {{
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
-  border: 1pt dashed {preset.border_color};
-  background-color: {preset.accent_bg};
-  padding: 5pt 10pt;
-  margin-bottom: 10pt;
-  border-radius: 3pt;
+.exam-header-title {{
+  font-family: {preset.font_family_heading};
+  font-size: 15pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+  color: {preset.primary_color};
+  letter-spacing: 0.3pt;
+  line-height: 1.35;
+  margin-bottom: 4pt;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}}
+
+.exam-header-meta {{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4pt 14pt;
   font-size: 9pt;
+  color: {preset.text_color};
 }}
 
 /* === Section Banners === */
@@ -288,20 +299,12 @@ body {{
   font-weight: bold;
   padding: 3.5pt 8pt;
   margin-top: 8pt;
-  margin-bottom: 4pt;
+  margin-bottom: 6pt;
   border-radius: 2pt;
   letter-spacing: 0.2pt;
   display: flex;
   justify-content: space-between;
   align-items: center;
-}}
-
-.section-instruction {{
-  font-size: 8.5pt;
-  font-style: italic;
-  color: {preset.muted_color};
-  margin-bottom: 7pt;
-  padding-left: 2pt;
 }}
 
 /* === Question & Options Typography === */

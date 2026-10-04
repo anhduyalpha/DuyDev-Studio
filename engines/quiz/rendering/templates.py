@@ -162,37 +162,21 @@ def render_worksheet_document(
 
     # Header block
     grade_str = f" - Lớp {meta.grade}" if meta.grade else ""
-    exam_code_str = f'<div style="font-weight: bold;">Mã đề: {meta.exam_code}</div>' if meta.exam_code else ""
+    exam_code_str = f'<span><strong>Mã đề: {html.escape(meta.exam_code)}</strong></span>' if meta.exam_code else ""
     duration_str = f"{meta.duration_minutes} phút" if meta.duration_minutes else "45-50 phút"
 
     header_html = f"""
-  <header class="exam-header">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-      <div>
-        <div style="font-weight: bold; font-size: 11.5pt; text-transform: uppercase; color: {preset.primary_color};">
-          {html.escape(meta.title)}
-        </div>
-        <div style="font-size: 9.5pt; color: {preset.text_color}; margin-top: 2pt;">
-          Môn học: <strong>{html.escape(meta.subject)}</strong>{html.escape(grade_str)}
-        </div>
-      </div>
-      <div style="text-align: right; font-size: 8.5pt; color: {preset.muted_color};">
-        {exam_code_str}
-        <div>Thời gian làm bài: {duration_str}</div>
-        <div>Tổng số câu hỏi: {meta.total_questions} câu</div>
-      </div>
+  <header class="exam-header" style="text-align: center;">
+    <div class="exam-header-title" style="font-family: {preset.font_family_heading}; font-size: 15pt; font-weight: bold; text-transform: uppercase; text-align: center; color: {preset.primary_color}; letter-spacing: 0.3pt; line-height: 1.35; margin-bottom: 4pt; word-wrap: break-word; overflow-wrap: break-word;">
+      {html.escape(meta.title)}
+    </div>
+    <div class="exam-header-meta" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4pt 14pt; font-size: 9pt; color: {preset.text_color};">
+      <span>Môn học: <strong>{html.escape(meta.subject)}</strong>{html.escape(grade_str)}</span>
+      {exam_code_str}
+      <span>Thời gian làm bài: {duration_str}</span>
+      <span>Tổng số câu hỏi: {meta.total_questions} câu</span>
     </div>
   </header>"""
-
-    student_box_html = ""
-    if preset.show_student_info:
-        student_box_html = """
-  <div class="student-info-box">
-    <div style="display: flex; justify-content: space-between;">
-      <span>Họ và tên thí sinh: ............................................................................</span>
-      <span>Lớp: .................... Số báo danh: ....................</span>
-    </div>
-  </div>"""
 
     # Group questions by section
     sections_html: list[str] = []
@@ -211,21 +195,6 @@ def render_worksheet_document(
       <span style="font-size: 8.5pt; font-weight: normal;">({len(sec_questions)} câu)</span>
     </div>"""
 
-            inst_text = sec.instruction
-            if inst_text and sec_questions:
-                min_q = min(q.number for q in sec_questions)
-                max_q = max(q.number for q in sec_questions)
-                range_str = f"câu {min_q}" if min_q == max_q else f"từ câu {min_q} đến câu {max_q}"
-                # Normalize any leftover placeholder 'N' or legacy 'từ câu 1 đến câu N'
-                if re.search(r"(?:từ\s+câu\s+1\s+đến\s+câu\s+(?:N|\d+)|đến\s+câu\s+N\b|\bcâu\s+N\b)", inst_text, re.IGNORECASE):
-                    if min_q > 1 and re.search(r"từ\s+câu\s+1\s+đến\s+câu\s+\d+", inst_text, re.IGNORECASE):
-                        inst_text = re.sub(r"từ\s+câu\s+1\s+đến\s+câu\s+\d+", range_str, inst_text, flags=re.IGNORECASE)
-                    inst_text = re.sub(r"từ\s+câu\s+1\s+đến\s+câu\s+N\b", range_str, inst_text, flags=re.IGNORECASE)
-                    inst_text = re.sub(r"đến\s+câu\s+N\b", f"đến câu {max_q}", inst_text, flags=re.IGNORECASE)
-                    inst_text = re.sub(r"\bcâu\s+N\b", f"câu {max_q}", inst_text, flags=re.IGNORECASE)
-
-            inst_html = f'<div class="section-instruction">{html.escape(inst_text)}</div>' if inst_text else ""
-
             rendered_q_items: list[str] = []
             for q in sec_questions:
                 break_before = (q.id in planned_breaks)
@@ -234,7 +203,6 @@ def render_worksheet_document(
             sections_html.append(f"""
   <section class="exam-section">
     {sec_banner}
-    {inst_html}
     {"".join(rendered_q_items)}
   </section>""")
     else:
@@ -261,7 +229,6 @@ def render_worksheet_document(
 </head>
 <body>
   {header_html}
-  {student_box_html}
   {"".join(sections_html)}
   <div class="exam-end-mark">--- HẾT ---</div>
 
