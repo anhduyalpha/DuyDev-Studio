@@ -209,15 +209,15 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       '--output-dir', tmpOutputDir
     ];
 
-    const effectiveKey = apiKey || process.env.AGNES_AI_API_KEY;
+    const effectiveKey = (apiKey || process.env.AGNES_AI_API_KEY || '').trim();
     if (effectiveKey) {
       pyArgs.push('--api-key', effectiveKey);
     }
     if (process.env.AGNES_AI_BASE_URL) {
-      pyArgs.push('--base-url', process.env.AGNES_AI_BASE_URL);
+      pyArgs.push('--base-url', process.env.AGNES_AI_BASE_URL.trim());
     }
     if (process.env.AGNES_AI_MODEL) {
-      pyArgs.push('--model', process.env.AGNES_AI_MODEL);
+      pyArgs.push('--model', process.env.AGNES_AI_MODEL.trim());
     }
 
     await emitProgress(5, 'Đang khởi chạy tiến trình trích xuất câu hỏi...');

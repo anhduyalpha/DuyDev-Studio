@@ -42,9 +42,9 @@ if sys.platform == "win32":
         pass
 
 
-DEFAULT_API_BASE = os.environ.get("AGNES_AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
-DEFAULT_MODEL = os.environ.get("AGNES_AI_MODEL", "agnes-3.0-flash")
-DEFAULT_API_KEY = os.environ.get("AGNES_AI_API_KEY", "")
+DEFAULT_API_BASE = os.environ.get("AGNES_AI_BASE_URL", "https://apihub.agnes-ai.com/v1").strip()
+DEFAULT_MODEL = os.environ.get("AGNES_AI_MODEL", "agnes-3.0-flash").strip()
+DEFAULT_API_KEY = os.environ.get("AGNES_AI_API_KEY", "").strip()
 
 _EMIT_LOCK = threading.Lock()
 
