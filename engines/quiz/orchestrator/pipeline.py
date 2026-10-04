@@ -32,7 +32,8 @@ from engines.quiz.qa.geometry_qa import validate_pdf_geometry
 from engines.quiz.qa.semantic_qa import validate_semantic_integrity
 from engines.quiz.qa.vision_qa import run_selective_vision_qa
 from engines.quiz.qa.repair import SafeRepairEngine
-from engines.quiz.qa.models import OverallQAResult, QAIssueType
+from engines.quiz.qa.final_validator import validate_final_pdf
+from engines.quiz.qa.models import OverallQAResult, QAIssueType, QASeverity
 from engines.quiz.orchestrator.state import JobStage, JobState, JobStateManager
 
 
@@ -251,6 +252,7 @@ class QuizPipelineOrchestrator:
                 emit(JobStage.QA, 85 + iteration * 3, f"Thực hiện kiểm định đa tầng QA (Lần {iteration + 1})")
                 geom_result = validate_pdf_geometry(debai_pdf_path, doc_ir=doc_ir)
                 sem_result = validate_semantic_integrity(doc_ir, debai_pdf_path, dapan_pdf_path)
+                final_qa = validate_final_pdf(debai_pdf_path, doc_ir=doc_ir, dapan_pdf_path=dapan_pdf_path)
 
                 flagged_pages = [i.page for i in geom_result.issues if i.page > 0]
                 rich_pages = sorted({
@@ -266,12 +268,13 @@ class QuizPipelineOrchestrator:
                     provider=self.provider,
                 )
 
+                qa_passed = geom_result.is_pass() and sem_result.is_pass() and vis_result.is_pass() and final_qa.is_pass()
                 overall_qa = OverallQAResult(
-                    status="PASS" if (geom_result.is_pass() and sem_result.is_pass() and vis_result.is_pass()) else "FAIL",
+                    status="PASS" if qa_passed else "FAIL",
                     geometry=geom_result,
                     semantic=sem_result,
                     vision=vis_result,
-                    requires_repair=not (geom_result.is_pass() and sem_result.is_pass()),
+                    requires_repair=not qa_passed,
                 )
 
                 state.diagnostics.append(
@@ -280,6 +283,7 @@ class QuizPipelineOrchestrator:
                         "overall_status": overall_qa.status,
                         "geometry_issues": len(geom_result.issues),
                         "semantic_issues": len(sem_result.issues),
+                        "final_qa_issues": len(final_qa.issues),
                     }
                 )
 
@@ -288,7 +292,7 @@ class QuizPipelineOrchestrator:
                     break
 
                 # Extract split question IDs to force atomic page breaks on retry
-                for issue in geom_result.issues:
+                for issue in (geom_result.issues + final_qa.issues):
                     if issue.type == QAIssueType.SPLIT_QUESTION:
                         m_qid = re.search(r"qid=([a-zA-Z0-9_\-]+)", issue.description)
                         if m_qid:
@@ -341,6 +345,22 @@ class QuizPipelineOrchestrator:
                     stage=JobStage.FINALIZING.value
                 )
 
+            # Strict Final Gate Execution
+            gate_qa = validate_final_pdf(debai_pdf_path, doc_ir=doc_ir, dapan_pdf_path=dapan_pdf_path)
+            if not gate_qa.is_pass():
+                crit_issues = [
+                    i.description for i in gate_qa.issues
+                    if i.severity in (QASeverity.CRITICAL, QASeverity.HIGH)
+                ]
+                err_msg = "; ".join(crit_issues[:3]) if crit_issues else "Kiểm định chất lượng cuối cùng không đạt chuẩn."
+                raise QuizEngineError(
+                    ErrorCode.QA_FAILED,
+                    DiagnosticLayer.QA_FAILURE,
+                    f"Kiểm định chất lượng xuất bản thất bại: {err_msg}",
+                    stage=JobStage.FINALIZING.value,
+                    details={"issues": [i.model_dump() for i in gate_qa.issues]}
+                )
+
             total_latency_ms = (time.perf_counter() - start_total_time) * 1000
             ai_summary = self.provider.tracker.get_summary() if hasattr(self.provider, "tracker") else {}
 
@@ -356,6 +376,7 @@ class QuizPipelineOrchestrator:
                 "dapan_pdf": dapan_pdf_path,
                 "debai_html": os.path.join(output_dir, f"{clean_prefix}_DeBai.html"),
                 "dapan_html": os.path.join(output_dir, f"{clean_prefix}_DapAn.html"),
+                "doc_ir": doc_ir,
                 "questions_count": len(cleaned_questions),
                 "total_latency_ms": round(total_latency_ms, 2),
                 "pipeline_ms": round(total_latency_ms, 2),

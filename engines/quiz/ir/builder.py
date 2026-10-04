@@ -207,35 +207,50 @@ class CanonicalIRBuilder:
         for q in questions_ir:
             section_groups[q.type].append(q.id)
 
+        def _build_section_range_instruction(sec_type: SectionType, base_suffix: str) -> str:
+            matching_qs = [q for q in questions_ir if q.type == sec_type]
+            if not matching_qs:
+                return ""
+            min_q = min(q.number for q in matching_qs)
+            max_q = max(q.number for q in matching_qs)
+            if min_q == max_q:
+                range_str = f"câu {min_q}"
+            else:
+                range_str = f"từ câu {min_q} đến câu {max_q}"
+            return f"Thí sinh trả lời {range_str}. {base_suffix}".strip()
+
         sections: list[SectionIR] = []
         if section_groups[SectionType.PART_I_MCQ]:
+            inst = _build_section_range_instruction(SectionType.PART_I_MCQ, "Mỗi câu hỏi chỉ chọn một phương án.")
             sections.append(
                 SectionIR(
                     id="sec_part_i",
                     title="PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
-                    instruction="Thí sinh trả lời từ câu 1 đến câu N. Mỗi câu hỏi chỉ chọn một phương án.",
+                    instruction=inst,
                     type=SectionType.PART_I_MCQ,
                     question_ids=section_groups[SectionType.PART_I_MCQ]
                 )
             )
 
         if section_groups[SectionType.PART_II_TF]:
+            inst = _build_section_range_instruction(SectionType.PART_II_TF, "Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.")
             sections.append(
                 SectionIR(
                     id="sec_part_ii",
                     title="PHẦN II. Câu trắc nghiệm đúng sai",
-                    instruction="Thí sinh trả lời từ câu 1 đến câu N. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.",
+                    instruction=inst,
                     type=SectionType.PART_II_TF,
                     question_ids=section_groups[SectionType.PART_II_TF]
                 )
             )
 
         if section_groups[SectionType.PART_III_SHORT]:
+            inst = _build_section_range_instruction(SectionType.PART_III_SHORT, "Điền kết quả chính xác vào ô trả lời.")
             sections.append(
                 SectionIR(
                     id="sec_part_iii",
                     title="PHẦN III. Câu trắc nghiệm trả lời ngắn",
-                    instruction="Thí sinh trả lời từ câu 1 đến câu N. Điền kết quả chính xác vào ô trả lời.",
+                    instruction=inst,
                     type=SectionType.PART_III_SHORT,
                     question_ids=section_groups[SectionType.PART_III_SHORT]
                 )

@@ -190,7 +190,7 @@ def post_process_questions(
 
         # Option integrity invariant: standard MCQ must have 4 options A, B, C, D
         final_options = q.options
-        if q.type == QuestionType.PART_I_MCQ and len(q.options) == 3:
+        if q.type == QuestionType.PART_I_MCQ and 0 < len(q.options) < 4:
             # Trigger targeted recovery
             final_options = recover_missing_mcq_options(q, source_context)
             if len(final_options) < 4:

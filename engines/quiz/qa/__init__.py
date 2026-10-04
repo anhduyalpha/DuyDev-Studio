@@ -16,6 +16,7 @@ from engines.quiz.qa.geometry_qa import validate_pdf_geometry
 from engines.quiz.qa.semantic_qa import validate_semantic_integrity
 from engines.quiz.qa.vision_qa import run_selective_vision_qa
 from engines.quiz.qa.repair import SafeRepairEngine
+from engines.quiz.qa.final_validator import validate_final_pdf, validate_rendered_html, FinalValidationResult
 
 __all__ = [
     "QAIssueType",
@@ -29,4 +30,8 @@ __all__ = [
     "validate_semantic_integrity",
     "run_selective_vision_qa",
     "SafeRepairEngine",
+    "validate_final_pdf",
+    "validate_rendered_html",
+    "FinalValidationResult",
 ]
+

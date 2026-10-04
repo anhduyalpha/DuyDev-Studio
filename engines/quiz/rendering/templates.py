@@ -6,6 +6,7 @@ W3C Paged Media styling, and zero arbitrary AI generation.
 
 import html
 import os
+import re
 from engines.quiz.ir.models import CanonicalDocumentIR, SectionType, QuestionIR, AnswerKeyIR
 from engines.quiz.rendering.styles import StylePreset
 from engines.quiz.rendering.layout import LayoutSolver
@@ -210,7 +211,20 @@ def render_worksheet_document(
       <span style="font-size: 8.5pt; font-weight: normal;">({len(sec_questions)} câu)</span>
     </div>"""
 
-            inst_html = f'<div class="section-instruction">{html.escape(sec.instruction)}</div>' if sec.instruction else ""
+            inst_text = sec.instruction
+            if inst_text and sec_questions:
+                min_q = min(q.number for q in sec_questions)
+                max_q = max(q.number for q in sec_questions)
+                range_str = f"câu {min_q}" if min_q == max_q else f"từ câu {min_q} đến câu {max_q}"
+                # Normalize any leftover placeholder 'N' or legacy 'từ câu 1 đến câu N'
+                if re.search(r"(?:từ\s+câu\s+1\s+đến\s+câu\s+(?:N|\d+)|đến\s+câu\s+N\b|\bcâu\s+N\b)", inst_text, re.IGNORECASE):
+                    if min_q > 1 and re.search(r"từ\s+câu\s+1\s+đến\s+câu\s+\d+", inst_text, re.IGNORECASE):
+                        inst_text = re.sub(r"từ\s+câu\s+1\s+đến\s+câu\s+\d+", range_str, inst_text, flags=re.IGNORECASE)
+                    inst_text = re.sub(r"từ\s+câu\s+1\s+đến\s+câu\s+N\b", range_str, inst_text, flags=re.IGNORECASE)
+                    inst_text = re.sub(r"đến\s+câu\s+N\b", f"đến câu {max_q}", inst_text, flags=re.IGNORECASE)
+                    inst_text = re.sub(r"\bcâu\s+N\b", f"câu {max_q}", inst_text, flags=re.IGNORECASE)
+
+            inst_html = f'<div class="section-instruction">{html.escape(inst_text)}</div>' if inst_text else ""
 
             rendered_q_items: list[str] = []
             for q in sec_questions:

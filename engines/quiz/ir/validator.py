@@ -57,7 +57,11 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                 f"Question '{q.id}' has invalid confidence {q.confidence} (must be between 0.0 and 1.0)."
             )
 
-        # 4. Option Cardinality Verification
+        # 4. Question Stem and Content Integrity Verification
+        if not q.stem or not q.stem.strip():
+            raise IRValidationError(f"Question '{q.id}' (Câu {q.number}) has empty stem.")
+
+        # 5. Option Cardinality and Label Integrity Verification
         if q.type == SectionType.PART_I_MCQ:
             if not (2 <= len(q.options) <= 4):
                 raise IRValidationError(
@@ -67,10 +71,45 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                 raise IRValidationError(
                     f"Question '{q.id}' (Part I, Câu {q.number}) has missing option: found only 3 options (expected 4). Content integrity invariant violated."
                 )
+            opt_labels = [opt.label.upper() for opt in q.options]
+            if len(opt_labels) != len(set(opt_labels)):
+                raise IRValidationError(
+                    f"Question '{q.id}' (Câu {q.number}) has duplicate option labels: {opt_labels}."
+                )
+            if len(q.options) == 4 and opt_labels != ["A", "B", "C", "D"]:
+                raise IRValidationError(
+                    f"Question '{q.id}' (Câu {q.number}) must have options ordered ['A', 'B', 'C', 'D'] (found {opt_labels})."
+                )
+            for opt in q.options:
+                if not opt.text or not opt.text.strip():
+                    raise IRValidationError(
+                        f"Question '{q.id}' (Câu {q.number}) has empty text for option '{opt.label}'."
+                    )
         elif q.type == SectionType.PART_II_TF:
             if len(q.sub_statements) != 4:
                 raise IRValidationError(
                     f"Question '{q.id}' (Part II) must have exactly 4 sub-statements (found {len(q.sub_statements)})."
+                )
+            tf_labels = [stmt.label.lower() for stmt in q.sub_statements]
+            if len(tf_labels) != len(set(tf_labels)):
+                raise IRValidationError(
+                    f"Question '{q.id}' (Câu {q.number}) has duplicate statement labels: {tf_labels}."
+                )
+            if tf_labels != ["a", "b", "c", "d"]:
+                raise IRValidationError(
+                    f"Question '{q.id}' (Câu {q.number}) must have statement labels ordered ['a', 'b', 'c', 'd'] (found {tf_labels})."
+                )
+            for stmt in q.sub_statements:
+                if not stmt.statement or not stmt.statement.strip():
+                    raise IRValidationError(
+                        f"Question '{q.id}' (Câu {q.number}) has empty statement text for '{stmt.label}'."
+                    )
+
+        # Rich elements validation
+        for elem in q.rich_elements:
+            if not elem.source_crop_path or not elem.source_crop_path.strip():
+                raise IRValidationError(
+                    f"Question '{q.id}' (Câu {q.number}) has rich element '{elem.element_id}' with empty source_crop_path."
                 )
 
     # 5. Exact 1:1 Question-Answer Mapping
@@ -121,3 +160,15 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                 raise IRValidationError(
                     f"Section '{sec.id}' references non-existent question ID '{ref_id}'."
                 )
+
+    # 7. Canonical Question Identity Verification
+    for q in doc_ir.questions:
+        if q.source_question_number is None and q.source_number is None:
+            raise IRValidationError(
+                f"Question '{q.id}' (Câu {q.number}) missing canonical source_question_number."
+            )
+        if q.output_question_number is None and q.number is None:
+            raise IRValidationError(
+                f"Question '{q.id}' missing output_question_number."
+            )
+

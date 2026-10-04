@@ -34,6 +34,10 @@ EQUILIBRIUM_ARROW_PATTERN = re.compile(
     r"(?<=\S)\s*(?:<=>|<==>|⇌)\s*(?=\S)"
 )
 
+CONDITION_ARROW_PATTERN = re.compile(
+    r"(?<=\S)\s*--\s*([^-\n\r]+?)\s*-->\s*(?=\S)"
+)
+
 # Number multiplication e.g. 2 x 10^3
 MULTIPLICATION_PATTERN = re.compile(
     r"\b(\d+(?:[,\.]\d+)?)\s*[xX]\s*(10\^[-+]?\d+|\d+)\b"
@@ -42,24 +46,35 @@ MULTIPLICATION_PATTERN = re.compile(
 
 def normalize_unicode_sub_superscripts(text: str) -> str:
     """
-    Converts Unicode subscripts (H₂SO₄) and superscripts (x², Cu²⁺)
+    Converts Unicode subscripts (H₂SO₄, C₁₇H₃₃COOH) and superscripts (x², Cu²⁺, 10⁻³)
     into standard bracketed LaTeX notation.
     """
     # Replace compound superscript sequences e.g. ²⁺ -> ^{2+}
     text = re.sub(r"([⁰¹²³⁴⁵⁶⁷⁸⁹]+)([⁺⁻])", lambda m: "^{" + "".join(SUPER_MAP.get(c, c)[1:] for c in m.group(1)) + SUPER_MAP.get(m.group(2), "")[1:] + "}", text)
     text = re.sub(r"([⁺⁻])([⁰¹²³⁴⁵⁶⁷⁸⁹]+)", lambda m: "^{" + SUPER_MAP.get(m.group(1), "")[1:] + "".join(SUPER_MAP.get(c, c)[1:] for c in m.group(2)) + "}", text)
 
+    # Group multi-digit superscripts e.g. ²³ -> ^{23}
+    text = re.sub(r"([⁰¹²³⁴⁵⁶⁷⁸⁹]{2,})", lambda m: "^{" + "".join(SUPER_MAP.get(c, c)[1:] for c in m.group(1)) + "}", text)
+
     # Replace individual superscripts
     for u_char, tex in SUPER_MAP.items():
         if u_char in text:
             text = text.replace(u_char, tex)
 
-    # Replace individual subscripts
+    # Group adjacent single-char superscripts e.g. ^2^3 -> ^{23}
+    text = re.sub(r"\^([0-9])(?:\^([0-9]))+", lambda m: "^{" + m.group(0).replace("^", "") + "}", text)
+
+    # Group multi-digit subscripts e.g. ₁₇ -> _{17}, ₃₃ -> _{33}
+    text = re.sub(r"([₀₁₂₃₄₅₆₇₈₉]{2,})", lambda m: "_{" + "".join(SUB_MAP.get(c, c)[1:] for c in m.group(1)) + "}", text)
+
+    # Replace individual subscripts e.g. ₂ -> _2
     for u_char, tex in SUB_MAP.items():
         if u_char in text:
             text = text.replace(u_char, tex)
 
-    # Group adjacent single-char subscripts e.g. _2_3 -> _{23} if needed, or _2 -> _2
+    # Group adjacent single-char subscripts e.g. _1_7 -> _{17}
+    text = re.sub(r"_([0-9])(?:_([0-9]))+", lambda m: "_{" + m.group(0).replace("_", "") + "}", text)
+
     return text
 
 
@@ -75,8 +90,14 @@ def normalize_math_symbols(text: str) -> str:
 def normalize_chemical_reactions(text: str) -> str:
     """
     Standardizes reaction arrows (-> to \\rightarrow, <=> to \\rightleftharpoons)
-    and physical state annotations.
+    and reaction condition arrows (--t°--> to \\xrightarrow{t^\\circ}).
     """
+    def _cond_arrow_repl(match: re.Match) -> str:
+        cond = match.group(1).strip()
+        cond = re.sub(r"t[°o]", r"t^\\circ", cond)
+        return f" \\xrightarrow{{{cond}}} "
+
+    text = CONDITION_ARROW_PATTERN.sub(_cond_arrow_repl, text)
     text = REACTION_ARROW_PATTERN.sub(r" \\rightarrow ", text)
     text = EQUILIBRIUM_ARROW_PATTERN.sub(r" \\rightleftharpoons ", text)
     return text

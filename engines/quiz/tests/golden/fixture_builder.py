@@ -479,6 +479,101 @@ def build_gf10_ester_reference(file_path: str) -> dict[str, Any]:
 
 
 # -------------------------------------------------------------------------
+# Fixture 11: GF-11-REG (Reference 12-Question Regression 35..46 with Linoleic Acid & Option D)
+# -------------------------------------------------------------------------
+def _create_linoleic_structure_pixmap(width: int = 220, height: int = 80) -> pymupdf.Pixmap:
+    """Creates a line-art chemical structure pixmap for Linoleic acid (C17H31COOH)."""
+    pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, width, height), 0)
+    # White background
+    for y in range(height):
+        for x in range(width):
+            pix.set_pixel(x, y, (255, 255, 255))
+    # Draw zigzag carbon backbone line simulating linoleic acid chain
+    y_center = height // 2
+    for x in range(15, width - 35):
+        cycle = (x // 12) % 2
+        py = y_center - 10 if cycle == 0 else y_center + 10
+        if 0 <= py < height:
+            pix.set_pixel(x, py, (0, 0, 0))
+            if py + 1 < height:
+                pix.set_pixel(x, py + 1, (0, 0, 0))
+    # Draw double bond parallel dashes
+    for x in range(70, 110):
+        if (x // 6) % 2 == 0:
+            if y_center - 14 >= 0:
+                pix.set_pixel(x, y_center - 14, (0, 0, 0))
+    return pix
+
+
+def build_gf11_regression_linoleic(file_path: str) -> dict[str, Any]:
+    doc = pymupdf.open()
+
+    # Page 1: Questions 31 to 38
+    p1 = doc.new_page(width=595.28, height=841.89)
+    p1.insert_text((50, 40), "SỞ GIÁO DỤC VÀ ĐÀO TẠO - ĐỀ KHẢO SÁT CHẤT LƯỢNG HỌC KỲ II", fontsize=11)
+    p1.insert_text((50, 56), "Môn: Hóa học 12 (Thời gian làm bài: 50 phút)", fontsize=9)
+    p1.insert_text((50, 70), "Mã đề thi: 401", fontsize=9)
+
+    y = 95
+    for i in range(31, 39):
+        p1.insert_text((50, y), f"Câu {i}: Hợp chất nào sau đây là este no, đơn chức, mạch hở?", fontsize=9.5)
+        y += 16
+        p1.insert_text((50, y), "A. CH3COOCH3    B. C6H5COOCH3    C. CH2=CHCOOCH3    D. CH3COOH", fontsize=9)
+        y += 26
+
+    # Page 2: Questions 39 to 46
+    p2 = doc.new_page(width=595.28, height=841.89)
+    p2.insert_text((50, 40), "ĐỀ KHẢO SÁT CHẤT LƯỢNG HỌC KỲ II - TRANG 2", fontsize=10)
+
+    y = 75
+    # Questions 39 and 40
+    for i in range(39, 41):
+        p2.insert_text((50, y), f"Câu {i}: Thủy phân chất béo trong dung dịch NaOH đun nóng luôn thu được chất nào sau đây?", fontsize=9.5)
+        y += 16
+        p2.insert_text((50, y), "A. Glixerol    B. Etylen glicol    C. Ancol etylic    D. Axit axetic", fontsize=9)
+        y += 26
+
+    # Question 41: Linoleic acid with image
+    p2.insert_text((50, y), "Câu 41: Cho công thức cấu tạo của axit linoleic như hình vẽ bên. Công thức phân tử của axit linoleic là gì?", fontsize=9.5)
+    y += 18
+    pix = _create_linoleic_structure_pixmap(width=220, height=80)
+    p2.insert_image(pymupdf.Rect(60, y, 280, y + 80), pixmap=pix)
+    y += 88
+    p2.insert_text((50, y), "A. C18H32O2    B. C18H34O2    C. C18H30O2    D. C16H32O2", fontsize=9)
+    y += 26
+
+    # Questions 42 to 45
+    for i in range(42, 46):
+        p2.insert_text((50, y), f"Câu {i}: Số liên kết peptit có trong phân tử tripeptit Gly-Ala-Val là bao nhiêu?", fontsize=9.5)
+        y += 16
+        p2.insert_text((50, y), "A. 2    B. 3    C. 1    D. 4", fontsize=9)
+        y += 26
+
+    # Question 46: At end of document followed by --- HẾT ---
+    p2.insert_text((50, y), "Câu 46: Dung dịch chất nào sau đây làm quỳ tím chuyển sang màu đỏ?", fontsize=9.5)
+    y += 16
+    p2.insert_text((50, y), "A. C2H5OH    B. CH3OCH3    C. CH3CHO    D. CH3COOH", fontsize=9)
+    y += 26
+    p2.insert_text((240, y), "--- HET ---", fontsize=10)
+
+    doc.save(file_path)
+    doc.close()
+
+    return {
+        "fixture_id": "GF-11-REG",
+        "name": "Reference 12-Question Regression (Questions 35–46)",
+        "file_path": file_path,
+        "expected_questions": 12,
+        "expected_pages": 2,
+        "is_scanned": False,
+        "has_images": True,
+        "is_reference": True,
+        "question_types": ["part_i_mcq"],
+        "target_recall": 1.0,
+    }
+
+
+# -------------------------------------------------------------------------
 # Fixture Registry and Factory
 # -------------------------------------------------------------------------
 FIXTURE_BUILDERS = {
@@ -492,6 +587,7 @@ FIXTURE_BUILDERS = {
     "GF-08-3PT": build_gf08_three_part,
     "GF-09-ADV": build_gf09_adversarial_distractors,
     "GF-10-EST": build_gf10_ester_reference,
+    "GF-11-REG": build_gf11_regression_linoleic,
 }
 
 

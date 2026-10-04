@@ -30,8 +30,13 @@ class TestContentNormalizer(unittest.TestCase):
         cu_ion = normalize_unicode_sub_superscripts("Cu²⁺")
         self.assertIn("^{2+}", cu_ion)
 
-        fe_ion = normalize_unicode_sub_superscripts("Fe³⁺")
-        self.assertIn("^{3+}", fe_ion)
+        # Multi-digit chemical formula subscripts (C₁₇H₃₃COOH, C₁₅H₃₁COOH)
+        self.assertEqual(normalize_unicode_sub_superscripts("C₁₇H₃₃COOH"), "C_{17}H_{33}COOH")
+        self.assertEqual(normalize_unicode_sub_superscripts("C₁₅H₃₁COOH"), "C_{15}H_{31}COOH")
+
+        # Multi-digit and signed superscripts
+        self.assertEqual(normalize_unicode_sub_superscripts("10²³"), "10^{23}")
+        self.assertEqual(normalize_unicode_sub_superscripts("10⁻³"), "10^{-3}")
 
     def test_math_symbols_and_scientific_notation(self):
         """Tests standardizing math symbols and multiplication."""
@@ -53,6 +58,12 @@ class TestContentNormalizer(unittest.TestCase):
         self.assertEqual(
             normalize_chemical_reactions("Fe + 2HCl --> FeCl2 + H2"),
             "Fe + 2HCl \\rightarrow FeCl2 + H2"
+        )
+
+        # Reaction arrow with condition (e.g. t°, xt)
+        self.assertEqual(
+            normalize_chemical_reactions("CH3COOCH3 + H2O --t°--> CH3COOH + CH3OH"),
+            "CH3COOCH3 + H2O \\xrightarrow{t^\\circ} CH3COOH + CH3OH"
         )
 
         # Equilibrium reaction
