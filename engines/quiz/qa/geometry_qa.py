@@ -6,8 +6,11 @@ question split avoidance, orphan heading prevention, and blank page elimination 
 
 import os
 import re
+from typing import Optional
 import pymupdf
 
+from engines.quiz.ir.models import CanonicalDocumentIR, SectionType
+from engines.quiz.rendering.layout import LayoutSolver
 from engines.quiz.qa.models import (
     GeometryQAResult,
     QAIssue,
@@ -16,9 +19,146 @@ from engines.quiz.qa.models import (
 )
 
 
+def verify_option_integrity(
+    doc: pymupdf.Document,
+    doc_ir: CanonicalDocumentIR,
+    content_bottom_limit: float = 813.5,
+) -> list[QAIssue]:
+    """
+    Deterministically verifies that all options (A, B, C, D) for every multiple-choice
+    or True/False question are present in the rendered PDF text layer and located
+    on the same page as their question stem (preventing detached/split options across page breaks).
+    """
+    issues: list[QAIssue] = []
+    page_count = doc.page_count
+    if page_count < 1 or not doc_ir.questions:
+        return issues
+
+    page_texts: list[str] = [doc[p].get_text() for p in range(page_count)]
+
+    for q in doc_ir.questions:
+        if q.type not in (SectionType.PART_I_MCQ, SectionType.PART_II_TF):
+            continue
+
+        expected_labels = (
+            [opt.label for opt in q.options]
+            if q.type == SectionType.PART_I_MCQ
+            else [stmt.label for stmt in q.sub_statements]
+        )
+        if not expected_labels:
+            continue
+
+        # Check if question is oversized (e.g. exceeds 85% of usable A4 height)
+        est_height = LayoutSolver.estimate_question_height_pt(q)
+        is_oversized = est_height > 650.0
+
+        # Find question on pages: pattern Câu <number> followed by . or :
+        q_num_pattern = re.compile(rf"\bCâu\s+{q.number}\s*[\.:]", re.IGNORECASE)
+        stem_page_idx = -1
+        stem_pos = -1
+
+        for p_idx in range(page_count):
+            m = q_num_pattern.search(page_texts[p_idx])
+            if m:
+                stem_page_idx = p_idx
+                stem_pos = m.start()
+                break
+
+        if stem_page_idx == -1:
+            issues.append(
+                QAIssue(
+                    page=0,
+                    type=QAIssueType.CARDINALITY_MISMATCH,
+                    severity=QASeverity.CRITICAL,
+                    description=f"Option integrity: Question {q.number} (qid={q.id}) stem not found in PDF text layer.",
+                )
+            )
+            continue
+
+        q_page_num = stem_page_idx + 1
+
+        # Determine boundaries of question q on stem_page_idx
+        next_q_num = q.number + 1
+        next_q_pattern = re.compile(rf"\bCâu\s+{next_q_num}\s*[\.:]", re.IGNORECASE)
+        m_next = next_q_pattern.search(page_texts[stem_page_idx], pos=stem_pos)
+
+        if m_next:
+            q_slice = page_texts[stem_page_idx][stem_pos:m_next.start()]
+        else:
+            q_slice = page_texts[stem_page_idx][stem_pos:]
+
+        # Check each expected option label in q_slice
+        for label in expected_labels:
+            if q.type == SectionType.PART_I_MCQ:
+                label_pat = re.compile(rf"(?:^|\s|\n){re.escape(label)}\.", re.IGNORECASE)
+            else:
+                label_pat = re.compile(rf"(?:^|\s|\n){re.escape(label)}\)", re.IGNORECASE)
+
+            if label_pat.search(q_slice):
+                # Option found on the stem page!
+                continue
+
+            # Option NOT found on stem page! Check if it spilled to next page
+            spilled_to_next = False
+            if stem_page_idx + 1 < page_count:
+                next_page_text = page_texts[stem_page_idx + 1]
+                m_next_on_next = next_q_pattern.search(next_page_text)
+                next_page_slice = (
+                    next_page_text[:m_next_on_next.start()]
+                    if m_next_on_next
+                    else next_page_text
+                )
+                if label_pat.search(next_page_slice):
+                    spilled_to_next = True
+
+            if spilled_to_next:
+                if is_oversized:
+                    # Oversized questions spanning pages are expected under oversized policy
+                    issues.append(
+                        QAIssue(
+                            page=q_page_num,
+                            type=QAIssueType.SPLIT_QUESTION,
+                            severity=QASeverity.LOW,
+                            description=(
+                                f"Oversized Question {q.number} (qid={q.id}, ~{est_height:.0f}pt) "
+                                f"flows across pages: option '{label}' rendered on page {q_page_num + 1}."
+                            ),
+                        )
+                    )
+                else:
+                    # Normal questions MUST NOT split options across page boundaries
+                    issues.append(
+                        QAIssue(
+                            page=q_page_num,
+                            type=QAIssueType.SPLIT_QUESTION,
+                            severity=QASeverity.CRITICAL,
+                            description=(
+                                f"Atomic pagination defect: Question {q.number} (qid={q.id}) options split across pages! "
+                                f"Stem is on page {q_page_num}, but option '{label}' spilled to page {q_page_num + 1}."
+                            ),
+                        )
+                    )
+            else:
+                # Option is completely missing / dropped!
+                issues.append(
+                    QAIssue(
+                        page=q_page_num,
+                        type=QAIssueType.CARDINALITY_MISMATCH,
+                        severity=QASeverity.CRITICAL,
+                        description=(
+                            f"Option integrity defect: Question {q.number} (qid={q.id}) option '{label}' "
+                            f"was dropped or clipped outside page bounds."
+                        ),
+                    )
+                )
+
+    return issues
+
+
 def validate_pdf_geometry(
     pdf_path: str,
     margins_mm: tuple[float, float, float, float] = (10.0, 12.0, 10.0, 12.0),
+    doc_ir: Optional[CanonicalDocumentIR] = None,
 ) -> GeometryQAResult:
     """
     Deterministically inspect PDF geometry and layout integrity.
@@ -190,6 +330,11 @@ def validate_pdf_geometry(
                     description=f"Final page {page_count} has excessive whitespace or is nearly empty ({len(clean_last_text)} non-footer characters).",
                 )
             )
+
+    # 6. Option Integrity Check (if doc_ir provided)
+    if doc_ir:
+        option_issues = verify_option_integrity(doc, doc_ir, content_bottom_limit=content_bottom_limit)
+        issues.extend(option_issues)
 
     doc.close()
 

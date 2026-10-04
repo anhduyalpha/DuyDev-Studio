@@ -32,7 +32,8 @@ class MockAIProvider(IAIProvider):
         simulate_http_429: bool = False,
         simulate_malformed_json: bool = False,
         simulate_missing_fields: bool = False,
-        failure_count_before_success: int = 0
+        failure_count_before_success: int = 0,
+        enable_cache: bool = False
     ):
         super().__init__()
         self.preset_response = preset_response
@@ -43,6 +44,7 @@ class MockAIProvider(IAIProvider):
         self.simulate_malformed_json = simulate_malformed_json
         self.simulate_missing_fields = simulate_missing_fields
         self.failure_count_before_success = failure_count_before_success
+        self.enable_cache = enable_cache
         self._current_attempt_count = 0
         self.call_history: list[dict] = []
 
@@ -60,11 +62,18 @@ class MockAIProvider(IAIProvider):
         Simulates structured response generation with error injection support.
         """
         self._current_attempt_count += 1
+        task_key = (task_name, user_prompt)
+        if not hasattr(self, "_task_attempts"):
+            self._task_attempts = {}
+        curr_attempts = self._task_attempts.get(task_key, 0) + 1
+        self._task_attempts[task_key] = curr_attempts
+        is_retry_call = (curr_attempts > 1)
+
         self.tracker.record_call(
             task_name=task_name,
             latency_ms=15.0,
             is_vision=bool(image_bytes),
-            is_retry=(self._current_attempt_count > 1)
+            is_retry=is_retry_call
         )
         self.call_history.append({
             "task_name": task_name,

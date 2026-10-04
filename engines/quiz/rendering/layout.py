@@ -5,8 +5,27 @@ and generates CSS Paged Media pagination rules to guarantee zero question splits
 """
 
 import re
-from engines.quiz.ir.models import OptionIR, QuestionIR
+from engines.quiz.ir.models import OptionIR, QuestionIR, CanonicalDocumentIR, SectionIR, SectionType
 from engines.quiz.rendering.styles import StylePreset
+
+
+class QuestionBlock:
+    """
+    Atomic Question Block abstraction (PLAN-02 / TASK-03).
+    Encapsulates stem, rich visual elements, and options as an indivisible unit for pagination.
+    """
+
+    def __init__(
+        self,
+        question: QuestionIR,
+        estimated_height_pt: float,
+        is_oversized: bool = False,
+        force_break_before: bool = False
+    ) -> None:
+        self.question = question
+        self.estimated_height_pt = estimated_height_pt
+        self.is_oversized = is_oversized
+        self.force_break_before = force_break_before
 
 
 class LayoutSolver:
@@ -46,20 +65,32 @@ class LayoutSolver:
             return 1
 
     @classmethod
-    def estimate_question_height_pt(cls, question: QuestionIR, option_cols: int) -> float:
-        """Approximate rendered height in points for pagination heuristics."""
+    def estimate_question_height_pt(cls, question: QuestionIR, option_cols: int = 1) -> float:
+        """
+        Calculates realistic rendered height in points for the entire QuestionBlock.
+        Accounts for multiline stem text, rich visual elements, options grid, and margins.
+        """
         clean_stem = cls.clean_text_for_length(question.stem)
-        # Roughly 85 characters per line at 10pt on A4
         lines_stem = max(1, len(clean_stem) // 85 + 1)
-        stem_height = lines_stem * 14.0
+        stem_height = lines_stem * 14.5
 
         # Rich elements (crops/images)
-        rich_height = sum(130.0 for elem in question.rich_elements)
+        rich_height = 0.0
+        for elem in question.rich_elements:
+            elem_h = 130.0
+            if elem.bbox and elem.bbox[2] > elem.bbox[0] and elem.bbox[3] > elem.bbox[1]:
+                bw = elem.bbox[2] - elem.bbox[0]
+                bh = elem.bbox[3] - elem.bbox[1]
+                scale = min(1.0, 500.0 / max(1.0, bw))
+                elem_h = min(180.0, max(40.0, bh * scale))
+            caption_h = 14.0 if elem.caption else 0.0
+            rich_height += elem_h + caption_h + 16.0
 
         # Options
         num_options = len(question.options)
-        if num_options > 0 and option_cols > 0:
-            option_rows = (num_options + option_cols - 1) // option_cols
+        if num_options > 0:
+            cols = option_cols if option_cols in (1, 2, 4) else cls.determine_option_columns(question.options, bool(question.rich_elements))
+            option_rows = (num_options + cols - 1) // cols
             options_height = option_rows * 20.0
         elif question.sub_statements:
             options_height = len(question.sub_statements) * 18.0
@@ -69,6 +100,83 @@ class LayoutSolver:
         # Padding, margin, and question label
         total_pt = stem_height + rich_height + options_height + 24.0
         return total_pt
+
+    @classmethod
+    def plan_atomic_pagination(
+        cls,
+        doc_ir: CanonicalDocumentIR,
+        preset: StylePreset,
+        force_break_ids: set[str] | None = None,
+    ) -> set[str]:
+        """
+        Determines which questions must break before to guarantee atomic placement (TASK-03).
+        Returns a set of question IDs that must have 'page-break-before: always'.
+        """
+        forced_breaks = set(force_break_ids or ())
+        std_height_pt = 841.89
+        pt_per_mm = 72.0 / 25.4
+        margin_top_pt = preset.margin_top_mm * pt_per_mm
+        margin_bottom_pt = preset.margin_bottom_mm * pt_per_mm
+
+        usable_height_pt = std_height_pt - (margin_top_pt + margin_bottom_pt) - 24.0
+        current_used_pt = 55.0 + (35.0 if preset.show_student_info else 0.0)
+
+        q_map = {q.id: q for q in doc_ir.questions}
+        ordered_sections = doc_ir.sections or [
+            SectionIR(
+                id="sec_default",
+                title="CÂU HỎI TRẮC NGHIỆM",
+                type=SectionType.PART_I_MCQ,
+                question_ids=[q.id for q in doc_ir.questions]
+            )
+        ]
+
+        planned_breaks: set[str] = set(forced_breaks)
+
+        for sec in ordered_sections:
+            sec_questions = [q_map[qid] for qid in sec.question_ids if qid in q_map]
+            if not sec_questions:
+                continue
+
+            banner_height = 28.0 + (16.0 if sec.instruction else 0.0)
+
+            # Check if section banner + at least first question fits on current page
+            first_q = sec_questions[0]
+            first_cols = cls.determine_option_columns(first_q.options, bool(first_q.rich_elements))
+            first_q_h = cls.estimate_question_height_pt(first_q, first_cols)
+
+            if (usable_height_pt - current_used_pt) < (banner_height + min(first_q_h, 80.0)):
+                current_used_pt = banner_height
+            else:
+                current_used_pt += banner_height
+
+            for q in sec_questions:
+                has_imgs = bool(q.rich_elements)
+                cols = cls.determine_option_columns(q.options, has_images=has_imgs)
+                q_h = cls.estimate_question_height_pt(q, cols)
+
+                if q.id in forced_breaks:
+                    planned_breaks.add(q.id)
+                    current_used_pt = q_h + 10.0
+                    continue
+
+                # Large question exception (> 85% of usable page)
+                if q_h >= usable_height_pt * 0.85:
+                    if current_used_pt > (usable_height_pt * 0.25):
+                        planned_breaks.add(q.id)
+                        current_used_pt = q_h + 10.0
+                    else:
+                        current_used_pt += q_h + 10.0
+                    continue
+
+                remaining_space = usable_height_pt - current_used_pt
+                if q_h > remaining_space:
+                    planned_breaks.add(q.id)
+                    current_used_pt = q_h + 10.0
+                else:
+                    current_used_pt += q_h + 10.0
+
+        return planned_breaks
 
     @classmethod
     def generate_paged_media_css(cls, preset: StylePreset, doc_title: str = "") -> str:
@@ -122,8 +230,22 @@ body {{
 .question-item {{
   break-inside: avoid !important;
   page-break-inside: avoid !important;
+  display: block;
+  contain: layout;
   margin-bottom: 9pt;
   padding-bottom: 2pt;
+}}
+
+.question-item.page-break-before {{
+  break-before: page !important;
+  page-break-before: always !important;
+}}
+
+.q-header {{
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  break-after: avoid !important;
+  page-break-after: avoid !important;
 }}
 
 .section-banner {{
@@ -217,6 +339,8 @@ body {{
   gap: 3pt 10pt;
   margin-top: 4pt;
   padding-left: 4pt;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }}
 
 .options-grid.opt-col-4 {{

@@ -41,8 +41,8 @@ class BatchPlanner:
 
         return "vector_text"
 
-    @staticmethod
-    def get_batch_capacity(batch_type: str) -> int:
+    @classmethod
+    def get_batch_capacity(cls, batch_type: str, custom_capacities: Optional[dict[str, int]] = None) -> int:
         """
         Returns recommended question capacity for a batch type:
         - text/vector: 12 (within 10-15)
@@ -56,6 +56,8 @@ class BatchPlanner:
             "visual_heavy": 4,
             "scanned": 2
         }
+        if custom_capacities and batch_type in custom_capacities:
+            return custom_capacities[batch_type]
         return capacities.get(batch_type, 10)
 
     @classmethod
@@ -65,7 +67,8 @@ class BatchPlanner:
         start_page: int,
         end_page: int,
         start_question: int = 1,
-        question_count: Optional[int] = None
+        question_count: Optional[int] = None,
+        custom_capacities: Optional[dict[str, int]] = None
     ) -> list[BatchPayload]:
         """
         Generates structured BatchPayload items across the target page range.
@@ -91,7 +94,7 @@ class BatchPlanner:
 
         if is_scanned_range:
             # Plan by pages (2-4 pages per batch)
-            page_chunk_size = cls.get_batch_capacity("scanned")
+            page_chunk_size = cls.get_batch_capacity("scanned", custom_capacities)
             for i in range(0, len(active_pages), page_chunk_size):
                 chunk = active_pages[i:i + page_chunk_size]
                 chunk_page_nums = [p.page_number for p in chunk]
@@ -166,7 +169,7 @@ class BatchPlanner:
             elif p_type == "formula_heavy" and curr_type != "visual_heavy":
                 curr_type = "formula_heavy"
 
-            capacity = cls.get_batch_capacity(curr_type)
+            capacity = cls.get_batch_capacity(curr_type, custom_capacities)
             curr_batch_cands.append(q_num)
             curr_batch_pages.add(p_rep.page_number)
 

@@ -42,6 +42,28 @@ def is_cache_enabled() -> bool:
     return os.environ.get("QUIZ_CACHE_DISABLED") != "1"
 
 
+def is_provider_cache_enabled(provider: Any = None) -> bool:
+    """
+    Returns True if global cache is enabled AND provider does not explicitly disable it.
+    Real providers (e.g. AgnesAIProvider) default to True.
+    Mock providers (MockAIProvider, MagicMock, Mock) must explicitly have enable_cache is True.
+    """
+    if not is_cache_enabled():
+        return False
+    if provider is None:
+        return True
+
+    is_mock = (
+        hasattr(provider, "_mock_return_value") or
+        provider.__class__.__name__ in ("MockAIProvider", "Mock", "MagicMock") or
+        getattr(provider, "__module__", "").startswith("unittest.mock")
+    )
+    if is_mock:
+        return getattr(provider, "enable_cache", False) is True
+
+    return True
+
+
 def read_json(key: str) -> dict | None:
     """
     Read cache entry JSON.
@@ -279,4 +301,32 @@ def set_ai_reconstruct_cache(batch_hash: str, result_dict: dict) -> None:
     if not is_cache_enabled():
         return
     write_json(f"ai_recon_{batch_hash}", result_dict)
+
+
+def get_ai_solve_cache(batch_hash: str) -> dict | None:
+    """Retrieves cached AI batch answer solving response."""
+    if not is_cache_enabled():
+        return None
+    return read_json(f"ai_solve_{batch_hash}")
+
+
+def set_ai_solve_cache(batch_hash: str, result_dict: dict) -> None:
+    """Saves AI batch answer solving response with 7-day TTL."""
+    if not is_cache_enabled():
+        return
+    write_json(f"ai_solve_{batch_hash}", result_dict)
+
+
+def get_vision_cache(vision_hash: str) -> dict | None:
+    """Retrieves cached Vision QA inspection response."""
+    if not is_cache_enabled():
+        return None
+    return read_json(f"vision_qa_{vision_hash}")
+
+
+def set_vision_cache(vision_hash: str, result_dict: dict) -> None:
+    """Saves Vision QA inspection response with 7-day TTL."""
+    if not is_cache_enabled():
+        return
+    write_json(f"vision_qa_{vision_hash}", result_dict)
 

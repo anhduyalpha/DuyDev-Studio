@@ -23,6 +23,7 @@ class DocumentHTMLRenderer:
     def render_worksheet(
         self,
         doc_ir: CanonicalDocumentIR,
+        force_break_ids: set[str] | None = None,
         katex_css_rel: str = "./katex/katex.min.css",
         katex_js_rel: str = "./katex/katex.min.js",
         katex_auto_render_rel: str = "./katex/contrib/auto-render.min.js",
@@ -31,6 +32,7 @@ class DocumentHTMLRenderer:
         return render_worksheet_document(
             doc_ir=doc_ir,
             preset=self.preset,
+            force_break_ids=force_break_ids,
             katex_css_rel=katex_css_rel,
             katex_js_rel=katex_js_rel,
             katex_auto_render_rel=katex_auto_render_rel,

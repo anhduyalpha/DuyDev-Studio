@@ -5,9 +5,22 @@ W3C Paged Media styling, and zero arbitrary AI generation.
 """
 
 import html
+import os
 from engines.quiz.ir.models import CanonicalDocumentIR, SectionType, QuestionIR, AnswerKeyIR
 from engines.quiz.rendering.styles import StylePreset
 from engines.quiz.rendering.layout import LayoutSolver
+
+
+def _normalize_img_src(path: str) -> str:
+    """Normalize filesystem path to compliant file URL for Chrome headless."""
+    if not path:
+        return ""
+    if path.startswith("file://") or path.startswith("data:") or path.startswith("http"):
+        return path
+    if os.path.isabs(path):
+        normalized = path.replace(os.sep, "/")
+        return f"file:///{normalized}" if not normalized.startswith("/") else f"file://{normalized}"
+    return path
 
 
 def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR) -> str:
@@ -110,10 +123,18 @@ def render_worksheet_document(
     katex_css_rel: str = "./katex/katex.min.css",
     katex_js_rel: str = "./katex/katex.min.js",
     katex_auto_render_rel: str = "./katex/contrib/auto-render.min.js",
+    force_break_ids: set[str] | None = None,
 ) -> str:
     """Generate self-contained HTML worksheet document for `{prefix}_DeBai.pdf`."""
     meta = doc_ir.metadata
     css_content = LayoutSolver.generate_paged_media_css(preset, meta.title)
+
+    # Compute proactive atomic pagination plan (PLAN-02 / TASK-03)
+    planned_breaks = LayoutSolver.plan_atomic_pagination(
+        doc_ir=doc_ir,
+        preset=preset,
+        force_break_ids=force_break_ids
+    )
 
     # Header block
     grade_str = f" - Lớp {meta.grade}" if meta.grade else ""
@@ -170,7 +191,8 @@ def render_worksheet_document(
 
             rendered_q_items: list[str] = []
             for q in sec_questions:
-                rendered_q_items.append(_render_single_question(q))
+                break_before = (q.id in planned_breaks)
+                rendered_q_items.append(_render_single_question(q, break_before=break_before))
 
             sections_html.append(f"""
   <section class="exam-section">
@@ -180,7 +202,10 @@ def render_worksheet_document(
   </section>""")
     else:
         # Fallback if no explicit sections defined: render all questions directly
-        rendered_q_items = [_render_single_question(q) for q in doc_ir.questions]
+        rendered_q_items = [
+            _render_single_question(q, break_before=(q.id in planned_breaks))
+            for q in doc_ir.questions
+        ]
         sections_html.append(f"""
   <section class="exam-section">
     <div class="section-banner">CÂU HỎI TRẮC NGHIỆM ({len(doc_ir.questions)} CÂU)</div>
@@ -227,17 +252,21 @@ def render_worksheet_document(
 </html>"""
 
 
-def _render_single_question(q: QuestionIR) -> str:
+def _render_single_question(q: QuestionIR, break_before: bool = False) -> str:
     """Render a single QuestionIR item with stem, crop images, and options."""
+    break_class = " page-break-before" if break_before else ""
+    break_style = ' style="break-before: page; page-break-before: always;"' if break_before else ""
+
     # Rich elements (crops)
     rich_html_items: list[str] = []
     for elem in q.rich_elements:
         if elem.source_crop_path:
+            src_val = _normalize_img_src(elem.source_crop_path)
             caption_html = f'<div style="font-size: 8pt; color: #64748b; margin-top: 2pt;">{html.escape(elem.caption)}</div>' if elem.caption else ""
             rich_html_items.append(
                 f"""
       <div class="q-rich-element">
-        <img src="{html.escape(elem.source_crop_path)}" class="q-crop-img" alt="Hình minh họa Câu {q.number}" />
+        <img src="{html.escape(src_val)}" class="q-crop-img" alt="Hình minh họa Câu {q.number}" />
         {caption_html}
       </div>"""
             )
@@ -283,7 +312,7 @@ def _render_single_question(q: QuestionIR) -> str:
       </div>"""
 
     return f"""
-    <article class="question-item">
+    <article class="question-item{break_class}"{break_style}>
       <div class="q-header">
         <span class="q-num">Câu {q.number}:</span>
         <span class="q-stem">{q.stem}</span>
@@ -342,8 +371,9 @@ def render_answer_document(
         crop_html_items: list[str] = []
         for elem in q.rich_elements:
             if elem.source_crop_path:
+                src_val = _normalize_img_src(elem.source_crop_path)
                 crop_html_items.append(
-                    f'<div style="margin: 4pt 0;"><img src="{html.escape(elem.source_crop_path)}" class="q-crop-img" style="max-height: 120pt;" alt="Hình Câu {q.number}" /></div>'
+                    f'<div style="margin: 4pt 0;"><img src="{html.escape(src_val)}" class="q-crop-img" style="max-height: 120pt;" alt="Hình Câu {q.number}" /></div>'
                 )
         crops_html = "".join(crop_html_items)
 

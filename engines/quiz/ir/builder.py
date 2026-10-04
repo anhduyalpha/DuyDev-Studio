@@ -27,7 +27,9 @@ from .models import (
     TFStatementIR,
     ProvenanceIR,
     LayoutHintsIR,
-    AnswerKeyIR
+    AnswerKeyIR,
+    RichElementIR,
+    RichElementType
 )
 from .normalizer import normalize_text
 from .rich_elements import extract_rich_elements_for_question
@@ -48,10 +50,12 @@ class CanonicalIRBuilder:
         answers: list[AnswerKeyIR],
         metadata: Optional[DocumentMetadataIR] = None,
         pdf_doc: Optional[fitz.Document] = None,
-        crops_output_dir: Optional[str] = None
+        crops_output_dir: Optional[str] = None,
+        rich_element_attachments: Optional[dict[str, list[Any]]] = None
     ) -> CanonicalDocumentIR:
         """
         Builds, normalizes, crops assets, and validates the CanonicalDocumentIR.
+        Supports rich_element_attachments from DocumentObjectGraph.
         """
         # 1. Answer Lookup Map
         ans_map: dict[str, AnswerKeyIR] = {
@@ -95,9 +99,44 @@ class CanonicalIRBuilder:
                     )
                 )
 
-            # Extract Rich Element crops if PDF doc and directory are supplied
-            rich_elements = []
-            if pdf_doc and crops_output_dir and q.bboxes:
+            # Extract Rich Elements (PLAN-01 / TASK-02)
+            rich_elements: list[RichElementIR] = []
+
+            # Priority 1: Attachments from DocumentObjectGraph
+            q_attachments = []
+            if rich_element_attachments:
+                q_attachments = (
+                    rich_element_attachments.get(q.id)
+                    or rich_element_attachments.get(str(q.source_number))
+                    or rich_element_attachments.get(str(q.number))
+                    or []
+                )
+
+            if q_attachments:
+                for att in q_attachments:
+                    rec = getattr(att, "asset_record", None)
+                    if rec and rec.path:
+                        rec_type = getattr(rec, "type", None)
+                        type_val = getattr(rec_type, "value", str(rec_type)).lower()
+                        if "table" in type_val:
+                            r_type = RichElementType.STRUCTURED_TABLE
+                        elif "diagram" in type_val or "vector" in type_val:
+                            r_type = RichElementType.DIAGRAM_VECTOR
+                        else:
+                            r_type = RichElementType.IMAGE_CROP
+
+                        rich_elements.append(
+                            RichElementIR(
+                                element_id=f"elem_{q.id}_{att.asset_id}",
+                                type=r_type,
+                                source_crop_path=rec.path,
+                                caption=att.caption,
+                                bbox=rec.bbox,
+                                page_number=rec.source_page
+                            )
+                        )
+            # Priority 2: Fallback to existing manual crop if q.bboxes populated
+            elif pdf_doc and crops_output_dir and q.bboxes:
                 primary_p = q.source_pages[0] if q.source_pages else 1
                 rich_elements = extract_rich_elements_for_question(
                     doc=pdf_doc,
@@ -116,6 +155,11 @@ class CanonicalIRBuilder:
                 elif max_opt_len < 25 and len(norm_options) in (2, 4):
                     columns = 2
 
+            # Preserve asset bboxes in provenance if q.bboxes is empty
+            q_bboxes = list(q.bboxes)
+            if not q_bboxes and rich_elements:
+                q_bboxes = [elem.bbox for elem in rich_elements]
+
             q_ir = QuestionIR(
                 id=q.id,
                 number=q.number,
@@ -129,7 +173,7 @@ class CanonicalIRBuilder:
                 provenance=ProvenanceIR(
                     source_pages=q.source_pages,
                     source_block_ids=q.source_block_ids,
-                    bboxes=q.bboxes,
+                    bboxes=q_bboxes,
                     original_number=q.source_number
                 ),
                 confidence=q.confidence,

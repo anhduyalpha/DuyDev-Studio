@@ -76,6 +76,41 @@ class QuestionReconstructor:
 
         full_prompt = prompt_builder.build()
 
+        # Check AI Reconstruct Cache first (bypass if simulated errors are injected)
+        has_simulated_error = (
+            getattr(self.ai_provider, "simulate_http_500", False) or
+            getattr(self.ai_provider, "simulate_timeout", False) or
+            getattr(self.ai_provider, "simulate_http_401", False) or
+            getattr(self.ai_provider, "simulate_http_429", False) or
+            getattr(self.ai_provider, "simulate_missing_fields", False) or
+            getattr(self.ai_provider, "simulate_malformed_json", False) or
+            getattr(self.ai_provider, "failure_count_before_success", 0) > 0
+        )
+
+        import hashlib
+        from engines.quiz.quiz_cache import get_ai_reconstruct_cache, set_ai_reconstruct_cache, is_provider_cache_enabled
+
+        batch_key = hashlib.sha256((batch.text_content + "v3.0.0").encode("utf-8")).hexdigest()
+        if not has_simulated_error and is_provider_cache_enabled(self.ai_provider):
+            cached_result = get_ai_reconstruct_cache(batch_key)
+            if cached_result and isinstance(cached_result, dict):
+                try:
+                    res_obj = BatchReconstructionResult.model_validate(cached_result)
+                    if hasattr(self.ai_provider, "tracker") and hasattr(self.ai_provider.tracker, "record_cache_hit"):
+                        self.ai_provider.tracker.record_cache_hit(1)
+                    if hasattr(self.ai_provider, "tracker") and hasattr(self.ai_provider.tracker, "record_batch"):
+                        self.ai_provider.tracker.record_batch(1)
+                    valid_questions = [
+                        q for q in res_obj.questions
+                        if q.type != QuestionType.SECTION_HEADER
+                    ]
+                    for q in valid_questions:
+                        if not q.source_pages:
+                            q.source_pages = list(batch.page_numbers)
+                    return valid_questions
+                except Exception:
+                    pass
+
         # Isolated Bounded Retry for this specific batch
         last_error: Optional[Exception] = None
         for attempt in range(1, self.max_batch_retries + 1):
@@ -95,6 +130,10 @@ class QuestionReconstructor:
                 for q in valid_questions:
                     if not q.source_pages:
                         q.source_pages = list(batch.page_numbers)
+                if is_provider_cache_enabled(self.ai_provider):
+                    set_ai_reconstruct_cache(batch_key, result.model_dump())
+                if hasattr(self.ai_provider, "tracker") and hasattr(self.ai_provider.tracker, "record_batch"):
+                    self.ai_provider.tracker.record_batch(1)
                 return valid_questions
 
             except Exception as ex:

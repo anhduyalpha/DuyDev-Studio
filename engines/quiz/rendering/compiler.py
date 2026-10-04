@@ -235,6 +235,7 @@ class PDFCompiler:
         output_dir: str,
         prefix: str = "DeThi",
         preset: StylePreset | str | None = None,
+        force_break_ids: set[str] | None = None,
         timeout: float = 45.0,
     ) -> tuple[str, str]:
         """
@@ -254,7 +255,7 @@ class PDFCompiler:
         debai_html_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.html")
         debai_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
 
-        worksheet_html = renderer.render_worksheet(doc_ir)
+        worksheet_html = renderer.render_worksheet(doc_ir, force_break_ids=force_break_ids)
         with open(debai_html_path, "w", encoding="utf-8") as f:
             f.write(worksheet_html)
 

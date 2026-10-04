@@ -49,9 +49,10 @@ def run_selective_vision_qa(
             if 1 <= p <= total_pages and p not in targets:
                 targets.append(p)
 
-    # If no flagged pages, choose Page 1 as representative sample
+    # If no flagged pages and no rich element pages, skip vision QA entirely
     if not targets:
-        targets.append(1)
+        doc.close()
+        return VisionQAResult(status="PASS", inspected_pages=[], issues=[])
 
     # Strictly cap inspected pages to max_pages
     inspected_pages = targets[:max_pages]
@@ -64,41 +65,54 @@ def run_selective_vision_qa(
             pix = page.get_pixmap(dpi=150)
             png_bytes = pix.tobytes("png")
 
-            # 2. Build 6-block strict diagnostic prompt
-            builder = (
-                PromptBuilder()
-                .set_role(
-                    "You are a Senior Visual QA Inspector verifying print-ready Vietnamese examination worksheets."
+            # Check Vision Cache first
+            import hashlib
+            from engines.quiz.quiz_cache import get_vision_cache, set_vision_cache, is_provider_cache_enabled
+            img_hash = hashlib.sha256(png_bytes).hexdigest()
+            cached_data = get_vision_cache(img_hash) if is_provider_cache_enabled(provider) else None
+            if cached_data and isinstance(cached_data, dict):
+                result = VisionQAResult.model_validate(cached_data)
+                if hasattr(provider, "tracker") and hasattr(provider.tracker, "record_cache_hit"):
+                    provider.tracker.record_cache_hit(1)
+            else:
+                # 2. Build 6-block strict diagnostic prompt
+                builder = (
+                    PromptBuilder()
+                    .set_role(
+                        "You are a Senior Visual QA Inspector verifying print-ready Vietnamese examination worksheets."
+                    )
+                    .set_task(
+                        f"Visually inspect the rendered page image (Page {page_num}) for layout overlap, clipped formulas, "
+                        "text collisions, or illegible graphics."
+                    )
+                    .set_input(f"Rendered image of Page {page_num} of {total_pages} from {os.path.basename(pdf_path)}.")
+                    .set_rules(
+                        [
+                            "Evaluate typography readability, margin clearance, and image placement.",
+                            "Flag issues ONLY if there is actual visual overlapping, clipping, or unreadable formulas.",
+                            "Strictly DO NOT output CSS, HTML, or code recommendations.",
+                            "Output ONLY diagnostic JSON matching the VisionQAResult schema.",
+                        ]
+                    )
+                    .set_schema(VisionQAResult)
+                    .set_uncertainty_policy(
+                        "If the page looks clean and readable, report status 'PASS' with an empty issues list."
+                    )
                 )
-                .set_task(
-                    f"Visually inspect the rendered page image (Page {page_num}) for layout overlap, clipped formulas, "
-                    "text collisions, or illegible graphics."
-                )
-                .set_input(f"Rendered image of Page {page_num} of {total_pages} from {os.path.basename(pdf_path)}.")
-                .set_rules(
-                    [
-                        "Evaluate typography readability, margin clearance, and image placement.",
-                        "Flag issues ONLY if there is actual visual overlapping, clipping, or unreadable formulas.",
-                        "Strictly DO NOT output CSS, HTML, or code recommendations.",
-                        "Output ONLY diagnostic JSON matching the VisionQAResult schema.",
-                    ]
-                )
-                .set_schema(VisionQAResult)
-                .set_uncertainty_policy(
-                    "If the page looks clean and readable, report status 'PASS' with an empty issues list."
-                )
-            )
-            prompt = builder.build()
+                prompt = builder.build()
 
-            # 3. Structured Vision Call
-            result = provider.generate_structured(
-                task_name=f"vision_qa_p{page_num}",
-                user_prompt=prompt,
-                system_prompt="You are a precise examination visual inspector. Respond strictly with JSON matching VisionQAResult.",
-                schema=VisionQAResult,
-                image_bytes=png_bytes,
-                temperature=0.0,
-            )
+                # 3. Structured Vision Call
+                result = provider.generate_structured(
+                    task_name=f"vision_qa_p{page_num}",
+                    user_prompt=prompt,
+                    system_prompt="You are a precise examination visual inspector. Respond strictly with JSON matching VisionQAResult.",
+                    schema=VisionQAResult,
+                    image_bytes=png_bytes,
+                    temperature=0.0,
+                )
+                if result and is_provider_cache_enabled(provider):
+                    set_vision_cache(img_hash, result.model_dump())
+
             if result and hasattr(result, "issues"):
                 for issue in result.issues:
                     # Enforce correct page number

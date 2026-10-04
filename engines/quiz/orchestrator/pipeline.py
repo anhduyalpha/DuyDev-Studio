@@ -6,6 +6,7 @@ Enforces atomic state persistence and strict Final Gate validation.
 """
 
 import os
+import re
 import time
 import uuid
 from typing import Callable, Any
@@ -20,6 +21,8 @@ from engines.quiz.recognition.range_resolver import resolve_smart_range
 from engines.quiz.reconstruction.batch_planner import BatchPlanner
 from engines.quiz.reconstruction.reconstructor import QuestionReconstructor
 from engines.quiz.reconstruction.post_processor import post_process_questions
+from engines.quiz.assets.extractor import RichAssetExtractor
+from engines.quiz.graph.object_graph import DocumentObjectGraph
 from engines.quiz.ir.builder import CanonicalIRBuilder
 from engines.quiz.ir.models import DocumentMetadataIR
 from engines.quiz.solver.solver import AnswerSolver
@@ -29,7 +32,7 @@ from engines.quiz.qa.geometry_qa import validate_pdf_geometry
 from engines.quiz.qa.semantic_qa import validate_semantic_integrity
 from engines.quiz.qa.vision_qa import run_selective_vision_qa
 from engines.quiz.qa.repair import SafeRepairEngine
-from engines.quiz.qa.models import OverallQAResult
+from engines.quiz.qa.models import OverallQAResult, QAIssueType
 from engines.quiz.orchestrator.state import JobStage, JobState, JobStateManager
 
 
@@ -137,6 +140,21 @@ class QuizPipelineOrchestrator:
             if not pages_in_range:
                 pages_in_range = page_representations
 
+            # Extract rich visual assets & construct Document Object Graph (PLAN-01)
+            assets_dir = os.path.join(output_dir, "assets")
+            rich_extractor = RichAssetExtractor(output_dir=assets_dir)
+            fitz_doc_assets = pymupdf.open(pdf_path)
+            try:
+                target_pages = [p.page_number for p in pages_in_range]
+                extracted_assets = rich_extractor.extract_all(fitz_doc_assets, page_numbers=target_pages)
+            finally:
+                fitz_doc_assets.close()
+
+            doc_graph = DocumentObjectGraph.build(
+                doc_reps=pages_in_range,
+                asset_records=extracted_assets
+            )
+
             batches = BatchPlanner.plan_batches(
                 doc_reps=pages_in_range,
                 start_page=start_page,
@@ -150,11 +168,17 @@ class QuizPipelineOrchestrator:
             reconstructor = QuestionReconstructor(ai_provider=self.provider)
             raw_questions = reconstructor.reconstruct_all(batches)
 
-            emit(JobStage.RECONSTRUCTING, 45, "Chuẩn hóa thứ tự câu và loại bỏ nội dung trùng lặp")
+            emit(JobStage.RECONSTRUCTING, 45, "Chuẩn hóa thứ tự câu và liên kết đồ thị đối tượng hình ảnh")
             cleaned_questions = post_process_questions(
                 raw_questions,
                 start_question=start_num,
                 expected_count=effective_count,
+            )
+
+            # Associate visual assets from Document Object Graph
+            attachments_map = doc_graph.associate_assets_to_questions(
+                questions=cleaned_questions,
+                ai_provider=self.provider
             )
 
             # 4. SOLVING (50% - 62%)
@@ -185,6 +209,7 @@ class QuizPipelineOrchestrator:
                     metadata=metadata,
                     pdf_doc=fitz_doc,
                     crops_output_dir=crops_dir,
+                    rich_element_attachments=attachments_map,
                 )
             finally:
                 fitz_doc.close()
@@ -196,6 +221,7 @@ class QuizPipelineOrchestrator:
             iteration = 0
             debai_pdf_path = ""
             dapan_pdf_path = ""
+            force_break_ids: set[str] = set()
 
             while iteration <= self.max_repair_iterations:
                 emit(
@@ -215,18 +241,26 @@ class QuizPipelineOrchestrator:
                     output_dir=output_dir,
                     prefix=clean_prefix,
                     preset=current_preset,
+                    force_break_ids=force_break_ids,
                 )
                 render_time_ms += (time.perf_counter() - compile_start) * 1000
 
                 # QA Stage
                 emit(JobStage.QA, 85 + iteration * 3, f"Thực hiện kiểm định đa tầng QA (Lần {iteration + 1})")
-                geom_result = validate_pdf_geometry(debai_pdf_path)
+                geom_result = validate_pdf_geometry(debai_pdf_path, doc_ir=doc_ir)
                 sem_result = validate_semantic_integrity(doc_ir, debai_pdf_path, dapan_pdf_path)
 
                 flagged_pages = [i.page for i in geom_result.issues if i.page > 0]
+                rich_pages = sorted({
+                    elem.page_number
+                    for q in doc_ir.questions
+                    for elem in getattr(q, "rich_elements", [])
+                    if getattr(elem, "page_number", 0) > 0
+                })
                 vis_result = run_selective_vision_qa(
                     pdf_path=debai_pdf_path,
                     flagged_pages=flagged_pages,
+                    rich_element_pages=rich_pages,
                     provider=self.provider,
                 )
 
@@ -250,6 +284,20 @@ class QuizPipelineOrchestrator:
                 # Check if QA passes
                 if overall_qa.is_pass():
                     break
+
+                # Extract split question IDs to force atomic page breaks on retry
+                for issue in geom_result.issues:
+                    if issue.type == QAIssueType.SPLIT_QUESTION:
+                        m_qid = re.search(r"qid=([a-zA-Z0-9_\-]+)", issue.description)
+                        if m_qid:
+                            force_break_ids.add(m_qid.group(1))
+                        else:
+                            m_num = re.search(r"Question\s+(\d+)", issue.description)
+                            if m_num:
+                                q_num = int(m_num.group(1))
+                                for q in doc_ir.questions:
+                                    if q.number == q_num:
+                                        force_break_ids.add(q.id)
 
                 # Attempt Safe Repair
                 if iteration < self.max_repair_iterations:
@@ -308,11 +356,13 @@ class QuizPipelineOrchestrator:
                 "dapan_html": os.path.join(output_dir, f"{clean_prefix}_DapAn.html"),
                 "questions_count": len(cleaned_questions),
                 "total_latency_ms": round(total_latency_ms, 2),
+                "pipeline_ms": round(total_latency_ms, 2),
                 "render_time_ms": round(render_time_ms, 2),
                 "ai_calls": ai_summary.get("ai_calls", 0),
                 "vision_calls": ai_summary.get("vision_calls", 0),
-                "batches": len(batches),
+                "batches": max(ai_summary.get("batches", 0), len(batches)),
                 "retries": ai_summary.get("retries", 0),
+                "cache_hits": ai_summary.get("cache_hits", 0),
             }
 
             emit(JobStage.COMPLETED, 100, "Hoàn tất tạo thành công 2 tệp PDF đạt chuẩn in ấn!")

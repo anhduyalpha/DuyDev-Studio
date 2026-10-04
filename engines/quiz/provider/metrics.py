@@ -20,6 +20,7 @@ class AICallBudgetTracker:
         self.vision_calls: int = 0
         self.batches: int = 0
         self.retries: int = 0
+        self.cache_hits: int = 0
         self.total_latency_ms: float = 0.0
         self.call_history: list[dict[str, Any]] = []
 
@@ -54,6 +55,11 @@ class AICallBudgetTracker:
         with self._lock:
             self.batches += count
 
+    def record_cache_hit(self, count: int = 1) -> None:
+        """Increments cache hit counter."""
+        with self._lock:
+            self.cache_hits += count
+
     def get_summary(self) -> dict[str, Any]:
         """Returns snapshot of current metrics."""
         with self._lock:
@@ -67,6 +73,7 @@ class AICallBudgetTracker:
                 "vision_calls": self.vision_calls,
                 "batches": self.batches,
                 "retries": self.retries,
+                "cache_hits": self.cache_hits,
                 "total_latency_ms": round(self.total_latency_ms, 2),
                 "avg_latency_ms": avg_lat,
             }

@@ -95,3 +95,4 @@ Thumbs.db
 
 # Quiz Engine Assets
 !engines/quiz/assets/**
+engines/quiz/assets/**/__pycache__/
