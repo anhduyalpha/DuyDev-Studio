@@ -41,9 +41,10 @@ def parse_mcq_blocks(text: str) -> list[dict]:
         for m in matches:
             by_letter[m.group(1)].append(m)
 
-        # Find all valid ordered 4-tuples (A < B < C < D)
+        # Find all valid ordered 4-tuples (A < B < C < D) or 2-column vertical (A < C < B < D)
         valid_tuples = []
         if by_letter['A'] and by_letter['B'] and by_letter['C'] and by_letter['D']:
+            # 1. Standard horizontal order: A < B < C < D
             for mA in by_letter['A']:
                 for mB in by_letter['B']:
                     if mB.start() < mA.end():
@@ -56,9 +57,22 @@ def parse_mcq_blocks(text: str) -> list[dict]:
                                 continue
                             valid_tuples.append((mA, mB, mC, mD))
 
+            # 2. Two-column vertical order: A < C < B < D
+            for mA in by_letter['A']:
+                for mC in by_letter['C']:
+                    if mC.start() < mA.end():
+                        continue
+                    for mB in by_letter['B']:
+                        if mB.start() < mC.end():
+                            continue
+                        for mD in by_letter['D']:
+                            if mD.start() < mB.end():
+                                continue
+                            valid_tuples.append((mA, mC, mB, mD))
+
         if valid_tuples:
             def score_tuple(tup):
-                mA, mB, mC, mD = tup
+                m1, m2, m3, m4 = tup
                 # Prefer markers starting on newlines or at line start with indentation
                 newline_score = sum(
                     1 for m in tup
@@ -66,14 +80,14 @@ def parse_mcq_blocks(text: str) -> list[dict]:
                 )
                 # Penalize if option bodies contain newline option delimiters
                 slices = [
-                    seg[mA.end():mB.start()],
-                    seg[mB.end():mC.start()],
-                    seg[mC.end():mD.start()],
-                    seg[mD.end():]
+                    seg[m1.end():m2.start()],
+                    seg[m2.end():m3.start()],
+                    seg[m3.end():m4.start()],
+                    seg[m4.end():]
                 ]
                 sub_delims = sum(1 for sl in slices if re.search(r'\n\s*[A-D][\.\)\:]', sl))
-                # Maximize newline_score, minimize sub_delims, prefer latest mA (closest to option block)
-                return (newline_score, -sub_delims, mA.start())
+                is_standard = 1 if [m.group(1) for m in tup] == ["A", "B", "C", "D"] else 0
+                return (newline_score, -sub_delims, is_standard, m1.start())
 
             chosen = list(max(valid_tuples, key=score_tuple))
         else:
@@ -85,19 +99,21 @@ def parse_mcq_blocks(text: str) -> list[dict]:
                     chosen.append(m)
                     idx += 1
 
+        # Reject non-MCQ blocks (essay questions, open-ended exercises with no options)
+        if len(chosen) < 2:
+            continue
+
         options = {"A": "", "B": "", "C": "", "D": ""}
-        if chosen:
-            stem = seg[:chosen[0].start()]
-            for k in range(len(chosen)):
-                letter = chosen[k].group(1)
-                start = chosen[k].end()
-                end = chosen[k + 1].start() if k + 1 < len(chosen) else len(seg)
-                opt_val = strip_section_banner(seg[start:end]).strip()
-                options[letter] = opt_val
-        else:
-            stem = seg
+        stem = seg[:chosen[0].start()]
+        for k in range(len(chosen)):
+            letter = chosen[k].group(1)
+            start = chosen[k].end()
+            end = chosen[k + 1].start() if k + 1 < len(chosen) else len(seg)
+            opt_val = strip_section_banner(seg[start:end]).strip()
+            options[letter] = opt_val
 
         stem = strip_section_banner(stem).strip()
+        clean_stem = re.sub(r"^(?:Câu\s*\d+[\.\:\)\s]*|\b\d+[\.\:]\s*)", "", stem, flags=re.IGNORECASE).strip()
 
         # Confidence:
         # "high" iff len(chosen) == 4, all options A, B, C, D non-empty, and stem non-empty
@@ -111,6 +127,7 @@ def parse_mcq_blocks(text: str) -> list[dict]:
         blocks.append({
             "source_number": source_number,
             "stem": stem,
+            "clean_stem": clean_stem,
             "options": options,
             "confidence": confidence,
             "raw": seg

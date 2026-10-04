@@ -169,7 +169,8 @@ def is_running_header_or_footer(block_text: str, y0: float, y1: float, page_h: f
 
     header_footer_regex = re.compile(
         r"(?:trang\s*\d+(?:\s*[\/\-]\s*\d+)?|mã\s*đề(?:\s*thi)?\s*[:\d]+|sở\s*gd|phòng\s*gd|bộ\s*giáo\s*dục|"
-        r"kỳ\s*thi|đề\s*thi\s*thử|đề\s*chính\s*thức|họ\s*(?:và\s*)?tên|số\s*báo\s*danh|---\s*hết\s*---|\bhết\b)",
+        r"kỳ\s*thi|đề\s*thi\s*thử|đề\s*chính\s*thức|họ\s*(?:và\s*)?tên|số\s*báo\s*danh|---\s*hết\s*---|\bhết\b|"
+        r"website\s*:|facebook|fb\.com|hotline|thaytrong|tenschool|youtube|chinh\s*phục|giáo\s*viên|biên\s*soạn)",
         re.IGNORECASE
     )
 
@@ -177,9 +178,12 @@ def is_running_header_or_footer(block_text: str, y0: float, y1: float, page_h: f
     if y1 < page_h * 0.08:
         if header_footer_regex.search(text) or (len(text) < 60 and ("trang" in text.lower() or "mã đề" in text.lower())):
             return True
-    # Check bottom 8% of page
-    if y0 > page_h * 0.92:
-        if header_footer_regex.search(text) or (len(text) < 60 and ("trang" in text.lower() or "hết" in text.lower())):
+        if y1 < page_h * 0.05 and not re.search(r"\b(?:câu\s*\d+|\b[A-D][\.\:\)])", text, re.IGNORECASE):
+            return True
+
+    # Check bottom 14% of page
+    if y0 > page_h * 0.86:
+        if header_footer_regex.search(text) or (len(text) < 80 and ("trang" in text.lower() or "hết" in text.lower())):
             return True
     return False
 
@@ -549,52 +553,134 @@ def link_assets_to_questions(
     asset_map = asset_question_map or {}
     source_nums = source_question_nums or []
 
-    # 1. Direct AI match
-    for q in questions:
+    assigned_assets = set()
+
+    # 0. Check for 4 option images FIRST using asset_map (deterministic 4-tuple layout)
+    for idx, q in enumerate(questions):
+        orig_q_num = source_nums[idx] if idx < len(source_nums) else q.get("number")
+        matching_aids = [
+            a_id for a_id, mapped_num in asset_map.items()
+            if mapped_num == orig_q_num and a_id in assets_by_id and a_id not in assigned_assets
+        ]
+        if len(matching_aids) == 4:
+            objs = [assets_by_id[aid] for aid in matching_aids]
+            objs.sort(key=lambda a: a.get("rect", (0, 0, 0, 0))[1])
+            q["option_images"] = {
+                "A": objs[0].get("data_uri"),
+                "B": objs[1].get("data_uri"),
+                "C": objs[2].get("data_uri"),
+                "D": objs[3].get("data_uri"),
+            }
+            q["image_ref"] = None
+            q["image_data"] = None
+            for aid in matching_aids:
+                assigned_assets.add(aid)
+
+    # 1. Direct AI match (only if validated against asset_map and not already having option_images)
+    for idx, q in enumerate(questions):
+        if q.get("option_images") or q.get("image_data"):
+            continue
         ref = q.get("image_ref")
         if ref:
             clean_ref = str(ref).replace(".png", "").strip()
-            if clean_ref in assets_by_id:
+            orig_q_num = source_nums[idx] if idx < len(source_nums) else q.get("number")
+            # Validation guard: if asset_map exists, ref must be in asset_map and match this question
+            if asset_map and clean_ref not in asset_map:
+                q["image_ref"] = None
+                continue
+            if asset_map and asset_map.get(clean_ref) not in (orig_q_num, q.get("number")):
+                q["image_ref"] = None
+                continue
+            if clean_ref in assets_by_id and clean_ref not in assigned_assets:
                 q["image_ref"] = f"{clean_ref}.png"
                 q["image_data"] = assets_by_id[clean_ref].get("data_uri")
-            elif ref in assets_by_id:
+                assigned_assets.add(clean_ref)
+            elif ref in assets_by_id and ref not in assigned_assets:
                 q["image_ref"] = f"{ref}.png"
                 q["image_data"] = assets_by_id[ref].get("data_uri")
+                assigned_assets.add(ref)
             else:
                 q["image_ref"] = None
 
-    assigned_assets = {str(q.get("image_ref", "")).replace(".png", "") for q in questions if q.get("image_data")}
-
     # 2. Sequential Index Mapping: question at index k was source_nums[k] in the source PDF!
     for idx, q in enumerate(questions):
-        if not q.get("image_data") and idx < len(source_nums):
+        if not q.get("image_data") and not q.get("option_images") and idx < len(source_nums):
             orig_q_num = source_nums[idx]
-            for a_id, mapped_num in asset_map.items():
-                if mapped_num == orig_q_num and a_id in assets_by_id and a_id not in assigned_assets:
-                    q["image_ref"] = f"{a_id}.png"
-                    q["image_data"] = assets_by_id[a_id].get("data_uri")
-                    assigned_assets.add(a_id)
-                    break
+            matching_aids = [
+                a_id for a_id, mapped_num in asset_map.items()
+                if mapped_num == orig_q_num and a_id in assets_by_id and a_id not in assigned_assets
+            ]
+            if len(matching_aids) == 4:
+                objs = [assets_by_id[aid] for aid in matching_aids]
+                objs.sort(key=lambda a: a.get("rect", (0, 0, 0, 0))[1])
+                q["option_images"] = {
+                    "A": objs[0].get("data_uri"),
+                    "B": objs[1].get("data_uri"),
+                    "C": objs[2].get("data_uri"),
+                    "D": objs[3].get("data_uri"),
+                }
+                for aid in matching_aids:
+                    assigned_assets.add(aid)
+            elif len(matching_aids) == 1:
+                aid = matching_aids[0]
+                q["image_ref"] = f"{aid}.png"
+                q["image_data"] = assets_by_id[aid].get("data_uri")
+                assigned_assets.add(aid)
+            elif len(matching_aids) > 1:
+                objs = [assets_by_id[aid] for aid in matching_aids]
+                objs.sort(key=lambda a: a.get("rect", (0, 0, 0, 0))[1])
+                aid = objs[0].get("id")
+                q["image_ref"] = f"{aid}.png"
+                q["image_data"] = objs[0].get("data_uri")
+                for item in objs:
+                    assigned_assets.add(str(item.get("id")).replace(".png", "").strip())
 
     # 3. Layout Spatial Map: match asset mapped to question number when numbers align
     for q in questions:
-        if not q.get("image_data"):
+        if not q.get("image_data") and not q.get("option_images"):
             q_num = q.get("number")
-            for a_id, mapped_q_num in asset_map.items():
-                if mapped_q_num == q_num and a_id in assets_by_id and a_id not in assigned_assets:
-                    q["image_ref"] = f"{a_id}.png"
-                    q["image_data"] = assets_by_id[a_id].get("data_uri")
-                    assigned_assets.add(a_id)
-                    break
+            matching_aids = [
+                a_id for a_id, mapped_q_num in asset_map.items()
+                if mapped_q_num == q_num and a_id in assets_by_id and a_id not in assigned_assets
+            ]
+            if len(matching_aids) == 4:
+                objs = [assets_by_id[aid] for aid in matching_aids]
+                objs.sort(key=lambda a: a.get("rect", (0, 0, 0, 0))[1])
+                q["option_images"] = {
+                    "A": objs[0].get("data_uri"),
+                    "B": objs[1].get("data_uri"),
+                    "C": objs[2].get("data_uri"),
+                    "D": objs[3].get("data_uri"),
+                }
+                for aid in matching_aids:
+                    assigned_assets.add(aid)
+            elif len(matching_aids) == 1:
+                aid = matching_aids[0]
+                q["image_ref"] = f"{aid}.png"
+                q["image_data"] = assets_by_id[aid].get("data_uri")
+                assigned_assets.add(aid)
+            elif len(matching_aids) > 1:
+                objs = [assets_by_id[aid] for aid in matching_aids]
+                objs.sort(key=lambda a: a.get("rect", (0, 0, 0, 0))[1])
+                aid = objs[0].get("id")
+                q["image_ref"] = f"{aid}.png"
+                q["image_data"] = objs[0].get("data_uri")
+                for item in objs:
+                    assigned_assets.add(str(item.get("id")).replace(".png", "").strip())
 
     # 4. Text marker match: if [IMAGE_REF: ...] was embedded in question text, options, or statements
-    for q in questions:
-        if not q.get("image_data"):
+    for idx, q in enumerate(questions):
+        if not q.get("image_data") and not q.get("option_images"):
             full_q_text = str(q.get("question", "")) + " " + json.dumps(q.get("options", {})) + " " + json.dumps(q.get("statements", {}))
             marker_match = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)(?:\.png)?\]", full_q_text)
             if marker_match:
                 asset_id = marker_match.group(1)
+                orig_q_num = source_nums[idx] if idx < len(source_nums) else q.get("number")
                 if asset_id in assets_by_id and asset_id not in assigned_assets:
+                    if asset_map and asset_id not in asset_map:
+                        continue
+                    if asset_map and asset_map.get(asset_id) not in (orig_q_num, q.get("number")):
+                        continue
                     q["image_ref"] = f"{asset_id}.png"
                     q["image_data"] = assets_by_id[asset_id].get("data_uri")
                     assigned_assets.add(asset_id)
@@ -603,10 +689,11 @@ def link_assets_to_questions(
     unassigned_assets = [
         a for a in assets
         if str(a.get("id") or a.get("name", "")).replace(".png", "").strip() not in assigned_assets
+        and (not asset_map or str(a.get("id") or a.get("name", "")).replace(".png", "").strip() in asset_map)
     ]
     if unassigned_assets:
         for q in questions:
-            if not q.get("image_data"):
+            if not q.get("image_data") and not q.get("option_images"):
                 q_text = str(q.get("question", "")).lower()
                 if any(w in q_text for w in ["hình vẽ", "hình bên", "hình dưới", "đồ thị", "thí nghiệm", "sơ đồ", "bảng sau", "hình sau", "phổ", "cấu tạo"]):
                     if unassigned_assets:
@@ -627,7 +714,7 @@ def link_assets_to_questions(
                 if isinstance(q["statements"][st_k], dict):
                     q["statements"][st_k]["text"] = clean_image_markers(q["statements"][st_k].get("text", ""))
         q["explanation"] = clean_image_markers(q.get("explanation", ""))
-        if not q.get("image_data"):
+        if not q.get("image_data") and not q.get("option_images"):
             q["image_ref"] = None
 
 
@@ -742,9 +829,13 @@ def stitch_cross_page_text(pages_text: list[str]) -> str:
             continue
 
         if is_question_dangling(stitched):
-            starts_with_new_q = bool(re.match(r"^(?:Câu\s*\d+|\d+\s*[\.\:])", curr_p))
+            lines = [ln for ln in curr_p.split("\n")]
+            while lines and re.search(r"(?:tenschool|thaytrong|website:|trang\s*\d+|sở\s*gd|bộ\s*giáo\s*dục)", lines[0], re.IGNORECASE):
+                lines.pop(0)
+            curr_p_clean = "\n".join(lines).strip()
+            starts_with_new_q = bool(re.match(r"^(?:Câu\s*\d+|\d+\s*[\.\:])", curr_p_clean))
             if not starts_with_new_q:
-                stitched = stitched + "\n" + curr_p
+                stitched = stitched + "\n" + curr_p_clean
                 continue
 
         stitched = stitched + f"\n\n--- PAGE BREAK ---\n\n" + curr_p
@@ -797,10 +888,49 @@ def extract_structured_page_content(
 
     # Build spatial mapping: link each image marker to the adjacent question in layout order
     page_asset_map = {}
+
+    # Extract micro-line question anchors via page.get_text("words")
+    line_questions = []
+    try:
+        words = page.get_text("words")
+        for idx_w, w in enumerate(words):
+            w_text = str(w[4])
+            if re.match(r"^Câu\s*\d+", w_text, re.IGNORECASE):
+                m = re.search(r"\d+", w_text)
+                if m:
+                    line_questions.append((w[1], int(m.group(0))))
+            elif w_text.lower() == "câu" and idx_w + 1 < len(words):
+                next_w = str(words[idx_w + 1][4])
+                m = re.match(r"^(\d+)[\.\:\)]?", next_w)
+                if m:
+                    line_questions.append((w[1], int(m.group(1))))
+            elif re.match(r"^\d+[\.\:]$", w_text):
+                m = re.match(r"^(\d+)", w_text)
+                if m:
+                    line_questions.append((w[1], int(m.group(1))))
+        line_questions.sort(key=lambda x: x[0])
+    except Exception:
+        line_questions = []
+
+    # Map assets to closest preceding question anchor, respecting section banners
+    banner_boxes = [b for b in sorted_blocks if is_section_banner(str(b[4]).strip())]
+
+    for a in assets:
+        ay0 = a["rect"][1]
+        last_banner_y = max([b[1] for b in banner_boxes if b[3] <= ay0], default=-1.0)
+        preceding = [q_num for (qy0, q_num) in line_questions if last_banner_y <= qy0 <= ay0 + 15]
+        if preceding:
+            page_asset_map[a["id"]] = preceding[-1]
+        else:
+            next_banner_y = min([b[1] for b in banner_boxes if b[1] >= ay0], default=float("inf"))
+            succeeding = [q_num for (qy0, q_num) in line_questions if ay0 < qy0 <= next_banner_y]
+            if succeeding:
+                page_asset_map[a["id"]] = succeeding[0]
+
+    # Fallback to block-based mapping for any assets still unmapped
     curr_q_num = None
     for b in sorted_blocks:
         text = str(b[4]).strip()
-        # Reset question context on section divider banner so subsequent assets aren't linked to preceding questions
         if is_section_banner(text):
             curr_q_num = None
             continue
@@ -808,7 +938,7 @@ def extract_structured_page_content(
         if q_m:
             curr_q_num = int(q_m.group(1) or q_m.group(2))
         m_img = re.search(r"\[IMAGE_REF:\s*(fig_p\d+_\d+)\]", text)
-        if m_img and curr_q_num is not None:
+        if m_img and m_img.group(1) not in page_asset_map and curr_q_num is not None:
             page_asset_map[m_img.group(1)] = curr_q_num
 
     # For any assets not yet mapped (e.g. image placed immediately above question stem), look ahead
@@ -818,7 +948,6 @@ def extract_structured_page_content(
         if m_img and m_img.group(1) not in page_asset_map:
             for next_b in sorted_blocks[i + 1:i + 4]:
                 next_text = str(next_b[4]).strip()
-                # Stop looking ahead across section boundaries
                 if is_section_banner(next_text):
                     break
                 next_qm = re.search(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", next_text)
@@ -829,7 +958,12 @@ def extract_structured_page_content(
     return page_text, assets, page_asset_map
 
 
-def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tuple[str, list[int], list[dict], dict]:
+def extract_raw_pages(
+    pdf_path: str,
+    page_spec: str,
+    temp_assets_dir: str,
+    requested_count: int = None
+) -> tuple[str, list[int], list[dict], dict, list[int]]:
     """Extract structured text, tables, and visual assets from PDF for specified pages (1-indexed)."""
     try:
         doc = pymupdf.open(pdf_path)
@@ -859,11 +993,51 @@ def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tu
             extracted_pages.append(page_text)
             actual_pages.append(p)
             all_assets.extend(page_assets)
-            all_asset_map.update(page_asset_map)
+
+            # Prune assets mapped to non-MCQ questions on this page (unless split from previous page)
+            page_mcqs = {b["source_number"] for b in parse_mcq_blocks(page_text)}
+            prev_mcqs = {b["source_number"] for b in parse_mcq_blocks(extracted_pages[-2])} if len(extracted_pages) >= 2 else set()
+            valid_page_map = {
+                aid: qnum for aid, qnum in page_asset_map.items()
+                if qnum in page_mcqs or qnum in prev_mcqs
+            }
+            all_asset_map.update(valid_page_map)
         else:
             raise ValueError(f"Trang {p} vượt quá tổng số {total_pages} trang của tài liệu PDF.")
 
     stitched_text = stitch_cross_page_text(extracted_pages)
+    parsed_blocks = parse_mcq_blocks(stitched_text)
+
+    # Auto look-ahead: If requested_count is larger than available questions, expand to next pages
+    if requested_count and len(parsed_blocks) < requested_count:
+        last_page = max(actual_pages) if actual_pages else 0
+        next_p = last_page + 1
+        while next_p <= total_pages and len(parsed_blocks) < requested_count:
+            idx = next_p - 1
+            try:
+                page_text, page_assets, page_asset_map = extract_structured_page_content(doc[idx], next_p, temp_assets_dir)
+                extracted_pages.append(page_text)
+                actual_pages.append(next_p)
+                all_assets.extend(page_assets)
+
+                page_mcqs = {b["source_number"] for b in parse_mcq_blocks(page_text)}
+                prev_mcqs = {b["source_number"] for b in parse_mcq_blocks(extracted_pages[-2])}
+                valid_page_map = {
+                    aid: qnum for aid, qnum in page_asset_map.items()
+                    if qnum in page_mcqs or qnum in prev_mcqs
+                }
+                all_asset_map.update(valid_page_map)
+
+                stitched_text = stitch_cross_page_text(extracted_pages)
+                parsed_blocks = parse_mcq_blocks(stitched_text)
+                emit_progress(
+                    28,
+                    f"Tự động mở rộng sang trang {next_p} để thu thập đủ {requested_count} câu (hiện có {len(parsed_blocks)} câu)..."
+                )
+            except Exception:
+                break
+            next_p += 1
+
     clean_len = len(re.sub(r"\s+", "", stitched_text))
     if clean_len < 50:
         raise ValueError(
@@ -871,13 +1045,15 @@ def extract_raw_pages(pdf_path: str, page_spec: str, temp_assets_dir: str) -> tu
             "Tài liệu có thể là ảnh scan thuần túy. Vui lòng chọn trang có lớp chữ hoặc OCR trước."
         )
 
-    # Collect ordered list of distinct question numbers found in the stitched text
-    q_matches = list(re.finditer(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", stitched_text))
-    source_q_nums = []
-    for m in q_matches:
-        n = int(m.group(1) or m.group(2))
-        if not source_q_nums or source_q_nums[-1] != n:
-            source_q_nums.append(n)
+    # Derive source_q_nums directly from parsed MCQ blocks for 100% synchronization
+    source_q_nums = [b["source_number"] for b in parsed_blocks]
+    if not source_q_nums:
+        # Fallback regex if no standard MCQ blocks were detected
+        q_matches = list(re.finditer(r"(?:^|\n)(?:Câu\s*(\d+)|\b(\d+)[\.\:])", stitched_text))
+        for m in q_matches:
+            n = int(m.group(1) or m.group(2))
+            if not source_q_nums or source_q_nums[-1] != n:
+                source_q_nums.append(n)
 
     return stitched_text, actual_pages, all_assets, all_asset_map, source_q_nums
 
@@ -1113,6 +1289,7 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
 
     # Question stem
     raw_question = strip_section_banner(str(q.get("question", "")))
+    raw_question = re.sub(r"^\s*(?:câu\s*\d+[\.\:\)\s]*|\b\d+[\.\:]\s*)", "", raw_question, flags=re.IGNORECASE).strip()
     if not q.get("image_ref"):
         ref_m = re.search(r"\[IMAGE_REF:\s*([^\]]+)\]", raw_question)
         if ref_m:
@@ -1132,6 +1309,10 @@ def normalize_question(q: dict, fallback_num: int = 1) -> dict:
     q["question"] = raw_question
     raw_exp = str(q.get("explanation", ""))
     q["explanation"] = strip_section_banner(raw_exp)
+
+    # Preserve option_images if present
+    if isinstance(q.get("option_images"), dict):
+        q["option_images"] = dict(q["option_images"])
 
     # MCQ options normalization (A, B, C, D)
     raw_opts = q.get("options")
@@ -1573,8 +1754,10 @@ def generate_explanations(
 # MODULE 1.7: A4 PRINT HTML TEMPLATES & KATEX
 # ==============================================================================
 
-def determine_option_layout(options: dict) -> str:
-    """Determine best grid layout (opt-col-4, opt-col-2, opt-col-1) based on text length."""
+def determine_option_layout(options: dict, has_option_images: bool = False) -> str:
+    """Determine best grid layout (opt-col-4, opt-col-2, opt-col-1) based on text length and images."""
+    if has_option_images:
+        return "opt-col-1"
     max_len = max(len(re.sub(r"<[^>]+>", "", str(v))) for v in options.values()) if options else 0
     if max_len <= 15:
         return "opt-col-4"
@@ -1588,6 +1771,8 @@ def render_question_content_html(q: dict) -> str:
     """Render question stem, embedded image (if any), and options/statements according to type."""
     q_type = q.get("type", "mcq")
     raw_text = clean_image_markers(q.get("question", ""))
+    # Defensively strip leading question numbering like "Câu 1: " or "1. " to prevent double labels ("Câu 6: Câu 1:")
+    raw_text = re.sub(r"^\s*(?:câu\s*\d+[\.\:\)\s]*|\b\d+[\.\:]\s*)", "", raw_text, flags=re.IGNORECASE).strip()
     q_text_formatted = format_tables_in_text(raw_text)
 
     # Embedded image box (guarded against null strings)
@@ -1601,11 +1786,20 @@ def render_question_content_html(q: dict) -> str:
 
     # Standard MCQ
     opts = q.get("options", {})
-    col_class = determine_option_layout(opts)
+    opt_imgs = q.get("option_images", {})
+    col_class = determine_option_layout(opts, has_option_images=bool(opt_imgs))
     opt_items = []
     for key in ["A", "B", "C", "D"]:
         val = clean_image_markers(str(opts.get(key, "")))
-        opt_items.append(f'<div class="opt-item"><span class="opt-letter">{key}.</span> {val}</div>')
+        opt_img = opt_imgs.get(key) if isinstance(opt_imgs, dict) else None
+        if opt_img:
+            if not val or val == ".":
+                val_content = f'<img src="{opt_img}" class="opt-img" alt="Đáp án {key}" />'
+            else:
+                val_content = f'{val} <br><img src="{opt_img}" class="opt-img" alt="Đáp án {key}" />'
+        else:
+            val_content = val
+        opt_items.append(f'<div class="opt-item"><span class="opt-letter">{key}.</span> {val_content}</div>')
     opts_rendered = "\n      ".join(opt_items)
     body = f"""
     <div class="q-content">{q_text_formatted}</div>{img_html}
@@ -1794,6 +1988,14 @@ def generate_worksheet_html(title: str, subtitle: str, questions: list[dict]) ->
     margin-right: 4px;
     min-width: 16px;
   }}
+  .opt-img {{
+    max-height: 48px;
+    max-width: 95%;
+    vertical-align: middle;
+    display: inline-block;
+    object-fit: contain;
+    margin-top: 2px;
+  }}
 
   /* True/False Table Layout */
   .tf-table {{
@@ -1917,8 +2119,11 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict]) -
 
         img_html = ""
         img_src = q.get("image_data")
+        opt_imgs = q.get("option_images", {})
         if img_src and str(img_src).lower() not in ("null", "none", "", "undefined"):
             img_html = f'<div class="sol-img"><img src="{img_src}" alt="Hình minh họa" /></div>'
+        elif opt_imgs and isinstance(opt_imgs, dict) and ans in opt_imgs and opt_imgs[ans]:
+            img_html = f'<div class="sol-img"><img src="{opt_imgs[ans]}" class="opt-img" alt="Hình minh họa đáp án {ans}" /></div>'
 
         sol = f"""
   <div class="sol-item">
@@ -2083,6 +2288,14 @@ def generate_answer_key_html(title: str, subtitle: str, questions: list[dict]) -
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     padding: 2px;
+  }}
+  .opt-img {{
+    max-height: 48px;
+    max-width: 95%;
+    vertical-align: middle;
+    display: inline-block;
+    object-fit: contain;
+    margin-top: 2px;
   }}
 
   /* Structured Markdown/HTML Table inside Solution */
@@ -2363,12 +2576,15 @@ def run_pipeline(
         pdf_local = download_gdrive_if_needed(input_source, temp_dir)
 
         emit_progress(25, "Đang trích xuất văn bản 2 cột, bảng biểu & hình ảnh minh họa...")
-        cached_extract = quiz_cache.get_extract_cache(pdf_local, str(pages), temp_assets_dir)
+        cache_key_spec = f"{pages}_c{count}" if count else str(pages)
+        cached_extract = quiz_cache.get_extract_cache(pdf_local, cache_key_spec, temp_assets_dir)
         if cached_extract is not None:
             raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = cached_extract
         else:
-            raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = extract_raw_pages(pdf_local, pages, temp_assets_dir)
-            quiz_cache.set_extract_cache(pdf_local, str(pages), raw_text, actual_pages, extracted_assets, asset_map, source_q_nums)
+            raw_text, actual_pages, extracted_assets, asset_map, source_q_nums = extract_raw_pages(
+                pdf_local, pages, temp_assets_dir, requested_count=count
+            )
+            quiz_cache.set_extract_cache(pdf_local, cache_key_spec, raw_text, actual_pages, extracted_assets, asset_map, source_q_nums)
         pages_desc = f"Trang {', '.join(map(str, actual_pages))}" if actual_pages else f"Trang {pages}"
 
         emit_progress(45, f"Đang chuẩn hóa câu hỏi đa định dạng GDPT 2018 ({count} câu)...")

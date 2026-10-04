@@ -266,6 +266,38 @@ class TestMCQParser(unittest.TestCase):
         self.assertEqual(b["options"]["C"], "x = 4")
         self.assertEqual(b["options"]["D"], "x = 5")
 
+    def test_essay_questions_without_options_are_dropped(self):
+        """Verify that open-ended essay questions without options are discarded from MCQ blocks."""
+        text = (
+            "Câu 14. Viết phương trình hóa học khi thủy phân tristearin trong môi trường acid.\n\n"
+            "Câu 15. Nêu các ứng dụng chính của chất béo trong công nghiệp thực phẩm và sản xuất xà phòng.\n\n"
+            "Câu 16. Hợp chất nào là triester?\nA. Tristearin\nB. Glyxerol\nC. Axit axetic\nD. Etyl axetat"
+        )
+        blocks = parse_mcq_blocks(text)
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0]["source_number"], 16)
+        self.assertEqual(blocks[0]["options"]["A"], "Tristearin")
+        self.assertEqual(count_available_questions(text), 1)
+
+    def test_two_column_acbd_layout_parsed_correctly(self):
+        """Verify that vertical 2-column layout (A -> C -> B -> D) is parsed with high confidence."""
+        text = (
+            "Câu 21: Khi để lâu trong không khí, chất béo sẽ\n"
+            "A. bị bay hơi.\n"
+            "C. có mùi khó chịu.\n"
+            "B. bị nóng chảy.\n"
+            "D. có mùi thơm."
+        )
+        blocks = parse_mcq_blocks(text)
+        self.assertEqual(len(blocks), 1)
+        b = blocks[0]
+        self.assertEqual(b["source_number"], 21)
+        self.assertEqual(b["confidence"], "high")
+        self.assertEqual(b["options"]["A"], "bị bay hơi.")
+        self.assertEqual(b["options"]["B"], "bị nóng chảy.")
+        self.assertEqual(b["options"]["C"], "có mùi khó chịu.")
+        self.assertEqual(b["options"]["D"], "có mùi thơm.")
+
 
 if __name__ == "__main__":
     unittest.main()
