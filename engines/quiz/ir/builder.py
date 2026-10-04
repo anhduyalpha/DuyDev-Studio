@@ -160,12 +160,16 @@ class CanonicalIRBuilder:
             if not q_bboxes and rich_elements:
                 q_bboxes = [elem.bbox for elem in rich_elements]
 
+            # Ensure clean stem without duplicate header
+            from engines.quiz.reconstruction.post_processor import clean_question_stem
+            cleaned_stem = clean_question_stem(q.stem)
+
             q_ir = QuestionIR(
                 id=q.id,
                 number=q.number,
                 source_number=q.source_number,
                 type=sec_type,
-                stem=normalize_text(q.stem),
+                stem=normalize_text(cleaned_stem),
                 options=norm_options,
                 sub_statements=norm_statements,
                 rich_elements=rich_elements,
@@ -177,9 +181,22 @@ class CanonicalIRBuilder:
                     original_number=q.source_number
                 ),
                 confidence=q.confidence,
-                warnings=q.warnings
+                warnings=q.warnings,
+                source_question_number=q.source_number,
+                selected_order=len(questions_ir) + 1,
+                output_question_number=q.number
             )
             questions_ir.append(q_ir)
+
+        # Build explicit question mapping records
+        question_mapping = [
+            {
+                "source_question_number": q.source_question_number or q.source_number,
+                "selected_order": q.selected_order or (idx + 1),
+                "output_question_number": q.output_question_number or q.number
+            }
+            for idx, q in enumerate(questions_ir)
+        ]
 
         # 3. Build Sections Grouped by SectionType
         section_groups: dict[SectionType, list[str]] = {
@@ -260,7 +277,8 @@ class CanonicalIRBuilder:
             pages=pages,
             sections=sections,
             questions=questions_ir,
-            answers=normalized_answers
+            answers=normalized_answers,
+            question_mapping=question_mapping
         )
 
         # 7. Execute Strict Integrity Validation

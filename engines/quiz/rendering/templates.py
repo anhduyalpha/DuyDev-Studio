@@ -12,14 +12,37 @@ from engines.quiz.rendering.layout import LayoutSolver
 
 
 def _normalize_img_src(path: str) -> str:
-    """Normalize filesystem path to compliant file URL for Chrome headless."""
+    """Normalize filesystem path to renderer-safe base64 data URL or compliant file URL for Chrome headless."""
     if not path:
         return ""
-    if path.startswith("file://") or path.startswith("data:") or path.startswith("http"):
+    if path.startswith("data:") or path.startswith("http"):
         return path
+
+    fs_path = path
+    if fs_path.startswith("file:///"):
+        fs_path = fs_path[8:]
+    elif fs_path.startswith("file://"):
+        fs_path = fs_path[7:]
+
+    # Priority 1: Self-contained base64 data URL (immune to Chrome sandbox, file:// blocks, and path spaces)
+    if os.path.isfile(fs_path):
+        try:
+            import base64
+            with open(fs_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("ascii")
+            ext = os.path.splitext(fs_path)[1].lower().lstrip(".")
+            mime = "image/png" if ext == "png" else ("image/jpeg" if ext in ("jpg", "jpeg") else "image/png")
+            return f"data:{mime};base64,{b64}"
+        except Exception:
+            pass
+
+    # Priority 2: Safely escaped file:// URL
     if os.path.isabs(path):
+        from urllib.parse import quote
         normalized = path.replace(os.sep, "/")
-        return f"file:///{normalized}" if not normalized.startswith("/") else f"file://{normalized}"
+        drive, rest = os.path.splitdrive(normalized)
+        quoted_rest = quote(rest)
+        return f"file:///{drive}{quoted_rest}" if drive else f"file://{quoted_rest}"
     return path
 
 

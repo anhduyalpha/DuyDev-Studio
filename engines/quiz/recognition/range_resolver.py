@@ -21,10 +21,18 @@ logger = logging.getLogger("engines.quiz.recognition.range_resolver")
 
 def _find_page_by_question_number(doc_reps: list[PageRepresentation], q_num: int) -> Optional[int]:
     """Finds the 1-based page number containing the specified question candidate number."""
+    import re
+    # 1. Search candidate records
     for rep in doc_reps:
         for cand in rep.candidates:
             if cand.candidate_number == q_num:
                 return rep.page_number
+
+    # 2. Search raw text regex fallback
+    pat = re.compile(rf"(?:(?:Câu|Bài|Question)\s*{q_num}\b|(?:\n|^)\s*{q_num}[\.\:\)])", re.IGNORECASE)
+    for rep in doc_reps:
+        if pat.search(rep.raw_text):
+            return rep.page_number
     return None
 
 
@@ -40,6 +48,7 @@ def resolve_smart_range(
     2. Inspects page representations to deterministically expand the page range.
     3. Fallback: Invokes AI provider only if natural language is ambiguous or candidates are absent.
     """
+    import re
     total_pages = len(doc_reps) if doc_reps else 1
     warnings: list[str] = []
 
@@ -84,15 +93,34 @@ def resolve_smart_range(
         )
 
     # Step 3: Fast Path Execution with Candidate Inspection
-    start_q = parsed.start_question if parsed.start_question is not None else 1
-    requested_count = parsed.question_count
-
-    # Determine start_page
     start_p = parsed.start_page
-    if start_p is None:
-        # User specified question range e.g. "Câu 1 đến câu 30" without page
+    if parsed.start_question is not None:
+        start_q = parsed.start_question
         found_p = _find_page_by_question_number(doc_reps, start_q)
-        start_p = found_p if found_p is not None else 1
+        if start_p is None:
+            start_p = found_p if found_p is not None else 1
+        elif found_p is not None:
+            # Check if the requested start_page actually contains start_q
+            start_p_rep = page_map.get(start_p)
+            has_start_q = False
+            if start_p_rep:
+                has_start_q = any(c.candidate_number == start_q for c in start_p_rep.candidates) or bool(
+                    re.search(rf"(?:(?:Câu|Bài|Question)\s*{start_q}\b|(?:\n|^)\s*{start_q}[\.\:\)])", start_p_rep.raw_text, re.IGNORECASE)
+                )
+            if not has_start_q:
+                # Canonical question identity mandate: align start_p with where start_q actually lives
+                logger.info(f"Aligning start_page from {start_p} to {found_p} to match canonical question {start_q}")
+                start_p = found_p
+    else:
+        if start_p is None:
+            start_p = 1
+        start_p_rep = page_map.get(start_p)
+        if start_p_rep and start_p_rep.candidates:
+            start_q = start_p_rep.candidates[0].candidate_number
+        else:
+            start_q = 1
+
+    requested_count = parsed.question_count
 
     # Clamp start_page to document range
     start_p = max(1, min(start_p, total_pages))
@@ -100,6 +128,13 @@ def resolve_smart_range(
     # Case A: User explicitly provided both start_page and end_page
     if parsed.end_page is not None:
         end_p = max(start_p, min(parsed.end_page, total_pages))
+
+        # Check continuation beyond end_p to preserve trailing options (BUG #3)
+        if end_p < total_pages:
+            rep_end = page_map.get(end_p)
+            rep_next = page_map.get(end_p + 1)
+            if rep_end and rep_next and detect_continuation_candidate(rep_end, rep_next):
+                end_p = min(total_pages, end_p + 1)
 
         # If count was not explicitly specified, count candidate questions across [start_p .. end_p]
         if requested_count is None:
@@ -146,7 +181,7 @@ def resolve_smart_range(
                 # Check continuation onto the next page
                 next_rep = page_map.get(curr_p + 1)
                 if rep and next_rep and detect_continuation_candidate(rep, next_rep):
-                    # Expand one page to include the continued question options
+                    # Expand one page to include the continued question options (BUG #3)
                     curr_p = min(total_pages, curr_p + 1)
                 break
 

@@ -169,10 +169,12 @@ class QuizPipelineOrchestrator:
             raw_questions = reconstructor.reconstruct_all(batches)
 
             emit(JobStage.RECONSTRUCTING, 45, "Chuẩn hóa thứ tự câu và liên kết đồ thị đối tượng hình ảnh")
+            full_source_text = "\n\n".join(p.raw_text for p in page_representations)
             cleaned_questions = post_process_questions(
                 raw_questions,
                 start_question=start_num,
                 expected_count=effective_count,
+                source_context=full_source_text
             )
 
             # Associate visual assets from Document Object Graph

@@ -56,6 +56,7 @@ class QuestionReconstructor:
                 "neighboring_next_context": batch.neighboring_next_context
             })
             .add_rule("Never invent or hallucinate questions not found in the input text.")
+            .add_rule("Do NOT repeat or prepend question numbering prefix (such as 'Câu 1:', 'Câu 35:') in the 'stem' field.")
             .add_rule("Do NOT generate answers or explanations in this step (solving is handled in a later phase).")
             .add_rule("Preserve all mathematical formulas in KaTeX/LaTeX format and chemical notations.")
             .add_rule("Preserve image references [IMAGE_REF: ...].")
@@ -197,6 +198,36 @@ class QuestionReconstructor:
         Prevents full job failure (Graceful degradation).
         """
         fallback_questions: list[ReconstructedQuestion] = []
+        try:
+            from engines.quiz.mcq_parser import parse_mcq_blocks
+            parsed_blocks = parse_mcq_blocks(batch.text_content)
+            if parsed_blocks:
+                for blk in parsed_blocks:
+                    q_num = blk["source_number"]
+                    opts = [
+                        QuestionOption(label=lbl, text=blk["options"][lbl])
+                        for lbl in ["A", "B", "C", "D"]
+                        if blk["options"].get(lbl)
+                    ]
+                    clean_stem = blk.get("clean_stem") or blk.get("stem", "")
+                    fallback_questions.append(
+                        ReconstructedQuestion(
+                            id=f"fallback_b{batch.batch_id}_q{q_num}",
+                            number=q_num,
+                            source_number=q_num,
+                            type=QuestionType.PART_I_MCQ,
+                            stem=clean_stem,
+                            options=opts,
+                            source_pages=list(batch.page_numbers),
+                            confidence=0.5,
+                            warnings=[f"Tạo bằng thuật toán dự phòng do AI thất bại: {error_msg}"]
+                        )
+                    )
+                if fallback_questions:
+                    return fallback_questions
+        except Exception as ex:
+            logger.warning(f"mcq_parser fallback in reconstructor failed: {ex}")
+
         pat = re.compile(r"(?:^|\n)\s*(?:Câu|Bài|Question)\s*(\d+)[\s\.\:\)]", re.IGNORECASE)
         matches = list(pat.finditer(batch.text_content))
 
@@ -216,13 +247,18 @@ class QuestionReconstructor:
             for opt_label, opt_text in opt_regex.findall(body):
                 options.append(QuestionOption(label=opt_label.upper(), text=opt_text.strip()))
 
+            clean_body = re.sub(r"^(?:Câu\s*\d+[\.\:\)\s]*|\b\d+[\.\:]\s*)", "", body, flags=re.IGNORECASE).strip()
+            # If options found, strip them from stem
+            first_opt = opt_regex.search(clean_body)
+            stem_text = clean_body[:first_opt.start()].strip() if first_opt else clean_body
+
             fallback_questions.append(
                 ReconstructedQuestion(
                     id=f"fallback_b{batch.batch_id}_q{q_num}",
                     number=q_num,
                     source_number=q_num,
                     type=QuestionType.PART_I_MCQ,
-                    stem=body,
+                    stem=stem_text,
                     options=options,
                     source_pages=list(batch.page_numbers),
                     confidence=0.5,

@@ -19,6 +19,95 @@ from .models import AssetRecord, AssetType, ExtractionMethod
 logger = logging.getLogger("engines.quiz.assets.extractor")
 
 
+def normalize_image_to_renderer_safe(img_path: str) -> tuple[int, int]:
+    """
+    Normalizes any image format (RGBA, CMYK, palette, 1-bit, alpha mask)
+    into a renderer-safe RGB PNG composited over an opaque pure white background.
+    Returns (width, height).
+    """
+    if not os.path.isfile(img_path) or os.path.getsize(img_path) == 0:
+        return 0, 0
+    try:
+        from PIL import Image
+        with Image.open(img_path) as im:
+            w, h = im.size
+            if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+                rgba = im.convert("RGBA")
+                # Composite over pure white opaque background
+                bg = Image.new("RGB", rgba.size, (255, 255, 255))
+                bg.paste(rgba, mask=rgba.split()[3])
+                bg.save(img_path, format="PNG")
+                return w, h
+            elif im.mode != "RGB":
+                rgb = im.convert("RGB")
+                rgb.save(img_path, format="PNG")
+                return w, h
+            return w, h
+    except Exception as ex:
+        logger.warning(f"Failed normalizing image {img_path}: {ex}")
+        return 0, 0
+
+
+def is_black_or_blank_image(img_path: str, max_black_ratio: float = 0.90, min_mean_lum: float = 12.0) -> bool:
+    """
+    Detects if an image is predominantly a black rectangle or completely blank/solid.
+    Returns True if image is corrupt/black/blank.
+    """
+    if not os.path.isfile(img_path) or os.path.getsize(img_path) < 100:
+        return True
+    try:
+        from PIL import Image, ImageStat
+        with Image.open(img_path) as im:
+            rgb = im.convert("RGB")
+            stat = ImageStat.Stat(rgb)
+            # Check mean luminance
+            mean_lum = sum(stat.mean) / 3.0
+            if mean_lum < min_mean_lum:
+                # Overwhelmingly black (< 12 on 0-255 scale)
+                return True
+
+            # Check variance (if variance < 0.5, completely solid uniform color)
+            var_lum = sum(stat.var) / 3.0
+            if var_lum < 0.5:
+                return True
+
+            # Check ratio of black pixels (R < 20, G < 20, B < 20)
+            hist = rgb.histogram()
+            total_pixels = max(1, im.width * im.height)
+            dark_r = sum(hist[0:20])
+            dark_g = sum(hist[256:276])
+            dark_b = sum(hist[512:532])
+            dark_ratio = min(dark_r, dark_g, dark_b) / total_pixels
+            if dark_ratio > max_black_ratio:
+                return True
+
+            return False
+    except Exception as ex:
+        logger.warning(f"Error checking black/blank image for {img_path}: {ex}")
+        return True
+
+
+def validate_image_asset(img_path: str, min_w: int = 10, min_h: int = 10) -> bool:
+    """
+    Strict validation for visual asset:
+    - File exists
+    - Non zero-byte
+    - Valid dimensions >= min_w, min_h
+    - Decoded pixels valid
+    - Not a black or blank placeholder
+    """
+    if not os.path.isfile(img_path) or os.path.getsize(img_path) < 100:
+        return False
+    try:
+        from PIL import Image
+        with Image.open(img_path) as im:
+            if im.width < min_w or im.height < min_h:
+                return False
+        return not is_black_or_blank_image(img_path)
+    except Exception:
+        return False
+
+
 class RichAssetExtractor:
     """
     High-fidelity asset extraction engine.
@@ -109,16 +198,42 @@ class RichAssetExtractor:
                 filename = f"{asset_id}.png"
                 img_path = os.path.join(self.output_dir, filename)
 
+                success = False
+                w, h = 0, 0
+                method = ExtractionMethod.EMBEDDED
+
+                # PRIORITY 1: Native embedded extraction with SMask & colorspace normalization
                 try:
-                    # Attempt native pixmap extraction from xref first
                     pix = fitz.Pixmap(doc, xref)
-                    if pix.n >= 5:
+                    # If image has an SMask xref, combine it
+                    smask = img_info[1] if len(img_info) > 1 else 0
+                    if smask > 0:
+                        try:
+                            mask = fitz.Pixmap(doc, smask)
+                            if pix.width == mask.width and pix.height == mask.height:
+                                pix = fitz.Pixmap(pix, mask)
+                        except Exception as ex_mask:
+                            logger.debug(f"Failed combining smask {smask} for xref {xref}: {ex_mask}")
+
+                    # Convert CMYK/non-RGB to RGB
+                    if pix.n >= 5 or pix.colorspace != fitz.csRGB:
                         pix = fitz.Pixmap(fitz.csRGB, pix)
+
                     pix.save(img_path)
-                    w, h = pix.width, pix.height
-                    method = ExtractionMethod.EMBEDDED
+                    norm_w, norm_h = normalize_image_to_renderer_safe(img_path)
+                    w, h = norm_w or pix.width, norm_h or pix.height
+
+                    # Validate extracted image
+                    if validate_image_asset(img_path, min_w=10, min_h=10):
+                        success = True
+                        method = ExtractionMethod.EMBEDDED
+                    else:
+                        logger.warning(f"Embedded extraction for xref {xref} produced invalid/black image. Triggering high-res crop fallback.")
                 except Exception as ex_native:
-                    logger.debug(f"Direct pixmap extraction failed for xref {xref}, falling back to page crop: {ex_native}")
+                    logger.debug(f"Direct pixmap extraction failed for xref {xref}: {ex_native}")
+
+                # PRIORITY 2: High-resolution source-page crop with opaque white background fallback
+                if not success:
                     try:
                         clip_rect = fitz.Rect(
                             max(0.0, bbox[0] - 2.0),
@@ -126,28 +241,36 @@ class RichAssetExtractor:
                             min(page_w, bbox[2] + 2.0),
                             min(page_h, bbox[3] + 2.0)
                         )
-                        pix = page.get_pixmap(clip=clip_rect, dpi=self.dpi)
+                        # Render with white opaque background (alpha=False)
+                        pix = page.get_pixmap(clip=clip_rect, dpi=self.dpi, alpha=False)
                         pix.save(img_path)
-                        w, h = pix.width, pix.height
-                        method = ExtractionMethod.CROP
+                        norm_w, norm_h = normalize_image_to_renderer_safe(img_path)
+                        w, h = norm_w or pix.width, norm_h or pix.height
+                        if validate_image_asset(img_path, min_w=10, min_h=10):
+                            success = True
+                            method = ExtractionMethod.CROP
+                        else:
+                            logger.warning(f"High-res crop fallback also failed validation for xref {xref} on page {page_number}")
                     except Exception as ex_crop:
-                        logger.warning(f"Could not extract or crop image xref {xref} on page {page_number}: {ex_crop}")
-                        records.append(
-                            AssetRecord(
-                                asset_id=asset_id,
-                                type=AssetType.RASTER,
-                                source_page=page_number,
-                                bbox=bbox,
-                                path="",
-                                sha256="",
-                                width=0,
-                                height=0,
-                                extraction_method=ExtractionMethod.EMBEDDED,
-                                confidence=0.0,
-                                error=str(ex_crop)
-                            )
+                        logger.warning(f"High-res crop fallback failed for xref {xref} on page {page_number}: {ex_crop}")
+
+                if not success:
+                    records.append(
+                        AssetRecord(
+                            asset_id=asset_id,
+                            type=AssetType.RASTER,
+                            source_page=page_number,
+                            bbox=bbox,
+                            path="",
+                            sha256="",
+                            width=0,
+                            height=0,
+                            extraction_method=ExtractionMethod.EMBEDDED,
+                            confidence=0.0,
+                            error="Image extraction resulted in corrupt or black placeholder"
                         )
-                        continue
+                    )
+                    continue
 
                 # Calculate SHA-256 content hash
                 with open(img_path, "rb") as f:
@@ -254,8 +377,13 @@ class RichAssetExtractor:
                     crop_path = os.path.join(self.output_dir, filename)
 
                     try:
-                        pix = page.get_pixmap(clip=clip_rect, dpi=self.dpi)
+                        pix = page.get_pixmap(clip=clip_rect, dpi=self.dpi, alpha=False)
                         pix.save(crop_path)
+                        norm_w, norm_h = normalize_image_to_renderer_safe(crop_path)
+                        if not validate_image_asset(crop_path, min_w=10, min_h=10):
+                            logger.debug(f"Vector crop {asset_id} failed validation (blank/black), skipping.")
+                            continue
+
                         with open(crop_path, "rb") as f:
                             sha256_hash = hashlib.sha256(f.read()).hexdigest()
 
@@ -270,8 +398,8 @@ class RichAssetExtractor:
                                 bbox=(float(x0), float(y0), float(x1), float(y1)),
                                 path=os.path.abspath(crop_path),
                                 sha256=sha256_hash,
-                                width=pix.width,
-                                height=pix.height,
+                                width=norm_w or pix.width,
+                                height=norm_h or pix.height,
                                 extraction_method=ExtractionMethod.CROP,
                                 confidence=0.95
                             )

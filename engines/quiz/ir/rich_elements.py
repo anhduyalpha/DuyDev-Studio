@@ -53,10 +53,17 @@ def crop_pdf_region(
     clip_rect = fitz.Rect(x0, y0, x1, y1)
     os.makedirs(output_dir, exist_ok=True)
 
-    pix = page.get_pixmap(clip=clip_rect, dpi=dpi)
+    pix = page.get_pixmap(clip=clip_rect, dpi=dpi, alpha=False)
     crop_filename = f"{filename_prefix}_p{page_number}_{int(x0)}_{int(y0)}.png"
     crop_path = os.path.join(output_dir, crop_filename)
     pix.save(crop_path)
+
+    try:
+        from engines.quiz.assets.extractor import normalize_image_to_renderer_safe, validate_image_asset
+        normalize_image_to_renderer_safe(crop_path)
+        validate_image_asset(crop_path)
+    except Exception:
+        pass
 
     return os.path.abspath(crop_path)
 

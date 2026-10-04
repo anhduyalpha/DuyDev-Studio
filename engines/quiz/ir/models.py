@@ -4,7 +4,7 @@ The single, authoritative typed contract connecting AI pipelines to HTML/PDF ren
 """
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any, Dict
 from pydantic import BaseModel, Field
 
 
@@ -118,6 +118,9 @@ class QuestionIR(BaseModel):
     provenance: ProvenanceIR = Field(default_factory=lambda: ProvenanceIR(source_pages=[1]))
     confidence: float = 1.0              # 0.0 .. 1.0
     warnings: list[str] = Field(default_factory=list)
+    source_question_number: Optional[int] = None
+    selected_order: Optional[int] = None
+    output_question_number: Optional[int] = None
 
 
 class AnswerKeyIR(BaseModel):
@@ -144,4 +147,5 @@ class CanonicalDocumentIR(BaseModel):
     sections: list[SectionIR] = Field(default_factory=list)
     questions: list[QuestionIR] = Field(default_factory=list)
     answers: list[AnswerKeyIR] = Field(default_factory=list)
+    question_mapping: list[dict[str, Any]] = Field(default_factory=list)
     unparsed_warnings: list[str] = Field(default_factory=list)

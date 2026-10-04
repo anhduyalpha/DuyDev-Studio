@@ -46,18 +46,20 @@ def validate_semantic_integrity(
             )
         )
 
-    # 2. Sequential Question Numbering (1..N)
+    # 2. Canonical Question Numbering
     total_q = len(doc_ir.questions)
     seq_valid = True
-    for idx, q in enumerate(doc_ir.questions, start=1):
-        if q.number != idx:
+    start_q = doc_ir.questions[0].number if doc_ir.questions else 1
+    for idx, q in enumerate(doc_ir.questions):
+        expected_num = start_q + idx
+        if q.number != expected_num and q.number != q.source_number:
             seq_valid = False
             issues.append(
                 QAIssue(
                     page=0,
                     type=QAIssueType.CARDINALITY_MISMATCH,
                     severity=QASeverity.HIGH,
-                    description=f"Question at index {idx} has non-sequential number: {q.number} (expected {idx}).",
+                    description=f"Question at index {idx + 1} has non-sequential number: {q.number} (expected {expected_num} or source {q.source_number}).",
                 )
             )
 
@@ -94,13 +96,13 @@ def validate_semantic_integrity(
     # 4. Option & Sub-statement Cardinality Check
     for q in doc_ir.questions:
         if q.type == SectionType.PART_I_MCQ:
-            if not (2 <= len(q.options) <= 4):
+            if not (2 <= len(q.options) <= 4) or len(q.options) == 3:
                 issues.append(
                     QAIssue(
                         page=0,
                         type=QAIssueType.CARDINALITY_MISMATCH,
                         severity=QASeverity.HIGH,
-                        description=f"Part I question '{q.id}' (Câu {q.number}) has invalid option count: {len(q.options)} (expected 2-4).",
+                        description=f"Part I question '{q.id}' (Câu {q.number}) has invalid option count: {len(q.options)} (missing options; expected 4 options).",
                     )
                 )
         elif q.type == SectionType.PART_II_TF:

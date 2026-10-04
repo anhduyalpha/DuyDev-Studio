@@ -127,9 +127,12 @@ class BatchPlanner:
 
         # For digital/vector documents: collect question candidates
         target_candidates: list[tuple[int, PageRepresentation]] = []
+        target_end_q = (start_question + question_count - 1) if question_count else None
         for p_rep in active_pages:
             for cand in p_rep.candidates:
                 if cand.candidate_number >= start_question:
+                    if target_end_q is not None and cand.candidate_number > target_end_q:
+                        continue
                     if question_count is None or len(target_candidates) < question_count:
                         target_candidates.append((cand.candidate_number, p_rep))
 
@@ -137,8 +140,8 @@ class BatchPlanner:
         if not target_candidates:
             # Fallback: group pages by text size
             for idx, p_rep in enumerate(active_pages):
-                prev_ctx = page_map[p_rep.page_number - 1].raw_text[-250:] if p_rep.page_number - 1 in page_map else ""
-                next_ctx = page_map[p_rep.page_number + 1].raw_text[:250] if p_rep.page_number + 1 in page_map else ""
+                prev_ctx = page_map[p_rep.page_number - 1].raw_text[-300:] if p_rep.page_number - 1 in page_map else ""
+                next_ctx = page_map[p_rep.page_number + 1].raw_text[:600] if p_rep.page_number + 1 in page_map else ""
                 batch_type = cls.classify_page_complexity(p_rep)
 
                 batches.append(
@@ -220,11 +223,11 @@ class BatchPlanner:
         # Context from boundary pages
         prev_ctx = ""
         if min_p > 1 and (min_p - 1) in page_map:
-            prev_ctx = page_map[min_p - 1].raw_text[-250:]
+            prev_ctx = page_map[min_p - 1].raw_text[-300:]
 
         next_ctx = ""
         if (max_p + 1) in page_map:
-            next_ctx = page_map[max_p + 1].raw_text[:250]
+            next_ctx = page_map[max_p + 1].raw_text[:600]
 
         has_vis = any(
             (len(page_map[p].images) > 0 or page_map[p].drawing_count > 0)

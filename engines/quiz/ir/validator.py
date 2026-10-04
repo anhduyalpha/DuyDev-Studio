@@ -63,6 +63,10 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                 raise IRValidationError(
                     f"Question '{q.id}' (Part I) has invalid option cardinality: {len(q.options)} (must be 2..4)."
                 )
+            if len(q.options) == 3:
+                raise IRValidationError(
+                    f"Question '{q.id}' (Part I, Câu {q.number}) has missing option: found only 3 options (expected 4). Content integrity invariant violated."
+                )
         elif q.type == SectionType.PART_II_TF:
             if len(q.sub_statements) != 4:
                 raise IRValidationError(

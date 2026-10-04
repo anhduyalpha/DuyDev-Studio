@@ -27,11 +27,15 @@ class ErrorCode(str, Enum):
     AI_TIMEOUT = "AI_TIMEOUT"
     AI_RATE_LIMIT = "AI_RATE_LIMIT"
     AI_INVALID_OUTPUT = "AI_INVALID_OUTPUT"
+    OPTION_MISSING = "OPTION_MISSING"
     RENDER_FAILED = "RENDER_FAILED"
     QA_FAILED = "QA_FAILED"
 
 
 ERROR_MESSAGES_VI: dict[ErrorCode, str] = {
+    ErrorCode.OPTION_MISSING: (
+        "Câu hỏi trắc nghiệm bị thiếu phương án lựa chọn trong tài liệu nguồn."
+    ),
     ErrorCode.PDF_INVALID: (
         "Tệp PDF bị hỏng hoặc không đúng định dạng chuẩn. Vui lòng kiểm tra lại tệp nguồn."
     ),
@@ -90,6 +94,10 @@ class QuizEngineError(Exception):
     @property
     def diagnostic_layer(self) -> DiagnosticLayer:
         return self.layer
+
+    @property
+    def message(self) -> str:
+        return self.user_message
 
     def to_dict(self) -> dict[str, Any]:
         """Returns structured JSON-serializable representation."""
