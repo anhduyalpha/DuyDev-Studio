@@ -57,22 +57,16 @@ It handles:
 - Do NOT introduce artificial rate-limiting, captcha, or tight file size caps.
 - Bind server to `0.0.0.0` and allow all local network and Cloudflare origins.
 
-### Rule 5: Dual-Environment Workflow (Dev on Port 3001 vs Production on Port 3000)
-- **Local Machine (`dev` branch)**:
-  - All coding, debugging, and experimentation are done on the `dev` branch.
-  - **FORBIDDEN**: Modifying code directly on the remote server or committing experimental/untested code directly to `main`.
-- **Dev Deployment & Testing (`dd-studio-dev`, Port 3001)**:
-  - Push to `origin/dev` and deploy to the Dev server:
+### Rule 5: Direct Production Workflow (Main Branch, Port 3000 / HTTPS)
+- **Local Machine (`main` branch)**:
+  - All coding, debugging, testing, and commits are done directly on the `main` branch.
+  - Branch `dev` has been deleted per user mandate.
+- **Production Deployment & Verification (`main` branch, Port 3000 / HTTPS)**:
+  - Push to `origin/main` and deploy directly to production:
     ```powershell
-    .\scripts\deploy-dev.ps1
+    .\scripts\deploy-prod.ps1
     # or via SSH:
-    ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio-dev/scripts/deploy-dev.sh"
-    ```
-  - Test and verify thoroughly on `http://192.168.2.171:3001`.
-- **Production Promotion (`main` branch, Port 3000 / HTTPS)**:
-  - Only when features are verified 100% on the Dev server, promote to production:
-    ```powershell
-    .\scripts\promote-to-prod.ps1
+    ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio/scripts/deploy-prod.sh"
     ```
   - Production runs at `/home/anhduy/dd-studio` on port 3000 (`dd-studio.service`), serving `https://duydevstudio.alphadaniel.io.vn`.
 
