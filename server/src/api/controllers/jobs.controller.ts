@@ -75,13 +75,10 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
 
   reply.raw.flushHeaders?.();
 
-  // Send initial connected event
-  reply.raw.write(`event: connected\ndata: ${JSON.stringify({ jobId, status: job.status, progress: job.progress })}\n\n`);
-
-  // If already completed or failed, emit current state and exit
-  if (job.status === 'COMPLETED') {
-    const artifact = job.files.find((f) => f.purpose === 'PROCESSED_ARTIFACT') || job.files[0];
-    let completedPayload: Record<string, unknown> = {
+  // Helper to build completed event payload
+  const buildCompletedPayload = (targetJob: typeof job) => {
+    const artifact = targetJob.files.find((f) => f.purpose === 'PROCESSED_ARTIFACT') || targetJob.files[0];
+    let payload: Record<string, unknown> = {
       jobId,
       percentage: 100,
       resultFileId: artifact?.id || null,
@@ -90,15 +87,24 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
     };
 
     try {
-      const opts = JSON.parse(job.optionsJson || '{}');
+      const opts = JSON.parse(targetJob.optionsJson || '{}');
       if (opts.result) {
-        completedPayload = {
-          ...completedPayload,
+        payload = {
+          ...payload,
           ...opts.result
         };
       }
     } catch {}
 
+    return payload;
+  };
+
+  // Send initial connected event
+  reply.raw.write(`event: connected\ndata: ${JSON.stringify({ jobId, status: job.status, progress: job.progress })}\n\n`);
+
+  // If already completed or failed, emit current state and exit immediately
+  if (job.status === 'COMPLETED') {
+    const completedPayload = buildCompletedPayload(job);
     reply.raw.write(`event: completed\ndata: ${JSON.stringify(completedPayload)}\n\n`);
     reply.raw.end();
     return;
@@ -146,10 +152,19 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
     }
   }, 5000);
 
+  // Maximum SSE connection lifetime (5 minutes) with automatic graceful termination
+  const maxTimeout = setTimeout(() => {
+    cleanup();
+    try {
+      reply.raw.end();
+    } catch {}
+  }, 5 * 60 * 1000);
+
   const cleanup = async () => {
     if (isCleanedUp) return;
     isCleanedUp = true;
     clearInterval(keepAliveTimer);
+    clearTimeout(maxTimeout);
     try {
       subscriber.off('message', messageHandler);
       await subscriber.unsubscribe(channel);
@@ -167,6 +182,39 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
     await subscriber.subscribe(channel);
   } catch (subErr) {
     logger.warn({ jobId, subErr }, 'Failed to subscribe to Redis events channel');
+  }
+
+  // POST-SUBSCRIPTION RE-CHECK: Eliminate TOCTOU race condition window
+  try {
+    const postSubJob = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: { files: true }
+    });
+
+    if (postSubJob && !isCleanedUp) {
+      if (postSubJob.status === 'COMPLETED') {
+        const completedPayload = buildCompletedPayload(postSubJob);
+        reply.raw.write(`event: completed\ndata: ${JSON.stringify(completedPayload)}\n\n`);
+        await cleanup();
+        reply.raw.end();
+        return;
+      }
+
+      if (postSubJob.status === 'FAILED') {
+        reply.raw.write(
+          `event: failed\ndata: ${JSON.stringify({
+            jobId,
+            error: postSubJob.errorMessage || 'Job execution failed',
+            timestamp: Math.floor(Date.now() / 1000)
+          })}\n\n`
+        );
+        await cleanup();
+        reply.raw.end();
+        return;
+      }
+    }
+  } catch (recheckErr) {
+    logger.warn({ jobId, recheckErr }, 'Post-subscription job status re-check error');
   }
 }
 

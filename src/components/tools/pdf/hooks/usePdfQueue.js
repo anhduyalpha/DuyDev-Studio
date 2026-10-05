@@ -994,7 +994,9 @@ export class PdfQueueManager {
         this.activeJobWatcherCleanup = watchJobProgress({
           apiBase, eventsUrl, pollUrl,
           onProgress: (pct, stageName) => {
-            this.progress = Math.max(this.progress, pct);
+            // Map worker progress (0% - 100%) into 25% - 99% range to eliminate visual freeze at 25%
+            const scaled = Math.min(99, 25 + Math.round((pct / 100) * 74));
+            this.progress = Math.max(this.progress, scaled);
             if (stageName) this.stage = stageName;
             this.notify('progress');
             taskCoordinator.syncTasks(true);

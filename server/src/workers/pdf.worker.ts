@@ -48,15 +48,17 @@ function resolveEngineScript(): string {
   return candidates.find((p) => existsSync(p)) || candidates[0];
 }
 
-function executePythonEngine(
+export function executePythonEngine(
   pythonBin: string,
   scriptPath: string,
   args: string[],
-  onProgress: (pct: number, stage: string) => Promise<void>
+  onProgress: (pct: number, stage: string) => Promise<void>,
+  timeoutMs: number = 120_000
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(pythonBin, [scriptPath, ...args]);
     let stderr = '';
+    let isTerminated = false;
     const pendingPromises: Promise<void>[] = [];
 
     const rl = readline.createInterface({ input: child.stdout });
@@ -76,7 +78,26 @@ function executePythonEngine(
       stderr += chunk.toString();
     });
 
+    // Hard watchdog execution timeout to prevent infinite hangs on corrupted PDFs
+    const timeoutTimer = setTimeout(() => {
+      isTerminated = true;
+      try {
+        rl.close();
+      } catch {}
+      try {
+        child.kill('SIGKILL');
+      } catch {}
+      reject(new Error('Thời gian xử lý tài liệu vượt quá giới hạn an toàn (120s). Vui lòng thử lại với file nhỏ hơn.'));
+    }, timeoutMs);
+
     child.on('close', async (code) => {
+      clearTimeout(timeoutTimer);
+      if (isTerminated) return;
+
+      try {
+        rl.close();
+      } catch {}
+
       await Promise.allSettled(pendingPromises);
       if (code === 0) return resolve();
       const lowerErr = stderr.toLowerCase();
@@ -90,6 +111,12 @@ function executePythonEngine(
     });
 
     child.on('error', (err) => {
+      clearTimeout(timeoutTimer);
+      if (isTerminated) return;
+
+      try {
+        rl.close();
+      } catch {}
       reject(err);
     });
   });
