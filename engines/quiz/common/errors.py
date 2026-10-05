@@ -8,8 +8,9 @@ from typing import Optional, Any
 
 
 class DiagnosticLayer(str, Enum):
-    """The 6 distinct technical layers responsible for pipeline failures."""
+    """The distinct technical layers responsible for pipeline failures."""
     PDF_PARSING_FAILURE = "PDF_PARSING_FAILURE"
+    RECOGNITION_FAILURE = "RECOGNITION_FAILURE"
     AI_FAILURE = "AI_FAILURE"
     IR_FAILURE = "IR_FAILURE"
     LAYOUT_FAILURE = "LAYOUT_FAILURE"
@@ -24,6 +25,7 @@ class ErrorCode(str, Enum):
     PDF_UNSUPPORTED = "PDF_UNSUPPORTED"
     PDF_SCAN_TOO_LOW_QUALITY = "PDF_SCAN_TOO_LOW_QUALITY"
     NO_QUESTIONS_FOUND = "NO_QUESTIONS_FOUND"
+    RANGE_MISMATCH = "RANGE_MISMATCH"
     AI_TIMEOUT = "AI_TIMEOUT"
     AI_RATE_LIMIT = "AI_RATE_LIMIT"
     AI_INVALID_OUTPUT = "AI_INVALID_OUTPUT"
@@ -33,6 +35,9 @@ class ErrorCode(str, Enum):
 
 
 ERROR_MESSAGES_VI: dict[ErrorCode, str] = {
+    ErrorCode.RANGE_MISMATCH: (
+        "Dải câu hỏi phát hiện không khớp với yêu cầu của người dùng. Vui lòng kiểm tra lại số trang hoặc số câu."
+    ),
     ErrorCode.OPTION_MISSING: (
         "Câu hỏi trắc nghiệm bị thiếu phương án lựa chọn trong tài liệu nguồn."
     ),

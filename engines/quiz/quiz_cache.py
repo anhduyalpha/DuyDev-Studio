@@ -330,3 +330,18 @@ def set_vision_cache(vision_hash: str, result_dict: dict) -> None:
         return
     write_json(f"vision_qa_{vision_hash}", result_dict)
 
+
+def get_question_index_cache(cache_key: str) -> dict | None:
+    """Retrieves cached Page Question Index for PLAN-05."""
+    if not is_cache_enabled():
+        return None
+    return read_json(f"q_index_{cache_key}")
+
+
+def set_question_index_cache(cache_key: str, result_dict: dict) -> None:
+    """Saves Page Question Index with 7-day TTL for PLAN-05."""
+    if not is_cache_enabled():
+        return
+    write_json(f"q_index_{cache_key}", result_dict)
+
+

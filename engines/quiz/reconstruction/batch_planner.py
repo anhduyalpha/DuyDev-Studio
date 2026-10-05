@@ -72,7 +72,8 @@ class BatchPlanner:
         end_page: int,
         start_question: int = 1,
         question_count: Optional[int] = None,
-        custom_capacities: Optional[dict[str, int]] = None
+        custom_capacities: Optional[dict[str, int]] = None,
+        target_question_numbers: Optional[list[int]] = None,
     ) -> list[BatchPayload]:
         """
         Generates structured BatchPayload items across the target page range.
@@ -118,7 +119,7 @@ class BatchPlanner:
                     BatchPayload(
                         batch_id=batch_id,
                         batch_type="scanned",
-                        target_question_numbers=[],
+                        target_question_numbers=target_question_numbers or [],
                         page_indices=[p.page_index for p in chunk],
                         page_numbers=chunk_page_nums,
                         text_content=chunk_text,
@@ -131,14 +132,30 @@ class BatchPlanner:
 
         # For digital/vector documents: collect question candidates
         target_candidates: list[tuple[int, PageRepresentation]] = []
-        target_end_q = (start_question + question_count - 1) if question_count else None
-        for p_rep in active_pages:
-            for cand in p_rep.candidates:
-                if cand.candidate_number >= start_question:
-                    if target_end_q is not None and cand.candidate_number > target_end_q:
-                        continue
-                    if question_count is None or len(target_candidates) < question_count:
+        if target_question_numbers is not None:
+            target_q_set = set(target_question_numbers)
+            seen_cand_nums: set[int] = set()
+            for p_rep in active_pages:
+                for cand in p_rep.candidates:
+                    if cand.candidate_number in target_q_set and cand.candidate_number not in seen_cand_nums:
                         target_candidates.append((cand.candidate_number, p_rep))
+                        seen_cand_nums.add(cand.candidate_number)
+            # If any target question wasn't directly in candidates, assign it to first active page
+            for q_n in target_question_numbers:
+                if q_n not in seen_cand_nums and active_pages:
+                    target_candidates.append((q_n, active_pages[0]))
+                    seen_cand_nums.add(q_n)
+            target_candidates.sort(key=lambda item: item[0])
+        else:
+            target_end_q = (start_question + question_count - 1) if question_count else None
+            for p_rep in active_pages:
+                for cand in p_rep.candidates:
+                    if cand.candidate_number >= start_question:
+                        if target_end_q is not None and cand.candidate_number > target_end_q:
+                            continue
+                        if question_count is None or len(target_candidates) < question_count:
+                            target_candidates.append((cand.candidate_number, p_rep))
+
 
         # If candidates are empty (e.g. non-standard numbering), partition by page blocks
         if not target_candidates:

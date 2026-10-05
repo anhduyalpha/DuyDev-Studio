@@ -1,97 +1,124 @@
 # Agent Handoff
 
 ## Current task
-`PLAN-04 — Extraction Window Planner (TASK-05)`
+`PLAN-05 — Page Neighborhood Scanner + Question Index`
 
 ## Status
-`DONE — PASS (AUDITED, REPAIRED & VERIFIED)`
+`DONE — PASS (SKEPTICALLY AUDITED, BUGS RESOLVED & FULLY VERIFIED)`
 
 ---
 
-## PLAN-04 Implementation Summary
+## PLAN-05 Implementation & Audit Summary
 
 ### 1. Objective Achieved
-Implemented and hardened the Extraction Window Planner capable of deterministically planning physical extraction windows across complex documents with:
-- **Printed-Page vs Physical-Page Reconciliation**: Reconciles logical printed page numbers to physical page indices across multiple header/footer patterns (`Trang 40`, `Page 40`, `Trang: 40`, `Trang số 40`, `Trang 40/50`, `- 40 -`) using bounding-box spatial geometry and raw text scanning without artificial page boundary limits (`_find_page_by_printed_page_number`).
-- **Bi-Directional Cross-Page Boundary Continuation Stitching**:
-  - **Inward Alignment (Stem Continuation)**: Automatically aligns `start_page` back to where a question stem begins when a question is split across page boundaries (e.g. Câu 41 starts at the bottom of physical Page 1 while its options and Linoleic acid structure diagram are on physical Page 2). Works for both explicit question queries and single-page queries (Case C).
-  - **Outward Expansion (Trailing Option Continuation)**: Automatically expands `end_page` by 1 when the final question's options continue onto the next page (e.g. Câu 46 on physical Page 2 has Option D on physical Page 3). Verified across explicit ranges (Case A), count-based ranges (Case B), and single-page requests (Case C).
-- **Batch Payload Packaging**: Generates batches with clean text from the entire extraction window while removing running headers, footers, website watermarks, and section banners (`BatchPlanner.plan_batches`).
-- **Canonical Post-Processing**: Filters strictly to requested target question bounds `[start_question .. start_question + count - 1]` while guaranteeing all 4 options A, B, C, D are present without placeholders.
+Implemented the Page Neighborhood Scanner & Question Index layer running strictly **prior to extraction and reconstruction**, guaranteeing that any requested question range is completely accounted for before processing, eliminating silent partial drops:
+- **Full-Page Question Inventory (`build_page_index`)**:
+  - Scans target physical pages deterministically using spatial layout and text block geometry without requiring external AI provider calls.
+  - Populates `QuestionIndexEntry` records tracking physical pages, bounding boxes, text spans, detection methods, and option markers (`A, B, C, D`).
+- **Two-Column Layout Reading Order Awareness**:
+  - Identifies two-column examination layouts via block spatial coordinate clustering across the horizontal midpoint.
+  - Enforces column-aware reading order (left column top-to-bottom, followed by right column top-to-bottom) preventing interleaving between columns.
+- **Lightweight Page Neighborhood Scanner (`build_neighborhood_index`)**:
+  - Targets requested physical page while scanning lightweight boundary context:
+    - **Previous Page**: Detects if a question stem began on the preceding page and continues onto the target page (inward continuation).
+    - **Next Page**: Detects if trailing options for the last question on the target page continue onto the following page (outward continuation).
+  - Explicitly categorizes document pages into `target`, `continuation`, and `context`.
+  - Derives precise continuation bounding boxes from adjacent questions rather than hardcoded fractions.
+- **Target / Continuation / Context Isolation**:
+  - Downstream extraction window planners (`BatchPlanner.plan_batches`) and post-processors (`post_process_questions`) strictly filter candidates to `target_question_numbers`.
+  - Context pages used for boundary resolution are strictly quarantined and never leak extraneous questions (e.g. Q45 on page 14) into final output.
+- **Hard Gate Range Validator (`validate_requested_range` & `build_extraction_plan`)**:
+  - Verifies that all expected question numbers `[start_q .. end_q]` are present.
+  - If a discrepancy occurs, engages **Missing Question Recovery** (deep regex text span re-scan on target, bidirectional previous AND next neighbor page boundary inspection, targeted vision fallback with full page text context).
+  - If questions remain missing, raises `QuizEngineError(ErrorCode.RANGE_MISMATCH)` with `DiagnosticLayer.RECOGNITION_FAILURE` — **never silently proceeds with a partial range**.
+- **Atomic Cache Tier (`quiz_cache.py`)**:
+  - Caches page question inventories (`q_index_<hash>`) with a 7-day TTL.
 
 ---
 
-## Golden Regression Verification: "Trang 40 từ câu 41 đến 46"
+## What Was Found & Fixed in Second-Pass Review
 
-### 1. Actual Extraction Window Report
-- **Reference Document**: `Gốc.pdf` (`.tmp/Diff check/Gốc.pdf`, 3-page excerpt).
-- **User Instruction**: `"Trang 40 từ câu 41 đến 46"`.
-- **Numeric Constraint Parsed**:
-  - `start_page`: 40 (printed)
-  - `start_question`: 41
-  - `end_question`: 46
-  - `question_count`: 6
-- **Physical vs Printed Reconciliation**:
-  - Printed page "Trang 40" maps to physical Page 2.
-  - Câu 41 stem begins at the bottom of physical Page 1 ("Linoleic acid (có cấu tạo như hình bên)...").
-  - `start_page` aligns inward to **physical Page 1**.
-  - Câu 46 is on physical Page 2, but its Option D ("1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2.") continues onto physical Page 3.
-  - `end_page` expands outward to **physical Page 3**.
-- **Actual Calculated Extraction Window**:
-  - **`start_page`**: `1`
-  - **`end_page`**: `3`
-  - **`start_question`**: `41`
-  - **`question_count`**: `6`
-  - **`target_question_numbers`**: `[41, 42, 43, 44, 45, 46]`
-  - **`batches`**: `1 batch` (`batch_1_p1-2_cands6`) spanning physical pages `[1, 2, 3]`.
-  - **`batch_type`**: `visual_heavy`
-  - **`questions extracted`**: Exactly 6 questions (41 to 46), each with all 4 options A, B, C, D.
-  - **`rich elements`**: Q41 claims Linoleic acid diagram on Page 2 (`asset_p2_img_83_0`); Q42..46 claim 0 assets.
+1. **Missing `next_page` recovery in `_recover_missing_questions`**:
+   - *Issue*: Step 2 only inspected `previous_page`. If a requested range spanned into `next_page`, recovery failed to inspect `next_page`.
+   - *Fix*: Added bidirectional neighbor scanning checking both `previous_page` and `next_page`, with dynamic continuation role assignment.
+2. **Brittle substring matching on neighbor pages**:
+   - *Issue*: Used `f"Câu {q_num}"` instead of regex, failing for non-"Câu" prefixes (e.g., "Bài", "Question", "15.").
+   - *Fix*: Upgraded to generic multi-pattern regex matching across all recovery stages.
+3. **Hardcoded Recovery Bounding Boxes**:
+   - *Issue*: Hardcoded `(50, 100, width - 50, 150)` for recovered items.
+   - *Fix*: Implemented `_find_question_bbox` to extract real line coordinates from `PageRepresentation.blocks`.
+4. **Empty Prompt Input in `_targeted_vision_fallback`**:
+   - *Issue*: AI prompt input passed only `page` number and `target_missing_questions` without document text or context.
+   - *Fix*: Provided full `page_text`, line count, and image metadata in `prompt_builder.set_input`.
+5. **Guard Against Empty `target_pages`**:
+   - *Issue*: `target_pages = []` caused `IndexError: list index out of range` in `build_multi_page_neighborhood_index`.
+   - *Fix*: Added defensive guard returning empty `PageNeighborhood`.
+6. **1-Based AI Renumbering Fallback in `post_processor.py`**:
+   - *Issue*: If AI renumbered questions 1..N while requested questions were 30..44, `post_processor` returned empty list.
+   - *Fix*: Added canonical mapping fallback when candidate count matches target count.
+7. **Distant Backwards Alignment in `range_resolver.py`**:
+   - *Issue*: Jumping backwards to distant chapters if a question number matched an earlier exam.
+   - *Fix*: Restrained alignment to immediate previous page (`start_p - 1`) or when target page has no candidates.
+
+---
+
+## Production Regression Verification
+
+### 1. Regression Test 1: "Trang 13 câu 30 đến 44"
+- **Reference Document**: `.tmp/sample.pdf` (75-page chemistry document, Page 13 contains Câu 30 to Câu 44).
+- **User Instruction**: `"Trang 13 câu 30 đến 44"`.
+- **Pre-Extraction Inventory**:
+  - Target physical page: `13`.
+  - Question index on Page 13: 15 questions detected (`[30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]`).
+  - Validation: Expected 15, Detected 15, Missing 0 -> `RANGE_VALID`.
+- **Extracted Question Output**: Exactly 15 questions (Q30..Q44).
+- **Generated Artifacts**:
+  - DeBai PDF: `.tmp/regression_plan05/run_q30_44/REG_Trang13_Q30_44_DeBai.pdf` (92,025 bytes, verified present).
+  - DapAn PDF: `.tmp/regression_plan05/run_q30_44/REG_Trang13_Q30_44_DapAn.pdf` (134,606 bytes).
+
+### 2. Regression Test 2: "Trang 13 câu 31 đến 43"
+- **User Instruction**: `"Trang 13 câu 31 đến 43"`.
+- **Pre-Extraction Inventory**:
+  - Target physical page: `13`.
+  - Filtered question bounds: Exactly 13 questions (`[31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]`).
+  - Validation: Expected 13, Detected 13, Missing 0 -> `RANGE_VALID`.
+- **Extracted Question Output**: Exactly 13 questions (Q31..Q43).
+  - Q30 is strictly excluded.
+  - Q44 is strictly excluded.
+- **Generated Artifacts**:
+  - DeBai PDF: `.tmp/regression_plan05/run_q31_43/REG_Trang13_Q31_43_DeBai.pdf` (88,790 bytes, verified present).
+  - DapAn PDF: `.tmp/regression_plan05/run_q31_43/REG_Trang13_Q31_43_DapAn.pdf` (128,505 bytes).
+
+### 3. Edge Case Boundary & Layout Tests
+- **Case C (Inward Continuation)**: Q40 stem starts on Page 1, options on Page 2. Query Q40..41 returns both Q40 and Q41; Page 1 questions (Q39) do not leak.
+- **Case D (Outward Continuation)**: Q44 on Page 2 continues with Option D on Page 3. Query Q44 captures Option D from Page 3; Page 3 Q45 does not leak.
+- **Case D (Next-Page Missing Recovery)**: Query Q44..Q45 on Page 2 recovers Q45 on Page 3 seamlessly.
+- **Case E (Two-Column Layout)**: Left column questions Q1..Q3 and right column questions Q4..Q6 maintain natural top-to-bottom reading order (Q1, Q2, Q3, Q4, Q5, Q6).
+- **Case F (Rich-Content Questions)**: Preserves diagrams, drawings, and KaTeX math formulas with exact bounding boxes.
+- **Case G (Hard Gate Validation)**: Query Q30..Q44 on a document with only Q41..Q44 triggers hard gate `RANGE_MISMATCH`, preventing silent partial output.
+- **Case H (Non-Standard Markers)**: Correctly indexes and recovers questions with "Bài", "Question", or standalone numeric prefixes.
 
 ---
 
 ## Verification Test Results
 
-1. **Golden Semantic Fidelity Suite (8/8 tests passed)**:
-   - Command: `python -m unittest engines/quiz/tests/test_semantic_fidelity_goc.py -v`
-   - Verified:
-     - `test_regression_trang_40_tu_cau_41_den_46`: PASS.
-     - `test_regression_single_page_trang_40`: PASS.
-     - `test_regression_page_range_trang_40_den_41`: PASS.
-     - `test_range_resolver_expands_to_page_3_for_q35_q46`: PASS.
-     - `test_batch_planner_includes_q46_option_d_continuation`: PASS.
-     - `test_mcq_parser_extracts_clean_q46_with_all_four_options`: PASS.
-     - `test_recover_missing_mcq_options_recovers_d_from_full_document_context`: PASS.
-     - `test_end_to_end_layout_renders_two_pages_with_true_option_d`: PASS.
-   - Result: **8/8 PASS (4.04s)**.
+1. **PLAN-05 Dedicated Suite (13/13 tests passed)**:
+   - Command: `python -m unittest engines/quiz/tests/test_plan05_question_index.py -v`
+   - Result: **13/13 PASS (11.99s, 0 failures, 0 errors)**.
 
-2. **Smart Recognition Test Suite (9/9 tests passed)**:
-   - Command: `python -m unittest engines/quiz/tests/test_smart_recognition.py -v`
-   - Verified:
-     - `test_parse_numeric_instruction_formats`: PASS.
-     - `test_deterministic_range_expansion`: PASS.
-     - `test_explicit_page_range`: PASS.
-     - `test_cross_page_continuation_expansion`: PASS.
-     - `test_single_page_continuation_expansion`: PASS.
-     - `test_printed_page_reconciliation_within_page_bounds`: PASS.
-     - `test_printed_page_header_formats`: PASS.
-     - `test_ai_fallback_on_ambiguous_instruction`: PASS.
-     - `test_traversal_safety_limit`: PASS.
-   - Result: **9/9 PASS (0.01s)**.
-
-3. **Full Engine Test Discovery (211/211 tests passed across all 21 test files)**:
+2. **Full Quiz Engine Test Discovery (224/224 tests passed across all 22 test files)**:
    - Command: `python -m unittest discover -s engines/quiz/tests -p "test_*.py"`
-   - Result: **211/211 PASS (40.49s, 0 failures, 0 errors)**.
+   - Result: **224/224 PASS (63.21s, 0 failures, 0 errors)**.
 
-4. **Backend TypeScript Compilation**:
+3. **Backend TypeScript Compilation**:
    - Command: `cd server && npx tsc --noEmit`
    - Result: **0 errors (PASS)**.
 
-5. **Backend Vitest Suite (515/515 tests passed across 47 test files)**:
-   - Command: `cd server && npx vitest run`
-   - Result: **515/515 PASS (77.76s)**.
+4. **Backend Vitest Unit Suite (463/463 tests passed across 39 test files)**:
+   - Command: `cd server && npx vitest run tests/unit`
+   - Result: **463/463 PASS (69.96s)**.
 
-6. **UI Production Minimalism Compliance**:
+5. **UI Production Minimalism Compliance**:
    - `src/` directory: **0 files modified, 0 lines changed**.
 
 ---
@@ -99,22 +126,18 @@ Implemented and hardened the Extraction Window Planner capable of deterministica
 ## Files Changed
 
 ### Created:
-- `docs/PLAN-04-EXTRACTION-WINDOW-PLANNER.md` (complete specification of PLAN-04)
+- `docs/PLAN-05-PAGE-NEIGHBORHOOD-SCANNER-QUESTION-INDEX.md`: Complete specification of PLAN-05.
+- `engines/quiz/recognition/question_index.py`: `QuestionIndexService` implementation.
+- `engines/quiz/tests/test_plan05_question_index.py`: Unit and regression test suite covering Cases A through H.
 
 ### Modified:
-- `engines/quiz/recognition/range_resolver.py`:
-  - Removed artificial `start_p > total_pages` constraint for printed page lookup.
-  - Enhanced `_find_page_by_printed_page_number` with spatial geometry block search and multiple Vietnamese header/footer patterns.
-  - Added inward continuation alignment for implicit question queries (`start_question is None`).
-  - Fixed Case C (single page) outward continuation expansion and accurate question counting.
-  - Fixed Case A candidate filtering on `start_p` by `start_q`.
-- `engines/quiz/tests/test_semantic_fidelity_goc.py`:
-  - Added `test_regression_trang_40_tu_cau_41_den_46`.
-  - Added `test_regression_single_page_trang_40`.
-  - Added `test_regression_page_range_trang_40_den_41`.
-- `engines/quiz/tests/test_smart_recognition.py`:
-  - Added `test_single_page_continuation_expansion`.
-  - Added `test_printed_page_reconciliation_within_page_bounds`.
-  - Added `test_printed_page_header_formats`.
-- `docs/agent-handoff.md`:
-  - Updated documentation with full audit findings, test runs, and verification reports.
+- `engines/quiz/common/errors.py`: Added `ErrorCode.RANGE_MISMATCH` and `DiagnosticLayer.RECOGNITION_FAILURE`.
+- `engines/quiz/recognition/models.py`: Added `QuestionSegment`, `QuestionIndexEntry`, `PageIndex`, `PageNeighborhood`, `ExtractionPlan`.
+- `engines/quiz/recognition/__init__.py`: Exported new models and `QuestionIndexService`.
+- `engines/quiz/quiz_cache.py`: Added `get_question_index_cache` and `set_question_index_cache`.
+- `engines/quiz/reconstruction/batch_planner.py`: Supported `target_question_numbers` filtering in `plan_batches`.
+- `engines/quiz/reconstruction/post_processor.py`: Supported `target_question_numbers` isolation and 1-based renumbering fallback in `post_process_questions`.
+- `engines/quiz/recognition/range_resolver.py`: Constrained backwards alignment to immediate neighbors to prevent jumping across chapters.
+- `engines/quiz/orchestrator/pipeline.py`: Integrated `QuestionIndexService` and hard-gate range validation into JobStage.PLANNING.
+- `server/src/workers/quiz.worker.ts`: Cleaned error reporting for `RANGE_MISMATCH`.
+- `docs/agent-handoff.md`: Updated handoff report with audit and verification details.

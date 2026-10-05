@@ -158,10 +158,18 @@ function cleanQuizErrorMessage(rawErr: string): string {
   ) {
     return 'Trang tài liệu dạng ảnh quét thuần túy không có lớp chữ số. Vui lòng chọn trang có văn bản rõ ràng.';
   }
+  if (
+    lowerErr.includes('range_mismatch') ||
+    lowerErr.includes('không tìm thấy đủ câu hỏi') ||
+    lowerErr.includes('tuyệt đối không xuất bản đề thi thiếu câu hỏi')
+  ) {
+    return 'Dải câu hỏi phát hiện không khớp với yêu cầu của bạn. Vui lòng kiểm tra lại số trang hoặc số câu.';
+  }
   if (lowerErr.includes('vượt quá tổng số')) {
     const lastLine = rawErr.trim().split('\n').pop() || '';
     return lastLine.replace(/^ValueError:\s*/, '').trim() || lastLine.trim();
   }
+
 
   // Strip Python tracebacks if present
   if (rawErr.includes('Traceback (most recent call last):')) {

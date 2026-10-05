@@ -149,17 +149,23 @@ def resolve_smart_range(
 
     if parsed.start_question is not None:
         start_q = parsed.start_question
-        found_p = _find_page_by_question_number(doc_reps, start_q)
+        start_p_rep = page_map.get(start_p) if start_p is not None else None
+        has_start_q = any(c.candidate_number == start_q for c in start_p_rep.candidates) if start_p_rep else False
+        if not has_start_q and start_p_rep and start_p_rep.raw_text:
+            pat_q = re.compile(rf"(?:(?:Câu|Bài|Question)\s*{start_q}\b|(?:\n|^)\s*{start_q}[\.\:\)])", re.IGNORECASE)
+            has_start_q = bool(pat_q.search(start_p_rep.raw_text))
+
         if start_p is None:
+            found_p = _find_page_by_question_number(doc_reps, start_q)
             start_p = found_p if found_p is not None else 1
-        elif found_p is not None:
-            if found_p < start_p:
-                logger.info(f"Aligning start_page from {start_p} to {found_p} to include canonical question stem for {start_q}")
-                start_p = found_p
-            else:
-                start_p_rep = page_map.get(start_p)
-                has_start_q = any(c.candidate_number == start_q for c in start_p_rep.candidates) if start_p_rep else False
-                if not has_start_q and found_p > start_p:
+        elif not has_start_q:
+            found_p = _find_page_by_question_number(doc_reps, start_q)
+            if found_p is not None:
+                if found_p == start_p - 1:
+                    # Inward continuation from immediate previous page
+                    logger.info(f"Aligning start_page from {start_p} to {found_p} to include canonical question stem for {start_q}")
+                    start_p = found_p
+                elif not start_p_rep or not start_p_rep.candidates:
                     logger.info(f"Aligning start_page from {start_p} to {found_p} to match canonical question {start_q}")
                     start_p = found_p
     else:

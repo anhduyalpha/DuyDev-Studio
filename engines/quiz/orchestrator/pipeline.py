@@ -18,6 +18,8 @@ from engines.quiz.quiz_cache import get_perception_cache, set_perception_cache
 from engines.quiz.perception.models import PageRepresentation, PageKind
 from engines.quiz.perception.extractor import extract_document_representations
 from engines.quiz.recognition.range_resolver import resolve_smart_range
+from engines.quiz.recognition.rule_parser import parse_numeric_instruction
+from engines.quiz.recognition.question_index import QuestionIndexService
 from engines.quiz.reconstruction.batch_planner import BatchPlanner
 from engines.quiz.reconstruction.reconstructor import QuestionReconstructor
 from engines.quiz.reconstruction.post_processor import post_process_questions
@@ -135,6 +137,45 @@ class QuizPipelineOrchestrator:
             end_page = smart_res.end_page
             effective_count = smart_res.question_count
             start_num = smart_res.start_question
+            end_num = start_num + effective_count - 1
+
+            # PLAN-05: Page Neighborhood Scanner & Question Index Validation (HARD GATE)
+            emit(JobStage.PLANNING, 25, "Lập danh mục câu hỏi (Question Index) và kiểm định dải trang yêu cầu")
+            index_service = QuestionIndexService(ai_provider=self.provider)
+            target_range_pages = list(range(start_page, end_page + 1))
+            neighborhood = index_service.build_multi_page_neighborhood_index(
+                target_pages=target_range_pages,
+                doc_reps=page_representations
+            )
+
+            # Reconcile question bounds from numeric instruction if explicitly provided
+            parsed_instr = parse_numeric_instruction(user_instruction)
+            if parsed_instr and parsed_instr.start_question is not None:
+                plan_start_q = parsed_instr.start_question
+                plan_end_q = parsed_instr.end_question or (plan_start_q + (parsed_instr.question_count or effective_count) - 1)
+                plan_count = parsed_instr.question_count or (plan_end_q - plan_start_q + 1)
+            else:
+                plan_start_q = start_num
+                plan_end_q = end_num
+                plan_count = effective_count
+
+            extraction_plan = index_service.build_extraction_plan(
+                neighborhood=neighborhood,
+                start_q=plan_start_q,
+                end_q=plan_end_q,
+                count=plan_count,
+                doc_reps=page_representations,
+                ai_provider=self.provider,
+                raise_on_mismatch=True
+            )
+
+            # Align effective count and start_num with validated extraction plan
+            start_num = extraction_plan.requested_start_question
+            effective_count = extraction_plan.requested_count
+            target_pages_all = list(set(extraction_plan.target_pages + extraction_plan.continuation_pages))
+            if target_pages_all:
+                start_page = min(target_pages_all)
+                end_page = max(target_pages_all)
 
             pages_in_range = [
                 p for p in page_representations if start_page <= p.page_number <= end_page
@@ -163,6 +204,7 @@ class QuizPipelineOrchestrator:
                 end_page=end_page,
                 start_question=start_num,
                 question_count=effective_count,
+                target_question_numbers=extraction_plan.target_question_numbers,
             )
 
             # 3. RECONSTRUCTING (30% - 50%)
@@ -176,8 +218,10 @@ class QuizPipelineOrchestrator:
                 raw_questions,
                 start_question=start_num,
                 expected_count=effective_count,
-                source_context=full_source_text
+                source_context=full_source_text,
+                target_question_numbers=extraction_plan.target_question_numbers,
             )
+
 
             # Associate visual assets from Document Object Graph
             attachments_map = doc_graph.associate_assets_to_questions(

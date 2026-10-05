@@ -129,7 +129,8 @@ def post_process_questions(
     questions: list[ReconstructedQuestion],
     start_question: int = 1,
     expected_count: Optional[int] = None,
-    source_context: str = ""
+    source_context: str = "",
+    target_question_numbers: Optional[list[int]] = None,
 ) -> list[ReconstructedQuestion]:
     """
     Deduplicates, sorts, maps numbers canonically, and enforces content integrity invariants.
@@ -169,27 +170,51 @@ def post_process_questions(
     cleaned_candidates.sort(key=sort_key)
 
     # 3. Filter by canonical requested question range
-    # If start_question is requested, prioritize questions >= start_question
-    in_range_questions = [
-        q for q in cleaned_candidates
-        if q.source_number >= start_question
-    ]
-    # Fallback to all candidates if none >= start_question (e.g. 1-based questions with custom offset)
-    if not in_range_questions:
-        in_range_questions = cleaned_candidates
-
-    # If expected_count is set, constrain to target end question bound
-    if expected_count is not None and expected_count > 0:
-        target_end_q = start_question + expected_count - 1
-        bounded_questions = [
-            q for q in in_range_questions
-            if q.source_number <= target_end_q
+    if target_question_numbers is not None:
+        target_set = set(target_question_numbers)
+        in_range_questions = [
+            q for q in cleaned_candidates
+            if q.source_number in target_set
         ]
-        # If bounded questions exist, use them; otherwise truncate in_range_questions
-        if bounded_questions:
-            in_range_questions = bounded_questions[:expected_count]
-        else:
-            in_range_questions = in_range_questions[:expected_count]
+        # Fallback: if AI renumbered questions (e.g. 1..N) instead of source numbers,
+        # but the candidate count matches or covers the target range
+        if not in_range_questions and cleaned_candidates:
+            if len(cleaned_candidates) == len(target_question_numbers):
+                for idx, q in enumerate(cleaned_candidates):
+                    q.source_number = target_question_numbers[idx]
+                in_range_questions = cleaned_candidates
+            elif len(cleaned_candidates) >= len(target_question_numbers):
+                in_range_questions = cleaned_candidates[:len(target_question_numbers)]
+                for idx, q in enumerate(in_range_questions):
+                    q.source_number = target_question_numbers[idx]
+        # Sort strictly in target_question_numbers order
+        in_range_questions.sort(
+            key=lambda q: target_question_numbers.index(q.source_number)
+            if q.source_number in target_question_numbers else 9999
+        )
+    else:
+        # If start_question is requested, prioritize questions >= start_question
+        in_range_questions = [
+            q for q in cleaned_candidates
+            if q.source_number >= start_question
+        ]
+        # Fallback to all candidates if none >= start_question (e.g. 1-based questions with custom offset)
+        if not in_range_questions:
+            in_range_questions = cleaned_candidates
+
+        # If expected_count is set, constrain to target end question bound
+        if expected_count is not None and expected_count > 0:
+            target_end_q = start_question + expected_count - 1
+            bounded_questions = [
+                q for q in in_range_questions
+                if q.source_number <= target_end_q
+            ]
+            # If bounded questions exist, use them; otherwise truncate in_range_questions
+            if bounded_questions:
+                in_range_questions = bounded_questions[:expected_count]
+            else:
+                in_range_questions = in_range_questions[:expected_count]
+
 
     # 4. Canonical Numbering and Targeted Invariant Verification
     processed: list[ReconstructedQuestion] = []
