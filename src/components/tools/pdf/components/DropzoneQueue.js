@@ -4,7 +4,6 @@
  * Renders tailored workspaces (Rotate, Split, Multi-file, Single-file Card) or clean Dropzone
  */
 
-import { renderDropzone } from '../../../common/Dropzone.js';
 import { formatBytes } from '../../../../utilities/formatters.js';
 import { renderPdfRotateWorkspace } from './PdfRotateWorkspace.js';
 import { renderPdfSplitWorkspace } from './PdfSplitWorkspace.js';
@@ -43,20 +42,20 @@ export function renderDropzoneQueue(queueState = {}) {
   // 1. When a file is being selected/dropped and loaded, render the upload animation
   if (isLoadingFile) {
     return `
-      <div id="pdfFileLoadingCard" class="p-8 sm:p-12 rounded-2xl bg-white dark:bg-[#121215] border border-amber-500/30 dark:border-amber-500/25 shadow-xs flex flex-col items-center justify-center text-center space-y-4 animate-fadeIn select-none min-h-[220px]">
+      <div id="pdfFileLoadingCard" class="p-8 sm:p-12 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-emerald-500/80 dark:border-emerald-500/70 shadow-xs flex flex-col items-center justify-center text-center space-y-4 animate-fadeIn select-none min-h-[220px]">
         <div class="relative flex items-center justify-center">
-          <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-500 shadow-sm">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-500 shadow-sm">
             <i data-lucide="upload-cloud" class="w-7 h-7 animate-bounce"></i>
           </div>
-          <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500 animate-ping"></span>
-          <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500"></span>
+          <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500"></span>
         </div>
         <div class="space-y-1.5 max-w-sm">
           <h4 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">${loadingFileName || 'Đang tải tệp lên...'}</h4>
           <p class="text-xs text-zinc-500 dark:text-zinc-400">Đang nạp và phân tích cấu trúc tệp PDF...</p>
         </div>
         <div class="w-48 h-1.5 bg-zinc-100 dark:bg-white/10 rounded-full overflow-hidden">
-          <div class="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full w-full animate-pulse"></div>
+          <div class="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full w-full animate-pulse"></div>
         </div>
       </div>
     `.trim();
@@ -107,7 +106,7 @@ export function renderDropzoneQueue(queueState = {}) {
 
     return `
       <div id="pdfSingleFileCardRoot" class="space-y-4 select-none">
-        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-emerald-500/80 dark:border-emerald-500/70 shadow-xs flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-3.5 min-w-0">
             <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
               <i data-lucide="file-text" class="w-6 h-6"></i>
@@ -171,24 +170,35 @@ export function renderDropzoneQueue(queueState = {}) {
     : '.pdf, application/pdf';
 
   return `
-    <div class="space-y-4">
-      ${renderDropzone({
-        id: 'pdfDropzone',
-        title,
-        subtitle,
-        accept,
-        multiple: isMulti
-      })}
+    <div id="pdfUnifiedDropzoneCard" class="relative rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs transition-colors duration-200 overflow-hidden flex flex-col justify-between">
+      <!-- File Dropzone Area -->
+      <div id="pdfDropzone" class="relative group p-6 sm:p-8 text-center cursor-pointer flex flex-col items-center justify-center min-h-[190px] transition duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
+        <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" ${isMulti ? 'multiple' : ''}>
+        
+        <div class="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-zinc-300 flex items-center justify-center mb-3 group-hover:scale-105 group-hover:text-black dark:group-hover:text-white transition duration-200">
+          <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+        </div>
+        
+        <h4 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">${title}</h4>
+        ${subtitle ? `<p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm font-normal">${subtitle}</p>` : ''}
+        
+        <div class="mt-4">
+          <button type="button" onclick="document.getElementById('pdfDropzone_input').click()" 
+                  class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-sm font-semibold shadow-xs transition cursor-pointer">
+            Chọn tệp
+          </button>
+        </div>
+      </div>
 
       ${!isImages ? `
-        <!-- Google Drive Direct Import Card -->
-        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs space-y-3">
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <i data-lucide="link" class="w-4 h-4 text-amber-500"></i>
-              Hoặc dán liên kết Google Drive
+        <!-- Google Drive Direct Import Bottom Bar (Unified) -->
+        <div class="border-t border-dashed border-zinc-200 dark:border-white/[0.08] bg-zinc-50/60 dark:bg-white/[0.015] p-3.5 sm:p-4 space-y-2.5">
+          <div class="flex items-center justify-between text-xs px-0.5">
+            <span class="font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <i data-lucide="link" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Hoặc dán liên kết Google Drive</span>
             </span>
-            <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">Xử lý trực tiếp không cần tải về</span>
+            <span class="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">Xử lý trực tiếp không cần tải về</span>
           </div>
 
           <div class="flex items-center gap-2">
@@ -197,11 +207,11 @@ export function renderDropzoneQueue(queueState = {}) {
                 <i data-lucide="cloud" class="w-4 h-4"></i>
               </div>
               <input type="url" id="inputPdfDriveLink" placeholder="https://drive.google.com/file/d/.../view"
-                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-500 transition font-mono" />
+                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-mono" />
             </div>
             <button type="button" id="btnImportPdfDrive"
               class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
-              <i data-lucide="arrow-down-to-dot" class="w-4 h-4 text-amber-400 dark:text-amber-500"></i>
+              <i data-lucide="arrow-down-to-dot" class="w-4 h-4 text-emerald-400 dark:text-emerald-500"></i>
               <span>Nạp tệp</span>
             </button>
           </div>

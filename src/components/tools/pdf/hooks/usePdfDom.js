@@ -8,7 +8,6 @@ import { renderConfigPanel } from '../components/ConfigPanel.js';
 import { renderResultCard } from '../components/ResultCard.js';
 import { renderPdfErrorBanner } from '../components/PdfErrorBanner.js';
 import { bindPdfHistory, updatePdfHistoryDom } from '../components/PdfHistoryList.js';
-import { attachDropzoneListeners } from '../../../common/Dropzone.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { copyText } from '../../../../utilities/clipboard.js';
@@ -110,16 +109,85 @@ function setVisualWorkspaceProcessingState(isProcessing) {
  * Binds dropzone event handlers or specialized workspace interactions
  */
 function bindDropzone(qm) {
-  attachDropzoneListeners('pdfDropzone', (files) => {
-    qm.addFiles(files);
-  });
-
   const rootEl = document.getElementById('pdfDropzoneContainer');
   if (!rootEl) return;
 
-  // 0. Handle Google Drive direct link import
+  const unifiedCard = rootEl.querySelector('#pdfUnifiedDropzoneCard');
   const inputDrive = rootEl.querySelector('#inputPdfDriveLink');
   const btnImportDrive = rootEl.querySelector('#btnImportPdfDrive');
+  const fileInput = rootEl.querySelector('#pdfDropzone_input');
+  const dropzone = rootEl.querySelector('#pdfDropzone');
+
+  const setGreenBorder = () => {
+    if (!unifiedCard) return;
+    unifiedCard.classList.remove('border-red-500/80', 'dark:border-red-500/70', 'border-red-500');
+    unifiedCard.classList.add('border-emerald-500', 'dark:border-emerald-500');
+  };
+
+  const setRedBorder = () => {
+    if (!unifiedCard) return;
+    unifiedCard.classList.remove('border-emerald-500', 'dark:border-emerald-500');
+    unifiedCard.classList.add('border-red-500/80', 'dark:border-red-500/70');
+  };
+
+  // 0. Interactive border for Drag-and-Drop & File selection
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', (e) => {
+      if (e.target !== fileInput && !e.target.closest('button') && !e.target.closest('input')) {
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        setGreenBorder();
+        qm.addFiles(e.target.files);
+      }
+    });
+  }
+
+  if (unifiedCard) {
+    ['dragenter', 'dragover'].forEach((eventName) => {
+      unifiedCard.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        setGreenBorder();
+      });
+    });
+
+    unifiedCard.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      if (!unifiedCard.contains(e.relatedTarget)) {
+        if (!inputDrive || !inputDrive.value.trim()) {
+          setRedBorder();
+        }
+      }
+    });
+
+    unifiedCard.addEventListener('drop', (e) => {
+      e.preventDefault();
+      setGreenBorder();
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        qm.addFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  // 0.1. Google Drive direct link import & reactive border toggle
+  if (inputDrive) {
+    const handleDriveInput = () => {
+      if (inputDrive.value.trim().length > 0) {
+        setGreenBorder();
+      } else {
+        setRedBorder();
+      }
+    };
+    if (inputDrive.value.trim().length > 0) {
+      setGreenBorder();
+    }
+    inputDrive.addEventListener('input', handleDriveInput);
+    inputDrive.addEventListener('paste', () => setTimeout(handleDriveInput, 20));
+  }
+
   if (btnImportDrive && inputDrive) {
     const doImport = async () => {
       const url = inputDrive.value.trim();
@@ -128,9 +196,10 @@ function bindDropzone(qm) {
         inputDrive.focus();
         return;
       }
+      setGreenBorder();
       btnImportDrive.disabled = true;
       const originalHtml = btnImportDrive.innerHTML;
-      btnImportDrive.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-400"></i><span>Đang nạp...</span>';
+      btnImportDrive.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-emerald-400"></i><span>Đang nạp...</span>';
       if (window.lucide?.createIcons) window.lucide.createIcons();
 
       const success = await qm.importFromDrive(url);
@@ -138,6 +207,9 @@ function bindDropzone(qm) {
         btnImportDrive.disabled = false;
         btnImportDrive.innerHTML = originalHtml;
         if (window.lucide?.createIcons) window.lucide.createIcons();
+        if (!inputDrive.value.trim()) {
+          setRedBorder();
+        }
       }
     };
 
