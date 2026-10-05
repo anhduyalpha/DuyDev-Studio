@@ -8,9 +8,10 @@ import { prisma } from '../../lib/prisma.js';
 import { StorageManager } from '../../storage/storage.manager.js';
 import { limits, isPermanentRetention, computeExpiresAt } from '../../config/limits.config.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
-import { fileIdParamSchema, uploadPurposeSchema, fileDownloadQuerySchema } from '../../schemas/files.schema.js';
+import { fileIdParamSchema, uploadPurposeSchema, fileDownloadQuerySchema, importDriveBodySchema } from '../../schemas/files.schema.js';
 import { getMimeTypeForExt } from '../../schemas/converter.schema.js';
 import { logger } from '../../lib/logger.js';
+import { downloadGoogleDriveFile } from '../../services/drive-download.service.js';
 
 export async function uploadFile(request: FastifyRequest, reply: FastifyReply) {
   const data = await request.file();
@@ -208,5 +209,57 @@ export async function downloadFile(request: FastifyRequest, reply: FastifyReply)
 
 export async function viewFile(request: FastifyRequest, reply: FastifyReply) {
   return handleFileSend(request, reply, true);
+}
+
+export async function importDriveFile(request: FastifyRequest, reply: FastifyReply) {
+  const { url, purpose } = importDriveBodySchema.parse(request.body);
+
+  const { buffer, fileName, sizeBytes } = await downloadGoogleDriveFile(url);
+
+  // Validate PDF magic bytes
+  const magic = buffer.subarray(0, 5).toString('ascii');
+  if (!magic.startsWith('%PDF')) {
+    throw new BadRequestError('Tệp tải về từ Google Drive không phải là tệp PDF hợp lệ (thiếu chữ ký %PDF).');
+  }
+
+  const fileId = `fil_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+  const targetPath = StorageManager.getUploadPath(fileId, '.pdf');
+
+  await fs.promises.writeFile(targetPath, buffer);
+
+  const hashSha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+  const expiresAt = computeExpiresAt();
+
+  const fileRecord = await prisma.fileRecord.create({
+    data: {
+      id: fileId,
+      purpose: purpose === 'pdf-convert' ? 'UPLOAD' : 'UPLOAD',
+      originalName: fileName,
+      storagePath: targetPath,
+      mimeType: 'application/pdf',
+      sizeBytes: BigInt(sizeBytes),
+      hashSha256,
+      isPurged: false,
+      expiresAt
+    }
+  });
+
+  logger.info(
+    { fileId: fileRecord.id, originalName: fileRecord.originalName, sizeBytes, purpose },
+    'Google Drive file imported successfully into PDF Studio pipeline'
+  );
+
+  return reply.status(201).send({
+    success: true,
+    data: {
+      fileId: fileRecord.id,
+      originalName: fileRecord.originalName,
+      mimeType: fileRecord.mimeType,
+      sizeBytes: Number(fileRecord.sizeBytes),
+      hashSha256: fileRecord.hashSha256,
+      downloadUrl: `/api/v1/files/download/${fileRecord.id}`,
+      viewUrl: `/api/v1/files/view/${fileRecord.id}`
+    }
+  });
 }
 

@@ -703,6 +703,112 @@ export class PdfQueueManager {
     }
   }
 
+  async importFromDrive(driveUrl) {
+    if (this.isProcessing) return false;
+    if (!driveUrl || typeof driveUrl !== 'string' || !driveUrl.trim()) {
+      showToast('Vui lòng nhập liên kết Google Drive', 'warning');
+      return false;
+    }
+
+    const cleanUrl = driveUrl.trim();
+    this.isLoadingFile = true;
+    this.loadingFileName = 'Google Drive';
+    this.notify('file-loading');
+
+    try {
+      const response = await fetch('/api/v1/files/import-drive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: cleanUrl, purpose: 'pdf-convert' })
+      });
+
+      const resData = await response.json().catch(() => null);
+      if (!response.ok || !resData?.success) {
+        const errorMsg = resData?.error?.message || resData?.message || 'Không thể nạp tệp từ Google Drive';
+        throw new Error(errorMsg);
+      }
+
+      const fileRecord = resData.data;
+
+      // Fetch file blob from local server for client-side PDF.js inspection & visual thumbnails
+      const viewEndpoint = fileRecord.viewUrl || `/api/v1/files/view/${fileRecord.fileId}`;
+      const blobRes = await fetch(viewEndpoint);
+      if (!blobRes.ok) {
+        throw new Error('Lỗi khi tải bản xem trước từ máy chủ');
+      }
+      const blob = await blobRes.blob();
+      const rawFile = new File([blob], fileRecord.originalName, { type: 'application/pdf' });
+
+      const isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
+
+      if (!isMulti && this.files.length > 0) {
+        this.files.forEach((f) => releasePdfFileResources(f));
+        this.files = [];
+      }
+
+      const item = {
+        id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: fileRecord.originalName,
+        size: Number(fileRecord.sizeBytes),
+        type: 'application/pdf',
+        pages: 0,
+        rawFile,
+        localUrl: URL.createObjectURL(blob),
+        fileId: fileRecord.fileId,
+        uploadStatus: 'uploaded',
+        uploadProgress: 100,
+        uploadError: null,
+        abortController: null
+      };
+
+      this.files = isMulti ? [...this.files, item] : [item];
+      this.result = null;
+      this.error = null;
+      this.pageRotations = {};
+      this.selectedSplitPages.clear();
+      this.splitRangeError = null;
+      this.pages = '';
+      this.thumbnailPage = 0;
+
+      // Parse page count & cache PDF document via PDF.js
+      const first = this.files[0];
+      if (first && (first.type === 'application/pdf' || first.name.toLowerCase().endsWith('.pdf'))) {
+        try {
+          const { ensurePdfJsLoaded } = await import('../../../../utilities/pdfJsHelper.js');
+          const pdfjs = await ensurePdfJsLoaded();
+          const targetBlob = first.rawFile || first;
+          const arrayBuffer = await targetBlob.arrayBuffer();
+          const doc = await pdfjs.getDocument({
+            data: arrayBuffer,
+            cMapUrl: '/pdfjs/web/cmaps/',
+            cMapPacked: true,
+            standardFontDataUrl: '/pdfjs/web/standard_fonts/'
+          }).promise;
+          first.pages = doc.numPages;
+          first.cachedDoc = doc;
+          this.totalPages = doc.numPages;
+          this.initOrganizePages(doc.numPages);
+        } catch (err) {
+          console.warn('PDF inspection fallback:', err);
+          first.pages = 1;
+          this.totalPages = 1;
+          this.initOrganizePages(1);
+        }
+      }
+
+      showToast(`Đã nạp tệp "${fileRecord.originalName}" từ Google Drive`, 'success');
+      return true;
+    } catch (err) {
+      console.error('Import from Google Drive error:', err);
+      showToast(err.message || 'Lỗi khi nạp tệp từ Google Drive', 'error');
+      return false;
+    } finally {
+      this.isLoadingFile = false;
+      this.loadingFileName = '';
+      this.notify('files-change');
+    }
+  }
+
   removeFile(id) {
     if (this.isProcessing) return;
     const target = this.files.find((f) => f.id === id);

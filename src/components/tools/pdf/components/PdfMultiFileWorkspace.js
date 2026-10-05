@@ -122,6 +122,34 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
           </div>
         `).join('')}
       </div>
+
+      ${!isImages ? `
+        <!-- Google Drive Import Bar for Merge Mode -->
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs space-y-2.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <i data-lucide="link" class="w-4 h-4 text-amber-500"></i>
+              Thêm tệp PDF từ Google Drive
+            </span>
+            <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">Nạp trực tiếp vào danh sách ghép</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                <i data-lucide="cloud" class="w-4 h-4"></i>
+              </div>
+              <input type="url" id="inputPdfMultiDriveLink" placeholder="https://drive.google.com/file/d/.../view"
+                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-500 transition font-mono" />
+            </div>
+            <button type="button" id="btnImportPdfMultiDrive"
+              class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
+              <i data-lucide="arrow-down-to-dot" class="w-4 h-4 text-amber-400 dark:text-amber-500"></i>
+              <span>Nạp tệp</span>
+            </button>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `.trim();
 }

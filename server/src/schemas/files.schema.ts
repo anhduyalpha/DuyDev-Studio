@@ -47,3 +47,10 @@ export const completeTransitBodySchema = z.object({
 
 export type CompleteTransitBody = z.infer<typeof completeTransitBodySchema>;
 
+export const importDriveBodySchema = z.object({
+  url: z.string().min(1, 'URL Google Drive là bắt buộc'),
+  purpose: uploadPurposeSchema.optional().default('pdf-convert')
+});
+
+export type ImportDriveBody = z.infer<typeof importDriveBodySchema>;
+

@@ -117,6 +117,39 @@ function bindDropzone(qm) {
   const rootEl = document.getElementById('pdfDropzoneContainer');
   if (!rootEl) return;
 
+  // 0. Handle Google Drive direct link import
+  const inputDrive = rootEl.querySelector('#inputPdfDriveLink');
+  const btnImportDrive = rootEl.querySelector('#btnImportPdfDrive');
+  if (btnImportDrive && inputDrive) {
+    const doImport = async () => {
+      const url = inputDrive.value.trim();
+      if (!url) {
+        showToast('Vui lòng dán liên kết Google Drive', 'warning');
+        inputDrive.focus();
+        return;
+      }
+      btnImportDrive.disabled = true;
+      const originalHtml = btnImportDrive.innerHTML;
+      btnImportDrive.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-400"></i><span>Đang nạp...</span>';
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+
+      const success = await qm.importFromDrive(url);
+      if (!success) {
+        btnImportDrive.disabled = false;
+        btnImportDrive.innerHTML = originalHtml;
+        if (window.lucide?.createIcons) window.lucide.createIcons();
+      }
+    };
+
+    btnImportDrive.onclick = doImport;
+    inputDrive.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doImport();
+      }
+    };
+  }
+
   // 1. Rotate Workspace
   if (qm.mode === 'rotate' && qm.files.length > 0) {
     rootEl.querySelector('#btnChangeRotateFile')?.addEventListener('click', () => {
@@ -353,6 +386,40 @@ function bindDropzone(qm) {
     rootEl.querySelector('#inputAddMoreFiles')?.addEventListener('change', (e) => {
       if (e.target.files) qm.addFiles(e.target.files);
     });
+
+    const inputMultiDrive = rootEl.querySelector('#inputPdfMultiDriveLink');
+    const btnImportMultiDrive = rootEl.querySelector('#btnImportPdfMultiDrive');
+    if (btnImportMultiDrive && inputMultiDrive) {
+      const doMultiImport = async () => {
+        const url = inputMultiDrive.value.trim();
+        if (!url) {
+          showToast('Vui lòng dán liên kết Google Drive', 'warning');
+          inputMultiDrive.focus();
+          return;
+        }
+        btnImportMultiDrive.disabled = true;
+        const originalHtml = btnImportMultiDrive.innerHTML;
+        btnImportMultiDrive.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i><span>Đang nạp...</span>';
+        if (window.lucide?.createIcons) window.lucide.createIcons();
+
+        const success = await qm.importFromDrive(url);
+        if (!success) {
+          btnImportMultiDrive.disabled = false;
+          btnImportMultiDrive.innerHTML = originalHtml;
+          if (window.lucide?.createIcons) window.lucide.createIcons();
+        } else {
+          inputMultiDrive.value = '';
+        }
+      };
+
+      btnImportMultiDrive.onclick = doMultiImport;
+      inputMultiDrive.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          doMultiImport();
+        }
+      };
+    }
 
     const multiRoot = rootEl.querySelector('#pdfMultiFileWorkspaceRoot');
     if (multiRoot) {
