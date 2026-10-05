@@ -278,12 +278,16 @@ function bindDropzone(qm) {
         btnImportDrive.disabled = false;
         btnImportDrive.innerHTML = originalHtml;
         if (window.lucide?.createIcons) window.lucide.createIcons();
-        if (inputDrive) {
-          const u = inputDrive.value.trim();
-          if (isValidGoogleDriveUrl(u)) {
-            setCardGreen(driveCard);
-          } else {
-            setCardRed(driveCard);
+        const curInput = document.getElementById('inputPdfDriveLink');
+        const curCard = document.getElementById('pdfDriveImportCard');
+        if (curInput) {
+          curInput.value = url;
+          if (curCard) {
+            if (isValidGoogleDriveUrl(url)) {
+              setCardGreen(curCard);
+            } else {
+              setCardRed(curCard);
+            }
           }
         }
       }
@@ -596,6 +600,10 @@ function bindDropzone(qm) {
           btnImportMultiDrive.disabled = false;
           btnImportMultiDrive.innerHTML = originalHtml;
           if (window.lucide?.createIcons) window.lucide.createIcons();
+          const curMultiInput = document.getElementById('inputPdfMultiDriveLink');
+          if (curMultiInput) {
+            curMultiInput.value = url;
+          }
         } else {
           inputMultiDrive.value = '';
           inputMultiDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');

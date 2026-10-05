@@ -216,18 +216,24 @@ export async function importDriveFile(request: FastifyRequest, reply: FastifyRep
 
   const { buffer, fileName, sizeBytes } = await downloadGoogleDriveFile(url);
 
-  // Validate PDF magic bytes
-  const magic = buffer.subarray(0, 5).toString('ascii');
-  if (!magic.startsWith('%PDF')) {
+  // Validate PDF magic bytes (per PDF ISO standard, %PDF- can be located anywhere within first 1024 bytes)
+  const head = buffer.subarray(0, 1024);
+  const pdfMarker = Buffer.from('%PDF');
+  const pdfOffset = head.indexOf(pdfMarker);
+  if (pdfOffset === -1) {
     throw new BadRequestError('Tệp tải về từ Google Drive không phải là tệp PDF hợp lệ (thiếu chữ ký %PDF).');
   }
+
+  // If there are leading BOM or preamble bytes, slice cleanly
+  const cleanBuffer = pdfOffset > 0 ? buffer.subarray(pdfOffset) : buffer;
+  const actualSizeBytes = cleanBuffer.length;
 
   const fileId = `fil_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
   const targetPath = StorageManager.getUploadPath(fileId, '.pdf');
 
-  await fs.promises.writeFile(targetPath, buffer);
+  await fs.promises.writeFile(targetPath, cleanBuffer);
 
-  const hashSha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+  const hashSha256 = crypto.createHash('sha256').update(cleanBuffer).digest('hex');
   const expiresAt = computeExpiresAt();
 
   const fileRecord = await prisma.fileRecord.create({
@@ -237,7 +243,7 @@ export async function importDriveFile(request: FastifyRequest, reply: FastifyRep
       originalName: fileName,
       storagePath: targetPath,
       mimeType: 'application/pdf',
-      sizeBytes: BigInt(sizeBytes),
+      sizeBytes: BigInt(actualSizeBytes),
       hashSha256,
       isPurged: false,
       expiresAt

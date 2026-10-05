@@ -753,10 +753,14 @@ export class PdfQueueManager {
 
       let rawFile;
       try {
-        rawFile = new File([blob], sanitizedName, { type: 'application/pdf' });
+        rawFile = new File([blob], sanitizedName, { type: 'application/pdf', lastModified: Date.now() });
       } catch {
         rawFile = blob;
-        try { rawFile.name = sanitizedName; } catch {}
+        try {
+          Object.defineProperty(rawFile, 'name', { value: sanitizedName, writable: true, configurable: true });
+        } catch {
+          try { rawFile.name = sanitizedName; } catch {}
+        }
       }
 
       const isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
@@ -768,8 +772,8 @@ export class PdfQueueManager {
 
       const item = {
         id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        name: fileRecord.originalName,
-        size: Number(fileRecord.sizeBytes),
+        name: sanitizedName,
+        size: Number(fileRecord.sizeBytes || blob.size || 0),
         type: 'application/pdf',
         pages: 0,
         rawFile,
@@ -824,7 +828,7 @@ export class PdfQueueManager {
         }
       }
 
-      showToast(`Đã nạp tệp "${fileRecord.originalName}" từ Google Drive`, 'success');
+      showToast(`Đã nạp tệp "${sanitizedName}" từ Google Drive`, 'success');
       return true;
     } catch (err) {
       console.error('Import from Google Drive error:', err);

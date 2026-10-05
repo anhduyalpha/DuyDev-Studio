@@ -1,4 +1,4 @@
-import { extractGoogleDriveId, extractFileNameFromDisposition } from '../../src/services/drive-download.service.js';
+import { extractGoogleDriveId, extractFileNameFromDisposition, downloadGoogleDriveFile } from '../../src/services/drive-download.service.js';
 import { importDriveBodySchema } from '../../src/schemas/files.schema.js';
 
 describe('Google Drive Import Service & Schema', () => {
@@ -48,8 +48,98 @@ describe('Google Drive Import Service & Schema', () => {
       expect(extractFileNameFromDisposition(disp, 'fallback123')).toBe('(Tờ 01-SÁCH HTCPHHC) CHƯƠNG 1-ESTER LIPID-ĐÁ.pdf');
     });
 
+    it('strips enclosing quotes from standard filename header', () => {
+      const disp = 'attachment; filename="simple_document.pdf"';
+      expect(extractFileNameFromDisposition(disp, 'fallback123')).toBe('simple_document.pdf');
+    });
+
     it('falls back to default document ID when disposition is missing', () => {
       expect(extractFileNameFromDisposition(null, 'abc12345678')).toBe('document_abc12345.pdf');
+    });
+  });
+
+  describe('downloadGoogleDriveFile', () => {
+    it('handles Google Drive virus warning page with form and inputs correctly', async () => {
+      const originalFetch = globalThis.fetch;
+      const fakePdfContent = Buffer.from('%PDF-1.4 sample pdf content that is long enough to pass size validation check');
+      const formHtml = `
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <form id="downloadForm" action="https://drive.usercontent.google.com/download" method="get">
+            <input type="hidden" name="id" value="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms">
+            <input type="hidden" name="export" value="download">
+            <input type="hidden" name="confirm" value="t_token_123">
+            <input type="hidden" name="uuid" value="uuid_test_456">
+            <input type="submit" value="Download anyway">
+          </form>
+        </body>
+        </html>
+      `;
+
+      let secondCallUrl = '';
+      let secondCallCookie = '';
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string, opts: any) => {
+        if (url.includes('drive.google.com/uc?export=download')) {
+          return new Response(formHtml, {
+            status: 200,
+            headers: {
+              'content-type': 'text/html; charset=utf-8',
+              'set-cookie': 'download_warning_123=token123; Path=/; Domain=.google.com'
+            }
+          });
+        }
+        if (url.includes('drive.usercontent.google.com/download')) {
+          secondCallUrl = url;
+          secondCallCookie = opts?.headers?.Cookie || '';
+          return new Response(fakePdfContent, {
+            status: 200,
+            headers: {
+              'content-type': 'application/pdf',
+              'content-disposition': 'attachment; filename="large_report.pdf"'
+            }
+          });
+        }
+        return new Response('Not found', { status: 404 });
+      }) as any;
+
+      try {
+        const result = await downloadGoogleDriveFile('https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/view');
+        expect(result.fileName).toBe('large_report.pdf');
+        expect(result.sizeBytes).toBe(fakePdfContent.length);
+        expect(secondCallUrl).toContain('confirm=t_token_123');
+        expect(secondCallUrl).toContain('id=1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+        expect(secondCallUrl).toContain('uuid=uuid_test_456');
+        expect(secondCallCookie).toBe('download_warning_123=token123');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('routes Google Docs links to /export?format=pdf endpoint', async () => {
+      const originalFetch = globalThis.fetch;
+      const fakePdfContent = Buffer.from('%PDF-1.4 exported doc pdf content that passes minimum length validation check');
+      let requestedUrl = '';
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        requestedUrl = url;
+        return new Response(fakePdfContent, {
+          status: 200,
+          headers: {
+            'content-type': 'application/pdf',
+            'content-disposition': 'attachment; filename="shared_notes.pdf"'
+          }
+        });
+      }) as any;
+
+      try {
+        const result = await downloadGoogleDriveFile('https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing');
+        expect(requestedUrl).toBe('https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/export?format=pdf');
+        expect(result.fileName).toBe('shared_notes.pdf');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 
