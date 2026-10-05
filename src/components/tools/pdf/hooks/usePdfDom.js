@@ -106,86 +106,102 @@ function setVisualWorkspaceProcessingState(isProcessing) {
 }
 
 /**
+ * Helper to validate Google Drive URL or File ID
+ */
+function isValidGoogleDriveUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const clean = url.trim();
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
+    /id=([a-zA-Z0-9_-]+)/,
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /open\?id=([a-zA-Z0-9_-]+)/,
+    /uc\?.*id=([a-zA-Z0-9_-]+)/
+  ];
+  for (const regex of patterns) {
+    if (regex.test(clean)) return true;
+  }
+  return /^[a-zA-Z0-9_-]{25,50}$/.test(clean);
+}
+
+/**
  * Binds dropzone event handlers or specialized workspace interactions
  */
 function bindDropzone(qm) {
   const rootEl = document.getElementById('pdfDropzoneContainer');
   if (!rootEl) return;
 
-  const unifiedCard = rootEl.querySelector('#pdfUnifiedDropzoneCard');
+  const dropzone = rootEl.querySelector('#pdfDropzone');
+  const fileInput = rootEl.querySelector('#pdfDropzone_input');
+  const driveCard = rootEl.querySelector('#pdfDriveImportCard');
   const inputDrive = rootEl.querySelector('#inputPdfDriveLink');
   const btnImportDrive = rootEl.querySelector('#btnImportPdfDrive');
-  const fileInput = rootEl.querySelector('#pdfDropzone_input');
-  const dropzone = rootEl.querySelector('#pdfDropzone');
 
-  const setGreenBorder = () => {
-    if (!unifiedCard) return;
-    unifiedCard.classList.remove('border-red-500/80', 'dark:border-red-500/70', 'border-red-500');
-    unifiedCard.classList.add('border-emerald-500', 'dark:border-emerald-500');
+  const setCardGreen = (card) => {
+    if (!card) return;
+    card.classList.remove('border-red-500/80', 'dark:border-red-500/70', 'border-red-500');
+    card.classList.add('border-emerald-500', 'dark:border-emerald-500');
   };
 
-  const setRedBorder = () => {
-    if (!unifiedCard) return;
-    unifiedCard.classList.remove('border-emerald-500', 'dark:border-emerald-500');
-    unifiedCard.classList.add('border-red-500/80', 'dark:border-red-500/70');
+  const setCardRed = (card) => {
+    if (!card) return;
+    card.classList.remove('border-emerald-500', 'dark:border-emerald-500');
+    card.classList.add('border-red-500/80', 'dark:border-red-500/70');
   };
 
-  // 0. Interactive border for Drag-and-Drop & File selection
+  // 1. File Dropzone events (separate compact box)
   if (dropzone && fileInput) {
     dropzone.addEventListener('click', (e) => {
-      if (e.target !== fileInput && !e.target.closest('button') && !e.target.closest('input')) {
+      if (e.target !== fileInput && !e.target.closest('button')) {
         fileInput.click();
       }
     });
 
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
-        setGreenBorder();
+        setCardGreen(dropzone);
         qm.addFiles(e.target.files);
       }
     });
-  }
 
-  if (unifiedCard) {
     ['dragenter', 'dragover'].forEach((eventName) => {
-      unifiedCard.addEventListener(eventName, (e) => {
+      dropzone.addEventListener(eventName, (e) => {
         e.preventDefault();
-        setGreenBorder();
+        setCardGreen(dropzone);
       });
     });
 
-    unifiedCard.addEventListener('dragleave', (e) => {
+    dropzone.addEventListener('dragleave', (e) => {
       e.preventDefault();
-      if (!unifiedCard.contains(e.relatedTarget)) {
-        if (!inputDrive || !inputDrive.value.trim()) {
-          setRedBorder();
-        }
+      if (!dropzone.contains(e.relatedTarget)) {
+        setCardRed(dropzone);
       }
     });
 
-    unifiedCard.addEventListener('drop', (e) => {
+    dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
-      setGreenBorder();
+      setCardGreen(dropzone);
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         qm.addFiles(e.dataTransfer.files);
       }
     });
   }
 
-  // 0.1. Google Drive direct link import & reactive border toggle
-  if (inputDrive) {
-    const handleDriveInput = () => {
-      if (inputDrive.value.trim().length > 0) {
-        setGreenBorder();
+  // 2. Separate Google Drive Card: Reactive dashed border (red when invalid/empty, green when valid)
+  if (driveCard && inputDrive) {
+    const updateDriveBorder = () => {
+      const url = inputDrive.value.trim();
+      if (isValidGoogleDriveUrl(url)) {
+        setCardGreen(driveCard);
       } else {
-        setRedBorder();
+        setCardRed(driveCard);
       }
     };
-    if (inputDrive.value.trim().length > 0) {
-      setGreenBorder();
-    }
-    inputDrive.addEventListener('input', handleDriveInput);
-    inputDrive.addEventListener('paste', () => setTimeout(handleDriveInput, 20));
+
+    updateDriveBorder();
+
+    inputDrive.addEventListener('input', updateDriveBorder);
+    inputDrive.addEventListener('paste', () => setTimeout(updateDriveBorder, 20));
   }
 
   if (btnImportDrive && inputDrive) {
@@ -196,7 +212,14 @@ function bindDropzone(qm) {
         inputDrive.focus();
         return;
       }
-      setGreenBorder();
+      if (!isValidGoogleDriveUrl(url)) {
+        showToast('Định dạng liên kết Google Drive không hợp lệ', 'warning');
+        inputDrive.focus();
+        setCardRed(driveCard);
+        return;
+      }
+
+      setCardGreen(driveCard);
       btnImportDrive.disabled = true;
       const originalHtml = btnImportDrive.innerHTML;
       btnImportDrive.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-emerald-400"></i><span>Đang nạp...</span>';
@@ -207,8 +230,13 @@ function bindDropzone(qm) {
         btnImportDrive.disabled = false;
         btnImportDrive.innerHTML = originalHtml;
         if (window.lucide?.createIcons) window.lucide.createIcons();
-        if (!inputDrive.value.trim()) {
-          setRedBorder();
+        if (inputDrive) {
+          const u = inputDrive.value.trim();
+          if (isValidGoogleDriveUrl(u)) {
+            setCardGreen(driveCard);
+          } else {
+            setCardRed(driveCard);
+          }
         }
       }
     };

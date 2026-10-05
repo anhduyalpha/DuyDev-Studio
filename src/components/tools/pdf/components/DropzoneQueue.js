@@ -170,29 +170,29 @@ export function renderDropzoneQueue(queueState = {}) {
     : '.pdf, application/pdf';
 
   return `
-    <div id="pdfUnifiedDropzoneCard" class="relative rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs transition-colors duration-200 overflow-hidden flex flex-col justify-between">
-      <!-- File Dropzone Area -->
-      <div id="pdfDropzone" class="relative group p-6 sm:p-8 text-center cursor-pointer flex flex-col items-center justify-center min-h-[190px] transition duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
+    <div class="space-y-3.5">
+      <!-- File Dropzone Card (Compact Vertical) -->
+      <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
         <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" ${isMulti ? 'multiple' : ''}>
         
-        <div class="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-zinc-300 flex items-center justify-center mb-3 group-hover:scale-105 group-hover:text-black dark:group-hover:text-white transition duration-200">
-          <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+        <div class="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-700 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-zinc-300 flex items-center justify-center mb-1.5 group-hover:scale-105 group-hover:text-black dark:group-hover:text-white transition duration-200">
+          <i data-lucide="upload-cloud" class="w-4.5 h-4.5"></i>
         </div>
         
-        <h4 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">${title}</h4>
-        ${subtitle ? `<p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm font-normal">${subtitle}</p>` : ''}
+        <h4 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">${title}</h4>
+        ${subtitle ? `<p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-sm font-normal">${subtitle}</p>` : ''}
         
-        <div class="mt-4">
+        <div class="mt-2.5">
           <button type="button" onclick="document.getElementById('pdfDropzone_input').click()" 
-                  class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-sm font-semibold shadow-xs transition cursor-pointer">
+                  class="px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold shadow-xs transition cursor-pointer">
             Chọn tệp
           </button>
         </div>
       </div>
 
       ${!isImages ? `
-        <!-- Google Drive Direct Import Bottom Bar (Unified) -->
-        <div class="border-t border-dashed border-zinc-200 dark:border-white/[0.08] bg-zinc-50/60 dark:bg-white/[0.015] p-3.5 sm:p-4 space-y-2.5">
+        <!-- Separate Google Drive Link Card -->
+        <div id="pdfDriveImportCard" class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs space-y-2.5 transition-colors duration-200">
           <div class="flex items-center text-xs px-0.5">
             <span class="font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <i data-lucide="link" class="w-3.5 h-3.5 text-amber-500"></i>
@@ -206,7 +206,7 @@ export function renderDropzoneQueue(queueState = {}) {
                 <i data-lucide="cloud" class="w-4 h-4"></i>
               </div>
               <input type="url" id="inputPdfDriveLink" placeholder="https://drive.google.com/file/d/.../view"
-                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-mono" />
+                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-mono" />
             </div>
             <button type="button" id="btnImportPdfDrive"
               class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
