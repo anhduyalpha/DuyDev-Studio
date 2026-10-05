@@ -206,10 +206,15 @@ export function renderDropzoneQueue(queueState = {}) {
                 <i data-lucide="cloud" class="w-4 h-4"></i>
               </div>
               <input type="url" id="inputPdfDriveLink" placeholder="https://drive.google.com/file/d/.../view"
-                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-mono" />
+                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:focus:ring-zinc-600/40 transition font-mono" />
             </div>
+            <button type="button" id="btnPastePdfDrive"
+              class="px-3 sm:px-3.5 py-2.5 rounded-xl border border-zinc-200/90 dark:border-white/[0.08] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán liên kết từ bộ nhớ tạm">
+              <i data-lucide="clipboard" class="w-4 h-4 text-zinc-500 dark:text-zinc-400"></i>
+              <span>Dán</span>
+            </button>
             <button type="button" id="btnImportPdfDrive"
-              class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
+              class="px-3.5 sm:px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
               <i data-lucide="arrow-down-to-dot" class="w-4 h-4 text-emerald-400 dark:text-emerald-500"></i>
               <span>Nạp tệp</span>
             </button>

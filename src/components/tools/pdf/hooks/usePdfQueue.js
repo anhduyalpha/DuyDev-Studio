@@ -736,8 +736,16 @@ export class PdfQueueManager {
       if (!blobRes.ok) {
         throw new Error('Lỗi khi tải bản xem trước từ máy chủ');
       }
-      const blob = await blobRes.blob();
-      const rawFile = new File([blob], fileRecord.originalName, { type: 'application/pdf' });
+      let sanitizedName = fileRecord.originalName || 'document.pdf';
+      try {
+        if (/[\u00C0-\u00FF]/.test(sanitizedName)) {
+          const decoded = decodeURIComponent(escape(sanitizedName));
+          if (decoded && !decoded.includes('\uFFFD')) {
+            sanitizedName = decoded;
+          }
+        }
+      } catch {}
+      const rawFile = new File([blob], sanitizedName, { type: 'application/pdf' });
 
       const isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
 

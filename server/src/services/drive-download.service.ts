@@ -45,7 +45,7 @@ export function extractGoogleDriveId(url: string): string | null {
 /**
  * Parses filename from Content-Disposition header.
  */
-function extractFileNameFromDisposition(disposition: string | null, fallbackId: string): string {
+export function extractFileNameFromDisposition(disposition: string | null, fallbackId: string): string {
   if (!disposition) return `document_${fallbackId.substring(0, 8)}.pdf`;
 
   const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
@@ -57,7 +57,15 @@ function extractFileNameFromDisposition(disposition: string | null, fallbackId: 
 
   const standardMatch = disposition.match(/filename="?([^";]+)"?/i);
   if (standardMatch && standardMatch[1]) {
-    return standardMatch[1].trim();
+    let raw = standardMatch[1].trim();
+    // HTTP headers are read as ISO-8859-1 (Latin1). If Google Drive sent raw UTF-8 bytes, decode back to UTF-8.
+    try {
+      const fixed = Buffer.from(raw, 'latin1').toString('utf8');
+      if (!fixed.includes('\uFFFD') && fixed.length > 0) {
+        raw = fixed;
+      }
+    } catch {}
+    return raw;
   }
 
   return `document_${fallbackId.substring(0, 8)}.pdf`;

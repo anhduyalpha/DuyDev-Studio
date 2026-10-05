@@ -1,5 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-import { extractGoogleDriveId } from '../../src/services/drive-download.service.js';
+import { extractGoogleDriveId, extractFileNameFromDisposition } from '../../src/services/drive-download.service.js';
 import { importDriveBodySchema } from '../../src/schemas/files.schema.js';
 
 describe('Google Drive Import Service & Schema', () => {
@@ -33,6 +32,24 @@ describe('Google Drive Import Service & Schema', () => {
       expect(extractGoogleDriveId('https://example.com/file.pdf')).toBeNull();
       expect(extractGoogleDriveId('')).toBeNull();
       expect(extractGoogleDriveId('short')).toBeNull();
+    });
+  });
+
+  describe('extractFileNameFromDisposition', () => {
+    it('decodes UTF-8 filename* format', () => {
+      const disp = "attachment; filename*=UTF-8''tailieu%20tieng%20viet.pdf";
+      expect(extractFileNameFromDisposition(disp, 'fallback123')).toBe('tailieu tieng viet.pdf');
+    });
+
+    it('decodes Latin-1 encoded UTF-8 bytes (mojibake from HTTP headers) back to Vietnamese', () => {
+      // Simulate raw UTF-8 bytes parsed as Latin-1 code points: "(Tá»  01-SÃ CH HTCPHHC) CHÆ¯Æ NG 1-ESTER LIPID-Ä Ã .pdf"
+      const mojibake = Buffer.from('(Tờ 01-SÁCH HTCPHHC) CHƯƠNG 1-ESTER LIPID-ĐÁ.pdf', 'utf8').toString('latin1');
+      const disp = `attachment; filename="${mojibake}"`;
+      expect(extractFileNameFromDisposition(disp, 'fallback123')).toBe('(Tờ 01-SÁCH HTCPHHC) CHƯƠNG 1-ESTER LIPID-ĐÁ.pdf');
+    });
+
+    it('falls back to default document ID when disposition is missing', () => {
+      expect(extractFileNameFromDisposition(null, 'abc12345678')).toBe('document_abc12345.pdf');
     });
   });
 
