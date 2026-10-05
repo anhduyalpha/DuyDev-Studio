@@ -217,16 +217,10 @@ export function renderQuizConfigPanel(state) {
             </div>
           </div>
 
-          <!-- Header Title & Optional Duration -->
-          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div class="sm:col-span-8 space-y-1.5">
-              <label class="text-xs font-medium text-zinc-300">Tiêu đề in đầu trang</label>
-              <input type="text" id="quizTitleInput" value="${escapeHtml(state.title)}" placeholder="BÀI TẬP TRẮC NGHIỆM" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden focus:border-zinc-600 transition" />
-            </div>
-            <div class="sm:col-span-4 space-y-1.5">
-              <label class="text-xs font-medium text-zinc-300">Thời gian làm bài</label>
-              <input type="text" id="quizDurationInput" value="${escapeHtml(state.duration || '')}" placeholder="45 phút" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
-            </div>
+          <!-- Header Title -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-zinc-300">Tiêu đề in đầu trang</label>
+            <input type="text" id="quizTitleInput" value="${escapeHtml(state.title)}" placeholder="BÀI TẬP TRẮC NGHIỆM" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden focus:border-zinc-600 transition" />
           </div>
 
           <!-- Action Button -->
