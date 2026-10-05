@@ -705,6 +705,10 @@ export class PdfQueueManager {
 
   async importFromDrive(driveUrl) {
     if (this.isProcessing) return false;
+    if (this.mode === 'images_to_pdf') {
+      showToast('Chế độ Ảnh sang PDF chỉ chấp nhận tệp hình ảnh, không hỗ trợ nhập PDF từ Google Drive', 'warning');
+      return false;
+    }
     if (!driveUrl || typeof driveUrl !== 'string' || !driveUrl.trim()) {
       showToast('Vui lòng nhập liên kết Google Drive', 'warning');
       return false;
@@ -736,6 +740,7 @@ export class PdfQueueManager {
       if (!blobRes.ok) {
         throw new Error('Lỗi khi tải bản xem trước từ máy chủ');
       }
+      const blob = await blobRes.blob();
       let sanitizedName = fileRecord.originalName || 'document.pdf';
       try {
         if (/[\u00C0-\u00FF]/.test(sanitizedName)) {
@@ -745,7 +750,14 @@ export class PdfQueueManager {
           }
         }
       } catch {}
-      const rawFile = new File([blob], sanitizedName, { type: 'application/pdf' });
+
+      let rawFile;
+      try {
+        rawFile = new File([blob], sanitizedName, { type: 'application/pdf' });
+      } catch {
+        rawFile = blob;
+        try { rawFile.name = sanitizedName; } catch {}
+      }
 
       const isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
 
@@ -778,13 +790,12 @@ export class PdfQueueManager {
       this.pages = '';
       this.thumbnailPage = 0;
 
-      // Parse page count & cache PDF document via PDF.js
-      const first = this.files[0];
-      if (first && (first.type === 'application/pdf' || first.name.toLowerCase().endsWith('.pdf'))) {
+      // Parse page count & cache PDF document via PDF.js for the newly added item
+      if (item && (item.type === 'application/pdf' || item.name.toLowerCase().endsWith('.pdf'))) {
         try {
           const { ensurePdfJsLoaded } = await import('../../../../utilities/pdfJsHelper.js');
           const pdfjs = await ensurePdfJsLoaded();
-          const targetBlob = first.rawFile || first;
+          const targetBlob = item.rawFile || item;
           const arrayBuffer = await targetBlob.arrayBuffer();
           const doc = await pdfjs.getDocument({
             data: arrayBuffer,
@@ -792,15 +803,24 @@ export class PdfQueueManager {
             cMapPacked: true,
             standardFontDataUrl: '/pdfjs/web/standard_fonts/'
           }).promise;
-          first.pages = doc.numPages;
-          first.cachedDoc = doc;
-          this.totalPages = doc.numPages;
-          this.initOrganizePages(doc.numPages);
+          item.pages = doc.numPages;
+          item.cachedDoc = doc;
+          if (!isMulti || this.files.length === 1) {
+            this.totalPages = doc.numPages;
+            this.initOrganizePages(doc.numPages);
+          }
         } catch (err) {
           console.warn('PDF inspection fallback:', err);
-          first.pages = 1;
-          this.totalPages = 1;
-          this.initOrganizePages(1);
+          item.pages = 1;
+          if (!isMulti || this.files.length === 1) {
+            this.totalPages = 1;
+            this.initOrganizePages(1);
+          }
+        }
+      } else {
+        if (!isMulti || this.files.length === 1) {
+          this.totalPages = this.files.length;
+          this.initOrganizePages(this.totalPages);
         }
       }
 

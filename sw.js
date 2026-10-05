@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v18.8';
+const CACHE_NAME = 'duydev-studio-v18.9';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=18.8',
-  './src/styles/studocu.css?v=18.8',
-  './src/styles/highlight-theme.css?v=18.8',
+  './src/styles/stitch-tokens.css?v=18.9',
+  './src/styles/studocu.css?v=18.9',
+  './src/styles/highlight-theme.css?v=18.9',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=18.8',
+  './src/app.js?v=18.9',
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',

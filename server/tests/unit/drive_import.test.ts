@@ -74,4 +74,179 @@ describe('Google Drive Import Service & Schema', () => {
       expect(() => importDriveBodySchema.parse({ url: '' })).toThrow();
     });
   });
+
+  describe('PdfQueueManager.importFromDrive (client-side)', () => {
+    let qm: any;
+
+    beforeEach(async () => {
+      if (!globalThis.URL.createObjectURL) {
+        globalThis.URL.createObjectURL = vi.fn((b) => 'blob:http://localhost/test-uuid');
+      }
+      if (!globalThis.URL.revokeObjectURL) {
+        globalThis.URL.revokeObjectURL = vi.fn();
+      }
+
+      const { PdfQueueManager } = await import('../../../src/components/tools/pdf/hooks/usePdfQueue.js');
+      qm = new PdfQueueManager();
+      qm.files = [];
+      qm.mode = 'compress';
+      qm.isProcessing = false;
+    });
+
+    it('rejects empty or whitespace Google Drive link with false', async () => {
+      const res = await qm.importFromDrive('   ');
+      expect(res).toBe(false);
+      expect(qm.files).toHaveLength(0);
+    });
+
+    it('rejects drive import if currently in images_to_pdf mode', async () => {
+      qm.setMode('images_to_pdf');
+      const res = await qm.importFromDrive('https://drive.google.com/file/d/123/view');
+      expect(res).toBe(false);
+      expect(qm.files).toHaveLength(0);
+    });
+
+    it('successfully imports Drive file, constructs Blob and File without ReferenceError', async () => {
+      const fakePdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]); // %PDF-1.4
+      const originalFetch = globalThis.fetch;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url === '/api/v1/files/import-drive') {
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                fileId: 'fil_test_drive_123',
+                originalName: 'tailieu_on_thi.pdf',
+                mimeType: 'application/pdf',
+                sizeBytes: fakePdfBytes.length,
+                viewUrl: '/api/v1/files/view/fil_test_drive_123'
+              }
+            })
+          };
+        }
+        if (url === '/api/v1/files/view/fil_test_drive_123') {
+          return {
+            ok: true,
+            blob: async () => new Blob([fakePdfBytes], { type: 'application/pdf' })
+          };
+        }
+        return { ok: false, status: 404 };
+      }) as any;
+
+      try {
+        const res = await qm.importFromDrive('https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/view');
+        expect(res).toBe(true);
+        expect(qm.files).toHaveLength(1);
+
+        const imported = qm.files[0];
+        expect(imported.name).toBe('tailieu_on_thi.pdf');
+        expect(imported.fileId).toBe('fil_test_drive_123');
+        expect(imported.uploadStatus).toBe('uploaded');
+        expect(imported.uploadProgress).toBe(100);
+        expect(imported.localUrl).toBeDefined();
+        expect(imported.rawFile).toBeDefined();
+        expect(imported.rawFile instanceof Blob || imported.rawFile instanceof File).toBe(true);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('returns false gracefully when backend import-drive returns error', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          success: false,
+          error: { message: 'Tệp không tồn tại hoặc đã bị khóa chia sẻ' }
+        })
+      }) as any;
+
+      try {
+        const res = await qm.importFromDrive('https://drive.google.com/file/d/invalid/view');
+        expect(res).toBe(false);
+        expect(qm.files).toHaveLength(0);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('returns false gracefully when view preview endpoint returns 404', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url === '/api/v1/files/import-drive') {
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                fileId: 'fil_test_missing',
+                originalName: 'missing.pdf',
+                viewUrl: '/api/v1/files/view/fil_test_missing'
+              }
+            })
+          };
+        }
+        return { ok: false, status: 404 };
+      }) as any;
+
+      try {
+        const res = await qm.importFromDrive('https://drive.google.com/file/d/missing/view');
+        expect(res).toBe(false);
+        expect(qm.files).toHaveLength(0);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('appends to queue when in multi-file merge mode', async () => {
+      qm.setMode('merge');
+      qm.files = [{
+        id: 'file-1',
+        name: 'existing.pdf',
+        pages: 2,
+        fileId: 'fil_existing'
+      }];
+
+      const fakePdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+      const originalFetch = globalThis.fetch;
+
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url === '/api/v1/files/import-drive') {
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                fileId: 'fil_test_2',
+                originalName: 'second.pdf',
+                mimeType: 'application/pdf',
+                sizeBytes: 100,
+                viewUrl: '/api/v1/files/view/fil_test_2'
+              }
+            })
+          };
+        }
+        if (url === '/api/v1/files/view/fil_test_2') {
+          return {
+            ok: true,
+            blob: async () => new Blob([fakePdfBytes], { type: 'application/pdf' })
+          };
+        }
+        return { ok: false, status: 404 };
+      }) as any;
+
+      try {
+        const res = await qm.importFromDrive('https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/view');
+        expect(res).toBe(true);
+        expect(qm.files).toHaveLength(2);
+        expect(qm.files[0].name).toBe('existing.pdf');
+        expect(qm.files[1].name).toBe('second.pdf');
+        expect(qm.files[1].fileId).toBe('fil_test_2');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+  });
 });

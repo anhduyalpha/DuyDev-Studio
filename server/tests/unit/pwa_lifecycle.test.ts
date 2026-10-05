@@ -21,10 +21,10 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
   const indexContent = fs.readFileSync(indexPath, 'utf-8');
 
   describe('1. sw.js Architecture & Skip-Waiting Safety', () => {
-    it('sw.js CACHE_NAME must be duydev-studio-v18.8', () => {
+    it('sw.js CACHE_NAME must be duydev-studio-v18.9', () => {
       const match = swContent.match(/const CACHE_NAME = ['"]([^'"]+)['"]/);
       expect(match).not.toBeNull();
-      expect(match![1]).toBe('duydev-studio-v18.8');
+      expect(match![1]).toBe('duydev-studio-v18.9');
     });
 
     it('sw.js install event must NOT call self.skipWaiting() automatically', () => {
@@ -46,12 +46,12 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(messageBody).toContain('self.skipWaiting()');
     });
 
-    it('sw.js ASSETS_TO_PRECACHE must reference v18.8 query versions for core assets', () => {
-      expect(swContent).toContain("'./src/styles/stitch-tokens.css?v=18.8'");
-      expect(swContent).toContain("'./src/styles/studocu.css?v=18.8'");
-      expect(swContent).toContain("'./src/styles/highlight-theme.css?v=18.8'");
-      expect(swContent).toContain("'./src/app.js?v=18.8'");
-      expect(swContent).not.toContain("?v=18.7");
+    it('sw.js ASSETS_TO_PRECACHE must reference v18.9 query versions for core assets', () => {
+      expect(swContent).toContain("'./src/styles/stitch-tokens.css?v=18.9'");
+      expect(swContent).toContain("'./src/styles/studocu.css?v=18.9'");
+      expect(swContent).toContain("'./src/styles/highlight-theme.css?v=18.9'");
+      expect(swContent).toContain("'./src/app.js?v=18.9'");
+      expect(swContent).not.toContain("?v=18.8");
     });
   });
 
@@ -59,14 +59,14 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
     it('CURRENT_PWA_VERSION in pwa.js must match CACHE_NAME in sw.js', () => {
       const match = swContent.match(/const CACHE_NAME = ['"]([^'"]+)['"]/);
       expect(CURRENT_PWA_VERSION).toBe(match![1]);
-      expect(CURRENT_PWA_VERSION).toBe('duydev-studio-v18.8');
+      expect(CURRENT_PWA_VERSION).toBe('duydev-studio-v18.9');
     });
 
-    it('index.html must reference v18.8 for all core css and script bundles', () => {
-      expect(indexContent).toContain('href="src/styles/stitch-tokens.css?v=18.8"');
-      expect(indexContent).toContain('href="src/styles/studocu.css?v=18.8"');
-      expect(indexContent).toContain('href="src/styles/highlight-theme.css?v=18.8"');
-      expect(indexContent).toContain('src="src/app.js?v=18.8"');
+    it('index.html must reference v18.9 for all core css and script bundles', () => {
+      expect(indexContent).toContain('href="src/styles/stitch-tokens.css?v=18.9"');
+      expect(indexContent).toContain('href="src/styles/studocu.css?v=18.9"');
+      expect(indexContent).toContain('href="src/styles/highlight-theme.css?v=18.9"');
+      expect(indexContent).toContain('src="src/app.js?v=18.9"');
 
       // Stale versions must not remain on core files
       expect(indexContent).not.toContain('href="src/styles/stitch-tokens.css?v=17.4"');

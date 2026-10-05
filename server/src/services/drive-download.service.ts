@@ -102,15 +102,28 @@ export async function downloadGoogleDriveFile(driveUrl: string): Promise<Downloa
   // Handle Google Drive virus scan warning / confirmation HTML page
   if (contentType.includes('text/html')) {
     const htmlText = await res.text();
-    const confirmMatch =
-      htmlText.match(/href="(\/uc\?export=download[^"]+)"/) ||
-      htmlText.match(/confirm=([a-zA-Z0-9_-]+)/);
+    let confirmUrl: string | null = null;
 
-    if (confirmMatch) {
-      const confirmUrl = confirmMatch[1].startsWith('http')
-        ? confirmMatch[1]
-        : `https://drive.google.com${confirmMatch[1].replace(/&amp;/g, '&')}`;
+    const hrefMatch =
+      htmlText.match(/href="(\/uc\?export=download[^"]+)"/i) ||
+      htmlText.match(/href="(https:\/\/[^"]*drive\.google\.com\/uc\?export=download[^"]+)"/i) ||
+      htmlText.match(/href="(https:\/\/drive\.usercontent\.google\.com\/download[^"]+)"/i) ||
+      htmlText.match(/action="(https:\/\/[^"]*drive\.usercontent\.google\.com\/download[^"]*)"/i) ||
+      htmlText.match(/action="(\/uc\?export=download[^"]+)"/i);
 
+    if (hrefMatch && hrefMatch[1]) {
+      const rawHref = hrefMatch[1].replace(/&amp;/g, '&');
+      confirmUrl = rawHref.startsWith('http')
+        ? rawHref
+        : `https://drive.google.com${rawHref.startsWith('/') ? '' : '/'}${rawHref}`;
+    } else {
+      const tokenMatch = htmlText.match(/confirm=([a-zA-Z0-9_-]+)/i);
+      if (tokenMatch && tokenMatch[1]) {
+        confirmUrl = `https://drive.google.com/uc?export=download&id=${driveId}&confirm=${tokenMatch[1]}`;
+      }
+    }
+
+    if (confirmUrl) {
       const headersWithCookie: Record<string, string> = { ...baseHeaders };
       if (setCookie) {
         headersWithCookie['Cookie'] = setCookie;
