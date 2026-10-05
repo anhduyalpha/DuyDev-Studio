@@ -193,12 +193,11 @@ export function renderDropzoneQueue(queueState = {}) {
       ${!isImages ? `
         <!-- Google Drive Direct Import Bottom Bar (Unified) -->
         <div class="border-t border-dashed border-zinc-200 dark:border-white/[0.08] bg-zinc-50/60 dark:bg-white/[0.015] p-3.5 sm:p-4 space-y-2.5">
-          <div class="flex items-center justify-between text-xs px-0.5">
+          <div class="flex items-center text-xs px-0.5">
             <span class="font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <i data-lucide="link" class="w-3.5 h-3.5 text-amber-500"></i>
               <span>Hoặc dán liên kết Google Drive</span>
             </span>
-            <span class="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">Xử lý trực tiếp không cần tải về</span>
           </div>
 
           <div class="flex items-center gap-2">
