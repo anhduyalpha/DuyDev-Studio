@@ -20,6 +20,7 @@ import { restoreThumbnailsSynchronously } from '../components/PdfPreviewCanvas.j
 import { pdfPageCache } from '../services/PdfPageCache.js';
 import { attachSwipeToDismiss, attachSlideToClear } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
+import { attachPdfClipboardPaste, pasteImageFromClipboard } from './usePdfPaste.js';
 
 /**
  * Synchronizes active tab styling for PDF Studio modes.
@@ -184,6 +185,14 @@ function bindDropzone(qm) {
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         qm.addFiles(e.dataTransfer.files);
       }
+    });
+  }
+
+  const btnPasteImage = rootEl.querySelector('#btnPastePdfImage');
+  if (btnPasteImage) {
+    btnPasteImage.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pasteImageFromClipboard(qm);
     });
   }
 
@@ -524,6 +533,11 @@ function bindDropzone(qm) {
 
     rootEl.querySelector('#inputAddMoreFiles')?.addEventListener('change', (e) => {
       if (e.target.files) qm.addFiles(e.target.files);
+    });
+
+    rootEl.querySelector('#btnPasteMorePdfImages')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pasteImageFromClipboard(qm);
     });
 
     const inputMultiDrive = rootEl.querySelector('#inputPdfMultiDriveLink');
@@ -897,6 +911,7 @@ export function attachPdfConverterListeners(queueManager) {
   bindResult(queueManager);
   bindError(queueManager);
   bindPdfHistory(queueManager);
+  const detachPaste = attachPdfClipboardPaste(queueManager);
 
   const unsubscribe = queueManager.subscribe((state, eventType) => {
     if (eventType === 'file-loading') {
@@ -1185,6 +1200,7 @@ export function attachPdfConverterListeners(queueManager) {
 
   return () => {
     try { unsubscribe(); } catch {}
+    try { detachPaste(); } catch {}
     closePdfPageLightbox();
     cleanupChainMenuListener();
   };

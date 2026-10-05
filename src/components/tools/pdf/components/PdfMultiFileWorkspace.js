@@ -43,6 +43,14 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
             <input type="file" id="inputAddMoreFiles" ${isImages ? 'accept="image/*"' : 'accept=".pdf,application/pdf"'} multiple class="hidden" />
           </label>
 
+          ${isImages ? `
+            <button type="button" id="btnPasteMorePdfImages"
+                    class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-[0.98]" title="Dán ảnh từ bộ nhớ tạm (Ctrl + V)">
+              <i data-lucide="clipboard" class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400"></i>
+              <span>Dán ảnh</span>
+            </button>
+          ` : ''}
+
           ${files.length > 0 ? `
             <!-- Slide-to-Clear Toolbar Track -->
             <div id="slideClearTrack" class="relative flex items-center h-10 w-44 sm:w-52 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] overflow-hidden select-none cursor-pointer group" title="Kéo sang phải để xóa tất cả">

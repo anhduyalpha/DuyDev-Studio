@@ -18,7 +18,7 @@ const MODE_DESCRIPTIONS = {
   organize: 'Sắp xếp lại thứ tự các trang, xóa trang không cần thiết hoặc xoay trang trực quan.',
   compress: 'Giảm dung lượng tệp PDF với các mức tối ưu hóa luồng dữ liệu.',
   extract_images: 'Trích xuất toàn bộ hình ảnh gốc từ tài liệu PDF thành tệp ZIP.',
-  images_to_pdf: 'Chỉ nhận tệp hình ảnh (PNG, JPG, WebP...). Tự động căn chỉnh vừa khổ A4.',
+  images_to_pdf: 'Chỉ nhận tệp hình ảnh (PNG, JPG, WebP...).',
   pdf_to_docx: 'Chuyển đổi tài liệu PDF thành văn bản Word (.docx) có thể chỉnh sửa, giữ nguyên bảng biểu.',
   watermark: 'Chèn chữ chìm đánh dấu bản quyền hoặc đánh số trang tự động.',
   security: 'Khóa mật khẩu mã hóa AES-256 hoặc giải mã gỡ bỏ mật khẩu.'
@@ -182,11 +182,18 @@ export function renderDropzoneQueue(queueState = {}) {
         <h4 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">${title}</h4>
         ${subtitle ? `<p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-sm font-normal">${subtitle}</p>` : ''}
         
-        <div class="mt-2.5">
+        <div class="mt-2.5 flex items-center justify-center gap-2">
           <button type="button" onclick="document.getElementById('pdfDropzone_input').click()" 
                   class="px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold shadow-xs transition cursor-pointer">
             Chọn tệp
           </button>
+          ${isImages ? `
+            <button type="button" id="btnPastePdfImage"
+                    class="px-3 py-1.5 rounded-xl border border-zinc-200/90 dark:border-white/[0.08] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán ảnh từ bộ nhớ tạm (Ctrl + V)">
+              <i data-lucide="clipboard" class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400"></i>
+              <span>Dán ảnh</span>
+            </button>
+          ` : ''}
         </div>
       </div>
 
