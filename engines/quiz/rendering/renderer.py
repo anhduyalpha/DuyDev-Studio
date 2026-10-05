@@ -4,6 +4,8 @@ Synthesizes CanonicalDocumentIR into deterministic, publication-grade HTML docum
 for both Worksheet (DeBai) and Answer Key (DapAn) based on configured StylePreset.
 """
 
+from __future__ import annotations
+
 from engines.quiz.ir.models import CanonicalDocumentIR
 from engines.quiz.rendering.styles import StylePreset, style_registry
 from engines.quiz.rendering.templates import render_worksheet_document, render_answer_document

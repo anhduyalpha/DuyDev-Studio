@@ -4,9 +4,12 @@ Produces deterministic, valid, production-grade HTML5 markup with embedded KaTeX
 W3C Paged Media styling, and zero arbitrary AI generation.
 """
 
+from __future__ import annotations
+
 import html
 import os
 import re
+from typing import Any
 from engines.quiz.ir.models import CanonicalDocumentIR, SectionType, QuestionIR, AnswerKeyIR
 from engines.quiz.rendering.styles import StylePreset
 from engines.quiz.rendering.layout import LayoutSolver

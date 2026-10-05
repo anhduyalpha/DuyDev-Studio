@@ -5,6 +5,8 @@ with isolated user profile directory, timeout control, offline KaTeX bundling,
 and strict PyMuPDF verification.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import re

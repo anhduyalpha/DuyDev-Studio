@@ -4,6 +4,8 @@ Deterministically computes option column layouts (1, 2, or 4 columns)
 and generates CSS Paged Media pagination rules to guarantee zero question splits and zero orphan headings.
 """
 
+from __future__ import annotations
+
 import os
 import math
 import re
