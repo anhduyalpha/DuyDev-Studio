@@ -148,17 +148,22 @@ def render_worksheet_document(
     katex_js_rel: str = "./katex/katex.min.js",
     katex_auto_render_rel: str = "./katex/contrib/auto-render.min.js",
     force_break_ids: set[str] | None = None,
+    rendered_measurements: dict[str, dict[str, Any]] | None = None,
 ) -> str:
     """Generate self-contained HTML worksheet document for `{prefix}_DeBai.pdf`."""
     meta = doc_ir.metadata
     css_content = LayoutSolver.generate_paged_media_css(preset, meta.title)
 
     # Compute proactive atomic pagination plan (PLAN-02 / TASK-03)
-    planned_breaks = LayoutSolver.plan_atomic_pagination(
-        doc_ir=doc_ir,
-        preset=preset,
-        force_break_ids=force_break_ids
-    )
+    if force_break_ids is not None and rendered_measurements is None:
+        planned_breaks = set(force_break_ids)
+    else:
+        planned_breaks = LayoutSolver.plan_atomic_pagination(
+            doc_ir=doc_ir,
+            preset=preset,
+            force_break_ids=force_break_ids,
+            rendered_measurements=rendered_measurements,
+        )
 
     # Header block
     grade_str = f" - Lớp {meta.grade}" if meta.grade else ""

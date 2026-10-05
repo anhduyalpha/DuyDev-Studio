@@ -4,7 +4,11 @@ Deterministically computes option column layouts (1, 2, or 4 columns)
 and generates CSS Paged Media pagination rules to guarantee zero question splits and zero orphan headings.
 """
 
+import os
+import math
 import re
+from typing import Any
+import pymupdf
 from engines.quiz.ir.models import OptionIR, QuestionIR, CanonicalDocumentIR, SectionIR, SectionType
 from engines.quiz.rendering.styles import StylePreset
 
@@ -44,6 +48,22 @@ class LayoutSolver:
         return re.sub(r"\s+", " ", no_math_delims).strip()
 
     @classmethod
+    def estimate_visual_text_length(cls, text: str) -> int:
+        """Estimate real rendered character length after KaTeX/HTML formatting."""
+        clean = cls.clean_text_for_length(text)
+        if not clean:
+            return 0
+        # Simplify LaTeX commands like \mathrm{...}, \mathbf{...}, \text{...} -> inner text
+        v = re.sub(r"\\[a-zA-Z]+\{([^}]*)\}", r"\1", clean)
+        # Arrow conditions like \xrightarrow[...] -> ->
+        v = re.sub(r"\\xrightarrow(?:\[[^\]]*\])?", " -> ", v)
+        # Other LaTeX command tokens like \times, \alpha, \degree -> 1 character
+        v = re.sub(r"\\[a-zA-Z]+", "X", v)
+        # Delimiters and math braces
+        v = re.sub(r"[{}\_\^]", "", v)
+        return len(re.sub(r"\s+", " ", v).strip())
+
+    @classmethod
     def determine_option_columns(cls, options: list[OptionIR], has_images: bool = False) -> int:
         """
         Deterministically decide grid layout: 4 columns, 2 columns, or 1 column.
@@ -54,7 +74,7 @@ class LayoutSolver:
         if has_images or not options:
             return 1
 
-        clean_lengths = [len(cls.clean_text_for_length(opt.text)) for opt in options]
+        clean_lengths = [cls.estimate_visual_text_length(opt.text) for opt in options]
         max_len = max(clean_lengths) if clean_lengths else 0
 
         if max_len <= 15 and len(options) == 4:
@@ -75,20 +95,30 @@ class LayoutSolver:
         (stem_height, rich_height, options_height).
         All measurements reflect real CSS layout under Headless Chrome.
         """
-        clean_stem = cls.clean_text_for_length(question.stem)
-        # In A4 portrait (527pt printable width) with 10pt font, ~80-85 characters fit per line
-        lines_stem = max(1, (len(clean_stem) + 75) // 80)
-        # 10pt font * 1.45 line-height = 14.5pt, plus label and inline spacing
+        vis_stem_len = cls.estimate_visual_text_length(question.stem)
+        # In A4 portrait (480-527pt printable width) with 10pt font, ~80-100 characters fit per line
+        lines_stem = max(1, (vis_stem_len + 75) // 80)
+        # 10pt font * 1.45 line-height = 14.5pt, plus label and spacing
         stem_height = lines_stem * 16.0 + 6.0
 
         # Rich elements (crops/images)
         rich_height = 0.0
         for elem in question.rich_elements:
             elem_h = 100.0
-            if elem.bbox and elem.bbox[2] > elem.bbox[0] and elem.bbox[3] > elem.bbox[1]:
+            if elem.source_crop_path and os.path.isfile(elem.source_crop_path):
+                try:
+                    from PIL import Image
+                    with Image.open(elem.source_crop_path) as im:
+                        iw, ih = im.size
+                        # Max-width in CSS is 95% of ~480pt = 457pt, max-height: 180pt
+                        scale = min(1.0, 457.0 / max(1.0, float(iw)), 180.0 / max(1.0, float(ih)))
+                        elem_h = min(180.0, max(30.0, float(ih) * scale))
+                except Exception:
+                    elem_h = 100.0
+            elif elem.bbox and elem.bbox[2] > elem.bbox[0] and elem.bbox[3] > elem.bbox[1]:
                 bw = elem.bbox[2] - elem.bbox[0]
                 bh = elem.bbox[3] - elem.bbox[1]
-                scale = min(1.0, 500.0 / max(1.0, bw))
+                scale = min(1.0, 457.0 / max(1.0, bw))
                 elem_h = min(160.0, max(40.0, bh * scale))
             caption_h = 14.0 if elem.caption else 0.0
             rich_height += elem_h + caption_h + 10.0
@@ -107,16 +137,126 @@ class LayoutSolver:
         return stem_height, rich_height, options_height
 
     @classmethod
-    def estimate_question_height_pt(cls, question: QuestionIR, option_cols: int = 1) -> float:
+    def estimate_question_height_pt(cls, question: QuestionIR, option_cols: int | StylePreset = 1) -> float:
         """
         Calculates realistic rendered height in points for the entire QuestionBlock.
         Accounts for multiline stem text, rich visual elements, options grid, and margins (16pt).
         """
-        cols = option_cols if option_cols in (1, 2, 4) else cls.determine_option_columns(question.options, bool(question.rich_elements))
+        if isinstance(option_cols, StylePreset):
+            cols = cls.determine_option_columns(question.options, bool(question.rich_elements))
+        else:
+            cols = option_cols if option_cols in (1, 2, 4) else cls.determine_option_columns(question.options, bool(question.rich_elements))
         stem_h, rich_h, opt_h = cls.estimate_question_components(question, cols)
         # CSS .question-item: margin-bottom: 9pt + padding-bottom: 2pt + container gaps = 16pt
         total_pt = stem_h + rich_h + opt_h + 16.0
         return total_pt
+
+    @staticmethod
+    def measure_pdf_rendered_questions(pdf_path: str, doc_ir: CanonicalDocumentIR | None = None) -> dict[str, dict[str, Any]]:
+        """
+        Extracts real rendered dimensions and page locations of questions from a compiled PDF using PyMuPDF.
+        Returns a dict mapping question ID (and question number string) to geometry and integrity data.
+        """
+        if not os.path.isfile(pdf_path):
+            return {}
+
+        doc = pymupdf.open(pdf_path)
+        q_data: dict[int, dict[str, Any]] = {}
+
+        num_to_q = {}
+        if doc_ir:
+            for q in doc_ir.questions:
+                num_to_q[q.number] = q
+
+        full_doc_text: list[str] = []
+
+        for p_idx, page in enumerate(doc):
+            p_num = p_idx + 1
+            blocks = page.get_text("blocks")
+            full_doc_text.append(page.get_text())
+            curr_q: int | None = None
+
+            for b in blocks:
+                txt = b[4].strip()
+                m = re.search(r"Câu\s+(\d+)\s*:", txt)
+                if m:
+                    curr_q = int(m.group(1))
+                    if curr_q not in q_data:
+                        q_data[curr_q] = {
+                            "stem_page": p_num,
+                            "opt_page": None,
+                            "stem_y0": b[1],
+                            "stem_y1": b[3],
+                            "rich_height": 0.0,
+                            "opt_y0": None,
+                            "opt_y1": None,
+                            "total_y0": b[1],
+                            "total_y1": b[3],
+                        }
+                    else:
+                        q_data[curr_q]["stem_y1"] = max(q_data[curr_q]["stem_y1"], b[3])
+                        q_data[curr_q]["total_y1"] = max(q_data[curr_q]["total_y1"], b[3])
+                elif curr_q is not None:
+                    if any(re.match(r"^(?:[A-D]\.|[a-d]\))", line.strip()) for line in txt.splitlines()):
+                        if q_data[curr_q]["opt_page"] is None:
+                            q_data[curr_q]["opt_page"] = p_num
+                            q_data[curr_q]["opt_y0"] = b[1]
+                        q_data[curr_q]["opt_y1"] = b[3]
+                        if q_data[curr_q]["opt_page"] == q_data[curr_q]["stem_page"]:
+                            q_data[curr_q]["total_y1"] = max(q_data[curr_q]["total_y1"], b[3])
+
+            for img in page.get_images():
+                for r in page.get_image_rects(img[0]):
+                    candidate_q = None
+                    for qnum, d in q_data.items():
+                        if d["stem_page"] == p_num and d["stem_y0"] <= r.y0 + 20:
+                            candidate_q = qnum
+                    if candidate_q is not None:
+                        img_h = r.y1 - r.y0
+                        q_data[candidate_q]["rich_height"] += img_h
+                        if q_data[candidate_q]["opt_page"] is None or q_data[candidate_q]["opt_page"] == p_num:
+                            q_data[candidate_q]["total_y1"] = max(q_data[candidate_q]["total_y1"], r.y1)
+
+        combined_text = "\n".join(full_doc_text)
+        doc.close()
+
+        result: dict[str, dict[str, Any]] = {}
+        for qnum, d in q_data.items():
+            stem_h = d["stem_y1"] - d["stem_y0"]
+            rich_h = d["rich_height"]
+            opt_h = (d["opt_y1"] - d["opt_y0"]) if (d["opt_y0"] is not None and d["opt_y1"] is not None) else 0.0
+
+            opt_p = d["opt_page"] or d["stem_page"]
+            is_split = (opt_p != d["stem_page"])
+
+            total_h = (d["total_y1"] - d["total_y0"]) if not is_split else (stem_h + rich_h + opt_h)
+
+            q_obj = num_to_q.get(qnum)
+            qid = q_obj.id if q_obj else f"q_{qnum}"
+
+            missing_opts: list[str] = []
+            if q_obj and q_obj.options:
+                for opt in q_obj.options:
+                    pattern = rf"(?:^|\s){re.escape(opt.label)}\."
+                    if not re.search(pattern, combined_text):
+                        missing_opts.append(opt.label)
+
+            info = {
+                "question_number": qnum,
+                "question_id": qid,
+                "stem_page": d["stem_page"],
+                "options_page": opt_p,
+                "is_split": is_split,
+                "total_height": total_h,
+                "stem_height": stem_h,
+                "rich_height": rich_h,
+                "options_height": opt_h,
+                "missing_options": missing_opts,
+            }
+            result[qid] = info
+            result[str(qnum)] = info
+
+        return result
 
     @classmethod
     def plan_atomic_pagination(
@@ -124,6 +264,7 @@ class LayoutSolver:
         doc_ir: CanonicalDocumentIR,
         preset: StylePreset,
         force_break_ids: set[str] | None = None,
+        rendered_measurements: dict[str, dict[str, Any]] | None = None,
     ) -> set[str]:
         """
         Determines which questions or question components must break before
@@ -178,20 +319,30 @@ class LayoutSolver:
 
             # Check if section banner + at least first question fits on current page
             first_q = sec_questions[0]
-            first_cols = cls.determine_option_columns(first_q.options, bool(first_q.rich_elements))
-            first_q_h = cls.estimate_question_height_pt(first_q, first_cols)
+            if rendered_measurements and first_q.id in rendered_measurements:
+                first_q_h = rendered_measurements[first_q.id].get("total_height", 70.0)
+            else:
+                first_cols = cls.determine_option_columns(first_q.options, bool(first_q.rich_elements))
+                first_q_h = cls.estimate_question_height_pt(first_q, first_cols)
 
             if (usable_height_pt - current_used_pt) < (banner_height + min(first_q_h, 70.0)):
-                # Start new page for section banner
                 current_used_pt = banner_height
             else:
                 current_used_pt += banner_height
 
             for q in sec_questions:
-                has_imgs = bool(q.rich_elements)
-                cols = cls.determine_option_columns(q.options, has_images=has_imgs)
-                stem_h, rich_h, opt_h = cls.estimate_question_components(q, cols)
-                total_q_h = stem_h + rich_h + opt_h + 16.0
+                if rendered_measurements and q.id in rendered_measurements:
+                    meas = rendered_measurements[q.id]
+                    stem_h = meas.get("stem_height", 20.0)
+                    rich_h = meas.get("rich_height", 0.0)
+                    opt_h = meas.get("options_height", 20.0)
+                    total_q_h = meas.get("total_height", stem_h + rich_h + opt_h + 16.0)
+                else:
+                    has_imgs = bool(q.rich_elements)
+                    cols = cls.determine_option_columns(q.options, has_images=has_imgs)
+                    stem_h, rich_h, opt_h = cls.estimate_question_components(q, cols)
+                    total_q_h = stem_h + rich_h + opt_h + 16.0
+
                 first_group_h = stem_h + rich_h + 8.0
                 second_group_h = opt_h + 8.0
 
@@ -224,7 +375,7 @@ class LayoutSolver:
                 # 2. Whole question does NOT fit: evaluate Controlled Splitting (PLAN Section 8, 11, 12)
                 can_split = (
                     first_group_h <= remaining_space
-                    and (has_imgs or stem_h >= 45.0)
+                    and (bool(q.rich_elements) or stem_h >= 45.0)
                     and (bool(q.options) or bool(q.sub_statements))
                     and first_group_h >= 50.0
                 )

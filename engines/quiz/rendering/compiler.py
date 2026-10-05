@@ -18,6 +18,7 @@ import pymupdf
 from engines.quiz.ir.models import CanonicalDocumentIR
 from engines.quiz.rendering.styles import StylePreset, style_registry
 from engines.quiz.rendering.renderer import DocumentHTMLRenderer
+from engines.quiz.rendering.layout import LayoutSolver
 
 
 def sanitize_filename_prefix(prefix: str) -> str:
@@ -255,7 +256,9 @@ class PDFCompiler:
         debai_html_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.html")
         debai_pdf_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.pdf")
 
-        worksheet_html = renderer.render_worksheet(doc_ir, force_break_ids=force_break_ids)
+        # Initial render: allow natural CSS paged media containment, honoring explicit user force_break_ids
+        initial_breaks = force_break_ids if force_break_ids is not None else set()
+        worksheet_html = renderer.render_worksheet(doc_ir, force_break_ids=initial_breaks)
         with open(debai_html_path, "w", encoding="utf-8") as f:
             f.write(worksheet_html)
 
@@ -265,6 +268,34 @@ class PDFCompiler:
             pdf_path=debai_pdf_path,
             timeout=timeout,
         )
+
+        # Post-render measurement and integrity verification pass
+        measurements = LayoutSolver.measure_pdf_rendered_questions(debai_pdf_path, doc_ir)
+
+        # Check for unintended question splits (where stem and options broke across pages)
+        unintended_splits = [
+            qid for qid, m in measurements.items()
+            if m.get("is_split") and (f"opt:{qid}" not in initial_breaks)
+        ]
+
+        if unintended_splits:
+            # Re-plan using real measured dimensions to eliminate unintended splits
+            refined_breaks = LayoutSolver.plan_atomic_pagination(
+                doc_ir=doc_ir,
+                preset=renderer.preset,
+                force_break_ids=force_break_ids,
+                rendered_measurements=measurements,
+            )
+            worksheet_html = renderer.render_worksheet(doc_ir, force_break_ids=refined_breaks, rendered_measurements=measurements)
+            with open(debai_html_path, "w", encoding="utf-8") as f:
+                f.write(worksheet_html)
+
+            compile_html_to_pdf(
+                chrome_path=self.chrome_path,
+                html_path=debai_html_path,
+                pdf_path=debai_pdf_path,
+                timeout=timeout,
+            )
 
         # 2. Render and compile Answer Key (DapAn)
         dapan_html_path = os.path.join(output_dir, f"{clean_prefix}_DapAn.html")
