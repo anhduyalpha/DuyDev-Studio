@@ -24,30 +24,35 @@ function renderProcessingState(state) {
   const pct = Math.max(5, Math.min(100, state.progress || 0));
 
   return `
-    <div id="quizProcessingBox" class="relative overflow-hidden bg-gradient-to-b from-[#141419] to-[#0f0f13] border border-indigo-500/30 rounded-2xl p-6 space-y-5 shadow-lg">
-      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/25">
-            <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+    <div id="quizProcessingBox" class="quiz-animated-box shadow-xl shadow-indigo-500/10 animate-fadeIn">
+      <!-- Animated Moving Gradient Border -->
+      <div class="quiz-border-processing" aria-hidden="true"></div>
+
+      <!-- Inner Card Body -->
+      <div class="relative z-[1] w-full rounded-[14.5px] bg-gradient-to-b from-[#141419] to-[#0f0f13] p-6 space-y-5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/25">
+              <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-sm font-semibold text-zinc-100">Đang biên soạn đề bài & đáp án</h4>
+              <p id="quizProgressStage" class="text-xs text-zinc-400 truncate">${escapeHtml(state.stage || 'Đang xử lý...')}</p>
+            </div>
           </div>
-          <div class="min-w-0">
-            <h4 class="text-sm font-semibold text-zinc-100">Đang biên soạn đề bài & đáp án</h4>
-            <p id="quizProgressStage" class="text-xs text-zinc-400 truncate">${escapeHtml(state.stage || 'Đang xử lý...')}</p>
-          </div>
+          <span id="quizProgressText" class="text-sm font-mono font-semibold text-zinc-200 shrink-0">${pct}%</span>
         </div>
-        <span id="quizProgressText" class="text-sm font-mono font-semibold text-zinc-200 shrink-0">${pct}%</span>
-      </div>
 
-      <!-- Progress bar -->
-      <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
-        <div id="quizProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
-      </div>
+        <!-- Progress bar -->
+        <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
+          <div id="quizProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+        </div>
 
-      <div class="flex items-center justify-end pt-2">
-        <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer">
-          Hủy tác vụ
-        </button>
+        <div class="flex items-center justify-end pt-2">
+          <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer">
+            Hủy tác vụ
+          </button>
+        </div>
       </div>
     </div>
   `.trim();
@@ -90,78 +95,81 @@ function renderCompletedState(state) {
     : '';
 
   return `
-    <div class="relative overflow-hidden rounded-2xl border border-zinc-700/80 bg-gradient-to-b from-[#141419] to-[#0f0f13] p-4 sm:p-5 space-y-4 shadow-lg animate-fadeIn">
-      <!-- Top Accent Line -->
-      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500"></div>
+    <div id="quizCompletedBox" class="quiz-animated-box shadow-xl shadow-emerald-500/5 animate-fadeIn">
+      <!-- Animated Moving Gradient Border -->
+      <div class="quiz-border-completed" aria-hidden="true"></div>
 
-      <!-- Result Header -->
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0"></span>
-          <div class="flex items-center gap-2 flex-wrap min-w-0">
-            <h4 class="text-sm font-bold text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              Hoàn tất
-            </span>
-          </div>
-        </div>
-        <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer shrink-0">
-          Làm bài tập khác
-        </button>
-      </div>
-
-      <!-- Dual Cards Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        <!-- Worksheet Card -->
-        <div class="bg-[#121217] border border-blue-500/30 hover:border-blue-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
-              <span class="text-xs text-zinc-500 font-mono">${wsPages} trang A4</span>
-            </div>
-            <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(wsName)}">${escapeHtml(wsName)}</div>
-            <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
-              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${count} câu</span>
-              ${imgBadge}
-              ${typeBadges}
-              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(wsSize)}</span>
+      <!-- Inner Card Body -->
+      <div class="relative z-[1] w-full rounded-[14.5px] bg-gradient-to-b from-[#141419] to-[#0f0f13] p-4 sm:p-5 space-y-4">
+        <!-- Result Header -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0"></span>
+            <div class="flex items-center gap-2 flex-wrap min-w-0">
+              <h4 class="text-sm font-bold text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                Hoàn tất
+              </span>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${wsViewUrl}" data-download-url="${wsDownloadUrl || ''}">
-              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-              <span>Xem trước</span>
-            </button>
-            <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Tải về</span>
-            </a>
-          </div>
+          <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer shrink-0">
+            Làm bài tập khác
+          </button>
         </div>
 
-        <!-- Answer Key Card -->
-        <div class="bg-[#121217] border border-emerald-500/30 hover:border-emerald-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
-              <span class="text-xs text-zinc-500 font-mono">${ansPages} trang A4</span>
+        <!-- Dual Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- Worksheet Card -->
+          <div class="bg-[#121217] border border-blue-500/30 hover:border-blue-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
+                <span class="text-xs text-zinc-500 font-mono">${wsPages} trang A4</span>
+              </div>
+              <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(wsName)}">${escapeHtml(wsName)}</div>
+              <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
+                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${count} câu</span>
+                ${imgBadge}
+                ${typeBadges}
+                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(wsSize)}</span>
+              </div>
             </div>
-            <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ansName)}">${escapeHtml(ansName)}</div>
-            <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
-              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">Ma trận + Lời giải</span>
-              ${imgBadge}
-              <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ansSize)}</span>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
+              <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${wsViewUrl}" data-download-url="${wsDownloadUrl || ''}">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>Xem trước</span>
+              </button>
+              <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Tải về</span>
+              </a>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-            <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ansViewUrl}" data-download-url="${ansDownloadUrl || ''}">
-              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-              <span>Xem trước</span>
-            </button>
-            <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Tải về</span>
-            </a>
+
+          <!-- Answer Key Card -->
+          <div class="bg-[#121217] border border-emerald-500/30 hover:border-emerald-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
+                <span class="text-xs text-zinc-500 font-mono">${ansPages} trang A4</span>
+              </div>
+              <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ansName)}">${escapeHtml(ansName)}</div>
+              <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
+                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">Ma trận + Lời giải</span>
+                ${imgBadge}
+                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ansSize)}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
+              <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ansViewUrl}" data-download-url="${ansDownloadUrl || ''}">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>Xem trước</span>
+              </button>
+              <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Tải về</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

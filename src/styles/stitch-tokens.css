@@ -212,3 +212,68 @@ html.dark .tool-accent-box {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.35);
 }
+
+/* Animated Moving Gradient Border for Quiz Result & Telemetry Cards */
+.quiz-animated-box {
+  position: relative;
+  border-radius: 1rem;
+  padding: 1.5px;
+  overflow: hidden;
+  background-color: #18181b;
+}
+
+.quiz-border-completed,
+.quiz-border-processing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%) rotate(0deg);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+
+.quiz-border-completed {
+  background: conic-gradient(
+    from 0deg,
+    #3b82f6 0deg,
+    #6366f1 72deg,
+    #10b981 144deg,
+    #059669 216deg,
+    #3b82f6 288deg,
+    #6366f1 360deg
+  );
+  animation: quiz-border-rotate 6s linear infinite;
+}
+
+.quiz-border-processing {
+  background: conic-gradient(
+    from 0deg,
+    #3b82f6 0deg,
+    #6366f1 72deg,
+    #8b5cf6 144deg,
+    #a855f7 216deg,
+    #3b82f6 288deg,
+    #6366f1 360deg
+  );
+  animation: quiz-border-rotate 4s linear infinite;
+}
+
+@keyframes quiz-border-rotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-border-completed,
+  .quiz-border-processing {
+    animation: none;
+  }
+}
+
