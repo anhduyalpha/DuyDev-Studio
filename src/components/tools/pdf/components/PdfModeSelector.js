@@ -7,8 +7,8 @@ export const PDF_MODE_GROUPS = [
   {
     name: 'Tối ưu & Chuyển đổi',
     modes: [
-      { id: 'compress', label: 'Nén PDF', icon: 'minimize-2' },
       { id: 'images_to_pdf', label: 'Ảnh sang PDF', icon: 'image' },
+      { id: 'compress', label: 'Nén PDF', icon: 'minimize-2' },
       { id: 'extract_images', label: 'Trích ảnh', icon: 'images' }
     ]
   },
