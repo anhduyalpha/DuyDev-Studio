@@ -32,6 +32,7 @@ class QuizManager {
       title: 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
       subtitle: '',
       prefix: '',
+      duration: '',
       step: 1, // 1: Nguồn tài liệu, 2: Nhận diện thông minh, 3: Thông số chi tiết & Tạo đề
       isAnalyzingPrompt: false,
       isProcessing: false,
@@ -293,7 +294,8 @@ class QuizManager {
         startNum: this.state.start,
         title: this.state.title || 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
         subtitle: this.state.subtitle || '',
-        prefix: this.state.prefix.trim()
+        prefix: this.state.prefix.trim(),
+        duration: this.state.duration?.trim() || undefined
       };
 
       if (this.state.fileId) {

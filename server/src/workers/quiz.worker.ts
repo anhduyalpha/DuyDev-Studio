@@ -26,6 +26,7 @@ export interface QuizJobPayload {
   title: string;
   subtitle?: string;
   prefix: string;
+  duration?: string;
   stylePresetId?: string;
   apiKey?: string;
 }
@@ -263,7 +264,7 @@ function executeQuizEngine(
 }
 
 export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
-  const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, stylePresetId, apiKey } = payload;
+  const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, duration, stylePresetId, apiKey } = payload;
   let isFinished = false;
   let tmpOutputDir: string | null = null;
 
@@ -320,6 +321,10 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       '--output-dir', tmpOutputDir,
       '--job-id', jobId
     ];
+
+    if (duration && duration.trim()) {
+      pyArgs.push('--duration', duration.trim());
+    }
 
     if (stylePresetId) {
       pyArgs.push('--style', stylePresetId);

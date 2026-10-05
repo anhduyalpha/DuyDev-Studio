@@ -389,6 +389,14 @@ export function attachQuizListeners() {
       bindInputEvents(titleInput, handleTitle);
     }
 
+    const durationInput = document.getElementById('quizDurationInput');
+    if (durationInput) {
+      const handleDuration = () => {
+        quizManager.setParams({ duration: durationInput.value.trim() });
+      };
+      bindInputEvents(durationInput, handleDuration);
+    }
+
     // Question Count Input
     const countInput = document.getElementById('quizCountInput');
     if (countInput) {

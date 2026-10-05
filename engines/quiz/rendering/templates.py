@@ -163,7 +163,16 @@ def render_worksheet_document(
     # Header block
     grade_str = f" - Lớp {meta.grade}" if meta.grade else ""
     exam_code_str = f'<span><strong>Mã đề: {html.escape(meta.exam_code)}</strong></span>' if meta.exam_code else ""
-    duration_str = f"{meta.duration_minutes} phút" if meta.duration_minutes else "45-50 phút"
+
+    # Optional Exam Duration (PLAN Section 3)
+    formatted_duration = ""
+    if getattr(meta, "duration", None) and meta.duration.strip():
+        raw_dur = meta.duration.strip()
+        formatted_duration = f"{raw_dur} phút" if raw_dur.isdigit() else raw_dur
+    elif getattr(meta, "duration_minutes", None):
+        formatted_duration = f"{meta.duration_minutes} phút"
+
+    duration_span = f"<span>Thời gian làm bài: {html.escape(formatted_duration)}</span>" if formatted_duration else ""
 
     header_html = f"""
   <header class="exam-header" style="text-align: center;">
@@ -173,8 +182,7 @@ def render_worksheet_document(
     <div class="exam-header-meta" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4pt 14pt; font-size: 9pt; color: {preset.text_color};">
       <span>Môn học: <strong>{html.escape(meta.subject)}</strong>{html.escape(grade_str)}</span>
       {exam_code_str}
-      <span>Thời gian làm bài: {duration_str}</span>
-      <span>Tổng số câu hỏi: {meta.total_questions} câu</span>
+      {duration_span}
     </div>
   </header>"""
 
@@ -198,7 +206,8 @@ def render_worksheet_document(
             rendered_q_items: list[str] = []
             for q in sec_questions:
                 break_before = (q.id in planned_breaks)
-                rendered_q_items.append(_render_single_question(q, break_before=break_before))
+                split_options = (f"opt:{q.id}" in planned_breaks)
+                rendered_q_items.append(_render_single_question(q, break_before=break_before, split_options=split_options))
 
             sections_html.append(f"""
   <section class="exam-section">
@@ -208,7 +217,11 @@ def render_worksheet_document(
     else:
         # Fallback if no explicit sections defined: render all questions directly
         rendered_q_items = [
-            _render_single_question(q, break_before=(q.id in planned_breaks))
+            _render_single_question(
+                q,
+                break_before=(q.id in planned_breaks),
+                split_options=(f"opt:{q.id}" in planned_breaks)
+            )
             for q in doc_ir.questions
         ]
         sections_html.append(f"""
@@ -256,10 +269,14 @@ def render_worksheet_document(
 </html>"""
 
 
-def _render_single_question(q: QuestionIR, break_before: bool = False) -> str:
+def _render_single_question(q: QuestionIR, break_before: bool = False, split_options: bool = False) -> str:
     """Render a single QuestionIR item with stem, crop images, and options."""
     break_class = " page-break-before" if break_before else ""
+    split_class = " allow-controlled-split" if split_options else ""
     break_style = ' style="break-before: page; page-break-before: always;"' if break_before else ""
+
+    opt_break_class = " page-break-before" if split_options else ""
+    opt_break_style = ' style="break-before: page; page-break-before: always;"' if split_options else ""
 
     # Rich elements (crops)
     rich_html_items: list[str] = []
@@ -288,12 +305,15 @@ def _render_single_question(q: QuestionIR, break_before: bool = False) -> str:
         <span class="tf-text">{stmt.statement}</span>
       </div>"""
             )
-        options_html = "".join(tf_items)
+        options_html = f"""
+      <div class="tf-statements-container{opt_break_class}"{opt_break_style}>
+        {"".join(tf_items)}
+      </div>"""
 
     elif q.type == SectionType.PART_III_SHORT:
         # Part III Short answer blank
-        options_html = """
-      <div class="short-answer-line">
+        options_html = f"""
+      <div class="short-answer-line{opt_break_class}"{opt_break_style}>
         Trả lời: <span class="short-answer-box"></span>
       </div>"""
 
@@ -311,12 +331,12 @@ def _render_single_question(q: QuestionIR, break_before: bool = False) -> str:
       </div>"""
             )
         options_html = f"""
-      <div class="options-grid opt-col-{cols}">
+      <div class="options-grid opt-col-{cols}{opt_break_class}"{opt_break_style}>
         {"".join(opt_items)}
       </div>"""
 
     return f"""
-    <article class="question-item{break_class}"{break_style}>
+    <article class="question-item{break_class}{split_class}"{break_style}>
       <div class="q-header">
         <span class="q-num">Câu {q.number}:</span>
         <span class="q-stem">{q.stem}</span>

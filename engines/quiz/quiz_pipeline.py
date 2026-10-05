@@ -41,6 +41,7 @@ def main() -> None:
     parser.add_argument("--start-num", "--start", dest="start_num", type=int, default=1, help="Starting question number")
     parser.add_argument("--title", default="BÀI TẬP TRẮC NGHIỆM", help="Exam header title")
     parser.add_argument("--subtitle", default="", help="Exam subtitle")
+    parser.add_argument("--duration", default="", help="Optional exam duration (e.g. '45 phút')")
     parser.add_argument("--prefix", default="DeThi", help="Output filename prefix")
     parser.add_argument("--style", default="blue_black_classic", help="Style preset ID")
     parser.add_argument("--output-dir", required=True, help="Directory to store generated artifacts")
@@ -101,6 +102,7 @@ def main() -> None:
         job_id=args.job_id,
         title=args.title,
         subtitle=args.subtitle,
+        duration=args.duration,
         on_progress=on_progress,
     )
 

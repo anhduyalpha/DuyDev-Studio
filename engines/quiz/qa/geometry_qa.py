@@ -87,7 +87,10 @@ def verify_option_integrity(
         else:
             q_slice = page_texts[stem_page_idx][stem_pos:]
 
-        # Check each expected option label in q_slice
+        # Check each expected option label in q_slice or next page
+        options_on_stem: list[str] = []
+        options_on_next: list[str] = []
+
         for label in expected_labels:
             if q.type == SectionType.PART_I_MCQ:
                 label_pat = re.compile(rf"(?:^|\s|\n){re.escape(label)}\.", re.IGNORECASE)
@@ -95,12 +98,8 @@ def verify_option_integrity(
                 label_pat = re.compile(rf"(?:^|\s|\n){re.escape(label)}\)", re.IGNORECASE)
 
             if label_pat.search(q_slice):
-                # Option found on the stem page!
-                continue
-
-            # Option NOT found on stem page! Check if it spilled to next page
-            spilled_to_next = False
-            if stem_page_idx + 1 < page_count:
+                options_on_stem.append(label)
+            elif stem_page_idx + 1 < page_count:
                 next_page_text = page_texts[stem_page_idx + 1]
                 m_next_on_next = next_q_pattern.search(next_page_text)
                 next_page_slice = (
@@ -109,48 +108,60 @@ def verify_option_integrity(
                     else next_page_text
                 )
                 if label_pat.search(next_page_slice):
-                    spilled_to_next = True
+                    options_on_next.append(label)
 
-            if spilled_to_next:
-                if is_oversized:
-                    # Oversized questions spanning pages are expected under oversized policy
-                    issues.append(
-                        QAIssue(
-                            page=q_page_num,
-                            type=QAIssueType.SPLIT_QUESTION,
-                            severity=QASeverity.LOW,
-                            description=(
-                                f"Oversized Question {q.number} (qid={q.id}, ~{est_height:.0f}pt) "
-                                f"flows across pages: option '{label}' rendered on page {q_page_num + 1}."
-                            ),
-                        )
-                    )
-                else:
-                    # Normal questions MUST NOT split options across page boundaries
-                    issues.append(
-                        QAIssue(
-                            page=q_page_num,
-                            type=QAIssueType.SPLIT_QUESTION,
-                            severity=QASeverity.CRITICAL,
-                            description=(
-                                f"Atomic pagination defect: Question {q.number} (qid={q.id}) options split across pages! "
-                                f"Stem is on page {q_page_num}, but option '{label}' spilled to page {q_page_num + 1}."
-                            ),
-                        )
-                    )
-            else:
-                # Option is completely missing / dropped!
+        # 1. All options on stem page: intact unit
+        if len(options_on_stem) == len(expected_labels):
+            continue
+
+        # 2. Controlled split (PLAN Section 8): ALL options intact together on next page (zero on stem page)
+        if len(options_on_next) == len(expected_labels) and len(options_on_stem) == 0:
+            continue
+
+        # 3. Oversized question allowed across pages
+        if is_oversized and (len(options_on_stem) + len(options_on_next)) == len(expected_labels):
+            spilled_desc = ", ".join(options_on_next) if options_on_next else "options"
+            issues.append(
+                QAIssue(
+                    page=q_page_num,
+                    type=QAIssueType.SPLIT_QUESTION,
+                    severity=QASeverity.LOW,
+                    description=(
+                        f"Oversized Question {q.number} (qid={q.id}, ~{est_height:.0f}pt) "
+                        f"flows across pages: option(s) '{spilled_desc}' rendered on page {q_page_num + 1}."
+                    ),
+                )
+            )
+            continue
+
+        # 4. Critical Defect: Missing options or options fractured across pages
+        missing_labels = [l for l in expected_labels if l not in options_on_stem and l not in options_on_next]
+        if missing_labels:
+            for l in missing_labels:
                 issues.append(
                     QAIssue(
                         page=q_page_num,
                         type=QAIssueType.CARDINALITY_MISMATCH,
                         severity=QASeverity.CRITICAL,
                         description=(
-                            f"Option integrity defect: Question {q.number} (qid={q.id}) option '{label}' "
+                            f"Option integrity defect: Question {q.number} (qid={q.id}) option '{l}' "
                             f"was dropped or clipped outside page bounds."
                         ),
                     )
                 )
+        elif options_on_stem and options_on_next:
+            spilled_lbl = options_on_next[0]
+            issues.append(
+                QAIssue(
+                    page=q_page_num,
+                    type=QAIssueType.SPLIT_QUESTION,
+                    severity=QASeverity.CRITICAL,
+                    description=(
+                        f"Atomic pagination defect: Question {q.number} (qid={q.id}) options split across pages! "
+                        f"Stem is on page {q_page_num}, but option '{spilled_lbl}' spilled to page {q_page_num + 1}."
+                    ),
+                )
+            )
 
     return issues
 

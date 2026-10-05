@@ -20,6 +20,7 @@ class DocumentMetadataIR(BaseModel):
     exam_code: Optional[str] = None
     total_questions: int
     duration_minutes: Optional[int] = None
+    duration: Optional[str] = None
     source_filename: str = ""
     source_hash: str = ""                # SHA-256 hash of original input
     created_at: str                      # ISO 8601 formatted timestamp

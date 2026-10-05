@@ -65,40 +65,57 @@ class LayoutSolver:
             return 1
 
     @classmethod
-    def estimate_question_height_pt(cls, question: QuestionIR, option_cols: int = 1) -> float:
+    def estimate_question_components(
+        cls,
+        question: QuestionIR,
+        option_cols: int = 1
+    ) -> tuple[float, float, float]:
         """
-        Calculates realistic rendered height in points for the entire QuestionBlock.
-        Accounts for multiline stem text, rich visual elements, options grid, and margins.
+        Calculates realistic rendered height in points for each semantic component:
+        (stem_height, rich_height, options_height).
+        All measurements reflect real CSS layout under Headless Chrome.
         """
         clean_stem = cls.clean_text_for_length(question.stem)
-        lines_stem = max(1, len(clean_stem) // 85 + 1)
-        stem_height = lines_stem * 14.5
+        # In A4 portrait (527pt printable width) with 10pt font, ~80-85 characters fit per line
+        lines_stem = max(1, (len(clean_stem) + 75) // 80)
+        # 10pt font * 1.45 line-height = 14.5pt, plus label and inline spacing
+        stem_height = lines_stem * 16.0 + 6.0
 
         # Rich elements (crops/images)
         rich_height = 0.0
         for elem in question.rich_elements:
-            elem_h = 130.0
+            elem_h = 100.0
             if elem.bbox and elem.bbox[2] > elem.bbox[0] and elem.bbox[3] > elem.bbox[1]:
                 bw = elem.bbox[2] - elem.bbox[0]
                 bh = elem.bbox[3] - elem.bbox[1]
                 scale = min(1.0, 500.0 / max(1.0, bw))
-                elem_h = min(180.0, max(40.0, bh * scale))
+                elem_h = min(160.0, max(40.0, bh * scale))
             caption_h = 14.0 if elem.caption else 0.0
-            rich_height += elem_h + caption_h + 16.0
+            rich_height += elem_h + caption_h + 10.0
 
         # Options
         num_options = len(question.options)
         if num_options > 0:
             cols = option_cols if option_cols in (1, 2, 4) else cls.determine_option_columns(question.options, bool(question.rich_elements))
             option_rows = (num_options + cols - 1) // cols
-            options_height = option_rows * 20.0
+            options_height = option_rows * 20.0 + 6.0
         elif question.sub_statements:
-            options_height = len(question.sub_statements) * 18.0
+            options_height = len(question.sub_statements) * 18.0 + 4.0
         else:
-            options_height = 24.0
+            options_height = 20.0
 
-        # Padding, margin, and question label
-        total_pt = stem_height + rich_height + options_height + 24.0
+        return stem_height, rich_height, options_height
+
+    @classmethod
+    def estimate_question_height_pt(cls, question: QuestionIR, option_cols: int = 1) -> float:
+        """
+        Calculates realistic rendered height in points for the entire QuestionBlock.
+        Accounts for multiline stem text, rich visual elements, options grid, and margins (16pt).
+        """
+        cols = option_cols if option_cols in (1, 2, 4) else cls.determine_option_columns(question.options, bool(question.rich_elements))
+        stem_h, rich_h, opt_h = cls.estimate_question_components(question, cols)
+        # CSS .question-item: margin-bottom: 9pt + padding-bottom: 2pt + container gaps = 16pt
+        total_pt = stem_h + rich_h + opt_h + 16.0
         return total_pt
 
     @classmethod
@@ -109,8 +126,11 @@ class LayoutSolver:
         force_break_ids: set[str] | None = None,
     ) -> set[str]:
         """
-        Determines which questions must break before to guarantee atomic placement (TASK-03).
-        Returns a set of question IDs that must have 'page-break-before: always'.
+        Determines which questions or question components must break before
+        to guarantee atomic placement, avoid premature page breaks, and minimize whitespace (PLAN-02 / PLAN-LAYOUT).
+        Returns a set of break specifiers:
+          - question ID '{qid}': forces a page break before the whole question
+          - option break ID 'opt:{qid}': forces a controlled split (options break to next page)
         """
         forced_breaks = set(force_break_ids or ())
         std_height_pt = 841.89
@@ -118,9 +138,24 @@ class LayoutSolver:
         margin_top_pt = preset.margin_top_mm * pt_per_mm
         margin_bottom_pt = preset.margin_bottom_mm * pt_per_mm
 
-        usable_height_pt = std_height_pt - (margin_top_pt + margin_bottom_pt) - 24.0
-        title_extra_pt = 18.0 if len(doc_ir.metadata.title) > 50 else 0.0
-        current_used_pt = 55.0 + title_extra_pt
+        usable_page_pt = std_height_pt - (margin_top_pt + margin_bottom_pt) - 18.0
+
+        # Dynamic Header Height (PLAN Section 13)
+        meta = doc_ir.metadata
+        title_len = len(meta.title)
+        title_lines = max(1, (title_len + 44) // 45)
+        title_h = title_lines * 20.0 + 4.0
+
+        has_duration = bool(getattr(meta, "duration", None) and meta.duration.strip()) or bool(getattr(meta, "duration_minutes", None))
+        meta_items = 1 + (1 if meta.grade else 0) + (1 if has_duration else 0) + (1 if meta.exam_code else 0)
+        meta_lines = 2 if meta_items >= 3 and title_len > 40 else 1
+        meta_h = meta_lines * 14.0
+        header_spacing_h = 16.0
+        actual_header_height = title_h + meta_h + header_spacing_h
+
+        # Page 1 starts with actual_header_height used
+        current_used_pt = actual_header_height
+        usable_height_pt = usable_page_pt
 
         q_map = {q.id: q for q in doc_ir.questions}
         ordered_sections = doc_ir.sections or [
@@ -139,14 +174,15 @@ class LayoutSolver:
             if not sec_questions:
                 continue
 
-            banner_height = 28.0
+            banner_height = 26.0
 
             # Check if section banner + at least first question fits on current page
             first_q = sec_questions[0]
             first_cols = cls.determine_option_columns(first_q.options, bool(first_q.rich_elements))
             first_q_h = cls.estimate_question_height_pt(first_q, first_cols)
 
-            if (usable_height_pt - current_used_pt) < (banner_height + min(first_q_h, 80.0)):
+            if (usable_height_pt - current_used_pt) < (banner_height + min(first_q_h, 70.0)):
+                # Start new page for section banner
                 current_used_pt = banner_height
             else:
                 current_used_pt += banner_height
@@ -154,28 +190,54 @@ class LayoutSolver:
             for q in sec_questions:
                 has_imgs = bool(q.rich_elements)
                 cols = cls.determine_option_columns(q.options, has_images=has_imgs)
-                q_h = cls.estimate_question_height_pt(q, cols)
+                stem_h, rich_h, opt_h = cls.estimate_question_components(q, cols)
+                total_q_h = stem_h + rich_h + opt_h + 16.0
+                first_group_h = stem_h + rich_h + 8.0
+                second_group_h = opt_h + 8.0
 
                 if q.id in forced_breaks:
                     planned_breaks.add(q.id)
-                    current_used_pt = q_h + 10.0
+                    current_used_pt = total_q_h
+                    continue
+
+                if f"opt:{q.id}" in forced_breaks:
+                    planned_breaks.add(f"opt:{q.id}")
+                    current_used_pt = second_group_h
                     continue
 
                 # Large question exception (> 85% of usable page)
-                if q_h >= usable_height_pt * 0.85:
+                if total_q_h >= usable_height_pt * 0.85:
                     if current_used_pt > (usable_height_pt * 0.25):
                         planned_breaks.add(q.id)
-                        current_used_pt = q_h + 10.0
+                        current_used_pt = total_q_h
                     else:
-                        current_used_pt += q_h + 10.0
+                        current_used_pt += total_q_h
                     continue
 
                 remaining_space = usable_height_pt - current_used_pt
-                if q_h > remaining_space:
-                    planned_breaks.add(q.id)
-                    current_used_pt = q_h + 10.0
+
+                # 1. Whole question fits completely
+                if total_q_h <= remaining_space:
+                    current_used_pt += total_q_h
+                    continue
+
+                # 2. Whole question does NOT fit: evaluate Controlled Splitting (PLAN Section 8, 11, 12)
+                can_split = (
+                    first_group_h <= remaining_space
+                    and (has_imgs or stem_h >= 45.0)
+                    and (bool(q.options) or bool(q.sub_statements))
+                    and first_group_h >= 50.0
+                )
+
+                if can_split:
+                    planned_breaks.add(f"opt:{q.id}")
+                    # Current page accommodates stem + rich content
+                    # Next page starts with options block
+                    current_used_pt = second_group_h
                 else:
-                    current_used_pt += q_h + 10.0
+                    # Semantic group does not fit or too small: break before entire question
+                    planned_breaks.add(q.id)
+                    current_used_pt = total_q_h
 
         return planned_breaks
 
@@ -235,6 +297,12 @@ body {{
   contain: layout;
   margin-bottom: 9pt;
   padding-bottom: 2pt;
+}}
+
+.question-item.allow-controlled-split {{
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  contain: none !important;
 }}
 
 .question-item.page-break-before {{
@@ -356,6 +424,26 @@ body {{
 
 .options-grid.opt-col-1 {{
   grid-template-columns: 1fr;
+}}
+
+.options-grid.page-break-before {{
+  break-before: page !important;
+  page-break-before: always !important;
+}}
+
+.tf-statements-container {{
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}}
+
+.tf-statements-container.page-break-before {{
+  break-before: page !important;
+  page-break-before: always !important;
+}}
+
+.short-answer-line.page-break-before {{
+  break-before: page !important;
+  page-break-before: always !important;
 }}
 
 .opt-item {{

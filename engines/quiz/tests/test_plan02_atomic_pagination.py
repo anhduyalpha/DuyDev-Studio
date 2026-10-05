@@ -228,6 +228,61 @@ class TestLayoutSolverAtomicPagination(unittest.TestCase):
         planned = LayoutSolver.plan_atomic_pagination(doc_ir, self.preset, force_break_ids=force_breaks)
         self.assertIn("q_3", planned)
 
+    def test_forced_option_break_honored(self):
+        doc_ir = self._create_mock_doc_ir(count=6)
+        force_breaks = {"opt:q_3"}
+        planned = LayoutSolver.plan_atomic_pagination(doc_ir, self.preset, force_break_ids=force_breaks)
+        self.assertIn("opt:q_3", planned)
+
+    def test_controlled_split_planned_when_stem_fits_but_options_do_not(self):
+        # 6 normal questions (each ~84pt) = ~504pt + header 54pt + banner 26pt = ~584pt used.
+        # Usable space ~767pt, remaining space ~183pt.
+        # Question 7 has stem_h ~134pt, first_group_h ~142pt <= 183pt (fits on page 1).
+        # Total Q7 ~216pt > 183pt (cannot fit entirely).
+        # Controlled split must be selected -> 'opt:q_7'
+        options = [
+            OptionIR(label="A", text="Lựa chọn A dài vừa phải để kiểm tra"),
+            OptionIR(label="B", text="Lựa chọn B dài vừa phải để kiểm tra"),
+            OptionIR(label="C", text="Lựa chọn C dài vừa phải để kiểm tra"),
+            OptionIR(label="D", text="Lựa chọn D dài vừa phải để kiểm tra"),
+        ]
+        questions = []
+        for i in range(1, 7):
+            questions.append(
+                QuestionIR(
+                    id=f"q_{i}", number=i, source_number=i, type=SectionType.PART_I_MCQ,
+                    stem=f"Câu hỏi số {i} với nội dung ngắn để chiếm một phần trang.",
+                    options=options
+                )
+            )
+        questions.append(
+            QuestionIR(
+                id="q_7", number=7, source_number=7, type=SectionType.PART_I_MCQ,
+                stem="Câu hỏi số 7 rất dài để kiểm tra controlled split. " * 12,
+                options=options
+            )
+        )
+        questions.append(
+            QuestionIR(
+                id="q_8", number=8, source_number=8, type=SectionType.PART_I_MCQ,
+                stem="Câu hỏi số 8 nằm ở trang 2.",
+                options=options
+            )
+        )
+        sec = SectionIR(
+            id="sec_1", title="PHẦN I", type=SectionType.PART_I_MCQ,
+            question_ids=[q.id for q in questions]
+        )
+        meta = DocumentMetadataIR(
+            title="TEST CONTROLLED SPLIT PLANNING",
+            total_questions=8,
+            created_at="2026-10-05T00:00:00Z",
+            duration="45 phút"
+        )
+        doc_ir = CanonicalDocumentIR(metadata=meta, sections=[sec], questions=questions)
+        planned = LayoutSolver.plan_atomic_pagination(doc_ir, self.preset)
+        self.assertIn("opt:q_7", planned, f"Expected 'opt:q_7' in planned breaks, got {planned}")
+
 
 class TestCSSAndTemplateAtomicRendering(unittest.TestCase):
     """Test CSS containment rules and template HTML output for atomic question units."""
@@ -289,6 +344,34 @@ class TestCSSAndTemplateAtomicRendering(unittest.TestCase):
         self.assertIn('question-item page-break-before', html_out)
         self.assertIn('style="break-before: page; page-break-before: always;"', html_out)
 
+    def test_template_applies_controlled_split_classes(self):
+        q1 = QuestionIR(
+            id="q_1",
+            number=1,
+            source_number=1,
+            stem="Nội dung câu 1",
+            type=SectionType.PART_I_MCQ,
+            options=[
+                OptionIR(label="A", text="Opt A"),
+                OptionIR(label="B", text="Opt B"),
+                OptionIR(label="C", text="Opt C"),
+                OptionIR(label="D", text="Opt D"),
+            ],
+        )
+        doc_ir = CanonicalDocumentIR(
+            metadata=DocumentMetadataIR(title="Test Split Exam", total_questions=1, created_at="2026-10-04T00:00:00Z"),
+            questions=[q1],
+        )
+
+        # Force controlled option split on q_1
+        html_out = render_worksheet_document(doc_ir, preset=BLUE_BLACK_CLASSIC_STYLE, force_break_ids={"opt:q_1"})
+
+        # Article must allow controlled split
+        self.assertIn("question-item allow-controlled-split", html_out)
+        # Options grid must have page-break-before
+        self.assertIn("options-grid opt-col-4 page-break-before", html_out)
+        self.assertIn('style="break-before: page; page-break-before: always;"', html_out)
+
 
 class TestPostRenderOptionIntegrityVerification(unittest.TestCase):
     """Test deterministic option integrity post-render verification."""
@@ -348,6 +431,33 @@ class TestPostRenderOptionIntegrityVerification(unittest.TestCase):
 
         critical_issues = [i for i in issues if i.severity == QASeverity.CRITICAL]
         self.assertEqual(len(critical_issues), 0, f"Expected 0 critical issues, got: {critical_issues}")
+
+    def test_option_integrity_passes_when_controlled_split_options_on_next_page(self):
+        """
+        Controlled splitting (PLAN Section 8):
+        Câu 1 stem is on Page 1.
+        ALL options A, B, C, D are intact together at top of Page 2 (zero options on Page 1).
+        Must be accepted without critical issues!
+        """
+        pdf_path = os.path.join(self.temp_dir, "controlled_split_options.pdf")
+        doc = pymupdf.open()
+        p1 = doc.new_page(width=595.28, height=841.89)
+        # Page 1: Only stem of Câu 1 near bottom
+        p1.insert_text((50, 750), "Câu 1: Chất nào sau đây thuộc loại đisaccarit?", fontsize=10)
+
+        # Page 2: All options A, B, C, D intact at top, followed by Câu 2
+        p2 = doc.new_page(width=595.28, height=841.89)
+        p2.insert_text((50, 50), "A. Glucozơ   B. Saccarozơ   C. Fructozơ   D. Tinh bột", fontsize=9)
+        p2.insert_text((50, 100), "Câu 2: Polime nào sau đây được điều chế bằng phản ứng trùng hợp?", fontsize=10)
+        p2.insert_text((50, 120), "A. Poli(etylen terephtalat)   B. Poli(etylen)   C. Nilon-6,6   D. Tơ lapsan", fontsize=9)
+
+        doc.save(pdf_path)
+
+        issues = verify_option_integrity(doc, self.doc_ir)
+        doc.close()
+
+        critical_issues = [i for i in issues if i.severity == QASeverity.CRITICAL]
+        self.assertEqual(len(critical_issues), 0, f"Controlled split should not raise critical defect, got: {critical_issues}")
 
     def test_reproduce_production_split_option_failure(self):
         """

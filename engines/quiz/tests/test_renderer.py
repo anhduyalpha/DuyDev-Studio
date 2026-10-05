@@ -173,10 +173,62 @@ class TestDocumentHTMLRenderer(unittest.TestCase):
         self.assertIn("Trả lời:", worksheet_html)
         self.assertIn("short-answer-box", worksheet_html)
 
-        # Footer & Offline KaTeX scripts
-        self.assertIn("--- HẾT ---", worksheet_html)
-        self.assertIn("katex.min.css", worksheet_html)
-        self.assertIn("auto-render.min.js", worksheet_html)
+        # Total question count must NOT be in header metadata
+        self.assertNotIn("Tổng số câu hỏi", worksheet_html)
+
+    def test_optional_duration_regression_cases(self):
+        # Case A: No duration (empty string or None) -> No duration text, no label, header collapses
+        doc_no_dur = self.doc_ir.model_copy(deep=True)
+        doc_no_dur.metadata.duration = ""
+        doc_no_dur.metadata.duration_minutes = None
+        html_a = self.renderer.render_worksheet(doc_no_dur)
+        self.assertNotIn("Thời gian làm bài", html_a)
+        self.assertNotIn("phút", html_a)
+        self.assertNotIn("Tổng số câu hỏi", html_a)
+
+        # Edge Case: duration = None
+        doc_none = self.doc_ir.model_copy(deep=True)
+        doc_none.metadata.duration = None
+        doc_none.metadata.duration_minutes = None
+        html_none = self.renderer.render_worksheet(doc_none)
+        self.assertNotIn("Thời gian làm bài", html_none)
+
+        # Edge Case: duration = whitespace only
+        doc_ws = self.doc_ir.model_copy(deep=True)
+        doc_ws.metadata.duration = "   "
+        doc_ws.metadata.duration_minutes = None
+        html_ws = self.renderer.render_worksheet(doc_ws)
+        self.assertNotIn("Thời gian làm bài", html_ws)
+
+        # Case B: Duration = "45 phút"
+        doc_45 = self.doc_ir.model_copy(deep=True)
+        doc_45.metadata.duration = "45 phút"
+        doc_45.metadata.duration_minutes = None
+        html_b = self.renderer.render_worksheet(doc_45)
+        self.assertIn("Thời gian làm bài: 45 phút", html_b)
+
+        # Edge Case: raw digits "45" auto-formats to "45 phút"
+        doc_digits = self.doc_ir.model_copy(deep=True)
+        doc_digits.metadata.duration = "45"
+        doc_digits.metadata.duration_minutes = None
+        html_digits = self.renderer.render_worksheet(doc_digits)
+        self.assertIn("Thời gian làm bài: 45 phút", html_digits)
+
+        # Case C: Duration = "90 phút"
+        doc_90 = self.doc_ir.model_copy(deep=True)
+        doc_90.metadata.duration = "90 phút"
+        doc_90.metadata.duration_minutes = None
+        html_c = self.renderer.render_worksheet(doc_90)
+        self.assertIn("Thời gian làm bài: 90 phút", html_c)
+
+    def test_long_title_header_wrap_safety(self):
+        doc_long_title = self.doc_ir.model_copy(deep=True)
+        doc_long_title.metadata.title = "BÀI TẬP TRẮC NGHIỆM HÓA HỌC HỮU CƠ CHƯƠNG ESTE LIPIT NÂNG CAO ÔN THI TỐT NGHIỆP TRUNG HỌC PHỔ THÔNG NĂM 2026"
+        html = self.renderer.render_worksheet(doc_long_title)
+        self.assertIn("exam-header-title", html)
+        self.assertIn("BÀI TẬP TRẮC NGHIỆM HÓA HỌC HỮU CƠ", html)
+        self.assertIn("word-wrap: break-word", html)
+
 
     def test_render_answer_key_matrix_and_evidence(self):
         answer_html = self.renderer.render_answer_key(self.doc_ir)

@@ -59,6 +59,7 @@ class QuizPipelineOrchestrator:
         job_id: str | None = None,
         title: str | None = None,
         subtitle: str | None = None,
+        duration: str | None = None,
         on_progress: Callable[[JobStage, int, str], None] | None = None,
     ) -> JobState:
         """Execute the end-to-end pipeline with state machine transitions."""
@@ -195,10 +196,12 @@ class QuizPipelineOrchestrator:
             os.makedirs(crops_dir, exist_ok=True)
 
             doc_title = title.strip() if (title and title.strip()) else (f"BÀI TẬP TRẮC NGHIỆM - {prefix}" if prefix else "BÀI TẬP TRẮC NGHIỆM")
+            clean_duration = duration.strip() if (duration and duration.strip()) else None
             metadata = DocumentMetadataIR(
                 title=doc_title,
                 subject="HÓA HỌC",
                 total_questions=len(cleaned_questions),
+                duration=clean_duration,
                 source_filename=os.path.basename(pdf_path),
                 created_at=datetime.now(timezone.utc).isoformat(),
             )

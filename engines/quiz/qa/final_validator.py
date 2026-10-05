@@ -415,6 +415,9 @@ def validate_final_pdf(
         est_height = LayoutSolver.estimate_question_height_pt(q)
         is_oversized = est_height > 650.0
 
+        options_on_stem: list[str] = []
+        options_on_next: list[str] = []
+
         for lbl in expected_labels:
             if q.type == SectionType.PART_I_MCQ:
                 lbl_pat = re.compile(rf"(?:^|\s|\n){re.escape(lbl)}\s*[\.\)]", re.IGNORECASE)
@@ -422,11 +425,8 @@ def validate_final_pdf(
                 lbl_pat = re.compile(rf"(?:^|\s|\n){re.escape(lbl)}\s*[\.\)]", re.IGNORECASE)
 
             if lbl_pat.search(q_slice):
-                continue
-
-            # Check next page in case of continuation
-            found_on_next = False
-            if stem_p_idx + 1 < page_count:
+                options_on_stem.append(lbl)
+            elif stem_p_idx + 1 < page_count:
                 headers_on_next = _find_question_header_matches(page_texts[stem_p_idx + 1])
                 if headers_on_next:
                     next_slice = page_texts[stem_p_idx + 1][:headers_on_next[0].start()]
@@ -434,35 +434,50 @@ def validate_final_pdf(
                     next_slice = page_texts[stem_p_idx + 1]
 
                 if lbl_pat.search(next_slice):
-                    found_on_next = True
+                    options_on_next.append(lbl)
 
-            if found_on_next:
-                if not is_oversized:
-                    option_valid = False
-                    issues.append(
-                        QAIssue(
-                            page=stem_p_idx + 1,
-                            type=QAIssueType.SPLIT_QUESTION,
-                            severity=QASeverity.CRITICAL,
-                            description=(
-                                f"Option integrity defect: Question {q.number} (qid={q.id}) option '{lbl}' "
-                                f"split onto page {stem_p_idx + 2}."
-                            ),
-                        )
-                    )
-            else:
-                option_valid = False
+        # 1. All options on stem page: intact unit
+        if len(options_on_stem) == len(expected_labels):
+            continue
+
+        # 2. Controlled split (PLAN Section 8): ALL options intact together on next page (zero on stem page)
+        if len(options_on_next) == len(expected_labels) and len(options_on_stem) == 0:
+            continue
+
+        # 3. Oversized question allowed across pages
+        if is_oversized and (len(options_on_stem) + len(options_on_next)) == len(expected_labels):
+            continue
+
+        # 4. Defect: missing options or fractured across pages
+        missing_lbls = [l for l in expected_labels if l not in options_on_stem and l not in options_on_next]
+        if missing_lbls:
+            option_valid = False
+            for l in missing_lbls:
                 issues.append(
                     QAIssue(
                         page=stem_p_idx + 1,
                         type=QAIssueType.CARDINALITY_MISMATCH,
                         severity=QASeverity.CRITICAL,
                         description=(
-                            f"Option integrity defect: Question {q.number} (qid={q.id}) is missing option '{lbl}' "
+                            f"Option integrity defect: Question {q.number} (qid={q.id}) is missing option '{l}' "
                             f"in rendered PDF (dropped or clipped outside page bounds)."
                         ),
                     )
                 )
+        elif options_on_stem and options_on_next:
+            spilled_lbl = options_on_next[0]
+            option_valid = False
+            issues.append(
+                QAIssue(
+                    page=stem_p_idx + 1,
+                    type=QAIssueType.SPLIT_QUESTION,
+                    severity=QASeverity.CRITICAL,
+                    description=(
+                        f"Atomic pagination defect: Question {q.number} (qid={q.id}) options fractured across page boundary! "
+                        f"Options {options_on_stem} on page {stem_p_idx + 1}, option '{spilled_lbl}' split onto page {stem_p_idx + 2}."
+                    ),
+                )
+            )
 
     # =========================================================================
     # 4. ASSET LEVEL
