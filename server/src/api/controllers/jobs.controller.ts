@@ -78,13 +78,23 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
   // Helper to build completed event payload
   const buildCompletedPayload = (targetJob: typeof job) => {
     const artifact = targetJob.files.find((f) => f.purpose === 'PROCESSED_ARTIFACT') || targetJob.files[0];
+    const inputFile = targetJob.files.find((f) => f.purpose !== 'PROCESSED_ARTIFACT');
+    const artifactSize = artifact ? Number(artifact.sizeBytes) : 0;
+    const inputSize = inputFile ? Number(inputFile.sizeBytes) : 0;
+
     let payload: Record<string, unknown> = {
       jobId,
       percentage: 100,
       resultFileId: artifact?.id || null,
-      resultSizeBytes: artifact ? Number(artifact.sizeBytes) : 0,
+      resultFileName: artifact?.originalName || null,
+      resultSizeBytes: artifactSize,
+      originalSizeBytes: inputSize > 0 ? inputSize : null,
       downloadUrl: artifact ? `/api/v1/files/download/${artifact.id}` : null
     };
+
+    if (inputSize > 0 && artifactSize > 0) {
+      payload.savingsPct = Number(Math.max(0, ((inputSize - artifactSize) / inputSize) * 100).toFixed(1));
+    }
 
     try {
       const opts = JSON.parse(targetJob.optionsJson || '{}');
@@ -179,7 +189,9 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
   });
 
   try {
-    await subscriber.subscribe(channel);
+    if (!isCleanedUp) {
+      await subscriber.subscribe(channel);
+    }
   } catch (subErr) {
     logger.warn({ jobId, subErr }, 'Failed to subscribe to Redis events channel');
   }
@@ -191,7 +203,7 @@ export async function getJobEvents(request: FastifyRequest, reply: FastifyReply)
       include: { files: true }
     });
 
-    if (postSubJob && !isCleanedUp) {
+    if (postSubJob && !isCleanedUp && !reply.raw.writableEnded) {
       if (postSubJob.status === 'COMPLETED') {
         const completedPayload = buildCompletedPayload(postSubJob);
         reply.raw.write(`event: completed\ndata: ${JSON.stringify(completedPayload)}\n\n`);

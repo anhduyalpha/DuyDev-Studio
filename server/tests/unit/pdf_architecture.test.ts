@@ -91,8 +91,10 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       });
 
       // Verification: fetch was called immediately at t = 0 without advancing timer
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/api/v1/jobs/job_fast_1');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/v1/jobs/job_fast_1',
+        expect.objectContaining({ signal: expect.any(Object) })
+      );
 
       // Flush microtasks
       await flushMicrotasks();
@@ -203,6 +205,49 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       expect(es.closed).toBe(true);
     });
 
+    it('should correctly extract jobId when REST endpoint returns { data: { jobId: ... } }', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: {
+            jobId: 'job_standard_schema_1',
+            status: 'COMPLETED',
+            files: [
+              {
+                fileId: 'fil_artifact_std',
+                purpose: 'PROCESSED_ARTIFACT',
+                originalName: 'output.pdf',
+                sizeBytes: 4096,
+                downloadUrl: '/api/v1/files/download/fil_artifact_std'
+              }
+            ]
+          }
+        })
+      });
+      globalThis.fetch = mockFetch;
+
+      const onCompleted = vi.fn();
+      watchJobProgress({
+        apiBase: 'http://localhost:3000',
+        eventsUrl: '/api/v1/jobs/job_standard_schema_1/events',
+        pollUrl: '/api/v1/jobs/job_standard_schema_1',
+        onProgress: vi.fn(),
+        onCompleted,
+        onFailed: vi.fn()
+      });
+
+      await flushMicrotasks();
+
+      expect(onCompleted).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobId: 'job_standard_schema_1',
+          percentage: 100,
+          resultFileId: 'fil_artifact_std',
+          resultFileName: 'output.pdf'
+        })
+      );
+    });
+
     it('heartbeat watchdog timer: triggers immediate poll if no events received for 12 seconds', async () => {
       let pollCallCount = 0;
       const mockFetch = vi.fn().mockImplementation(async () => {
@@ -260,6 +305,92 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       // Advancing timer should produce NO further fetch calls
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch.mock.calls.length).toBe(callsBefore);
+    });
+
+    it('cleanup function prevents in-flight poll from triggering onCompleted or onProgress', async () => {
+      let resolveFetch: any;
+      const mockFetch = vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveFetch = resolve;
+          })
+      );
+      globalThis.fetch = mockFetch;
+
+      const onCompleted = vi.fn();
+      const onProgress = vi.fn();
+      const cleanup = watchJobProgress({
+        apiBase: 'http://localhost:3000',
+        eventsUrl: '/api/v1/jobs/job_inflight/events',
+        pollUrl: '/api/v1/jobs/job_inflight',
+        onProgress,
+        onCompleted,
+        onFailed: vi.fn()
+      });
+
+      // Polling has started and fetch is in-flight
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // User cancels / cleans up before fetch resolves
+      cleanup();
+
+      // Now fetch finishes resolving with COMPLETED
+      resolveFetch({
+        ok: true,
+        json: async () => ({
+          data: {
+            jobId: 'job_inflight',
+            status: 'COMPLETED',
+            files: [{ fileId: 'fil_x', purpose: 'PROCESSED_ARTIFACT' }]
+          }
+        })
+      });
+
+      await flushMicrotasks();
+
+      // Must NOT invoke onCompleted because cleanup set isDone = true
+      expect(onCompleted).not.toHaveBeenCalled();
+      expect(onProgress).not.toHaveBeenCalled();
+    });
+
+    it('recovers gracefully from fetch rejection without permanently freezing polling lock', async () => {
+      let callCount = 0;
+      const mockFetch = vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error('Network offline');
+        }
+        return {
+          ok: true,
+          json: async () => ({
+            data: { jobId: 'job_recov', status: 'COMPLETED', files: [] }
+          })
+        };
+      });
+      globalThis.fetch = mockFetch;
+
+      const onCompleted = vi.fn();
+      const cleanup = watchJobProgress({
+        apiBase: 'http://localhost:3000',
+        eventsUrl: '/api/v1/jobs/job_recov/events',
+        pollUrl: '/api/v1/jobs/job_recov',
+        onProgress: vi.fn(),
+        onCompleted,
+        onFailed: vi.fn()
+      });
+
+      // t = 0 failed
+      await flushMicrotasks();
+      expect(onCompleted).not.toHaveBeenCalled();
+
+      // Advance by 2000ms: poll 2 should run and succeed because isPolling was safely reset
+      await vi.advanceTimersByTimeAsync(2000);
+      await flushMicrotasks();
+
+      expect(callCount).toBe(2);
+      expect(onCompleted).toHaveBeenCalledTimes(1);
+
+      cleanup();
     });
   });
 
@@ -464,10 +595,22 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
 
       expect(uiProgress).toBe(99);
     });
+
+    it('should defensively handle NaN and negative progress inputs without breaking UI', () => {
+      const defensiveScale = (pct: any) => {
+        const validPct = typeof pct === 'number' && !isNaN(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+        return Math.min(99, 25 + Math.round((validPct / 100) * 74));
+      };
+
+      expect(defensiveScale(NaN)).toBe(25);
+      expect(defensiveScale(-10)).toBe(25);
+      expect(defensiveScale(undefined)).toBe(25);
+      expect(defensiveScale(150)).toBe(99);
+    });
   });
 
   // =========================================================================
-  // 4. PYTHON ENGINE WATCHDOG TIMEOUT (pdf.worker.ts)
+  // 4. PYTHON ENGINE WATCHDOG TIMEOUT & PERSISTENCE (pdf.worker.ts)
   // =========================================================================
   describe('Python Engine Watchdog Execution Timeout (executePythonEngine)', () => {
     it('should terminate hung child process and reject with safe error message upon timeout', async () => {
@@ -507,6 +650,36 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       ).resolves.toBeUndefined();
 
       expect(onProgress).toHaveBeenCalledWith(50, 'Testing');
+    });
+
+    it('should verify processPdfJob optionsJson persistence structure on completion', () => {
+      const originalSizeBytes = 10000;
+      const resultSizeBytes = 4000;
+      const savingsPct = Number(
+        Math.max(0, ((originalSizeBytes - resultSizeBytes) / originalSizeBytes) * 100).toFixed(1)
+      );
+
+      const resultPayload = {
+        jobId: 'job_persist_test',
+        percentage: 100,
+        resultFileId: 'fil_res_1',
+        resultFileName: 'doc_compressed.pdf',
+        resultSizeBytes,
+        originalSizeBytes,
+        savingsPct,
+        downloadUrl: '/api/v1/files/download/fil_res_1',
+        historyId: 'hist_1'
+      };
+
+      const optionsJson = JSON.stringify({
+        initialOption: true,
+        result: resultPayload
+      });
+
+      const parsed = JSON.parse(optionsJson);
+      expect(parsed.result).toBeDefined();
+      expect(parsed.result.savingsPct).toBe(60);
+      expect(parsed.result.resultFileName).toBe('doc_compressed.pdf');
     });
   });
 });

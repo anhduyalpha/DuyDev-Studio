@@ -995,13 +995,15 @@ export class PdfQueueManager {
           apiBase, eventsUrl, pollUrl,
           onProgress: (pct, stageName) => {
             // Map worker progress (0% - 100%) into 25% - 99% range to eliminate visual freeze at 25%
-            const scaled = Math.min(99, 25 + Math.round((pct / 100) * 74));
+            const validPct = typeof pct === 'number' && !isNaN(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+            const scaled = Math.min(99, 25 + Math.round((validPct / 100) * 74));
             this.progress = Math.max(this.progress, scaled);
             if (stageName) this.stage = stageName;
             this.notify('progress');
             taskCoordinator.syncTasks(true);
           },
           onCompleted: (data) => {
+            if (!this.isProcessing) return;
             this.activeJobWatcherCleanup = null;
             this.activeUploadAbortController = null;
             const dur = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -1015,6 +1017,7 @@ export class PdfQueueManager {
             resolve(this.result);
           },
           onFailed: (errMessage) => {
+            if (!this.isProcessing) return;
             this.activeJobWatcherCleanup = null;
             this.activeUploadAbortController = null;
             this.isProcessing = false;

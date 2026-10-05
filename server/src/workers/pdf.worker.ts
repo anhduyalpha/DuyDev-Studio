@@ -85,7 +85,11 @@ export function executePythonEngine(
         rl.close();
       } catch {}
       try {
-        child.kill('SIGKILL');
+        if (process.platform === 'win32' && child.pid) {
+          spawn('taskkill', ['/pid', child.pid.toString(), '/T', '/F']);
+        } else {
+          child.kill('SIGKILL');
+        }
       } catch {}
       reject(new Error('Thời gian xử lý tài liệu vượt quá giới hạn an toàn (120s). Vui lòng thử lại với file nhỏ hơn.'));
     }, timeoutMs);
@@ -255,9 +259,6 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
       }
     });
 
-    isFinished = true;
-    await prisma.job.update({ where: { id: jobId }, data: { status: 'COMPLETED', progress: 100, completedAt: new Date() } });
-
     const savingsPct = originalSizeBytes > 0
       ? Number(Math.max(0, ((originalSizeBytes - resultSizeBytes) / originalSizeBytes) * 100).toFixed(1))
       : 0;
@@ -271,10 +272,34 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
       }
     }).catch((e) => { logger.warn({ e }, 'Failed to record pdf history'); return null; });
 
-    await publishJobEvent(jobId, 'completed', {
+    const resultPayload = {
       jobId, percentage: 100, resultFileId, resultFileName: processedFileName,
       resultSizeBytes, originalSizeBytes, savingsPct, downloadUrl, historyId: historyItem?.id || null
+    };
+
+    let currentOptions: Record<string, unknown> = {};
+    try {
+      const existingJob = await prisma.job.findUnique({ where: { id: jobId } });
+      if (existingJob?.optionsJson) {
+        currentOptions = JSON.parse(existingJob.optionsJson);
+      }
+    } catch {}
+
+    isFinished = true;
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: 'COMPLETED',
+        progress: 100,
+        completedAt: new Date(),
+        optionsJson: JSON.stringify({
+          ...currentOptions,
+          result: resultPayload
+        })
+      }
     });
+
+    await publishJobEvent(jobId, 'completed', resultPayload);
 
     logger.info({ jobId, resultFileId, originalSizeBytes, resultSizeBytes, savingsPct }, 'PDF job completed successfully');
     return resultFileId;

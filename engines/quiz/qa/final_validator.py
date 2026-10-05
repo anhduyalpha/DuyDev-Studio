@@ -198,7 +198,7 @@ def validate_final_pdf(
     doc_ir: CanonicalDocumentIR,
     dapan_pdf_path: Optional[str] = None,
     debai_html_path: Optional[str] = None,
-    margins_mm: tuple[float, float, float, float] = (10.0, 12.0, 10.0, 12.0),
+    margins_mm: tuple[float, float, float, float] = (15.0, 15.0, 15.0, 15.0),
 ) -> FinalValidationResult:
     """
     Executes full multi-level deterministic validation after PDF compilation.
@@ -305,6 +305,16 @@ def validate_final_pdf(
                         type=QAIssueType.OVERFLOW,
                         severity=QASeverity.CRITICAL,
                         description=f"Page {p_idx + 1} has invalid dimensions: {rect.width}x{rect.height}.",
+                    )
+                )
+            elif abs(rect.width - 595.28) > 6.0 or abs(rect.height - 841.89) > 6.0:
+                doc_valid = False
+                issues.append(
+                    QAIssue(
+                        page=p_idx + 1,
+                        type=QAIssueType.OVERFLOW,
+                        severity=QASeverity.CRITICAL,
+                        description=f"Page {p_idx + 1} dimensions ({rect.width:.1f}x{rect.height:.1f} pt) are not standard A4 portrait (595.3x841.9 pt).",
                     )
                 )
         except Exception as ex_p:
@@ -732,6 +742,19 @@ def validate_final_pdf(
                         )
                     )
                 else:
+                    for p_idx_da in range(doc_da.page_count):
+                        r_da = doc_da[p_idx_da].rect
+                        if abs(r_da.width - 595.28) > 6.0 or abs(r_da.height - 841.89) > 6.0:
+                            dapan_valid = False
+                            issues.append(
+                                QAIssue(
+                                    page=p_idx_da + 1,
+                                    type=QAIssueType.OVERFLOW,
+                                    severity=QASeverity.CRITICAL,
+                                    description=f"Answer Key page {p_idx_da + 1} dimensions ({r_da.width:.1f}x{r_da.height:.1f} pt) are not standard A4 portrait.",
+                                )
+                            )
+
                     da_full_text = "\n\n".join(doc_da[p].get_text() for p in range(doc_da.page_count))
 
                     # Check placeholders in Dap An

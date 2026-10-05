@@ -201,11 +201,18 @@ def compile_html_to_pdf(chrome_path: str, html_path: str, pdf_path: str, timeout
         if not success or not os.path.exists(abs_pdf) or os.path.getsize(abs_pdf) < 1024:
             raise RuntimeError(f"Headless Chrome failed to generate valid PDF at {abs_pdf}")
 
-        # PyMuPDF integrity verification
+        # PyMuPDF integrity and A4 dimension verification
         doc = pymupdf.open(abs_pdf)
         if doc.page_count < 1:
             doc.close()
             raise RuntimeError(f"Generated PDF has 0 pages: {abs_pdf}")
+        for p_idx, page in enumerate(doc):
+            if abs(page.rect.width - 595.28) > 6.0 or abs(page.rect.height - 841.89) > 6.0:
+                w, h = page.rect.width, page.rect.height
+                doc.close()
+                raise RuntimeError(
+                    f"Generated PDF page {p_idx + 1} dimensions ({w:.1f}x{h:.1f} pt) are not standard A4 portrait (595.3x841.9 pt)"
+                )
         doc.close()
 
     finally:

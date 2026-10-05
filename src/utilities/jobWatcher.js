@@ -17,8 +17,16 @@ export function watchJobProgress({
   let activeEventSource = null;
   let lastActivityTime = Date.now();
   let isPolling = false;
+  let activePollAbort = null;
 
   const cleanup = () => {
+    isDone = true;
+    if (activePollAbort) {
+      try {
+        activePollAbort.abort();
+      } catch {}
+      activePollAbort = null;
+    }
     if (activeEventSource) {
       activeEventSource.close();
       activeEventSource = null;
@@ -35,14 +43,12 @@ export function watchJobProgress({
 
   const finishSuccess = (data) => {
     if (isDone) return;
-    isDone = true;
     cleanup();
     onCompleted(data);
   };
 
   const finishError = (errMessage) => {
     if (isDone) return;
-    isDone = true;
     cleanup();
     onFailed(errMessage);
   };
@@ -50,9 +56,20 @@ export function watchJobProgress({
   const pollStatus = async () => {
     if (isDone || isPolling) return;
     isPolling = true;
+
+    const controller = new AbortController();
+    activePollAbort = controller;
+    const fetchTimeout = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {}
+    }, 6000);
+
     try {
       const fullPollUrl = pollUrl.startsWith('http') ? pollUrl : `${apiBase}${pollUrl}`;
-      const res = await fetch(fullPollUrl);
+      const res = await fetch(fullPollUrl, { signal: controller.signal });
+      clearTimeout(fetchTimeout);
+
       if (!res.ok) return;
       const resJson = await res.json();
       const job = resJson?.data;
@@ -62,12 +79,16 @@ export function watchJobProgress({
 
       if (job.status === 'COMPLETED') {
         const fileObj = job.files?.find((f) => f.purpose === 'PROCESSED_ARTIFACT') || job.files?.[0];
+        const inputFile = job.files?.find((f) => f.purpose !== 'PROCESSED_ARTIFACT');
+        const resolvedFileId = fileObj?.fileId || fileObj?.id || null;
         finishSuccess({
-          jobId: job.id,
+          jobId: job.jobId || job.id,
           percentage: 100,
-          resultFileId: fileObj?.fileId,
+          resultFileId: resolvedFileId,
+          resultFileName: fileObj?.originalName || null,
           resultSizeBytes: fileObj?.sizeBytes,
-          downloadUrl: fileObj?.downloadUrl,
+          originalSizeBytes: inputFile?.sizeBytes || null,
+          downloadUrl: fileObj?.downloadUrl || (resolvedFileId ? `/api/v1/files/download/${resolvedFileId}` : null),
           ...(job.result && typeof job.result === 'object' ? job.result : {})
         });
       } else if (job.status === 'FAILED') {
@@ -78,6 +99,10 @@ export function watchJobProgress({
     } catch {
       // Network or parse issue; concurrent polling will retry
     } finally {
+      clearTimeout(fetchTimeout);
+      if (activePollAbort === controller) {
+        activePollAbort = null;
+      }
       isPolling = false;
     }
   };

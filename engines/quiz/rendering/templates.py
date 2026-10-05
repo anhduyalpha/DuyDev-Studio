@@ -170,9 +170,6 @@ def render_worksheet_document(
         )
 
     # Header block
-    grade_str = f" - Lớp {meta.grade}" if meta.grade else ""
-    exam_code_str = f'<span><strong>Mã đề: {html.escape(meta.exam_code)}</strong></span>' if meta.exam_code else ""
-
     # Optional Exam Duration (PLAN Section 3)
     formatted_duration = ""
     if getattr(meta, "duration", None) and meta.duration.strip():
@@ -181,18 +178,33 @@ def render_worksheet_document(
     elif getattr(meta, "duration_minutes", None):
         formatted_duration = f"{meta.duration_minutes} phút"
 
-    duration_span = f"<span>Thời gian làm bài: {html.escape(formatted_duration)}</span>" if formatted_duration else ""
+    meta_items: list[str] = []
+    if meta.subject:
+        subj_str = f"Môn học: <strong>{html.escape(meta.subject)}</strong>"
+        if meta.grade:
+            subj_str += f" - Lớp {html.escape(str(meta.grade))}"
+        meta_items.append(f"<span>{subj_str}</span>")
+    elif meta.grade:
+        meta_items.append(f"<span>Lớp: <strong>{html.escape(str(meta.grade))}</strong></span>")
+
+    if meta.exam_code:
+        meta_items.append(f"<span><strong>Mã đề: {html.escape(meta.exam_code)}</strong></span>")
+
+    if formatted_duration:
+        meta_items.append(f"<span>Thời gian làm bài: {html.escape(formatted_duration)}</span>")
+
+    meta_line_html = ""
+    if meta_items:
+        meta_line_html = f"""
+    <div class="exam-header-meta" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4pt 14pt; font-size: 9pt; color: {preset.text_color};">
+      {" ".join(meta_items)}
+    </div>"""
 
     header_html = f"""
   <header class="exam-header" style="text-align: center;">
     <div class="exam-header-title" style="font-family: {preset.font_family_heading}; font-size: 15pt; font-weight: bold; text-transform: uppercase; text-align: center; color: {preset.primary_color}; letter-spacing: 0.3pt; line-height: 1.35; margin-bottom: 4pt; word-wrap: break-word; overflow-wrap: break-word;">
       {html.escape(meta.title)}
-    </div>
-    <div class="exam-header-meta" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4pt 14pt; font-size: 9pt; color: {preset.text_color};">
-      <span>Môn học: <strong>{html.escape(meta.subject)}</strong>{html.escape(grade_str)}</span>
-      {exam_code_str}
-      {duration_span}
-    </div>
+    </div>{meta_line_html}
   </header>"""
 
     # Group questions by section
@@ -366,6 +378,16 @@ def render_answer_document(
     meta = doc_ir.metadata
     css_content = LayoutSolver.generate_paged_media_css(preset, f"{meta.title} - ĐÁP ÁN", is_answer=True)
 
+    ans_meta_items: list[str] = [
+        f'<span style="background-color: {preset.accent_bg}; border: 0.5pt solid {preset.accent_border}; color: {preset.primary_color}; padding: 1.5pt 6pt; border-radius: 3pt; font-weight: bold;">ĐÁP ÁN CHÍNH THỨC</span>'
+    ]
+    if meta.subject:
+        ans_meta_items.append(f'<span>Môn học: <strong style="color: {preset.text_color};">{html.escape(meta.subject)}</strong></span>')
+    if meta.total_questions:
+        ans_meta_items.append(f'<span>Số lượng: <strong style="color: {preset.text_color};">{meta.total_questions} câu</strong></span>')
+    if meta.created_at:
+        ans_meta_items.append(f'<span>Ngày lập: <strong style="color: {preset.text_color};">{html.escape(meta.created_at[:10])}</strong></span>')
+
     header_html = f"""
   <header class="exam-header" style="text-align: center;">
     <div style="font-family: {preset.font_family_heading}; font-weight: bold; font-size: 15pt; text-transform: uppercase; color: {preset.primary_color}; letter-spacing: 0.3pt; line-height: 1.35; margin-bottom: 4pt; word-wrap: break-word; overflow-wrap: break-word;">
@@ -375,10 +397,7 @@ def render_answer_document(
       {html.escape(meta.title)}
     </div>
     <div class="exam-header-meta" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4pt 12pt; font-size: 8.5pt; color: {preset.muted_color};">
-      <span style="background-color: {preset.accent_bg}; border: 0.5pt solid {preset.accent_border}; color: {preset.primary_color}; padding: 1.5pt 6pt; border-radius: 3pt; font-weight: bold;">ĐÁP ÁN CHÍNH THỨC</span>
-      <span>Môn học: <strong style="color: {preset.text_color};">{html.escape(meta.subject)}</strong></span>
-      <span>Số lượng: <strong style="color: {preset.text_color};">{meta.total_questions} câu</strong></span>
-      <span>Ngày lập: <strong style="color: {preset.text_color};">{meta.created_at[:10]}</strong></span>
+      {" ".join(ans_meta_items)}
     </div>
   </header>"""
 

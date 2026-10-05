@@ -16,8 +16,8 @@ class TestStylePresets(unittest.TestCase):
         preset = BLUE_BLACK_CLASSIC_STYLE
         self.assertEqual(preset.preset_id, "blue_black_classic")
         self.assertEqual(preset.page_size, "A4 portrait")
-        self.assertEqual(preset.margin_top_mm, 10.0)
-        self.assertEqual(preset.margin_right_mm, 12.0)
+        self.assertEqual(preset.margin_top_mm, 15.0)
+        self.assertEqual(preset.margin_right_mm, 15.0)
         self.assertEqual(preset.primary_color, "#1e3a8a")
         self.assertEqual(preset.text_color, "#0f172a")
         self.assertFalse(preset.show_student_info)

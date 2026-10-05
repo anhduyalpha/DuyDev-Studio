@@ -419,7 +419,8 @@ class LayoutSolver:
     font-weight: bold;
     color: {preset.primary_color};
     border-bottom: 0.75pt solid {preset.border_color};
-    padding-bottom: 3pt;
+    vertical-align: bottom;
+    padding-bottom: 4pt;
   }}
   @top-right {{
     content: "{safe_title}";
@@ -427,7 +428,8 @@ class LayoutSolver:
     font-family: {preset.font_family_base};
     color: {preset.secondary_color};
     border-bottom: 0.75pt solid {preset.border_color};
-    padding-bottom: 3pt;
+    vertical-align: bottom;
+    padding-bottom: 4pt;
   }}
   @bottom-left {{
     content: "{safe_title}";
@@ -435,6 +437,7 @@ class LayoutSolver:
     font-family: {preset.font_family_base};
     color: {preset.muted_color};
     border-top: 0.75pt solid {preset.border_color};
+    vertical-align: top;
     padding-top: 4pt;
   }}
   @bottom-right {{
@@ -444,6 +447,7 @@ class LayoutSolver:
     font-weight: bold;
     color: {preset.primary_color};
     border-top: 0.75pt solid {preset.border_color};
+    vertical-align: top;
     padding-top: 4pt;
   }}
 }}
@@ -468,6 +472,7 @@ class LayoutSolver:
     font-family: {preset.font_family_base};
     color: {preset.muted_color};
     border-top: 0.5pt solid {preset.border_color};
+    vertical-align: top;
     padding-top: 4pt;
   }}
   @bottom-right {{
@@ -476,6 +481,7 @@ class LayoutSolver:
     font-family: {preset.font_family_base};
     color: {preset.muted_color};
     border-top: 0.5pt solid {preset.border_color};
+    vertical-align: top;
     padding-top: 4pt;
   }}
 }}"""

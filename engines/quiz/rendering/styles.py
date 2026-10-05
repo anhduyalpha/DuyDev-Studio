@@ -12,10 +12,10 @@ class StylePreset(BaseModel):
     preset_id: str = "blue_black_classic"
     display_name: str = "Blue Black Classic"
     page_size: str = "A4 portrait"
-    margin_top_mm: float = 10.0
-    margin_right_mm: float = 12.0
-    margin_bottom_mm: float = 10.0
-    margin_left_mm: float = 12.0
+    margin_top_mm: float = 15.0
+    margin_right_mm: float = 15.0
+    margin_bottom_mm: float = 15.0
+    margin_left_mm: float = 15.0
     
     # Palette
     primary_color: str = "#1e3a8a"       # Deep blue / navy
@@ -29,11 +29,11 @@ class StylePreset(BaseModel):
     accent_border: str = "#93c5fd"       # Blue-300
     
     # Typography
-    font_family_base: str = "'Roboto', 'Liberation Sans', 'DejaVu Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
-    font_family_heading: str = "'Roboto', 'Liberation Sans', 'DejaVu Sans', sans-serif"
-    font_family_mono: str = "'JetBrains Mono', 'DejaVu Sans Mono', monospace"
+    font_family_base: str = "'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif"
+    font_family_heading: str = "'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif"
+    font_family_mono: str = "'Courier New', 'JetBrains Mono', 'DejaVu Sans Mono', monospace"
     font_size_pt: float = 10.0
-    line_height: float = 1.45
+    line_height: float = 1.42
     
     # Components & Layout
     show_student_info: bool = False
@@ -46,10 +46,10 @@ BLUE_BLACK_CLASSIC_STYLE = StylePreset(
     preset_id="blue_black_classic",
     display_name="Blue Black Classic",
     page_size="A4 portrait",
-    margin_top_mm=10.0,
-    margin_right_mm=12.0,
-    margin_bottom_mm=10.0,
-    margin_left_mm=12.0,
+    margin_top_mm=15.0,
+    margin_right_mm=15.0,
+    margin_bottom_mm=15.0,
+    margin_left_mm=15.0,
     primary_color="#1e3a8a",
     secondary_color="#2563eb",
     text_color="#0f172a",
@@ -59,8 +59,10 @@ BLUE_BLACK_CLASSIC_STYLE = StylePreset(
     banner_text_color="#ffffff",
     accent_bg="#f8fafc",
     accent_border="#93c5fd",
+    font_family_base="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
+    font_family_heading="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
     font_size_pt=10.0,
-    line_height=1.45,
+    line_height=1.42,
     show_student_info=False,
     show_decor_lines=True,
 )
@@ -69,10 +71,10 @@ ANSWER_GREEN_STYLE = StylePreset(
     preset_id="answer_green",
     display_name="Answer Green Theme",
     page_size="A4 portrait",
-    margin_top_mm=10.0,
-    margin_right_mm=12.0,
-    margin_bottom_mm=10.0,
-    margin_left_mm=12.0,
+    margin_top_mm=15.0,
+    margin_right_mm=15.0,
+    margin_bottom_mm=15.0,
+    margin_left_mm=15.0,
     primary_color="#047857",       # Emerald-700 deep green for title, banners, and headers
     secondary_color="#059669",     # Emerald-600 medium green for indicators and subheadings
     text_color="#0f172a",          # Slate-900 high-contrast body text for readability
@@ -82,8 +84,10 @@ ANSWER_GREEN_STYLE = StylePreset(
     banner_text_color="#ffffff",   # Pure white text
     accent_bg="#ecfdf5",           # Emerald-50 soft mint green for answer cells & badges
     accent_border="#6ee7b7",       # Emerald-300 light green border
+    font_family_base="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
+    font_family_heading="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
     font_size_pt=10.0,
-    line_height=1.45,
+    line_height=1.42,
     show_student_info=False,
     show_decor_lines=True,
     question_num_color="#047857",
