@@ -16,7 +16,7 @@ from engines.quiz.common.errors import ErrorCode, DiagnosticLayer, QuizEngineErr
 
 
 def clean_question_stem(stem: str) -> str:
-    """Removes redundant leading question headers like 'Câu 35:', 'Câu 31: Câu 35:', etc."""
+    """Removes redundant leading question headers and cross-page running headers from stems."""
     if not stem:
         return ""
     # Strip any leading 'Câu \d+[:.]', 'Bài \d+[:.]', 'Question \d+[:.]', or standalone '\d+[:.]'
@@ -30,6 +30,21 @@ def clean_question_stem(stem: str) -> str:
         if not m:
             break
         cleaned = cleaned[m.end():].strip()
+
+    # Strip embedded page boundary markers (e.g. === TRANG 2 ===)
+    if "=== TRANG" in cleaned:
+        cleaned = re.sub(r"=== TRANG \d+(?:\s*\(.*?\))? ===", "", cleaned)
+
+    # Strip cross-page running headers and footers
+    cleaned_lines = []
+    for line in cleaned.split("\n"):
+        line_str = line.strip()
+        if not line_str:
+            continue
+        if re.search(r"(?:Website:|Tenschool|Trang\s*\d+|Hành trình chinh phục|Đề thi\s+số|Mã đề\s*\d+)", line_str, re.IGNORECASE):
+            continue
+        cleaned_lines.append(line_str)
+    cleaned = " ".join(cleaned_lines).strip()
     return cleaned
 
 
@@ -61,7 +76,7 @@ def recover_missing_mcq_options(
     # 1. Check if missing option is embedded inside stem
     for lbl in missing_labels:
         opt_pat = re.compile(
-            rf"(?:^|\s|\n){lbl}[\.\)\:]\s*([^\n\r]+(?:\n(?!\s*(?:[A-D][\.\)\:]|Câu\s*\d|\b\d+[\.\:]|PHẦN|BẢNG|---|HẾT))[^\n\r]+)*)",
+            rf"(?:^|\s|\n){lbl}[\.\)\:]\s*([^\n\r]+(?:\n(?!\s*(?:[A-D][\.\)\:]|(?:Câu|Bài|Question|CÂU|BÀI)\s*\d|PHẦN|BẢNG|---|HẾT))[^\n\r]+)*)",
             re.IGNORECASE
         )
         m = opt_pat.search(q.stem)
@@ -84,9 +99,9 @@ def recover_missing_mcq_options(
         m_q = q_marker_pat.search(source_context)
         start_idx = m_q.end() if m_q else 0
 
-        # Find next question marker
+        # Find next question marker strictly at line starts
         next_marker_pat = re.compile(
-            r"(?:^|\n|\b)(?:(?:Câu|Bài|Question)\s*\d+\b|\d+[\.\:\)])",
+            r"(?:^|\n)\s*(?:(?:Câu|Bài|Question|CÂU|BÀI)\s*\d+\b|\d+[\.\:\)]\s+[A-ZÀ-Ỹ])",
             re.IGNORECASE
         )
         m_next = next_marker_pat.search(source_context, pos=start_idx + 10)
@@ -95,7 +110,7 @@ def recover_missing_mcq_options(
 
         for lbl in missing_labels:
             opt_pat = re.compile(
-                rf"(?:^|\s|\n){lbl}[\.\)\:]\s*([^\n\r]+(?:\n(?!\s*(?:[A-D][\.\)\:]|Câu\s*\d|\b\d+[\.\:]|PHẦN|BẢNG|---|HẾT))[^\n\r]+)*)",
+                rf"(?:^|\s|\n){lbl}[\.\)\:]\s*([^\n\r]+(?:\n(?!\s*(?:[A-D][\.\)\:]|(?:Câu|Bài|Question|CÂU|BÀI)\s*\d|PHẦN|BẢNG|---|HẾT))[^\n\r]+)*)",
                 re.IGNORECASE
             )
             m = opt_pat.search(q_text_region)

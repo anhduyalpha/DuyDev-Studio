@@ -7,7 +7,11 @@ and packages batch payloads with neighboring page context for seamless cross-pag
 import re
 from typing import Optional
 from engines.quiz.perception.models import PageRepresentation, PageKind
-from engines.quiz.perception.candidates import detect_continuation_candidate
+from engines.quiz.perception.candidates import (
+    detect_continuation_candidate,
+    QUESTION_PATTERN,
+    STANDALONE_NUM_PATTERN,
+)
 from .models import BatchPayload
 
 # Heuristic patterns for formula density detection
@@ -199,6 +203,27 @@ class BatchPlanner:
 
         return batches
 
+    @staticmethod
+    def _clean_continuation_text(text: str) -> str:
+        """
+        Strips running headers, footers, page numbers, and structural section banners
+        from continuation text while preserving question options and stem continuations.
+        """
+        if not text:
+            return ""
+        lines = text.split("\n")
+        filtered: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if re.search(r"(?:Website:|Tenschool|Trang\s*\d+|Hành trình chinh phục|Đề thi\s+số|Mã đề\s*\d+)", stripped, re.IGNORECASE):
+                continue
+            if re.search(r"^\s*(?:PHẦN\s+[IVXLCDM\d]+|BẢNG\s+ĐÁP\s+ÁN|HƯỚNG\s+DẪN|Thí sinh trả lời)", stripped, re.IGNORECASE):
+                continue
+            filtered.append(stripped)
+        return "\n".join(filtered).strip()
+
     @classmethod
     def _flush_batch(
         cls,
@@ -218,6 +243,20 @@ class BatchPlanner:
             f"=== TRANG {p} ===\n{page_map[p].raw_text}"
             for p in sorted_pages if p in page_map
         ]
+
+        batch_page_nums = list(sorted_pages)
+
+        # Check if the last page in this batch has a question continuing onto the next page
+        if (max_p + 1) in page_map and detect_continuation_candidate(page_map[max_p], page_map[max_p + 1]):
+            next_rep = page_map[max_p + 1]
+            first_marker = QUESTION_PATTERN.search(next_rep.raw_text) or STANDALONE_NUM_PATTERN.search(next_rep.raw_text)
+            leading_text = next_rep.raw_text[:first_marker.start()].strip() if first_marker else next_rep.raw_text.strip()
+            cont_text = cls._clean_continuation_text(leading_text)
+            if cont_text:
+                text_parts.append(cont_text)
+                if (max_p + 1) not in batch_page_nums:
+                    batch_page_nums.append(max_p + 1)
+
         text_content = "\n\n".join(text_parts)
 
         # Context from boundary pages
@@ -240,8 +279,8 @@ class BatchPlanner:
                 batch_id=batch_id,
                 batch_type=batch_type,
                 target_question_numbers=cands,
-                page_indices=[page_map[p].page_index for p in sorted_pages if p in page_map],
-                page_numbers=sorted_pages,
+                page_indices=[page_map[p].page_index for p in batch_page_nums if p in page_map],
+                page_numbers=batch_page_nums,
                 text_content=text_content,
                 neighboring_prev_context=prev_ctx,
                 neighboring_next_context=next_ctx,

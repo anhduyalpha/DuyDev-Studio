@@ -109,6 +109,23 @@ def detect_candidates_from_page(blocks: list[TextBlock], raw_text: str = "") -> 
                 )
                 seen_numbers.add(q_num)
 
+    # Enrich options_detected using raw_text across blocks if raw_text is provided
+    if raw_text and candidates:
+        raw_matches = list(QUESTION_PATTERN.finditer(raw_text)) or list(STANDALONE_NUM_PATTERN.finditer(raw_text))
+        cand_map = {c.candidate_number: c for c in candidates}
+        for i, m in enumerate(raw_matches):
+            try:
+                q_num = int(m.group(1))
+            except (ValueError, IndexError):
+                continue
+            if q_num in cand_map:
+                start_p = m.start()
+                end_p = raw_matches[i + 1].start() if i + 1 < len(raw_matches) else len(raw_text)
+                slice_text = raw_text[start_p:end_p]
+                opts_in_slice = sorted(list(set(OPTION_PATTERN.findall(slice_text))))
+                if opts_in_slice:
+                    cand_map[q_num].options_detected = opts_in_slice
+
     # Sort candidates top-to-bottom by vertical coordinate (y_pos)
     candidates.sort(key=lambda c: (c.y_pos, c.candidate_number))
     return candidates
@@ -139,6 +156,12 @@ def detect_continuation_candidate(prev_page: PageRepresentation, curr_page: Page
 
     last_cand = prev_page.candidates[-1]
     last_opts = set(last_cand.options_detected)
+    if prev_page.raw_text:
+        # Check raw_text from last question marker to end of page for full option set on prev_page
+        matches = list(QUESTION_PATTERN.finditer(prev_page.raw_text)) or list(STANDALONE_NUM_PATTERN.finditer(prev_page.raw_text))
+        if matches:
+            last_q_slice = prev_page.raw_text[matches[-1].start():]
+            last_opts.update(OPTION_PATTERN.findall(last_q_slice))
 
     # If last question already has all 4 standard options A, B, C, D, it's likely complete
     if len(last_opts) >= 4 and {"A", "B", "C", "D"}.issubset(last_opts):
@@ -150,18 +173,23 @@ def detect_continuation_candidate(prev_page: PageRepresentation, curr_page: Page
     # Find where the first new question candidate begins on curr_page (if any)
     first_cand_y = curr_page.candidates[0].y_pos if curr_page.candidates else float("inf")
 
-    # Collect all text on curr_page appearing before the first new question
+    # 1. Collect leading text from blocks appearing before first candidate
     leading_text_parts: list[str] = []
-    for b in curr_page.blocks:
-        if b.bbox[1] < first_cand_y:
-            leading_text_parts.append(b.text)
-        else:
-            break
-
+    if curr_page.blocks:
+        sorted_blocks = sorted(curr_page.blocks, key=lambda b: (b.bbox[1], b.bbox[0]))
+        for b in sorted_blocks:
+            if b.bbox[1] < first_cand_y:
+                leading_text_parts.append(b.text)
+            else:
+                break
     leading_text = "\n".join(leading_text_parts).strip()
-    if not leading_text and curr_page.raw_text:
-        # If block bboxes weren't cleanly separated, take first 500 chars of raw_text
-        leading_text = curr_page.raw_text[:500]
+
+    # 2. Also inspect curr_page.raw_text before first question marker
+    if curr_page.raw_text:
+        first_marker_match = QUESTION_PATTERN.search(curr_page.raw_text) or STANDALONE_NUM_PATTERN.search(curr_page.raw_text)
+        raw_leading = curr_page.raw_text[:first_marker_match.start()].strip() if first_marker_match else curr_page.raw_text.strip()
+        if raw_leading:
+            leading_text = f"{leading_text}\n{raw_leading}".strip() if leading_text else raw_leading
 
     # Search for continuation options in the leading text
     found_leading_opts = set(OPTION_PATTERN.findall(leading_text))
@@ -169,7 +197,11 @@ def detect_continuation_candidate(prev_page: PageRepresentation, curr_page: Page
     if found_leading_opts.intersection(expected_continuations):
         return True
 
-    # If curr_page has no candidates in the first 30% of height and has text, likely continuation stem/options
+    # If curr_page has leading text with any option markers B, C, D before the first question
+    if found_leading_opts.intersection({"B", "C", "D"}):
+        return True
+
+    # If curr_page has candidates but the first candidate is situated far down (> 25% height)
     if curr_page.candidates:
         first_curr_cand = curr_page.candidates[0]
         if first_curr_cand.y_pos > (curr_page.height * 0.25):

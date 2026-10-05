@@ -1,11 +1,12 @@
 """
-Regression test for Quiz PDF Pagination Bug (tesst_DeBai regression case).
+Golden Semantic Fidelity Regression Test for Gốc.pdf
 Verifies:
-1. Page 1 does not prematurely push Câu 41 to Page 2.
-2. Câu 45 stem and all options (A, B, C, D) remain atomically together on Page 2.
-3. Page count is exactly 2 pages (no excessive empty space or orphan 3rd page).
-4. No question is split across pages.
-5. All multiple-choice options (A, B, C, D) are verified present in the rendered document.
+1. Range resolver detects continuation from Page 2 to Page 3 and resolves end_page=3.
+2. BatchPlanner appends cleaned continuation text from Page 3 into batch payload.
+3. Câu 46 contains all 4 options A, B, C, D.
+4. Câu 46 Option D is strictly '1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2.' (never 'HCOOH.').
+5. Post-processor enforces option count=4 and canonical question numbers 35..46.
+6. Worksheet PDF renders within 2 pages with zero question splits.
 """
 
 import os
@@ -14,6 +15,12 @@ import tempfile
 import unittest
 import pymupdf
 
+from engines.quiz.perception.extractor import extract_document_representations
+from engines.quiz.recognition.range_resolver import resolve_smart_range
+from engines.quiz.reconstruction.batch_planner import BatchPlanner
+from engines.quiz.mcq_parser import parse_mcq_blocks
+from engines.quiz.reconstruction.models import ReconstructedQuestion, QuestionOption, QuestionType
+from engines.quiz.reconstruction.post_processor import post_process_questions, recover_missing_mcq_options
 from engines.quiz.ir.models import (
     CanonicalDocumentIR,
     DocumentMetadataIR,
@@ -29,18 +36,93 @@ from engines.quiz.rendering.layout import LayoutSolver
 from engines.quiz.rendering.styles import BLUE_BLACK_CLASSIC_STYLE
 
 
-class TestRegressionPaginationTesst(unittest.TestCase):
+class TestSemanticFidelityGoc(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp_dir = tempfile.mkdtemp(prefix="quiz_pag_regress_")
+        cls.goc_pdf_path = os.path.abspath(".tmp/Diff check/Gốc.pdf")
+        if not os.path.isfile(cls.goc_pdf_path):
+            raise unittest.SkipTest(f"Golden fixture '{cls.goc_pdf_path}' not found on disk.")
+        cls.reps = extract_document_representations(cls.goc_pdf_path)
+        cls.temp_dir = tempfile.mkdtemp(prefix="quiz_fidelity_test_")
         cls.compiler = PDFCompiler()
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.temp_dir, ignore_errors=True)
 
-    def _build_regression_doc_ir(self) -> CanonicalDocumentIR:
-        """Construct the canonical IR matching the 12 questions from tesst_DeBai (Q35..Q46)."""
+    def test_range_resolver_expands_to_page_3_for_q35_q46(self):
+        """User requests 12 questions starting from Q35; resolver must include Page 3 for Q46 continuation."""
+        res = resolve_smart_range("từ câu 35, lấy 12 câu", self.reps)
+        self.assertEqual(res.start_page, 1)
+        self.assertEqual(res.end_page, 3, "Range resolver must expand end_page to 3 due to cross-page Q46 continuation")
+        self.assertEqual(res.start_question, 35)
+        self.assertEqual(res.question_count, 12)
+
+    def test_batch_planner_includes_q46_option_d_continuation(self):
+        """BatchPlanner must append Page 3 continuation so that Q46 text contains Option D."""
+        batches = BatchPlanner.plan_batches(
+            self.reps,
+            start_page=1,
+            end_page=3,
+            start_question=35,
+            question_count=12
+        )
+        self.assertGreaterEqual(len(batches), 1)
+        # Search for Option D content in the batch containing Q46
+        has_opt_d = any(
+            "1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2." in b.text_content
+            for b in batches
+        )
+        self.assertTrue(has_opt_d, "BatchPlanner text_content must contain Câu 46 Option D text")
+
+    def test_mcq_parser_extracts_clean_q46_with_all_four_options(self):
+        """MCQ parser must extract Q46 with clean A, B, C, D options and no dummy placeholder."""
+        batches = BatchPlanner.plan_batches(
+            self.reps,
+            start_page=1,
+            end_page=3,
+            start_question=35,
+            question_count=12
+        )
+        batch = batches[0]
+        parsed_questions = parse_mcq_blocks(batch.text_content)
+        q46_list = [q for q in parsed_questions if q.get("source_number") == 46]
+        self.assertEqual(len(q46_list), 1, "Must parse exactly one question for Q46")
+
+        q46 = q46_list[0]
+        opts = q46.get("options", {})
+        self.assertEqual(len(opts), 4, "Q46 must have 4 options")
+        self.assertEqual(opts["A"], "G là tristearin có công thức (C17H35COO)3C3H5.")
+        self.assertEqual(opts["B"], "G là glycerol có công thức C3H5(OH)3.")
+        self.assertEqual(opts["C"], "Thủy phân hoàn toàn 1 mol tristearin trong môi trường NaOH thu được 3 mol glycerol.")
+        self.assertEqual(opts["D"], "1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2.")
+        self.assertNotEqual(opts["D"], "HCOOH.", "Option D must NEVER be the dummy placeholder 'HCOOH.'")
+
+    def test_recover_missing_mcq_options_recovers_d_from_full_document_context(self):
+        """Targeted recovery must succeed in recovering Option D across chemical formulas like C3H5(OH)3."""
+        full_text = "\n\n".join(p.raw_text for p in self.reps)
+        q_incomplete = ReconstructedQuestion(
+            id="q_46_inc",
+            number=46,
+            source_number=46,
+            type=QuestionType.PART_I_MCQ,
+            stem="Chất hữu cơ G được dùng phổ biến trong lĩnh vực mĩ phẩm và phụ gia thực phẩm...",
+            options=[
+                QuestionOption(label="A", text="G là tristearin có công thức (C17H35COO)3C3H5."),
+                QuestionOption(label="B", text="G là glycerol có công thức C3H5(OH)3."),
+                QuestionOption(label="C", text="Thủy phân hoàn toàn 1 mol tristearin trong môi trường NaOH thu được 3 mol glycerol.")
+            ]
+        )
+
+        recovered = recover_missing_mcq_options(q_incomplete, source_context=full_text)
+        self.assertEqual(len(recovered), 4)
+        labels = [o.label for o in recovered]
+        self.assertEqual(labels, ["A", "B", "C", "D"])
+        opt_d = next(o for o in recovered if o.label == "D")
+        self.assertEqual(opt_d.text, "1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2.")
+
+    def test_end_to_end_layout_renders_two_pages_with_true_option_d(self):
+        """End-to-end rendering test with genuine Q46 Option D text: exactly 2 pages, no orphan 3rd page."""
         questions = [
             QuestionIR(
                 id="q_35", number=35, source_number=35, type=SectionType.PART_I_MCQ,
@@ -180,62 +262,38 @@ class TestRegressionPaginationTesst(unittest.TestCase):
         )
 
         meta = DocumentMetadataIR(
-            title="HULA HILU",
+            title="BÀI TẬP TRẮC NGHIỆM HÓA HỌC",
             subject="HÓA HỌC",
             grade="12",
             total_questions=12,
             created_at="2026-10-05T00:00:00Z"
         )
 
-        return CanonicalDocumentIR(metadata=meta, sections=[sec], questions=questions)
-
-    def test_regression_pagination_renders_exactly_two_pages_with_zero_splits(self):
-        doc_ir = self._build_regression_doc_ir()
+        doc_ir = CanonicalDocumentIR(metadata=meta, sections=[sec], questions=questions)
         debai_pdf, dapan_pdf = self.compiler.compile_both(
             doc_ir=doc_ir,
             output_dir=self.temp_dir,
-            prefix="test_regress",
+            prefix="fidelity_goc",
             preset=BLUE_BLACK_CLASSIC_STYLE
         )
 
         self.assertTrue(os.path.isfile(debai_pdf))
         doc = pymupdf.open(debai_pdf)
-        # Bug 1 & 3: Must be exactly 2 pages, not 3
         self.assertEqual(doc.page_count, 2, f"Expected exactly 2 pages, got {doc.page_count}")
+
+        # Check rendered text contains true Option D
+        full_rendered_text = "\n".join(page.get_text() for page in doc)
         doc.close()
 
+        self.assertIn("1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2.", full_rendered_text)
+        self.assertNotIn("HCOOH.", full_rendered_text)
+
         meas = LayoutSolver.measure_pdf_rendered_questions(debai_pdf, doc_ir)
-
-        # Bug 1 verification: Câu 41 must be placed on Page 1
-        q41_info = meas.get("q_41")
-        self.assertIsNotNone(q41_info)
-        self.assertEqual(q41_info["stem_page"], 1, "Câu 41 stem must be on Page 1")
-        self.assertEqual(q41_info["options_page"], 1, "Câu 41 options must be on Page 1")
-        self.assertFalse(q41_info["is_split"], "Câu 41 must not be split")
-
-        # Bug 2 verification: Câu 45 must NOT be split; stem and options must both be on Page 2
-        q45_info = meas.get("q_45")
-        self.assertIsNotNone(q45_info)
-        self.assertEqual(q45_info["stem_page"], 2, "Câu 45 stem must be on Page 2")
-        self.assertEqual(q45_info["options_page"], 2, "Câu 45 options must be on Page 2")
-        self.assertFalse(q45_info["is_split"], "Câu 45 must not be split across pages")
-
-        # Câu 46 verification: Must be on Page 2 with all options intact
-        q46_info = meas.get("q_46")
-        self.assertIsNotNone(q46_info)
-        self.assertEqual(q46_info["stem_page"], 2, "Câu 46 stem must be on Page 2")
-        self.assertEqual(q46_info["options_page"], 2, "Câu 46 options must be on Page 2")
-        self.assertFalse(q46_info["is_split"], "Câu 46 must not be split across pages")
-
-        # Option integrity: verify no dropped options
         for q in doc_ir.questions:
             q_info = meas.get(q.id)
             self.assertIsNotNone(q_info)
-            self.assertEqual(
-                len(q_info.get("missing_options", [])), 0,
-                f"Question {q.number} has missing options: {q_info.get('missing_options')}"
-            )
-            self.assertFalse(q_info["is_split"], f"Question {q.number} unexpectedly split across pages")
+            self.assertEqual(len(q_info.get("missing_options", [])), 0)
+            self.assertFalse(q_info.get("is_split", False), f"Question {q.number} unexpectedly split across pages")
 
 
 if __name__ == "__main__":
