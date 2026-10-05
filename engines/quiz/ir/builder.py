@@ -100,20 +100,31 @@ class CanonicalIRBuilder:
                 )
 
             # Extract Rich Elements (PLAN-01 / TASK-02)
+            # IR INVARIANT:
+            # For every question: rich_elements = ONLY assets whose owner_question_id == question.id
+            # A question with no source image MUST have: rich_elements = []
+            # Do not manufacture a rich element because nearby assets exist.
             rich_elements: list[RichElementIR] = []
 
             # Priority 1: Attachments from DocumentObjectGraph
             q_attachments = []
-            if rich_element_attachments:
-                q_attachments = (
-                    rich_element_attachments.get(q.id)
-                    or rich_element_attachments.get(str(q.source_number))
-                    or rich_element_attachments.get(str(q.number))
-                    or []
-                )
+            if rich_element_attachments is not None:
+                if q.id in rich_element_attachments:
+                    q_attachments = rich_element_attachments[q.id]
+                elif str(q.source_number) in rich_element_attachments:
+                    q_attachments = rich_element_attachments[str(q.source_number)]
+                elif str(q.number) in rich_element_attachments:
+                    q_attachments = rich_element_attachments[str(q.number)]
+                else:
+                    q_attachments = []
 
             if q_attachments:
                 for att in q_attachments:
+                    # IR INVARIANT:
+                    # For every question: rich_elements = ONLY assets whose owner_question_id == question.id
+                    owner_qid = getattr(att, "owner_question_id", None)
+                    if owner_qid and owner_qid not in (q.id, str(q.source_number), str(q.number)):
+                        continue
                     rec = getattr(att, "asset_record", None)
                     if rec and rec.path:
                         rec_type = getattr(rec, "type", None)
@@ -135,7 +146,11 @@ class CanonicalIRBuilder:
                                 page_number=rec.source_page
                             )
                         )
-            # Priority 2: Fallback to existing manual crop if q.bboxes populated
+            elif rich_element_attachments is not None:
+                # DocumentObjectGraph attachments mapping provided:
+                # A question with no source image MUST have rich_elements = []
+                rich_elements = []
+            # Priority 2: Fallback to existing manual crop ONLY when rich_element_attachments was not provided
             elif pdf_doc and crops_output_dir and q.bboxes:
                 primary_p = q.source_pages[0] if q.source_pages else 1
                 rich_elements = extract_rich_elements_for_question(
@@ -145,6 +160,7 @@ class CanonicalIRBuilder:
                     bboxes=q.bboxes,
                     output_dir=crops_output_dir
                 )
+
 
             # Auto calculate layout hints (e.g. 2 or 4 columns if options are brief)
             columns = 1

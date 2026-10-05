@@ -33,6 +33,19 @@ class AssociationRole(str, Enum):
     UNASSOCIATED = "unassociated"
 
 
+class AssetOwnership(BaseModel):
+    """
+    Authoritative record defining explicit ownership of an extracted visual asset.
+    Specifies asset ID, source page, bounding box, owner question ID, role, and confidence.
+    """
+    asset_id: str
+    source_page: int
+    bbox: tuple[float, float, float, float]
+    owner_question_id: Optional[str] = None
+    role: AssociationRole = AssociationRole.QUESTION_FIGURE
+    confidence: float = 0.0
+
+
 class RichElementAttachment(BaseModel):
     """
     Association link attaching an AssetRecord to a specific Question.
@@ -44,6 +57,7 @@ class RichElementAttachment(BaseModel):
     confidence: float = 1.0
     caption: Optional[str] = None
     asset_record: Optional[AssetRecord] = None
+    owner_question_id: Optional[str] = None
 
 
 class GraphObject(BaseModel):
