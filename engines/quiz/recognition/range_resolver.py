@@ -36,6 +36,45 @@ def _find_page_by_question_number(doc_reps: list[PageRepresentation], q_num: int
     return None
 
 
+def _find_page_by_printed_page_number(doc_reps: list[PageRepresentation], printed_page: int) -> Optional[int]:
+    """
+    Finds the 1-based physical page number whose running header or footer matches printed page number.
+    Supports formats like 'Trang 40', 'Page 40', 'Trang: 40', 'Trang số 40', 'Trang 40/50', '- 40 -'.
+    """
+    import re
+    patterns = [
+        re.compile(rf"(?:Trang|Page)(?:\s*số|\s*:|\s*-)?\s*{printed_page}\b", re.IGNORECASE),
+        re.compile(rf"\b(?:Trang|Page)\s*{printed_page}\s*/\s*\d+\b", re.IGNORECASE),
+        re.compile(rf"(?:^|\n|\s)[-–—]\s*{printed_page}\s*[-–—](?:\s|$|\n)"),
+        re.compile(rf"(?:^|\n)\s*{printed_page}\s*/\s*\d+\s*(?:$|\n)"),
+    ]
+    for rep in doc_reps:
+        header_blocks: list[str] = []
+        footer_blocks: list[str] = []
+        if rep.blocks and rep.height > 0:
+            header_threshold = rep.height * 0.15
+            footer_threshold = rep.height * 0.85
+            for b in rep.blocks:
+                if b.bbox[1] <= header_threshold:
+                    header_blocks.append(b.text)
+                elif b.bbox[3] >= footer_threshold:
+                    footer_blocks.append(b.text)
+
+        candidates_to_check = [
+            rep.raw_text[:400],
+            rep.raw_text[-400:],
+            "\n".join(header_blocks),
+            "\n".join(footer_blocks),
+        ]
+        for text in candidates_to_check:
+            if not text:
+                continue
+            for pat in patterns:
+                if pat.search(text):
+                    return rep.page_number
+    return None
+
+
 def resolve_smart_range(
     instruction: str,
     doc_reps: list[PageRepresentation],
@@ -94,31 +133,57 @@ def resolve_smart_range(
 
     # Step 3: Fast Path Execution with Candidate Inspection
     start_p = parsed.start_page
+    target_requested_page = start_p
+    if start_p is not None:
+        printed_p = _find_page_by_printed_page_number(doc_reps, start_p)
+        if printed_p is not None:
+            logger.info(f"Resolved printed page {start_p} to physical document page {printed_p}")
+            start_p = printed_p
+            target_requested_page = printed_p
+
+    if parsed.end_page is not None:
+        printed_end = _find_page_by_printed_page_number(doc_reps, parsed.end_page)
+        if printed_end is not None:
+            logger.info(f"Resolved printed end page {parsed.end_page} to physical document page {printed_end}")
+            parsed.end_page = printed_end
+
     if parsed.start_question is not None:
         start_q = parsed.start_question
         found_p = _find_page_by_question_number(doc_reps, start_q)
         if start_p is None:
             start_p = found_p if found_p is not None else 1
         elif found_p is not None:
-            # Check if the requested start_page actually contains start_q
-            start_p_rep = page_map.get(start_p)
-            has_start_q = False
-            if start_p_rep:
-                has_start_q = any(c.candidate_number == start_q for c in start_p_rep.candidates) or bool(
-                    re.search(rf"(?:(?:Câu|Bài|Question)\s*{start_q}\b|(?:\n|^)\s*{start_q}[\.\:\)])", start_p_rep.raw_text, re.IGNORECASE)
-                )
-            if not has_start_q:
-                # Canonical question identity mandate: align start_p with where start_q actually lives
-                logger.info(f"Aligning start_page from {start_p} to {found_p} to match canonical question {start_q}")
+            if found_p < start_p:
+                logger.info(f"Aligning start_page from {start_p} to {found_p} to include canonical question stem for {start_q}")
                 start_p = found_p
+            else:
+                start_p_rep = page_map.get(start_p)
+                has_start_q = any(c.candidate_number == start_q for c in start_p_rep.candidates) if start_p_rep else False
+                if not has_start_q and found_p > start_p:
+                    logger.info(f"Aligning start_page from {start_p} to {found_p} to match canonical question {start_q}")
+                    start_p = found_p
     else:
         if start_p is None:
             start_p = 1
-        start_p_rep = page_map.get(start_p)
-        if start_p_rep and start_p_rep.candidates:
-            start_q = start_p_rep.candidates[0].candidate_number
+
+        # Check inward continuation: does start_p continue a question from start_p - 1?
+        if start_p > 1:
+            prev_rep = page_map.get(start_p - 1)
+            curr_rep = page_map.get(start_p)
+            if prev_rep and curr_rep and detect_continuation_candidate(prev_rep, curr_rep):
+                if prev_rep.candidates:
+                    cont_q = prev_rep.candidates[-1].candidate_number
+                    logger.info(f"Inward alignment: Page {start_p} continues question {cont_q} from page {start_p - 1}")
+                    start_q = cont_q
+                    start_p = start_p - 1
+                else:
+                    start_q = 1
+            else:
+                start_p_rep = page_map.get(start_p)
+                start_q = start_p_rep.candidates[0].candidate_number if start_p_rep and start_p_rep.candidates else 1
         else:
-            start_q = 1
+            start_p_rep = page_map.get(start_p)
+            start_q = start_p_rep.candidates[0].candidate_number if start_p_rep and start_p_rep.candidates else 1
 
     requested_count = parsed.question_count
 
@@ -142,7 +207,11 @@ def resolve_smart_range(
             for p in range(start_p, end_p + 1):
                 rep = page_map.get(p)
                 if rep:
-                    total_detected += len(rep.candidates)
+                    valid_cands = [
+                        c for c in rep.candidates
+                        if p > start_p or c.candidate_number >= start_q
+                    ]
+                    total_detected += len(valid_cands)
             resolved_count = max(1, total_detected) if total_detected > 0 else 10
         else:
             resolved_count = requested_count
@@ -204,14 +273,26 @@ def resolve_smart_range(
         )
 
     # Case C: Single page specified with no count (e.g. "Trang 11")
-    rep = page_map.get(start_p)
-    detected_on_page = len(rep.candidates) if rep and rep.candidates else 10
+    base_end_p = target_requested_page if target_requested_page is not None else start_p
+    end_p = max(start_p, min(base_end_p, total_pages))
+
+    # Check outward continuation beyond base_end_p to preserve trailing options
+    if end_p < total_pages:
+        rep_end = page_map.get(end_p)
+        rep_next = page_map.get(end_p + 1)
+        if rep_end and rep_next and detect_continuation_candidate(rep_end, rep_next):
+            end_p = min(total_pages, end_p + 1)
+
+    target_rep = page_map.get(base_end_p)
+    detected_count = len(target_rep.candidates) if target_rep and target_rep.candidates else 10
+    if start_p < base_end_p and start_q is not None:
+        detected_count += 1
 
     return SmartRecognitionResult(
         start_page=start_p,
-        end_page=start_p,
+        end_page=end_p,
         start_question=start_q,
-        question_count=max(1, detected_on_page),
+        question_count=max(1, detected_count),
         question_mode="auto",
         confidence=1.0,
         warnings=warnings

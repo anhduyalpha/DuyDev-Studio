@@ -180,6 +180,94 @@ class TestSmartRecognition(unittest.TestCase):
         self.assertEqual(res.question_count, 50)
         self.assertGreater(len(res.warnings), 0)
 
+    def test_single_page_continuation_expansion(self):
+        """Case C: Standalone 'Trang 1' must expand end_page to 2 when last question continues to Page 2."""
+        doc = self._create_mock_document(page_count=3, questions_per_page=10)
+        doc[0].candidates[-1].options_detected = ["A", "B"]
+        doc[1].blocks = [
+            TextBlock(
+                block_index=0,
+                bbox=(50, 50, 500, 70),
+                lines=[],
+                text="C. Axit axetic.   D. Etanol."
+            )
+        ]
+        res = resolve_smart_range("Trang 1", doc)
+        self.assertEqual(res.start_page, 1)
+        self.assertEqual(res.end_page, 2, "Single-page request must expand end_page to 2 for trailing options")
+        self.assertEqual(res.question_count, 10)
+
+    def test_printed_page_reconciliation_within_page_bounds(self):
+        """Reconciliation must work even if printed page number is within total_pages or document is excerpt."""
+        doc_reps: list[PageRepresentation] = []
+        for p in range(1, 6):
+            doc_reps.append(
+                PageRepresentation(
+                    page_index=p - 1,
+                    page_number=p,
+                    width=595.0,
+                    height=842.0,
+                    raw_text=f"Tenschool Header Trang  {p + 10}\nNội dung đề...",
+                    character_count=300,
+                    page_kind=PageKind.VECTOR,
+                    candidates=[
+                        QuestionCandidate(
+                            candidate_number=p,
+                            marker_text=f"Câu {p}:",
+                            bbox=(50.0, 100.0, 500.0, 150.0),
+                            y_pos=100.0,
+                            options_detected=["A", "B", "C", "D"]
+                        )
+                    ]
+                )
+            )
+        # Total pages = 5. Printed pages are 11 to 15.
+        # User requests "Trang 13" -> physical page 3
+        res = resolve_smart_range("Trang 13", doc_reps)
+        self.assertEqual(res.start_page, 3, "Printed page 13 must reconcile to physical page 3")
+        self.assertEqual(res.end_page, 3)
+
+    def test_printed_page_header_formats(self):
+        """Reconciles various printed header formats ('Trang: 40', 'Trang số 40', 'Trang 40/50')."""
+        doc_reps: list[PageRepresentation] = [
+            PageRepresentation(
+                page_index=0,
+                page_number=1,
+                width=595.0,
+                height=842.0,
+                raw_text="Website: test.vn - Trang: 25\nCâu 1: Test",
+                character_count=200,
+                page_kind=PageKind.VECTOR,
+                candidates=[]
+            ),
+            PageRepresentation(
+                page_index=1,
+                page_number=2,
+                width=595.0,
+                height=842.0,
+                raw_text="Website: test.vn - Trang số 26\nCâu 2: Test",
+                character_count=200,
+                page_kind=PageKind.VECTOR,
+                candidates=[]
+            ),
+            PageRepresentation(
+                page_index=2,
+                page_number=3,
+                width=595.0,
+                height=842.0,
+                raw_text="Website: test.vn - Trang 27/50\nCâu 3: Test",
+                character_count=200,
+                page_kind=PageKind.VECTOR,
+                candidates=[]
+            )
+        ]
+        res1 = resolve_smart_range("Trang 25", doc_reps)
+        self.assertEqual(res1.start_page, 1)
+        res2 = resolve_smart_range("Trang 26", doc_reps)
+        self.assertEqual(res2.start_page, 2)
+        res3 = resolve_smart_range("Trang 27", doc_reps)
+        self.assertEqual(res3.start_page, 3)
+
 
 if __name__ == "__main__":
     unittest.main()

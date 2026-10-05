@@ -58,6 +58,88 @@ class TestSemanticFidelityGoc(unittest.TestCase):
         self.assertEqual(res.start_question, 35)
         self.assertEqual(res.question_count, 12)
 
+    def test_regression_trang_40_tu_cau_41_den_46(self):
+        """
+        Regression Test: 'Trang 40 từ câu 41 đến 46' on Gốc.pdf
+        - Reconciles printed header 'Trang 40' with physical document structure
+        - Aligns start_page to 1 where Câu 41 stem begins (inward boundary stitching)
+        - Expands end_page to 3 where Câu 46 Option D continues (outward boundary stitching)
+        - Plans single batch containing target questions [41, 42, 43, 44, 45, 46] across pages [1, 2, 3]
+        - Verifies post-processed questions produce exactly 6 questions with 4 options each
+        """
+        res = resolve_smart_range("Trang 40 từ câu 41 đến 46", self.reps)
+        self.assertEqual(res.start_page, 1, "start_page must align to physical Page 1 where Q41 begins")
+        self.assertEqual(res.end_page, 3, "end_page must expand to physical Page 3 for Q46 Option D continuation")
+        self.assertEqual(res.start_question, 41)
+        self.assertEqual(res.question_count, 6)
+
+        batches = BatchPlanner.plan_batches(
+            self.reps,
+            start_page=res.start_page,
+            end_page=res.end_page,
+            start_question=res.start_question,
+            question_count=res.question_count,
+        )
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0].target_question_numbers, [41, 42, 43, 44, 45, 46])
+        self.assertEqual(batches[0].page_numbers, [1, 2, 3])
+
+        # Verify MCQ extraction and post-processing
+        parsed = parse_mcq_blocks(batches[0].text_content)
+        qs = []
+        for b in parsed:
+            num = b["source_number"]
+            opts = [QuestionOption(label=l, text=t) for l, t in b.get("options", {}).items()]
+            qs.append(ReconstructedQuestion(
+                id=f"q_{num}",
+                number=num,
+                source_number=num,
+                type=QuestionType.PART_I_MCQ,
+                stem=b.get("clean_stem", b["stem"]),
+                options=opts,
+                source_pages=[1 if num <= 41 else 2]
+            ))
+
+        full_ctx = "\n\n".join(p.raw_text for p in self.reps)
+        final_qs = post_process_questions(qs, start_question=41, expected_count=6, source_context=full_ctx)
+        self.assertEqual(len(final_qs), 6, "Expected exactly 6 questions (41 to 46)")
+        self.assertEqual([q.number for q in final_qs], [41, 42, 43, 44, 45, 46])
+        for q in final_qs:
+            self.assertEqual(len(q.options), 4, f"Question {q.number} must have 4 options")
+        
+        # Verify specific semantic fidelity items
+        q41 = next(q for q in final_qs if q.number == 41)
+        self.assertIn("Linoleic acid", q41.stem)
+        q46 = next(q for q in final_qs if q.number == 46)
+        opt_d = next(o for o in q46.options if o.label == "D")
+        self.assertEqual(opt_d.text, "1 mol G phản ứng hoàn toàn với Na dư thu được 3 mol H2.")
+
+    def test_regression_single_page_trang_40(self):
+        """
+        Regression Test: 'Trang 40' on Gốc.pdf (Case C with bi-directional stitching)
+        - Inward aligns start_page to 1 and start_question to 41 due to incoming stem continuation
+        - Outward expands end_page to 3 due to outgoing Q46 Option D continuation
+        - Resolves exact 6 questions across pages [1, 2, 3]
+        """
+        res = resolve_smart_range("Trang 40", self.reps)
+        self.assertEqual(res.start_page, 1, "start_page must align inward to Page 1 for Q41 stem")
+        self.assertEqual(res.end_page, 3, "end_page must expand outward to Page 3 for Q46 Option D")
+        self.assertEqual(res.start_question, 41)
+        self.assertEqual(res.question_count, 6)
+
+    def test_regression_page_range_trang_40_den_41(self):
+        """
+        Regression Test: 'Trang 40 đến 41' on Gốc.pdf
+        - Inward aligns start_page to 1 for Q41 stem
+        - End page covers Page 3 (printed 41)
+        - Resolves target questions starting at 41 with 11 questions total
+        """
+        res = resolve_smart_range("Trang 40 đến 41", self.reps)
+        self.assertEqual(res.start_page, 1)
+        self.assertEqual(res.end_page, 3)
+        self.assertEqual(res.start_question, 41)
+        self.assertEqual(res.question_count, 11)
+
     def test_batch_planner_includes_q46_option_d_continuation(self):
         """BatchPlanner must append Page 3 continuation so that Q46 text contains Option D."""
         batches = BatchPlanner.plan_batches(
