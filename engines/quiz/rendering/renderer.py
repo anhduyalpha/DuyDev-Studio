@@ -14,13 +14,24 @@ from engines.quiz.rendering.templates import render_worksheet_document, render_a
 class DocumentHTMLRenderer:
     """Orchestrates deterministic rendering of CanonicalDocumentIR to HTML."""
 
-    def __init__(self, preset: StylePreset | str | None = None) -> None:
+    def __init__(
+        self,
+        preset: StylePreset | str | None = None,
+        answer_preset: StylePreset | str | None = None,
+    ) -> None:
         if isinstance(preset, str):
             self.preset = style_registry.get(preset)
         elif isinstance(preset, StylePreset):
             self.preset = preset
         else:
             self.preset = style_registry.get()
+
+        if isinstance(answer_preset, str):
+            self.answer_preset = style_registry.get(answer_preset)
+        elif isinstance(answer_preset, StylePreset):
+            self.answer_preset = answer_preset
+        else:
+            self.answer_preset = style_registry.get("answer_green")
 
     def render_worksheet(
         self,
@@ -45,14 +56,19 @@ class DocumentHTMLRenderer:
     def render_answer_key(
         self,
         doc_ir: CanonicalDocumentIR,
+        preset: StylePreset | str | None = None,
         katex_css_rel: str = "./katex/katex.min.css",
         katex_js_rel: str = "./katex/katex.min.js",
         katex_auto_render_rel: str = "./katex/contrib/auto-render.min.js",
     ) -> str:
         """Render answer matrix and detailed pedagogical solutions HTML."""
+        ans_preset = self.answer_preset
+        if preset is not None:
+            ans_preset = style_registry.get(preset) if isinstance(preset, str) else preset
+
         return render_answer_document(
             doc_ir=doc_ir,
-            preset=self.preset,
+            preset=ans_preset,
             katex_css_rel=katex_css_rel,
             katex_js_rel=katex_js_rel,
             katex_auto_render_rel=katex_auto_render_rel,

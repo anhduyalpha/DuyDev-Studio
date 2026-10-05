@@ -65,6 +65,31 @@ BLUE_BLACK_CLASSIC_STYLE = StylePreset(
     show_decor_lines=True,
 )
 
+ANSWER_GREEN_STYLE = StylePreset(
+    preset_id="answer_green",
+    display_name="Answer Green Theme",
+    page_size="A4 portrait",
+    margin_top_mm=10.0,
+    margin_right_mm=12.0,
+    margin_bottom_mm=10.0,
+    margin_left_mm=12.0,
+    primary_color="#047857",       # Emerald-700 deep green for title, banners, and headers
+    secondary_color="#059669",     # Emerald-600 medium green for indicators and subheadings
+    text_color="#0f172a",          # Slate-900 high-contrast body text for readability
+    muted_color="#065f46",         # Emerald-800 muted for running header/footer
+    border_color="#10b981",        # Emerald-500 crisp green dividers and borders
+    banner_bg="#047857",           # Emerald-700 solid green section banners
+    banner_text_color="#ffffff",   # Pure white text
+    accent_bg="#ecfdf5",           # Emerald-50 soft mint green for answer cells & badges
+    accent_border="#6ee7b7",       # Emerald-300 light green border
+    font_size_pt=10.0,
+    line_height=1.45,
+    show_student_info=False,
+    show_decor_lines=True,
+    question_num_color="#047857",
+    option_letter_color="#047857",
+)
+
 
 class StyleRegistry:
     """Registry managing available style presets."""
@@ -72,6 +97,7 @@ class StyleRegistry:
     def __init__(self) -> None:
         self._presets: dict[str, StylePreset] = {}
         self.register(BLUE_BLACK_CLASSIC_STYLE)
+        self.register(ANSWER_GREEN_STYLE)
 
     def register(self, preset: StylePreset) -> None:
         """Register a new style preset."""

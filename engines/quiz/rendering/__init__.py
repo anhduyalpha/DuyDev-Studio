@@ -7,6 +7,7 @@ from engines.quiz.rendering.styles import (
     StylePreset,
     StyleRegistry,
     BLUE_BLACK_CLASSIC_STYLE,
+    ANSWER_GREEN_STYLE,
     style_registry,
 )
 from engines.quiz.rendering.layout import LayoutSolver
@@ -26,6 +27,7 @@ __all__ = [
     "StylePreset",
     "StyleRegistry",
     "BLUE_BLACK_CLASSIC_STYLE",
+    "ANSWER_GREEN_STYLE",
     "style_registry",
     "LayoutSolver",
     "render_worksheet_document",

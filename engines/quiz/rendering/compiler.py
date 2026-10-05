@@ -238,6 +238,7 @@ class PDFCompiler:
         output_dir: str,
         prefix: str = "DeThi",
         preset: StylePreset | str | None = None,
+        answer_preset: StylePreset | str | None = None,
         force_break_ids: set[str] | None = None,
         timeout: float = 45.0,
     ) -> tuple[str, str]:
@@ -252,7 +253,7 @@ class PDFCompiler:
         self.ensure_katex_bundle(output_dir)
 
         # Resolve style preset
-        renderer = DocumentHTMLRenderer(preset=preset)
+        renderer = DocumentHTMLRenderer(preset=preset, answer_preset=answer_preset)
 
         # 1. Render and compile Worksheet (DeBai)
         debai_html_path = os.path.join(output_dir, f"{clean_prefix}_DeBai.html")

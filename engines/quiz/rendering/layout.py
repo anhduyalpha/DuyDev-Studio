@@ -395,16 +395,71 @@ class LayoutSolver:
         return planned_breaks
 
     @classmethod
-    def generate_paged_media_css(cls, preset: StylePreset, doc_title: str = "") -> str:
+    def generate_paged_media_css(
+        cls,
+        preset: StylePreset,
+        doc_title: str = "",
+        is_answer: bool = False
+    ) -> str:
         """
         Synthesize complete CSS Paged Media rules according to the selected StylePreset.
         Guarantees strict A4 portrait margins, running header/footer, and anti-orphan pagination.
         """
         safe_title = doc_title.replace('"', '\\"') if doc_title else "BÀI TẬP TRẮC NGHIỆM"
-        
-        return f"""
-/* === CSS Paged Media Rules (W3C Paged Media Spec) === */
-@page {{
+        is_ans_doc = is_answer or (preset.preset_id == "answer_green") or ("ĐÁP ÁN" in safe_title.upper())
+
+        if is_ans_doc:
+            page_rules = f"""@page {{
+  size: {preset.page_size};
+  margin: {preset.margin_top_mm}mm {preset.margin_right_mm}mm {preset.margin_bottom_mm}mm {preset.margin_left_mm}mm;
+  @top-left {{
+    content: "ĐÁP ÁN & HƯỚNG DẪN GIẢI";
+    font-size: 7.5pt;
+    font-family: {preset.font_family_heading};
+    font-weight: bold;
+    color: {preset.primary_color};
+    border-bottom: 0.75pt solid {preset.border_color};
+    padding-bottom: 3pt;
+  }}
+  @top-right {{
+    content: "{safe_title}";
+    font-size: 7.5pt;
+    font-family: {preset.font_family_base};
+    color: {preset.secondary_color};
+    border-bottom: 0.75pt solid {preset.border_color};
+    padding-bottom: 3pt;
+  }}
+  @bottom-left {{
+    content: "{safe_title}";
+    font-size: 8pt;
+    font-family: {preset.font_family_base};
+    color: {preset.muted_color};
+    border-top: 0.75pt solid {preset.border_color};
+    padding-top: 4pt;
+  }}
+  @bottom-right {{
+    content: "Trang " counter(page) " / " counter(pages);
+    font-size: 8pt;
+    font-family: {preset.font_family_base};
+    font-weight: bold;
+    color: {preset.primary_color};
+    border-top: 0.75pt solid {preset.border_color};
+    padding-top: 4pt;
+  }}
+}}
+
+@page:first {{
+  @top-left {{
+    content: none;
+    border-bottom: none;
+  }}
+  @top-right {{
+    content: none;
+    border-bottom: none;
+  }}
+}}"""
+        else:
+            page_rules = f"""@page {{
   size: {preset.page_size};
   margin: {preset.margin_top_mm}mm {preset.margin_right_mm}mm {preset.margin_bottom_mm}mm {preset.margin_left_mm}mm;
   @bottom-left {{
@@ -423,7 +478,11 @@ class LayoutSolver:
     border-top: 0.5pt solid {preset.border_color};
     padding-top: 4pt;
   }}
-}}
+}}"""
+
+        return f"""
+/* === CSS Paged Media Rules (W3C Paged Media Spec) === */
+{page_rules}
 
 *, *::before, *::after {{
   box-sizing: border-box;
@@ -668,19 +727,32 @@ body {{
 
 .quick-matrix-table th,
 .quick-matrix-table td {{
-  border: 0.5pt solid {preset.border_color};
-  padding: 3pt 4pt;
+  border: 0.75pt solid {preset.border_color};
+  padding: 3.5pt 4pt;
   text-align: center;
 }}
 
 .quick-matrix-table th {{
-  background-color: {preset.accent_bg};
-  color: {preset.primary_color};
+  background-color: {preset.primary_color};
+  color: #ffffff;
   font-weight: bold;
 }}
 
-.quick-matrix-table td.correct-val {{
+.quick-matrix-table th.matrix-label-th {{
+  background-color: {preset.primary_color};
+  color: #ffffff;
   font-weight: bold;
+  width: 32pt;
+}}
+
+.quick-matrix-table td {{
+  background-color: #ffffff;
+}}
+
+.quick-matrix-table td.correct-val {{
+  background-color: {preset.accent_bg};
+  font-weight: bold;
+  font-size: 9.5pt;
   color: {preset.primary_color};
 }}
 
@@ -689,8 +761,8 @@ body {{
   break-inside: avoid !important;
   page-break-inside: avoid !important;
   margin-bottom: 9pt;
-  border-left: 2pt solid {preset.secondary_color};
-  padding-left: 7pt;
+  border-left: 2.5pt solid {preset.primary_color};
+  padding-left: 8pt;
 }}
 
 .sol-header {{
@@ -698,25 +770,51 @@ body {{
   font-size: 9.5pt;
   color: {preset.primary_color};
   margin-bottom: 2pt;
+  display: flex;
+  align-items: center;
+  gap: 6pt;
 }}
 
 .sol-selected {{
   display: inline-block;
   background-color: {preset.accent_bg};
-  border: 0.5pt solid {preset.accent_border};
-  padding: 1pt 5pt;
-  border-radius: 2pt;
+  border: 1pt solid {preset.accent_border};
+  padding: 1.5pt 6pt;
+  border-radius: 3pt;
   margin-left: 4pt;
   color: {preset.primary_color};
+  font-weight: bold;
+  font-size: 8.5pt;
+  letter-spacing: 0.2pt;
+}}
+
+.sol-stem {{
+  font-size: 9pt;
+  color: #334155;
+  margin-top: 2.5pt;
+  line-height: 1.4;
+}}
+
+.sol-stem strong {{
+  color: {preset.secondary_color};
 }}
 
 .sol-evidence {{
   font-size: 9pt;
-  margin-top: 3pt;
+  margin-top: 4pt;
   color: {preset.text_color};
-  background-color: #fafafa;
-  padding: 4pt 6pt;
-  border-radius: 2pt;
+  background-color: {preset.accent_bg};
+  border: 0.5pt solid {preset.accent_border};
+  padding: 5pt 7pt;
+  border-radius: 3pt;
+  line-height: 1.45;
+}}
+
+.sol-evidence-header {{
+  font-weight: bold;
+  font-size: 8.5pt;
+  color: {preset.primary_color};
+  margin-bottom: 2.5pt;
 }}
 
 /* === Footer End Mark === */
@@ -727,7 +825,7 @@ body {{
   font-weight: bold;
   font-size: 9pt;
   letter-spacing: 2pt;
-  color: {preset.muted_color};
+  color: {preset.primary_color};
   break-before: avoid !important;
 }}
 """

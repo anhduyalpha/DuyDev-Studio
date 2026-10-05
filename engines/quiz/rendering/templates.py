@@ -11,7 +11,7 @@ import os
 import re
 from typing import Any
 from engines.quiz.ir.models import CanonicalDocumentIR, SectionType, QuestionIR, AnswerKeyIR
-from engines.quiz.rendering.styles import StylePreset
+from engines.quiz.rendering.styles import StylePreset, style_registry
 from engines.quiz.rendering.layout import LayoutSolver
 
 
@@ -50,8 +50,9 @@ def _normalize_img_src(path: str) -> str:
     return path
 
 
-def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR) -> str:
+def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR, preset: StylePreset | None = None) -> str:
     """Generate compact tabular matrix for rapid grading and student self-check."""
+    active_preset = preset or style_registry.get("answer_green")
     part1_answers = [a for a in doc_ir.answers if a.type == SectionType.PART_I_MCQ]
     part2_answers = [a for a in doc_ir.answers if a.type == SectionType.PART_II_TF]
     part3_answers = [a for a in doc_ir.answers if a.type == SectionType.PART_III_SHORT]
@@ -71,10 +72,10 @@ def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR) -> str:
                 f"""
         <table class="quick-matrix-table">
           <thead>
-            <tr><th>Câu</th>{th_cells}</tr>
+            <tr><th class="matrix-label-th">Câu</th>{th_cells}</tr>
           </thead>
           <tbody>
-            <tr><th>Đ/A</th>{td_cells}</tr>
+            <tr><th class="matrix-label-th">Đ/A</th>{td_cells}</tr>
           </tbody>
         </table>"""
             )
@@ -82,7 +83,7 @@ def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR) -> str:
         matrix_blocks.append(
             f"""
       <div style="margin-bottom: 8pt;">
-        <div style="font-weight: bold; font-size: 9pt; color: #1e3a8a; margin-bottom: 2pt;">
+        <div style="font-weight: bold; font-size: 9pt; color: {active_preset.primary_color}; margin-bottom: 2pt;">
           1. Bảng đáp án trắc nghiệm Phần I
         </div>
         {"".join(part1_tables)}
@@ -103,13 +104,13 @@ def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR) -> str:
             else:
                 formatted = html.escape(a.selected_answer or "-")
             rows.append(
-                f"""<tr><th style="width: 60pt;">Câu {a.question_number}</th><td style="text-align: left; padding-left: 10pt;">{formatted}</td></tr>"""
+                f"""<tr><th class="matrix-label-th" style="width: 60pt;">Câu {a.question_number}</th><td style="text-align: left; padding-left: 10pt;">{formatted}</td></tr>"""
             )
 
         matrix_blocks.append(
             f"""
       <div style="margin-bottom: 8pt;">
-        <div style="font-weight: bold; font-size: 9pt; color: #1e3a8a; margin-bottom: 2pt;">
+        <div style="font-weight: bold; font-size: 9pt; color: {active_preset.primary_color}; margin-bottom: 2pt;">
           2. Bảng đáp án Đúng / Sai Phần II
         </div>
         <table class="quick-matrix-table" style="max-width: 400pt;">
@@ -123,12 +124,12 @@ def _render_quick_answer_matrix(doc_ir: CanonicalDocumentIR) -> str:
         rows = []
         for a in part3_answers:
             val = a.short_answer_value or a.selected_answer or "-"
-            rows.append(f"""<tr><th style="width: 60pt;">Câu {a.question_number}</th><td class="correct-val" style="text-align: left; padding-left: 10pt;">{html.escape(val)}</td></tr>""")
+            rows.append(f"""<tr><th class="matrix-label-th" style="width: 60pt;">Câu {a.question_number}</th><td class="correct-val" style="text-align: left; padding-left: 10pt;">{html.escape(val)}</td></tr>""")
 
         matrix_blocks.append(
             f"""
       <div style="margin-bottom: 8pt;">
-        <div style="font-weight: bold; font-size: 9pt; color: #1e3a8a; margin-bottom: 2pt;">
+        <div style="font-weight: bold; font-size: 9pt; color: {active_preset.primary_color}; margin-bottom: 2pt;">
           3. Bảng đáp án Điền ngắn Phần III
         </div>
         <table class="quick-matrix-table" style="max-width: 300pt;">
@@ -363,23 +364,26 @@ def render_answer_document(
 ) -> str:
     """Generate self-contained HTML answer key and solution document for `{prefix}_DapAn.pdf`."""
     meta = doc_ir.metadata
-    css_content = LayoutSolver.generate_paged_media_css(preset, f"{meta.title} - ĐÁP ÁN")
+    css_content = LayoutSolver.generate_paged_media_css(preset, f"{meta.title} - ĐÁP ÁN", is_answer=True)
 
     header_html = f"""
   <header class="exam-header" style="text-align: center;">
-    <div style="font-weight: bold; font-size: 13pt; text-transform: uppercase; color: {preset.primary_color};">
+    <div style="font-family: {preset.font_family_heading}; font-weight: bold; font-size: 15pt; text-transform: uppercase; color: {preset.primary_color}; letter-spacing: 0.3pt; line-height: 1.35; margin-bottom: 4pt; word-wrap: break-word; overflow-wrap: break-word;">
       ĐÁP ÁN VÀ HƯỚNG DẪN GIẢI CHI TIẾT
     </div>
-    <div style="font-size: 9.5pt; color: {preset.text_color}; margin-top: 3pt;">
-      {html.escape(meta.title)} &nbsp;|&nbsp; Môn: <strong>{html.escape(meta.subject)}</strong>
+    <div style="font-size: 10pt; font-weight: 600; color: {preset.secondary_color}; margin-top: 2pt; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.2pt;">
+      {html.escape(meta.title)}
     </div>
-    <div style="font-size: 8.5pt; color: {preset.muted_color}; margin-top: 2pt;">
-      Tổng số: {meta.total_questions} câu &nbsp;|&nbsp; Ngày biên soạn: {meta.created_at[:10]}
+    <div class="exam-header-meta" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4pt 12pt; font-size: 8.5pt; color: {preset.muted_color};">
+      <span style="background-color: {preset.accent_bg}; border: 0.5pt solid {preset.accent_border}; color: {preset.primary_color}; padding: 1.5pt 6pt; border-radius: 3pt; font-weight: bold;">ĐÁP ÁN CHÍNH THỨC</span>
+      <span>Môn học: <strong style="color: {preset.text_color};">{html.escape(meta.subject)}</strong></span>
+      <span>Số lượng: <strong style="color: {preset.text_color};">{meta.total_questions} câu</strong></span>
+      <span>Ngày lập: <strong style="color: {preset.text_color};">{meta.created_at[:10]}</strong></span>
     </div>
   </header>"""
 
     # 1. Quick Answer Matrix
-    matrix_html = _render_quick_answer_matrix(doc_ir)
+    matrix_html = _render_quick_answer_matrix(doc_ir, preset)
 
     # 2. Detailed Pedagogical Solutions
     ans_map: dict[str, AnswerKeyIR] = {a.question_id: a for a in doc_ir.answers}
@@ -418,12 +422,12 @@ def render_answer_document(
         <span>Câu {q.number}:</span>
         <span class="sol-selected">{html.escape(badge_text)}</span>
       </div>
-      <div style="font-size: 9pt; color: #475569; margin-top: 2pt;">
+      <div class="sol-stem">
         <strong>Đề bài:</strong> {q.stem}
       </div>
       {crops_html}
       <div class="sol-evidence">
-        <div style="font-weight: bold; font-size: 8.5pt; color: {preset.primary_color}; margin-bottom: 2pt;">
+        <div class="sol-evidence-header">
           Phương pháp giải & Hướng dẫn:
         </div>
         <div>{evidence_content}</div>
