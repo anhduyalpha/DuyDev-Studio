@@ -190,7 +190,6 @@ export function renderConfigPanel(queueState = {}) {
       case 'merge':
       case 'images_to_pdf':
       case 'extract_images':
-      case 'view':
       default:
         return '';
     }
@@ -238,8 +237,6 @@ export function renderConfigPanel(queueState = {}) {
         return 'Đóng dấu PDF';
       case 'security':
         return securityAction === 'unlock' ? 'Mở khóa PDF' : 'Khóa mật khẩu PDF';
-      case 'view':
-        return 'Xem PDF';
       default:
         return 'Bắt đầu';
     }
@@ -272,7 +269,7 @@ export function renderConfigPanel(queueState = {}) {
             ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
             : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-zinc-950 shadow-lg shadow-amber-500/25 active:scale-[0.98] cursor-pointer'
         }">
-        <i data-lucide="${mode === 'view' ? 'eye' : 'play'}" class="w-4 h-4 fill-current"></i>
+        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
         <span>${getPrimaryButtonLabel()}</span>
       </button>
     `;

@@ -21,7 +21,6 @@ const MODE_DESCRIPTIONS = {
   extract_images: 'Trích xuất toàn bộ hình ảnh gốc từ tài liệu PDF thành tệp ZIP.',
   images_to_pdf: 'Chỉ nhận tệp hình ảnh (PNG, JPG, WebP...). Tự động căn chỉnh vừa khổ A4.',
   pdf_to_docx: 'Chuyển đổi tài liệu PDF thành văn bản Word (.docx) có thể chỉnh sửa, giữ nguyên bảng biểu.',
-  view: 'Xem trực tiếp tài liệu PDF với đầy đủ công cụ chuyển trang và thu phóng.',
   watermark: 'Chèn chữ chìm đánh dấu bản quyền hoặc đánh số trang tự động.',
   security: 'Khóa mật khẩu mã hóa AES-256 hoặc giải mã gỡ bỏ mật khẩu.'
 };
@@ -103,7 +102,7 @@ export function renderDropzoneQueue(queueState = {}) {
       });
     }
 
-    // Single-file operations (compress, watermark, security, extract_images, view)
+    // Single-file operations (compress, watermark, security, extract_images, pdf_to_docx)
     const singleFile = files[0];
 
     return `

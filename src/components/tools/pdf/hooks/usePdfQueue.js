@@ -767,7 +767,6 @@ export class PdfQueueManager {
   }
 
   async runProcess() {
-    if (this.mode === 'view') return;
     if (this.files.length === 0) return showToast('Vui lòng chọn tệp để xử lý', 'warning');
 
     if (this.mode === 'split') {
@@ -945,7 +944,7 @@ export class PdfQueueManager {
       merge: 'Ghép PDF', split: 'Tách trang', rotate: 'Xoay trang',
       organize: 'Sắp xếp trang', compress: 'Nén PDF', extract_images: 'Trích ảnh',
       images_to_pdf: 'Ảnh sang PDF', pdf_to_docx: 'PDF sang Word',
-      view: 'Xem PDF', watermark: 'Watermark', security: 'Bảo mật'
+      watermark: 'Watermark', security: 'Bảo mật'
     };
     return titles[modeId] || modeId;
   }

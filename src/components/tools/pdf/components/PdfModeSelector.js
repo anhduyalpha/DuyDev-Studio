@@ -22,11 +22,10 @@ export const PDF_MODE_GROUPS = [
     ]
   },
   {
-    name: 'Bảo mật & Xem',
+    name: 'Bảo mật',
     modes: [
       { id: 'watermark', label: 'Watermark', icon: 'stamp' },
-      { id: 'security', label: 'Bảo mật', icon: 'shield' },
-      { id: 'view', label: 'Xem PDF', icon: 'eye' }
+      { id: 'security', label: 'Bảo mật', icon: 'shield' }
     ]
   }
 ];

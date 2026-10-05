@@ -112,9 +112,6 @@ function setVisualWorkspaceProcessingState(isProcessing) {
 function bindDropzone(qm) {
   attachDropzoneListeners('pdfDropzone', (files) => {
     qm.addFiles(files);
-    if (qm.mode === 'view' && files && files[0]) {
-      ViewerConnector.previewBlob(files[0], files[0].name);
-    }
   });
 
   const rootEl = document.getElementById('pdfDropzoneContainer');
@@ -503,14 +500,6 @@ function bindConfig(qm) {
   const btnStart = cfgEl.querySelector('#btnStartProcess');
   if (btnStart) {
     btnStart.onclick = () => {
-      if (qm.mode === 'view') {
-        if (qm.files[0]) {
-          ViewerConnector.previewBlob(qm.files[0].rawFile || qm.files[0], qm.files[0].name);
-        } else {
-          showToast('Vui lòng chọn tệp PDF', 'warning');
-        }
-        return;
-      }
       qm.runProcess();
     };
   }
