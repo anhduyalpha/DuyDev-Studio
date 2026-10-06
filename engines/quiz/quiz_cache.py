@@ -53,6 +53,9 @@ def is_provider_cache_enabled(provider: Any = None) -> bool:
     if provider is None:
         return True
 
+    if hasattr(provider, "enable_cache") and provider.enable_cache is False:
+        return False
+
     is_mock = (
         hasattr(provider, "_mock_return_value") or
         provider.__class__.__name__ in ("MockAIProvider", "Mock", "MagicMock") or

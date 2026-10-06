@@ -222,6 +222,24 @@ class QuizPipelineOrchestrator:
                 target_question_numbers=extraction_plan.target_question_numbers,
             )
 
+            # PLAN-05 HARD GATE: Verify reconstructed questions against extraction plan
+            if extraction_plan and extraction_plan.target_question_numbers:
+                expected_nums = set(extraction_plan.target_question_numbers)
+                actual_nums = {q.source_number or q.number for q in cleaned_questions}
+                missing_nums = sorted(list(expected_nums - actual_nums))
+                if missing_nums:
+                    raise QuizEngineError(
+                        ErrorCode.RANGE_MISMATCH,
+                        DiagnosticLayer.RECONSTRUCTION_FAILURE,
+                        f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu {len(missing_nums)} câu: {missing_nums[:5]}). "
+                        f"Tuyệt đối không xuất bản đề thi thiếu câu hỏi.",
+                        stage=JobStage.RECONSTRUCTING.value,
+                        details={
+                            "expected_count": len(extraction_plan.target_question_numbers),
+                            "actual_count": len(cleaned_questions),
+                            "missing_questions": missing_nums
+                        }
+                    )
 
             # Associate visual assets from Document Object Graph
             attachments_map = doc_graph.associate_assets_to_questions(

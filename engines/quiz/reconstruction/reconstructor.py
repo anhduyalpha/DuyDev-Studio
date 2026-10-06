@@ -89,9 +89,19 @@ class QuestionReconstructor:
         )
 
         import hashlib
+        import json
         from engines.quiz.quiz_cache import get_ai_reconstruct_cache, set_ai_reconstruct_cache, is_provider_cache_enabled
 
-        batch_key = hashlib.sha256((batch.text_content + "v3.0.0").encode("utf-8")).hexdigest()
+        batch_cache_payload = {
+            "batch_id": batch.batch_id,
+            "target_question_numbers": sorted(batch.target_question_numbers),
+            "page_numbers": sorted(batch.page_numbers),
+            "text_content": batch.text_content,
+            "neighboring_prev_context": batch.neighboring_prev_context,
+            "neighboring_next_context": batch.neighboring_next_context,
+            "version": "v3.1.0"
+        }
+        batch_key = hashlib.sha256(json.dumps(batch_cache_payload, sort_keys=True).encode("utf-8")).hexdigest()
         if not has_simulated_error and is_provider_cache_enabled(self.ai_provider):
             cached_result = get_ai_reconstruct_cache(batch_key)
             if cached_result and isinstance(cached_result, dict):

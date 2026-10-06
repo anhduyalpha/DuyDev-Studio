@@ -257,6 +257,44 @@ class TestQuestionReconstruction(unittest.TestCase):
         self.assertTrue(processed[0].id.startswith("q_p1_num10_"))
         self.assertTrue(processed[1].id.startswith("q_p2_num11_"))
 
+    def test_cache_key_uniqueness_for_different_question_ranges(self):
+        """Verifies that two batches sharing page text but targeting different questions do NOT collide on cache key."""
+        import hashlib
+        import json
+
+        page_text = "Câu 31: ... Câu 32: ... Câu 41: ... Câu 42: ..."
+        batch_1 = BatchPayload(
+            batch_id="b1",
+            batch_type="vector_text",
+            target_question_numbers=[31, 32],
+            page_numbers=[13],
+            text_content=page_text
+        )
+        batch_2 = BatchPayload(
+            batch_id="b2",
+            batch_type="vector_text",
+            target_question_numbers=[41, 42],
+            page_numbers=[13],
+            text_content=page_text
+        )
+
+        def make_key(b):
+            payload = {
+                "batch_id": b.batch_id,
+                "target_question_numbers": sorted(b.target_question_numbers),
+                "page_numbers": sorted(b.page_numbers),
+                "text_content": b.text_content,
+                "neighboring_prev_context": b.neighboring_prev_context,
+                "neighboring_next_context": b.neighboring_next_context,
+                "version": "v3.1.0"
+            }
+            return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+        key_1 = make_key(batch_1)
+        key_2 = make_key(batch_2)
+        self.assertNotEqual(key_1, key_2, "Batches with different target questions must never share the same cache key!")
+
 
 if __name__ == "__main__":
     unittest.main()
+
