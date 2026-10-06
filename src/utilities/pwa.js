@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v19.0';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v19.1';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -71,7 +71,7 @@ export async function getSwVersion() {
 }
 
 // Controlled update state management
-let userRequestedReload = true;
+let userRequestedReload = false;
 let updateToastShown = false;
 
 /**
@@ -98,7 +98,7 @@ export function resetUpdateToastShown() {
 }
 
 /**
- * Activates pending worker immediately without displaying intrusive toast prompts.
+ * Activates pending worker immediately when commanded.
  * @param {ServiceWorker | null} waitingWorker
  * @param {boolean} [_force=false]
  */
@@ -111,7 +111,8 @@ export function promptUserToApplyUpdate(waitingWorker, _force = false) {
 }
 
 /**
- * Listens for waiting or newly installed workers and activates them immediately.
+ * Listens for waiting or newly installed workers and activates them in the background
+ * without triggering an unannounced page reload during the user's active session.
  * @param {ServiceWorkerRegistration | null} reg
  */
 export function listenForWaitingWorker(reg) {
@@ -119,13 +120,12 @@ export function listenForWaitingWorker(reg) {
 
   function activateWorker(worker) {
     if (!worker) return;
-    userRequestedReload = true;
     try {
       worker.postMessage({ type: 'SKIP_WAITING' });
     } catch (_) {}
   }
 
-  // 1. If a waiting worker already exists, activate it immediately
+  // 1. If a waiting worker already exists, activate it immediately in background
   if (reg.waiting) {
     activateWorker(reg.waiting);
   }
@@ -231,25 +231,30 @@ export function registerServiceWorker() {
     window.location.reload();
   };
 
-  // When a new SW takes over, reload to apply new assets automatically on new deployment
+  // When a new SW takes over, reload to apply new assets ONLY if the user explicitly commanded an update.
+  // Otherwise, allow the new SW to control background requests without disrupting the active page session (zero double loading).
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadExistingController) {
       console.log('[PWA] Initial Service Worker activated. Skipping reload.');
       return;
     }
 
-    // Never disrupt in-flight tasks or active downloads
-    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
-      console.log('[PWA] Tasks are active in background. Skipping reload.');
-      return;
-    }
-    const activeJob = localStorage.getItem('ds_studocu_active_job');
-    if (activeJob) {
-      console.log('[PWA] Studocu job active. Skipping reload.');
-      return;
-    }
+    if (userRequestedReload) {
+      // Never disrupt in-flight tasks or active downloads
+      if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+        console.log('[PWA] Tasks are active in background. Skipping reload.');
+        return;
+      }
+      const activeJob = localStorage.getItem('ds_studocu_active_job');
+      if (activeJob) {
+        console.log('[PWA] Studocu job active. Skipping reload.');
+        return;
+      }
 
-    performSafeReload('Auto-updating to newly deployed version', true);
+      performSafeReload('User confirmed update', true);
+    } else {
+      console.log('[PWA] Service Worker controller updated in background. Next launch will use fresh cache without double loading.');
+    }
   });
 
   const doRegister = () => {

@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v19.0';
+const CACHE_NAME = 'duydev-studio-v19.1';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=19.0',
-  './src/styles/studocu.css?v=19.0',
-  './src/styles/highlight-theme.css?v=19.0',
+  './src/styles/stitch-tokens.css?v=19.1',
+  './src/styles/studocu.css?v=19.1',
+  './src/styles/highlight-theme.css?v=19.1',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=19.0',
+  './src/app.js?v=19.1',
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',
@@ -293,40 +293,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. App Shell Navigation: Cache-First with Stale-While-Revalidate for instant FCP (<50ms)
-  // Allows Android OS to dismiss the native splash screen immediately without waiting for network!
+  // 2. App Shell Navigation: Network-First with Cache Fallback for offline PWA
+  // Always fetches the fresh index.html from server when online to prevent stale UI and eliminate double loading.
+  // Falls back to Cache Storage if network is offline or unreachable.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       (async () => {
         try {
+          const fetchPromise = fetch(event.request, { cache: 'no-cache' });
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Navigation network timeout')), 3000)
+          );
+          const networkResponse = await Promise.race([fetchPromise, timeoutPromise]);
+          if (networkResponse && networkResponse.status === 200) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(event.request, networkResponse.clone()).catch(() => {});
+            return networkResponse;
+          }
+        } catch (err) {
+          // Network failed or device is offline - fall back to Cache Storage below
+        }
+
+        try {
           const cache = await caches.open(CACHE_NAME);
-          // 1. Match with ignoreSearch to handle query params like ?hasFiles=1&t=...
           const cached = (await cache.match(event.request, { ignoreSearch: true })) ||
                          (await cache.match('./index.html')) ||
                          (await cache.match('./'));
-
-          // 2. Background revalidation without blocking initial paint
-          const networkPromise = fetch(event.request, { cache: 'no-cache' })
-            .then(async (networkResponse) => {
-              if (networkResponse && networkResponse.status === 200) {
-                const clone = networkResponse.clone();
-                await cache.put(event.request, clone);
-              }
-              return networkResponse;
-            })
-            .catch(() => null);
-
-          // 3. Return cached HTML immediately in <3ms so Android dismisses the native splash screen instantly
           if (cached) {
-            event.waitUntil(networkPromise);
             return cached;
           }
-
-          // 4. Fallback to network if cache was empty
-          const netRes = await networkPromise;
-          if (netRes) return netRes;
         } catch (err) {
-          console.warn('[SW] Navigation cache handler warning:', err);
+          console.warn('[SW] Navigation cache fallback warning:', err);
         }
 
         return (await caches.match('./index.html')) ||
