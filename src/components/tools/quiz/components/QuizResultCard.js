@@ -195,6 +195,14 @@ function renderErrorState(state) {
   let errorMsg = state.error || 'Đã xảy ra lỗi khi tạo bài tập.';
   const lower = errorMsg.toLowerCase();
   if (
+    lower.includes('prisma') ||
+    lower.includes('record to update not found') ||
+    lower.includes('invocation') ||
+    lower.includes('database') ||
+    lower.includes('sqlite')
+  ) {
+    errorMsg = 'Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng bấm Thử lại để tiếp tục.';
+  } else if (
     lower.includes('không có câu hỏi') ||
     lower.includes('không tìm thấy câu hỏi') ||
     lower.includes('no questions')

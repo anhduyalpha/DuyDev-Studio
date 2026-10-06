@@ -131,9 +131,12 @@ function cleanQuizErrorMessage(rawErr: string): string {
   if (
     lowerErr.includes('prisma') ||
     lowerErr.includes('record to update not found') ||
-    lowerErr.includes('unique constraint')
+    lowerErr.includes('unique constraint') ||
+    lowerErr.includes('invocation') ||
+    lowerErr.includes('sqlite') ||
+    lowerErr.includes('database')
   ) {
-    return 'Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng thử lại sau giây lát.';
+    return 'Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng bấm Thử lại để tiếp tục.';
   }
 
   if (
@@ -286,35 +289,32 @@ async function safeJobUpsert(
 ): Promise<void> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      if (createPayload) {
-        await prisma.job.upsert({
-          where: { id: jobId },
-          create: {
-            id: jobId,
-            type: 'quiz_generate',
-            status: updateData.status || 'PROCESSING',
-            progress: updateData.progress ?? 0,
-            startedAt: updateData.startedAt || new Date(),
-            optionsJson: JSON.stringify({
-              fileId: createPayload.fileId,
-              gdriveUrl: createPayload.gdriveUrl,
-              pages: createPayload.pages,
-              count: createPayload.count,
-              startNum: createPayload.startNum,
-              title: createPayload.title,
-              subtitle: createPayload.subtitle,
-              prefix: createPayload.prefix,
-              stylePresetId: createPayload.stylePresetId
-            })
-          },
-          update: updateData
-        });
-      } else {
-        await prisma.job.update({
-          where: { id: jobId },
-          data: updateData
-        });
-      }
+      const createOptions = createPayload
+        ? JSON.stringify({
+            fileId: createPayload.fileId,
+            gdriveUrl: createPayload.gdriveUrl,
+            pages: createPayload.pages,
+            count: createPayload.count,
+            startNum: createPayload.startNum,
+            title: createPayload.title,
+            subtitle: createPayload.subtitle,
+            prefix: createPayload.prefix,
+            stylePresetId: createPayload.stylePresetId
+          })
+        : (updateData.optionsJson || '{}');
+
+      await prisma.job.upsert({
+        where: { id: jobId },
+        create: {
+          id: jobId,
+          type: 'quiz_generate',
+          status: updateData.status || 'PROCESSING',
+          progress: updateData.progress ?? 0,
+          startedAt: updateData.startedAt || new Date(),
+          optionsJson: createOptions
+        },
+        update: updateData
+      });
       return;
     } catch (err: any) {
       if (attempt === 3) {

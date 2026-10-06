@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v18.9';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v19.0';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -71,7 +71,7 @@ export async function getSwVersion() {
 }
 
 // Controlled update state management
-let userRequestedReload = false;
+let userRequestedReload = true;
 let updateToastShown = false;
 
 /**
@@ -98,63 +98,57 @@ export function resetUpdateToastShown() {
 }
 
 /**
- * Prompts the user with an actionable toast to apply the pending update.
+ * Activates pending worker immediately without displaying intrusive toast prompts.
  * @param {ServiceWorker | null} waitingWorker
- * @param {boolean} [force=false]
+ * @param {boolean} [_force=false]
  */
-export function promptUserToApplyUpdate(waitingWorker, force = false) {
-  if ((updateToastShown && !force) || !waitingWorker) return;
-  updateToastShown = true;
-
-  // Auto-reset debounce after 15s so future updates or manual checks can re-prompt
-  setTimeout(() => {
-    updateToastShown = false;
-  }, 15000);
-
-  import('./toast.js')
-    .then(({ showActionableToast }) => {
-      showActionableToast('Đã có bản cập nhật mới', {
-        type: 'info',
-        actionText: 'Cập nhật',
-        duration: 12000,
-        onAction: () => {
-          userRequestedReload = true;
-          waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-        }
-      });
-    })
-    .catch(() => {});
+export function promptUserToApplyUpdate(waitingWorker, _force = false) {
+  if (!waitingWorker) return;
+  userRequestedReload = true;
+  try {
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  } catch (_) {}
 }
 
 /**
- * Listens for waiting or newly installed workers without hijacking the active session.
+ * Listens for waiting or newly installed workers and activates them immediately.
  * @param {ServiceWorkerRegistration | null} reg
  */
 export function listenForWaitingWorker(reg) {
   if (!reg) return;
 
-  function trackInstalling(worker) {
+  function activateWorker(worker) {
     if (!worker) return;
-    worker.addEventListener('statechange', () => {
-      if (worker.state === 'installed' && navigator.serviceWorker?.controller) {
-        promptUserToApplyUpdate(worker);
-      }
-    });
+    userRequestedReload = true;
+    try {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    } catch (_) {}
   }
 
-  // 1. If a waiting worker already exists and the page is controlled by an active worker
-  if (reg.waiting && navigator.serviceWorker?.controller) {
-    promptUserToApplyUpdate(reg.waiting);
+  // 1. If a waiting worker already exists, activate it immediately
+  if (reg.waiting) {
+    activateWorker(reg.waiting);
   }
 
   // 2. If a worker is currently installing when registration resolves
   if (reg.installing) {
-    trackInstalling(reg.installing);
+    reg.installing.addEventListener('statechange', () => {
+      if (reg.installing?.state === 'installed') {
+        activateWorker(reg.installing);
+      }
+    });
   }
 
   // 3. Listen for worker installation transitions for future updates
   reg.addEventListener('updatefound', () => {
-    trackInstalling(reg.installing);
+    const worker = reg.installing;
+    if (worker) {
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed') {
+          activateWorker(worker);
+        }
+      });
+    }
   });
 }
 
@@ -237,28 +231,25 @@ export function registerServiceWorker() {
     window.location.reload();
   };
 
-  // When a new SW takes over, reload to apply new assets ONLY if an older SW was controlling the page AND user explicitly confirmed
+  // When a new SW takes over, reload to apply new assets automatically on new deployment
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadExistingController) {
       console.log('[PWA] Initial Service Worker activated. Skipping reload.');
       return;
     }
-    // Reload only when the user explicitly confirmed the update
-    if (userRequestedReload) {
-      // Never disrupt in-flight tasks or active downloads
-      if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
-        console.log('[PWA] Tasks are active in background. Skipping reload.');
-        return;
-      }
-      const activeJob = localStorage.getItem('ds_studocu_active_job');
-      if (activeJob) {
-        console.log('[PWA] Studocu job active. Skipping reload.');
-        return;
-      }
-      performSafeReload('User confirmed update', true);
-    } else {
-      console.log('[PWA] Service Worker controller updated in background. Will apply on next session.');
+
+    // Never disrupt in-flight tasks or active downloads
+    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+      console.log('[PWA] Tasks are active in background. Skipping reload.');
+      return;
     }
+    const activeJob = localStorage.getItem('ds_studocu_active_job');
+    if (activeJob) {
+      console.log('[PWA] Studocu job active. Skipping reload.');
+      return;
+    }
+
+    performSafeReload('Auto-updating to newly deployed version', true);
   });
 
   const doRegister = () => {
@@ -281,16 +272,21 @@ export function registerServiceWorker() {
     window.addEventListener('load', doRegister);
   }
 
-  // Auto-check for updates only when app returns after being in the background for > 5 minutes.
-  // This completely eliminates unwanted reloads when returning from file picker dialogs or quick tab switches.
+  // Auto-check for updates when app returns to foreground or window regains focus.
   let lastBackgroundTime = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       lastBackgroundTime = Date.now();
     } else if (document.visibilityState === 'visible') {
-      if (lastBackgroundTime > 0 && Date.now() - lastBackgroundTime > 300000) {
+      if (lastBackgroundTime > 0 && Date.now() - lastBackgroundTime > 30000) {
         checkForAppUpdate().catch(() => {});
       }
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (lastBackgroundTime > 0 && Date.now() - lastBackgroundTime > 30000) {
+      checkForAppUpdate().catch(() => {});
     }
   });
 }

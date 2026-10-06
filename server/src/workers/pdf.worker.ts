@@ -130,6 +130,25 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
   const { jobId, fileId, operation, options } = payload;
   let isFinished = false;
 
+  const safePdfJobUpdate = async (data: Record<string, any>) => {
+    try {
+      await prisma.job.upsert({
+        where: { id: jobId },
+        create: {
+          id: jobId,
+          type: `pdf_${operation || 'process'}`,
+          status: data.status || 'PROCESSING',
+          progress: data.progress ?? 0,
+          startedAt: data.startedAt || new Date(),
+          optionsJson: data.optionsJson || '{}'
+        },
+        update: data
+      });
+    } catch (dbErr) {
+      logger.debug({ jobId, dbErr }, 'safePdfJobUpdate skipped');
+    }
+  };
+
   let lastDbProgressTime = 0;
   let lastDbPercentage = -1;
 
@@ -139,17 +158,13 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
     if (now - lastDbProgressTime >= 500 || Math.abs(percentage - lastDbPercentage) >= 5 || percentage >= 100) {
       lastDbProgressTime = now;
       lastDbPercentage = percentage;
-      try {
-        await prisma.job.update({ where: { id: jobId }, data: { progress: percentage, status: 'PROCESSING' } });
-      } catch (dbErr) {
-        logger.debug({ jobId, dbErr }, 'Progress DB update skipped due to SQLite lock');
-      }
+      await safePdfJobUpdate({ progress: percentage, status: 'PROCESSING' });
     }
     await publishJobEvent(jobId, 'progress', { jobId, percentage, stage, timestamp: Math.floor(now / 1000) });
   };
 
   try {
-    await prisma.job.update({ where: { id: jobId }, data: { status: 'PROCESSING', startedAt: new Date(), progress: 5 } });
+    await safePdfJobUpdate({ status: 'PROCESSING', startedAt: new Date(), progress: 5 });
     await emitProgress(10, 'Locating uploaded file artifact');
     const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
     if (!fileRecord || !existsSync(fileRecord.storagePath)) {
@@ -286,17 +301,14 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
     } catch {}
 
     isFinished = true;
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'COMPLETED',
-        progress: 100,
-        completedAt: new Date(),
-        optionsJson: JSON.stringify({
-          ...currentOptions,
-          result: resultPayload
-        })
-      }
+    await safePdfJobUpdate({
+      status: 'COMPLETED',
+      progress: 100,
+      completedAt: new Date(),
+      optionsJson: JSON.stringify({
+        ...currentOptions,
+        result: resultPayload
+      })
     });
 
     await publishJobEvent(jobId, 'completed', resultPayload);
@@ -306,7 +318,7 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
   } catch (err: unknown) {
     isFinished = true;
     const errorMessage = err instanceof Error ? err.message : String(err);
-    await prisma.job.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage } });
+    await safePdfJobUpdate({ status: 'FAILED', errorMessage });
     await publishJobEvent(jobId, 'failed', { jobId, error: errorMessage, timestamp: Math.floor(Date.now() / 1000) });
     logger.error({ jobId, err }, 'PDF job execution failed');
     throw err;

@@ -80,6 +80,25 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
   const startTime = Date.now();
   let isFinished = false;
 
+  const safeConverterJobUpdate = async (data: Record<string, any>) => {
+    try {
+      await prisma.job.upsert({
+        where: { id: jobId },
+        create: {
+          id: jobId,
+          type: 'converter_process',
+          status: data.status || 'PROCESSING',
+          progress: data.progress ?? 0,
+          startedAt: data.startedAt || new Date(),
+          optionsJson: data.optionsJson || '{}'
+        },
+        update: data
+      });
+    } catch (dbErr) {
+      logger.debug({ jobId, dbErr }, 'safeConverterJobUpdate skipped');
+    }
+  };
+
   let lastDbProgressTime = 0;
   let lastDbPercentage = -1;
 
@@ -89,17 +108,13 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     if (now - lastDbProgressTime >= 500 || Math.abs(percentage - lastDbPercentage) >= 5 || percentage >= 100) {
       lastDbProgressTime = now;
       lastDbPercentage = percentage;
-      try {
-        await prisma.job.update({ where: { id: jobId }, data: { progress: percentage, status: 'PROCESSING' } });
-      } catch (dbErr) {
-        logger.debug({ jobId, dbErr }, 'Progress DB update skipped due to SQLite lock');
-      }
+      await safeConverterJobUpdate({ progress: percentage, status: 'PROCESSING' });
     }
     await publishJobEvent(jobId, 'progress', { jobId, percentage, stage, timestamp: Math.floor(now / 1000) });
   };
 
   try {
-    await prisma.job.update({ where: { id: jobId }, data: { status: 'PROCESSING', startedAt: new Date(), progress: 5 } });
+    await safeConverterJobUpdate({ status: 'PROCESSING', startedAt: new Date(), progress: 5 });
     await emitProgress(10, 'Locating uploaded file artifact');
 
     const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
@@ -156,7 +171,7 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     });
 
     isFinished = true;
-    await prisma.job.update({ where: { id: jobId }, data: { status: 'COMPLETED', progress: 100, completedAt: new Date() } });
+    await safeConverterJobUpdate({ status: 'COMPLETED', progress: 100, completedAt: new Date() });
 
     const savingsPct = originalSizeBytes > 0
       ? Number(Math.max(0, ((originalSizeBytes - resultSizeBytes) / originalSizeBytes) * 100).toFixed(1))
@@ -197,7 +212,7 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
   } catch (err: unknown) {
     isFinished = true;
     const errorMessage = err instanceof Error ? err.message : String(err);
-    await prisma.job.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage } });
+    await safeConverterJobUpdate({ status: 'FAILED', errorMessage });
     await publishJobEvent(jobId, 'failed', { jobId, error: errorMessage, timestamp: Math.floor(Date.now() / 1000) });
     logger.error({ jobId, err }, 'Converter job execution failed');
     throw err;
