@@ -58,23 +58,8 @@ class PostRenderFormulaChecker:
             if total_pages == 0:
                 return PostRenderVerificationResult(status="FAIL")
 
-            # 1. Select representative pages
-            # Prioritize pages with repaired formulas, low confidence, or formula-heavy
-            pages_to_check: set[int] = set()
-
-            for f in formulas:
-                if f.verification_status.value in ("REPAIRED", "FAIL") or f.confidence < 0.9:
-                    p = min(total_pages, max(1, f.source_page))
-                    pages_to_check.add(p)
-
-            # If none flagged, pick page 1 and any page with formulas
-            if not pages_to_check:
-                pages_to_check.add(1)
-                for f in formulas[:3]:
-                    p = min(total_pages, max(1, f.source_page))
-                    pages_to_check.add(p)
-
-            selected_pages = sorted(list(pages_to_check))[:5]  # Cap to max 5 pages for speed
+            # 1. Select representative pages (cap to max 5 pages for performance)
+            selected_pages = list(range(1, min(total_pages + 1, 6)))
 
             issues: list[FormulaVerificationIssue] = []
             verified_count = 0
@@ -111,16 +96,13 @@ class PostRenderFormulaChecker:
                             )
                         )
 
-                # Spot-check formula keywords for questions on this page
+                # Spot-check formula tokens on this page
                 for f in formulas:
-                    if f.source_page == page_num:
-                        # Extract core alphanumeric token from formula (e.g. C17H31, H2SO4)
-                        tokens = re.findall(r"[A-Za-z0-9]{2,}", f.render_representation)
-                        for tok in tokens[:2]:
-                            # In rendered PDF, characters may be present in page text
-                            if tok.isalnum() and len(tok) >= 2 and tok in page_text:
-                                verified_count += 1
-                                break
+                    tokens = re.findall(r"[A-Za-z0-9]{2,}", f.render_representation)
+                    for tok in tokens[:2]:
+                        if tok.isalnum() and len(tok) >= 2 and tok in page_text:
+                            verified_count += 1
+                            break
 
             return PostRenderVerificationResult(
                 status="PASS" if not issues else "FAIL",

@@ -61,7 +61,7 @@ GREEK_SYMBOLS = {
 }
 
 PHYSICAL_UNITS = [
-    "km/h", "m/s^2", "m/s", "cm/s", "rad/s",
+    "km/h", "m/s^2", "m/s²", "m/s", "cm/s", "rad/s",
     "mol/L", "mol/l", "mol", "M",
     "cm^3", "cm³", "m^3", "m³", "dm^3", "dm³",
     "mL", "ml", "lít", "lit", "L", "g", "kg", "mg",
@@ -76,6 +76,14 @@ PHYSICAL_UNITS = [
 
 def normalize_to_plain_sub_superscripts(text: str) -> str:
     """Normalizes Unicode and LaTeX subscripts/superscripts into unified markup."""
+    if not text:
+        return ""
+    # Strip enclosing math delimiters $...$ or $$...$$
+    if text.startswith("$$") and text.endswith("$$"):
+        text = text[2:-2].strip()
+    elif text.startswith("$") and text.endswith("$"):
+        text = text[1:-1].strip()
+
     # LaTeX _{...} to _(...) and ^{...} to ^(...)
     text = re.sub(r"_\{([^}]+)\}", r"_\1", text)
     text = re.sub(r"\^\{([^}]+)\}", r"^\1", text)
@@ -94,20 +102,59 @@ def normalize_to_plain_sub_superscripts(text: str) -> str:
     return text
 
 
+def extract_subscripts(text: str) -> list[str]:
+    """Extracts all subscript tokens in a string."""
+    norm = normalize_to_plain_sub_superscripts(text)
+    return re.findall(r"_([A-Za-z0-9+-]+)", norm)
+
+
+def extract_superscripts(text: str) -> list[str]:
+    """Extracts all superscript tokens in a string."""
+    norm = normalize_to_plain_sub_superscripts(text)
+    return re.findall(r"\^([A-Za-z0-9+-]+)", norm)
+
+
 def parse_chemical_composition(formula: str) -> tuple[dict[str, int], int]:
     """
     Parses a chemical formula string into elemental atomic counts and net ionic charge.
-    Handles nested parentheses, brackets, organic chains, and charge markers.
+    Handles nested parentheses, brackets, organic chains, charge markers, and hydrates.
     Example: '(C17H31COO)3C3H5' -> ({'C': 57, 'H': 98, 'O': 6}, 0)
     Example: 'Cu^{2+}' -> ({'Cu': 1}, 2)
+    Example: 'CuSO4.5H2O' -> ({'Cu': 1, 'S': 1, 'O': 9, 'H': 10}, 0)
     """
     clean_f = formula.strip()
+    if not clean_f:
+        return {}, 0
+
+    # If it's a hydrate e.g. CuSO4.5H2O or CuSO4 \cdot 5H2O
+    hydrate_parts = re.split(r"\s*(?:\.|\\cdot|\*)\s*", clean_f)
+    if len(hydrate_parts) > 1:
+        total_counts: dict[str, int] = {}
+        total_charge = 0
+        for part in hydrate_parts:
+            part = part.strip()
+            if not part:
+                continue
+            # Check leading coefficient e.g. 5H2O -> mult=5, part=H2O
+            m_coeff = re.match(r"^(\d+)\s*(.*)$", part)
+            if m_coeff:
+                mult = int(m_coeff.group(1))
+                sub_formula = m_coeff.group(2)
+            else:
+                mult = 1
+                sub_formula = part
+            sub_cnts, sub_chg = parse_chemical_composition(sub_formula)
+            for elem, cnt in sub_cnts.items():
+                total_counts[elem] = total_counts.get(elem, 0) + cnt * mult
+            total_charge += sub_chg * mult
+        return total_counts, total_charge
+
     # Normalize LaTeX and Unicode subscripts/superscripts
     clean_f = normalize_to_plain_sub_superscripts(clean_f)
     # Remove leading stoichiometric coefficients if present (e.g. '2 H2O' -> 'H2O')
     clean_f = re.sub(r"^\s*\d+\s*", "", clean_f)
 
-    # Extract charge if present at the end
+    # Extract charge if present at the end: e.g. ^{2+}, ^2+, 2+, ^+, +, ^-, -
     charge = 0
     m_charge = re.search(r"\^([0-9]*[\+\-])$", clean_f)
     if m_charge:
@@ -117,7 +164,6 @@ def parse_chemical_composition(formula: str) -> tuple[dict[str, int], int]:
         charge = sign * (int(num_str) if num_str else 1)
         clean_f = clean_f[:m_charge.start()].strip()
     else:
-        # Check standard charge notation e.g. 2+ or 2- at end
         m_charge2 = re.search(r"(\d*[\+\-])$", clean_f)
         if m_charge2 and not clean_f.endswith(("->", "<=>")):
             ch_str = m_charge2.group(1)
@@ -156,9 +202,9 @@ def parse_chemical_composition(formula: str) -> tuple[dict[str, int], int]:
                 for elem, cnt in group.items():
                     top[elem] = top.get(elem, 0) + cnt * mult
         elif char.isupper():
-            # Element symbol: uppercase followed by optional lowercase
             elem = char
             i += 1
+            # Check for two-letter element symbol
             if i < n and clean_f[i].islower() and (elem + clean_f[i]) in KNOWN_ELEMENTS:
                 elem += clean_f[i]
                 i += 1
@@ -173,7 +219,7 @@ def parse_chemical_composition(formula: str) -> tuple[dict[str, int], int]:
             top = stack[-1]
             top[elem] = top.get(elem, 0) + cnt
         else:
-            # Skip separators like dots, spaces, bonds '-'
+            # Skip non-element characters (bonds, hyphens, spaces, dots)
             i += 1
 
     # Merge all remaining layers
@@ -185,21 +231,15 @@ def parse_chemical_composition(formula: str) -> tuple[dict[str, int], int]:
     return counts, charge
 
 
-def extract_subscripts(text: str) -> list[str]:
-    """Extracts all subscript tokens in a string."""
-    norm = normalize_to_plain_sub_superscripts(text)
-    return re.findall(r"_([A-Za-z0-9+-]+)", norm)
-
-
-def extract_superscripts(text: str) -> list[str]:
-    """Extracts all superscript tokens in a string."""
-    norm = normalize_to_plain_sub_superscripts(text)
-    return re.findall(r"\^([A-Za-z0-9+-]+)", norm)
-
-
 def canonicalize_math_expression(expr: str) -> str:
     """Canonicalizes a mathematical string for semantic equivalence."""
     c = expr.strip()
+    # Strip $ delimiters
+    if c.startswith("$$") and c.endswith("$$"):
+        c = c[2:-2].strip()
+    elif c.startswith("$") and c.endswith("$"):
+        c = c[1:-1].strip()
+
     # Normalize LaTeX spaces
     c = re.sub(r"\\[,;! ]", " ", c)
     # Normalize roots: √(x) -> \sqrt{x}
@@ -208,7 +248,7 @@ def canonicalize_math_expression(expr: str) -> str:
     c = re.sub(r"\\frac\s*\{([^}]+)\}\s*\{([^}]+)\}", r"(\\frac{\1}{\2})", c)
     # Normalize sub/superscripts
     c = normalize_to_plain_sub_superscripts(c)
-    # Normalize inequalities
+    # Normalize inequalities and operators
     c = re.sub(r"\\(?:leq|le)\b", "<=", c)
     c = re.sub(r"\\(?:geq|ge)\b", ">=", c)
     c = re.sub(r"\\neq\b", "!=", c)
@@ -220,10 +260,36 @@ def canonicalize_math_expression(expr: str) -> str:
 def canonicalize_chemical_reaction(reaction: str) -> str:
     """Canonicalizes a chemical reaction equation."""
     r = reaction.strip()
+    if r.startswith("$$") and r.endswith("$$"):
+        r = r[2:-2].strip()
+    elif r.startswith("$") and r.endswith("$"):
+        r = r[1:-1].strip()
+
     r = re.sub(r"\s*(?:-->|->|—>|\\rightarrow)\s*", " -> ", r)
     r = re.sub(r"\s*(?:<=>|<==>|⇌|\\rightleftharpoons)\s*", " <=> ", r)
     r = re.sub(r"\s*\\xrightarrow\{([^}]+)\}\s*", r" --\1--> ", r)
     return r.strip()
+
+
+def extract_numeric_tokens(text: str) -> list[str]:
+    """Extracts all numeric tokens (including negative numbers and decimals)."""
+    # Replace sub/superscripts first to treat them as numbers with markings
+    norm = normalize_to_plain_sub_superscripts(text)
+    # Find all signed numbers or floating points
+    return re.findall(r"(?:(?<=[^A-Za-z0-9_])|^)[-+]?\d+(?:[\.,]\d+)?", norm)
+
+
+def extract_operators(text: str) -> list[str]:
+    """Extracts mathematical and relational operators."""
+    norm = text
+    norm = re.sub(r"\\(?:le|leq)\b", "<=", norm)
+    norm = re.sub(r"\\(?:ge|geq)\b", ">=", norm)
+    norm = re.sub(r"\\neq\b", "!=", norm)
+    norm = re.sub(r"\\rightarrow\b", "->", norm)
+    norm = re.sub(r"\\rightleftharpoons\b", "<=>", norm)
+    # Match operators: <=, >=, !=, ==, ->, <=>, +, -, *, /, =, <, >
+    op_pattern = re.compile(r"(?:<=|>=|!=|==|->|<=>|\+|-|\*|/|=|<|>|⇌)")
+    return op_pattern.findall(norm)
 
 
 class SemanticFormulaComparator:
@@ -255,53 +321,51 @@ class SemanticFormulaComparator:
         if clean_src == clean_cand:
             return issues
 
+        # Strip outer dollar signs for normalization comparison
+        src_inner = clean_src.strip("$").strip()
+        cand_inner = clean_cand.strip("$").strip()
+
         # Fast path semantic sub/superscript match (e.g. H₂ == H2, Cu²⁺ == Cu^{2+}, 10⁻³ == 10^{-3})
-        if normalize_to_plain_sub_superscripts(clean_src) == normalize_to_plain_sub_superscripts(clean_cand):
+        if normalize_to_plain_sub_superscripts(src_inner) == normalize_to_plain_sub_superscripts(cand_inner):
             return issues
 
         # Fast path math canonical match (e.g. √(x²+1) == \sqrt{x^2+1})
-        if canonicalize_math_expression(clean_src) == canonicalize_math_expression(clean_cand):
+        if canonicalize_math_expression(src_inner) == canonicalize_math_expression(cand_inner):
             return issues
 
         # 1. Branch by specified formula_type
         if formula_type == FormulaType.CHEMISTRY:
-            chem_issues = cls._verify_chemistry(clean_src, clean_cand, formula_id, question_id, field)
-            issues.extend(chem_issues)
-            if chem_issues:
-                return issues
+            issues.extend(cls._verify_chemistry(clean_src, clean_cand, formula_id, question_id, field))
         elif formula_type == FormulaType.PHYSICS:
-            phys_issues = cls._verify_physics(clean_src, clean_cand, formula_id, question_id, field)
-            issues.extend(phys_issues)
-            if phys_issues:
-                return issues
+            issues.extend(cls._verify_physics(clean_src, clean_cand, formula_id, question_id, field))
         elif formula_type == FormulaType.MATHEMATICS:
-            math_issues = cls._verify_mathematics(clean_src, clean_cand, formula_id, question_id, field)
-            issues.extend(math_issues)
-            if math_issues:
-                return issues
+            issues.extend(cls._verify_mathematics(clean_src, clean_cand, formula_id, question_id, field))
         else:
             # Fallback auto-detection for GENERAL formulas
-            if any(el in clean_src for el in ("COOH", "COO", "OH", "SO4", "NO3", "CO3", "PO4", "NH4")):
-                chem_issues = cls._verify_chemistry(clean_src, clean_cand, formula_id, question_id, field)
-                issues.extend(chem_issues)
-                if chem_issues:
-                    return issues
-            elif any(u in clean_src for u in ("m/s", "km/h", "v_0", "v₀", "a_x")):
-                phys_issues = cls._verify_physics(clean_src, clean_cand, formula_id, question_id, field)
-                issues.extend(phys_issues)
-                if phys_issues:
-                    return issues
-            elif any(sym in clean_src for sym in ("\\sqrt", "√", "\\frac", "^", "²", "³", "\\int", "\\lim", "\\log", "\\ln")):
-                math_issues = cls._verify_mathematics(clean_src, clean_cand, formula_id, question_id, field)
-                issues.extend(math_issues)
-                if math_issues:
-                    return issues
+            is_chem = any(el in clean_src for el in ("COOH", "COO", "OH", "SO4", "NO3", "CO3", "PO4", "NH4", "->", "⇌"))
+            is_phys = any(u in clean_src for u in ("m/s", "km/h", "v_0", "v₀", "a_x", "10^", "10⁻"))
+            is_math = any(sym in clean_src for sym in ("\\sqrt", "√", "\\frac", "^", "²", "³", "\\int", "\\lim", "\\log", "\\ln", "<=", ">="))
 
-        # 4. GENERAL CROSS-CUTTING INTEGRITY (Rules A, B, C, D, G, H, I)
-        general_issues = cls._verify_general_integrity(clean_src, clean_cand, formula_id, question_id, field)
-        issues.extend(general_issues)
+            if is_chem:
+                issues.extend(cls._verify_chemistry(clean_src, clean_cand, formula_id, question_id, field))
+            elif is_phys:
+                issues.extend(cls._verify_physics(clean_src, clean_cand, formula_id, question_id, field))
+            elif is_math:
+                issues.extend(cls._verify_mathematics(clean_src, clean_cand, formula_id, question_id, field))
 
-        return issues
+        # 2. Cross-cutting integrity checks across all formulas (Rules A, B, F, G, H)
+        issues.extend(cls._verify_general_integrity(clean_src, clean_cand, formula_id, question_id, field))
+
+        # Deduplicate issues by (issue_type, expected, actual)
+        deduped: list[FormulaVerificationIssue] = []
+        seen_keys: set[tuple[str, str, str]] = set()
+        for iss in issues:
+            k = (iss.issue_type.value, iss.expected, iss.actual)
+            if k not in seen_keys:
+                seen_keys.add(k)
+                deduped.append(iss)
+
+        return deduped
 
     @classmethod
     def _verify_chemistry(
@@ -387,7 +451,6 @@ class SemanticFormulaComparator:
         src_subs = extract_subscripts(source)
         cand_subs = extract_subscripts(candidate)
         if src_subs and not cand_subs:
-            # Check if subscripts were completely lost and not converted to counts
             if not cand_counts or any(cand_counts.get(k, 0) < src_counts.get(k, 0) for k in src_counts):
                 issues.append(
                     FormulaVerificationIssue(
@@ -415,14 +478,13 @@ class SemanticFormulaComparator:
     ) -> list[FormulaVerificationIssue]:
         issues: list[FormulaVerificationIssue] = []
 
-        # Rule D: Exponent / Power integrity (e.g. x² + 1 vs x2 + 1)
+        # Rule D: Exponent / Power integrity (e.g. x² + 1 vs x2 + 1 or x + 1)
         src_supers = extract_superscripts(source)
         cand_supers = extract_superscripts(candidate)
 
-        # Check if superscripts were flattened into normal text
         for exp in src_supers:
             if exp not in cand_supers:
-                # Check if it was flattened into linear text (e.g. x² -> x2)
+                # Check if flattened into normal text (x² -> x2) or completely dropped (x² -> x)
                 cand_lin_pat = r"[A-Za-z]" + re.escape(exp) + r"\b"
                 cand_sup_pat = r"[A-Za-z]\^\{?" + re.escape(exp) + r"\}?"
                 if re.search(cand_lin_pat, candidate) and not re.search(cand_sup_pat, candidate):
@@ -436,6 +498,20 @@ class SemanticFormulaComparator:
                             actual=f"Chữ số thường {exp}",
                             severity="critical",
                             description=f"Lũy thừa bị biến thành số thường làm mất ý nghĩa toán học: {source} -> {candidate}"
+                        )
+                    )
+                else:
+                    # Dropped exponent entirely (e.g. x² + 1 -> x + 1)
+                    issues.append(
+                        FormulaVerificationIssue(
+                            formula_id=fid,
+                            question_id=qid,
+                            field=field,
+                            issue_type=FormulaIssueType.SUPERSCRIPT_LOST,
+                            expected=f"Lũy thừa ^{exp}",
+                            actual=candidate,
+                            severity="critical",
+                            description=f"Số mũ lũy thừa '^{exp}' bị mất hoàn toàn trong kết xuất: {source} -> {candidate}"
                         )
                     )
 
@@ -453,6 +529,23 @@ class SemanticFormulaComparator:
                     actual=candidate,
                     severity="high",
                     description=f"Căn thức bị mất cấu trúc hiển thị toán học: {source} -> {candidate}"
+                )
+            )
+
+        # Rule J: Fraction structure integrity (\frac{a}{b} vs linear a/b or dropped denominator)
+        has_frac_src = "\\frac" in source
+        has_frac_cand = "\\frac" in candidate or "/" in candidate
+        if has_frac_src and not has_frac_cand:
+            issues.append(
+                FormulaVerificationIssue(
+                    formula_id=fid,
+                    question_id=qid,
+                    field=field,
+                    issue_type=FormulaIssueType.EQUATION_STRUCTURE_MISMATCH,
+                    expected="Cấu trúc phân số (\\frac)",
+                    actual=candidate,
+                    severity="high",
+                    description=f"Phân số bị mất cấu trúc tử/mẫu: {source} -> {candidate}"
                 )
             )
 
@@ -491,6 +584,55 @@ class SemanticFormulaComparator:
                     )
                 )
 
+        # Rule F: Operator and Inequality sign integrity (e.g. <= vs >=, + vs -)
+        src_ops = extract_operators(source)
+        cand_ops = extract_operators(candidate)
+        if src_ops != cand_ops:
+            # Check for critical inequality flip (<= vs >=)
+            if ("<=" in src_ops and ">=" in cand_ops) or (">=" in src_ops and "<=" in cand_ops):
+                issues.append(
+                    FormulaVerificationIssue(
+                        formula_id=fid,
+                        question_id=qid,
+                        field=field,
+                        issue_type=FormulaIssueType.OPERATOR_MISMATCH,
+                        expected=str(src_ops),
+                        actual=str(cand_ops),
+                        severity="critical",
+                        description=f"Dấu bất đẳng thức bị đảo ngược: nguồn={source}, kết quả={candidate}"
+                    )
+                )
+            elif len(src_ops) != len(cand_ops):
+                issues.append(
+                    FormulaVerificationIssue(
+                        formula_id=fid,
+                        question_id=qid,
+                        field=field,
+                        issue_type=FormulaIssueType.OPERATOR_MISMATCH,
+                        expected=str(src_ops),
+                        actual=str(cand_ops),
+                        severity="high",
+                        description=f"Toán tử toán học bị thay đổi hoặc thiếu: nguồn={source}, kết quả={candidate}"
+                    )
+                )
+
+        # Rule G: Numeric integrity in math (e.g. 2x + 1 vs 3x + 1 or -5 vs 5)
+        src_nums = extract_numeric_tokens(source)
+        cand_nums = extract_numeric_tokens(candidate)
+        if sorted(src_nums) != sorted(cand_nums):
+            issues.append(
+                FormulaVerificationIssue(
+                    formula_id=fid,
+                    question_id=qid,
+                    field=field,
+                    issue_type=FormulaIssueType.NUMERIC_MISMATCH,
+                    expected=str(src_nums),
+                    actual=str(cand_nums),
+                    severity="critical",
+                    description=f"Sai lệch hệ số hoặc giá trị số trong biểu thức: mong đợi {src_nums}, thu được {cand_nums}"
+                )
+            )
+
         return issues
 
     @classmethod
@@ -527,7 +669,6 @@ class SemanticFormulaComparator:
         cand_supers = extract_superscripts(candidate)
         for sup in src_supers:
             if sup not in cand_supers:
-                # Check sign reversal: e.g. -3 vs 3
                 if (sup.startswith("-") and sup[1:] in cand_supers) or (not sup.startswith("-") and f"-{sup}" in cand_supers):
                     issues.append(
                         FormulaVerificationIssue(
@@ -554,13 +695,24 @@ class SemanticFormulaComparator:
                             description=f"Số mũ khoa học bị ép phẳng thành số nguyên: {source} -> {candidate}"
                         )
                     )
+                else:
+                    issues.append(
+                        FormulaVerificationIssue(
+                            formula_id=fid,
+                            question_id=qid,
+                            field=field,
+                            issue_type=FormulaIssueType.SUPERSCRIPT_LOST,
+                            expected=f"Số mũ ^{sup}",
+                            actual=candidate,
+                            severity="critical",
+                            description=f"Số mũ khoa học '^{sup}' bị mất: {source} -> {candidate}"
+                        )
+                    )
 
         # Rule I: Physical unit integrity
         for unit in PHYSICAL_UNITS:
-            # Check if source contains this unit
             u_pat = r"(?:^|\s|\d)(" + re.escape(unit) + r")(?:$|\s|[,\.;\)])"
             if re.search(u_pat, source, re.IGNORECASE):
-                # Candidate must also contain equivalent unit
                 if not re.search(u_pat, candidate, re.IGNORECASE):
                     issues.append(
                         FormulaVerificationIssue(
@@ -575,6 +727,23 @@ class SemanticFormulaComparator:
                         )
                     )
 
+        # Rule E: Vectors & Greek symbols in physics
+        has_vec_src = "\\vec" in source or "→" in source
+        has_vec_cand = "\\vec" in candidate or "→" in candidate
+        if has_vec_src and not has_vec_cand:
+            issues.append(
+                FormulaVerificationIssue(
+                    formula_id=fid,
+                    question_id=qid,
+                    field=field,
+                    issue_type=FormulaIssueType.SYMBOL_MISMATCH,
+                    expected="Dấu vectơ (\\vec)",
+                    actual=candidate,
+                    severity="high",
+                    description=f"Dấu vectơ đại lượng vật lý bị mất: {source} -> {candidate}"
+                )
+            )
+
         return issues
 
     @classmethod
@@ -588,8 +757,8 @@ class SemanticFormulaComparator:
     ) -> list[FormulaVerificationIssue]:
         issues: list[FormulaVerificationIssue] = []
 
-        # Rule H: Bracket / Parenthesis balance (literal '(' and '[' brackets)
-        for open_b, close_b in [("(", ")"), ("[", "]")]:
+        # Rule H: Bracket / Parenthesis balance (literal '()', '[]', '{}')
+        for open_b, close_b in [("(", ")"), ("[", "]"), ("{", "}")]:
             src_open = source.count(open_b)
             src_close = source.count(close_b)
             cand_open = candidate.count(open_b)

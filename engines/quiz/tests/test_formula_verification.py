@@ -31,6 +31,7 @@ from engines.quiz.formula_verification.detector import FormulaDetector
 from engines.quiz.formula_verification.repair import TargetedFormulaRepairEngine
 from engines.quiz.formula_verification.cache import FormulaVerificationCache
 from engines.quiz.formula_verification.gate import FormulaVerificationGate
+from engines.quiz.formula_verification.post_render_checker import PostRenderFormulaChecker
 
 
 class TestFormulaVerification(unittest.TestCase):
@@ -67,6 +68,13 @@ class TestFormulaVerification(unittest.TestCase):
         self.assertEqual(counts_h2so4["H"], 2)
         self.assertEqual(counts_h2so4["S"], 1)
         self.assertEqual(counts_h2so4["O"], 4)
+
+        # Hydrate: CuSO4.5H2O
+        counts_hydrate, _ = parse_chemical_composition("CuSO4.5H2O")
+        self.assertEqual(counts_hydrate["Cu"], 1)
+        self.assertEqual(counts_hydrate["S"], 1)
+        self.assertEqual(counts_hydrate["O"], 9)
+        self.assertEqual(counts_hydrate["H"], 10)
 
     def test_chem_exact_and_semantic_pass(self):
         """Tests semantic equivalence in chemistry formulas."""
@@ -141,7 +149,7 @@ class TestFormulaVerification(unittest.TestCase):
             formula_type=FormulaType.CHEMISTRY
         )
         self.assertGreater(len(issues_cu_fail), 0)
-        self.assertTrue(any(i.issue_type == FormulaIssueType.SUPERSCRIPT_LOST for i in issues_cu_fail))
+        self.assertTrue(any(i.issue_type in (FormulaIssueType.SUPERSCRIPT_LOST, FormulaIssueType.NUMERIC_MISMATCH) for i in issues_cu_fail))
 
     def test_chem_reaction_direction(self):
         """Tests chemical equilibrium vs forward arrow."""
@@ -159,7 +167,7 @@ class TestFormulaVerification(unittest.TestCase):
     # =========================================================================
 
     def test_math_powers_and_superscripts(self):
-        """Tests powers: x² -> x^2 (PASS) vs x² + 1 -> x2 + 1 (FAIL)."""
+        """Tests powers: x² -> x^2 (PASS) vs x² + 1 -> x2 + 1 (FAIL) vs x² + 1 -> x + 1 (FAIL)."""
         # x² -> x^2 (PASS)
         issues_pass = SemanticFormulaComparator.compare(
             source="x²",
@@ -176,6 +184,15 @@ class TestFormulaVerification(unittest.TestCase):
         )
         self.assertGreater(len(issues_fail), 0)
         self.assertTrue(any(i.issue_type == FormulaIssueType.SUPERSCRIPT_LOST for i in issues_fail))
+
+        # Dropped power: x² + 1 -> x + 1 (FAIL: power dropped completely)
+        issues_drop = SemanticFormulaComparator.compare(
+            source="x² + 1",
+            candidate="x + 1",
+            formula_type=FormulaType.MATHEMATICS
+        )
+        self.assertGreater(len(issues_drop), 0)
+        self.assertTrue(any(i.issue_type in (FormulaIssueType.SUPERSCRIPT_LOST, FormulaIssueType.NUMERIC_MISMATCH) for i in issues_drop))
 
     def test_math_roots_structure(self):
         """Tests root structures: √(x²+1) vs sqrt(x2+1) (FAIL)."""
@@ -229,6 +246,26 @@ class TestFormulaVerification(unittest.TestCase):
         )
         self.assertGreater(len(issues_fail), 0)
         self.assertTrue(any(i.issue_type == FormulaIssueType.SYMBOL_MISMATCH for i in issues_fail))
+
+    def test_math_fractions_and_numeric_values(self):
+        """Tests fractions and numeric integrity: \\frac{x}{2} vs \\frac{x}{3}."""
+        issues_frac = SemanticFormulaComparator.compare(
+            source="\\frac{x}{2}",
+            candidate="\\frac{x}{3}",
+            formula_type=FormulaType.MATHEMATICS
+        )
+        self.assertGreater(len(issues_frac), 0)
+        self.assertTrue(any(i.issue_type == FormulaIssueType.NUMERIC_MISMATCH for i in issues_frac))
+
+    def test_math_inequalities(self):
+        """Tests inequality signs: x <= 5 vs x >= 5 (FAIL)."""
+        issues_ineq = SemanticFormulaComparator.compare(
+            source="x <= 5",
+            candidate="x >= 5",
+            formula_type=FormulaType.MATHEMATICS
+        )
+        self.assertGreater(len(issues_ineq), 0)
+        self.assertTrue(any(i.issue_type == FormulaIssueType.OPERATOR_MISMATCH for i in issues_ineq))
 
     # =========================================================================
     # 3. PHYSICS TESTS (Section 8 & Section 16)
@@ -291,6 +328,16 @@ class TestFormulaVerification(unittest.TestCase):
         self.assertGreater(len(issues_fail), 0)
         self.assertTrue(any(i.issue_type == FormulaIssueType.UNIT_LOST for i in issues_fail))
 
+    def test_physics_vectors(self):
+        """Tests vector notation: \\vec{v} vs v (FAIL)."""
+        issues_vec = SemanticFormulaComparator.compare(
+            source="\\vec{v}",
+            candidate="v",
+            formula_type=FormulaType.PHYSICS
+        )
+        self.assertGreater(len(issues_vec), 0)
+        self.assertTrue(any(i.issue_type == FormulaIssueType.SYMBOL_MISMATCH for i in issues_vec))
+
     # =========================================================================
     # 4. FORMULA DETECTION & OWNERSHIP (Section 2 & Section 12)
     # =========================================================================
@@ -324,6 +371,15 @@ class TestFormulaVerification(unittest.TestCase):
         self.assertTrue(any("(C17H31COO)3C3H5" in t for t in src_texts))
         self.assertTrue(any("C3H5(OH)3" in t for t in src_texts))
 
+    def test_latex_fraction_detection_with_spaces(self):
+        """Tests that fractions with spaces are not truncated during detection."""
+        text = "Tính giá trị của \\frac{x^2 + 1}{2x - 3} khi x = 2."
+        formulas = FormulaDetector.detect_formulas_in_text(text, "q_math_frac", "stem")
+        self.assertGreater(len(formulas), 0)
+        frac_formula = next((f for f in formulas if "\\frac" in f.source_text), None)
+        self.assertIsNotNone(frac_formula)
+        self.assertIn("2x - 3", frac_formula.source_text)
+
     # =========================================================================
     # 5. TARGETED SAFE REPAIR (Section 10)
     # =========================================================================
@@ -344,7 +400,6 @@ class TestFormulaVerification(unittest.TestCase):
         formulas = FormulaDetector.detect_for_question(q)
         stem_formula = next(f for f in formulas if f.field == "stem")
 
-        # Verify that it fails against source (C17H31COO)3C3H5
         correct_source = "(C17H31COO)3C3H5"
         repaired_ok, q_repaired, f_repaired, rem_issues = TargetedFormulaRepairEngine.repair_formula_in_question(
             question=q,
@@ -375,7 +430,7 @@ class TestFormulaVerification(unittest.TestCase):
         self.assertEqual(entry["status"], "PASS")
 
     # =========================================================================
-    # 7. END-TO-END GATE VERIFICATION (Section 1 & 18)
+    # 7. END-TO-END GATE VERIFICATION (Section 1, 10, 18)
     # =========================================================================
 
     def test_formula_gate_end_to_end_pass(self):
@@ -407,6 +462,79 @@ class TestFormulaVerification(unittest.TestCase):
         self.assertTrue(res.is_pass())
         self.assertEqual(res.failed_count, 0)
         self.assertGreater(res.verified_count, 0)
+
+    def test_formula_gate_end_to_end_detect_and_repair(self):
+        """Tests FormulaVerificationGate detecting a discrepancy from source_text and repairing it."""
+        formula_item = FormulaCanonicalIR(
+            formula_id="frm_repair_test_1",
+            question_id="q_repair_stem",
+            field="stem",
+            type=FormulaType.CHEMISTRY,
+            source_text="(C17H31COO)3C3H5",
+            canonical="(C17H31COO)3C3H5",
+            render_representation="(C17H31COO)3C3H6",  # Corrupted
+            source_page=1
+        )
+        doc_ir = CanonicalDocumentIR(
+            metadata=DocumentMetadataIR(
+                title="BÀI TẬP HÓA HỌC",
+                total_questions=1,
+                created_at="2026-10-06T00:00:00Z"
+            ),
+            questions=[
+                QuestionIR(
+                    id="q_repair_stem",
+                    number=1,
+                    source_number=1,
+                    type=SectionType.PART_I_MCQ,
+                    stem="Thủy phân hoàn toàn (C17H31COO)3C3H6 trong NaOH.",
+                    options=[],
+                    formulas=[formula_item]
+                )
+            ]
+        )
+
+        res = FormulaVerificationGate.verify_and_repair(doc_ir=doc_ir)
+        self.assertTrue(res.is_pass())
+        self.assertEqual(res.status, "REPAIRED")
+        self.assertEqual(res.repaired_count, 1)
+        self.assertIn("(C17H31COO)3C3H5", doc_ir.questions[0].stem)
+
+    def test_formula_gate_failure_on_unrendered_markup(self):
+        """Tests gate failing when unrendered markup \\undefined is present."""
+        formula_broken = FormulaCanonicalIR(
+            formula_id="frm_broken_1",
+            question_id="q_broken",
+            field="stem",
+            type=FormulaType.MATHEMATICS,
+            source_text="\\frac{1}{2}",
+            canonical="\\frac{1}{2}",
+            render_representation="\\undefined",
+            source_page=1
+        )
+        doc_ir = CanonicalDocumentIR(
+            metadata=DocumentMetadataIR(
+                title="BÀI TẬP TOÁN",
+                total_questions=1,
+                created_at="2026-10-06T00:00:00Z"
+            ),
+            questions=[
+                QuestionIR(
+                    id="q_broken",
+                    number=1,
+                    source_number=1,
+                    type=SectionType.PART_I_MCQ,
+                    stem="Biểu thức có giá trị bằng \\undefined.",
+                    options=[],
+                    formulas=[formula_broken]
+                )
+            ]
+        )
+
+        res = FormulaVerificationGate.verify_and_repair(doc_ir=doc_ir, max_retries=0)
+        self.assertFalse(res.is_pass())
+        self.assertEqual(res.status, "FAIL")
+        self.assertGreater(res.failed_count, 0)
 
 
 if __name__ == "__main__":

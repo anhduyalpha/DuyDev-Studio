@@ -29,7 +29,7 @@ class TargetedFormulaRepairEngine:
     ) -> tuple[bool, QuestionIR, FormulaCanonicalIR, list[FormulaVerificationIssue]]:
         """
         Replaces the flawed formula with the verified correct formula in the question field.
-        Re-normalizes and re-verifies.
+        Re-normalizes and re-verifies against the ground-truth correct formula.
         Returns (is_repaired, updated_question, updated_formula, remaining_issues).
         """
         target_token = formula.render_representation or formula.source_text
@@ -42,7 +42,6 @@ class TargetedFormulaRepairEngine:
             if target_token in question.stem:
                 new_stem = question.stem.replace(target_token, repaired_str)
             else:
-                # Regex replace with word boundary if possible
                 new_stem = re.sub(rf"\b{re.escape(target_token)}\b", repaired_str, question.stem)
             question.stem = normalize_text(new_stem)
 
@@ -70,10 +69,10 @@ class TargetedFormulaRepairEngine:
         formula.repaired_text = repaired_str
         formula.render_representation = repaired_str
 
-        # Re-verify
+        # Re-verify candidate against original correct_formula ground truth
         remaining_issues = SemanticFormulaComparator.compare(
             source=repaired_str,
-            candidate=repaired_str,
+            candidate=formula.render_representation,
             formula_type=formula.type,
             formula_id=formula.formula_id,
             question_id=formula.question_id,
