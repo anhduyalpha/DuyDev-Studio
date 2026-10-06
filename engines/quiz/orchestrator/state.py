@@ -13,13 +13,14 @@ from pydantic import BaseModel, Field
 
 
 class JobStage(str, Enum):
-    """The 13 formal execution stages of the Quiz Processing Pipeline."""
+    """The formal execution stages of the Quiz Processing Pipeline."""
     CREATED = "CREATED"
     INSPECTING = "INSPECTING"
     PLANNING = "PLANNING"
     RECONSTRUCTING = "RECONSTRUCTING"
     NORMALIZING = "NORMALIZING"
     SOLVING = "SOLVING"
+    FORMULA_VERIFICATION = "FORMULA_VERIFICATION"
     RENDERING = "RENDERING"
     COMPILING = "COMPILING"
     QA = "QA"

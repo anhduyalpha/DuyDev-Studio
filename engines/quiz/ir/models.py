@@ -122,6 +122,7 @@ class QuestionIR(BaseModel):
     source_question_number: Optional[int] = None
     selected_order: Optional[int] = None
     output_question_number: Optional[int] = None
+    formulas: list[Any] = Field(default_factory=list)
 
 
 class AnswerKeyIR(BaseModel):

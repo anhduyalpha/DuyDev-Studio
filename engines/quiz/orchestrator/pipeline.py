@@ -37,6 +37,7 @@ from engines.quiz.qa.repair import SafeRepairEngine
 from engines.quiz.qa.final_validator import validate_final_pdf
 from engines.quiz.qa.models import OverallQAResult, QAIssueType, QASeverity
 from engines.quiz.orchestrator.state import JobStage, JobState, JobStateManager
+from engines.quiz.formula_verification.gate import FormulaVerificationGate
 
 
 class QuizPipelineOrchestrator:
@@ -282,6 +283,25 @@ class QuizPipelineOrchestrator:
             finally:
                 fitz_doc.close()
 
+            # 5b. FORMULA INTEGRITY VERIFICATION GATE (68% - 70%)
+            emit(JobStage.FORMULA_VERIFICATION, 68, "Kiểm định toàn vẹn công thức Toán / Hóa / Lý (Formula Integrity Gate)")
+            formula_gate_res = FormulaVerificationGate.verify_and_repair(
+                doc_ir=doc_ir,
+                pdf_path=pdf_path,
+                ai_provider=self.provider,
+                output_dir=output_dir,
+                max_retries=self.max_repair_iterations,
+            )
+
+            if not formula_gate_res.is_pass():
+                raise QuizEngineError(
+                    ErrorCode.FORMULA_VERIFY_FAILED,
+                    DiagnosticLayer.FORMULA_FAILURE,
+                    f"Kiểm định công thức thất bại: {formula_gate_res.summary()}",
+                    stage=JobStage.FORMULA_VERIFICATION.value,
+                    details=formula_gate_res.to_dict(),
+                )
+
             # 6. RENDERING, COMPILING & QA LOOP (70% - 95%)
             clean_prefix = sanitize_filename_prefix(prefix)
             compiler = PDFCompiler()
@@ -333,7 +353,14 @@ class QuizPipelineOrchestrator:
                     provider=self.provider,
                 )
 
-                qa_passed = geom_result.is_pass() and sem_result.is_pass() and vis_result.is_pass() and final_qa.is_pass()
+                # Post-render formula spot-check (Section 11)
+                post_formula_res = FormulaVerificationGate.verify_post_render(
+                    pdf_path=debai_pdf_path,
+                    doc_ir=doc_ir,
+                    gate_result=formula_gate_res,
+                )
+
+                qa_passed = geom_result.is_pass() and sem_result.is_pass() and vis_result.is_pass() and final_qa.is_pass() and post_formula_res.is_pass()
                 overall_qa = OverallQAResult(
                     status="PASS" if qa_passed else "FAIL",
                     geometry=geom_result,
@@ -349,6 +376,7 @@ class QuizPipelineOrchestrator:
                         "geometry_issues": len(geom_result.issues),
                         "semantic_issues": len(sem_result.issues),
                         "final_qa_issues": len(final_qa.issues),
+                        "formula_issues": len(post_formula_res.issues),
                     }
                 )
 
@@ -436,12 +464,22 @@ class QuizPipelineOrchestrator:
                     state.diagnostics.append({"warning": budget_msg, "code": "AI_BUDGET_WARNING"})
 
             # Register artifacts
+            state.diagnostics.append(
+                {
+                    "formula_gate_status": formula_gate_res.status,
+                    "formulas_verified": formula_gate_res.verified_count,
+                    "formulas_repaired": formula_gate_res.repaired_count,
+                    "formulas_failed": formula_gate_res.failed_count,
+                }
+            )
+
             state.artifacts = {
                 "debai_pdf": debai_pdf_path,
                 "dapan_pdf": dapan_pdf_path,
                 "debai_html": os.path.join(output_dir, f"{clean_prefix}_DeBai.html"),
                 "dapan_html": os.path.join(output_dir, f"{clean_prefix}_DapAn.html"),
                 "doc_ir": doc_ir,
+                "formula_verification": formula_gate_res.to_dict(),
                 "questions_count": len(cleaned_questions),
                 "total_latency_ms": round(total_latency_ms, 2),
                 "pipeline_ms": round(total_latency_ms, 2),

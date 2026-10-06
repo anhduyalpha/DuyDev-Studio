@@ -16,6 +16,7 @@ class DiagnosticLayer(str, Enum):
     LAYOUT_FAILURE = "LAYOUT_FAILURE"
     RENDERING_FAILURE = "RENDERING_FAILURE"
     QA_FAILURE = "QA_FAILURE"
+    FORMULA_FAILURE = "FORMULA_FAILURE"
 
 
 class ErrorCode(str, Enum):
@@ -32,6 +33,8 @@ class ErrorCode(str, Enum):
     OPTION_MISSING = "OPTION_MISSING"
     RENDER_FAILED = "RENDER_FAILED"
     QA_FAILED = "QA_FAILED"
+    FORMULA_VERIFY_FAILED = "FORMULA_VERIFY_FAILED"
+    FORMULA_SOURCE_CONFLICT = "FORMULA_SOURCE_CONFLICT"
 
 
 ERROR_MESSAGES_VI: dict[ErrorCode, str] = {
@@ -70,6 +73,12 @@ ERROR_MESSAGES_VI: dict[ErrorCode, str] = {
     ),
     ErrorCode.QA_FAILED: (
         "Đề thi không đạt tiêu chuẩn in ấn sau các bước căn chỉnh bố cục tự động."
+    ),
+    ErrorCode.FORMULA_VERIFY_FAILED: (
+        "Công thức Toán / Hóa / Lý không bảo đảm tính toàn vẹn so với tài liệu gốc."
+    ),
+    ErrorCode.FORMULA_SOURCE_CONFLICT: (
+        "Xung đột giữa lớp văn bản và hình ảnh gốc của công thức."
     ),
 }
 
