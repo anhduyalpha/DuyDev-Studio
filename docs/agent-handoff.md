@@ -1,10 +1,10 @@
 # Agent Handoff
 
 ## Current task
-`PLAN-05 — Page Neighborhood Scanner + Question Index`
+`RICH ASSET TEXT-CONTAINER FILTERING, SAFE PRISMA JOB UPSERT, AND TYPOGRAPHY HARMONIZATION`
 
 ## Status
-`DONE — PASS (SKEPTICALLY AUDITED, BUGS RESOLVED & FULLY VERIFIED)`
+`DONE — PASS (ALL 3 WORK PACKAGES IMPLEMENTED & VERIFIED WITH 100% PASSING TEST SUITES)`
 
 ---
 
@@ -141,3 +141,50 @@ Implemented the Page Neighborhood Scanner & Question Index layer running strictl
 - `engines/quiz/orchestrator/pipeline.py`: Integrated `QuestionIndexService` and hard-gate range validation into JobStage.PLANNING.
 - `server/src/workers/quiz.worker.ts`: Cleaned error reporting for `RANGE_MISMATCH`.
 - `docs/agent-handoff.md`: Updated handoff report with audit and verification details.
+
+---
+
+## Rich Asset Cleanup, Safe Job Upsert & Typography Tuning Summary
+
+### 1. Work Packages Implemented
+1. **WP1: Anti-Self-Image Nesting (`is_text_container_box`)**:
+   - `engines/quiz/assets/extractor.py`: Added `is_text_container_box(page, c_rect)` which rejects vector clusters enclosing question markers (`\b(câu|bài)\s*\d+`), MCQ options (`\b[A-D]\.\s+`), or wide text paragraphs (> 20 words across >= 40% page width). Prevents whole-question callout boxes from being extracted as images.
+   - `engines/quiz/graph/object_graph.py`: In `associate_assets_to_questions`, suppressed unassociated or self-matching vector/diagram assets whose text matches candidate question stems.
+2. **WP2: Safe Prisma Job Upsert & Error Sanitization**:
+   - `server/src/workers/quiz.worker.ts`: Implemented `safeJobUpsert` with retry and backoff replacing direct `prisma.job.update` calls to prevent `Record to update not found` errors when Redis jobs start before database sync.
+   - Sanitized raw database error messages into friendly user feedback (`"Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng thử lại sau giây lát."`).
+3. **WP3: Typography Harmonization & Section Banner Sizing**:
+   - `engines/quiz/rendering/layout.py`: Increased `.section-banner` to `11.5pt` with `padding: 5.5pt 10pt`, `.exam-header-meta` to `9.5pt`, and scaled KaTeX elements to `1.05em` (`.katex`).
+   - `engines/quiz/rendering/styles.py`: Calibrated body text to `font_size_pt = 10.2` and `line_height = 1.40`, ensuring balanced visual hierarchy while strictly adhering to the 2-page A4 layout constraint for standard 12-question exams.
+
+### 2. Verification Results
+- **Quiz Engine Unit & Integration Tests**: 229/229 passed (`python -m unittest discover -s engines/quiz/tests`).
+- **Server Vitest Test Suite**: 544/544 passed across 48 test files (`npx vitest run`).
+- **TypeScript Static Verification**: 0 errors (`npx tsc --noEmit`).
+- **Golden Regression Benchmark**: 6/6 passed (`python -m unittest engines/quiz/tests/test_golden_regression_35_46.py`).
+
+---
+
+## UI Progressive Source Disclosure & Reset Lifecycle Summary
+
+### 1. Requirements Implemented
+1. **Dynamic Source Box Concealment (`QuizConfigPanel.js`)**:
+   - Khi tệp PDF tải lên thành công (`state.file.status === 'ready'`) hoặc dán link Google Drive hợp lệ (`isValidDriveUrl`), toàn bộ Section 1 ("Nguồn tài liệu" lớn gồm dropzone, divider và ô nhập link) được ẩn hoàn toàn.
+   - Thay thế bằng thanh trạng thái nguồn tài liệu tối giản (`quizSourceCompactBar`, cao ~40px) hiển thị tên tệp/nguồn, dung lượng, nhãn "Đã sẵn sàng" và nút "Đổi tệp".
+   - Biểu mẫu trực tiếp đưa người dùng vào các bước cấu hình: "Nhận diện thông minh" và "Thông số trích xuất".
+2. **Result Isolation & Persistent Source Box Concealment (`QuizResultCard.js`, `QuizWorkspace.js`)**:
+   - Khi tác vụ hoàn tất và xuất bản tài liệu (`state.result` tồn tại), `QuizConfigPanel` ẩn hoàn toàn (`renderQuizConfigPanel` trả về `''`, container có class `hidden`).
+   - Màn hình chỉ hiển thị thẻ kết quả ("Box hoàn thành xuất tài liệu") gồm 2 thẻ Đề bài & Đáp án cùng nút "Làm tài liệu khác" (`btnQuizReset`).
+   - Box nguồn tài liệu vẫn giữ trạng thái ẩn trong suốt quá trình người dùng xem/tải kết quả.
+3. **Dedicated Reset Lifecycle (`useQuiz.js`, `useQuizListeners.js`)**:
+   - Nút hoàn thành được đổi nhãn chuẩn xác thành `Làm tài liệu khác` kèm icon.
+   - Khi người dùng bấm `Làm tài liệu khác`, hàm `quizManager.resetForNewDocument()` được kích hoạt: xoá sạch kết quả cũ, reset trạng thái về Step 1 (`file = null`, `gdriveUrl = ''`, `step = 1`).
+   - Ngay khi reset, box nguồn tài liệu lớn mới xuất hiện trở lại ở trạng thái ban đầu, sẵn sàng nhận tài liệu mới.
+   - Cung cấp `quizManager.clearSource()` khi người dùng bấm "Đổi tệp" trên thanh trạng thái tối giản nếu muốn đổi tệp trước khi sinh đề.
+
+### 2. Verification Results
+- **Server TypeScript Build**: `cd server && npm run build` -> **0 errors**.
+- **Server Vitest Suite**: `cd server && npx vitest run` -> **544/544 PASS** (48/48 test files).
+- **Quiz Engine Test Suite**: `python -m unittest discover -s engines/quiz/tests` -> **229/229 PASS** (58.7s).
+
+

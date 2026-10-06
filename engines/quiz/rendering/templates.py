@@ -221,7 +221,7 @@ def render_worksheet_document(
             sec_banner = f"""
     <div class="section-banner">
       <span>{html.escape(sec.title)}</span>
-      <span style="font-size: 8.5pt; font-weight: normal;">({len(sec_questions)} câu)</span>
+      <span style="font-size: 10.0pt; font-weight: normal; opacity: 0.95;">({len(sec_questions)} câu)</span>
     </div>"""
 
             rendered_q_items: list[str] = []

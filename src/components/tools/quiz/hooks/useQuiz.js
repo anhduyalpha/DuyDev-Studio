@@ -10,11 +10,19 @@ import { saveQuizHistoryPair } from '../utilities/quizHistoryHelper.js';
 
 export function isValidDriveUrl(url) {
   if (!url || typeof url !== 'string') return false;
-  const clean = url.trim();
-  if (!clean.startsWith('http://') && !clean.startsWith('https://')) return false;
+  let clean = url.trim();
+  if (!clean) return false;
+  if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+    clean = 'https://' + clean;
+  }
   try {
     const parsed = new URL(clean);
-    return parsed.hostname.includes('drive.google.com') || parsed.hostname.includes('docs.google.com');
+    return (
+      parsed.hostname.includes('drive.google.com') ||
+      parsed.hostname.includes('docs.google.com') ||
+      parsed.pathname.includes('/drive/') ||
+      parsed.pathname.includes('/file/d/')
+    );
   } catch {
     return false;
   }
@@ -133,7 +141,10 @@ class QuizManager {
   }
 
   setGdriveUrl(url) {
-    const clean = (url || '').trim();
+    let clean = (url || '').trim();
+    if (clean && !clean.startsWith('http://') && !clean.startsWith('https://') && (clean.includes('drive.google.com') || clean.includes('docs.google.com'))) {
+      clean = 'https://' + clean;
+    }
     this.state.gdriveUrl = clean;
 
     // If user enters a drive link, clear any previously chosen file
@@ -155,6 +166,8 @@ class QuizManager {
       if (this.state.step < 2) {
         this.state.step = 2;
       }
+      this.notify('source-ready');
+      return;
     } else if (!this.state.file || this.state.file.status !== 'ready') {
       if (this.state.step !== 1) {
         this.state.step = 1;
@@ -418,18 +431,9 @@ class QuizManager {
             } catch (_) {}
           }
 
-          // Reset form fields to Step 1 for the next document per user request
-          this.state.file = null;
-          this.state.fileId = null;
-          this.state.gdriveUrl = '';
-          this.state.pages = '';
-          this.state.prefix = '';
-          this.state.count = 20;
-          this.state.start = 1;
-          this.state.title = 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12';
-          this.state.step = 1;
           this.state.isProcessing = false;
           this.state.progress = 100;
+          this.state.stage = 'Hoàn tất xuất bản 2 tệp PDF A4!';
           this.state.result = res;
 
           this.notify('job-completed');
@@ -482,10 +486,54 @@ class QuizManager {
     this.notify('job-cancelled');
   }
 
-  clearResult() {
+  resetForNewDocument() {
+    if (this.disconnectEvents) {
+      this.disconnectEvents();
+      this.disconnectEvents = null;
+    }
+    if (this.uploadAbortController) {
+      this.uploadAbortController.abort();
+      this.uploadAbortController = null;
+    }
+    this.state.file = null;
+    this.state.fileId = null;
+    this.state.gdriveUrl = '';
+    this.state.pages = '';
+    this.state.prefix = '';
+    this.state.count = 20;
+    this.state.start = 1;
+    this.state.title = 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12';
+    this.state.subtitle = '';
+    this.state.duration = '';
+    this.state.step = 1;
+    this.state.isProcessing = false;
+    this.state.progress = 0;
+    this.state.stage = '';
+    this.state.jobId = null;
     this.state.result = null;
     this.state.error = null;
     this.notify('result-cleared');
+  }
+
+  clearSource() {
+    if (this.uploadAbortController) {
+      this.uploadAbortController.abort();
+      this.uploadAbortController = null;
+    }
+    this.state.file = null;
+    this.state.fileId = null;
+    this.state.gdriveUrl = '';
+    this.state.step = 1;
+    this.notify('file-cleared');
+  }
+
+  clearError() {
+    this.state.error = null;
+    this.notify('error-cleared');
+  }
+
+  clearResult() {
+    this.resetForNewDocument();
   }
 
   teardown() {

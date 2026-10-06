@@ -208,6 +208,7 @@ export function attachQuizListeners() {
       'file-uploaded',
       'file-cleared',
       'file-upload-error',
+      'source-ready',
       'step-changed',
       'prompt-analyzing',
       'prompt-parsed',
@@ -216,11 +217,12 @@ export function attachQuizListeners() {
       'job-completed',
       'job-cancelled',
       'job-error',
-      'result-cleared'
+      'result-cleared',
+      'error-cleared'
     ];
 
     if (configEl) {
-      if (state.isProcessing) {
+      if (state.isProcessing || state.result) {
         configEl.classList.add('hidden');
         configEl.innerHTML = '';
       } else {
@@ -307,30 +309,42 @@ export function attachQuizListeners() {
       };
     }
 
+    const btnChangeSource = document.getElementById('btnQuizChangeSource');
+    if (btnChangeSource) {
+      btnChangeSource.onclick = (e) => {
+        e.stopPropagation();
+        quizManager.clearSource();
+      };
+    }
+
     // Google Drive Input
     const driveInput = document.getElementById('quizDriveInput');
     if (driveInput) {
-      driveInput.oninput = (e) => {
-        quizManager.setGdriveUrl(e.target.value);
+      const handleDrive = () => {
+        quizManager.setGdriveUrl(driveInput.value);
         syncValidationUI();
       };
-      driveInput.onpaste = () => {
-        setTimeout(() => {
-          quizManager.setGdriveUrl(driveInput.value);
-          syncValidationUI();
-        }, 0);
-      };
+      ['input', 'change', 'paste', 'keyup', 'blur'].forEach((evt) => {
+        driveInput.addEventListener(evt, handleDrive);
+      });
     }
 
     // Prompt Box
     const promptInput = document.getElementById('quizPromptInput');
     const btnParsePrompt = document.getElementById('btnQuizParsePrompt');
     if (btnParsePrompt && promptInput) {
-      btnParsePrompt.onclick = () => quizManager.parsePrompt(promptInput.value);
+      const triggerParse = () => {
+        const dInput = document.getElementById('quizDriveInput');
+        if (dInput && dInput.value.trim() && !quizManager.state.gdriveUrl) {
+          quizManager.setGdriveUrl(dInput.value);
+        }
+        quizManager.parsePrompt(promptInput.value);
+      };
+      btnParsePrompt.onclick = triggerParse;
       promptInput.onkeydown = (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          quizManager.parsePrompt(promptInput.value);
+          triggerParse();
         }
       };
     }
@@ -433,7 +447,14 @@ export function attachQuizListeners() {
 
     const btnReset = document.getElementById('btnQuizReset');
     if (btnReset) {
-      btnReset.onclick = () => quizManager.clearResult();
+      btnReset.onclick = () => {
+        const state = quizManager.getState();
+        if (state.result) {
+          quizManager.resetForNewDocument();
+        } else {
+          quizManager.clearError();
+        }
+      };
     }
 
     // Preview buttons

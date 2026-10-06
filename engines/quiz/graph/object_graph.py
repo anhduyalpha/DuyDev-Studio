@@ -300,7 +300,29 @@ class DocumentObjectGraph:
                     break
 
             if matched_q:
+                if ownership.role == AssociationRole.UNASSOCIATED:
+                    continue
+
                 asset = self.asset_records[asset_id]
+
+                # Defensive check: Suppress vector/diagram crops that enclose the question's own text or marker
+                if asset.type in (AssetType.VECTOR_REGION, AssetType.DIAGRAM_REGION):
+                    p_rep = next((r for r in self.doc_reps if r.page_number == asset.source_page), None)
+                    if p_rep:
+                        ax0, ay0, ax1, ay1 = asset.bbox
+                        inner_texts = []
+                        for b in p_rep.blocks:
+                            bx0, by0, bx1, by1 = b.bbox
+                            if bx0 >= ax0 - 5.0 and by0 >= ay0 - 5.0 and bx1 <= ax1 + 5.0 and by1 <= ay1 + 5.0:
+                                inner_texts.append(b.text)
+                        joined_inner = " ".join(inner_texts).lower()
+                        q_marker = f"câu {matched_q.source_number}".lower()
+                        if q_marker in joined_inner or (len(matched_q.stem) > 20 and matched_q.stem[:25].lower() in joined_inner):
+                            logger.info(
+                                f"Suppressed text-container asset {asset_id} overlapping Question {matched_q.source_number}"
+                            )
+                            continue
+
                 attachments_map[matched_q.id].append(
                     RichElementAttachment(
                         asset_id=asset_id,

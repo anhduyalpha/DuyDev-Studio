@@ -129,6 +129,14 @@ function cleanQuizErrorMessage(rawErr: string): string {
   const lowerErr = rawErr.toLowerCase();
 
   if (
+    lowerErr.includes('prisma') ||
+    lowerErr.includes('record to update not found') ||
+    lowerErr.includes('unique constraint')
+  ) {
+    return 'Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng thử lại sau giây lát.';
+  }
+
+  if (
     lowerErr.includes('google drive') ||
     lowerErr.includes('drive.google.com')
   ) {
@@ -271,23 +279,64 @@ function executeQuizEngine(
   });
 }
 
+async function safeJobUpsert(
+  jobId: string,
+  updateData: Record<string, any>,
+  createPayload?: QuizJobPayload
+): Promise<void> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (createPayload) {
+        await prisma.job.upsert({
+          where: { id: jobId },
+          create: {
+            id: jobId,
+            type: 'quiz_generate',
+            status: updateData.status || 'PROCESSING',
+            progress: updateData.progress ?? 0,
+            startedAt: updateData.startedAt || new Date(),
+            optionsJson: JSON.stringify({
+              fileId: createPayload.fileId,
+              gdriveUrl: createPayload.gdriveUrl,
+              pages: createPayload.pages,
+              count: createPayload.count,
+              startNum: createPayload.startNum,
+              title: createPayload.title,
+              subtitle: createPayload.subtitle,
+              prefix: createPayload.prefix,
+              stylePresetId: createPayload.stylePresetId
+            })
+          },
+          update: updateData
+        });
+      } else {
+        await prisma.job.update({
+          where: { id: jobId },
+          data: updateData
+        });
+      }
+      return;
+    } catch (err: any) {
+      if (attempt === 3) {
+        logger.warn({ jobId, attempt, err: err?.message }, 'safeJobUpsert exhausted retries');
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 120 * attempt));
+    }
+  }
+}
+
 export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
   const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, duration, stylePresetId, apiKey } = payload;
   let isFinished = false;
   let tmpOutputDir: string | null = null;
 
   try {
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'PROCESSING', startedAt: new Date() }
-    });
+    await safeJobUpsert(jobId, { status: 'PROCESSING', startedAt: new Date() }, payload);
 
     const emitProgress = async (pct: number, stage: string) => {
       if (isFinished) return;
-      await prisma.job.update({
-        where: { id: jobId },
-        data: { progress: Math.min(99, Math.max(0, pct)) }
-      }).catch(() => {});
+      await safeJobUpsert(jobId, { progress: Math.min(99, Math.max(0, pct)) }).catch(() => {});
       await publishJobEvent(jobId, 'progress', { jobId, percentage: pct, stage });
     };
 
@@ -482,9 +531,9 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       }
     } catch {}
 
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
+    await safeJobUpsert(
+      jobId,
+      {
         status: 'COMPLETED',
         progress: 100,
         completedAt: new Date(),
@@ -492,8 +541,9 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
           ...currentOptions,
           result: resultPayload
         })
-      }
-    });
+      },
+      payload
+    );
 
     // Create TWO separate history records: one for Worksheet PDF and one for Answer PDF
     const [wsHistory, ansHistory] = await Promise.all([
@@ -543,10 +593,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     const errorMessage = cleanQuizErrorMessage(rawMessage);
     const errorCode = (err as any)?.errorCode || 'INTERNAL_ERROR';
     const diagnosticLayer = (err as any)?.diagnosticLayer || null;
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'FAILED', errorMessage }
-    }).catch(() => {});
+    await safeJobUpsert(jobId, { status: 'FAILED', errorMessage }, payload).catch(() => {});
     await publishJobEvent(jobId, 'failed', {
       jobId,
       error: errorMessage,

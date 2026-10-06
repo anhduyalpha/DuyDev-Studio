@@ -32,8 +32,8 @@ class StylePreset(BaseModel):
     font_family_base: str = "'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif"
     font_family_heading: str = "'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif"
     font_family_mono: str = "'Courier New', 'JetBrains Mono', 'DejaVu Sans Mono', monospace"
-    font_size_pt: float = 10.0
-    line_height: float = 1.42
+    font_size_pt: float = 10.2
+    line_height: float = 1.40
     
     # Components & Layout
     show_student_info: bool = False
@@ -61,8 +61,8 @@ BLUE_BLACK_CLASSIC_STYLE = StylePreset(
     accent_border="#93c5fd",
     font_family_base="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
     font_family_heading="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
-    font_size_pt=10.0,
-    line_height=1.42,
+    font_size_pt=10.2,
+    line_height=1.40,
     show_student_info=False,
     show_decor_lines=True,
 )
@@ -86,8 +86,8 @@ ANSWER_GREEN_STYLE = StylePreset(
     accent_border="#6ee7b7",       # Emerald-300 light green border
     font_family_base="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
     font_family_heading="'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Tinos', 'DejaVu Serif', serif",
-    font_size_pt=10.0,
-    line_height=1.42,
+    font_size_pt=10.2,
+    line_height=1.40,
     show_student_info=False,
     show_decor_lines=True,
     question_num_color="#047857",

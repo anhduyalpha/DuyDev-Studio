@@ -7,6 +7,7 @@ Guarantees source provenance, content hashing, and non-destructive image preserv
 import hashlib
 import logging
 import os
+import re
 from typing import Optional
 
 try:
@@ -17,6 +18,38 @@ except ImportError:
 from .models import AssetRecord, AssetType, ExtractionMethod
 
 logger = logging.getLogger("engines.quiz.assets.extractor")
+
+
+def is_text_container_box(page: fitz.Page, c_rect: fitz.Rect) -> bool:
+    """
+    Determines whether a clustered vector region is merely a decorative border,
+    card, or callout container enclosing a question stem or multiple-choice options,
+    rather than a genuine visual figure/diagram/scheme.
+    """
+    try:
+        text_inside = page.get_text("text", clip=c_rect).strip()
+        if not text_inside:
+            return False
+
+        # Check for presence of question headers (e.g., 'Câu 45:', 'Bài 12.')
+        has_question_marker = bool(re.search(r"\b(câu|bài)\s*\d+[:.]?", text_inside, re.IGNORECASE))
+
+        # Check for presence of MCQ options (e.g., 'A.', 'B.', 'C.', 'D.')
+        has_options = bool(re.search(r"\b[A-D]\.\s+", text_inside))
+
+        words = text_inside.split()
+        # If it contains question marker with multiple words, or options with words:
+        if (has_question_marker and len(words) >= 6) or (has_options and len(words) >= 8):
+            return True
+
+        # If it's a wide container (> 40% page width) and contains multiple sentences (> 20 words)
+        page_w = float(page.rect.width)
+        if c_rect.width >= page_w * 0.40 and len(words) >= 20:
+            return True
+
+        return False
+    except Exception:
+        return False
 
 
 def normalize_image_to_renderer_safe(img_path: str) -> tuple[int, int]:
@@ -361,6 +394,11 @@ class RichAssetExtractor:
                             overlaps_raster = True
                             break
                 if overlaps_raster:
+                    continue
+
+                # Filter out decorative text-container boxes / callout frames enclosing question stems/options
+                if is_text_container_box(page, c_rect):
+                    logger.debug(f"Skipping text-container box on page {page_number}: {c_rect}")
                     continue
 
                 # Ensure minimum dimensions for meaningful visual content

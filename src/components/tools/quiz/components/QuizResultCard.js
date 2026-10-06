@@ -112,8 +112,9 @@ function renderCompletedState(state) {
               </span>
             </div>
           </div>
-          <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer shrink-0">
-            Làm bài tập khác
+          <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition cursor-pointer shrink-0 flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Làm tài liệu khác</span>
           </button>
         </div>
 

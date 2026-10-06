@@ -28,7 +28,7 @@ export function renderQuizWorkspace() {
 
       <!-- Unified Single-Column Flow -->
       <div class="space-y-6">
-        <div id="quizConfigContainer">
+        <div id="quizConfigContainer" class="${state.isProcessing || state.result ? 'hidden' : ''}">
           ${renderQuizConfigPanel(state)}
         </div>
 

@@ -572,7 +572,7 @@ body {{
   align-items: center;
   flex-wrap: wrap;
   gap: 4pt 14pt;
-  font-size: 9pt;
+  font-size: 9.5pt;
   color: {preset.text_color};
 }}
 
@@ -581,16 +581,25 @@ body {{
   background-color: {preset.banner_bg};
   color: {preset.banner_text_color};
   font-family: {preset.font_family_heading};
-  font-size: 9.5pt;
+  font-size: 11.5pt;
   font-weight: bold;
-  padding: 3.5pt 8pt;
-  margin-top: 8pt;
-  margin-bottom: 6pt;
-  border-radius: 2pt;
-  letter-spacing: 0.2pt;
+  padding: 5.5pt 10pt;
+  margin-top: 9pt;
+  margin-bottom: 7pt;
+  border-radius: 3pt;
+  letter-spacing: 0.25pt;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}}
+
+/* === KaTeX Formula Scaling & Visual Harmony === */
+.katex {{
+  font-size: 1.05em !important;
+}}
+
+.katex-display {{
+  margin: 4pt 0 !important;
 }}
 
 /* === Question & Options Typography === */
