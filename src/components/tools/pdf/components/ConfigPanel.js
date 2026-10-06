@@ -1,9 +1,12 @@
 /**
- * ConfigPanel Component (< 190 lines)
+ * ConfigPanel Component (< 250 lines)
  * Contextual settings panel for PDF Studio Pro modes.
  * Displays dedicated configuration controls only when options exist (Compress, Watermark, Security),
- * and presents clean direct action execution for zero-config modes (Merge, Split, Rotate, Images-to-PDF, Extract Images, View).
+ * and presents clean direct action execution for zero-config modes.
+ * The primary action CTA is dynamically themed to match the active PDF tool.
  */
+
+import { getToolTheme } from '../services/pdfThemes.js';
 
 export function renderConfigPanel(queueState = {}) {
   const {
@@ -28,6 +31,7 @@ export function renderConfigPanel(queueState = {}) {
     return '';
   }
 
+  const theme = getToolTheme(mode);
   const splitCount = selectedSplitPages.size;
 
   const renderModeSettings = () => {
@@ -65,7 +69,7 @@ export function renderConfigPanel(queueState = {}) {
             <div class="space-y-1.5">
               <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Chữ watermark</label>
               <input type="text" id="inputPdfWatermark" value="${watermarkText}" placeholder="Nhập chữ chìm..." ${isProcessing ? 'disabled' : ''}
-                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed">
             </div>
 
             <div class="space-y-1.5">
@@ -93,14 +97,14 @@ export function renderConfigPanel(queueState = {}) {
             <div class="space-y-1.5">
               <div class="flex items-center justify-between text-xs">
                 <label class="font-semibold text-zinc-700 dark:text-zinc-300">Độ mờ</label>
-                <span id="watermarkOpacityLabel" class="font-mono font-bold text-amber-500">${Math.round(watermarkOpacity * 100)}%</span>
+                <span id="watermarkOpacityLabel" class="font-mono font-bold text-yellow-500">${Math.round(watermarkOpacity * 100)}%</span>
               </div>
               <input type="range" id="inputWatermarkOpacity" min="0.1" max="1.0" step="0.05" value="${watermarkOpacity}" ${isProcessing ? 'disabled' : ''}
-                class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed">
             </div>
 
             <label class="flex items-center gap-2.5 p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/60 dark:border-white/[0.06] ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}">
-              <input type="checkbox" id="chkPdfPageNumbers" ${pageNumbers ? 'checked' : ''} ${isProcessing ? 'disabled' : ''} class="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 accent-amber-500 disabled:cursor-not-allowed">
+              <input type="checkbox" id="chkPdfPageNumbers" ${pageNumbers ? 'checked' : ''} ${isProcessing ? 'disabled' : ''} class="w-4 h-4 rounded text-yellow-500 focus:ring-yellow-500 accent-yellow-500 disabled:cursor-not-allowed">
               <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Đánh số trang</span>
             </label>
           </div>
@@ -134,7 +138,7 @@ export function renderConfigPanel(queueState = {}) {
             <div class="space-y-1.5">
               <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Mật khẩu</label>
               <input type="password" id="inputPdfPassword" value="${password}" placeholder="Nhập mật khẩu..." ${isProcessing ? 'disabled' : ''}
-                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
             </div>
           </div>
         `;
@@ -167,11 +171,11 @@ export function renderConfigPanel(queueState = {}) {
             <div class="space-y-1.5">
               <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Dải trang chuyển đổi (Tùy chọn)</label>
               <input type="text" id="inputPdfDocxPages" value="${pages}" placeholder="Ví dụ: 1-10, 15 (Để trống để chuyển hết)" ${isProcessing ? 'disabled' : ''}
-                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
             </div>
-            <div class="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20 text-xs space-y-2 text-zinc-600 dark:text-zinc-400">
+            <div class="p-3 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs space-y-2 text-zinc-600 dark:text-zinc-400">
               <div class="flex items-center justify-between">
-                <span class="font-mono text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                <span class="font-mono text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                   <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> AI Decision Router & Sanitizer
                 </span>
                 <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -250,12 +254,12 @@ export function renderConfigPanel(queueState = {}) {
       return `
         <div class="space-y-2">
           <button id="btnStartProcess" disabled type="button"
-            class="w-full py-3 px-4 rounded-xl bg-amber-500/80 text-zinc-950 font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 transition opacity-75 cursor-not-allowed">
-            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-zinc-950"></i>
+            class="btn-process-pdf w-full py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl ${theme.ctaProgress} font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition opacity-80 cursor-not-allowed">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-current"></i>
             <span>Đang xử lý (${Math.round(progress || 0)}%)...</span>
           </button>
           <button id="btnCancelPdfProcess" type="button"
-            class="w-full py-2 px-3 rounded-lg border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
+            class="w-full py-2.5 px-3 rounded-xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
             <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Hủy tác vụ
           </button>
         </div>
@@ -264,10 +268,10 @@ export function renderConfigPanel(queueState = {}) {
 
     return `
       <button id="btnStartProcess" ${startDisabled ? 'disabled' : ''} type="button"
-        class="w-full py-3.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+        class="btn-process-pdf w-full py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
           startDisabled
             ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
-            : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-zinc-950 shadow-lg shadow-amber-500/25 active:scale-[0.98] cursor-pointer'
+            : `${theme.ctaGradient} active:scale-[0.98] cursor-pointer`
         }">
         <i data-lucide="play" class="w-4 h-4 fill-current"></i>
         <span>${getPrimaryButtonLabel()}</span>
@@ -286,7 +290,7 @@ export function renderConfigPanel(queueState = {}) {
   return `
     <div class="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-white/[0.07] p-5 space-y-4 shadow-xs">
       <h3 class="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-amber-500"></i> Cấu hình
+        <i data-lucide="sliders-horizontal" class="w-4 h-4 ${theme.textSoft}"></i> Cấu hình
       </h3>
 
       ${settingsHtml}

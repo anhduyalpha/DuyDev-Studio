@@ -44,8 +44,8 @@ export function renderPreviewCanvasBox({
       <div id="${skeletonId}" class="pdf-thumb-skeleton absolute inset-0 flex items-center justify-center text-zinc-400 ${isCached ? 'hidden' : ''}">
         <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
       </div>
-      <button type="button" data-preview-page="${pageIndex}" class="btn-preview-page absolute ${eyePosClass} z-10 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-xs transition shadow-xs cursor-pointer" title="Xem toàn màn hình trang ${pageIndex + 1}">
-        <i data-lucide="eye" class="w-4 h-4"></i>
+      <button type="button" data-preview-page="${pageIndex}" class="btn-preview-page absolute ${eyePosClass} z-10 w-8 h-8 rounded-lg bg-black/50 hover:bg-black/85 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-sm transition-all shadow-2xs cursor-pointer opacity-80 hover:opacity-100 hover:scale-105 active:scale-95" title="Xem toàn màn hình trang ${pageIndex + 1}">
+        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
       </button>
     </div>
   `.trim();

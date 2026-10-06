@@ -1,32 +1,34 @@
 /**
  * PdfMultiFileWorkspace Component (< 200 lines)
  * Reorderable Card Workspace for Merge PDF and Images-to-PDF
- * Enhanced with Slide-to-Clear Toolbar, Drag Reorder Grips, and Swipe-to-Dismiss.
+ * Enhanced with Semantic Tool Theming, Drag Reorder Grips, and Swipe-to-Dismiss.
  */
 
 import { formatBytes } from '../../../../utilities/formatters.js';
+import { getToolTheme } from '../services/pdfThemes.js';
 
 /**
  * Generates markup for the reorderable multi-file workspace
  */
 export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {}) {
   const isImages = mode === 'images_to_pdf';
+  const theme = getToolTheme(mode);
   const totalSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
 
   return `
-    <div id="pdfMultiFileWorkspaceRoot" class="space-y-4">
+    <div id="pdfMultiFileWorkspaceRoot" class="space-y-4 select-none">
       <!-- Header Bar with Stats, Add More Files, and Slide-to-Clear Track -->
       <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="w-11 h-11 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center shrink-0 shadow-2xs">
             <i data-lucide="${isImages ? 'image' : 'layers'}" class="w-5 h-5"></i>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                ${isImages ? 'Danh sách ảnh' : 'Danh sách tệp'}
+              <span class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">
+                ${isImages ? 'Danh sách ảnh' : 'Danh sách tệp PDF'}
               </span>
-              <span class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <span class="px-2 py-0.5 rounded-full text-xs font-mono font-bold ${theme.badgeBg}">
                 ${files.length} tệp
               </span>
             </div>
@@ -79,10 +81,10 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
             </div>
 
             <!-- Foreground Swipable Row with Drag Grip Handle -->
-            <div class="pdf-file-row relative flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.07] hover:border-amber-500/60 dark:hover:border-amber-500/60 transition-colors gap-3 shadow-2xs touch-pan-y" data-file-id="${f.id}" data-file-index="${idx}">
+            <div class="pdf-file-row relative flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.07] hover:${theme.borderActive} transition-colors gap-3 shadow-2xs touch-pan-y" data-file-id="${f.id}" data-file-index="${idx}">
               <div class="flex items-center gap-2 sm:gap-3 min-w-0">
                 <!-- Pointer Drag Grip Handle -->
-                <button type="button" class="drag-grip-handle p-1.5 -ml-1 text-zinc-400 hover:text-amber-500 dark:text-zinc-500 dark:hover:text-amber-400 cursor-grab active:cursor-grabbing touch-none shrink-0 rounded-lg transition" title="Kéo để đổi thứ tự" aria-label="Kéo để đổi thứ tự" data-drag-handle="true">
+                <button type="button" class="drag-grip-handle p-1.5 -ml-1 text-zinc-400 hover:${theme.textSoft} cursor-grab active:cursor-grabbing touch-none shrink-0 rounded-lg transition" title="Kéo để đổi thứ tự" aria-label="Kéo để đổi thứ tự" data-drag-handle="true">
                   <i data-lucide="grip-vertical" class="w-4 h-4"></i>
                 </button>
 
@@ -97,7 +99,7 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
                     <img src="${f.localUrl}" alt="${f.name}" class="w-full h-full object-cover" />
                   </div>
                 ` : `
-                  <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                  <div class="w-10 h-10 rounded-lg ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center shrink-0">
                     <i data-lucide="${isImages ? 'image' : 'file-text'}" class="w-5 h-5"></i>
                   </div>
                 `}
@@ -136,7 +138,7 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
         <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs space-y-2.5">
           <div class="flex items-center justify-between text-xs">
             <span class="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <i data-lucide="link" class="w-4 h-4 text-amber-500"></i>
+              <i data-lucide="link" class="w-4 h-4 ${theme.textSoft}"></i>
               Thêm tệp PDF từ Google Drive
             </span>
             <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">Nạp trực tiếp vào danh sách ghép</span>
@@ -157,7 +159,7 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
             </button>
             <button type="button" id="btnImportPdfMultiDrive"
               class="px-3.5 sm:px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
-              <i data-lucide="arrow-down-to-dot" class="w-4 h-4 text-amber-400 dark:text-amber-500"></i>
+              <i data-lucide="arrow-down-to-dot" class="w-4 h-4 ${theme.textSoft}"></i>
               <span>Nạp tệp</span>
             </button>
           </div>

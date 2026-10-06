@@ -21,13 +21,17 @@ import { pdfPageCache } from '../services/PdfPageCache.js';
 import { attachSwipeToDismiss, attachSlideToClear } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
 import { attachPdfClipboardPaste, pasteImageFromClipboard } from './usePdfPaste.js';
+import { getToolTheme } from '../services/pdfThemes.js';
+import { renderMobileStickyBar } from '../PdfWorkspace.js';
 
 /**
- * Synchronizes active tab styling for PDF Studio modes.
+ * Synchronizes active tab styling for PDF Studio modes with Semantic Tool Theming.
  */
 export function syncModeTabs(activeMode, isProcessing = false) {
   document.querySelectorAll('.btn-pdf-mode').forEach((btn) => {
-    const isActive = btn.dataset.mode === activeMode;
+    const mode = btn.dataset.mode;
+    const theme = getToolTheme(mode);
+    const isActive = mode === activeMode;
     if (isProcessing) {
       btn.disabled = true;
       btn.className = 'btn-pdf-mode flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0 opacity-40 cursor-not-allowed pointer-events-none text-zinc-400 dark:text-zinc-600';
@@ -35,14 +39,27 @@ export function syncModeTabs(activeMode, isProcessing = false) {
       btn.disabled = false;
       btn.className = `btn-pdf-mode flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer shrink-0 ${
         isActive
-          ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm font-bold'
+          ? `bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm font-bold ring-1 ring-inset ${theme.ringTab}`
           : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/70 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]'
       }`;
     }
     const icon = typeof btn.querySelector === 'function' ? btn.querySelector('svg, i') : null;
     if (icon && icon.classList) {
-      icon.classList.toggle('text-amber-400', isActive);
-      icon.classList.toggle('dark:text-amber-500', isActive);
+      icon.classList.remove(
+        'text-amber-400', 'dark:text-amber-500', 'dark:text-amber-400',
+        'text-violet-400', 'dark:text-violet-400',
+        'text-sky-400', 'dark:text-sky-400',
+        'text-indigo-400', 'dark:text-indigo-400',
+        'text-emerald-400', 'dark:text-emerald-400',
+        'text-rose-400', 'dark:text-rose-400',
+        'text-cyan-400', 'dark:text-cyan-400',
+        'text-yellow-400', 'dark:text-yellow-400',
+        'text-red-400', 'dark:text-red-400',
+        'text-blue-400', 'dark:text-blue-400'
+      );
+      if (isActive && theme.iconActive) {
+        theme.iconActive.split(' ').forEach((cls) => cls && icon.classList.add(cls));
+      }
     }
   });
 }
@@ -104,6 +121,37 @@ function setVisualWorkspaceProcessingState(isProcessing) {
       el.removeAttribute('aria-disabled');
     }
   });
+
+  const btnStartMobile = document.getElementById('btnStartProcessMobile');
+  if (btnStartMobile) {
+    btnStartMobile.disabled = isProcessing;
+    if (isProcessing) {
+      btnStartMobile.classList.add('opacity-40', 'cursor-not-allowed');
+    } else {
+      btnStartMobile.classList.remove('opacity-40', 'cursor-not-allowed');
+    }
+  }
+}
+
+/**
+ * Synchronizes mobile sticky bottom action bar state and bindings.
+ */
+function syncMobileStickyBar(qm, state = null) {
+  const container = document.getElementById('pdfMobileStickyContainer');
+  if (!container) return;
+  const currState = state || qm.getState();
+  if (currState.files && currState.files.length > 0) {
+    container.innerHTML = renderMobileStickyBar(currState);
+    const btnMobile = container.querySelector('#btnStartProcessMobile');
+    if (btnMobile) {
+      btnMobile.onclick = () => {
+        qm.runProcess();
+      };
+    }
+    if (window.lucide) window.lucide.createIcons({ root: container });
+  } else {
+    container.innerHTML = '';
+  }
 }
 
 /**
@@ -776,6 +824,15 @@ function bindConfig(qm) {
       qm.cancelTask('pdf-studio-job');
     };
   }
+
+  // Bind mobile sticky action CTA
+  const stickyContainer = document.getElementById('pdfMobileStickyContainer');
+  const btnStartMobile = stickyContainer?.querySelector('#btnStartProcessMobile');
+  if (btnStartMobile) {
+    btnStartMobile.onclick = () => {
+      qm.runProcess();
+    };
+  }
 }
 
 /**
@@ -920,6 +977,7 @@ export function attachPdfConverterListeners(queueManager) {
   bindError(queueManager);
   bindPdfHistory(queueManager);
   const detachPaste = attachPdfClipboardPaste(queueManager);
+  syncMobileStickyBar(queueManager);
 
   const unsubscribe = queueManager.subscribe((state, eventType) => {
     if (eventType === 'file-loading') {
@@ -933,14 +991,22 @@ export function attachPdfConverterListeners(queueManager) {
     }
 
     if (eventType === 'progress' || eventType === 'upload-progress') {
+      const pct = Math.max(0, Math.min(100, Math.round(state.progress || 0)));
       const btnStart = document.getElementById('btnStartProcess');
       if (btnStart && state.isProcessing) {
-        const pct = Math.max(0, Math.min(100, Math.round(state.progress || 0)));
         btnStart.innerHTML = `
-          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-zinc-950"></i>
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-current"></i>
           <span>Đang xử lý (${pct}%)...</span>
         `;
         if (window.lucide) window.lucide.createIcons({ root: btnStart });
+      }
+      const btnStartMobile = document.getElementById('btnStartProcessMobile');
+      if (btnStartMobile && state.isProcessing) {
+        btnStartMobile.innerHTML = `
+          <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-current"></i>
+          <span>${pct}%</span>
+        `;
+        if (window.lucide) window.lucide.createIcons({ root: btnStartMobile });
       }
       return;
     }
@@ -949,6 +1015,7 @@ export function attachPdfConverterListeners(queueManager) {
       document.querySelectorAll('.badge-page-count').forEach((el) => {
         el.textContent = state.totalPages > 0 ? `${state.totalPages} trang` : '';
       });
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -964,35 +1031,35 @@ export function attachPdfConverterListeners(queueManager) {
           if (canvas) canvas.style.transform = `rotate(${deg}deg)`;
 
           if (deg) {
-            card.classList.add('border-amber-500', 'bg-amber-500/[0.03]');
+            card.classList.add('border-sky-500', 'dark:border-sky-500', 'bg-sky-500/[0.03]', 'ring-2', 'ring-sky-500/20');
             card.classList.remove('border-zinc-200/80', 'dark:border-white/[0.08]', 'bg-white', 'dark:bg-[#121215]');
           } else {
-            card.classList.remove('border-amber-500', 'bg-amber-500/[0.03]');
+            card.classList.remove('border-sky-500', 'dark:border-sky-500', 'bg-sky-500/[0.03]', 'ring-2', 'ring-sky-500/20');
             card.classList.add('border-zinc-200/80', 'dark:border-white/[0.08]', 'bg-white', 'dark:bg-[#121215]');
           }
 
           let badgeRot = card.querySelector('.badge-rot');
           if (deg) {
             if (!badgeRot) {
-              const footerCtrl = card.querySelector('.page-footer-ctrls');
-              if (footerCtrl) {
-                const span = document.createElement('span');
-                span.className = 'badge-rot px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30';
-                span.textContent = `${deg}°`;
-                footerCtrl.insertBefore(span, footerCtrl.firstChild);
-              }
-            } else {
-              badgeRot.textContent = `${deg}°`;
+              badgeRot = document.createElement('div');
+              badgeRot.className = 'badge-rot absolute top-2 right-2 z-10 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold bg-sky-500 text-zinc-950 shadow-xs border border-sky-400 pointer-events-none';
+              card.appendChild(badgeRot);
             }
+            badgeRot.textContent = `+${deg}°`;
           } else if (badgeRot) {
             badgeRot.remove();
+          }
+
+          const badgeRotSub = card.querySelector('.badge-rot-sub');
+          if (badgeRotSub) {
+            badgeRotSub.textContent = deg ? `${deg}°` : '';
           }
         });
       }
 
       const summaryEl = document.getElementById('pdfRotatedSummary');
       if (summaryEl) {
-        summaryEl.innerHTML = rotatedCount > 0 ? `• Đã xoay <strong class="text-amber-500 font-bold">${rotatedCount}</strong> trang` : '';
+        summaryEl.innerHTML = rotatedCount > 0 ? `• Đã xoay <strong class="text-sky-500 font-bold">${rotatedCount}</strong> trang` : '';
       }
 
       const resetBtn = document.getElementById('btnResetRotations');
@@ -1006,6 +1073,7 @@ export function attachPdfConverterListeners(queueManager) {
         bindConfig(queueManager);
         refreshIcons(cfgEl);
       }
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1020,15 +1088,21 @@ export function attachPdfConverterListeners(queueManager) {
           const chkBox = card.querySelector('.split-chkbox');
           const statusText = card.querySelector('.split-status-text');
           if (isSelected) {
-            card.classList.add('border-amber-500', 'dark:border-amber-500/80', 'bg-amber-500/[0.04]', 'ring-2', 'ring-amber-500/20');
+            card.classList.add('border-amber-500', 'dark:border-amber-500', 'ring-2', 'ring-amber-500', 'bg-amber-500/5', 'dark:bg-amber-500/[0.08]');
             card.classList.remove('border-zinc-200/80', 'dark:border-white/[0.08]');
-            if (chkBox) chkBox.className = 'split-chkbox w-5 h-5 rounded-md flex items-center justify-center transition-colors bg-amber-500 text-zinc-950 shadow-2xs';
-            if (statusText) statusText.textContent = 'Đã chọn';
+            if (chkBox) chkBox.className = 'split-chkbox w-6 h-6 rounded-lg flex items-center justify-center transition-all bg-amber-500 text-zinc-950 shadow-sm font-bold scale-105';
+            if (statusText) {
+              statusText.textContent = 'Đã chọn';
+              statusText.className = 'split-status-text font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25';
+            }
           } else {
-            card.classList.remove('border-amber-500', 'dark:border-amber-500/80', 'bg-amber-500/[0.04]', 'ring-2', 'ring-amber-500/20');
+            card.classList.remove('border-amber-500', 'dark:border-amber-500', 'ring-2', 'ring-amber-500', 'bg-amber-500/5', 'dark:bg-amber-500/[0.08]');
             card.classList.add('border-zinc-200/80', 'dark:border-white/[0.08]');
-            if (chkBox) chkBox.className = 'split-chkbox w-5 h-5 rounded-md flex items-center justify-center transition-colors bg-white/80 dark:bg-black/50 border border-zinc-300 dark:border-white/20 text-transparent';
-            if (statusText) statusText.textContent = '';
+            if (chkBox) chkBox.className = 'split-chkbox w-6 h-6 rounded-lg flex items-center justify-center transition-all bg-white/90 dark:bg-black/60 border border-zinc-300 dark:border-white/20 text-transparent';
+            if (statusText) {
+              statusText.textContent = '';
+              statusText.className = 'split-status-text font-mono text-[10px] text-zinc-400';
+            }
           }
         });
 
@@ -1057,7 +1131,7 @@ export function attachPdfConverterListeners(queueManager) {
           if (!errP && rangeInput.parentElement) {
             errP = document.createElement('p');
             errP.id = 'pdfSplitRangeError';
-            errP.className = 'text-[11px] font-mono text-red-500 font-semibold';
+            errP.className = 'absolute -bottom-4 right-0 text-[10px] font-mono text-red-500 font-semibold truncate';
             rangeInput.parentElement.appendChild(errP);
           }
         }
@@ -1076,6 +1150,7 @@ export function attachPdfConverterListeners(queueManager) {
         bindConfig(queueManager);
         refreshIcons(cfgEl);
       }
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1090,6 +1165,7 @@ export function attachPdfConverterListeners(queueManager) {
         cfgEl.innerHTML = renderConfigPanel(state);
         bindConfig(queueManager);
       }
+      syncMobileStickyBar(queueManager, state);
       refreshIcons(dropEl, cfgEl);
       return;
     }
@@ -1101,6 +1177,7 @@ export function attachPdfConverterListeners(queueManager) {
         bindConfig(queueManager);
         refreshIcons(cfgEl);
       }
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1123,6 +1200,7 @@ export function attachPdfConverterListeners(queueManager) {
         refreshIcons(cfgEl);
       }
       setVisualWorkspaceProcessingState(true);
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1141,6 +1219,7 @@ export function attachPdfConverterListeners(queueManager) {
         refreshIcons(cfgEl);
       }
       setVisualWorkspaceProcessingState(false);
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1165,6 +1244,7 @@ export function attachPdfConverterListeners(queueManager) {
       }
       setVisualWorkspaceProcessingState(false);
       updatePdfHistoryDom(queueManager);
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1172,11 +1252,13 @@ export function attachPdfConverterListeners(queueManager) {
       closePdfPageLightbox();
       cleanupChainMenuListener();
       syncModeTabs(state.mode, state.isProcessing);
+      syncMobileStickyBar(queueManager, state);
     }
 
     if (eventType === 'files-change') {
       closePdfPageLightbox();
       cleanupChainMenuListener();
+      syncMobileStickyBar(queueManager, state);
     }
 
     if (eventType === 'thumbnail-page-change') {
@@ -1186,6 +1268,7 @@ export function attachPdfConverterListeners(queueManager) {
         bindDropzone(queueManager);
         refreshIcons(dropEl);
       }
+      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1203,6 +1286,7 @@ export function attachPdfConverterListeners(queueManager) {
       bindConfig(queueManager);
     }
     updatePdfHistoryDom(queueManager);
+    syncMobileStickyBar(queueManager, state);
     refreshIcons(document.getElementById('pdfDropzoneContainer'), cfgEl);
   });
 
