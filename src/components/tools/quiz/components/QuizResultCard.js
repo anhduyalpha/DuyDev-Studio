@@ -112,10 +112,6 @@ function renderCompletedState(state) {
               </span>
             </div>
           </div>
-          <button type="button" id="btnQuizReset" class="btn-quiz-reset text-xs sm:text-sm px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-600/30 border border-indigo-400/40 hover:border-indigo-300 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 active:scale-95">
-            <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
-            <span>Làm tài liệu khác</span>
-          </button>
         </div>
 
         <!-- Dual Cards Grid -->
@@ -180,7 +176,7 @@ function renderCompletedState(state) {
             <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
             <span class="font-mono text-[11px] text-zinc-400">Đã lưu trữ vào lịch sử bài tập</span>
           </div>
-          <button type="button" class="btn-quiz-reset w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30 border border-indigo-400/40 hover:border-indigo-300 transition-all cursor-pointer active:scale-98">
+          <button type="button" id="btnQuizReset" class="btn-quiz-reset w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30 border border-indigo-400/40 hover:border-indigo-300 transition-all cursor-pointer active:scale-98">
             <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
             <span>Làm tài liệu khác</span>
           </button>
