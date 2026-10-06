@@ -445,9 +445,9 @@ export function attachQuizListeners() {
       btnCancel.onclick = () => quizManager.cancelJob();
     }
 
-    const btnReset = document.getElementById('btnQuizReset');
-    if (btnReset) {
-      btnReset.onclick = () => {
+    const resetButtons = document.querySelectorAll('.btn-quiz-reset, #btnQuizReset');
+    resetButtons.forEach((btn) => {
+      btn.onclick = () => {
         const state = quizManager.getState();
         if (state.result) {
           quizManager.resetForNewDocument();
@@ -455,7 +455,7 @@ export function attachQuizListeners() {
           quizManager.clearError();
         }
       };
-    }
+    });
 
     // Preview buttons
     const previewBtns = document.querySelectorAll('.btn-quiz-preview');

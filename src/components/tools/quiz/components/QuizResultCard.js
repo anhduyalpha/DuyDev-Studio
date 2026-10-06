@@ -112,8 +112,8 @@ function renderCompletedState(state) {
               </span>
             </div>
           </div>
-          <button type="button" id="btnQuizReset" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition cursor-pointer shrink-0 flex items-center gap-1.5">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <button type="button" id="btnQuizReset" class="btn-quiz-reset text-xs sm:text-sm px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold shadow-md shadow-indigo-600/30 border border-indigo-400/40 hover:border-indigo-300 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 active:scale-95">
+            <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
             <span>Làm tài liệu khác</span>
           </button>
         </div>
@@ -173,6 +173,18 @@ function renderCompletedState(state) {
             </div>
           </div>
         </div>
+
+        <!-- Bottom Action Bar / Làm tài liệu khác -->
+        <div class="pt-3 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-xs text-zinc-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
+            <span class="font-mono text-[11px] text-zinc-400">Đã lưu trữ vào lịch sử bài tập</span>
+          </div>
+          <button type="button" class="btn-quiz-reset w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30 border border-indigo-400/40 hover:border-indigo-300 transition-all cursor-pointer active:scale-98">
+            <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
+            <span>Làm tài liệu khác</span>
+          </button>
+        </div>
       </div>
     </div>
   `.trim();
@@ -205,8 +217,9 @@ function renderErrorState(state) {
         <span>Lỗi tạo bài tập</span>
       </div>
       <p class="text-xs text-red-300/90 leading-relaxed font-medium">${escapeHtml(errorMsg)}</p>
-      <button type="button" id="btnQuizReset" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/30 transition cursor-pointer">
-        Thử lại
+      <button type="button" id="btnQuizReset" class="btn-quiz-reset text-xs px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-semibold border border-red-400/30 transition shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        <span>Thử lại</span>
       </button>
     </div>
   `.trim();
