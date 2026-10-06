@@ -187,4 +187,27 @@ Implemented the Page Neighborhood Scanner & Question Index layer running strictl
 - **Server Vitest Suite**: `cd server && npx vitest run` -> **544/544 PASS** (48/48 test files).
 - **Quiz Engine Test Suite**: `python -m unittest discover -s engines/quiz/tests` -> **229/229 PASS** (58.7s).
 
+---
+
+## Formula & Equation Integrity Verification Gate Summary
+
+### 1. Architectural Role & Execution Gate
+- **Pipeline Stage**: Positioned strictly at `JobStage.FORMULA_VERIFICATION` (68%–70%) **AFTER** normalization / Canonical IR packaging and **BEFORE** HTML compilation & PDF rendering.
+- **Source of Truth Hierarchy**:
+  1. Exact PyMuPDF text & character spans within question bounding boxes.
+  2. Original PDF vector objects.
+  3. Visual crop & Agnes vision diagnostic cross-check when confidence is low or text conflicts (`FORMULA_SOURCE_CONFLICT`).
+- **11-Dimension Verification Strategy**:
+  - Character, token, subscript, superscript, symbol, operator (inequalities, arrows), numeric (coefficients, powers), bracket/parentheses, unit, equation structure, and stoichiometry.
+- **Disciplined Targeted Safe Repair**:
+  - Repairs only the corrupted rich formula element via `TargetedFormulaRepairEngine`, re-verifying against the ground truth without regenerating entire questions or re-running documents.
+- **Post-Render Spot Check**:
+  - `PostRenderFormulaChecker` decoupled from source page indices, inspecting final compiled PDF pages for formula fidelity.
+
+### 2. Verification Results
+- **Formula Verification Suite**: `python -m unittest engines/quiz/tests/test_formula_verification.py` -> **23/23 PASS** (0.016s).
+- **Full Quiz Engine Test Discovery**: `python -m unittest discover -s engines/quiz/tests` -> **252/252 PASS** (58.3s, 0 failures, 0 errors).
+- **Server TypeScript Compilation**: `cd server && npx tsc --noEmit` -> **0 errors**.
+
+
 

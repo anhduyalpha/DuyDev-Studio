@@ -451,7 +451,15 @@ class QuizPipelineOrchestrator:
                     DiagnosticLayer.QA_FAILURE,
                     f"Kiểm định chất lượng xuất bản thất bại: {err_msg}",
                     stage=JobStage.FINALIZING.value,
-                    details={"issues": [i.model_dump() for i in gate_qa.issues]}
+                    details={"issues": [i.model_dump() for i in gate_qa.issues]},
+                )
+
+            # Optional Post-Render Formula Verification
+            if debai_pdf_path and os.path.isfile(debai_pdf_path):
+                FormulaVerificationGate.verify_post_render(
+                    pdf_path=debai_pdf_path,
+                    doc_ir=doc_ir,
+                    gate_result=formula_gate_res,
                 )
 
             total_latency_ms = (time.perf_counter() - start_total_time) * 1000
