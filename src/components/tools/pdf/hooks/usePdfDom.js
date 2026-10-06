@@ -21,8 +21,10 @@ import { pdfPageCache } from '../services/PdfPageCache.js';
 import { attachSwipeToDismiss, attachSlideToClear } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
 import { attachPdfClipboardPaste, pasteImageFromClipboard } from './usePdfPaste.js';
-import { getToolTheme } from '../services/pdfThemes.js';
+import { getToolTheme, PDF_THEMES } from '../services/pdfThemes.js';
 import { renderMobileStickyBar } from '../PdfWorkspace.js';
+
+const ALL_THEME_ICON_CLASSES = Object.values(PDF_THEMES).flatMap((t) => (t.iconActive || '').split(' ')).filter(Boolean);
 
 /**
  * Synchronizes active tab styling for PDF Studio modes with Semantic Tool Theming.
@@ -46,16 +48,17 @@ export function syncModeTabs(activeMode, isProcessing = false) {
     const icon = typeof btn.querySelector === 'function' ? btn.querySelector('svg, i') : null;
     if (icon && icon.classList) {
       icon.classList.remove(
-        'text-amber-400', 'dark:text-amber-500', 'dark:text-amber-400',
-        'text-violet-400', 'dark:text-violet-400',
-        'text-sky-400', 'dark:text-sky-400',
-        'text-indigo-400', 'dark:text-indigo-400',
-        'text-emerald-400', 'dark:text-emerald-400',
-        'text-rose-400', 'dark:text-rose-400',
-        'text-cyan-400', 'dark:text-cyan-400',
-        'text-yellow-400', 'dark:text-yellow-400',
-        'text-red-400', 'dark:text-red-400',
-        'text-blue-400', 'dark:text-blue-400'
+        ...ALL_THEME_ICON_CLASSES,
+        'text-amber-400', 'dark:text-amber-500', 'dark:text-amber-400', 'dark:text-amber-600',
+        'text-violet-400', 'dark:text-violet-400', 'dark:text-violet-600',
+        'text-sky-400', 'dark:text-sky-400', 'dark:text-sky-600',
+        'text-indigo-400', 'dark:text-indigo-400', 'dark:text-indigo-600',
+        'text-emerald-400', 'dark:text-emerald-400', 'dark:text-emerald-600',
+        'text-rose-400', 'dark:text-rose-400', 'dark:text-rose-600',
+        'text-cyan-400', 'dark:text-cyan-400', 'dark:text-cyan-600',
+        'text-yellow-400', 'dark:text-yellow-400', 'dark:text-yellow-600',
+        'text-red-400', 'dark:text-red-400', 'dark:text-red-600',
+        'text-blue-400', 'dark:text-blue-400', 'dark:text-blue-600'
       );
       if (isActive && theme.iconActive) {
         theme.iconActive.split(' ').forEach((cls) => cls && icon.classList.add(cls));
@@ -439,7 +442,8 @@ function bindDropzone(qm) {
     }
 
     rootEl.querySelectorAll('.btn-split-card').forEach((card) => {
-      card.onclick = () => {
+      card.onclick = (e) => {
+        if (e.target.closest('button')) return;
         const idx = card.dataset.splitIndex;
         if (idx !== undefined) qm.toggleSplitPage(idx);
       };
@@ -553,9 +557,11 @@ function bindDropzone(qm) {
     // Check if any canvas in the visible page range needs rendering
     const unrendered = rootEl.querySelector('#pdfOrganizeGrid canvas.pdf-thumb-canvas:not([data-rendered="true"])');
     if (unrendered || !qm.totalPages) {
+      const count = qm.totalPages || qm.files[0]?.pages || qm.organizeOrder.length || 0;
+      const order = qm.organizeOrder.length === count && count > 0 ? qm.organizeOrder : Array.from({ length: count }, (_, i) => i);
       const startIdx = (qm.thumbnailPage || 0) * 8;
-      const endIdx = Math.min(qm.organizeOrder.length, startIdx + 8);
-      const visibleSlots = qm.organizeOrder.slice(startIdx, endIdx);
+      const endIdx = Math.min(order.length, startIdx + 8);
+      const visibleSlots = order.length > 0 ? order.slice(startIdx, endIdx) : null;
       loadAndRenderOrganizeThumbnails(qm.files[0], (numPages) => qm.setTotalPages(numPages), qm.thumbnailPage, 8, visibleSlots);
     }
   }

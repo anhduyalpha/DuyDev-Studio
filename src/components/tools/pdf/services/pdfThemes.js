@@ -27,7 +27,7 @@ export const PDF_THEMES = {
     borderActive: 'border-amber-500 dark:border-amber-500/90',
     ringColor: 'ring-amber-500/30',
     ringTab: 'ring-amber-500/40',
-    iconActive: 'text-amber-400 dark:text-amber-400',
+    iconActive: 'text-amber-400 dark:text-amber-600',
     badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25',
     ctaGradient: 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-zinc-950 shadow-lg shadow-amber-500/25',
     ctaProgress: 'bg-amber-500/80 text-zinc-950'
@@ -44,7 +44,7 @@ export const PDF_THEMES = {
     borderActive: 'border-violet-500 dark:border-violet-500/90',
     ringColor: 'ring-violet-500/30',
     ringTab: 'ring-violet-500/40',
-    iconActive: 'text-violet-400 dark:text-violet-400',
+    iconActive: 'text-violet-400 dark:text-violet-600',
     badgeBg: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/25',
     ctaGradient: 'bg-gradient-to-r from-violet-600 via-violet-500 to-violet-600 hover:from-violet-500 hover:to-violet-400 text-white shadow-lg shadow-violet-500/25',
     ctaProgress: 'bg-violet-600/80 text-white'
@@ -61,7 +61,7 @@ export const PDF_THEMES = {
     borderActive: 'border-sky-500 dark:border-sky-500/90',
     ringColor: 'ring-sky-500/30',
     ringTab: 'ring-sky-500/40',
-    iconActive: 'text-sky-400 dark:text-sky-400',
+    iconActive: 'text-sky-400 dark:text-sky-600',
     badgeBg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/25',
     ctaGradient: 'bg-gradient-to-r from-sky-500 via-sky-400 to-sky-500 hover:from-sky-400 hover:to-sky-300 text-zinc-950 shadow-lg shadow-sky-500/25',
     ctaProgress: 'bg-sky-500/80 text-zinc-950'
@@ -78,7 +78,7 @@ export const PDF_THEMES = {
     borderActive: 'border-indigo-500 dark:border-indigo-500/90',
     ringColor: 'ring-indigo-500/30',
     ringTab: 'ring-indigo-500/40',
-    iconActive: 'text-indigo-400 dark:text-indigo-400',
+    iconActive: 'text-indigo-400 dark:text-indigo-600',
     badgeBg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25',
     ctaGradient: 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-lg shadow-indigo-500/25',
     ctaProgress: 'bg-indigo-600/80 text-white'
@@ -95,7 +95,7 @@ export const PDF_THEMES = {
     borderActive: 'border-emerald-500 dark:border-emerald-500/90',
     ringColor: 'ring-emerald-500/30',
     ringTab: 'ring-emerald-500/40',
-    iconActive: 'text-emerald-400 dark:text-emerald-400',
+    iconActive: 'text-emerald-400 dark:text-emerald-600',
     badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25',
     ctaGradient: 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/25',
     ctaProgress: 'bg-emerald-600/80 text-white'
@@ -112,7 +112,7 @@ export const PDF_THEMES = {
     borderActive: 'border-rose-500 dark:border-rose-500/90',
     ringColor: 'ring-rose-500/30',
     ringTab: 'ring-rose-500/40',
-    iconActive: 'text-rose-400 dark:text-rose-400',
+    iconActive: 'text-rose-400 dark:text-rose-600',
     badgeBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25',
     ctaGradient: 'bg-gradient-to-r from-rose-600 via-rose-500 to-rose-600 hover:from-rose-500 hover:to-rose-400 text-white shadow-lg shadow-rose-500/25',
     ctaProgress: 'bg-rose-600/80 text-white'
@@ -129,7 +129,7 @@ export const PDF_THEMES = {
     borderActive: 'border-cyan-500 dark:border-cyan-500/90',
     ringColor: 'ring-cyan-500/30',
     ringTab: 'ring-cyan-500/40',
-    iconActive: 'text-cyan-400 dark:text-cyan-400',
+    iconActive: 'text-cyan-400 dark:text-cyan-600',
     badgeBg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/25',
     ctaGradient: 'bg-gradient-to-r from-cyan-500 via-cyan-400 to-cyan-500 hover:from-cyan-400 hover:to-cyan-300 text-zinc-950 shadow-lg shadow-cyan-500/25',
     ctaProgress: 'bg-cyan-500/80 text-zinc-950'
@@ -146,7 +146,7 @@ export const PDF_THEMES = {
     borderActive: 'border-yellow-500 dark:border-yellow-500/90',
     ringColor: 'ring-yellow-500/30',
     ringTab: 'ring-yellow-500/40',
-    iconActive: 'text-yellow-400 dark:text-yellow-400',
+    iconActive: 'text-yellow-400 dark:text-yellow-600',
     badgeBg: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/25',
     ctaGradient: 'bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:to-yellow-300 text-zinc-950 shadow-lg shadow-yellow-500/25',
     ctaProgress: 'bg-yellow-500/80 text-zinc-950'
@@ -163,7 +163,7 @@ export const PDF_THEMES = {
     borderActive: 'border-red-500 dark:border-red-500/90',
     ringColor: 'ring-red-500/30',
     ringTab: 'ring-red-500/40',
-    iconActive: 'text-red-400 dark:text-red-400',
+    iconActive: 'text-red-400 dark:text-red-600',
     badgeBg: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/25',
     ctaGradient: 'bg-gradient-to-r from-red-600 via-red-500 to-red-600 hover:from-red-500 hover:to-red-400 text-white shadow-lg shadow-red-500/25',
     ctaProgress: 'bg-red-600/80 text-white'
@@ -180,7 +180,7 @@ export const PDF_THEMES = {
     borderActive: 'border-blue-500 dark:border-blue-500/90',
     ringColor: 'ring-blue-500/30',
     ringTab: 'ring-blue-500/40',
-    iconActive: 'text-blue-400 dark:text-blue-400',
+    iconActive: 'text-blue-400 dark:text-blue-600',
     badgeBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25',
     ctaGradient: 'bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/25',
     ctaProgress: 'bg-blue-600/80 text-white'

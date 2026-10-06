@@ -99,7 +99,7 @@ export function renderMobileStickyBar(queueState = {}) {
   }
 
   return `
-    <div id="pdfMobileStickyBar" class="sm:hidden fixed bottom-[74px] left-3 right-3 z-30 max-w-md mx-auto p-2.5 rounded-2xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-xl border border-zinc-200/90 dark:border-white/[0.12] shadow-2xl flex items-center justify-between gap-3 animate-fadeIn select-none">
+    <div id="pdfMobileStickyBar" class="md:hidden fixed bottom-[calc(74px+env(safe-area-inset-bottom,0px))] left-3 right-3 z-30 max-w-md mx-auto p-2.5 rounded-2xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-xl border border-zinc-200/90 dark:border-white/[0.12] shadow-2xl flex items-center justify-between gap-3 animate-fadeIn select-none">
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
         <div class="w-8 h-8 rounded-lg ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center shrink-0">
           <i data-lucide="${theme.icon}" class="w-4 h-4"></i>
@@ -128,12 +128,12 @@ export function renderMobileStickyBar(queueState = {}) {
 export function renderPdfConverter(queueState = {}) {
   const { error, result, mode = 'compress', files = [], isProcessing = false } = queueState;
   const hasFiles = files.length > 0;
-  const isVisualMode = (mode === 'rotate' || mode === 'split') && hasFiles;
+  const isVisualMode = (mode === 'rotate' || mode === 'split' || mode === 'organize') && hasFiles;
   const leftSpan = !hasFiles ? 'lg:col-span-12' : (isVisualMode ? 'lg:col-span-8' : 'lg:col-span-7');
   const rightSpan = !hasFiles ? 'hidden' : (isVisualMode ? 'lg:col-span-4' : 'lg:col-span-5');
 
   return `
-    <div id="pdfStudioWorkspaceRoot" class="space-y-6 animate-fadeIn">
+    <div id="pdfStudioWorkspaceRoot" class="space-y-6 animate-fadeIn pb-24 md:pb-6">
       <!-- Breadcrumb Navigation -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
