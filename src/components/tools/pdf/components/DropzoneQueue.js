@@ -175,7 +175,7 @@ export function renderDropzoneQueue(queueState = {}) {
   return `
     <div class="space-y-3.5">
       <!-- File Dropzone Card (Compact Vertical) -->
-      <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-zinc-300 dark:border-white/10 hover:${theme.borderActive} shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
+      <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
         <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" ${isMulti ? 'multiple' : ''}>
         
         <div class="w-10 h-10 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center mb-1.5 group-hover:scale-105 transition duration-200">
@@ -202,7 +202,7 @@ export function renderDropzoneQueue(queueState = {}) {
 
       ${!isImages ? `
         <!-- Separate Google Drive Link Card -->
-        <div id="pdfDriveImportCard" class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs space-y-2.5 transition-colors duration-200">
+        <div id="pdfDriveImportCard" class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs space-y-2.5 transition-colors duration-200">
           <div class="flex items-center text-xs px-0.5">
             <span class="font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <i data-lucide="link" class="w-3.5 h-3.5 ${theme.textSoft}"></i>
