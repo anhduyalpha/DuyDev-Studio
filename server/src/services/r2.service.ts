@@ -34,6 +34,7 @@ export interface R2Metrics {
 export class R2Service {
   private static s3Client: S3Client | null = null;
   private static cachedMetrics: R2Metrics | null = null;
+  private static activeIngestions: Map<string, Promise<{ byteCount: number; hashSha256: string }>> = new Map();
 
   static getMetricsFilePath(): string {
     const serverDataDir = path.resolve(process.cwd(), 'server', 'data');
@@ -249,6 +250,55 @@ export class R2Service {
       await this.deleteTransitObject(fileKey).catch(() => {});
       throw err;
     }
+  }
+
+  static startAsyncIngestion(
+    fileId: string,
+    fileKey: string,
+    targetPath: string
+  ): Promise<{ byteCount: number; hashSha256: string }> {
+    if (this.activeIngestions.has(fileId)) {
+      return this.activeIngestions.get(fileId)!;
+    }
+
+    const ingestionPromise = (async () => {
+      try {
+        const result = await this.ingestAndPurgeTransitObject(fileKey, targetPath);
+        try {
+          const { prisma } = await import('../lib/prisma.js');
+          await prisma.fileRecord.update({
+            where: { id: fileId },
+            data: {
+              sizeBytes: BigInt(result.byteCount),
+              hashSha256: result.hashSha256
+            }
+          });
+        } catch (dbErr) {
+          logger.warn({ fileId, dbErr }, 'Could not update FileRecord after async R2 ingestion');
+        }
+        return result;
+      } catch (err) {
+        logger.error({ fileId, fileKey, err }, 'Async R2 ingestion failed');
+        throw err;
+      }
+    })().finally(() => {
+      this.activeIngestions.delete(fileId);
+    });
+
+    this.activeIngestions.set(fileId, ingestionPromise);
+    return ingestionPromise;
+  }
+
+  static isIngesting(fileId: string): boolean {
+    return this.activeIngestions.has(fileId);
+  }
+
+  static async waitForIngestion(fileId: string): Promise<{ byteCount: number; hashSha256: string }> {
+    const promise = this.activeIngestions.get(fileId);
+    if (!promise) {
+      return { byteCount: 0, hashSha256: '' };
+    }
+    return await promise;
   }
 
   static async deleteTransitObject(fileKey: string): Promise<boolean> {

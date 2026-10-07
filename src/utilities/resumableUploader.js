@@ -652,43 +652,60 @@ export async function smartUploadFile(file, options = {}) {
     }
   }
 
-  // 1. Presign query: check if R2 Transit Pipe is available for this request
-  if (!options.uploadUrl && !options.forceDirect) {
-    try {
-      const presignRes = await fetch(resolveApiUrl('/api/v1/files/presign'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers || {})
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileSize: file.size,
-          mimeType: file.type || 'application/octet-stream',
-          purpose: options.purpose || 'general',
-          targetDir: options.targetDir || undefined
-        }),
-        signal
-      });
+  // Fast-path: Files <= 50MB and not forced R2 skip presign and stream directly to server (<1s!)
+  const isFastPath = file.size <= 50 * 1024 * 1024 && !options.forceR2;
 
-      if (presignRes.ok) {
-        const presignJson = await presignRes.json();
-        if (presignJson.success && presignJson.data?.mode === 'r2') {
-          try {
-            return await uploadViaR2Transit(file, presignJson.data, options);
-          } catch (r2Err) {
-            if (signal?.aborted) throw r2Err;
-            console.warn('[SmartUpload] R2 transit failed, falling back to direct upload:', r2Err);
-            // Fall through gracefully to direct upload
-          }
-        } else if (presignJson.success && presignJson.data?.uploadUrl) {
-          options.uploadUrl = presignJson.data.uploadUrl;
+  // 1. Presign query: check if R2 Transit Pipe is available for this request (> 50MB or forceR2)
+  if (!isFastPath && !options.uploadUrl && !options.forceDirect) {
+    if (options.presignData) {
+      if (options.presignData.mode === 'r2') {
+        try {
+          return await uploadViaR2Transit(file, options.presignData, options);
+        } catch (r2Err) {
+          if (signal?.aborted) throw r2Err;
+          console.warn('[SmartUpload] R2 transit failed, falling back to direct upload:', r2Err);
         }
+      } else if (options.presignData.uploadUrl) {
+        options.uploadUrl = options.presignData.uploadUrl;
       }
-    } catch (presignErr) {
-      if (signal?.aborted) throw presignErr;
-      console.warn('[SmartUpload] Presign request failed, falling back to direct upload:', presignErr);
-      // Fall through gracefully to direct upload
+    } else {
+      try {
+        const presignRes = await fetch(resolveApiUrl('/api/v1/files/presign'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type || 'application/octet-stream',
+            purpose: options.purpose || 'general',
+            targetDir: options.targetDir || undefined,
+            forceR2: options.forceR2 || false
+          }),
+          signal
+        });
+
+        if (presignRes.ok) {
+          const presignJson = await presignRes.json();
+          if (presignJson.success && presignJson.data?.mode === 'r2') {
+            try {
+              return await uploadViaR2Transit(file, presignJson.data, options);
+            } catch (r2Err) {
+              if (signal?.aborted) throw r2Err;
+              console.warn('[SmartUpload] R2 transit failed, falling back to direct upload:', r2Err);
+              // Fall through gracefully to direct upload
+            }
+          } else if (presignJson.success && presignJson.data?.uploadUrl) {
+            options.uploadUrl = presignJson.data.uploadUrl;
+          }
+        }
+      } catch (presignErr) {
+        if (signal?.aborted) throw presignErr;
+        console.warn('[SmartUpload] Presign request failed, falling back to direct upload:', presignErr);
+        // Fall through gracefully to direct upload
+      }
     }
   }
 
@@ -841,4 +858,43 @@ export async function poolAll(items, workerFn, maxConcurrency = 3) {
 
   await Promise.all(workers);
   return results;
+}
+
+/**
+ * Batch presigns multiple files in 1 roundtrip HTTP request.
+ * Automatically classifies each item into direct stream or R2 edge presign.
+ */
+export async function batchPresignFiles(files, options = {}) {
+  if (!files || files.length === 0) return [];
+
+  const payloadFiles = files.map((f) => ({
+    fileName: f.name || f.fileName || 'file.bin',
+    fileSize: f.size !== undefined ? f.size : (f.fileSize || 0),
+    mimeType: f.type || f.mimeType || 'application/octet-stream',
+    purpose: options.purpose || f.purpose || 'pdf-convert',
+    targetDir: options.targetDir || f.targetDir || undefined,
+    forceR2: options.forceR2 || f.forceR2 || false
+  }));
+
+  const res = await fetch(resolveApiUrl('/api/v1/files/presign-batch'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    },
+    body: JSON.stringify({ files: payloadFiles }),
+    signal: options.signal || options.abortController?.signal
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => null);
+    throw new Error(errJson?.error?.message || errJson?.message || `Lỗi gom yêu cầu presign (${res.status})`);
+  }
+
+  const json = await res.json();
+  if (!json.success || !Array.isArray(json.data)) {
+    throw new Error('Dữ liệu batch presign không hợp lệ');
+  }
+
+  return json.data;
 }

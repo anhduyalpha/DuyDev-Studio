@@ -22,7 +22,6 @@ import { attachSwipeToDismiss, attachSlideToClear } from '../../../../utilities/
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
 import { attachPdfClipboardPaste, pasteImageFromClipboard } from './usePdfPaste.js';
 import { getToolTheme, PDF_THEMES } from '../services/pdfThemes.js';
-import { renderMobileStickyBar } from '../PdfWorkspace.js';
 
 const ALL_THEME_ICON_CLASSES = Object.values(PDF_THEMES).flatMap((t) => (t.iconActive || '').split(' ')).filter(Boolean);
 
@@ -124,37 +123,6 @@ function setVisualWorkspaceProcessingState(isProcessing) {
       el.removeAttribute('aria-disabled');
     }
   });
-
-  const btnStartMobile = document.getElementById('btnStartProcessMobile');
-  if (btnStartMobile) {
-    btnStartMobile.disabled = isProcessing;
-    if (isProcessing) {
-      btnStartMobile.classList.add('opacity-40', 'cursor-not-allowed');
-    } else {
-      btnStartMobile.classList.remove('opacity-40', 'cursor-not-allowed');
-    }
-  }
-}
-
-/**
- * Synchronizes mobile sticky bottom action bar state and bindings.
- */
-function syncMobileStickyBar(qm, state = null) {
-  const container = document.getElementById('pdfMobileStickyContainer');
-  if (!container) return;
-  const currState = state || qm.getState();
-  if (currState.files && currState.files.length > 0) {
-    container.innerHTML = renderMobileStickyBar(currState);
-    const btnMobile = container.querySelector('#btnStartProcessMobile');
-    if (btnMobile) {
-      btnMobile.onclick = () => {
-        qm.runProcess();
-      };
-    }
-    if (window.lucide) window.lucide.createIcons({ root: container });
-  } else {
-    container.innerHTML = '';
-  }
 }
 
 /**
@@ -923,15 +891,6 @@ function bindConfig(qm) {
       qm.cancelTask('pdf-studio-job');
     };
   }
-
-  // Bind mobile sticky action CTA
-  const stickyContainer = document.getElementById('pdfMobileStickyContainer');
-  const btnStartMobile = stickyContainer?.querySelector('#btnStartProcessMobile');
-  if (btnStartMobile) {
-    btnStartMobile.onclick = () => {
-      qm.runProcess();
-    };
-  }
 }
 
 /**
@@ -1076,7 +1035,6 @@ export function attachPdfConverterListeners(queueManager) {
   bindError(queueManager);
   bindPdfHistory(queueManager);
   const detachPaste = attachPdfClipboardPaste(queueManager);
-  syncMobileStickyBar(queueManager);
 
   const unsubscribe = queueManager.subscribe((state, eventType) => {
     if (eventType === 'file-loading') {
@@ -1099,14 +1057,6 @@ export function attachPdfConverterListeners(queueManager) {
         `;
         if (window.lucide) window.lucide.createIcons({ root: btnStart });
       }
-      const btnStartMobile = document.getElementById('btnStartProcessMobile');
-      if (btnStartMobile && state.isProcessing) {
-        btnStartMobile.innerHTML = `
-          <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-current"></i>
-          <span>${pct}%</span>
-        `;
-        if (window.lucide) window.lucide.createIcons({ root: btnStartMobile });
-      }
       return;
     }
 
@@ -1114,7 +1064,6 @@ export function attachPdfConverterListeners(queueManager) {
       document.querySelectorAll('.badge-page-count').forEach((el) => {
         el.textContent = state.totalPages > 0 ? `${state.totalPages} trang` : '';
       });
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1172,7 +1121,6 @@ export function attachPdfConverterListeners(queueManager) {
         bindConfig(queueManager);
         refreshIcons(cfgEl);
       }
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1249,7 +1197,6 @@ export function attachPdfConverterListeners(queueManager) {
         bindConfig(queueManager);
         refreshIcons(cfgEl);
       }
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1264,7 +1211,6 @@ export function attachPdfConverterListeners(queueManager) {
         cfgEl.innerHTML = renderConfigPanel(state);
         bindConfig(queueManager);
       }
-      syncMobileStickyBar(queueManager, state);
       refreshIcons(dropEl, cfgEl);
       return;
     }
@@ -1276,7 +1222,6 @@ export function attachPdfConverterListeners(queueManager) {
         bindConfig(queueManager);
         refreshIcons(cfgEl);
       }
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1299,7 +1244,6 @@ export function attachPdfConverterListeners(queueManager) {
         refreshIcons(cfgEl);
       }
       setVisualWorkspaceProcessingState(true);
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1318,7 +1262,6 @@ export function attachPdfConverterListeners(queueManager) {
         refreshIcons(cfgEl);
       }
       setVisualWorkspaceProcessingState(false);
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1343,7 +1286,6 @@ export function attachPdfConverterListeners(queueManager) {
       }
       setVisualWorkspaceProcessingState(false);
       updatePdfHistoryDom(queueManager);
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1351,13 +1293,11 @@ export function attachPdfConverterListeners(queueManager) {
       closePdfPageLightbox();
       cleanupChainMenuListener();
       syncModeTabs(state.mode, state.isProcessing);
-      syncMobileStickyBar(queueManager, state);
     }
 
     if (eventType === 'files-change') {
       closePdfPageLightbox();
       cleanupChainMenuListener();
-      syncMobileStickyBar(queueManager, state);
     }
 
     if (eventType === 'thumbnail-page-change') {
@@ -1367,7 +1307,6 @@ export function attachPdfConverterListeners(queueManager) {
         bindDropzone(queueManager);
         refreshIcons(dropEl);
       }
-      syncMobileStickyBar(queueManager, state);
       return;
     }
 
@@ -1385,7 +1324,6 @@ export function attachPdfConverterListeners(queueManager) {
       bindConfig(queueManager);
     }
     updatePdfHistoryDom(queueManager);
-    syncMobileStickyBar(queueManager, state);
     refreshIcons(document.getElementById('pdfDropzoneContainer'), cfgEl);
   });
 

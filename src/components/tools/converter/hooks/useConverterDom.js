@@ -101,7 +101,7 @@ export function updateBatchButton(manager) {
 
   const isBusy = manager.isConverting;
   const uploadingItems = manager.items.filter(
-    (item) => item.uploadStatus === 'uploading' || item.status === 'uploading'
+    (item) => item.uploadStatus === 'uploading' || item.status === 'uploading' || (item.uploadStatus === 'idle' && !item.fileId && item.file)
   );
   const isUploading = uploadingItems.length > 0;
 
@@ -410,7 +410,7 @@ export function attachConverterListeners(manager) {
 
       if (e.target.closest('#btnClearConverterQueue')) {
         const isUploading = manager.items?.some(
-          (it) => it.uploadStatus === 'uploading' || it.status === 'uploading'
+          (it) => it.uploadStatus === 'uploading' || it.status === 'uploading' || (it.uploadStatus === 'idle' && !it.fileId && it.file)
         );
         if (isUploading) {
           showToast('Đang tải tệp lên máy chủ, vui lòng đợi hoàn tất!', 'warning');

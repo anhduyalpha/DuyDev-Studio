@@ -16,7 +16,7 @@ import { BadRequestError, FileSizeLimitError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { R2Service } from '../../services/r2.service.js';
 import { DriveService } from '../../services/drive.service.js';
-import { presignTransitBodySchema, completeTransitBodySchema } from '../../schemas/files.schema.js';
+import { presignTransitBodySchema, completeTransitBodySchema, batchPresignBodySchema } from '../../schemas/files.schema.js';
 
 export function isLanRequest(request: FastifyRequest): boolean {
   // If CF-Connecting-IP header is present, request entered via Cloudflare Edge (WAN)
@@ -51,8 +51,8 @@ export function isLanRequest(request: FastifyRequest): boolean {
 
 export async function presignTransitUpload(request: FastifyRequest, reply: FastifyReply) {
   const body = presignTransitBodySchema.parse(request.body);
-  const { fileName, fileSize, mimeType, purpose } = body;
-  const isForceR2 = (request.query as Record<string, unknown>)?.forceR2 === 'true';
+  const { fileName, fileSize, mimeType, purpose, forceR2 } = body;
+  const isForceR2 = (request.query as Record<string, unknown>)?.forceR2 === 'true' || forceR2 === true;
 
   if (fileSize && fileSize > limits.maxUploadSizeBytes) {
     throw new FileSizeLimitError(`File exceeds maximum size of ${env.MAX_UPLOAD_SIZE_MB}MB`);
@@ -62,7 +62,19 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
     ? `/api/v1/storage/upload?path=${encodeURIComponent(body.targetDir || '/')}`
     : `/api/v1/files/upload?purpose=${encodeURIComponent(purpose || 'pdf-convert')}`;
 
-  // 1. LAN Auto-Bypass: If request is within local network, return direct upload endpoint to save R2 quota
+  // 1. Fast-Path: If fileSize <= 50MB and not forced R2, route to direct upload (<1s!)
+  if (!isForceR2 && fileSize && fileSize <= 50 * 1024 * 1024) {
+    logger.debug({ fileSize, fileName }, 'Fast-Path (<= 50MB): routing to direct upload');
+    return reply.status(200).send({
+      success: true,
+      data: {
+        mode: 'direct',
+        uploadUrl
+      }
+    });
+  }
+
+  // 2. LAN Auto-Bypass: If request is within local network, return direct upload endpoint to save R2 quota
   if (!isForceR2 && isLanRequest(request)) {
     logger.debug({ ip: request.ip, host: request.headers.host }, 'LAN detected: routing to direct upload');
     return reply.status(200).send({
@@ -74,7 +86,7 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
     });
   }
 
-  // 2. Check if R2 is enabled and circuit breaker quota has not tripped
+  // 3. Check if R2 is enabled and circuit breaker quota has not tripped
   if (!R2Service.isAvailable()) {
     logger.info('R2 unavailable or quota exceeded: falling back to direct upload');
     return reply.status(200).send({
@@ -86,7 +98,7 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
     });
   }
 
-  // 3. Generate Cloudflare R2 Presigned Upload URL
+  // 4. Generate Cloudflare R2 Presigned Upload URL
   const { presignedUrl, fileKey, fileId, sanitizedName } = await R2Service.generatePresignedUploadUrl(
     fileName,
     mimeType || 'application/octet-stream',
@@ -102,6 +114,76 @@ export async function presignTransitUpload(request: FastifyRequest, reply: Fasti
       fileId,
       sanitizedName
     }
+  });
+}
+
+export async function batchPresignTransitUpload(request: FastifyRequest, reply: FastifyReply) {
+  const body = batchPresignBodySchema.parse(request.body);
+  const isQueryForceR2 = (request.query as Record<string, unknown>)?.forceR2 === 'true';
+  const isLan = isLanRequest(request);
+  const r2Available = R2Service.isAvailable();
+
+  const items = await Promise.all(
+    body.files.map(async (fileItem) => {
+      const { fileName, fileSize, mimeType, purpose, targetDir, forceR2 } = fileItem;
+      const isForceR2 = isQueryForceR2 || forceR2 === true;
+
+      if (fileSize && fileSize > limits.maxUploadSizeBytes) {
+        throw new FileSizeLimitError(`File "${fileName}" exceeds maximum size of ${env.MAX_UPLOAD_SIZE_MB}MB`);
+      }
+
+      const uploadUrl = purpose === 'storage-drive'
+        ? `/api/v1/storage/upload?path=${encodeURIComponent(targetDir || '/')}`
+        : `/api/v1/files/upload?purpose=${encodeURIComponent(purpose || 'pdf-convert')}`;
+
+      // 1. Fast-Path (<= 50MB) and not forced R2
+      if (!isForceR2 && fileSize && fileSize <= 50 * 1024 * 1024) {
+        return {
+          fileName,
+          mode: 'direct' as const,
+          uploadUrl
+        };
+      }
+
+      // 2. LAN auto-bypass
+      if (!isForceR2 && isLan) {
+        return {
+          fileName,
+          mode: 'direct' as const,
+          uploadUrl
+        };
+      }
+
+      // 3. R2 availability
+      if (!r2Available) {
+        return {
+          fileName,
+          mode: 'direct' as const,
+          uploadUrl
+        };
+      }
+
+      // 4. R2 presigned url
+      const { presignedUrl, fileKey, fileId, sanitizedName } = await R2Service.generatePresignedUploadUrl(
+        fileName,
+        mimeType || 'application/octet-stream',
+        fileSize
+      );
+
+      return {
+        fileName,
+        mode: 'r2' as const,
+        presignedUrl,
+        fileKey,
+        fileId,
+        sanitizedName
+      };
+    })
+  );
+
+  return reply.status(200).send({
+    success: true,
+    data: items
   });
 }
 
@@ -126,47 +208,82 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
   const ext = path.extname(safeOriginalName) || '.bin';
   const targetPath = StorageManager.getUploadPath(fileId, ext);
 
-  // Ingest stream from R2 directly to disk and delete from R2 upon success
-  const { byteCount, hashSha256 } = await R2Service.ingestAndPurgeTransitObject(fileKey, targetPath);
+  // For processing tasks (pdf-convert, universal-converter, media-transcode, archive-inspect):
+  // Non-blocking async ingestion stream from R2 to disk.
+  // Immediate HTTP 200 returned in <50ms without blocking client!
+  if (purpose !== 'storage-drive') {
+    R2Service.startAsyncIngestion(fileId, fileKey, targetPath);
 
-  const expiresAt = computeExpiresAt();
+    const expiresAt = computeExpiresAt();
+    const fileRecord = await prisma.fileRecord.create({
+      data: {
+        id: fileId,
+        purpose: 'UPLOAD',
+        originalName: safeOriginalName,
+        storagePath: targetPath,
+        mimeType: mimeType || 'application/octet-stream',
+        sizeBytes: BigInt(sizeBytes || 0),
+        hashSha256: '',
+        isPurged: false,
+        expiresAt
+      }
+    });
+
+    logger.info(
+      { fileId: fileRecord.id, originalName: fileRecord.originalName, purpose },
+      'R2 transit upload initiated async ingestion; returned instant response'
+    );
+
+    return reply.status(200).send({
+      success: true,
+      data: {
+        fileId: fileRecord.id,
+        originalName: fileRecord.originalName,
+        mimeType: fileRecord.mimeType,
+        sizeBytes: Number(fileRecord.sizeBytes),
+        hashSha256: fileRecord.hashSha256,
+        expiresAt: fileRecord.expiresAt.toISOString(),
+        status: 'ingesting'
+      }
+    });
+  }
+
+  // For storage-drive: synchronous ingestion before copying into user's drive directory
+  const { byteCount, hashSha256 } = await R2Service.ingestAndPurgeTransitObject(fileKey, targetPath);
 
   const fileRecord = await prisma.fileRecord.create({
     data: {
       id: fileId,
-      purpose: purpose === 'storage-drive' ? 'DRIVE' : 'UPLOAD',
+      purpose: 'DRIVE',
       originalName: safeOriginalName,
       storagePath: targetPath,
       mimeType: mimeType || 'application/octet-stream',
       sizeBytes: BigInt(byteCount),
       hashSha256,
       isPurged: false,
-      expiresAt: purpose === 'storage-drive' ? new Date('2099-12-31T23:59:59.999Z') : expiresAt
+      expiresAt: new Date('2099-12-31T23:59:59.999Z')
     }
   });
 
-  let driveItemPath: string | undefined;
-  if (purpose === 'storage-drive') {
-    const targetDir = body.targetDir || '/';
-    const targetDiskDir = DriveService.getDiskPath(targetDir);
-    await fsPromises.mkdir(targetDiskDir, { recursive: true });
+  const targetDir = body.targetDir || '/';
+  const targetDiskDir = DriveService.getDiskPath(targetDir);
+  await fsPromises.mkdir(targetDiskDir, { recursive: true });
 
-    let finalName = safeOriginalName;
-    let targetFilePath = path.join(targetDiskDir, finalName);
-    let counter = 1;
-    const base = path.basename(safeOriginalName, ext);
-    while (fs.existsSync(targetFilePath)) {
-      finalName = `${base} (${counter})${ext}`;
-      targetFilePath = path.join(targetDiskDir, finalName);
-      counter++;
-    }
-    await fsPromises.copyFile(targetPath, targetFilePath);
-    driveItemPath = targetDir === '/' ? `/${finalName}` : `${DriveService.normalizeRelativePath(targetDir)}/${finalName}`;
+  let finalName = safeOriginalName;
+  let targetFilePath = path.join(targetDiskDir, finalName);
+  let counter = 1;
+  const base = path.basename(safeOriginalName, ext);
+  while (fs.existsSync(targetFilePath)) {
+    finalName = `${base} (${counter})${ext}`;
+    targetFilePath = path.join(targetDiskDir, finalName);
+    counter++;
   }
+  await fsPromises.copyFile(targetPath, targetFilePath);
+  const driveItemPath = targetDir === '/' ? `/${finalName}` : `${DriveService.normalizeRelativePath(targetDir)}/${finalName}`;
 
   logger.info(
     { fileId: fileRecord.id, originalName: fileRecord.originalName, sizeBytes: byteCount, purpose, driveItemPath },
-    'R2 transit upload ingested and purged successfully'
+    'R2 transit drive upload ingested and placed successfully'
   );
 
   return reply.status(201).send({
@@ -179,9 +296,7 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
       hashSha256: fileRecord.hashSha256,
       expiresAt: fileRecord.expiresAt.toISOString(),
       driveItemPath,
-      uploaded: driveItemPath
-        ? [{ name: path.basename(driveItemPath), sizeBytes: Number(fileRecord.sizeBytes), path: driveItemPath }]
-        : undefined
+      uploaded: [{ name: path.basename(driveItemPath), sizeBytes: Number(fileRecord.sizeBytes), path: driveItemPath }]
     }
   });
 }

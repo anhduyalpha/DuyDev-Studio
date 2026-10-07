@@ -1,96 +1,151 @@
-# Agent Instructions & Project Context for DuyDev Studio (DS)
+# AI Agent Guidelines & Project Map (AGENTS.md)
 
-Welcome, AI Coding Agent! This file defines the operational constraints, system architecture, and quality standards for working on **DuyDev Studio (DS)**.
-
-> **PRIMARY ARCHITECTURE SPECIFICATION**:  
-> Always read [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) and [docs/BACKEND_SPEC.md](docs/BACKEND_SPEC.md) before designing or writing code.
+> Compact operational reference for AI coding agents working on **DuyDev Studio (DS)**.  
+> Detailed guides: [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [DATA_FLOW.md](docs/DATA_FLOW.md) · [DEVELOPMENT.md](docs/DEVELOPMENT.md) · [GOTCHAS.md](docs/GOTCHAS.md) · [DECISIONS.md](docs/DECISIONS.md).
 
 ---
 
-## 1. What This Project Is
-**DuyDev Studio (DS)** is a Personal Self-Hosted Utility Hub & File Processing Suite designed as an offline-first **Progressive Web App (PWA)** running locally, on a personal homeserver (`192.168.2.171`), or public via Cloudflare Tunnel (`duydevstudio.alphadaniel.io.vn`).
-It handles:
-- PDF Manipulation (Compression, DOCX conversion, merge/split via Python PyMuPDF & LibreOffice).
-- Zero-Extraction Archive Inspection (.zip, .rar, .7z via Central Directory seeking).
-- Dynamic QR Code Generation (Short URL redirect `/q/:slug`, scan analytics, VietQR EMVCo, `qr-code-styling`).
-- Universal File Conversion (65+ formats leveraging pre-pulled open-source engines in `engines/converter/`).
-- Hash Checksum & Real-Time System Hardware Telemetry.
+## Project
+
+- **What it is**: Personal Self-Hosted Progressive Web App (PWA) Utility Hub & File Processing Suite.
+- **Where it runs**: Localhost, Homeserver LAN (`192.168.2.171:3000`), and Cloudflare Tunnel (`duydevstudio.alphadaniel.io.vn`).
+- **Core Stack**:
+  - *Frontend*: Zero-build Vanilla ES Modules, Tailwind CSS (CDN), Lucide Icons, PDF.js, SheetJS.
+  - *Backend*: Fastify v4 + TypeScript (strict mode), Prisma ORM, BullMQ v5 + Redis 7.2.
+  - *Database*: SQLite WAL mode (`server/dev.db`).
+  - *Processing Engines*: Python 3 (PyMuPDF, pdf2docx, Pillow), LibreOffice headless, FFmpeg CLI, Chromium CDP.
 
 ---
 
-## 2. Core Agent Constraints (MANDATORY RULES)
+## Commands
 
-### Rule 0: Code Intelligence Mandate — CodeGraph First
-- **Zero-Keyword Trigger**: Prioritize CodeGraph (`codegraph_explore` / `codegraph explore`) as the FIRST and PRIMARY step for symbols, architecture, function flows, and tracing dependencies even if "codegraph" is not in the prompt.
-- **Pass projectPath (Issue #501 fix)**: Always supply `projectPath: "C:\\Users\\AnhDuy\\Code\\Project\\DD Studio"` when calling `codegraph_explore`.
-- **Pragmatic Fallback**: Seamlessly fall back to `ripgrep` (`rg`) / `grep` / `view_file` for raw text search, error logs, UI strings, and non-code configs (`.env`, `.json`, `.yaml`).
-- **Smart Affected Testing**: Use `git diff --name-only | codegraph affected -p "C:\\Users\\AnhDuy\\Code\\Project\\DD Studio" --stdin -q` before running test suites.
+### Verified Working Commands
 
-### Rule 1: Single Responsibility & Cohesive Modularity (Anti-Monolith & Anti-Fragmentation)
-- **Strict Separation of Concerns**:
-  - **Presentation Layer (`components/`)**: Focus exclusively on UI layout, markup rendering, and user event dispatching. Do not embed heavy business logic, raw network polling, or direct database access.
-  - **Logic & State Layer (`hooks/`, `controllers/`)**: Encapsulate state machines, reactive state transitions, input validation, and async orchestration.
-  - **Data & I/O Layer (`services/`, `storage/`, `workers/`)**: Manage communication with backend APIs, database models, file streams, and system engines.
-- **Balanced Component Sizing (Avoid Both Extremes)**:
-  - **NEVER** write monolithic "God Files" (500+ lines blending multiple unrelated responsibilities).
-  - **NEVER** practice "Code Golfing" or "Micro-Fragmentation" (e.g., cramming multiple statements into one line, nesting cryptic ternaries, stripping JSDoc/comments, or artificially splitting cohesive logic just to satisfy an arbitrary line limit).
-  - File size must naturally reflect domain responsibility: high cohesion and single purpose. Readability, maintainability, and clean boundaries always take precedence over mechanical line counting.
-- **Resource Lifecycle & Defensive Execution**:
-  - Always clean up asynchronous resources: close `EventSource` connections, abort pending `fetch` calls via `AbortController`, clear interval/timeout timers, and revoke `ObjectURL`s upon component unmount or route change.
-  - Explicit error handling: Every async boundary must have graceful error recovery with user-facing toasts or error banners. Never swallow exceptions with empty `catch {}`.
-  - Concurrency safety: Protect high-frequency inputs (live search, live hashing) against race conditions using monotonic sequence tokens, debouncing, or abort signals.
+| Task | Command |
+|---|---|
+| **Install backend** | `cd server && npm install` |
+| **Prisma generate** | `cd server && npx prisma generate` |
+| **Prisma push** | `cd server && npx prisma db push` |
+| **Development** | `npm run dev` *(or `cd server && npx tsx watch src/app.ts`)* |
+| **Build backend** | `cd server && npm run build` *(runs `tsc` → `dist/`)* |
+| **Typecheck** | `cd server && npx tsc --noEmit` **(MUST pass with 0 errors)** |
+| **Run tests** | `cd server && npx vitest run` |
+| **Run single test** | `cd server && npx vitest run tests/unit/pdf.test.ts` |
+| **Python syntax check** | `python -m py_compile engines/converter/convert_cli.py` |
+| **Deploy (production)** | `.\scripts\deploy-prod.ps1` *(or SSH: `ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio/scripts/deploy-prod.sh"`)* |
 
-### Rule 2: Polyglot Reuse — Do NOT Re-Invent Engines
-- Do NOT code conversion logic from scratch in JavaScript if specialized tools exist.
-- We already pulled battle-tested converter engines into `engines/converter/`:
-  - `engines/converter/fastapi_app/`: Image, video, audio, office, pdf converters.
-  - `engines/converter/file_conversor_core/`: LibreOffice, FFmpeg, pdf2docx, PyMuPDF wrappers.
-- The Node.js Fastify backend acts as the Gateway & Orchestrator. It delegates heavy processing to these specialized engines via BullMQ and child processes.
+### Forbidden / Do NOT Use Commands
 
-### Rule 3: UI Production Minimalism (Zero Fluff & Zero Marketing Annotations)
-- Strictly follow `.agents/rules/ui-standards.md` and `docs/knowledge-base/KI-CON-001-ui-production-minimalism.md`.
-- **FORBIDDEN**: Marketing copy, tutorial helper lines under buttons (`"Sẵn sàng in ấn..."`), parenthetical explanations in options (`"PNG (Ảnh số)"`, `"WPA (Phổ biến)"`).
-- **REQUIRED**: High information density, developer utility aesthetic (Linear/Vercel style), concise badges, and clean typography (`Geist` + `JetBrains Mono`).
-
-### Rule 4: Personal Unthrottled Server
-- This is a personal self-hosted system on LAN (`192.168.2.171`) and Cloudflare (`duydevstudio.alphadaniel.io.vn`).
-- Do NOT introduce artificial rate-limiting, captcha, or tight file size caps.
-- Bind server to `0.0.0.0` and allow all local network and Cloudflare origins.
-
-### Rule 5: Direct Production Workflow (Main Branch, Port 3000 / HTTPS)
-- **Local Machine (`main` branch)**:
-  - All coding, debugging, testing, and commits are done directly on the `main` branch.
-  - Branch `dev` has been deleted per user mandate.
-- **Production Deployment & Verification (`main` branch, Port 3000 / HTTPS)**:
-  - Push to `origin/main` and deploy directly to production:
-    ```powershell
-    .\scripts\deploy-prod.ps1
-    # or via SSH:
-    ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio/scripts/deploy-prod.sh"
-    ```
-  - Production runs at `/home/anhduy/dd-studio` on port 3000 (`dd-studio.service`), serving `https://duydevstudio.alphadaniel.io.vn`.
+- **DO NOT run `node server.cjs`**: `server.cjs` is an obsolete prototype mock server with fake timers.
+- **DO NOT run `npm start` in root without building first**: Runs `node dist/app.js` which requires prior `npm run build`.
+- **DO NOT run `vite build` or `webpack`**: The frontend is zero-build native ES modules.
+- **DO NOT re-run all tests blindly**: Run affected tests first using `codegraph affected` or targeted test files.
 
 ---
 
-## 3. Directory Navigation Guide
-- **Frontend PWA**: `src/`
-  - Components: `src/components/tools/{qr, pdf, archive, converter, hash, image}/`
-  - State & Hooks: `src/hooks/` and `src/utilities/persistentStore.js`
-  - Router & App Mount: `src/app.js` and `index.html`
-- **Backend Gateway**: `server/`
-  - Fastify Entry: `server/src/app.ts`
-  - Prisma Models: `server/prisma/schema.prisma` (SQLite WAL `dev.db`)
-  - Routes & Controllers: `server/src/api/`
-  - Background Workers: `server/src/workers/` and `server/src/queues/`
-  - Storage Manager: `server/src/storage/storage.manager.ts`
-- **Polyglot Engines**: `engines/`
-  - Converter Bridge: `engines/converter/convert_cli.py`
-  - Pre-pulled modules: `engines/converter/fastapi_app/` and `engines/converter/file_conversor_core/`
+## Architecture
+
+```
+PWA Frontend (Vanilla ES Modules / Hash Router)
+  ↓ fetch / EventSource (SSE)
+Fastify Gateway (:3000/:3001) [server/src/app.ts]
+  ├── @fastify/static (serves index.html & src/ directly)
+  ├── Route Validation (Zod schemas)
+  ├── StorageManager (Stream to disk, 4MB chunks, SHA-256 inline)
+  ├── Prisma Client → SQLite WAL (server/dev.db)
+  └── BullMQ Producers → Redis 7.2 Queue Pool
+                           ↓
+BullMQ Workers (server/src/workers/)
+  ├── pdf.worker.ts       → spawn() → engines/document/pdf_engine.py (PyMuPDF)
+  ├── converter.worker.ts → spawn() → engines/converter/convert_cli.py (FFmpeg, LibreOffice)
+  └── quiz.worker.ts      → spawn() → engines/quiz/ pipeline (AI + Chrome)
+                           ↓
+Real-Time Progress: Worker stdout JSON → Redis Pub/Sub → SSE → Browser
+Storage: /data/storage/ (uploads/, processed/, temp/, drive/)
+```
 
 ---
 
-## 4. Verification Requirements
-Before declaring any task complete, you MUST execute and verify:
-1. `cd server && npx tsc --noEmit` -> Must pass with **0 errors**.
-2. `cd server && npx vitest run` -> All unit and integration test suites must pass.
-3. No newly introduced or edited file violates Single Responsibility, resource cleanup standards, or UI anti-filler rules.
+## Important File Responsibilities
+
+| Path | Responsibility |
+|---|---|
+| `index.html` | PWA entry point; loads Tailwind CDN, Lucide, fonts, and `src/app.js`. |
+| `src/app.js` | App bootstrapper; hash-based SPA router (`handleRoute`); cleanups. |
+| `sw.js` | Service worker; precaching; Web Share Target interceptor (`ds_share_db`). |
+| `src/components/tools/{name}/` | Modular tool workspaces (PDF, QR, Converter, Archive, Hash, Quiz, Studocu). |
+| `src/hooks/useToolRegistry.js` | Registry of all active dashboard tools and routes. |
+| `src/utilities/moduleState.js` | Client-side persistent state between route transitions. |
+| `server/src/app.ts` | Server entry; Fastify plugins; CORS; static server; route registration; worker init. |
+| `server/src/api/routes/` | HTTP route declarations for all 13 API modules. |
+| `server/src/api/controllers/` | Request handlers validating input with Zod and delegating to services. |
+| `server/src/services/` | Core business logic (auth, janitor, dynamic-qr, archive, storage, etc.). |
+| `server/src/workers/` | BullMQ queue consumers running Python CLIs via `spawn()`. |
+| `server/src/queues/task.queue.ts` | Redis connection, BullMQ queue instances, and Pub/Sub publisher. |
+| `server/src/storage/storage.manager.ts` | Filesystem operations, path traversal sandboxing (`sanitizeSafePath`). |
+| `server/src/config/env.config.ts` | Zod schema validating environment variables. |
+| `server/src/config/limits.config.ts` | System limits, concurrency, timeouts, permanent retention logic. |
+| `server/src/lib/errors.ts` | Standardized `AppError` exception hierarchy. |
+| `server/prisma/schema.prisma` | Relational database models (User, Job, FileRecord, DynamicQr, HistoryRecord). |
+| `engines/converter/convert_cli.py` | Universal CLI bridge for 65+ media, image, and document formats. |
+| `engines/document/pdf_engine.py` | PyMuPDF vector processing script (merge, split, compress, docx, rotate). |
+
+---
+
+## Data Flow
+
+1. **Heavy Processing (PDF / Converter / Quiz)**:
+   Drop file → `POST /api/v1/files/upload` (streams to `data/storage/uploads/`, saves `FileRecord`) → `POST /api/v1/jobs/*` (enqueues BullMQ job) → Worker spawns Python CLI → Engine streams JSON ticks to stdout → Worker publishes to Redis channel `job:events:{jobId}` → Fastify SSE stream pushes to client → On exit 0, output saved to `data/storage/processed/`, records created in `FileRecord` and `HistoryRecord` → User downloads via `GET /api/v1/files/download/:fileId`.
+2. **Dynamic QR Code**:
+   `POST /api/v1/qr/dynamic` → inserts `DynamicQr` in SQLite → QR rendered pointing to `/q/:slug` → User scans → Fastify increments `scanCount`, logs `QrScanLog`, responds HTTP 302 redirect.
+3. **PWA Share Target**:
+   OS share sheet sends multipart `POST /share-target` → Service Worker `sw.js` intercepts → stores in IndexedDB → sends BroadcastChannel message → `src/app.js` opens `ShareTargetModal`.
+
+---
+
+## Conventions
+
+- **Code Intelligence**: Prioritize CodeGraph MCP (`codegraph_explore` passing `projectPath: "C:\\Users\\AnhDuy\\Code\\Project\\DD Studio"`) before broad text scans. Fall back to `ripgrep` for raw strings/configs.
+- **Frontend Modularity**: Keep component files focused (<200 lines where practical). Separate presentation (`components/`), state (`hooks/`), and API (`services/`).
+- **Resource Lifecycle**: Always clean up resources on unmount: close `EventSource`, cancel pending `fetch` with `AbortController`, clear timers, revoke `URL.revokeObjectURL()`.
+- **UI Minimalism**: Strictly enforce `.agents/rules/ui-standards.md`. FORBIDDEN: tutorial filler, marketing buzzwords, parenthetical explanations like `(Ảnh số)`. Use high-density Linear/Vercel utility styling.
+- **Error Handling**: Throw `AppError` subclasses (`BadRequestError`, `NotFoundError`, `SecurityException`) on backend. Handled uniformly by `error.middleware.ts`.
+- **Branch & Deployment**: Work directly on `main` branch. Production runs at `/home/anhduy/dd-studio` on port 3000 (`dd-studio.service`).
+
+---
+
+## Do Not
+
+- **DO NOT** edit `src/components/tools/pdf/hooks/pdfApi.js` (dead duplicate; edit `src/components/tools/pdf/services/pdfApi.js`).
+- **DO NOT** add a frontend bundler (Webpack, Vite, Rollup) or import Node modules into `src/`.
+- **DO NOT** swallow errors with empty `catch {}` blocks.
+- **DO NOT** rewrite conversion or vector logic in JavaScript when specialized engines exist in `engines/`.
+- **DO NOT** introduce artificial rate-limiting, captchas, or file size restrictions (Rule 4: personal unthrottled server).
+- **DO NOT** modify `isAllowedStaticAsset()` in `server/src/app.ts` without verifying you are not exposing `server/`, `data/`, or `.env`.
+
+---
+
+## Gotchas
+
+- **Auth Backdoor**: Password `"anhduy123"` always passes verification in `AuthService.verifyPassword()` before checking custom password file. This is intentional for owner recovery.
+- **Duplicate `pdfApi.js`**: `src/components/tools/pdf/hooks/pdfApi.js` is unimported dead code; `services/pdfApi.js` is the active file.
+- **SW Cache Stale Trap**: When updating frontend files in `src/`, bump `CACHE_NAME` and `?v=` version parameters in `sw.js` (e.g. `v19.1`), or browser will serve stale cached code.
+- **CWD Storage Resolution**: Paths resolve to `data/storage/` or `server/data/storage/` depending on whether process runs from project root or `server/`.
+- **Hardcoded Paths**: System binaries (LibreOffice, Chrome, Python venv) have hardcoded candidate paths in workers and Python scripts; ensure fallbacks are preserved.
+- **Prisma Schema Updates**: Always run `npx prisma db push` and `npx prisma generate` after editing `schema.prisma`.
+
+---
+
+## Testing
+
+```bash
+# 1. Typecheck (0 errors required)
+cd server && npx tsc --noEmit
+
+# 2. Run unit & integration tests
+cd server && npx vitest run
+
+# 3. Python script syntax check
+python -m py_compile engines/converter/convert_cli.py
+python -m py_compile engines/document/pdf_engine.py
+```

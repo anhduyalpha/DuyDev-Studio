@@ -139,7 +139,7 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
       expect(body.data.uploadUrl).toContain('/api/v1/files/upload');
     });
 
-    it('provides R2 presigned URL when request comes from WAN (Cloudflare)', async () => {
+    it('auto-routes to direct upload on WAN when fileSize <= 50MB (Fast-Path)', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/files/presign',
@@ -148,8 +148,31 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
           host: 'duydevstudio.alphadaniel.io.vn'
         },
         payload: {
-          fileName: 'video_clip.mp4',
+          fileName: 'small_video.mp4',
           fileSize: 45000000,
+          mimeType: 'video/mp4',
+          purpose: 'media-transcode'
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.mode).toBe('direct');
+      expect(body.data.uploadUrl).toContain('/api/v1/files/upload');
+    });
+
+    it('provides R2 presigned URL when request comes from WAN with large file (> 50MB)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/presign',
+        headers: {
+          'cf-connecting-ip': '203.0.113.195',
+          host: 'duydevstudio.alphadaniel.io.vn'
+        },
+        payload: {
+          fileName: 'large_video.mp4',
+          fileSize: 60 * 1024 * 1024,
           mimeType: 'video/mp4',
           purpose: 'media-transcode'
         }
@@ -162,6 +185,55 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
       expect(body.data.presignedUrl).toContain('https://');
       expect(body.data.fileKey).toMatch(/^transit\//);
       expect(body.data.fileId).toMatch(/^fil_/);
+    });
+
+    it('provides R2 presigned URL even for small file when forceR2 is requested', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/presign',
+        headers: {
+          'cf-connecting-ip': '203.0.113.195',
+          host: 'duydevstudio.alphadaniel.io.vn'
+        },
+        payload: {
+          fileName: 'forced_r2.pdf',
+          fileSize: 1024 * 1024,
+          mimeType: 'application/pdf',
+          purpose: 'pdf-convert',
+          forceR2: true
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.mode).toBe('r2');
+      expect(body.data.fileKey).toMatch(/^transit\//);
+    });
+
+    it('supports batch presign for multiple files in a single request', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/files/presign-batch',
+        headers: {
+          'cf-connecting-ip': '203.0.113.195',
+          host: 'duydevstudio.alphadaniel.io.vn'
+        },
+        payload: {
+          files: [
+            { fileName: 'small.pdf', fileSize: 5 * 1024 * 1024, purpose: 'pdf-convert' },
+            { fileName: 'large.mp4', fileSize: 70 * 1024 * 1024, purpose: 'media-transcode' }
+          ]
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data).toHaveLength(2);
+      expect(body.data[0].mode).toBe('direct');
+      expect(body.data[1].mode).toBe('r2');
     });
 
     it('falls back to direct upload if circuit breaker trips on WAN', async () => {
@@ -212,36 +284,41 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
         return {} as any;
       });
 
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/files/complete-transit',
-        payload: {
-          fileKey: `transit/test_${Date.now()}_document.pdf`,
-          fileId,
-          originalName: 'final_document.pdf',
-          mimeType: 'application/pdf',
-          purpose: 'pdf-convert',
-          sizeBytes: testBuffer.length
-        }
-      });
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/v1/files/complete-transit',
+          payload: {
+            fileKey: `transit/test_${Date.now()}_document.pdf`,
+            fileId,
+            originalName: 'final_document.pdf',
+            mimeType: 'application/pdf',
+            purpose: 'pdf-convert',
+            sizeBytes: testBuffer.length
+          }
+        });
 
-      sendSpy.mockRestore();
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.success).toBe(true);
+        expect(body.data.fileId).toBe(fileId);
+        expect(body.data.originalName).toBe('final_document.pdf');
+        expect(body.data.sizeBytes).toBe(testBuffer.length);
+        expect(body.data.status).toBe('ingesting');
 
-      expect(response.statusCode).toBe(201);
-      const body = JSON.parse(response.body);
-      expect(body.success).toBe(true);
-      expect(body.data.fileId).toBe(fileId);
-      expect(body.data.originalName).toBe('final_document.pdf');
-      expect(body.data.sizeBytes).toBe(testBuffer.length);
-      expect(body.data.hashSha256).toBe(expectedHash);
+        const ingestResult = await R2Service.waitForIngestion(fileId);
+        expect(ingestResult.hashSha256).toBe(expectedHash);
 
-      // Verify Prisma database record
-      const dbRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
-      expect(dbRecord).not.toBeNull();
-      expect(dbRecord?.originalName).toBe('final_document.pdf');
-      expect(dbRecord?.hashSha256).toBe(expectedHash);
-      expect(dbRecord?.isPurged).toBe(false);
-      expect(fs.existsSync(dbRecord!.storagePath)).toBe(true);
+        // Verify Prisma database record
+        const dbRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
+        expect(dbRecord).not.toBeNull();
+        expect(dbRecord?.originalName).toBe('final_document.pdf');
+        expect(dbRecord?.hashSha256).toBe(expectedHash);
+        expect(dbRecord?.isPurged).toBe(false);
+        expect(fs.existsSync(dbRecord!.storagePath)).toBe(true);
+      } finally {
+        sendSpy.mockRestore();
+      }
     });
 
     it('rejects transit completion with unauthorized or malicious fileKey', async () => {

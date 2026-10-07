@@ -613,52 +613,66 @@ export class PdfQueueManager {
       }
 
       const chosenFiles = isMulti ? validFiles : validFiles.slice(0, 1);
-      const newItems = chosenFiles.map((f) => {
-        const item = {
-          id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          name: f.name,
-          size: f.size,
-          type: f.type || (isImages ? 'image/png' : 'application/pdf'),
-          pages: 0,
-          rawFile: f,
-          localUrl: URL.createObjectURL(f),
-          fileId: null,
-          uploadStatus: 'uploading',
-          uploadProgress: 0,
-          uploadError: null,
-          abortController: new AbortController()
-        };
+      const newItems = chosenFiles.map((f) => ({
+        id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: f.name,
+        size: f.size,
+        type: f.type || (isImages ? 'image/png' : 'application/pdf'),
+        pages: 0,
+        rawFile: f,
+        localUrl: URL.createObjectURL(f),
+        fileId: null,
+        uploadStatus: 'idle',
+        uploadProgress: 0,
+        uploadError: null,
+        abortController: new AbortController()
+      }));
 
-        const p = smartUploadFile(item.rawFile, {
-          purpose: 'pdf-convert',
-          signal: item.abortController.signal,
-          onProgress: (prog) => {
-            item.uploadProgress = prog.percent || 0;
+      // Bounded concurrency eager upload (max 3 streams simultaneously)
+      let uploadCursor = 0;
+      const maxWorkers = Math.min(3, newItems.length);
+      for (let w = 0; w < maxWorkers; w++) {
+        (async () => {
+          while (uploadCursor < newItems.length) {
+            const item = newItems[uploadCursor++];
+            if (!item || item.abortController?.signal?.aborted) continue;
+
+            item.uploadStatus = 'uploading';
             this.notify('upload-progress');
-            if (typeof item.onEagerProgress === 'function') {
-              item.onEagerProgress(prog);
-            }
+
+            const p = smartUploadFile(item.rawFile, {
+              purpose: 'pdf-convert',
+              signal: item.abortController.signal,
+              onProgress: (prog) => {
+                item.uploadProgress = prog.percent || 0;
+                this.notify('upload-progress');
+                if (typeof item.onEagerProgress === 'function') {
+                  item.onEagerProgress(prog);
+                }
+              }
+            }).then((res) => {
+              item.fileId = res.fileId;
+              item.uploadStatus = 'uploaded';
+              item.uploadProgress = 100;
+              this.notify('upload-progress');
+              return res;
+            });
+
+            p.catch((err) => {
+              if (!item.abortController?.signal?.aborted) {
+                item.uploadStatus = 'error';
+                item.uploadError = err.message || 'Lỗi tải lên';
+                this.notify('upload-progress');
+              }
+            });
+
+            item.uploadPromise = p;
+            try {
+              await p;
+            } catch (_) {}
           }
-        }).then((res) => {
-          item.fileId = res.fileId;
-          item.uploadStatus = 'uploaded';
-          item.uploadProgress = 100;
-          this.notify('upload-progress');
-          return res;
-        });
-
-        p.catch((err) => {
-          if (!item.abortController?.signal?.aborted) {
-            item.uploadStatus = 'error';
-            item.uploadError = err.message || 'Lỗi tải lên';
-            this.notify('upload-progress');
-          }
-        });
-
-        item.uploadPromise = p;
-
-        return item;
-      });
+        })();
+      }
 
       this.files = isMulti ? [...this.files, ...newItems] : newItems;
       this.result = null;

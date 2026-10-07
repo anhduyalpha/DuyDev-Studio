@@ -172,17 +172,30 @@ pip install PyMuPDF pdf2docx python-docx
 
 ### 3. Khởi động môi trường phát triển (Development)
 
-```bash
-# Terminal 1: Khởi động Fastify Backend API (Port 3001)
-cd server
-npm run dev
+Fastify Gateway được thiết kế theo kiến trúc **Unified Server**, phục vụ cả API và toàn bộ PWA Frontend trên cùng một cổng:
 
-# Terminal 2: Khởi động PWA Frontend (Port 3000)
-# Sử dụng npx serve hoặc bất kỳ HTTP server tĩnh nào
-npx serve . -l 3000
+```bash
+# Khởi động máy chủ Fastify đồng bộ (tự động phục vụ API + giao diện PWA)
+npm run dev
+# hoặc: cd server && npm run dev
 ```
 
-Mở trình duyệt tại: **`http://localhost:3000`**
+Mở trình duyệt tại: **`http://localhost:3000`** *(hoặc cổng được định nghĩa trong `server/.env`)*.
+
+---
+
+## 📚 Tài liệu Kỹ thuật Chuyên sâu (Documentation)
+
+Hệ thống tài liệu hoàn chỉnh được tổ chức rõ ràng theo chuẩn AI-friendly & Human-developer:
+
+- 📋 [**Tài liệu chỉ dẫn AI Coding Agent (AGENTS.md)**](AGENTS.md): Bản đồ tác vụ, cấm kỵ và quy tắc làm việc cho AI.
+- 📑 [**Mục lục toàn diện (docs/INDEX.md)**](docs/INDEX.md): Tổng hợp toàn bộ tài liệu kỹ thuật của dự án.
+- 🏗️ [**Kiến trúc hệ thống (docs/ARCHITECTURE.md)**](docs/ARCHITECTURE.md): Phân tầng Gateway, Worker BullMQ, Polyglot Engine và SQLite WAL.
+- 🌊 [**Luồng dữ liệu chi tiết (docs/DATA_FLOW.md)**](docs/DATA_FLOW.md): Sơ đồ từng bước từ lúc tải file, enqueuing đến khi hoàn tất.
+- 💻 [**Cẩm nang phát triển (docs/DEVELOPMENT.md)**](docs/DEVELOPMENT.md): Hướng dẫn cài đặt, debug, kiểm thử và deploy production.
+- ⚠️ [**Cạm bẫy & Vùng mã nhạy cảm (docs/GOTCHAS.md)**](docs/GOTCHAS.md): Bẫy đường dẫn, mã trùng lặp, logic đặc thù cần lưu ý.
+- ⚖️ [**Hồ sơ quyết định kiến trúc (docs/DECISIONS.md)**](docs/DECISIONS.md): Ghi chép lý do chọn Native ES Modules, SQLite WAL, Stream-to-Disk.
+- 🧠 [**Cơ sở tri thức KIs (docs/knowledge-base/)**](docs/knowledge-base/README.md): 25 Knowledge Items chuẩn hóa xử lý sự cố.
 
 ---
 

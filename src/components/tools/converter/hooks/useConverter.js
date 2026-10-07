@@ -358,8 +358,8 @@ export class ConverterManager {
   async startConversion() {
     if (this.isConverting) return;
 
-    // Guard: Check if any item is currently uploading
-    const uploadingItems = this.items.filter((it) => it.uploadStatus === 'uploading');
+    // Guard: Check if any item is currently uploading or queued to upload
+    const uploadingItems = this.items.filter((it) => it.uploadStatus === 'uploading' || (it.uploadStatus === 'idle' && !it.fileId && it.file));
     if (uploadingItems.length > 0) {
       return showToast('Đang tải tệp lên máy chủ, vui lòng đợi giây lát...', 'info');
     }

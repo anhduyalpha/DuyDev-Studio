@@ -51,18 +51,51 @@ export async function runConcurrentQueue(manager, maxConcurrency = 3) {
   });
 }
 
+const bgUploadQueue = [];
+let activeBgUploads = 0;
+const MAX_BG_UPLOAD_CONCURRENCY = 3;
+
+function pumpBgUploadQueue(manager) {
+  while (activeBgUploads < MAX_BG_UPLOAD_CONCURRENCY && bgUploadQueue.length > 0) {
+    const task = bgUploadQueue.shift();
+    activeBgUploads++;
+    task.fn().finally(() => {
+      activeBgUploads--;
+      pumpBgUploadQueue(manager);
+    });
+  }
+}
+
 export function startBackgroundUpload(manager, item) {
   if (!item.file || item.fileId || item.uploadStatus === 'uploading' || item.uploadStatus === 'uploaded') {
     return item.uploadPromise || Promise.resolve();
   }
 
+  if (item.uploadPromise) {
+    return item.uploadPromise;
+  }
+
   const abortController = new AbortController();
   item.abortController = abortController;
-  item.uploadStatus = 'uploading';
+  item.uploadStatus = 'idle';
   item.uploadProgress = 0;
   item.uploadError = null;
 
-  const uploadPromise = (async () => {
+  let resolveUpload, rejectUpload;
+  const uploadPromise = new Promise((resolve, reject) => {
+    resolveUpload = resolve;
+    rejectUpload = reject;
+  });
+  item.uploadPromise = uploadPromise;
+
+  const executeUpload = async () => {
+    if (abortController.signal.aborted) {
+      resolveUpload();
+      return;
+    }
+    item.uploadStatus = 'uploading';
+    manager.notify('upload-progress');
+
     try {
       const upData = await smartUploadFile(item.file, {
         purpose: 'universal-converter',
@@ -75,7 +108,10 @@ export function startBackgroundUpload(manager, item) {
           }
         }
       });
-      if (abortController.signal.aborted) return;
+      if (abortController.signal.aborted) {
+        resolveUpload();
+        return;
+      }
       if (!upData?.fileId) {
         throw new Error('Máy chủ không trả về fileId');
       }
@@ -85,18 +121,23 @@ export function startBackgroundUpload(manager, item) {
       item.uploadError = null;
       manager.persist();
       manager.notify('upload-progress');
-      return upData;
+      resolveUpload(upData);
     } catch (err) {
-      if (abortController.signal.aborted) return;
+      if (abortController.signal.aborted) {
+        resolveUpload();
+        return;
+      }
       item.uploadStatus = 'error';
       item.uploadError = err.message || 'Lỗi tải lên ngầm';
       manager.persist();
       manager.notify('upload-progress');
-      throw err;
+      rejectUpload(err);
     }
-  })();
+  };
 
-  item.uploadPromise = uploadPromise;
+  bgUploadQueue.push({ fn: executeUpload });
+  pumpBgUploadQueue(manager);
+
   return uploadPromise;
 }
 

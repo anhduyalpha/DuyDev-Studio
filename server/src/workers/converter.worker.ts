@@ -9,6 +9,7 @@ import { redisConnection, publishJobEvent } from '../queues/task.queue.js';
 import { limits, computeExpiresAt } from '../config/limits.config.js';
 import { prisma } from '../lib/prisma.js';
 import { StorageManager } from '../storage/storage.manager.js';
+import { R2Service } from '../services/r2.service.js';
 import { resolvedStoragePaths } from '../config/env.config.js';
 import { logger } from '../lib/logger.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -116,6 +117,11 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
   try {
     await safeConverterJobUpdate({ status: 'PROCESSING', startedAt: new Date(), progress: 5 });
     await emitProgress(10, 'Locating uploaded file artifact');
+
+    if (R2Service.isIngesting(fileId)) {
+      await emitProgress(10, 'Đang đồng bộ tệp từ Cloudflare R2 về máy chủ...');
+      await R2Service.waitForIngestion(fileId);
+    }
 
     const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
     if (!fileRecord || !existsSync(fileRecord.storagePath)) {

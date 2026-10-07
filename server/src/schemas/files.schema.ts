@@ -30,10 +30,17 @@ export const presignTransitBodySchema = z.object({
   fileSize: z.number().nonnegative().optional(),
   mimeType: z.string().optional(),
   purpose: z.string().optional().default('pdf-convert'),
-  targetDir: z.string().optional()
+  targetDir: z.string().optional(),
+  forceR2: z.boolean().optional().default(false)
 });
 
 export type PresignTransitBody = z.infer<typeof presignTransitBodySchema>;
+
+export const batchPresignBodySchema = z.object({
+  files: z.array(presignTransitBodySchema).min(1).max(50)
+});
+
+export type BatchPresignBody = z.infer<typeof batchPresignBodySchema>;
 
 export const completeTransitBodySchema = z.object({
   fileKey: z.string().min(1, 'fileKey is required'),

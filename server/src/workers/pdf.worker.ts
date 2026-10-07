@@ -9,6 +9,7 @@ import { redisConnection, publishJobEvent } from '../queues/task.queue.js';
 import { limits, computeExpiresAt } from '../config/limits.config.js';
 import { prisma } from '../lib/prisma.js';
 import { StorageManager } from '../storage/storage.manager.js';
+import { R2Service } from '../services/r2.service.js';
 import { logger } from '../lib/logger.js';
 import { FileCorruptedError, NotFoundError } from '../lib/errors.js';
 import { fileURLToPath } from 'url';
@@ -166,6 +167,15 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
   try {
     await safePdfJobUpdate({ status: 'PROCESSING', startedAt: new Date(), progress: 5 });
     await emitProgress(10, 'Locating uploaded file artifact');
+
+    const allInputFileIds = [fileId, ...(options?.fileIds || [])];
+    for (const fid of allInputFileIds) {
+      if (R2Service.isIngesting(fid)) {
+        await emitProgress(10, 'Đang đồng bộ tệp từ Cloudflare R2 về máy chủ...');
+        await R2Service.waitForIngestion(fid);
+      }
+    }
+
     const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
     if (!fileRecord || !existsSync(fileRecord.storagePath)) {
       throw new NotFoundError(`Input file ${fileId} not found on disk`);
