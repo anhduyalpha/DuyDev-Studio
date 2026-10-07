@@ -106,6 +106,8 @@
             android:background="@drawable/bg_button_secondary"
             android:textAllCaps="false" />
 
+    </LinearLayout>
+
     <!-- Fullscreen Video / Media Container -->
     <FrameLayout
         android:id="@+id/customViewContainer"
