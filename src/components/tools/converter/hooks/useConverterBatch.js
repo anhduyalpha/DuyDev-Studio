@@ -93,12 +93,17 @@ export function startBackgroundUpload(manager, item) {
       resolveUpload();
       return;
     }
+    if (item.fileId) {
+      resolveUpload({ fileId: item.fileId });
+      return;
+    }
     item.uploadStatus = 'uploading';
     manager.notify('upload-progress');
 
     try {
       const upData = await smartUploadFile(item.file, {
         purpose: 'universal-converter',
+        presignData: item.presignData,
         signal: abortController.signal,
         abortController: abortController,
         onProgress: (p) => {
@@ -155,8 +160,8 @@ export async function processSingleItem(manager, item) {
 
     // 1. Upload if missing fileId
     if (!item.fileId && item.file) {
-      // If background upload is still in flight, wait for it
-      if (item.uploadPromise && item.uploadStatus === 'uploading') {
+      // If background upload is still in flight or queued in idle, wait for it
+      if (item.uploadPromise && !item.fileId) {
         item.stage = 'Đang chờ hoàn tất tải lên ngầm...';
         manager.notify('item-progress');
         try {
@@ -172,6 +177,7 @@ export async function processSingleItem(manager, item) {
         manager.notify('upload-progress');
         const upData = await smartUploadFile(item.file, {
           purpose: 'universal-converter',
+          presignData: item.presignData,
           signal: abortController.signal,
           abortController: abortController,
           onStage: (stage) => {

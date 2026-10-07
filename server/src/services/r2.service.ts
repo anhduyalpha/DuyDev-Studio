@@ -286,6 +286,7 @@ export class R2Service {
     });
 
     this.activeIngestions.set(fileId, ingestionPromise);
+    ingestionPromise.catch(() => {});
     return ingestionPromise;
   }
 

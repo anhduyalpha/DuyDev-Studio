@@ -8,7 +8,7 @@ import { watchJobProgress } from '../../../../utilities/jobWatcher.js';
 import { loadModuleState, saveModuleState } from '../../../../utilities/moduleState.js';
 import { uploadPdfFiles, dispatchPdfJob, buildPdfResult } from './pdfApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
-import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
+import { smartUploadFile, batchPresignFiles } from '../../../../utilities/resumableUploader.js';
 
 const ALLOWED_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'tiff', 'tif', 'svg']);
 
@@ -628,11 +628,32 @@ export class PdfQueueManager {
         abortController: new AbortController()
       }));
 
+      // If multiple large files (>50MB), pre-fetch batch presign in 1 roundtrip
+      const largePdfFiles = newItems.filter((it) => it.rawFile && it.rawFile.size > 50 * 1024 * 1024);
+      let batchPresignPromise = Promise.resolve(null);
+      if (largePdfFiles.length > 1) {
+        batchPresignPromise = batchPresignFiles(
+          largePdfFiles.map((it) => it.rawFile),
+          { purpose: 'pdf-convert' }
+        ).catch((err) => {
+          console.warn('[PdfQueue] Batch presign fallback:', err);
+          return null;
+        });
+      }
+
       // Bounded concurrency eager upload (max 3 streams simultaneously)
       let uploadCursor = 0;
       const maxWorkers = Math.min(3, newItems.length);
       for (let w = 0; w < maxWorkers; w++) {
         (async () => {
+          const batchResults = await batchPresignPromise;
+          const presignMap = new Map();
+          if (Array.isArray(batchResults)) {
+            batchResults.forEach((r) => {
+              if (r.fileName) presignMap.set(r.fileName, r);
+            });
+          }
+
           while (uploadCursor < newItems.length) {
             const item = newItems[uploadCursor++];
             if (!item || item.abortController?.signal?.aborted) continue;
@@ -640,8 +661,11 @@ export class PdfQueueManager {
             item.uploadStatus = 'uploading';
             this.notify('upload-progress');
 
+            const presignData = presignMap.get(item.rawFile?.name);
+
             const p = smartUploadFile(item.rawFile, {
               purpose: 'pdf-convert',
+              presignData,
               signal: item.abortController.signal,
               onProgress: (prog) => {
                 item.uploadProgress = prog.percent || 0;

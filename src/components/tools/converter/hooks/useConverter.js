@@ -15,6 +15,7 @@ import {
 import { loadModuleState, saveModuleState } from '../../../../utilities/moduleState.js';
 import { storage } from '../../../../utilities/storage.js';
 import { runConcurrentQueue, processSingleItem, createZipBundleFromCompleted, startBackgroundUpload } from './useConverterBatch.js';
+import { batchPresignFiles } from '../../../../utilities/resumableUploader.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 
 /**
@@ -222,6 +223,25 @@ export class ConverterManager {
     if (firstItem?.detectedMeta) {
       this.selectedCategory = firstItem.detectedMeta.category;
       this.targetFormat = firstItem.targetFormat;
+    }
+
+    // Batch presign multiple large files (>50MB) in 1 roundtrip
+    const largeFiles = newItems.filter(it => it.file && it.file.size > 50 * 1024 * 1024);
+    if (largeFiles.length > 1) {
+      batchPresignFiles(largeFiles.map(it => it.file), { purpose: 'universal-converter' })
+        .then((batchData) => {
+          if (Array.isArray(batchData)) {
+            const map = new Map(batchData.map(r => [r.fileName, r]));
+            largeFiles.forEach(it => {
+              if (it.file && map.has(it.file.name)) {
+                it.presignData = map.get(it.file.name);
+              }
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn('[Converter] Batch presign fallback:', err);
+        });
     }
 
     // Trigger background eager upload for newly added files
