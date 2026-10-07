@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="prismTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C0C1FF" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+    <linearGradient id="prismLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#4338CA" />
+    </linearGradient>
+    <linearGradient id="prismRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+    <linearGradient id="prismBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#12111E" />
+      <stop offset="100%" stop-color="#07060B" />
+    </linearGradient>
+    <filter id="glowPrism" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#prismBg)" stroke="rgba(99,102,241,0.25)" stroke-width="1.5" />
+  
+  <!-- Outer Hexagonal Facet Contour -->
+  <polygon points="60,22 93,41 93,79 60,98 27,79 27,41" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+  
+  <!-- Top Rhombus Facet -->
+  <polygon points="60,25 90,42 60,59 30,42" fill="url(#prismTop)" opacity="0.95" />
+  
+  <!-- Left Isometric Facet (Carving 'D' silhouette) -->
+  <polygon points="30,42 60,59 60,95 30,78" fill="url(#prismLeft)" />
+  
+  <!-- Right Isometric Facet -->
+  <polygon points="60,59 90,42 90,78 60,95" fill="url(#prismRight)" />
+  
+  <!-- Internal Floating Core DD Monogram Cutout -->
+  <path d="M 52 42 H 64 C 72 42 77 47 77 54 C 77 61 72 66 64 66 H 52 Z" 
+        fill="#FFFFFF" opacity="0.9" filter="url(#glowPrism)" />
+  <path d="M 56 47 H 63 C 67 47 70 50 70 54 C 70 58 67 61 63 61 H 56 Z" 
+        fill="#12111E" />
+</svg>

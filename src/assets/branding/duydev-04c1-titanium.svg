@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="tiGrad_4c1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#F4F4F5" />
+      <stop offset="100%" stop-color="#A1A1AA" />
+    </linearGradient>
+  </defs>
+  <!-- Background Container -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#09090B" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+  
+  <!-- Outer Leading Delta Wing (First D) in Pure Titanium White -->
+  <path d="M 28 26 L 66 26 C 86 26 98 42 98 60 C 98 78 86 94 66 94 L 28 94 L 46 60 Z" 
+        stroke="url(#tiGrad_4c1)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Inner Interlocking Trailing Delta (Second D) in Solid White -->
+  <path d="M 46 40 L 68 40 C 78 40 84 48 84 60 C 84 72 78 80 68 80 L 46 80 L 58 60 Z" 
+        stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Precision Platinum Center Needle -->
+  <polygon points="62,60 74,54 71,60 74,66" fill="#FFFFFF" />
+  
+  <!-- Precision Center Axis Dot -->
+  <circle cx="28" cy="60" r="2.5" fill="#A1A1AA" />
+</svg>

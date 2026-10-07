@@ -8,7 +8,7 @@
 ## Project
 
 - **What it is**: Personal Self-Hosted Progressive Web App (PWA) Utility Hub & File Processing Suite.
-- **Where it runs**: Localhost, Homeserver LAN (`192.168.2.171:3000`), and Cloudflare Tunnel (`duydevstudio.alphadaniel.io.vn`).
+- **Where it runs**: Localhost, Homeserver LAN (`192.168.2.171:3000`), and Cloudflare Tunnel (`studio.duydev.cloud`).
 - **Core Stack**:
   - *Frontend*: Zero-build Vanilla ES Modules, Tailwind CSS (CDN), Lucide Icons, PDF.js, SheetJS.
   - *Backend*: Fastify v4 + TypeScript (strict mode), Prisma ORM, BullMQ v5 + Redis 7.2.

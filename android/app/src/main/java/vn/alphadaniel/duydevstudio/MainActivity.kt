@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
         @Volatile
         var currentInstance: MainActivity? = null
 
-        const val PRIMARY_HOST = "https://duydevstudio.alphadaniel.io.vn"
+        const val PRIMARY_HOST = "https://studio.duydev.cloud"
         const val LAN_HOST = "http://192.168.2.171:3000"
         const val TAILSCALE_HOST = "http://100.90.62.15:3000"
         const val WIREGUARD_HOST = "http://10.7.0.1:3000"
@@ -481,7 +481,8 @@ class MainActivity : AppCompatActivity() {
                 val host = uri.host?.lowercase(Locale.ROOT) ?: ""
 
                 // Allow internal app navigation across all 4 highway endpoints
-                if (host == "duydevstudio.alphadaniel.io.vn" ||
+                if (host == "studio.duydev.cloud" ||
+                    host == "duydevstudio.alphadaniel.io.vn" ||
                     host == "192.168.2.171" ||
                     host == "100.90.62.15" ||
                     host == "10.7.0.1" ||

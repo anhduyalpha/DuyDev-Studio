@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="flowAmber_4c4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="30%" stop-color="#FFB703" />
+      <stop offset="70%" stop-color="#FB8500" />
+      <stop offset="100%" stop-color="#FF5400" />
+    </linearGradient>
+    <linearGradient id="flowCore_4c4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#FFD166" />
+    </linearGradient>
+  </defs>
+  <!-- Background Container -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0C0A09" stroke="rgba(255,183,3,0.2)" stroke-width="1.5" />
+  
+  <!-- Outer Aerodynamic Track (Ribbon 1) -->
+  <path d="M 26 24 L 66 24 C 88 24 100 40 100 60 C 100 80 88 96 66 96 L 26 96 L 44 60 Z" 
+        stroke="url(#flowAmber_4c4)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Middle Interlocking Track (Ribbon 2) -->
+  <path d="M 36 32 L 68 32 C 84 32 92 44 92 60 C 92 76 84 88 68 88 L 36 88 L 50 60 Z" 
+        stroke="url(#flowAmber_4c4)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+
+  <!-- Inner High-Velocity Core Track (Ribbon 3) -->
+  <path d="M 46 40 L 70 40 C 80 40 84 48 84 60 C 84 72 80 80 70 80 L 46 80 L 56 60 Z" 
+        stroke="url(#flowCore_4c4)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Supersonic Flow Leading Filaments -->
+  <path d="M 18 42 L 34 42 L 44 60" stroke="#FFB703" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+  <path d="M 18 78 L 34 78 L 44 60" stroke="#FF5400" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+
+  <!-- Central Jet Needle -->
+  <polygon points="62,60 74,56 72,60 74,64" fill="#FFFFFF" />
+</svg>

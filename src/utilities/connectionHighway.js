@@ -39,8 +39,8 @@ export const HIGHWAYS = [
     id: 'cloudflare',
     name: 'Cloudflare WAN',
     badge: 'Cloudflare WAN',
-    url: 'https://duydevstudio.alphadaniel.io.vn',
-    hostname: 'duydevstudio.alphadaniel.io.vn',
+    url: 'https://studio.duydev.cloud',
+    hostname: 'studio.duydev.cloud',
     speed: '1 - 3 MB/s',
     benchmarkTime: 'Tùy mạng 4G',
     desc: 'Đường hầm Cloudflare WAN'

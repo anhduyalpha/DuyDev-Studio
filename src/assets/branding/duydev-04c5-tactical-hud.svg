@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="hudOrange_4c5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5400" />
+      <stop offset="60%" stop-color="#FF7A00" />
+      <stop offset="100%" stop-color="#FFB703" />
+    </linearGradient>
+  </defs>
+  <!-- Background Container -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0A0B0E" stroke="rgba(255,84,0,0.2)" stroke-width="1.5" />
+  
+  <!-- Outer Tactical Radar Ring & Degree Ticks -->
+  <circle cx="60" cy="60" r="48" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+  <circle cx="60" cy="60" r="42" stroke="rgba(255,84,0,0.25)" stroke-width="1" stroke-dasharray="3 6" />
+  <circle cx="60" cy="60" r="30" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="1 4" />
+
+  <!-- Tactical Reticle Crosshairs -->
+  <line x1="60" y1="10" x2="60" y2="20" stroke="#FF5400" stroke-width="1.5" />
+  <line x1="60" y1="100" x2="60" y2="110" stroke="#FF5400" stroke-width="1.5" />
+  <line x1="10" y1="60" x2="20" y2="60" stroke="#FF5400" stroke-width="1.5" />
+  <line x1="100" y1="60" x2="110" y2="60" stroke="#FF5400" stroke-width="1.5" />
+  
+  <!-- Outer Leading Delta Wing (First D) -->
+  <path d="M 28 26 L 66 26 C 86 26 98 42 98 60 C 98 78 86 94 66 94 L 28 94 L 46 60 Z" 
+        stroke="url(#hudOrange_4c5)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Inner Interlocking Trailing Delta (Second D) in High-Contrast White -->
+  <path d="M 46 40 L 68 40 C 78 40 84 48 84 60 C 84 72 78 80 68 80 L 46 80 L 58 60 Z" 
+        stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- HUD Target Lock Crosshair Pips -->
+  <circle cx="98" cy="60" r="3" fill="#FF5400" />
+  <circle cx="98" cy="60" r="1.5" fill="#FFFFFF" />
+
+  <!-- Precision Center Needle -->
+  <polygon points="62,60 74,55 72,60 74,65" fill="#FFFFFF" />
+  
+  <!-- Subtle Tactical Data Stamp -->
+  <text x="32" y="104" font-family="monospace" font-size="5" fill="#71717A" letter-spacing="1">HUD: 04C-V5</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="aeroGrad4d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="50%" stop-color="#F4F4F5" />
+      <stop offset="100%" stop-color="#FB923C" />
+    </linearGradient>
+  </defs>
+  <!-- Background Container -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#09090B" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+  
+  <!-- Continuous Single-Line Monogram (Delta Arrowhead merging into rounded D) -->
+  <path d="M 32 32 L 64 32 C 84 32 96 44 96 60 C 96 76 84 88 64 88 L 32 88 L 48 60 Z" 
+        stroke="url(#aeroGrad4d)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Single Precision Negative Slot -->
+  <line x1="50" y1="46" x2="68" y2="46" stroke="#FB923C" stroke-width="3.5" stroke-linecap="round" />
+  <line x1="50" y1="74" x2="68" y2="74" stroke="#FB923C" stroke-width="3.5" stroke-linecap="round" />
+
+  <!-- Forward Apex Vector Needle -->
+  <polygon points="68,60 80,56 76,60 80,64" fill="#FFFFFF" />
+  
+  <!-- Single Minimalist Trailing Speed Dot -->
+  <circle cx="20" cy="60" r="3" fill="#FB923C" />
+</svg>

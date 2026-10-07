@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="mono1a_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#F4F4F5" />
+      <stop offset="100%" stop-color="#D4D4D8" />
+    </linearGradient>
+  </defs>
+  <!-- Background Container -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#09090B" stroke="rgba(255,255,255,0.14)" stroke-width="1.5" />
+  
+  <!-- Outer D Path (Balanced Weight 6.5px) -->
+  <path d="M 34 28 H 62 C 80 28 92 40 92 60 C 92 80 80 92 62 92 H 34 Z" 
+        stroke="url(#mono1a_grad)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Inner Interlocking D Path (Balanced Weight 5.5px) -->
+  <path d="M 48 42 H 62 C 72 42 78 49 78 60 C 78 71 72 78 62 78 H 48 Z" 
+        stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- 45-degree Optical Chamfer Cuts -->
+  <line x1="34" y1="28" x2="48" y2="42" stroke="url(#mono1a_grad)" stroke-width="4.5" stroke-linecap="round" />
+  <line x1="34" y1="92" x2="48" y2="78" stroke="url(#mono1a_grad)" stroke-width="4.5" stroke-linecap="round" />
+
+  <!-- Precision Center Axis Dot -->
+  <circle cx="63" cy="60" r="3" fill="#FFFFFF" opacity="0.9" />
+</svg>

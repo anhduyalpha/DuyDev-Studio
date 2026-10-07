@@ -14,4 +14,4 @@ ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio/scripts/deploy-prod.sh"
 Write-Host "Returning to 'dev' branch for continued development..." -ForegroundColor Cyan
 git checkout dev
 
-Write-Host "Done! Production deployed at https://duydevstudio.alphadaniel.io.vn" -ForegroundColor Green
+Write-Host "Done! Production deployed at https://studio.duydev.cloud" -ForegroundColor Green

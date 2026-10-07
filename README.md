@@ -3,8 +3,8 @@
 # ⚡ DuyDev Studio (DS)
 ### Personal Self-Hosted Utility Hub & High-Performance File Processing Suite
 
-[![Live Production Demo](https://img.shields.io/badge/Production%20Link-duydevstudio.alphadaniel.io.vn-6366f1?style=for-the-badge&logo=cloudflare&logoColor=white)](https://duydevstudio.alphadaniel.io.vn)
-[![PWA Ready](https://img.shields.io/badge/PWA-Offline--First-emerald?style=for-the-badge&logo=pwa&logoColor=white)](https://duydevstudio.alphadaniel.io.vn)
+[![Live Production Demo](https://img.shields.io/badge/Production%20Link-studio.duydev.cloud-6366f1?style=for-the-badge&logo=cloudflare&logoColor=white)](https://studio.duydev.cloud)
+[![PWA Ready](https://img.shields.io/badge/PWA-Offline--First-emerald?style=for-the-badge&logo=pwa&logoColor=white)](https://studio.duydev.cloud)
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-green?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-v4.28-black?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-v5.4-blue?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@
 
 <p align="center">
   <b>Trang sản phẩm trực tiếp (Production):</b> <br/>
-  🌐 <a href="https://duydevstudio.alphadaniel.io.vn">https://duydevstudio.alphadaniel.io.vn</a> (Cloudflare Tunnel) <br/>
+  🌐 <a href="https://studio.duydev.cloud">https://studio.duydev.cloud</a> (Cloudflare Tunnel) <br/>
   🏠 <code>http://192.168.2.171:3000</code> (LAN Homeserver)
 </p>
 
@@ -220,7 +220,7 @@ Kết quả: **`33 passed (33) | 337 passed (337)`**.
 ## 🌐 Triển Khai Thực Tế (Production Deployment)
 
 Dự án hiện đang vận hành trực tiếp tại:
-- **Tên miền công khai**: [https://duydevstudio.alphadaniel.io.vn](https://duydevstudio.alphadaniel.io.vn) (định tuyến bảo mật qua Cloudflare Zero Trust Tunnel).
+- **Tên miền công khai**: [https://studio.duydev.cloud](https://studio.duydev.cloud) (định tuyến bảo mật qua Cloudflare Zero Trust Tunnel).
 - **Máy chủ nội bộ (Homeserver)**: `192.168.2.171` quản lý qua `systemd` (`dd-studio.service`).
 
 Khởi động / quản lý dịch vụ qua Systemd:

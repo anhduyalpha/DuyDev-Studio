@@ -190,7 +190,7 @@ ssh anhduy@192.168.2.171 "bash /home/anhduy/dd-studio/scripts/deploy-prod.sh"
 
 ### Production Endpoints
 
-- **Cloudflare**: `https://duydevstudio.alphadaniel.io.vn`
+- **Cloudflare**: `https://studio.duydev.cloud`
 - **LAN**: `http://192.168.2.171:3000`
 
 ### Process Management

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="deltaOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7A00" />
+      <stop offset="50%" stop-color="#FF5400" />
+      <stop offset="100%" stop-color="#FF0055" />
+    </linearGradient>
+    <linearGradient id="deltaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141113" />
+      <stop offset="100%" stop-color="#09080A" />
+    </linearGradient>
+    <filter id="glowDelta" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#deltaBg)" stroke="rgba(255,122,0,0.25)" stroke-width="1.5" />
+  
+  <!-- Outer Delta Wing Streamline (Letter D) -->
+  <path d="M 32 26 L 68 26 C 88 26 98 42 98 60 C 98 78 88 94 68 94 L 32 94 L 48 60 Z" 
+        fill="url(#deltaOrange)" filter="url(#glowDelta)" />
+        
+  <!-- Negative Space Airflow Split -->
+  <path d="M 44 38 L 64 38 C 76 38 82 48 82 60 C 82 72 76 82 64 82 L 44 82 L 54 60 Z" 
+        fill="#141113" />
+
+  <!-- Supersonic Core Needle -->
+  <polygon points="56,60 70,50 67,60 70,70" fill="#FFFFFF" opacity="0.95" />
+  
+  <!-- Kinetic Speed Accent Lines -->
+  <line x1="22" y1="46" x2="30" y2="46" stroke="#FF7A00" stroke-width="3" stroke-linecap="round" opacity="0.6" />
+  <line x1="18" y1="60" x2="28" y2="60" stroke="#FF7A00" stroke-width="3.5" stroke-linecap="round" />
+  <line x1="22" y1="74" x2="30" y2="74" stroke="#FF7A00" stroke-width="3" stroke-linecap="round" opacity="0.6" />
+</svg>

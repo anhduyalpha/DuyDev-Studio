@@ -16,7 +16,7 @@ Hầu hết các công cụ trực tuyến hiện nay (Smallpdf, CloudConvert, T
 - **Rủi ro rò rỉ dữ liệu & quyền riêng tư** (tải tệp nội bộ lên máy chủ của bên thứ ba).
 - **Trải nghiệm người dùng tệ** (quảng cáo tràn ngập, hàng đợi chờ đợi lâu, captcha).
 
-**DuyDev Studio (DS)** là một **Trung tâm Tiện ích Đa năng Tự Lưu Trữ (Personal Self-Hosted Utility Hub)** được thiết kế để chạy hoàn toàn trên máy cục bộ (Localhost), máy chủ gia đình (**Homeserver LAN: `192.168.2.171`**) hoặc qua Cloudflare Tunnel (**`duydevstudio.alphadaniel.io.vn`**). Dự án giải phóng hoàn toàn các giới hạn dung lượng, thắt cổ chai mạng, và đảm bảo 100% quyền riêng tư với tốc độ xử lý phần cứng tối đa.
+**DuyDev Studio (DS)** là một **Trung tâm Tiện ích Đa năng Tự Lưu Trữ (Personal Self-Hosted Utility Hub)** được thiết kế để chạy hoàn toàn trên máy cục bộ (Localhost), máy chủ gia đình (**Homeserver LAN: `192.168.2.171`**) hoặc qua Cloudflare Tunnel (**`studio.duydev.cloud`**). Dự án giải phóng hoàn toàn các giới hạn dung lượng, thắt cổ chai mạng, và đảm bảo 100% quyền riêng tư với tốc độ xử lý phần cứng tối đa.
 
 ### 1.2. Triết lý thiết kế cốt lõi
 1. **Self-Hosted & Zero-Throttling (Không giới hạn)**: Loại bỏ toàn bộ cơ chế Rate-limit, dung lượng tệp hỗ trợ lên tới 50GB+, tối ưu hóa cho mạng nội bộ cá nhân.

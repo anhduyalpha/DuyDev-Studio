@@ -26,7 +26,7 @@ export function isLanRequest(request: FastifyRequest): boolean {
   }
 
   const hostHeader = (request.headers['host'] || request.hostname || '').toLowerCase();
-  if (hostHeader.includes('alphadaniel.io.vn') || hostHeader.includes('cloudflare')) {
+  if (hostHeader.includes('duydev.cloud') || hostHeader.includes('alphadaniel.io.vn') || hostHeader.includes('cloudflare')) {
     return false;
   }
 

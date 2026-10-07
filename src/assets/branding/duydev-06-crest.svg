@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="crestGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="50%" stop-color="#E4E4E7" />
+      <stop offset="100%" stop-color="#D4AF37" />
+    </linearGradient>
+    <linearGradient id="crestBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#121214" />
+      <stop offset="100%" stop-color="#050507" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#crestBg)" stroke="rgba(212,175,55,0.3)" stroke-width="1.5" />
+  
+  <!-- Outer Micrometric Reticle Ring -->
+  <circle cx="60" cy="60" r="46" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="2 4" />
+  <circle cx="60" cy="60" r="42" stroke="url(#crestGold)" stroke-width="1.5" opacity="0.8" />
+
+  <!-- Cardinal Precision Tick-Marks -->
+  <line x1="60" y1="14" x2="60" y2="20" stroke="#D4AF37" stroke-width="2" />
+  <line x1="60" y1="100" x2="60" y2="106" stroke="#D4AF37" stroke-width="2" />
+  <line x1="14" y1="60" x2="20" y2="60" stroke="#D4AF37" stroke-width="2" />
+  <line x1="100" y1="60" x2="106" y2="60" stroke="#D4AF37" stroke-width="2" />
+
+  <!-- Interlocking Classical Serif DD Monogram -->
+  <!-- Left Serif D -->
+  <path d="M 38 38 H 54 C 64 38 70 47 70 60 C 70 73 64 82 54 82 H 38 V 38 Z M 44 44 V 76 H 52 C 60 76 64 69 64 60 C 64 51 60 44 52 44 H 44 Z" 
+        fill="url(#crestGold)" />
+  <!-- Serif Bracket Accents -->
+  <rect x="35" y="36" width="6" height="3" fill="#D4AF37" />
+  <rect x="35" y="81" width="6" height="3" fill="#D4AF37" />
+
+  <!-- Central Star / Diamond Insignia -->
+  <polygon points="60,26 62,30 66,32 62,34 60,38 58,34 54,32 58,30" fill="#FFFFFF" />
+  <polygon points="60,82 62,86 66,88 62,90 60,94 58,90 54,88 58,86" fill="#D4AF37" opacity="0.8" />
+  
+  <!-- Subtle Micro-text curve indicator -->
+  <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.06)" stroke-width="0.8" />
+</svg>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="sealRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444" />
+      <stop offset="60%" stop-color="#DC2626" />
+      <stop offset="100%" stop-color="#991B1B" />
+    </linearGradient>
+    <filter id="sealShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#DC2626" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  <!-- Background Container -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0C0809" stroke="rgba(239,68,68,0.2)" stroke-width="1.5" />
+  
+  <!-- Solid Vermilion Inkan / Hanko Squircle Stamp -->
+  <rect x="18" y="18" width="84" height="84" rx="20" fill="url(#sealRed)" filter="url(#sealShadow)" />
+  
+  <!-- Subtle Inkan Perimeter Border Line -->
+  <rect x="22" y="22" width="76" height="76" rx="16" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
+
+  <!-- Negative Space Carved Monogram: Dual D Stems & Curves (Carved out with #0C0809) -->
+  <!-- Left D Cutout -->
+  <path d="M 36 34 H 50 C 58 34 64 40 64 48 C 64 56 58 62 50 62 H 36 Z M 44 42 V 54 H 49 C 53 54 56 51 56 48 C 56 45 53 42 49 42 Z" 
+        fill="#0C0809" />
+
+  <!-- Right Shifted Interlocking D Cutout -->
+  <path d="M 52 58 H 66 C 74 58 80 64 80 72 C 80 80 74 86 66 86 H 52 Z M 60 66 V 78 H 65 C 69 78 72 75 72 72 C 72 69 69 66 65 66 Z" 
+        fill="#0C0809" />
+        
+  <!-- Fine Craftsmanship Vermilion Accent Dot -->
+  <circle cx="76" cy="42" r="2.5" fill="#FAFAFA" opacity="0.9" />
+</svg>
