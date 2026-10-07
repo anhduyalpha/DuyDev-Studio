@@ -146,21 +146,19 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
 
           <div class="flex items-center gap-2">
             <div class="relative flex-1">
-              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+              <div id="pdfMultiDriveIcon" class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                 <i data-lucide="cloud" class="w-4 h-4"></i>
               </div>
-              <input type="url" id="inputPdfMultiDriveLink" placeholder="https://drive.google.com/file/d/.../view"
-                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:focus:ring-zinc-600/40 transition font-mono" />
+              <input type="url" id="inputPdfMultiDriveLink" placeholder="Dán liên kết Google Drive để tự động nạp tệp..."
+                class="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/[0.08] text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:focus:ring-zinc-600/40 transition font-mono" />
+              <div id="pdfMultiDriveSpinner" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none hidden">
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin ${theme.textSoft}"></i>
+              </div>
             </div>
             <button type="button" id="btnPastePdfMultiDrive"
-              class="px-3 sm:px-3.5 py-2.5 rounded-xl border border-zinc-200/90 dark:border-white/[0.08] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán liên kết từ bộ nhớ tạm">
+              class="px-3.5 sm:px-4 py-2.5 rounded-xl border border-zinc-200/90 dark:border-white/[0.08] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán liên kết từ bộ nhớ tạm">
               <i data-lucide="clipboard" class="w-4 h-4 text-zinc-500 dark:text-zinc-400"></i>
               <span>Dán</span>
-            </button>
-            <button type="button" id="btnImportPdfMultiDrive"
-              class="px-3.5 sm:px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-950 text-xs sm:text-sm font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs shrink-0 active:scale-[0.98]">
-              <i data-lucide="arrow-down-to-dot" class="w-4 h-4 ${theme.textSoft}"></i>
-              <span>Nạp tệp</span>
             </button>
           </div>
         </div>

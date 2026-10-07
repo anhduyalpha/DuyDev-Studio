@@ -187,7 +187,6 @@ function bindDropzone(qm) {
   const fileInput = rootEl.querySelector('#pdfDropzone_input');
   const driveCard = rootEl.querySelector('#pdfDriveImportCard');
   const inputDrive = rootEl.querySelector('#inputPdfDriveLink');
-  const btnImportDrive = rootEl.querySelector('#btnImportPdfDrive');
 
   const setCardGreen = (card) => {
     if (!card) return;
@@ -247,88 +246,46 @@ function bindDropzone(qm) {
     });
   }
 
-  // 2. Separate Google Drive Card: Reactive dashed border (red when invalid/empty, green when valid)
+  // 2. Separate Google Drive Card: Reactive dashed border & Instant Auto-Import on Paste / Link Entry
   if (driveCard && inputDrive) {
-    const updateDriveBorder = () => {
-      const url = inputDrive.value.trim();
-      if (isValidGoogleDriveUrl(url)) {
-        setCardGreen(driveCard);
-        inputDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
-        inputDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
-      } else {
+    let isImporting = false;
+    const spinner = rootEl.querySelector('#pdfDriveSpinner');
+    const driveIcon = rootEl.querySelector('#pdfDriveIcon');
+    const btnPasteDrive = rootEl.querySelector('#btnPastePdfDrive');
+
+    const setImportingUi = (loading) => {
+      isImporting = loading;
+      if (inputDrive) inputDrive.disabled = loading;
+      if (btnPasteDrive) {
+        btnPasteDrive.disabled = loading;
+        btnPasteDrive.classList.toggle('opacity-50', loading);
+        btnPasteDrive.classList.toggle('pointer-events-none', loading);
+      }
+      if (spinner) spinner.classList.toggle('hidden', !loading);
+      if (driveIcon) driveIcon.classList.toggle('opacity-40', loading);
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+    };
+
+    const doAutoImport = async (targetUrl) => {
+      const url = (targetUrl !== undefined ? targetUrl : inputDrive.value).trim();
+      if (!url || isImporting) return;
+
+      if (!isValidGoogleDriveUrl(url)) {
         setCardRed(driveCard);
         inputDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
         inputDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
-      }
-    };
-
-    updateDriveBorder();
-
-    inputDrive.addEventListener('input', updateDriveBorder);
-    inputDrive.addEventListener('paste', () => setTimeout(updateDriveBorder, 20));
-  }
-
-  const btnPasteDrive = rootEl.querySelector('#btnPastePdfDrive');
-  if (btnPasteDrive && inputDrive) {
-    btnPasteDrive.addEventListener('click', async () => {
-      try {
-        let text = '';
-        if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
-          text = await navigator.clipboard.readText();
-        }
-        if (!text) {
-          inputDrive.focus();
-          showToast('Vui lòng cấp quyền truy cập bộ nhớ tạm hoặc nhấn Ctrl+V để dán', 'info');
-          return;
-        }
-        inputDrive.value = text.trim();
-        const url = inputDrive.value;
-        if (driveCard) {
-          if (isValidGoogleDriveUrl(url)) {
-            setCardGreen(driveCard);
-            inputDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
-            inputDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
-            showToast('Đã dán liên kết Google Drive hợp lệ', 'success');
-          } else {
-            setCardRed(driveCard);
-            inputDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
-            inputDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
-            showToast('Đã dán nội dung từ bộ nhớ tạm', 'info');
-          }
-        }
-      } catch (err) {
-        inputDrive.focus();
-        showToast('Không thể đọc bộ nhớ tạm tự động. Vui lòng bấm giữ hoặc nhấn Ctrl+V để dán', 'warning');
-      }
-    });
-  }
-
-  if (btnImportDrive && inputDrive) {
-    const doImport = async () => {
-      const url = inputDrive.value.trim();
-      if (!url) {
-        showToast('Vui lòng dán liên kết Google Drive', 'warning');
-        inputDrive.focus();
-        return;
-      }
-      if (!isValidGoogleDriveUrl(url)) {
         showToast('Định dạng liên kết Google Drive không hợp lệ', 'warning');
-        inputDrive.focus();
-        setCardRed(driveCard);
         return;
       }
 
       setCardGreen(driveCard);
-      btnImportDrive.disabled = true;
-      const originalHtml = btnImportDrive.innerHTML;
-      btnImportDrive.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-emerald-400"></i><span>Đang nạp...</span>';
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      inputDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+      inputDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
+      setImportingUi(true);
 
       const success = await qm.importFromDrive(url);
       if (!success) {
-        btnImportDrive.disabled = false;
-        btnImportDrive.innerHTML = originalHtml;
-        if (window.lucide?.createIcons) window.lucide.createIcons();
+        setImportingUi(false);
         const curInput = document.getElementById('inputPdfDriveLink');
         const curCard = document.getElementById('pdfDriveImportCard');
         if (curInput) {
@@ -344,13 +301,82 @@ function bindDropzone(qm) {
       }
     };
 
-    btnImportDrive.onclick = doImport;
-    inputDrive.onkeydown = (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        doImport();
+    const updateDriveBorder = () => {
+      if (isImporting) return;
+      const url = inputDrive.value.trim();
+      if (isValidGoogleDriveUrl(url)) {
+        setCardGreen(driveCard);
+        inputDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+        inputDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
+      } else {
+        setCardRed(driveCard);
+        inputDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
+        inputDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
       }
     };
+
+    updateDriveBorder();
+
+    // Auto-import when user pastes via Ctrl+V or Context Menu
+    inputDrive.addEventListener('paste', (e) => {
+      if (isImporting) return;
+      const pasted = e.clipboardData?.getData('text') || '';
+      setTimeout(() => {
+        const val = (pasted || inputDrive.value).trim();
+        updateDriveBorder();
+        if (isValidGoogleDriveUrl(val)) {
+          doAutoImport(val);
+        }
+      }, 20);
+    });
+
+    // Auto-import when complete valid Google Drive URL is typed or dragged into input
+    let debounceTimer = null;
+    inputDrive.addEventListener('input', () => {
+      updateDriveBorder();
+      const val = inputDrive.value.trim();
+      if (isValidGoogleDriveUrl(val) && !isImporting) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          doAutoImport(val);
+        }, 350);
+      }
+    });
+
+    inputDrive.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doAutoImport(inputDrive.value.trim());
+      }
+    });
+
+    if (btnPasteDrive) {
+      btnPasteDrive.addEventListener('click', async () => {
+        if (isImporting) return;
+        try {
+          let text = '';
+          if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+            text = await navigator.clipboard.readText();
+          }
+          if (!text) {
+            inputDrive.focus();
+            showToast('Vui lòng cấp quyền truy cập bộ nhớ tạm hoặc nhấn giữ ô nhập để dán', 'info');
+            return;
+          }
+          inputDrive.value = text.trim();
+          updateDriveBorder();
+          if (isValidGoogleDriveUrl(inputDrive.value)) {
+            showToast('Đang tự động nạp tệp từ liên kết...', 'info');
+            await doAutoImport(inputDrive.value);
+          } else {
+            showToast('Đã dán nội dung, nhưng liên kết Google Drive không hợp lệ', 'warning');
+          }
+        } catch (err) {
+          inputDrive.focus();
+          showToast('Không thể đọc bộ nhớ tạm tự động. Vui lòng bấm giữ hoặc nhấn Ctrl+V để dán', 'warning');
+        }
+      });
+    }
   }
 
   // 1. Rotate Workspace
@@ -600,78 +626,121 @@ function bindDropzone(qm) {
 
     const inputMultiDrive = rootEl.querySelector('#inputPdfMultiDriveLink');
     const btnPasteMultiDrive = rootEl.querySelector('#btnPastePdfMultiDrive');
-    const btnImportMultiDrive = rootEl.querySelector('#btnImportPdfMultiDrive');
+    const multiDriveSpinner = rootEl.querySelector('#pdfMultiDriveSpinner');
+    const multiDriveIcon = rootEl.querySelector('#pdfMultiDriveIcon');
 
-    if (btnPasteMultiDrive && inputMultiDrive) {
-      btnPasteMultiDrive.addEventListener('click', async () => {
-        try {
-          let text = '';
-          if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
-            text = await navigator.clipboard.readText();
-          }
-          if (!text) {
-            inputMultiDrive.focus();
-            showToast('Vui lòng cấp quyền truy cập bộ nhớ tạm hoặc nhấn Ctrl+V để dán', 'info');
-            return;
-          }
-          inputMultiDrive.value = text.trim();
-          if (isValidGoogleDriveUrl(inputMultiDrive.value)) {
-            inputMultiDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
-            inputMultiDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
-            showToast('Đã dán liên kết Google Drive hợp lệ', 'success');
-          } else {
-            inputMultiDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
-            inputMultiDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
-            showToast('Đã dán nội dung từ bộ nhớ tạm', 'info');
-          }
-        } catch (err) {
-          inputMultiDrive.focus();
-          showToast('Không thể đọc bộ nhớ tạm tự động. Vui lòng bấm giữ hoặc nhấn Ctrl+V để dán', 'warning');
-        }
-      });
-    }
+    if (inputMultiDrive) {
+      let isMultiImporting = false;
 
-    if (btnImportMultiDrive && inputMultiDrive) {
-      const doMultiImport = async () => {
-        const url = inputMultiDrive.value.trim();
-        if (!url) {
-          showToast('Vui lòng dán liên kết Google Drive', 'warning');
-          inputMultiDrive.focus();
-          return;
+      const setMultiImportingUi = (loading) => {
+        isMultiImporting = loading;
+        inputMultiDrive.disabled = loading;
+        if (btnPasteMultiDrive) {
+          btnPasteMultiDrive.disabled = loading;
+          btnPasteMultiDrive.classList.toggle('opacity-50', loading);
+          btnPasteMultiDrive.classList.toggle('pointer-events-none', loading);
         }
-        if (!isValidGoogleDriveUrl(url)) {
-          showToast('Định dạng liên kết Google Drive không hợp lệ', 'warning');
-          inputMultiDrive.focus();
-          return;
-        }
-        btnImportMultiDrive.disabled = true;
-        const originalHtml = btnImportMultiDrive.innerHTML;
-        btnImportMultiDrive.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i><span>Đang nạp...</span>';
+        if (multiDriveSpinner) multiDriveSpinner.classList.toggle('hidden', !loading);
+        if (multiDriveIcon) multiDriveIcon.classList.toggle('opacity-40', loading);
         if (window.lucide?.createIcons) window.lucide.createIcons();
+      };
+
+      const doMultiAutoImport = async (targetUrl) => {
+        const url = (targetUrl !== undefined ? targetUrl : inputMultiDrive.value).trim();
+        if (!url || isMultiImporting) return;
+
+        if (!isValidGoogleDriveUrl(url)) {
+          inputMultiDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
+          inputMultiDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+          showToast('Định dạng liên kết Google Drive không hợp lệ', 'warning');
+          return;
+        }
+
+        setMultiImportingUi(true);
+        inputMultiDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+        inputMultiDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
 
         const success = await qm.importFromDrive(url);
         if (!success) {
-          btnImportMultiDrive.disabled = false;
-          btnImportMultiDrive.innerHTML = originalHtml;
-          if (window.lucide?.createIcons) window.lucide.createIcons();
+          setMultiImportingUi(false);
           const curMultiInput = document.getElementById('inputPdfMultiDriveLink');
           if (curMultiInput) {
             curMultiInput.value = url;
           }
         } else {
+          setMultiImportingUi(false);
           inputMultiDrive.value = '';
           inputMultiDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
           inputMultiDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
         }
       };
 
-      btnImportMultiDrive.onclick = doMultiImport;
-      inputMultiDrive.onkeydown = (e) => {
+      let multiDebounceTimer = null;
+      inputMultiDrive.addEventListener('input', () => {
+        const val = inputMultiDrive.value.trim();
+        if (isValidGoogleDriveUrl(val)) {
+          inputMultiDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+          inputMultiDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
+          if (!isMultiImporting) {
+            clearTimeout(multiDebounceTimer);
+            multiDebounceTimer = setTimeout(() => {
+              doMultiAutoImport(val);
+            }, 350);
+          }
+        } else {
+          inputMultiDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
+          inputMultiDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+        }
+      });
+
+      inputMultiDrive.addEventListener('paste', (e) => {
+        if (isMultiImporting) return;
+        const pasted = e.clipboardData?.getData('text') || '';
+        setTimeout(() => {
+          const val = (pasted || inputMultiDrive.value).trim();
+          if (isValidGoogleDriveUrl(val)) {
+            doMultiAutoImport(val);
+          }
+        }, 20);
+      });
+
+      inputMultiDrive.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          doMultiImport();
+          doMultiAutoImport(inputMultiDrive.value.trim());
         }
-      };
+      });
+
+      if (btnPasteMultiDrive) {
+        btnPasteMultiDrive.addEventListener('click', async () => {
+          if (isMultiImporting) return;
+          try {
+            let text = '';
+            if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+              text = await navigator.clipboard.readText();
+            }
+            if (!text) {
+              inputMultiDrive.focus();
+              showToast('Vui lòng cấp quyền truy cập bộ nhớ tạm hoặc nhấn giữ ô nhập để dán', 'info');
+              return;
+            }
+            inputMultiDrive.value = text.trim();
+            if (isValidGoogleDriveUrl(inputMultiDrive.value)) {
+              inputMultiDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+              inputMultiDrive.classList.add('focus:ring-emerald-500/50', 'border-emerald-500/60');
+              showToast('Đang tự động nạp tệp từ liên kết...', 'info');
+              await doMultiAutoImport(inputMultiDrive.value);
+            } else {
+              inputMultiDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
+              inputMultiDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+              showToast('Đã dán nội dung, nhưng liên kết Google Drive không hợp lệ', 'warning');
+            }
+          } catch (err) {
+            inputMultiDrive.focus();
+            showToast('Không thể đọc bộ nhớ tạm tự động. Vui lòng bấm giữ hoặc nhấn Ctrl+V để dán', 'warning');
+          }
+        });
+      }
     }
 
     const multiRoot = rootEl.querySelector('#pdfMultiFileWorkspaceRoot');
