@@ -212,8 +212,6 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
   // Non-blocking async ingestion stream from R2 to disk.
   // Immediate HTTP 200 returned in <50ms without blocking client!
   if (purpose !== 'storage-drive') {
-    R2Service.startAsyncIngestion(fileId, fileKey, targetPath);
-
     const expiresAt = computeExpiresAt();
     const fileRecord = await prisma.fileRecord.create({
       data: {
@@ -228,6 +226,8 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
         expiresAt
       }
     });
+
+    R2Service.startAsyncIngestion(fileId, fileKey, targetPath);
 
     logger.info(
       { fileId: fileRecord.id, originalName: fileRecord.originalName, purpose },

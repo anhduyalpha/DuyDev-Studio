@@ -36,6 +36,11 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().default(''),
   R2_BUCKET_NAME: z.string().default('ddstudio-backend'),
   R2_MAX_MONTHLY_REQUESTS: z.coerce.number().default(900000),
+  R2_FALLBACK_ACCOUNT_ID: z.string().default(''),
+  R2_FALLBACK_ACCESS_KEY_ID: z.string().default(''),
+  R2_FALLBACK_SECRET_ACCESS_KEY: z.string().default(''),
+  R2_FALLBACK_BUCKET_NAME: z.string().default('ddstudio-backend'),
+  R2_FALLBACK_MAX_MONTHLY_REQUESTS: z.coerce.number().default(900000),
   STUDOCU_API_URL: z.string().default('http://127.0.0.1:8090').transform((v) => v.replace(/^['"\\ ]+|['"\\ ]+$/g, ''))
 });
 

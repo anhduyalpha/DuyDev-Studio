@@ -64,16 +64,31 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
 
       // Verify circuit breaker logic
       const originalMax = env.R2_MAX_MONTHLY_REQUESTS;
+      const originalFallbackMax = env.R2_FALLBACK_MAX_MONTHLY_REQUESTS;
       try {
-        // Temporarily lower threshold below current requests
-        (env as any).R2_MAX_MONTHLY_REQUESTS = updatedMetrics.totalRequests;
+        // Primary trips when requests reach limit
+        (env as any).R2_MAX_MONTHLY_REQUESTS = (updatedMetrics.primary?.totalRequests ?? 0);
+        expect(R2Service.isPrimaryAvailable()).toBe(false);
+
+        // When both primary and fallback trip, whole service is unavailable
+        (env as any).R2_FALLBACK_MAX_MONTHLY_REQUESTS = (updatedMetrics.fallback?.totalRequests ?? 0);
+        expect(R2Service.isFallbackAvailable()).toBe(false);
         expect(R2Service.isAvailable()).toBe(false);
 
-        // Restore above
-        (env as any).R2_MAX_MONTHLY_REQUESTS = updatedMetrics.totalRequests + 1000;
+        // When fallback has quota, it remains available as fallback provider
+        (env as any).R2_FALLBACK_MAX_MONTHLY_REQUESTS = 900000;
+        expect(R2Service.isFallbackAvailable()).toBe(true);
         expect(R2Service.isAvailable()).toBe(true);
+        expect(R2Service.getActiveAccount()).toBe('fallback');
+
+        // Restore primary
+        (env as any).R2_MAX_MONTHLY_REQUESTS = 900000;
+        expect(R2Service.isPrimaryAvailable()).toBe(true);
+        expect(R2Service.isAvailable()).toBe(true);
+        expect(R2Service.getActiveAccount()).toBe('primary');
       } finally {
         (env as any).R2_MAX_MONTHLY_REQUESTS = originalMax;
+        (env as any).R2_FALLBACK_MAX_MONTHLY_REQUESTS = originalFallbackMax;
       }
     });
 
@@ -490,6 +505,32 @@ describe('Cloudflare R2 Transit Pipe Architecture Suite', () => {
       expect((deleteCalls[0][0] as any).input.Key).toBe('transit/orphaned_old.pdf');
 
       sendSpy.mockRestore();
+    });
+
+    it('switches to fallback account and generates transit/fb_ key when primary limit is reached', async () => {
+      const origPrimaryMax = env.R2_MAX_MONTHLY_REQUESTS;
+      const metrics = R2Service.getMetrics();
+      try {
+        // Force primary over quota
+        (env as any).R2_MAX_MONTHLY_REQUESTS = metrics.primary?.totalRequests ?? 0;
+        expect(R2Service.isPrimaryAvailable()).toBe(false);
+        expect(R2Service.isFallbackAvailable()).toBe(true);
+
+        const result = await R2Service.generatePresignedUploadUrl('fallback_doc.pdf', 'application/pdf');
+        expect(result.provider).toBe('fallback');
+        expect(result.fileKey.startsWith('transit/fb_')).toBe(true);
+      } finally {
+        (env as any).R2_MAX_MONTHLY_REQUESTS = origPrimaryMax;
+      }
+    });
+
+    it('identifies and routes transit/fb_ keys to fallback account on ingestion', () => {
+      const primaryKey = 'transit/abc_document.pdf';
+      const fallbackKey = 'transit/fb_abc_document.pdf';
+
+      expect(R2Service.getAccountForFileKey(primaryKey).target).toBe('primary');
+      expect(R2Service.getAccountForFileKey(fallbackKey).target).toBe('fallback');
+      expect(R2Service.getAccountForFileKey(fallbackKey).bucket).toBe(env.R2_FALLBACK_BUCKET_NAME);
     });
   });
 });
