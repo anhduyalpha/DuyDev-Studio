@@ -81,7 +81,8 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                     f"Question '{q.id}' (Câu {q.number}) must have options ordered ['A', 'B', 'C', 'D'] (found {opt_labels})."
                 )
             for opt in q.options:
-                if not opt.text or not opt.text.strip():
+                has_visual = bool(getattr(opt, "image_path", None)) or bool(getattr(q, "rich_elements", None))
+                if not (opt.text and opt.text.strip()) and not has_visual:
                     raise IRValidationError(
                         f"Question '{q.id}' (Câu {q.number}) has empty text for option '{opt.label}'."
                     )
@@ -100,7 +101,8 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                     f"Question '{q.id}' (Câu {q.number}) must have statement labels ordered ['a', 'b', 'c', 'd'] (found {tf_labels})."
                 )
             for stmt in q.sub_statements:
-                if not stmt.statement or not stmt.statement.strip():
+                has_visual = bool(getattr(q, "rich_elements", None))
+                if not (stmt.statement and stmt.statement.strip()) and not has_visual:
                     raise IRValidationError(
                         f"Question '{q.id}' (Câu {q.number}) has empty statement text for '{stmt.label}'."
                     )

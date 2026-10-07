@@ -81,7 +81,8 @@ class CanonicalIRBuilder:
                     OptionIR(
                         label=opt.label.upper(),
                         text=normalize_text(opt.text),
-                        is_correct=is_corr
+                        is_correct=is_corr,
+                        image_path=getattr(opt, "image_path", None)
                     )
                 )
 
@@ -110,13 +111,35 @@ class CanonicalIRBuilder:
             q_attachments = []
             if rich_element_attachments is not None:
                 if q.id in rich_element_attachments:
-                    q_attachments = rich_element_attachments[q.id]
+                    q_attachments = list(rich_element_attachments[q.id])
                 elif str(q.source_number) in rich_element_attachments:
-                    q_attachments = rich_element_attachments[str(q.source_number)]
+                    q_attachments = list(rich_element_attachments[str(q.source_number)])
                 elif str(q.number) in rich_element_attachments:
-                    q_attachments = rich_element_attachments[str(q.number)]
+                    q_attachments = list(rich_element_attachments[str(q.number)])
                 else:
                     q_attachments = []
+
+            # Check for visual / image-based options (e.g. chemical formulas or figures as options)
+            if sec_type == SectionType.PART_I_MCQ and norm_options and q_attachments:
+                has_empty_opts = any(not opt.text or opt.text.strip() in (".", "...", "•") for opt in norm_options)
+                already_has_img = any(bool(opt.image_path) for opt in norm_options)
+                if not already_has_img:
+                    valid_att_recs = [att for att in q_attachments if getattr(att, "asset_record", None) and getattr(att.asset_record, "path", None)]
+                    if len(valid_att_recs) == len(norm_options) or (has_empty_opts and len(valid_att_recs) >= len(norm_options)):
+                        sorted_atts = sorted(
+                            valid_att_recs,
+                            key=lambda a: (
+                                a.asset_record.bbox[1] if a.asset_record and a.asset_record.bbox else 0.0,
+                                a.asset_record.bbox[0] if a.asset_record and a.asset_record.bbox else 0.0
+                            )
+                        )
+                        opt_atts = sorted_atts[-len(norm_options):]
+                        stem_att_ids = {a.asset_id for a in sorted_atts[:-len(norm_options)]}
+                        for opt, att in zip(norm_options, opt_atts):
+                            opt.image_path = att.asset_record.path
+                            if opt.text.strip() in (".", "...", "•"):
+                                opt.text = ""
+                        q_attachments = [a for a in q_attachments if a.asset_id in stem_att_ids]
 
             if q_attachments:
                 for att in q_attachments:
@@ -161,10 +184,10 @@ class CanonicalIRBuilder:
                     output_dir=crops_output_dir
                 )
 
-
             # Auto calculate layout hints (e.g. 2 or 4 columns if options are brief)
             columns = 1
-            if norm_options:
+            has_opt_images = any(bool(opt.image_path) for opt in norm_options)
+            if norm_options and not has_opt_images:
                 max_opt_len = max(len(opt.text) for opt in norm_options)
                 if max_opt_len < 12 and len(norm_options) == 4:
                     columns = 4

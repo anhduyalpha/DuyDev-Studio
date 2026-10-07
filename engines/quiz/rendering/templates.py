@@ -340,15 +340,22 @@ def _render_single_question(q: QuestionIR, break_before: bool = False, split_opt
 
     else:
         # Standard Part I MCQ (4 choices)
-        has_imgs = bool(q.rich_elements)
+        has_imgs = bool(q.rich_elements) or any(bool(getattr(opt, "image_path", None)) for opt in q.options)
         cols = LayoutSolver.determine_option_columns(q.options, has_images=has_imgs)
         opt_items: list[str] = []
         for opt in q.options:
+            opt_img_html = ""
+            if getattr(opt, "image_path", None) and os.path.isfile(opt.image_path):
+                src_val = _normalize_img_src(opt.image_path)
+                opt_img_html = f'<img src="{html.escape(src_val)}" class="opt-crop-img" alt="Phương án {html.escape(opt.label)}" />'
+
+            opt_text_content = opt.text or ""
+            separator = " " if (opt_img_html and opt_text_content.strip()) else ""
             opt_items.append(
                 f"""
       <div class="opt-item">
         <span class="opt-letter">{html.escape(opt.label)}.</span>
-        <span class="opt-text">{opt.text}</span>
+        <span class="opt-text">{opt_img_html}{separator}{opt_text_content}</span>
       </div>"""
             )
         options_html = f"""

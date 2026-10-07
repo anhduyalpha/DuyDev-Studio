@@ -72,8 +72,9 @@ def detect_candidates_from_page(blocks: list[TextBlock], raw_text: str = "") -> 
             cand_y = block.bbox[1]
 
             marker_str = match.group(0).strip()
+            line_marker_re = re.compile(rf"\b(?:Câu|Bài|Question)\s*{q_num}\b|\b{q_num}\.", re.IGNORECASE)
             for line in block.lines:
-                if marker_str in line.text or f"Câu {q_num}" in line.text or f"{q_num}." in line.text:
+                if marker_str in line.text or f"Câu {q_num}" in line.text or line_marker_re.search(line.text.strip()):
                     cand_bbox = line.bbox
                     cand_y = line.bbox[1]
                     break

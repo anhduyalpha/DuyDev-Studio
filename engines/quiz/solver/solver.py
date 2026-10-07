@@ -122,7 +122,13 @@ class AnswerSolver:
                 "number": q.number,
                 "type": q.type.value,
                 "stem": q.stem,
-                "options": [{"label": opt.label, "text": opt.text} for opt in q.options],
+                "options": [
+                    {
+                        "label": opt.label,
+                        "text": opt.text if (opt.text and opt.text.strip()) else f"[Hình ảnh / công thức cấu tạo phương án {opt.label}]"
+                    }
+                    for opt in q.options
+                ],
                 "sub_statements": [{"label": sub.label, "statement": sub.statement} for sub in q.sub_statements]
             }
             for q in questions

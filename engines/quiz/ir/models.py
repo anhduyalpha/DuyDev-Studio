@@ -53,8 +53,9 @@ class SectionIR(BaseModel):
 class OptionIR(BaseModel):
     """Multiple-choice option item."""
     label: str                           # "A", "B", "C", "D"
-    text: str                            # Normalized KaTeX/chemical text
+    text: str = ""                       # Normalized KaTeX/chemical text
     is_correct: Optional[bool] = None    # Populated by AnswerKey
+    image_path: Optional[str] = None     # Path to image crop if option is visual
 
 
 class TFStatementIR(BaseModel):

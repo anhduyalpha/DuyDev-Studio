@@ -19,8 +19,9 @@ class QuestionType(str, Enum):
 class QuestionOption(BaseModel):
     """Multiple-choice option item (A, B, C, D)."""
     label: str                         # "A", "B", "C", "D"
-    text: str                          # Option text preserving KaTeX and chemical formulas
+    text: str = ""                     # Option text preserving KaTeX and chemical formulas
     is_correct: Optional[bool] = None  # Populated during Answer Solving (TASK-08)
+    image_path: Optional[str] = None   # Path to image crop if option is visual
 
 
 class TFSubStatement(BaseModel):

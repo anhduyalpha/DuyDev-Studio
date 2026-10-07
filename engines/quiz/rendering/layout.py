@@ -73,7 +73,8 @@ class LayoutSolver:
         - 2 columns: Medium options (16-45 characters).
         - 1 column: Long statements (> 45 characters) or options with embedded images.
         """
-        if has_images or not options:
+        has_opt_images = any(bool(getattr(opt, "image_path", None)) for opt in options)
+        if has_images or has_opt_images or not options:
             return 1
 
         clean_lengths = [cls.estimate_visual_text_length(opt.text) for opt in options]
@@ -128,9 +129,11 @@ class LayoutSolver:
         # Options
         num_options = len(question.options)
         if num_options > 0:
+            has_opt_images = any(bool(getattr(opt, "image_path", None)) for opt in question.options)
             cols = option_cols if option_cols in (1, 2, 4) else cls.determine_option_columns(question.options, bool(question.rich_elements))
             option_rows = (num_options + cols - 1) // cols
-            options_height = option_rows * 20.0 + 6.0
+            base_row_h = 42.0 if has_opt_images else 20.0
+            options_height = option_rows * base_row_h + 6.0
         elif question.sub_statements:
             options_height = len(question.sub_statements) * 18.0 + 4.0
         else:
@@ -689,6 +692,15 @@ body {{
 
 .opt-text {{
   flex-grow: 1;
+}}
+
+.opt-crop-img {{
+  display: inline-block;
+  vertical-align: middle;
+  max-height: 42pt;
+  max-width: 88%;
+  object-fit: contain;
+  margin: 2pt 0;
 }}
 
 /* === Part II True / False Sub-statements === */
