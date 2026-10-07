@@ -347,6 +347,19 @@ class TestDiagnosticLayerAttribution(unittest.TestCase):
         self.assertEqual(err.diagnostic_layer, DiagnosticLayer.QA_FAILURE)
         self.assertEqual(err.code, ErrorCode.QA_FAILED)
 
+    def test_layer_reconstruction_failure_attribution(self):
+        """Reconstruction failure is attributed to RECONSTRUCTION_FAILURE."""
+        err = QuizEngineError(
+            code=ErrorCode.RANGE_MISMATCH,
+            layer=DiagnosticLayer.RECONSTRUCTION_FAILURE,
+            message="Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu 2 câu: [1, 2]).",
+            stage=JobStage.RECONSTRUCTING.value,
+        )
+        self.assertEqual(err.diagnostic_layer, DiagnosticLayer.RECONSTRUCTION_FAILURE)
+        self.assertEqual(err.code, ErrorCode.RANGE_MISMATCH)
+        self.assertEqual(err.to_dict()["diagnostic_layer"], "RECONSTRUCTION_FAILURE")
+
+
 
 class TestAICallBudgetInvariant(unittest.TestCase):
     """Verifies that AI calls scale sub-linearly and never explode linearly."""

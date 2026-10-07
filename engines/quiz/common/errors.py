@@ -11,6 +11,7 @@ class DiagnosticLayer(str, Enum):
     """The distinct technical layers responsible for pipeline failures."""
     PDF_PARSING_FAILURE = "PDF_PARSING_FAILURE"
     RECOGNITION_FAILURE = "RECOGNITION_FAILURE"
+    RECONSTRUCTION_FAILURE = "RECONSTRUCTION_FAILURE"
     AI_FAILURE = "AI_FAILURE"
     IR_FAILURE = "IR_FAILURE"
     LAYOUT_FAILURE = "LAYOUT_FAILURE"

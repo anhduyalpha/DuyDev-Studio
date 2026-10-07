@@ -51,7 +51,7 @@ from engines.quiz.ir.validator import (
     validate_canonical_document_ir,
     IRValidationError
 )
-from engines.quiz.common.errors import ErrorCode, QuizEngineError
+from engines.quiz.common.errors import ErrorCode, QuizEngineError, DiagnosticLayer
 
 
 class TestProductionBugfixes(unittest.TestCase):
@@ -512,6 +512,23 @@ class TestProductionBugfixes(unittest.TestCase):
         data_url = _normalize_img_src(test_img_path)
         self.assertTrue(data_url.startswith("data:image/png;base64,"))
 
+    def test_reconstruction_failure_diagnostic_layer(self):
+        """Verifies that DiagnosticLayer.RECONSTRUCTION_FAILURE exists and serializes correctly in QuizEngineError."""
+        err = QuizEngineError(
+            code=ErrorCode.RANGE_MISMATCH,
+            layer=DiagnosticLayer.RECONSTRUCTION_FAILURE,
+            message="Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu 2 câu: [1, 2]). Tuyệt đối không xuất bản đề thi thiếu câu hỏi.",
+            stage="RECONSTRUCTING",
+            details={"missing_questions": [1, 2]}
+        )
+        self.assertEqual(err.layer, DiagnosticLayer.RECONSTRUCTION_FAILURE)
+        self.assertEqual(err.diagnostic_layer, DiagnosticLayer.RECONSTRUCTION_FAILURE)
+        self.assertEqual(err.code, ErrorCode.RANGE_MISMATCH)
+        d = err.to_dict()
+        self.assertEqual(d["diagnostic_layer"], "RECONSTRUCTION_FAILURE")
+        self.assertEqual(d["error_code"], "RANGE_MISMATCH")
+
 
 if __name__ == "__main__":
     unittest.main()
+

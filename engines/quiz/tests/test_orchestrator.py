@@ -19,6 +19,7 @@ from engines.quiz.reconstruction.models import (
     QuestionType,
 )
 from engines.quiz.solver.models import BatchAnswerResult, QuestionAnswerItem
+from engines.quiz.common.errors import ErrorCode, DiagnosticLayer
 
 
 class TestOrchestrator(unittest.TestCase):
@@ -185,6 +186,45 @@ class TestOrchestrator(unittest.TestCase):
         self.assertEqual(final_state.current_stage, JobStage.FAILED)
         self.assertIsNotNone(final_state.error)
 
+    def test_orchestrator_reconstruction_missing_questions_hard_gate(self):
+        """Verifies that missing questions during reconstruction cleanly triggers RECONSTRUCTION_FAILURE without AttributeError."""
+        # Provider returns only question 1 when questions 1 and 2 are expected
+        mock_recon = BatchReconstructionResult(
+            batch_id="batch_partial_recon",
+            questions=[
+                ReconstructedQuestion(
+                    id="q_1",
+                    number=1,
+                    source_number=1,
+                    type=QuestionType.PART_I_MCQ,
+                    stem="Chất nào sau đây là ancol no đơn chức mạch hở?",
+                    options=[
+                        QuestionOption(label="A", text="CH3OH"),
+                        QuestionOption(label="B", text="C6H5OH"),
+                        QuestionOption(label="C", text="CH3COOH"),
+                        QuestionOption(label="D", text="HCHO"),
+                    ],
+                    source_pages=[1],
+                ),
+            ]
+        )
+        provider = MockAIProvider(preset_response={BatchReconstructionResult: mock_recon})
+        orchestrator = QuizPipelineOrchestrator(provider=provider)
+        out_dir = os.path.join(self.temp_dir, "run_missing_gate")
+
+        final_state = orchestrator.run(
+            pdf_path=self.input_pdf,
+            user_instruction="Trang 1 lấy 2 câu",
+            output_dir=out_dir,
+            prefix="PartialGateTest",
+        )
+        self.assertEqual(final_state.current_stage, JobStage.FAILED)
+        self.assertEqual(final_state.artifacts.get("error_code"), ErrorCode.RANGE_MISMATCH.value)
+        self.assertEqual(final_state.artifacts.get("diagnostic_layer"), DiagnosticLayer.RECONSTRUCTION_FAILURE.value)
+        self.assertIn("Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu", final_state.error)
+        self.assertNotIn("AttributeError", final_state.error)
+
 
 if __name__ == "__main__":
     unittest.main()
+
