@@ -33,6 +33,16 @@ export function renderMobileStickyBar(queueState = {}) {
 
   if (!files || files.length === 0) return '';
 
+  // Only render sticky action bar for visual multi-page workspaces (split, rotate, organize)
+  // or long multi-file queues (merge, images_to_pdf with > 3 files) where scrolling occurs.
+  // In single-file modes (compress, extract_images, pdf_to_docx, watermark, security),
+  // the inline CTA in ConfigPanel is already directly visible and accessible without duplication.
+  const isVisualMode = mode === 'split' || mode === 'rotate' || mode === 'organize';
+  const isLongQueue = (mode === 'merge' || mode === 'images_to_pdf') && files.length > 3;
+  if (!isVisualMode && !isLongQueue) {
+    return '';
+  }
+
   const theme = getToolTheme(mode);
   const splitCount = selectedSplitPages.size;
   const rotatedCount = Object.values(pageRotations || {}).filter((deg) => (deg % 360) !== 0).length;
@@ -133,7 +143,7 @@ export function renderPdfConverter(queueState = {}) {
   const rightSpan = !hasFiles ? 'hidden' : (isVisualMode ? 'lg:col-span-4' : 'lg:col-span-5');
 
   return `
-    <div id="pdfStudioWorkspaceRoot" class="space-y-6 animate-fadeIn pb-24 md:pb-6">
+    <div id="pdfStudioWorkspaceRoot" class="space-y-6 animate-fadeIn pb-32 md:pb-8">
       <!-- Breadcrumb Navigation -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">

@@ -8,10 +8,10 @@ export const redisConnection = new Redis(env.REDIS_URL, {
   enableReadyCheck: false,
   lazyConnect: true,
   retryStrategy(times) {
-    if (process.env.NODE_ENV === 'test' || times > 3) {
-      return null;
+    if (process.env.NODE_ENV === 'test') {
+      return times > 3 ? null : 100;
     }
-    return Math.min(times * 1000, 5000);
+    return Math.min(times * 500, 3000);
   }
 });
 
@@ -70,10 +70,10 @@ export function createRedisSubscriber(): Redis {
     enableReadyCheck: false,
     lazyConnect: true,
     retryStrategy(times) {
-      if (process.env.NODE_ENV === 'test' || times > 3) {
-        return null;
+      if (process.env.NODE_ENV === 'test') {
+        return times > 3 ? null : 100;
       }
-      return Math.min(times * 1000, 5000);
+      return Math.min(times * 500, 3000);
     }
   });
 

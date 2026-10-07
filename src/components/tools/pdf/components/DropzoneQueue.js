@@ -11,6 +11,7 @@ import { renderPdfOrganizeWorkspace } from './PdfOrganizeWorkspace.js';
 import { renderPdfMultiFileWorkspace } from './PdfMultiFileWorkspace.js';
 import { PDF_MODES } from './PdfModeSelector.js';
 import { getToolTheme } from '../services/pdfThemes.js';
+import { renderPreviewCanvasBox } from './PdfPreviewCanvas.js';
 
 const MODE_DESCRIPTIONS = {
   merge: 'Ghép nhiều tệp PDF thành một tài liệu duy nhất theo thứ tự.',
@@ -143,6 +144,56 @@ export function renderDropzoneQueue(queueState = {}) {
               <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
               <span>Đổi tệp</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Document Preview & Inspection Card -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-zinc-100 dark:border-white/[0.06]">
+            <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4 ${theme.textSoft}"></i> Trang bìa tài liệu
+            </span>
+            <span class="text-[11px] font-mono text-zinc-500">Trang 1 / ${singleFile.pages || 1}</span>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center gap-5">
+            <div class="w-36 sm:w-44 shrink-0 mx-auto sm:mx-0">
+              ${renderPreviewCanvasBox({
+                file: singleFile,
+                pageIndex: 0,
+                canvasId: 'pdfSingleCoverCanvas_0',
+                skeletonId: 'pdfSingleCoverSkeleton_0',
+                eyePosition: 'right'
+              })}
+            </div>
+
+            <div class="flex-1 w-full space-y-3">
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                  <span class="block text-zinc-400 text-[11px]">Định dạng</span>
+                  <span class="font-semibold text-zinc-800 dark:text-zinc-200 font-mono mt-0.5">PDF Document</span>
+                </div>
+                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                  <span class="block text-zinc-400 text-[11px]">Số trang</span>
+                  <span class="font-semibold text-zinc-800 dark:text-zinc-200 font-mono mt-0.5">${singleFile.pages || 1} trang</span>
+                </div>
+                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                  <span class="block text-zinc-400 text-[11px]">Dung lượng</span>
+                  <span class="font-semibold text-zinc-800 dark:text-zinc-200 font-mono mt-0.5">${formatBytes(singleFile.size)}</span>
+                </div>
+                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                  <span class="block text-zinc-400 text-[11px]">Công cụ</span>
+                  <span class="font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">${theme.label}</span>
+                </div>
+              </div>
+
+              <div class="pt-1">
+                <button type="button" data-preview-page="0" class="btn-preview-page w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-white/[0.08] hover:bg-zinc-50 dark:hover:bg-white/[0.04] text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                  <span>Xem chi tiết trang bìa</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

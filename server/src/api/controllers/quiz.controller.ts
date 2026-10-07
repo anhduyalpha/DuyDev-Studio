@@ -63,6 +63,19 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
     });
   } catch (queueErr) {
     logger.warn({ jobId: job.id, queueErr }, 'Queue enqueue failed, job remains QUEUED in database');
+    if (process.env.NODE_ENV !== 'test') {
+      await prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: 'Không thể xếp hàng tạo bài tập trắc nghiệm. Vui lòng thử lại.'
+        }
+      });
+      return reply.status(503).send({
+        success: false,
+        error: 'Dịch vụ xử lý bài tập trắc nghiệm tạm thời gián đoạn. Vui lòng thử lại.'
+      });
+    }
   }
 
   return reply.status(202).send({

@@ -62,11 +62,44 @@ class TaskCoordinator {
     if (this.initialized) return;
     this.initialized = true;
 
-    // Periodic heartbeat sync to catch any background updates
     if (typeof window !== 'undefined') {
-      this.heartbeatTimer = window.setInterval(() => {
-        this.syncTasks();
-      }, 1200);
+      // Dynamic lifecycle management: pause timers when page/app is in background
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          this.stopHeartbeat();
+        } else {
+          this.syncTasks(true);
+          this.updateHeartbeatState();
+        }
+      });
+      this.updateHeartbeatState();
+    }
+  }
+
+  hasActiveRunningTasks() {
+    return this.cachedTasks.some((t) => t.status === 'running');
+  }
+
+  updateHeartbeatState() {
+    if (typeof window === 'undefined') return;
+    if (document.hidden || !this.hasActiveRunningTasks()) {
+      this.stopHeartbeat();
+    } else if (!this.heartbeatTimer) {
+      this.startHeartbeat();
+    }
+  }
+
+  startHeartbeat() {
+    if (this.heartbeatTimer || typeof window === 'undefined') return;
+    this.heartbeatTimer = window.setInterval(() => {
+      this.syncTasks();
+    }, 2500);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      window.clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
   }
 
@@ -183,6 +216,7 @@ class TaskCoordinator {
     if (isDifferent || force) {
       this.notifySubscribers();
     }
+    this.updateHeartbeatState();
   }
 
   /**

@@ -16,7 +16,7 @@ import { loadAndRenderPdfThumbnails } from '../components/PdfRotateWorkspace.js'
 import { loadAndRenderSplitThumbnails } from '../components/PdfSplitWorkspace.js';
 import { loadAndRenderOrganizeThumbnails } from '../components/PdfOrganizeWorkspace.js';
 import { openPdfPageLightbox, closePdfPageLightbox } from '../components/PdfPageLightboxModal.js';
-import { restoreThumbnailsSynchronously } from '../components/PdfPreviewCanvas.js';
+import { restoreThumbnailsSynchronously, renderWorkspaceThumbnails } from '../components/PdfPreviewCanvas.js';
 import { pdfPageCache } from '../services/PdfPageCache.js';
 import { attachSwipeToDismiss, attachSlideToClear } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
@@ -818,6 +818,30 @@ function bindDropzone(qm) {
     rootEl.querySelector('#btnPreviewSingleFile')?.addEventListener('click', () => {
       const f = qm.files[0];
       if (f) ViewerConnector.previewBlob(f.rawFile || f, f.name);
+    });
+
+    // Synchronously paint cached cover bitmap with 0ms latency
+    restoreThumbnailsSynchronously(rootEl, qm.files[0]);
+
+    // Render cover page thumbnail on single-file preview canvas
+    const coverCanvas = rootEl.querySelector('#pdfSingleCoverCanvas_0:not([data-rendered="true"])');
+    if (coverCanvas && qm.files[0]) {
+      renderWorkspaceThumbnails({
+        file: qm.files[0],
+        onDocLoaded: (numPages) => qm.setTotalPages(numPages),
+        pageIndex: 0,
+        pageSize: 1,
+        idPrefix: 'pdfSingleCover'
+      });
+    }
+
+    // Wire lightbox preview button for cover thumbnail
+    rootEl.querySelectorAll('.btn-preview-page').forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const pIdx = Number(btn.dataset.previewPage || 0);
+        openPdfPageLightbox(qm.files[0], pIdx);
+      };
     });
   }
 

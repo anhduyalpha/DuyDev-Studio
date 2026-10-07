@@ -19,8 +19,22 @@ export function watchJobProgress({
   let isPolling = false;
   let activePollAbort = null;
 
+  const onVisibilityChange = () => {
+    if (isDone) return;
+    if (typeof document !== 'undefined' && !document.hidden) {
+      pollStatus();
+    }
+  };
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange);
+  }
+
   const cleanup = () => {
     isDone = true;
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    }
     if (activePollAbort) {
       try {
         activePollAbort.abort();

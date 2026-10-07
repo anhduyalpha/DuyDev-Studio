@@ -40,6 +40,19 @@ export async function enqueuePdfJob(request: FastifyRequest, reply: FastifyReply
     });
   } catch (queueErr) {
     logger.warn({ jobId: job.id, queueErr }, 'Queue enqueue failed, job remains QUEUED in database');
+    if (process.env.NODE_ENV !== 'test') {
+      await prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: 'Không thể đưa tác vụ vào hàng đợi xử lý. Vui lòng thử lại.'
+        }
+      });
+      return reply.status(503).send({
+        success: false,
+        error: 'Dịch vụ xử lý tác vụ tạm thời gián đoạn. Vui lòng thử lại.'
+      });
+    }
   }
 
   return reply.status(202).send({
