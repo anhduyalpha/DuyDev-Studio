@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Base64
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
@@ -23,11 +24,14 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import org.json.JSONArray
 import org.json.JSONObject
@@ -52,10 +56,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var offlineContainer: View
+    private lateinit var customViewContainer: FrameLayout
     private lateinit var btnRetry: Button
     private lateinit var btnOpenTailscale: Button
     private lateinit var btnOpenLan: Button
     private lateinit var btnOpenCloudflare: Button
+
+    private var customView: View? = null
+    private var customViewCallback: WebChromeClient.CustomViewCallback? = null
+    private var lastBackPressTime = 0L
 
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermissionRequest: PermissionRequest? = null
@@ -177,6 +186,9 @@ class MainActivity : AppCompatActivity() {
         if (::webView.isInitialized) {
             webView.onPause()
             webView.pauseTimers()
+            try {
+                CookieManager.getInstance().flush()
+            } catch (_: Exception) {}
         }
     }
 
@@ -207,6 +219,7 @@ class MainActivity : AppCompatActivity() {
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         progressBar = findViewById(R.id.progressBar)
         offlineContainer = findViewById(R.id.offlineContainer)
+        customViewContainer = findViewById(R.id.customViewContainer)
         btnRetry = findViewById(R.id.btnRetry)
         btnOpenTailscale = findViewById(R.id.btnOpenTailscale)
         btnOpenLan = findViewById(R.id.btnOpenLan)
@@ -316,16 +329,47 @@ class MainActivity : AppCompatActivity() {
             })
         }
 
-        // Native download listener with accurate filename extraction and app icon notification
+        // Native download listener with accurate filename extraction, blob/data support, and app icon notification
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             val fileName = resolveDownloadFileName(url, contentDisposition, mimetype)
-            vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
-                this,
-                url,
-                fileName,
-                mimetype ?: "application/octet-stream",
-                userAgent
-            )
+            if (url.startsWith("blob:")) {
+                val safeUrl = url.replace("'", "\\'")
+                val safeName = fileName.replace("'", "\\'")
+                val safeMime = (mimetype ?: "application/octet-stream").replace("'", "\\'")
+                val script = """
+                    (function() {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('GET', '$safeUrl', true);
+                        xhr.responseType = 'blob';
+                        xhr.onload = function() {
+                            var reader = new FileReader();
+                            reader.onloadend = function() {
+                                if (window.AndroidBridge && typeof window.AndroidBridge.saveBase64File === 'function') {
+                                    window.AndroidBridge.saveBase64File(reader.result, '$safeName', '$safeMime');
+                                }
+                            };
+                            reader.readAsDataURL(xhr.response);
+                        };
+                        xhr.send();
+                    })();
+                """.trimIndent()
+                evaluateJs(script)
+            } else if (url.startsWith("data:")) {
+                vn.alphadaniel.duydevstudio.download.DownloadHelper.saveBase64(
+                    this,
+                    url,
+                    fileName,
+                    mimetype ?: "application/octet-stream"
+                )
+            } else {
+                vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
+                    this,
+                    url,
+                    fileName,
+                    mimetype ?: "application/octet-stream",
+                    userAgent
+                )
+            }
         }
 
         // Inject Native Javascript Interface
@@ -340,6 +384,28 @@ class MainActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     swipeRefreshLayout.isRefreshing = false
                 }
+            }
+
+            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                if (customView != null) {
+                    onHideCustomView()
+                    return
+                }
+                customView = view
+                customViewCallback = callback
+                customViewContainer.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                customViewContainer.visibility = View.VISIBLE
+                swipeRefreshLayout.visibility = View.GONE
+            }
+
+            override fun onHideCustomView() {
+                if (customView == null) return
+                customViewContainer.removeView(customView)
+                customView = null
+                customViewContainer.visibility = View.GONE
+                swipeRefreshLayout.visibility = View.VISIBLE
+                customViewCallback?.onCustomViewHidden()
+                customViewCallback = null
             }
 
             override fun onShowFileChooser(
@@ -467,6 +533,11 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 swipeRefreshLayout.isRefreshing = false
                 progressBar.visibility = View.GONE
+
+                // Notify web application if pending shared payload is ready to be consumed
+                if (AndroidBridge.sharedPayloadJson != null) {
+                    evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }")
+                }
             }
 
             override fun onReceivedError(
@@ -485,24 +556,75 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                if (customView != null) {
+                    webView.webChromeClient?.onHideCustomView()
+                    return
+                }
                 if (offlineContainer.visibility == View.VISIBLE) {
                     finish()
-                } else {
-                    webView.evaluateJavascript(
-                        "(function() { if (document.getElementById('fileViewerCoreModal')) { if (window.closeFileViewer) { window.closeFileViewer(); } else { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'})); } return 'true'; } return 'false'; })()"
-                    ) { result ->
-                        val closedModal = result?.replace("\"", "") == "true"
-                        if (!closedModal) {
-                            if (webView.canGoBack()) {
-                                webView.goBack()
-                            } else {
+                    return
+                }
+                webView.evaluateJavascript("""
+                    (function() {
+                        if (document.getElementById('fileViewerCoreModal')) {
+                            if (window.closeFileViewer) window.closeFileViewer();
+                            else window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));
+                            return 'true';
+                        }
+                        if (document.getElementById('shareTargetPanel')) {
+                            var btn = document.getElementById('btnCloseShareModal') || document.querySelector('#shareTargetPanel button');
+                            if (btn) btn.click();
+                            else { var p = document.getElementById('shareTargetPanel'); if (p) p.remove(); }
+                            return 'true';
+                        }
+                        var modalBackdrop = document.querySelector('.modal-backdrop, [data-modal-open="true"]');
+                        if (modalBackdrop) {
+                            window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));
+                            return 'true';
+                        }
+                        if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '#dashboard') {
+                            window.location.hash = '';
+                            return 'true';
+                        }
+                        return 'false';
+                    })()
+                """.trimIndent()) { result ->
+                    val handled = result?.replace("\"", "") == "true"
+                    if (!handled) {
+                        if (webView.canGoBack()) {
+                            webView.goBack()
+                        } else {
+                            val now = System.currentTimeMillis()
+                            if (now - lastBackPressTime < 2000L) {
                                 finish()
+                            } else {
+                                lastBackPressTime = now
+                                Toast.makeText(this@MainActivity, "Nhấn quay lại lần nữa để thoát", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 }
             }
         })
+    }
+
+    /**
+     * Dynamically update system status bar and navigation bar colors and icon brightness.
+     */
+    fun updateSystemTheme(isDark: Boolean) {
+        val color = if (isDark) Color.parseColor("#09090B") else Color.parseColor("#F4F4F6")
+        window.statusBarColor = color
+        window.navigationBarColor = color
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.isAppearanceLightStatusBars = !isDark
+        controller.isAppearanceLightNavigationBars = !isDark
+    }
+
+    /**
+     * Toggle swipe-to-refresh to prevent accidental reloads during interactive gestures.
+     */
+    fun setSwipeRefreshEnabled(enabled: Boolean) {
+        swipeRefreshLayout.isEnabled = enabled
     }
 
     private fun showOffline(show: Boolean) {

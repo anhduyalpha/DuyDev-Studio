@@ -517,6 +517,60 @@ class AndroidBridge(
     }
 
     /**
+     * Save base64 file data directly to device Downloads without network roundtrip.
+     */
+    @JavascriptInterface
+    fun saveBase64File(base64Data: String, fileName: String, mimeType: String) {
+        activity.runOnUiThread {
+            vn.alphadaniel.duydevstudio.download.DownloadHelper.saveBase64(
+                activity,
+                base64Data,
+                fileName,
+                mimeType
+            )
+        }
+    }
+
+    /**
+     * Dynamically update system status bar and navigation bar to match web theme (dark / light).
+     */
+    @JavascriptInterface
+    fun setTheme(isDark: Boolean) {
+        activity.runOnUiThread {
+            activity.updateSystemTheme(isDark)
+        }
+    }
+
+    /**
+     * Enable or disable pull-to-refresh to avoid accidental reloads during tool interactions.
+     */
+    @JavascriptInterface
+    fun setSwipeRefreshEnabled(enabled: Boolean) {
+        activity.runOnUiThread {
+            activity.setSwipeRefreshEnabled(enabled)
+        }
+    }
+
+    /**
+     * Native text and link share via Android system intent chooser.
+     */
+    @JavascriptInterface
+    fun shareText(title: String, text: String, url: String) {
+        activity.runOnUiThread {
+            try {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    if (title.isNotBlank()) putExtra(Intent.EXTRA_SUBJECT, title)
+                    val combined = listOf(text, url).filter { it.isNotBlank() }.joinToString("\n")
+                    putExtra(Intent.EXTRA_TEXT, combined)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                activity.startActivity(Intent.createChooser(shareIntent, title.ifBlank { "Chia sẻ qua DuyDev Studio" }))
+            } catch (_: Exception) {}
+        }
+    }
+
+    /**
      * Show general push notification with official app icon.
      */
     @JavascriptInterface

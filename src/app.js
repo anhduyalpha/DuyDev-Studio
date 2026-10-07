@@ -70,6 +70,9 @@ class App {
     window.__dsAppReady = true;
     window.dispatchEvent(new CustomEvent('ds:app-ready'));
 
+    // Cold-start share target check (handles Android native intent and Service Worker shares)
+    this.checkAndOpenShareTarget();
+
     // Web Share Target: listen for payloads from Service Worker
     navigator.serviceWorker?.addEventListener('message', (e) => {
       if (e.data?.type === 'DS_SHARE_TARGET_PAYLOAD' && e.data.payload) {

@@ -251,8 +251,10 @@
     import { openShareTargetModal } from './src/components/common/ShareTargetModal.js';
 
     const hash = window.location.hash || '';
-    const search = window.location.search || '';
-    const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=');
+    const hasNativeShared = typeof window.AndroidBridge !== 'undefined' &&
+      typeof window.AndroidBridge.getSharedPayload === 'function' &&
+      Boolean(window.AndroidBridge.getSharedPayload());
+    const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=') || hasNativeShared;
 
     function closeFastSharePlaceholder() {
       const p = document.getElementById('fastPathSharePlaceholder');

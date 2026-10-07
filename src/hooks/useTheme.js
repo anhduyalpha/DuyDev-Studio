@@ -56,6 +56,11 @@ export function applyTheme(theme) {
   localStorage.setItem('ds_theme', theme);
   updateThemeUI(theme);
 
+  // Sync native Android system bar colors
+  if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.setTheme === 'function') {
+    try { window.AndroidBridge.setTheme(isDark); } catch (_) {}
+  }
+
   // Notify listeners
   window.dispatchEvent(new CustomEvent('ds-theme-change', { detail: { theme, isDark } }));
 }

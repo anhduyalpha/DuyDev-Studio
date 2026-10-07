@@ -21,6 +21,55 @@ object DownloadHelper {
         .followSslRedirects(true)
         .build()
 
+    fun saveBase64(
+        context: Context,
+        base64Data: String,
+        suggestedFileName: String,
+        mimeType: String
+    ) {
+        val notificationId = (System.currentTimeMillis() % 100000).toInt()
+        val cleanName = sanitizeFileName(suggestedFileName, mimeType)
+
+        DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (!downloadsDir.exists()) {
+                    downloadsDir.mkdirs()
+                }
+
+                val destinationFile = resolveUniqueFile(downloadsDir, cleanName)
+                val rawBase64 = if (base64Data.contains(",")) {
+                    base64Data.substringAfter(",")
+                } else {
+                    base64Data
+                }
+
+                val bytes = android.util.Base64.decode(rawBase64.trim(), android.util.Base64.DEFAULT)
+                FileOutputStream(destinationFile).use { it.write(bytes) }
+
+                // Scan file so it appears in the Downloads app immediately
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(destinationFile.absolutePath),
+                    arrayOf(mimeType.ifBlank { null })
+                ) { _, _ -> }
+
+                // Post completed push notification with app icon
+                DownloadNotificationManager.showDownloadCompleted(
+                    context,
+                    notificationId,
+                    destinationFile.name,
+                    destinationFile,
+                    mimeType
+                )
+            } catch (_: Exception) {
+                DownloadNotificationManager.cancelNotification(context, notificationId)
+            }
+        }
+    }
+
     fun download(
         context: Context,
         url: String,
@@ -28,8 +77,13 @@ object DownloadHelper {
         mimeType: String,
         userAgent: String? = null
     ) {
+        if (url.startsWith("data:")) {
+            saveBase64(context, url, suggestedFileName, mimeType)
+            return
+        }
+
         val notificationId = (System.currentTimeMillis() % 100000).toInt()
-        val cleanName = sanitizeFileName(suggestedFileName, mimeType)
+        var cleanName = sanitizeFileName(suggestedFileName, mimeType)
 
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 
@@ -49,6 +103,16 @@ object DownloadHelper {
                 val body = response.body ?: run {
                     DownloadNotificationManager.cancelNotification(context, notificationId)
                     return@launch
+                }
+
+                // Extract server-assigned file name from Content-Disposition if available
+                val serverDisposition = response.header("Content-Disposition")
+                val serverMime = response.header("Content-Type")?.substringBefore(';') ?: mimeType
+                if (!serverDisposition.isNullOrBlank()) {
+                    val resolvedFromServer = resolveContentDispositionFileName(serverDisposition)
+                    if (!resolvedFromServer.isNullOrBlank()) {
+                        cleanName = sanitizeFileName(resolvedFromServer, serverMime)
+                    }
                 }
 
                 val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -88,7 +152,7 @@ object DownloadHelper {
                 MediaScannerConnection.scanFile(
                     context,
                     arrayOf(destinationFile.absolutePath),
-                    arrayOf(mimeType.ifBlank { null })
+                    arrayOf(serverMime.ifBlank { null })
                 ) { _, _ -> }
 
                 // Post completed push notification with app icon
@@ -97,12 +161,26 @@ object DownloadHelper {
                     notificationId,
                     destinationFile.name,
                     destinationFile,
-                    mimeType
+                    serverMime
                 )
             } catch (_: Exception) {
                 DownloadNotificationManager.cancelNotification(context, notificationId)
             }
         }
+    }
+
+    private fun resolveContentDispositionFileName(contentDisposition: String): String? {
+        try {
+            val matchStar = Regex("filename\\*=(?:UTF-8''|utf-8'')([^;]+)", RegexOption.IGNORE_CASE).find(contentDisposition)
+            if (matchStar != null) {
+                return java.net.URLDecoder.decode(matchStar.groupValues[1].trim('"', '\''), "UTF-8")
+            }
+            val matchNormal = Regex("filename=\"?([^\";]+)\"?", RegexOption.IGNORE_CASE).find(contentDisposition)
+            if (matchNormal != null) {
+                return java.net.URLDecoder.decode(matchNormal.groupValues[1].trim(), "UTF-8")
+            }
+        } catch (_: Exception) {}
+        return null
     }
 
     private fun sanitizeFileName(rawName: String, mimeType: String): String {
