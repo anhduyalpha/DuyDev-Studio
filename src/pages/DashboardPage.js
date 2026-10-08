@@ -51,7 +51,10 @@ export function renderDashboardPage() {
     <div class="space-y-6 sm:space-y-8 animate-fadeIn">
       
       <!-- Workstation Header (Option 2 - Linear Precision) -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
+      <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3 sm:pb-4">
+        <!-- Subtle Gradient Bottom Divider (Fades seamlessly at edges) -->
+        <div class="absolute bottom-0 inset-x-0 h-[1px] bg-gradient-to-r from-zinc-200/90 via-zinc-200/40 to-transparent dark:from-white/10 dark:via-white/5 dark:to-transparent pointer-events-none"></div>
+
         <div class="flex items-center gap-2.5">
           <div class="relative flex items-center justify-center shrink-0">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>

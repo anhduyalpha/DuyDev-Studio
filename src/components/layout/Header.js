@@ -36,6 +36,8 @@ export function renderHeader() {
             <input 
               type="text" 
               id="globalSearchInput"
+              role="searchbox"
+              aria-label="Tìm kiếm công cụ (⌘K)"
               placeholder="Tìm kiếm công cụ..." 
               class="w-full bg-white/80 dark:bg-black/35 backdrop-blur-md border border-zinc-200/90 dark:border-white/[0.1] focus:border-indigo-500/60 dark:focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans shadow-xs"
             >
@@ -43,32 +45,32 @@ export function renderHeader() {
           </div>
         </div>
 
-        <!-- Right: Controls -->
-        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Right: Controls (Ergonomic touch targets >= 38-44px) -->
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
 
           <!-- Storage Drive Link -->
-          <a href="#storage" title="Bộ nhớ lưu trữ" class="inline-flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.08] transition cursor-pointer">
+          <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
             <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
           </a>
 
           <!-- History Link (Desktop only) -->
-          <a href="#history" title="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.08] transition">
+          <a href="#history" title="Lịch sử tác vụ" aria-label="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition">
             <i data-lucide="clock" class="w-4.5 h-4.5"></i>
           </a>
 
           <!-- Trash Bin Link -->
-          <a href="#trash" id="headerTrashBtn" title="Thùng rác" class="relative inline-flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-rose-600 dark:text-zinc-300 dark:hover:text-rose-400 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.08] transition cursor-pointer">
+          <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-rose-600 dark:text-zinc-300 dark:hover:text-rose-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
             <i data-lucide="trash-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
-            <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
+            <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
           </a>
 
           <!-- Theme Toggle Button -->
-          <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" class="inline-flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.08] transition cursor-pointer">
+          <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
           </button>
 
           <!-- User Profile Avatar -->
-          <div onclick="window.location.hash = '#settings'" title="Cài đặt" class="flex w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-200 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.15] items-center justify-center font-bold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 cursor-pointer hover:border-zinc-400 dark:hover:border-white/30 transition shrink-0 shadow-xs">
+          <div onclick="window.location.hash = '#settings'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.hash='#settings';}" role="button" tabindex="0" title="Cài đặt hệ thống" aria-label="Cài đặt hệ thống" class="flex w-9 h-9 sm:w-9 sm:h-9 rounded-full bg-zinc-200 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.15] items-center justify-center font-bold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 cursor-pointer hover:border-zinc-400 dark:hover:border-white/30 transition shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
             D
           </div>
 
