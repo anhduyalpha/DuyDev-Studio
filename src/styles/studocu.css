@@ -91,6 +91,13 @@
   opacity: 0.65;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .border-beam-card::before,
+  .border-beam-card::after {
+    animation: none !important;
+  }
+}
+
 /* 2. Hero Petite Pill Paste Button */
 .btn-hero-paste {
   background: linear-gradient(180deg, #ffffff 0%, #ececef 100%) !important;

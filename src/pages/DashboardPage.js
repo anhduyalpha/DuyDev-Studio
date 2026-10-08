@@ -17,11 +17,11 @@ import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 function renderToolsContent(toolsList) {
   if (!toolsList || toolsList.length === 0) {
     return `
-      <div class="py-12 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs space-y-3">
+      <div class="py-12 text-center rounded-2xl glass-panel-contained text-zinc-500 dark:text-zinc-400 font-mono text-xs space-y-3">
         <p>Không tìm thấy công cụ nào phù hợp.</p>
-        <button type="button" id="btnResetSearch" class="px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 font-sans text-xs font-medium transition cursor-pointer inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs">
+        <button type="button" id="btnResetSearch" class="px-3.5 py-1.5 rounded-xl glass-pill text-zinc-700 dark:text-zinc-300 font-sans text-xs font-medium transition cursor-pointer inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <span>Xóa bộ lọc tìm kiếm</span>
-          <kbd class="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] font-mono font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-white/10">Esc</kbd>
+          <kbd class="px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-white/[0.08] text-[10px] font-mono font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-300/80 dark:border-white/10">Esc</kbd>
         </button>
       </div>
     `.trim();
@@ -50,15 +50,11 @@ export function renderDashboardPage() {
   return `
     <div class="space-y-6 sm:space-y-8 animate-fadeIn">
       
-      <!-- Workstation Header (Option 2 - Linear Precision) -->
-      <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3 sm:pb-4">
-        <!-- Subtle Gradient Bottom Divider (Fades seamlessly at edges) -->
-        <div class="absolute bottom-0 inset-x-0 h-[1px] bg-gradient-to-r from-zinc-200/90 via-zinc-200/40 to-transparent dark:from-white/10 dark:via-white/5 dark:to-transparent pointer-events-none"></div>
-
+      <!-- Workstation Header (Apple Sequoia Frosted Workstation Bar) -->
+      <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 p-3.5 sm:px-5 sm:py-3.5 rounded-2xl glass-panel-contained">
         <div class="flex items-center gap-2.5">
           <div class="relative flex items-center justify-center shrink-0">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span class="absolute w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-75"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
           </div>
           <div>
             <h1 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-white font-mono flex items-center gap-2">
@@ -67,10 +63,10 @@ export function renderDashboardPage() {
           </div>
         </div>
 
-        <!-- Technical Status Indicator (Linear Precision) -->
+        <!-- Technical Status Indicator -->
         <div class="flex items-center gap-2 font-mono text-xs select-none">
           <span class="hidden sm:inline-block text-zinc-300 dark:text-zinc-600">//</span>
-          <div id="workstationStatusBadge" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-100/80 dark:bg-white/[0.04] backdrop-blur-xl border border-zinc-200/90 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 shadow-2xs">
+          <div id="workstationStatusBadge" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg glass-pill text-zinc-700 dark:text-zinc-300">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${currentCategory.toUpperCase()}</span>
             <span class="text-zinc-300 dark:text-zinc-700">|</span>
@@ -84,15 +80,10 @@ export function renderDashboardPage() {
         ${renderCategoryFilters(currentCategory, counts)}
       </div>
 
-      <!-- Recent Executions Activity Feed (Elevated for immediate access) -->
-      <div id="recentActivityContainer" class="empty:hidden">
-        ${renderRecentActivity()}
-      </div>
-
       <!-- Tools Grid -->
       <div>
-        <div class="flex items-center justify-between mb-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">
+        <div class="flex items-center justify-between mb-3.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base font-mono tracking-tight">
             ${isAllDefault ? `Tất cả công cụ (${tools.length})` : `Kết quả (${tools.length})`}
           </span>
         </div>
@@ -100,6 +91,11 @@ export function renderDashboardPage() {
         <div id="toolsGridContainer">
           ${renderToolsContent(tools)}
         </div>
+      </div>
+
+      <!-- Recent Executions Activity Feed (Apple Sequoia Pure Frost Glass - Located at bottom) -->
+      <div id="recentActivityContainer" class="empty:hidden pt-2 sm:pt-4">
+        ${renderRecentActivity()}
       </div>
 
     </div>
@@ -193,7 +189,7 @@ export function attachDashboardListeners(onReRender) {
     document.querySelectorAll('.filter-pill').forEach(btn => {
       const isThisActive = btn.getAttribute('data-category') === cat;
       const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
-      const inactiveClasses = 'bg-white/80 dark:bg-white/[0.04] backdrop-blur-xl text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.10] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
+      const inactiveClasses = 'glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium';
 
       btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isThisActive ? activeClasses : inactiveClasses}`;
       btn.setAttribute('aria-selected', String(isThisActive));
@@ -204,7 +200,7 @@ export function attachDashboardListeners(onReRender) {
         badge.className = `filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${
           isThisActive 
             ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900' 
-            : 'bg-zinc-100 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-400'
+            : 'bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]'
         }`;
       }
     });

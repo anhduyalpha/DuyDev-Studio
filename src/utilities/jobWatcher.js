@@ -121,21 +121,31 @@ export function watchJobProgress({
     }
   };
 
+  const startFallbackPolling = () => {
+    if (pollTimer || isDone) return;
+    pollStatus();
+    pollTimer = setInterval(pollStatus, 2500);
+  };
+
+  const stopFallbackPolling = () => {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  };
+
   // 1. Proactive status check at t = 0 (immediately catches jobs completed < 200ms)
   pollStatus();
 
-  // 2. Active concurrent polling safety net running alongside EventSource
-  pollTimer = setInterval(pollStatus, 2000);
-
-  // 3. Heartbeat watchdog timer: if no progress/event received for 12 seconds, perform immediate poll
+  // 2. Heartbeat watchdog timer: if no progress/event received for 12 seconds, engage fallback polling
   watchdogTimer = setInterval(() => {
     if (isDone) return;
     if (Date.now() - lastActivityTime >= 12000) {
-      pollStatus();
+      startFallbackPolling();
     }
   }, 3000);
 
-  // 4. SSE Real-time streaming channel
+  // 3. SSE Real-time streaming channel (primary channel - zero CPU/modem polling while active)
   try {
     const fullEventsUrl = eventsUrl.startsWith('http') ? eventsUrl : `${apiBase}${eventsUrl}`;
     const es = new EventSource(fullEventsUrl);
@@ -143,6 +153,7 @@ export function watchJobProgress({
 
     es.addEventListener('progress', (e) => {
       lastActivityTime = Date.now();
+      stopFallbackPolling();
       try {
         const data = JSON.parse(e.data);
         onProgress(data.percentage || 0, data.stage);
@@ -151,6 +162,7 @@ export function watchJobProgress({
 
     es.addEventListener('completed', (e) => {
       lastActivityTime = Date.now();
+      stopFallbackPolling();
       try {
         const data = JSON.parse(e.data);
         finishSuccess(data);
@@ -161,6 +173,7 @@ export function watchJobProgress({
 
     es.addEventListener('failed', (e) => {
       lastActivityTime = Date.now();
+      stopFallbackPolling();
       try {
         const data = JSON.parse(e.data);
         finishError(data.error || 'Tác vụ thất bại');
@@ -171,11 +184,12 @@ export function watchJobProgress({
 
     es.onerror = () => {
       if (!isDone) {
-        pollStatus();
+        startFallbackPolling();
       }
     };
   } catch {
-    // If EventSource is unsupported or threw on instantiation, pollTimer continues as fallback
+    // If EventSource is unsupported or threw on instantiation, engage fallback polling
+    startFallbackPolling();
   }
 
   return cleanup;

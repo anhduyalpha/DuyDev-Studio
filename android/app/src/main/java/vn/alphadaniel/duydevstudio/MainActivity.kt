@@ -184,8 +184,18 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         if (::webView.isInitialized) {
+            evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-paused')); }")
             webView.onPause()
             webView.pauseTimers()
+            try {
+                CookieManager.getInstance().flush()
+            } catch (_: Exception) {}
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (::webView.isInitialized) {
             try {
                 CookieManager.getInstance().flush()
             } catch (_: Exception) {}
@@ -279,7 +289,8 @@ class MainActivity : AppCompatActivity() {
         settings.allowContentAccess = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        settings.mediaPlaybackRequiresUserGesture = false
+        settings.mediaPlaybackRequiresUserGesture = true
+        settings.safeBrowsingEnabled = false
         settings.userAgentString = "${settings.userAgentString} DuyDevStudioNative/1.0"
 
         // Enforce viewport compliance and lock zoom/scaling

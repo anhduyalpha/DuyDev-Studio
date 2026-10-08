@@ -163,11 +163,17 @@ html.dark .tool-accent-text {
   background-color: color-mix(in srgb, var(--accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
   color: var(--accent-contrast, var(--accent));
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 html.dark .tool-accent-box {
   background-color: color-mix(in srgb, var(--accent) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
   color: var(--accent);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Glassmorphism & Depth Layers (Apple Sequoia Pure Frost Glass) */
@@ -204,6 +210,54 @@ html:not(.dark) .glass-panel {
   box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.04),
               inset 0 -1px 0 0 rgba(0, 0, 0, 0.02),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+}
+
+.glass-panel-contained {
+  background: var(--glass-card, rgba(255, 255, 255, 0.78));
+  backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+html.dark .glass-panel-contained {
+  background: var(--glass-panel, rgba(12, 14, 22, 0.65));
+  backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
+.glass-pill {
+  background: var(--glass-card, rgba(255, 255, 255, 0.78));
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+html.dark .glass-pill {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px) saturate(200%) brightness(104%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%) brightness(104%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.20),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
+.glass-pill:hover {
+  background: rgba(255, 255, 255, 0.90);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+html.dark .glass-pill:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 /* Touch Friendly Targets */
@@ -251,7 +305,6 @@ html:not(.dark) .glass-panel {
   transform: translate(-50%, -50%) rotate(0deg);
   pointer-events: none;
   z-index: 0;
-  will-change: transform;
 }
 
 .quiz-border-completed {
@@ -264,7 +317,7 @@ html:not(.dark) .glass-panel {
     #3b82f6 288deg,
     #6366f1 360deg
   );
-  animation: quiz-border-rotate 6s linear infinite;
+  animation: none;
 }
 
 .quiz-border-processing {
@@ -277,6 +330,7 @@ html:not(.dark) .glass-panel {
     #3b82f6 288deg,
     #6366f1 360deg
   );
+  will-change: transform;
   animation: quiz-border-rotate 4s linear infinite;
 }
 
@@ -307,6 +361,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-repeat: no-repeat;
+  transform: translateZ(0);
+  will-change: transform;
   /* Mobile Default: Flowing smoothly through translucent frost glass */
   background-image: 
     radial-gradient(circle 440px at -5% -5%, rgba(99, 102, 241, 0.24) 0%, rgba(79, 70, 229, 0.12) 40%, transparent 75%),

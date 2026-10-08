@@ -13,16 +13,16 @@ export function renderRecentActivity() {
   if (history.length === 0) return '';
 
   return `
-    <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-[#12141e]/65 backdrop-blur-2xl border border-zinc-200/90 dark:border-white/[0.09] space-y-3 shadow-xs" style="box-shadow: 0 8px 24px -4px rgba(0,0,0,0.35), inset 0 1px 0 0 rgba(255,255,255,0.12);">
+    <div class="p-4 sm:p-5 rounded-2xl glass-panel-contained space-y-3">
       <div class="flex items-center justify-between">
         <h4 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-200 flex items-center gap-2">
           <i data-lucide="clock" class="w-4 h-4 text-zinc-500 dark:text-zinc-400"></i> Tác vụ gần đây
         </h4>
         <div class="flex items-center gap-1.5 sm:gap-2">
-          <a href="#trash" class="text-xs sm:text-sm text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 font-semibold flex items-center gap-1 transition px-2 py-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" aria-label="Mở thùng rác">
+          <a href="#trash" class="text-xs sm:text-sm text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 font-semibold flex items-center gap-1 transition px-2.5 py-1 rounded-lg glass-pill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" aria-label="Mở thùng rác">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Thùng rác</span>
           </a>
-          <a href="#history" class="text-xs sm:text-sm text-zinc-700 hover:text-black dark:text-zinc-400 dark:hover:text-white font-semibold transition px-2 py-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="Xem tất cả lịch sử tác vụ"><span>Xem tất cả</span></a>
+          <a href="#history" class="text-xs sm:text-sm text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white font-semibold transition px-2.5 py-1 rounded-lg glass-pill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" aria-label="Xem tất cả lịch sử tác vụ"><span>Xem tất cả</span></a>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ export function renderRecentActivity() {
 
           return `
             <div data-recent-card-id="${item.id}"
-              class="recent-activity-card p-3.5 sm:p-4 rounded-xl bg-zinc-50/80 dark:bg-white/[0.04] backdrop-blur-md border border-zinc-200/80 dark:border-white/[0.07] flex flex-col justify-between gap-3 text-sm hover:border-zinc-300 dark:hover:border-white/15 transition shadow-2xs">
+              class="recent-activity-card p-3.5 sm:p-4 rounded-xl glass-pill flex flex-col justify-between gap-3 text-sm hover:border-zinc-300 dark:hover:border-white/20 transition">
               
               <!-- File Meta Info (Full width, clear hierarchy) -->
               <div class="flex items-start gap-3 min-w-0">
@@ -79,7 +79,7 @@ export function renderRecentActivity() {
                     <button type="button" data-preview-url="${item.downloadUrl}" data-file-name="${item.fileName}" data-file-size="${item.resultSize || 0}" 
                       title="Xem trước" 
                       aria-label="Xem trước tệp ${item.fileName || ''}"
-                      class="btn-preview-recent min-w-[38px] min-h-[38px] p-2 text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-lg hover:bg-zinc-200/70 dark:hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition inline-flex items-center justify-center cursor-pointer">
+                      class="btn-preview-recent min-w-[38px] min-h-[38px] p-2 text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-lg glass-pill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition inline-flex items-center justify-center cursor-pointer">
                       <i data-lucide="eye" class="w-4 h-4"></i>
                     </button>
                   ` : ''}
@@ -88,7 +88,7 @@ export function renderRecentActivity() {
                   <button type="button" data-open-in-tool="${item.id}" data-tool-id="${tool.id}" 
                     title="Mở trong ${tool.title}" 
                     aria-label="Mở tệp ${item.fileName || 'này'} trong ${tool.title}"
-                    class="btn-open-in-tool min-w-[38px] min-h-[38px] p-2 text-zinc-700 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400 rounded-lg hover:bg-zinc-200/70 dark:hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition inline-flex items-center justify-center cursor-pointer">
+                    class="btn-open-in-tool min-w-[38px] min-h-[38px] p-2 text-zinc-700 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400 rounded-lg glass-pill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition inline-flex items-center justify-center cursor-pointer">
                     <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
                   </button>
 
@@ -96,7 +96,7 @@ export function renderRecentActivity() {
                   <button type="button" data-copy-id="${item.id}" 
                     title="Sao chép" 
                     aria-label="Sao chép nội dung hoặc liên kết ${item.fileName || 'tệp'}"
-                    class="btn-copy-recent min-w-[38px] min-h-[38px] p-2 text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-lg hover:bg-zinc-200/70 dark:hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition inline-flex items-center justify-center cursor-pointer">
+                    class="btn-copy-recent min-w-[38px] min-h-[38px] p-2 text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-lg glass-pill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition inline-flex items-center justify-center cursor-pointer">
                     <i data-lucide="copy" class="w-4 h-4"></i>
                   </button>
                 </div>

@@ -215,15 +215,25 @@ function isAllowedStaticAsset(pathname: string): boolean {
       root: clientRoot,
       prefix: '/',
       index: ['index.html'],
-      maxAge: 0,
+      etag: true,
       allowedPath: (pathname) => isAllowedStaticAsset(pathname),
-      setHeaders(res, pathName) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        if (pathName.endsWith('sw.js')) {
-          res.setHeader('Service-Worker-Allowed', '/');
+      setHeaders(this: any, res, pathName) {
+        const normalizedPath = pathName.replace(/\\/g, '/');
+        const reqUrl = this?.req?.url || '';
+
+        if (normalizedPath.endsWith('index.html') || normalizedPath.endsWith('sw.js')) {
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          if (normalizedPath.endsWith('sw.js')) {
+            res.setHeader('Service-Worker-Allowed', '/');
+          }
         } else {
-          res.setHeader('Expires', '0');
+          const isVersioned = reqUrl.includes('?v=') || reqUrl.includes('/vendor/') || normalizedPath.includes('/vendor/');
+          if (isVersioned) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          } else {
+            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+          }
         }
       }
     });
@@ -249,9 +259,8 @@ function isAllowedStaticAsset(pathname: string): boolean {
           }
         });
       }
-      reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+      reply.header('Cache-Control', 'no-cache, must-revalidate');
       reply.header('Pragma', 'no-cache');
-      reply.header('Expires', '0');
       return reply.sendFile('index.html', clientRoot);
     });
   }

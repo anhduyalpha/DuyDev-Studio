@@ -18,7 +18,7 @@ export function renderCategoryFilters(activeCategory = 'all', counts = {}) {
         const isActive = cat.id === activeCategory;
         const count = counts[cat.id] !== undefined ? counts[cat.id] : 0;
         const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
-        const inactiveClasses = 'bg-white/80 dark:bg-white/[0.04] backdrop-blur-xl text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.10] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
+        const inactiveClasses = 'glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium';
 
         return `
           <button 
@@ -30,7 +30,7 @@ export function renderCategoryFilters(activeCategory = 'all', counts = {}) {
             class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isActive ? activeClasses : inactiveClasses}">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 ${isActive ? 'bg-white dark:bg-zinc-900' : ''}" style="${isActive ? '' : `background-color: ${cat.color};`}"></span>
             <span>${cat.label}</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${isActive ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900' : 'bg-zinc-100 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-400'}">${count}</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${isActive ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900' : 'bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]'}">${count}</span>
           </button>
         `;
       }).join('')}

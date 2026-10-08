@@ -61,8 +61,8 @@ export function renderToolCard(tool) {
           ${tool.specs && tool.specs.length > 0 ? tool.specs.map((spec, idx) => `
             <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium ${
               idx === 0 
-                ? 'bg-zinc-100 dark:bg-white/[0.07] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold' 
-                : 'bg-zinc-50 dark:bg-white/[0.03] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]'
+                ? 'bg-zinc-100/90 dark:bg-white/[0.08] backdrop-blur-md text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs' 
+                : 'bg-zinc-50/80 dark:bg-white/[0.04] backdrop-blur-sm text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]'
             }">
               ${spec}
             </span>
@@ -71,7 +71,7 @@ export function renderToolCard(tool) {
       </div>
 
       <!-- Footer / CTA -->
-      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           ${categoryLabel}
         </span>

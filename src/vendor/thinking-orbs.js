@@ -207,7 +207,10 @@
         let currentState = state;
 
         function loop() {
-            if (!isRunning) return;
+            if (!isRunning || (canvas && !canvas.isConnected) || (typeof document !== 'undefined' && document.hidden)) {
+                animId = null;
+                return;
+            }
             const t = (performance.now() / 1000) * speed;
 
             ctx.save();
@@ -227,6 +230,17 @@
             animId = requestAnimationFrame(loop);
         }
 
+        function handleVisibilityChange() {
+            if (!isRunning || (canvas && !canvas.isConnected)) return;
+            if (typeof document !== 'undefined' && !document.hidden && !animId) {
+                animId = requestAnimationFrame(loop);
+            }
+        }
+
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+
         loop();
 
         return {
@@ -235,6 +249,9 @@
                 if (animId) {
                     cancelAnimationFrame(animId);
                     animId = null;
+                }
+                if (typeof document !== 'undefined') {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
                 }
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             },
