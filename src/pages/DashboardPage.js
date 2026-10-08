@@ -84,6 +84,11 @@ export function renderDashboardPage() {
         ${renderCategoryFilters(currentCategory, counts)}
       </div>
 
+      <!-- Recent Executions Activity Feed (Elevated for immediate access) -->
+      <div id="recentActivityContainer" class="empty:hidden">
+        ${renderRecentActivity()}
+      </div>
+
       <!-- Tools Grid -->
       <div>
         <div class="flex items-center justify-between mb-3 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
@@ -95,11 +100,6 @@ export function renderDashboardPage() {
         <div id="toolsGridContainer">
           ${renderToolsContent(tools)}
         </div>
-      </div>
-
-      <!-- Recent Executions Activity Feed (Moved to bottom) -->
-      <div id="recentActivityContainer" class="empty:hidden">
-        ${renderRecentActivity()}
       </div>
 
     </div>
@@ -118,6 +118,31 @@ export function attachDashboardListeners(onReRender) {
       }
     }
   }).catch(() => {});
+
+  // Live Telemetry Sync
+  fetch('/api/v1/system/telemetry')
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+      if (data && data.success && data.data) {
+        const t = data.data;
+        const statusBadge = document.getElementById('workstationStatusBadge');
+        if (statusBadge) {
+          const totalActive = t.queues?.totalActive || 0;
+          const currentCat = toolRegistry.currentCategory.toUpperCase();
+          const count = toolRegistry.getFilteredTools().length;
+          const statusText = totalActive > 0 ? `${totalActive} ACTIVE JOBS` : `${count} ENGINES ONLINE`;
+          const dotColor = totalActive > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500';
+          statusBadge.innerHTML = `
+            <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+            <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${currentCat}</span>
+            <span class="text-zinc-300 dark:text-zinc-700">|</span>
+            <span class="text-[11px] font-bold text-zinc-900 dark:text-white">${statusText}</span>
+          `;
+          statusBadge.title = `Fastify: ${t.gateway} • Redis: ${t.redis} • Uptime: ${Math.floor(t.uptime / 60)}m • Memory: ${t.memoryMb}MB`;
+        }
+      }
+    })
+    .catch(() => {});
 
   // Handle clear search filter click
   const toolsGridContainer = document.getElementById('toolsGridContainer');
@@ -170,7 +195,7 @@ export function attachDashboardListeners(onReRender) {
       const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
       const inactiveClasses = 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.12] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
 
-      btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isThisActive ? activeClasses : inactiveClasses}`;
+      btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isThisActive ? activeClasses : inactiveClasses}`;
       btn.setAttribute('aria-selected', String(isThisActive));
       btn.setAttribute('aria-pressed', String(isThisActive));
       
