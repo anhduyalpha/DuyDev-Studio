@@ -279,6 +279,7 @@ html.dark .tool-accent-box {
 
 /* ==============================================================================
    Ambient Dual-Spot Atmosphere (Option 2 - Raycast / Linear Workspace Lighting)
+   Mobile-Optimized Dynamic Sizing & High-Contrast OLED Tuning
    ============================================================================== */
 body::before {
   content: '';
@@ -286,17 +287,33 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: 
-    radial-gradient(circle 650px at 10% -12%, rgba(99, 102, 241, 0.07) 0%, transparent 70%),
-    radial-gradient(circle 550px at 90% -10%, rgba(16, 185, 129, 0.045) 0%, transparent 65%);
   background-repeat: no-repeat;
+  /* Mobile Default: Centered below header (~50-70px) with rich localized bloom */
+  background-image: 
+    radial-gradient(circle 320px at 0% 50px, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.08) 45%, transparent 75%),
+    radial-gradient(circle 300px at 100% 70px, rgba(16, 185, 129, 0.13) 0%, rgba(5, 150, 105, 0.06) 45%, transparent 70%);
 }
 
 html.dark body::before {
+  /* Mobile Dark OLED Optimized: Vibrant luminous opacity right beneath sticky header */
   background-image: 
-    radial-gradient(circle 750px at 12% -12%, rgba(79, 70, 229, 0.13) 0%, transparent 70%),
-    radial-gradient(circle 650px at 88% -10%, rgba(16, 185, 129, 0.07) 0%, transparent 65%),
-    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(99, 102, 241, 0.04) 0%, transparent 70%);
+    radial-gradient(circle 340px at 0% 50px, rgba(99, 102, 241, 0.28) 0%, rgba(79, 70, 229, 0.14) 45%, transparent 75%),
+    radial-gradient(circle 320px at 100% 70px, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.10) 45%, transparent 70%);
+}
+
+@media (min-width: 641px) {
+  body::before {
+    background-image: 
+      radial-gradient(circle 650px at 10% 0%, rgba(99, 102, 241, 0.12) 0%, rgba(79, 70, 229, 0.06) 50%, transparent 70%),
+      radial-gradient(circle 550px at 90% 0%, rgba(16, 185, 129, 0.09) 0%, rgba(5, 150, 105, 0.04) 50%, transparent 65%);
+  }
+
+  html.dark body::before {
+    background-image: 
+      radial-gradient(circle 750px at 12% 0%, rgba(99, 102, 241, 0.20) 0%, rgba(79, 70, 229, 0.10) 45%, transparent 75%),
+      radial-gradient(circle 650px at 88% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.07) 45%, transparent 70%),
+      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+  }
 }
 
 #app {
