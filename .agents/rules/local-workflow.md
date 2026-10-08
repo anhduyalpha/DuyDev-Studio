@@ -14,6 +14,9 @@
      ```
    - Test features directly on the server / production URL.
 
-## 2. Strict Prohibitions
+## 2. UI Deployment Mandate (User Rule)
+- **Always Deploy UI Changes to HTTPS**: Whenever any UI modification or styling change is completed, always build, bump cache version (`sw.js`, `pwa.js`, `index.html`), commit, push to GitHub, and run `.\scripts\deploy-prod.ps1` to deploy immediately to production HTTPS (`https://studio.duydev.cloud`).
+
+## 3. Strict Prohibitions
 - **NO WinSCP / NO File Copying**: Do not use WinSCP, `scp`, or `rsync` to manually upload files to the server.
 - **NO Editing on Server**: Do not edit files on the remote server via SSH. All changes must be committed and pushed from local Git.

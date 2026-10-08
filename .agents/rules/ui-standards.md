@@ -18,4 +18,9 @@ All user interfaces in DuyDev Studio must adhere to **production-grade minimalis
 4. **Never show fake placeholder feedback**:
    - Show real decoded output or real server status directly.
 
+## 3. Dual-Platform Mandate (Desktop & Mobile Parity)
+1. **Never design for desktop-only or mobile-only**: Every UI feature, card, navigation element, and atmospheric background MUST be designed, tested, and verified for both Desktop (hover states, wide viewports) and Mobile (touch targets >=44px, compact widths 375px–430px, OLED dark contrast, safe-areas, and sticky header bounds).
+2. **Never hide primary information on mobile**: Adapt layout gracefully via responsive breakpoints (`sm:`, `md:`, `lg:`) instead of arbitrarily removing key capabilities.
+3. **Ambient background & lighting must be tuned for mobile**: Sizing and opacity of spotlights/gradients must account for mobile screen aspect ratios and OLED contrast so they remain clear and purposeful on phones.
+
 Refer to Knowledge Item: [`docs/knowledge-base/KI-CON-001-ui-production-minimalism.md`](../docs/knowledge-base/KI-CON-001-ui-production-minimalism.md)
