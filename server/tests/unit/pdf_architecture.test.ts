@@ -109,7 +109,7 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       );
     });
 
-    it('should run concurrent active polling every 2000ms alongside EventSource', async () => {
+    it('should engage fallback polling when EventSource encounters an error or is unavailable', async () => {
       let pollCount = 0;
       const mockFetch = vi.fn().mockImplementation(async () => {
         pollCount++;
@@ -151,19 +151,23 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       await flushMicrotasks();
 
-      // Advance by 2000ms: poll 2
+      // In battery-optimized architecture, concurrent polling does NOT fire at 2000ms while SSE is healthy
       await vi.advanceTimersByTimeAsync(2000);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // When EventSource errors, fallback polling engages immediately
+      mockInstances[0].onerror?.();
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
-      // Advance by another 2000ms: poll 3 completes the job
-      await vi.advanceTimersByTimeAsync(2000);
+      // Advance by fallback interval (2500ms): poll 3 completes the job
+      await vi.advanceTimersByTimeAsync(2500);
       expect(mockFetch).toHaveBeenCalledTimes(3);
 
       expect(onCompleted).toHaveBeenCalledTimes(1);
       expect(mockInstances[0].closed).toBe(true);
 
       // Advance further: polling must be stopped
-      await vi.advanceTimersByTimeAsync(4000);
+      await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
@@ -248,7 +252,7 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       );
     });
 
-    it('heartbeat watchdog timer: triggers immediate poll if no events received for 12 seconds', async () => {
+    it('heartbeat watchdog timer: triggers fallback polling if no events received for 12 seconds', async () => {
       let pollCallCount = 0;
       const mockFetch = vi.fn().mockImplementation(async () => {
         pollCallCount++;
@@ -270,12 +274,16 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
         onFailed: vi.fn()
       });
 
-      // t = 0
+      // t = 0: initial poll
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      // Advance 12 seconds: regular 2s polling fires 6 times, plus watchdog ensures activity
-      await vi.advanceTimersByTimeAsync(12000);
-      expect(pollCallCount).toBeGreaterThanOrEqual(6);
+      // Advance 6 seconds: under 12s threshold, so no fallback polling occurs
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(pollCallCount).toBe(1);
+
+      // Advance another 6 seconds (total 12 seconds): watchdog timer fires and engages fallback polling
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(pollCallCount).toBeGreaterThanOrEqual(2);
 
       cleanup();
     });
@@ -383,8 +391,8 @@ describe('PDF Architecture & 25% Freeze Elimination Test Suite', () => {
       await flushMicrotasks();
       expect(onCompleted).not.toHaveBeenCalled();
 
-      // Advance by 2000ms: poll 2 should run and succeed because isPolling was safely reset
-      await vi.advanceTimersByTimeAsync(2000);
+      // Trigger fallback polling via EventSource error; poll 2 runs and succeeds because isPolling was safely reset
+      mockInstances[0].onerror?.();
       await flushMicrotasks();
 
       expect(callCount).toBe(2);
