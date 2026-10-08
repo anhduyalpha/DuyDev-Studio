@@ -50,15 +50,53 @@ export function connectJobEvents(jobId, { onProgress, onCompleted, onError }) {
   const url = `/api/v1/jobs/${jobId}/events`;
   const eventSource = new EventSource(url);
   let isClosed = false;
+  let pollTimer = null;
+
+  const startFallbackPolling = () => {
+    if (pollTimer || isClosed) return;
+    pollTimer = setInterval(async () => {
+      if (isClosed) return;
+      try {
+        const res = await fetch(`/api/v1/jobs/${jobId}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const job = json.data;
+        if (!job) return;
+
+        if (job.status === 'PROCESSING') {
+          if (typeof onProgress === 'function' && job.progress !== undefined) {
+            onProgress({ percentage: job.progress, stage: job.stage });
+          }
+        } else if (job.status === 'COMPLETED') {
+          teardown();
+          if (typeof onCompleted === 'function') {
+            onCompleted(job);
+          }
+        } else if (job.status === 'FAILED') {
+          teardown();
+          if (typeof onError === 'function') {
+            onError(new Error(job.errorMessage || 'Tác vụ thất bại'));
+          }
+        }
+      } catch (_) {}
+    }, 2500);
+  };
 
   const teardown = () => {
     if (isClosed) return;
     isClosed = true;
-    clearInterval(pollTimer);
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
     try { eventSource.close(); } catch (_) {}
   };
 
   eventSource.addEventListener('progress', (e) => {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
     try {
       const data = JSON.parse(e.data);
       if (typeof onProgress === 'function') {
@@ -90,36 +128,11 @@ export function connectJobEvents(jobId, { onProgress, onCompleted, onError }) {
   });
 
   eventSource.onerror = () => {
-    // If stream encounters error or closes, do not immediately fail; let polling fallback take over
+    // If stream encounters error or closes, trigger fallback polling
+    if (!isClosed) {
+      startFallbackPolling();
+    }
   };
-
-  // Fallback Polling every 2.5s for resilient mobile/proxy updates
-  const pollTimer = setInterval(async () => {
-    if (isClosed) return;
-    try {
-      const res = await fetch(`/api/v1/jobs/${jobId}`);
-      if (!res.ok) return;
-      const json = await res.json();
-      const job = json.data;
-      if (!job) return;
-
-      if (job.status === 'PROCESSING') {
-        if (typeof onProgress === 'function' && job.progress !== undefined) {
-          onProgress({ percentage: job.progress, stage: job.stage });
-        }
-      } else if (job.status === 'COMPLETED') {
-        teardown();
-        if (typeof onCompleted === 'function') {
-          onCompleted(job);
-        }
-      } else if (job.status === 'FAILED') {
-        teardown();
-        if (typeof onError === 'function') {
-          onError(new Error(job.errorMessage || 'Tác vụ thất bại'));
-        }
-      }
-    } catch (_) {}
-  }, 2500);
 
   return teardown;
 }

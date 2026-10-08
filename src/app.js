@@ -90,6 +90,19 @@ class App {
         this.checkAndOpenShareTarget();
       });
 
+      // Native Android lifecycle: suspend audio/video and stop coordinator heartbeat when app pauses
+      window.addEventListener('ds:native-app-paused', () => {
+        document.querySelectorAll('audio, video').forEach((media) => {
+          try { media.pause(); } catch {}
+        });
+        taskCoordinator.stopHeartbeat();
+      });
+
+      // Native Android lifecycle: resume heartbeat when app returns to foreground
+      window.addEventListener('ds:native-app-resumed', () => {
+        taskCoordinator.updateHeartbeatState();
+      });
+
       // Pause active media when browser/tab/app moves to background
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
