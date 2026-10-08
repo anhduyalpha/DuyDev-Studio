@@ -21,7 +21,7 @@ export function renderBottomNav(activeRoute = '') {
   `;
 
   return `
-    <nav class="md:hidden fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto rounded-2xl p-1.5 flex items-center justify-around shadow-[0_12px_32px_rgba(0,0,0,0.45)] border border-zinc-200/90 dark:border-white/[0.14] bg-white/95 dark:bg-[#131317]/95 backdrop-blur-2xl safe-bottom">
+    <nav class="md:hidden fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto rounded-2xl p-1.5 flex items-center justify-around glass-dock safe-bottom">
       ${navItem('#', 'layout-grid', 'Trang chủ', isDashboard)}
       ${navItem('#tool/universal-converter', 'refresh-cw', 'Converter', isConverter)}
       ${navItem('#tool/pdf-studio', 'file-text', 'PDF', isPdf)}

@@ -70,7 +70,7 @@ export function renderDashboardPage() {
         <!-- Technical Status Indicator (Linear Precision) -->
         <div class="flex items-center gap-2 font-mono text-xs select-none">
           <span class="hidden sm:inline-block text-zinc-300 dark:text-zinc-600">//</span>
-          <div id="workstationStatusBadge" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/90 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 shadow-2xs">
+          <div id="workstationStatusBadge" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-100/80 dark:bg-white/[0.04] backdrop-blur-xl border border-zinc-200/90 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 shadow-2xs">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${currentCategory.toUpperCase()}</span>
             <span class="text-zinc-300 dark:text-zinc-700">|</span>
@@ -193,7 +193,7 @@ export function attachDashboardListeners(onReRender) {
     document.querySelectorAll('.filter-pill').forEach(btn => {
       const isThisActive = btn.getAttribute('data-category') === cat;
       const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
-      const inactiveClasses = 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.12] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
+      const inactiveClasses = 'bg-white/80 dark:bg-white/[0.04] backdrop-blur-xl text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.10] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
 
       btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isThisActive ? activeClasses : inactiveClasses}`;
       btn.setAttribute('aria-selected', String(isThisActive));

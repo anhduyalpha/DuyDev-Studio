@@ -13,7 +13,7 @@ export function renderRecentActivity() {
   if (history.length === 0) return '';
 
   return `
-    <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-3 shadow-xs">
+    <div class="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-[#12141e]/65 backdrop-blur-2xl border border-zinc-200/90 dark:border-white/[0.09] space-y-3 shadow-xs" style="box-shadow: 0 8px 24px -4px rgba(0,0,0,0.35), inset 0 1px 0 0 rgba(255,255,255,0.12);">
       <div class="flex items-center justify-between">
         <h4 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-200 flex items-center gap-2">
           <i data-lucide="clock" class="w-4 h-4 text-zinc-500 dark:text-zinc-400"></i> Tác vụ gần đây
@@ -35,7 +35,7 @@ export function renderRecentActivity() {
 
           return `
             <div data-recent-card-id="${item.id}"
-              class="recent-activity-card p-3.5 sm:p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.06] flex flex-col justify-between gap-3 text-sm hover:border-zinc-300 dark:hover:border-white/10 transition shadow-2xs">
+              class="recent-activity-card p-3.5 sm:p-4 rounded-xl bg-zinc-50/80 dark:bg-white/[0.04] backdrop-blur-md border border-zinc-200/80 dark:border-white/[0.07] flex flex-col justify-between gap-3 text-sm hover:border-zinc-300 dark:hover:border-white/15 transition shadow-2xs">
               
               <!-- File Meta Info (Full width, clear hierarchy) -->
               <div class="flex items-start gap-3 min-w-0">

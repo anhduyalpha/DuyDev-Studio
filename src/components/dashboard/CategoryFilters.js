@@ -18,7 +18,7 @@ export function renderCategoryFilters(activeCategory = 'all', counts = {}) {
         const isActive = cat.id === activeCategory;
         const count = counts[cat.id] !== undefined ? counts[cat.id] : 0;
         const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
-        const inactiveClasses = 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.12] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
+        const inactiveClasses = 'bg-white/80 dark:bg-white/[0.04] backdrop-blur-xl text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.10] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
 
         return `
           <button 
