@@ -50,8 +50,8 @@ export function renderDashboardPage() {
   return `
     <div class="space-y-6 sm:space-y-8 animate-fadeIn">
       
-      <!-- Workstation Header & Live System Telemetry Bar -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
+      <!-- Workstation Header -->
+      <div class="flex items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
         <div class="flex items-center gap-2.5">
           <div class="relative flex items-center justify-center shrink-0">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
@@ -63,42 +63,6 @@ export function renderDashboardPage() {
             </h1>
           </div>
         </div>
-
-        <!-- System & Engine Telemetry Bar -->
-        <div id="systemTelemetryBar" class="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
-          <!-- Gateway / Host -->
-          <div class="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] flex items-center gap-1.5 shadow-2xs">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span class="text-zinc-500 dark:text-zinc-400">HOST:</span>
-            <span id="telemetryHost" class="font-bold text-zinc-800 dark:text-zinc-200">${typeof window !== 'undefined' ? window.location.host : 'localhost:3000'}</span>
-          </div>
-
-          <!-- Redis / Queue Status -->
-          <div class="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] flex items-center gap-1.5 shadow-2xs">
-            <span id="telemetryRedisDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span class="text-zinc-500 dark:text-zinc-400">REDIS:</span>
-            <span id="telemetryRedis" class="font-bold text-zinc-800 dark:text-zinc-200">READY</span>
-          </div>
-
-          <!-- Polyglot Engines -->
-          <div class="hidden sm:flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] gap-1.5 shadow-2xs">
-            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-            <span class="text-zinc-500 dark:text-zinc-400">ENGINES:</span>
-            <span class="font-bold text-zinc-800 dark:text-zinc-200">PyMuPDF • FFmpeg • LibreOffice</span>
-          </div>
-
-          <!-- Active Tasks Count -->
-          <div id="telemetryTasksBadge" class="hidden sm:flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] gap-1.5 shadow-2xs">
-            <span class="text-zinc-500 dark:text-zinc-400">QUEUE:</span>
-            <span id="telemetryQueueCount" class="font-bold text-zinc-800 dark:text-zinc-200">0 ACTIVE</span>
-          </div>
-        </div>
-      </div>
-
-
-      <!-- Recent Executions Activity Feed (Promoted to top in Operate mode, auto-hiding when empty) -->
-      <div id="recentActivityContainer" class="empty:hidden">
-        ${renderRecentActivity()}
       </div>
 
       <!-- Category Filter Pills Bar -->
@@ -119,6 +83,11 @@ export function renderDashboardPage() {
         </div>
       </div>
 
+      <!-- Recent Executions Activity Feed (Moved to bottom) -->
+      <div id="recentActivityContainer" class="empty:hidden">
+        ${renderRecentActivity()}
+      </div>
+
     </div>
   `;
 }
@@ -135,36 +104,6 @@ export function attachDashboardListeners(onReRender) {
       }
     }
   }).catch(() => {});
-
-  // Fetch live system telemetry
-  fetch('/api/v1/system/telemetry')
-    .then((r) => r.json())
-    .then((res) => {
-      if (res.success && res.data) {
-        const d = res.data;
-        const redisEl = document.getElementById('telemetryRedis');
-        const redisDot = document.getElementById('telemetryRedisDot');
-        const queueEl = document.getElementById('telemetryQueueCount');
-
-        if (redisEl) {
-          redisEl.textContent = d.redis === 'connected' ? 'CONNECTED' : (d.redis?.toUpperCase() || 'ONLINE');
-        }
-        if (redisDot) {
-          redisDot.className = `w-1.5 h-1.5 rounded-full ${d.redis === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`;
-        }
-        if (queueEl) {
-          const active = d.queues?.totalActive || 0;
-          queueEl.textContent = `${active} ACTIVE`;
-          if (active > 0) {
-            queueEl.classList.add('text-indigo-400', 'animate-pulse');
-          }
-        }
-      }
-    })
-    .catch(() => {
-      const redisEl = document.getElementById('telemetryRedis');
-      if (redisEl) redisEl.textContent = 'STANDALONE';
-    });
 
   // Handle clear search filter click
   const toolsGridContainer = document.getElementById('toolsGridContainer');
