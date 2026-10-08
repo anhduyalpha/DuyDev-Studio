@@ -27,12 +27,13 @@ export function renderToolCard(tool) {
   const contrastColor = contrastMap[accent] || accent;
 
   return `
-    <div onclick="window.location.hash = '${tool.route}'"
-         class="tool-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/25 transition-all duration-200 cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] select-none"
-         data-tool-id="${tool.id}"
-         style="--accent: ${accent}; --accent-contrast: ${contrastColor};">
+    <a href="${tool.route}"
+       class="tool-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/25 transition-all duration-200 cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="${tool.id}"
+       aria-label="${tool.title} - ${tool.description}"
+       style="--accent: ${accent}; --accent-contrast: ${contrastColor};">
       
-      <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
       <div>
         <!-- Header: Icon & Badge -->
@@ -44,7 +45,7 @@ export function renderToolCard(tool) {
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition tracking-tight">
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
           ${tool.title}
         </h3>
         <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
@@ -67,12 +68,12 @@ export function renderToolCard(tool) {
           ${categoryLabel}
         </span>
         <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
-          <span>Mở ngay</span>
+          <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"></i>
         </div>
       </div>
 
-    </div>
+    </a>
   `.trim();
 }
 

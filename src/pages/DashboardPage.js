@@ -17,8 +17,12 @@ import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 function renderToolsContent(toolsList) {
   if (!toolsList || toolsList.length === 0) {
     return `
-      <div class="py-12 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs">
-        Không tìm thấy công cụ nào phù hợp.
+      <div class="py-12 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs space-y-3">
+        <p>Không tìm thấy công cụ nào phù hợp.</p>
+        <button type="button" id="btnResetSearch" class="px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 font-sans text-xs font-medium transition cursor-pointer inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs">
+          <span>Xóa bộ lọc tìm kiếm</span>
+          <kbd class="px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-[10px] font-mono font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-white/10">Esc</kbd>
+        </button>
       </div>
     `.trim();
   }
@@ -46,43 +50,56 @@ export function renderDashboardPage() {
   return `
     <div class="space-y-6 sm:space-y-8 animate-fadeIn">
       
-      <!-- Welcome Header & Quick Action Chips -->
-      <div class="flex items-center justify-between pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
-        <div>
-          <h1 class="text-lg sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-            Xin chào, Duy! <span class="text-base">👋</span>
-          </h1>
+      <!-- Workstation Header & Live System Telemetry Bar -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
+        <div class="flex items-center gap-2.5">
+          <div class="relative flex items-center justify-center shrink-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="absolute w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-75"></span>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-white font-mono flex items-center gap-2">
+              WORKSTATION <span class="text-xs text-zinc-400 dark:text-zinc-500 font-normal tracking-normal">// DUYDEV STUDIO</span>
+            </h1>
+          </div>
         </div>
 
-        <!-- Quick Jump Buttons (Desktop only to prevent mobile clutter) -->
-        <div class="hidden sm:flex flex-wrap gap-2.5">
-          <a href="#tool/pdf-studio" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-amber-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-amber-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"></span>
-            <span>PDF Studio</span>
-          </a>
-          <a href="#tool/quiz-generator" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-purple-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-purple-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400"></span>
-            <span>Tạo Bài Tập Trắc Nghiệm</span>
-          </a>
-          <a href="#tool/universal-converter" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-indigo-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-indigo-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
-            <span>File Converter</span>
-          </a>
-          <a href="#archive" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-sky-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-sky-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400"></span>
-            <span>File nén</span>
-          </a>
-          <a href="#tool/qr-multi" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-emerald-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-emerald-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
-            <span>Mã QR</span>
-          </a>
-          <a href="#storage" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black border border-zinc-200 hover:border-indigo-500/50 dark:bg-[#121215] dark:hover:bg-[#18181B] dark:text-zinc-300 dark:hover:text-white dark:border-white/[0.08] dark:hover:border-indigo-500/30 text-xs sm:text-sm font-medium flex items-center gap-2 transition shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
-            <span>Tiện ích (Storage)</span>
-          </a>
+        <!-- System & Engine Telemetry Bar -->
+        <div id="systemTelemetryBar" class="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+          <!-- Gateway / Host -->
+          <div class="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] flex items-center gap-1.5 shadow-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span class="text-zinc-500 dark:text-zinc-400">HOST:</span>
+            <span id="telemetryHost" class="font-bold text-zinc-800 dark:text-zinc-200">${typeof window !== 'undefined' ? window.location.host : 'localhost:3000'}</span>
+          </div>
+
+          <!-- Redis / Queue Status -->
+          <div class="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] flex items-center gap-1.5 shadow-2xs">
+            <span id="telemetryRedisDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span class="text-zinc-500 dark:text-zinc-400">REDIS:</span>
+            <span id="telemetryRedis" class="font-bold text-zinc-800 dark:text-zinc-200">READY</span>
+          </div>
+
+          <!-- Polyglot Engines -->
+          <div class="hidden sm:flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] gap-1.5 shadow-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+            <span class="text-zinc-500 dark:text-zinc-400">ENGINES:</span>
+            <span class="font-bold text-zinc-800 dark:text-zinc-200">PyMuPDF • FFmpeg • LibreOffice</span>
+          </div>
+
+          <!-- Active Tasks Count -->
+          <div id="telemetryTasksBadge" class="hidden sm:flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.08] gap-1.5 shadow-2xs">
+            <span class="text-zinc-500 dark:text-zinc-400">QUEUE:</span>
+            <span id="telemetryQueueCount" class="font-bold text-zinc-800 dark:text-zinc-200">0 ACTIVE</span>
+          </div>
         </div>
       </div>
 
+
+      <!-- Recent Executions Activity Feed (Promoted to top in Operate mode, auto-hiding when empty) -->
+      <div id="recentActivityContainer" class="empty:hidden">
+        ${renderRecentActivity()}
+      </div>
 
       <!-- Category Filter Pills Bar -->
       <div class="w-full min-w-0 overflow-hidden">
@@ -102,11 +119,6 @@ export function renderDashboardPage() {
         </div>
       </div>
 
-      <!-- Recent Executions Activity Feed -->
-      <div id="recentActivityContainer">
-        ${renderRecentActivity()}
-      </div>
-
     </div>
   `;
 }
@@ -123,6 +135,50 @@ export function attachDashboardListeners(onReRender) {
       }
     }
   }).catch(() => {});
+
+  // Fetch live system telemetry
+  fetch('/api/v1/system/telemetry')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res.success && res.data) {
+        const d = res.data;
+        const redisEl = document.getElementById('telemetryRedis');
+        const redisDot = document.getElementById('telemetryRedisDot');
+        const queueEl = document.getElementById('telemetryQueueCount');
+
+        if (redisEl) {
+          redisEl.textContent = d.redis === 'connected' ? 'CONNECTED' : (d.redis?.toUpperCase() || 'ONLINE');
+        }
+        if (redisDot) {
+          redisDot.className = `w-1.5 h-1.5 rounded-full ${d.redis === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`;
+        }
+        if (queueEl) {
+          const active = d.queues?.totalActive || 0;
+          queueEl.textContent = `${active} ACTIVE`;
+          if (active > 0) {
+            queueEl.classList.add('text-indigo-400', 'animate-pulse');
+          }
+        }
+      }
+    })
+    .catch(() => {
+      const redisEl = document.getElementById('telemetryRedis');
+      if (redisEl) redisEl.textContent = 'STANDALONE';
+    });
+
+  // Handle clear search filter click
+  const toolsGridContainer = document.getElementById('toolsGridContainer');
+  if (toolsGridContainer) {
+    toolsGridContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('#btnResetSearch');
+      if (btn) {
+        toolRegistry.setSearchQuery('');
+        const searchInput = document.getElementById('globalSearchInput');
+        if (searchInput) searchInput.value = '';
+        if (onReRender) onReRender();
+      }
+    });
+  }
 
   attachCategoryFilterListeners((cat, clickedBtn) => {
     toolRegistry.setCategory(cat);
@@ -152,13 +208,15 @@ export function attachDashboardListeners(onReRender) {
       const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
       const inactiveClasses = 'bg-white dark:bg-[#16161a] text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/90 dark:border-white/[0.12] hover:border-zinc-300 dark:hover:border-white/25 font-medium shadow-2xs';
 
-      btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 ${isThisActive ? activeClasses : inactiveClasses}`;
+      btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isThisActive ? activeClasses : inactiveClasses}`;
+      btn.setAttribute('aria-selected', String(isThisActive));
+      btn.setAttribute('aria-pressed', String(isThisActive));
       
       const badge = btn.querySelector('.filter-count-badge');
       if (badge) {
         badge.className = `filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${
           isThisActive 
-            ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800' 
+            ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900' 
             : 'bg-zinc-100 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-400'
         }`;
       }
@@ -266,5 +324,18 @@ export function attachDashboardListeners(onReRender) {
     });
   }
 
-  return () => {};
+  // Keyboard shortcut: Escape clears active search query
+  const handleEscapeKey = (e) => {
+    if (e.key === 'Escape' && toolRegistry.searchQuery) {
+      toolRegistry.setSearchQuery('');
+      const searchInput = document.getElementById('globalSearchInput');
+      if (searchInput) searchInput.value = '';
+      if (onReRender) onReRender();
+    }
+  };
+  window.addEventListener('keydown', handleEscapeKey);
+
+  return () => {
+    window.removeEventListener('keydown', handleEscapeKey);
+  };
 }

@@ -6,11 +6,11 @@ const DEFAULT_TOOLS = [
   // 1. PDF Studio Suite
   {
     id: 'pdf-studio',
-    title: 'PDF Studio Pro',
-    description: 'Ghép, tách, xoay, nén, đóng dấu và xem PDF chuyên nghiệp.',
+    title: 'PDF Studio',
+    description: 'Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector.',
     category: 'pdf',
     icon: 'file-text',
-    badge: '10-in-1 Suite',
+    badge: 'PyMuPDF',
     featured: true,
     specs: ['Nén & Ghép', 'Tách & Xoay', 'Watermark'],
     color: '#F59E0B',
@@ -62,11 +62,11 @@ const DEFAULT_TOOLS = [
   // 3. Format Converters
   {
     id: 'universal-converter',
-    title: 'File Converter Pro',
-    description: 'Chuyển đổi 65+ định dạng hình ảnh, video, âm thanh và tài liệu.',
+    title: 'File Converter',
+    description: 'Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng.',
     category: 'convert',
     icon: 'refresh-cw',
-    badge: '65+ Định dạng',
+    badge: 'FFmpeg & LibreOffice',
     featured: true,
     specs: ['Hình ảnh', 'Video & Nhạc', 'Tài liệu'],
     color: '#6366F1',
@@ -91,7 +91,7 @@ const DEFAULT_TOOLS = [
   // 4. QR Studio
   {
     id: 'qr-multi',
-    title: 'QR Studio Pro',
+    title: 'QR Studio',
     description: 'Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ.',
     category: 'qr',
     icon: 'qr-code',
@@ -146,10 +146,10 @@ const DEFAULT_TOOLS = [
   {
     id: 'storage',
     title: 'Bộ Nhớ Lưu Trữ',
-    description: 'Kho lưu trữ và truyền tải tập tin cá nhân an toàn giữa các thiết bị.',
+    description: 'Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.',
     category: 'system',
     icon: 'hard-drive',
-    badge: 'Cá nhân',
+    badge: 'Cloud Drive',
     featured: false,
     specs: ['Cloud Drive', 'Truyền tệp'],
     color: '#6366F1',

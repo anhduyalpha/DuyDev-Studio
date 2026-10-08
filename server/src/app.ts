@@ -34,6 +34,7 @@ import { getPdfWorker, closePdfWorker } from './workers/pdf.worker.js';
 import { getConverterWorker, closeConverterWorker } from './workers/converter.worker.js';
 import { quizRoute } from './api/routes/quiz.route.js';
 import { getQuizWorker, closeQuizWorker } from './workers/quiz.worker.js';
+import { systemRoute } from './api/routes/system.route.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -123,6 +124,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(storageRoute);
   await app.register(viewerRoute);
   await app.register(quizRoute);
+  await app.register(systemRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)

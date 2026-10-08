@@ -546,6 +546,22 @@ export class R2Service {
     const summary: any = {
       enabled: env.R2_ENABLED,
       activeAccount: this.getActiveAccount(),
+      month: metrics.month,
+      classA: metrics.classA ?? (metrics.primary?.classA ?? 0) + (metrics.fallback?.classA ?? 0),
+      classB: metrics.classB ?? (metrics.primary?.classB ?? 0) + (metrics.fallback?.classB ?? 0),
+      totalRequests: metrics.totalRequests ?? primaryRequests + fallbackRequests,
+      maxMonthlyRequests: primaryMax,
+      remainingRequests: Math.max(0, primaryMax - primaryRequests),
+      percentUsed: Number(((primaryRequests / primaryMax) * 100).toFixed(2)),
+      freeTier: {
+        maxMonthlyClassA: 1_000_000,
+        maxMonthlyClassB: 10_000_000,
+        maxStorageGb: 10
+      },
+      liveStorage: {
+        bytes: 0,
+        filesCount: 0
+      },
       primary: {
         accountId: env.R2_ACCOUNT_ID,
         bucketName: env.R2_BUCKET_NAME,
@@ -569,8 +585,7 @@ export class R2Service {
         percentUsed: Number(((fallbackRequests / fallbackMax) * 100).toFixed(2)),
         isAvailable: this.isFallbackAvailable()
       },
-      month: metrics.month,
-      totalCombinedRequests: metrics.totalRequests,
+      totalCombinedRequests: metrics.totalRequests ?? primaryRequests + fallbackRequests,
       updatedAt: metrics.updatedAt
     };
 
