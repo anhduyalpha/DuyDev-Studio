@@ -18,12 +18,12 @@ export function renderHeader() {
   const trashCount = storage.getLocalTrash().length;
 
   return `
-    <header class="sticky top-0 z-40 w-full glass-panel border-b border-zinc-200/80 dark:border-white/[0.07] px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5">
+    <header class="sticky top-0 z-40 w-full glass-panel px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5">
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
         
         <!-- Left: Clean Branding -->
         <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0 group" onclick="window.location.hash = ''">
-          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/[0.12] dark:to-white/[0.04] border border-zinc-300/90 dark:border-white/[0.18] flex items-center justify-center transition-all duration-200 group-hover:border-indigo-500/50 dark:group-hover:border-indigo-400/50 shadow-xs group-hover:scale-105">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-white/90 to-zinc-100 dark:from-white/[0.12] dark:to-white/[0.04] backdrop-blur-md border border-zinc-300/80 dark:border-white/[0.18] flex items-center justify-center transition-all duration-200 group-hover:border-indigo-500/50 dark:group-hover:border-indigo-400/50 shadow-xs group-hover:scale-105">
             <span class="font-bold text-xs sm:text-sm tracking-wider text-zinc-900 dark:text-white font-mono">DS</span>
           </div>
           <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
@@ -37,9 +37,9 @@ export function renderHeader() {
               type="text" 
               id="globalSearchInput"
               placeholder="Tìm kiếm công cụ..." 
-              class="w-full bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.08] focus:border-indigo-500/60 dark:focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans shadow-xs"
+              class="w-full bg-white/80 dark:bg-black/35 backdrop-blur-md border border-zinc-200/90 dark:border-white/[0.1] focus:border-indigo-500/60 dark:focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans shadow-xs"
             >
-            <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-white/[0.04] rounded border border-zinc-200 dark:border-white/[0.08]">⌘K</kbd>
+            <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-100/80 dark:bg-white/[0.06] rounded border border-zinc-200 dark:border-white/[0.08]">⌘K</kbd>
           </div>
         </div>
 

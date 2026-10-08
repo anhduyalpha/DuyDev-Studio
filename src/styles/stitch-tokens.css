@@ -22,8 +22,8 @@
   --accent: #4F46E5;
   --accent-light: #6366F1;
 
-  --glass-dock: rgba(255, 255, 255, 0.94);
-  --glass-panel: rgba(255, 255, 255, 0.94);
+  --glass-dock: rgba(255, 255, 255, 0.80);
+  --glass-panel: rgba(244, 244, 246, 0.72);
   --dock-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
@@ -46,8 +46,8 @@ html.dark {
   --accent: #4F46E5;
   --accent-light: #6366F1;
 
-  --glass-dock: rgba(18, 18, 21, 0.92);
-  --glass-panel: rgba(14, 14, 17, 0.88);
+  --glass-dock: rgba(18, 18, 21, 0.78);
+  --glass-panel: rgba(11, 15, 23, 0.62);
   --dock-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
@@ -171,20 +171,28 @@ html.dark .tool-accent-box {
 /* Glassmorphism & Depth Layers */
 .glass-dock {
   background: var(--glass-dock);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--dock-shadow);
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .glass-panel {
   background: var(--glass-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25),
+              inset 0 -1px 0 0 rgba(255, 255, 255, 0.04);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+html:not(.dark) .glass-panel {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.04),
+              inset 0 -1px 0 0 rgba(0, 0, 0, 0.02);
 }
 
 /* Touch Friendly Targets */
@@ -279,7 +287,7 @@ html.dark .tool-accent-box {
 
 /* ==============================================================================
    Ambient Dual-Spot Atmosphere (Option 2 - Raycast / Linear Workspace Lighting)
-   Mobile-Optimized Dynamic Sizing & High-Contrast OLED Tuning
+   Enhanced High-Luminance Glassmorphism Blend for Header & Canvas
    ============================================================================== */
 body::before {
   content: '';
@@ -288,31 +296,32 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-repeat: no-repeat;
-  /* Mobile Default: Centered below header (~50-70px) with rich localized bloom */
+  /* Mobile Default: Flowing smoothly through translucent glass header */
   background-image: 
-    radial-gradient(circle 320px at 0% 50px, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.08) 45%, transparent 75%),
-    radial-gradient(circle 300px at 100% 70px, rgba(16, 185, 129, 0.13) 0%, rgba(5, 150, 105, 0.06) 45%, transparent 70%);
+    radial-gradient(circle 420px at -5% -5%, rgba(99, 102, 241, 0.22) 0%, rgba(79, 70, 229, 0.10) 40%, transparent 75%),
+    radial-gradient(circle 380px at 105% -5%, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.08) 40%, transparent 70%);
 }
 
 html.dark body::before {
-  /* Mobile Dark OLED Optimized: Vibrant luminous opacity right beneath sticky header */
+  /* Mobile Dark OLED: Rich, vibrant saturation shining directly through glass header & onto top cards */
   background-image: 
-    radial-gradient(circle 340px at 0% 50px, rgba(99, 102, 241, 0.28) 0%, rgba(79, 70, 229, 0.14) 45%, transparent 75%),
-    radial-gradient(circle 320px at 100% 70px, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.10) 45%, transparent 70%);
+    radial-gradient(circle 450px at -8% -8%, rgba(99, 102, 241, 0.38) 0%, rgba(79, 70, 229, 0.20) 38%, rgba(67, 56, 202, 0.06) 65%, transparent 85%),
+    radial-gradient(circle 400px at 108% -8%, rgba(16, 185, 129, 0.30) 0%, rgba(5, 150, 105, 0.15) 38%, rgba(4, 120, 87, 0.04) 65%, transparent 80%),
+    radial-gradient(ellipse 80% 30% at 50% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
 }
 
 @media (min-width: 641px) {
   body::before {
     background-image: 
-      radial-gradient(circle 650px at 10% 0%, rgba(99, 102, 241, 0.12) 0%, rgba(79, 70, 229, 0.06) 50%, transparent 70%),
-      radial-gradient(circle 550px at 90% 0%, rgba(16, 185, 129, 0.09) 0%, rgba(5, 150, 105, 0.04) 50%, transparent 65%);
+      radial-gradient(circle 750px at 10% -5%, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.08) 45%, transparent 75%),
+      radial-gradient(circle 650px at 90% -5%, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.05) 45%, transparent 70%);
   }
 
   html.dark body::before {
     background-image: 
-      radial-gradient(circle 750px at 12% 0%, rgba(99, 102, 241, 0.20) 0%, rgba(79, 70, 229, 0.10) 45%, transparent 75%),
-      radial-gradient(circle 650px at 88% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.07) 45%, transparent 70%),
-      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+      radial-gradient(circle 880px at 8% -6%, rgba(99, 102, 241, 0.30) 0%, rgba(79, 70, 229, 0.16) 40%, rgba(67, 56, 202, 0.04) 70%, transparent 85%),
+      radial-gradient(circle 780px at 92% -6%, rgba(16, 185, 129, 0.24) 0%, rgba(5, 150, 105, 0.12) 40%, rgba(4, 120, 87, 0.03) 70%, transparent 80%),
+      radial-gradient(ellipse 75% 35% at 50% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 75%);
   }
 }
 
