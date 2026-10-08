@@ -50,8 +50,8 @@ export function renderDashboardPage() {
   return `
     <div class="space-y-6 sm:space-y-8 animate-fadeIn">
       
-      <!-- Workstation Header -->
-      <div class="flex items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
+      <!-- Workstation Header (Option 2 - Linear Precision) -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3 sm:pb-4 border-b border-zinc-200/80 dark:border-white/5">
         <div class="flex items-center gap-2.5">
           <div class="relative flex items-center justify-center shrink-0">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
@@ -61,6 +61,17 @@ export function renderDashboardPage() {
             <h1 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-white font-mono flex items-center gap-2">
               WORKSTATION <span class="text-xs text-zinc-400 dark:text-zinc-500 font-normal tracking-normal">// DUYDEV STUDIO</span>
             </h1>
+          </div>
+        </div>
+
+        <!-- Technical Status Indicator (Linear Precision) -->
+        <div class="flex items-center gap-2 font-mono text-xs select-none">
+          <span class="hidden sm:inline-block text-zinc-300 dark:text-zinc-600">//</span>
+          <div id="workstationStatusBadge" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/90 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 shadow-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${currentCategory.toUpperCase()}</span>
+            <span class="text-zinc-300 dark:text-zinc-700">|</span>
+            <span class="text-[11px] font-bold text-zinc-900 dark:text-white">${tools.length} ENGINES ONLINE</span>
           </div>
         </div>
       </div>
@@ -139,6 +150,15 @@ export function attachDashboardListeners(onReRender) {
     }
     if (countEl) {
       countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
+    }
+    const statusBadge = document.getElementById('workstationStatusBadge');
+    if (statusBadge) {
+      statusBadge.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${cat.toUpperCase()}</span>
+        <span class="text-zinc-300 dark:text-zinc-700">|</span>
+        <span class="text-[11px] font-bold text-zinc-900 dark:text-white">${filteredTools.length} ENGINES ONLINE</span>
+      `;
     }
 
     // 3. Update active pill styling across all tabs in place

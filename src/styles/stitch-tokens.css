@@ -304,4 +304,35 @@ html.dark body::before {
   z-index: 1;
 }
 
+/* ==============================================================================
+   Linear Precision Border & Card Surface (Option 2 - Linear / Vercel Aesthetic)
+   ============================================================================== */
+.linear-card {
+  position: relative;
+  background-color: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease;
+}
+
+html.dark .linear-card {
+  background: linear-gradient(180deg, #16161D 0%, #101014 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.linear-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+html.dark .linear-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, rgba(255, 255, 255, 0.2));
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.7),
+              0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: translateY(-2px);
+}
+
 

@@ -22,22 +22,22 @@ export function renderHeader() {
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
         
         <!-- Left: Clean Branding -->
-        <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0" onclick="window.location.hash = ''">
-          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/90 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.15] flex items-center justify-center transition hover:bg-zinc-300 dark:hover:bg-white/[0.12] shadow-xs">
-            <span class="font-bold text-xs sm:text-sm tracking-wider text-zinc-900 dark:text-white">DS</span>
+        <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0 group" onclick="window.location.hash = ''">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/[0.12] dark:to-white/[0.04] border border-zinc-300/90 dark:border-white/[0.18] flex items-center justify-center transition-all duration-200 group-hover:border-indigo-500/50 dark:group-hover:border-indigo-400/50 shadow-xs group-hover:scale-105">
+            <span class="font-bold text-xs sm:text-sm tracking-wider text-zinc-900 dark:text-white font-mono">DS</span>
           </div>
           <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
         </div>
 
         <!-- Center: Minimalist Search Bar (Desktop) -->
         <div class="hidden md:flex flex-1 max-w-md mx-6">
-          <div class="relative w-full">
-            <i data-lucide="search" class="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <div class="relative w-full group/search">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within/search:text-indigo-500 dark:group-focus-within/search:text-indigo-400"></i>
             <input 
               type="text" 
               id="globalSearchInput"
               placeholder="Tìm kiếm công cụ..." 
-              class="w-full bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.08] rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none focus:border-zinc-400 dark:focus:border-white/25 transition font-sans shadow-xs"
+              class="w-full bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.08] focus:border-indigo-500/60 dark:focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans shadow-xs"
             >
             <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-white/[0.04] rounded border border-zinc-200 dark:border-white/[0.08]">⌘K</kbd>
           </div>
