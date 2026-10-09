@@ -50,31 +50,6 @@ export function renderDashboardPage() {
   return `
     <div class="space-y-6 sm:space-y-8 animate-fadeIn">
       
-      <!-- Workstation Header (Apple Sequoia Frosted Workstation Bar) -->
-      <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 p-3.5 sm:px-5 sm:py-3.5 rounded-2xl glass-panel-contained">
-        <div class="flex items-center gap-2.5">
-          <div class="relative flex items-center justify-center shrink-0">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-          </div>
-          <div>
-            <h1 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-white font-mono flex items-center gap-2">
-              WORKSTATION <span class="text-xs text-zinc-400 dark:text-zinc-500 font-normal tracking-normal">// DUYDEV STUDIO</span>
-            </h1>
-          </div>
-        </div>
-
-        <!-- Technical Status Indicator -->
-        <div class="flex items-center gap-2 font-mono text-xs select-none">
-          <span class="hidden sm:inline-block text-zinc-300 dark:text-zinc-600">//</span>
-          <div id="workstationStatusBadge" class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg glass-pill text-zinc-700 dark:text-zinc-300">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${currentCategory.toUpperCase()}</span>
-            <span class="text-zinc-300 dark:text-zinc-700">|</span>
-            <span class="text-[11px] font-bold text-zinc-900 dark:text-white">${tools.length} ENGINES ONLINE</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Category Filter Pills Bar -->
       <div class="w-full min-w-0 overflow-hidden">
         ${renderCategoryFilters(currentCategory, counts)}
@@ -115,30 +90,6 @@ export function attachDashboardListeners(onReRender) {
     }
   }).catch(() => {});
 
-  // Live Telemetry Sync
-  fetch('/api/v1/system/telemetry')
-    .then(res => res.ok ? res.json() : null)
-    .then(data => {
-      if (data && data.success && data.data) {
-        const t = data.data;
-        const statusBadge = document.getElementById('workstationStatusBadge');
-        if (statusBadge) {
-          const totalActive = t.queues?.totalActive || 0;
-          const currentCat = toolRegistry.currentCategory.toUpperCase();
-          const count = toolRegistry.getFilteredTools().length;
-          const statusText = totalActive > 0 ? `${totalActive} ACTIVE JOBS` : `${count} ENGINES ONLINE`;
-          const dotColor = totalActive > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500';
-          statusBadge.innerHTML = `
-            <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
-            <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${currentCat}</span>
-            <span class="text-zinc-300 dark:text-zinc-700">|</span>
-            <span class="text-[11px] font-bold text-zinc-900 dark:text-white">${statusText}</span>
-          `;
-          statusBadge.title = `Fastify: ${t.gateway} • Redis: ${t.redis} • Uptime: ${Math.floor(t.uptime / 60)}m • Memory: ${t.memoryMb}MB`;
-        }
-      }
-    })
-    .catch(() => {});
 
   // Handle clear search filter click
   const toolsGridContainer = document.getElementById('toolsGridContainer');
@@ -174,15 +125,6 @@ export function attachDashboardListeners(onReRender) {
     }
     if (countEl) {
       countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
-    }
-    const statusBadge = document.getElementById('workstationStatusBadge');
-    if (statusBadge) {
-      statusBadge.innerHTML = `
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-        <span class="text-[11px] font-semibold tracking-wide uppercase">INDEX: ${cat.toUpperCase()}</span>
-        <span class="text-zinc-300 dark:text-zinc-700">|</span>
-        <span class="text-[11px] font-bold text-zinc-900 dark:text-white">${filteredTools.length} ENGINES ONLINE</span>
-      `;
     }
 
     // 3. Update active pill styling across all tabs in place

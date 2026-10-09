@@ -194,9 +194,8 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(orbsContent).toContain("document.removeEventListener('visibilitychange'");
     });
 
-    it('DashboardPage.js workstation status dot must NOT use animate-ping', () => {
+    it('DashboardPage.js must NOT use animate-ping for background animation', () => {
       expect(dashboardContent).not.toContain('animate-ping');
-      expect(dashboardContent).toContain('bg-emerald-500 shadow-');
     });
   });
 
