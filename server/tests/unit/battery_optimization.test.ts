@@ -221,23 +221,27 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   });
 
   describe('5. Service Worker & Cache Version Alignment (Pillar 5)', () => {
-    it('CURRENT_PWA_VERSION must be duydev-studio-v21.0 across sw.js and pwa.js', () => {
-      expect(CURRENT_PWA_VERSION).toBe('duydev-studio-v21.0');
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v21.0';");
+    it('CURRENT_PWA_VERSION must match CACHE_NAME across sw.js and pwa.js', () => {
+      const match = swContent.match(/const CACHE_NAME = ['"]([^'"]+)['"]/);
+      expect(CURRENT_PWA_VERSION).toBe(match![1]);
     });
 
-    it('index.html must reference ?v=21.0 for all critical CSS and app.js bundles', () => {
-      expect(indexContent).toContain('href="src/styles/stitch-tokens.css?v=21.0"');
-      expect(indexContent).toContain('href="src/styles/studocu.css?v=21.0"');
-      expect(indexContent).toContain('href="src/styles/highlight-theme.css?v=21.0"');
-      expect(indexContent).toContain('src="src/app.js?v=21.0"');
+    it('index.html must reference matching version for all critical CSS and app.js bundles', () => {
+      const match = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v(\d+\.\d+)['"]/);
+      const v = match ? match[1] : '21.3';
+      expect(indexContent).toContain(`href="src/styles/stitch-tokens.css?v=${v}"`);
+      expect(indexContent).toContain(`href="src/styles/studocu.css?v=${v}"`);
+      expect(indexContent).toContain(`href="src/styles/highlight-theme.css?v=${v}"`);
+      expect(indexContent).toContain(`src="src/app.js?v=${v}"`);
     });
 
-    it('sw.js ASSETS_TO_PRECACHE must reference ?v=21.0', () => {
-      expect(swContent).toContain("'./src/styles/stitch-tokens.css?v=21.0'");
-      expect(swContent).toContain("'./src/styles/studocu.css?v=21.0'");
-      expect(swContent).toContain("'./src/styles/highlight-theme.css?v=21.0'");
-      expect(swContent).toContain("'./src/app.js?v=21.0'");
+    it('sw.js ASSETS_TO_PRECACHE must reference matching version', () => {
+      const match = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v(\d+\.\d+)['"]/);
+      const v = match ? match[1] : '21.3';
+      expect(swContent).toContain(`'./src/styles/stitch-tokens.css?v=${v}'`);
+      expect(swContent).toContain(`'./src/styles/studocu.css?v=${v}'`);
+      expect(swContent).toContain(`'./src/styles/highlight-theme.css?v=${v}'`);
+      expect(swContent).toContain(`'./src/app.js?v=${v}'`);
     });
 
     it('sw.js same-origin assets fetch handler must allow browser disk cache', () => {

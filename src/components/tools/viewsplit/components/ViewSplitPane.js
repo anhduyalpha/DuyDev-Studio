@@ -57,7 +57,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
                 <div class="flex items-center gap-1 px-2 py-1 rounded-xl bg-black/60 dark:bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-mono text-zinc-300 shadow-sm">
                   <span>${pane.width}×${pane.height}</span>
                   <span class="text-zinc-500">•</span>
-                  <span class="text-cyan-400 font-semibold">${zoomPercent}%</span>
+                  <span id="viewsplit-zoom-badge-${pane.id}" class="text-cyan-400 font-semibold">${zoomPercent}%</span>
                 </div>
                 <button
                   type="button"

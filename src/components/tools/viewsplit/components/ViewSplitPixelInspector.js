@@ -47,12 +47,15 @@ export function renderViewSplitPixelInspector(state) {
       id="viewsplit-pixel-inspector-hud"
       class="fixed bottom-4 right-4 z-40 w-[290px] sm:w-[320px] rounded-2xl bg-zinc-950/90 dark:bg-black/85 backdrop-blur-2xl border border-white/15 shadow-2xl p-3 text-zinc-100 select-none animate-fadeIn"
     >
-      <!-- HUD Header -->
-      <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/10 text-xs">
-        <div class="flex items-center gap-1.5 font-bold tracking-tight text-white">
+      <!-- HUD Header (Draggable Handle) -->
+      <div
+        id="viewsplit-inspector-header"
+        class="flex items-center justify-between pb-2 mb-2 border-b border-white/10 text-xs cursor-move select-none"
+      >
+        <div class="flex items-center gap-1.5 font-bold tracking-tight text-white pointer-events-none">
           <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-cyan-400"></i>
           <span>Pixel Inspector</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-zinc-300 font-mono">${paneTitle}</span>
+          <span id="viewsplit-inspector-pane-title" class="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-zinc-300 font-mono">${paneTitle}</span>
         </div>
         <button
           type="button"
@@ -74,11 +77,11 @@ export function renderViewSplitPixelInspector(state) {
             height="90"
             class="w-full h-full block"
           ></canvas>
-          ${
-            !isValid
-              ? `<span class="absolute text-[10px] text-zinc-500 font-mono pointer-events-none">No Pixel</span>`
-              : ''
-          }
+          <span
+            id="viewsplit-inspector-no-pixel"
+            class="absolute text-[10px] text-zinc-500 font-mono pointer-events-none"
+            style="display: ${isValid ? 'none' : 'block'};"
+          >No Pixel</span>
         </div>
 
         <!-- Telemetry Data -->
@@ -86,19 +89,19 @@ export function renderViewSplitPixelInspector(state) {
           <!-- Coordinates (X, Y) -->
           <div class="flex items-center justify-between text-zinc-300">
             <span class="text-zinc-500 text-[10px] uppercase font-sans">Toạ độ</span>
-            <span class="font-bold text-white">${isValid ? `X:${x} Y:${y}` : '--, --'}</span>
+            <span id="viewsplit-inspector-coords" class="font-bold text-white">${isValid ? `X:${x} Y:${y}` : '--, --'}</span>
           </div>
 
           <!-- RGB & Alpha Channels -->
           <div class="flex items-center justify-between text-zinc-300">
             <span class="text-zinc-500 text-[10px] uppercase font-sans">RGB</span>
-            <span class="text-zinc-200">${isValid ? `${r}, ${g}, ${b}` : '--, --, --'}</span>
+            <span id="viewsplit-inspector-rgb" class="text-zinc-200">${isValid ? `${r}, ${g}, ${b}` : '--, --, --'}</span>
           </div>
 
           <!-- Alpha -->
           <div class="flex items-center justify-between text-zinc-400 text-[10px]">
             <span class="text-zinc-500 uppercase font-sans">Alpha</span>
-            <span>${isValid ? `${a} (${Math.round((a / 255) * 100)}%)` : '--'}</span>
+            <span id="viewsplit-inspector-alpha">${isValid ? `${a} (${Math.round((a / 255) * 100)}%)` : '--'}</span>
           </div>
 
           <!-- HEX & Swatch & 1-Click Copy -->
@@ -106,16 +109,18 @@ export function renderViewSplitPixelInspector(state) {
             <div class="flex items-center gap-1.5">
               <!-- Color Swatch Preview -->
               <div
+                id="viewsplit-inspector-swatch"
                 class="w-4 h-4 rounded-md border border-white/30 shadow-sm shrink-0"
                 style="background-color: ${isValid ? `rgba(${r},${g},${b},${a / 255})` : 'transparent'};"
                 title="${isValid ? hex : 'Chưa có mẫu màu'}"
               ></div>
-              <span class="font-bold text-cyan-400 text-xs">${isValid ? hex : '------'}</span>
+              <span id="viewsplit-inspector-hex" class="font-bold text-cyan-400 text-xs">${isValid ? hex : '------'}</span>
             </div>
 
             <!-- 1-Click Copy Button -->
             <button
               type="button"
+              id="viewsplit-inspector-copy-btn"
               data-action="copy-hex"
               data-hex="${isValid ? hex : ''}"
               title="Sao chép mã HEX"
@@ -130,6 +135,51 @@ export function renderViewSplitPixelInspector(state) {
       </div>
     </div>
   `;
+}
+
+/**
+ * Updates DOM telemetry values directly in 0ms without re-rendering the whole page.
+ * @param {Object} state
+ * @param {string} [activePaneTitle]
+ */
+export function updatePixelInspectorHud(state, activePaneTitle = '') {
+  if (!state) return;
+  const { x, y, r, g, b, a, hex, isValid } = state;
+
+  const titleEl = document.getElementById('viewsplit-inspector-pane-title');
+  if (titleEl && activePaneTitle) {
+    titleEl.textContent = activePaneTitle;
+  }
+  const coordsEl = document.getElementById('viewsplit-inspector-coords');
+  if (coordsEl) {
+    coordsEl.textContent = isValid ? `X:${x} Y:${y}` : '--, --';
+  }
+  const rgbEl = document.getElementById('viewsplit-inspector-rgb');
+  if (rgbEl) {
+    rgbEl.textContent = isValid ? `${r}, ${g}, ${b}` : '--, --, --';
+  }
+  const alphaEl = document.getElementById('viewsplit-inspector-alpha');
+  if (alphaEl) {
+    alphaEl.textContent = isValid ? `${a} (${Math.round((a / 255) * 100)}%)` : '--';
+  }
+  const swatchEl = document.getElementById('viewsplit-inspector-swatch');
+  if (swatchEl) {
+    swatchEl.style.backgroundColor = isValid ? `rgba(${r},${g},${b},${a / 255})` : 'transparent';
+    swatchEl.title = isValid ? hex : 'Chưa có mẫu màu';
+  }
+  const hexEl = document.getElementById('viewsplit-inspector-hex');
+  if (hexEl) {
+    hexEl.textContent = isValid ? hex : '------';
+  }
+  const copyBtn = document.getElementById('viewsplit-inspector-copy-btn');
+  if (copyBtn) {
+    copyBtn.dataset.hex = isValid ? hex : '';
+    copyBtn.disabled = !isValid;
+  }
+  const noPixelEl = document.getElementById('viewsplit-inspector-no-pixel');
+  if (noPixelEl) {
+    noPixelEl.style.display = isValid ? 'none' : 'block';
+  }
 }
 
 /**

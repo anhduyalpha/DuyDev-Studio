@@ -53,6 +53,7 @@ export function renderViewSplitUrlModal(state) {
               <button
                 type="button"
                 id="viewsplit-btn-load-url"
+                data-action="load-url"
                 data-pane-id="${urlModalTargetPaneId}"
                 class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition cursor-pointer shrink-0 shadow-sm"
               >
@@ -75,6 +76,7 @@ export function renderViewSplitUrlModal(state) {
               <button
                 type="button"
                 id="viewsplit-btn-refresh-drive"
+                data-action="refresh-drive"
                 class="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <i data-lucide="refresh-cw" class="w-3 h-3"></i>

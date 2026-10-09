@@ -218,6 +218,54 @@ export function composeMergedComparisonCanvas(panes, layout, {
       break;
     }
 
+    case LAYOUT_MODES.TRIPLE_L: {
+      const p1 = panes[0]?.image || validPanes[0];
+      const p2 = panes[1]?.image || p1;
+      const p3 = panes[2]?.image || p2;
+      const targetH = Math.max(p1.height, p2.height + p3.height);
+      const rightH = Math.round(targetH / 2);
+      const w1 = Math.round((p1.width / p1.height) * targetH);
+      const w2 = Math.round((p2.width / p2.height) * rightH);
+      const w3 = Math.round((p3.width / p3.height) * rightH);
+      const rightW = Math.max(w2, w3);
+
+      canvas.width = w1 + rightW;
+      canvas.height = targetH;
+
+      ctx.drawImage(p1.image, 0, 0, w1, targetH);
+      ctx.drawImage(p2.image, w1, 0, rightW, rightH);
+      ctx.drawImage(p3.image, w1, rightH, rightW, targetH - rightH);
+
+      drawLabel(ctx, p1.title, 16, 24);
+      drawLabel(ctx, p2.title, w1 + 16, 24);
+      drawLabel(ctx, p3.title, w1 + 16, rightH + 24);
+      break;
+    }
+
+    case LAYOUT_MODES.TRIPLE_T: {
+      const p1 = panes[0]?.image || validPanes[0];
+      const p2 = panes[1]?.image || p1;
+      const p3 = panes[2]?.image || p2;
+      const targetW = Math.max(p1.width, p2.width + p3.width);
+      const topH = Math.round((p1.height / p1.width) * targetW);
+      const bottomW = Math.round(targetW / 2);
+      const h2 = Math.round((p2.height / p2.width) * bottomW);
+      const h3 = Math.round((p3.height / p3.width) * (targetW - bottomW));
+      const bottomH = Math.max(h2, h3);
+
+      canvas.width = targetW;
+      canvas.height = topH + bottomH;
+
+      ctx.drawImage(p1.image, 0, 0, targetW, topH);
+      ctx.drawImage(p2.image, 0, topH, bottomW, bottomH);
+      ctx.drawImage(p3.image, bottomW, topH, targetW - bottomW, bottomH);
+
+      drawLabel(ctx, p1.title, 16, 24);
+      drawLabel(ctx, p2.title, 16, topH + 24);
+      drawLabel(ctx, p3.title, bottomW + 16, topH + 24);
+      break;
+    }
+
     case LAYOUT_MODES.QUAD:
     default: {
       // 2x2 Grid

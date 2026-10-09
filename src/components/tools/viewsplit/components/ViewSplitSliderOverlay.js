@@ -72,7 +72,7 @@ export function renderViewSplitSliderOverlay(state) {
               `
               : `
                 <!-- Slider Percentage Badge -->
-                <div class="px-2.5 py-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-[11px] font-mono text-cyan-400 font-semibold shadow-md">
+                <div id="viewsplit-slider-pct-badge" class="px-2.5 py-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-[11px] font-mono text-cyan-400 font-semibold shadow-md">
                   ${Math.round(sliderPos * 100)}%
                 </div>
               `
@@ -90,6 +90,10 @@ export function renderViewSplitSliderOverlay(state) {
           </button>
         </div>
       </div>
+
+      <!-- Hidden File Inputs for Slot A and Slot B Ingestion in Overlay Mode -->
+      <input type="file" accept="image/*" class="viewsplit-file-input hidden" data-pane-id="1" />
+      <input type="file" accept="image/*" class="viewsplit-file-input hidden" data-pane-id="2" />
 
       <!-- Wipe Divider Line & Drag Handle (Visible only in Slider Wipe mode when both images loaded) -->
       ${
@@ -138,22 +142,33 @@ export function renderViewSplitSliderOverlay(state) {
                 </div>
                 <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Gốc (Before - ${paneA.title})</h4>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasA ? paneA.name : 'Chưa chọn ảnh'}</p>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     type="button"
                     data-action="pick-file"
                     data-pane-id="1"
-                    class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold cursor-pointer shadow-sm"
+                    class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold cursor-pointer shadow-sm flex items-center gap-1"
                   >
-                    ${hasA ? 'Đổi ảnh' : 'Chọn tệp'}
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>${hasA ? 'Đổi ảnh' : 'Chọn tệp'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="paste-clipboard"
+                    data-pane-id="1"
+                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
+                  >
+                    <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+                    <span>Dán ảnh</span>
                   </button>
                   <button
                     type="button"
                     data-action="open-url-modal"
                     data-pane-id="1"
-                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer"
+                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
                   >
-                    URL / Drive
+                    <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
+                    <span>URL / Drive</span>
                   </button>
                 </div>
               </div>
@@ -165,22 +180,33 @@ export function renderViewSplitSliderOverlay(state) {
                 </div>
                 <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Đích (After - ${paneB.title})</h4>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasB ? paneB.name : 'Chưa chọn ảnh'}</p>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     type="button"
                     data-action="pick-file"
                     data-pane-id="2"
-                    class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold cursor-pointer shadow-sm"
+                    class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold cursor-pointer shadow-sm flex items-center gap-1"
                   >
-                    ${hasB ? 'Đổi ảnh' : 'Chọn tệp'}
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>${hasB ? 'Đổi ảnh' : 'Chọn tệp'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="paste-clipboard"
+                    data-pane-id="2"
+                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
+                  >
+                    <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+                    <span>Dán ảnh</span>
                   </button>
                   <button
                     type="button"
                     data-action="open-url-modal"
                     data-pane-id="2"
-                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer"
+                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
                   >
-                    URL / Drive
+                    <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
+                    <span>URL / Drive</span>
                   </button>
                 </div>
               </div>

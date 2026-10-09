@@ -347,4 +347,75 @@ describe('ViewSplit Reactive Store (useViewSplit)', () => {
     expect(pane1.width).toBe(0);
     expect(pane1.zoom).toBe(1.0);
   });
+
+  it('should reset cursor across all panes via clearAllCursors()', () => {
+    const pane1 = viewSplitStore.getPane(1);
+    const pane2 = viewSplitStore.getPane(2);
+    pane1.cursor.inside = true;
+    pane2.cursor.inside = true;
+    viewSplitStore.pixelInspectorState.isValid = true;
+
+    viewSplitStore.clearAllCursors();
+
+    expect(pane1.cursor.inside).toBe(false);
+    expect(pane2.cursor.inside).toBe(false);
+    expect(viewSplitStore.pixelInspectorState.isValid).toBe(false);
+  });
+
+  it('should clear pixel inspector when cursor is outside image boundary', () => {
+    const pane1 = viewSplitStore.getPane(1);
+    pane1.image = { naturalWidth: 100, naturalHeight: 100 } as any;
+    pane1.width = 100;
+    pane1.height = 100;
+    pane1.zoom = 1.0;
+    pane1.panX = 0;
+    pane1.panY = 0;
+    pane1.imageData = new Uint8ClampedArray(100 * 100 * 4);
+
+    // Cursor placed at (500, 500) which is far outside (100x100)
+    viewSplitStore.updateCursor(1, 500, 500, true);
+    expect(viewSplitStore.pixelInspectorState.isValid).toBe(false);
+  });
+
+  it('should synchronize normalized centers across unequal resolution images', () => {
+    // Pane 1: 1000x1000, Pane 2: 2000x2000
+    const p1 = viewSplitStore.getPane(1);
+    const p2 = viewSplitStore.getPane(2);
+    p1.image = { width: 1000, height: 1000 } as any;
+    p1.width = 1000;
+    p1.height = 1000;
+
+    p2.image = { width: 2000, height: 2000 } as any;
+    p2.width = 2000;
+    p2.height = 2000;
+
+    const viewW = 800;
+    const viewH = 600;
+    const zoom = 2.0;
+
+    // Pan p1 such that its center (500, 500) is centered in the viewport
+    const { panX: p1PanX, panY: p1PanY } = panFromNormalizedCenter(
+      { x: 0.5, y: 0.5 },
+      zoom,
+      viewW,
+      viewH,
+      p1.width,
+      p1.height
+    );
+
+    viewSplitStore.setTransform(1, zoom, p1PanX, p1PanY, viewW, viewH);
+
+    // Check that p2 was synchronized to also have normalized center at (0.5, 0.5)
+    const normP2 = getNormalizedCenter(
+      p2.panX,
+      p2.panY,
+      p2.zoom,
+      viewW,
+      viewH,
+      p2.width,
+      p2.height
+    );
+    expect(normP2.x).toBeCloseTo(0.5, 4);
+    expect(normP2.y).toBeCloseTo(0.5, 4);
+  });
 });

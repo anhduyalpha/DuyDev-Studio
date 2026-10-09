@@ -381,7 +381,7 @@ class ViewSplitStore {
       return;
     }
 
-    const { x: imageX, y: imageY } = viewToImageCoordinates(
+    const { x: imageX, y: imageY, isInside: isImagePixel } = viewToImageCoordinates(
       viewX,
       viewY,
       sourcePane.panX,
@@ -390,6 +390,13 @@ class ViewSplitStore {
       sourcePane.width,
       sourcePane.height
     );
+
+    if (!isImagePixel) {
+      if (this.pixelInspectorState.paneId === sourcePaneId) {
+        this.clearPixelInspector();
+      }
+      return;
+    }
 
     sourcePane.cursor.imageX = imageX;
     sourcePane.cursor.imageY = imageY;
@@ -433,6 +440,14 @@ class ViewSplitStore {
       };
       this.notify('pixel-update');
     }
+  }
+
+  clearAllCursors() {
+    this.panes.forEach((p) => {
+      p.cursor.inside = false;
+    });
+    this.clearPixelInspector();
+    this.notify('cursor-cleared');
   }
 
   clearPixelInspector() {
