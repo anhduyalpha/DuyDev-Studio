@@ -108,7 +108,7 @@ export function renderStoragePage() {
               id="inputStorageSearch" 
               placeholder="Lọc tệp..." 
               value="${state.searchQuery}"
-              class="w-36 sm:w-48 pl-8 pr-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-indigo-500 transition font-sans"
+              class="w-36 sm:w-48 pl-8 pr-3 py-1.5 rounded-xl glass-search text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none transition font-sans"
             />
           </div>
 

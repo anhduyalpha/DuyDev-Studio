@@ -29,7 +29,7 @@ export function renderHeader() {
           <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
         </div>
 
-        <!-- Center: Minimalist Search Bar (Desktop) -->
+        <!-- Center: Minimalist Search Bar (Desktop - Apple Sequoia Frosted Glass) -->
         <div class="hidden md:flex flex-1 max-w-md mx-6">
           <div class="relative w-full group/search">
             <i data-lucide="search" class="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within/search:text-indigo-500 dark:group-focus-within/search:text-indigo-400"></i>
@@ -39,9 +39,9 @@ export function renderHeader() {
               role="searchbox"
               aria-label="Tìm kiếm công cụ (⌘K)"
               placeholder="Tìm kiếm công cụ..." 
-              class="w-full bg-white/80 dark:bg-black/35 backdrop-blur-md border border-zinc-200/90 dark:border-white/[0.1] focus:border-indigo-500/60 dark:focus:border-indigo-400/60 focus:ring-1 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans shadow-xs"
+              class="w-full glass-search rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans"
             >
-            <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-100/80 dark:bg-white/[0.06] rounded border border-zinc-200 dark:border-white/[0.08]">⌘K</kbd>
+            <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-300 glass-pill rounded border border-zinc-200/90 dark:border-white/[0.12]">⌘K</kbd>
           </div>
         </div>
 
