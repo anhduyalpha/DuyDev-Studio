@@ -356,6 +356,8 @@ class App {
       dispatchTool('universal-converter');
     } else if (hash === '#studocu' || hash === '#studocu-dl') {
       dispatchTool('studocu-dl');
+    } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {
+      dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);
     } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {
       dispatchTool('quiz-generator');
     } else if (hash === '#archive' || hash === '#archive-inspect') {

@@ -24,6 +24,7 @@ import { renderConverterWorkspace, attachConverterListeners } from '../component
 import { renderStudocuWorkspace, attachStudocuListeners } from '../components/tools/studocu/StudocuWorkspace.js';
 import { renderStoragePage, attachStoragePageListeners } from './StoragePage.js';
 import { renderQuizWorkspace, attachQuizListeners } from '../components/tools/quiz/QuizWorkspace.js';
+import { renderViewSplitWorkspace, attachViewSplitWorkspaceListeners } from '../components/tools/viewsplit/ViewSplitWorkspace.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
@@ -67,6 +68,9 @@ export function renderToolPage(toolId = 'pdf-convert', subTab = null) {
     case 'quiz-generator':
     case 'quiz':
       return renderQuizWorkspace();
+
+    case 'view-split':
+      return renderViewSplitWorkspace();
 
     case 'pdf-studio':
     case 'pdf-merge':
@@ -124,6 +128,9 @@ export function attachToolPageListeners(onReRender) {
     case 'quiz-generator':
     case 'quiz':
       return attachQuizListeners(onReRender);
+
+    case 'view-split':
+      return attachViewSplitWorkspaceListeners(onReRender);
 
     case 'pdf-studio':
     case 'pdf-merge':

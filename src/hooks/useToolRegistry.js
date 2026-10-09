@@ -118,6 +118,19 @@ const DEFAULT_TOOLS = [
 
   // 5. System & Utility
   {
+    id: 'view-split',
+    title: 'ViewSplit',
+    description: 'So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector.',
+    category: 'system',
+    icon: 'columns-2',
+    badge: 'Canvas 2D',
+    featured: true,
+    specs: ['So sánh đa ảnh', 'Slider Wipe', 'Pixel Inspector'],
+    color: '#06B6D4',
+    route: '#tool/view-split',
+    tags: ['viewsplit', 'view split', 'so sánh ảnh', 'soi điểm ảnh', 'pixel inspector', 'slider wipe', 'diff', 'compare']
+  },
+  {
     id: 'hash-checksum',
     title: 'Mã Băm & Base64',
     description: 'Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.',
