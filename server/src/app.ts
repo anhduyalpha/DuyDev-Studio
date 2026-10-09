@@ -219,7 +219,7 @@ function isAllowedStaticAsset(pathname: string): boolean {
       allowedPath: (pathname) => isAllowedStaticAsset(pathname),
       setHeaders(this: any, res, pathName) {
         const normalizedPath = pathName.replace(/\\/g, '/');
-        const reqUrl = this?.req?.url || '';
+        const reqUrl = this?.req?.url || (res as any)?.req?.url || '';
 
         if (normalizedPath.endsWith('index.html') || normalizedPath.endsWith('sw.js')) {
           res.setHeader('Cache-Control', 'no-cache, must-revalidate');

@@ -155,6 +155,8 @@ export function showUpdateCapsule(waitingWorker) {
     'align-items: center',
     'gap: 0.75rem',
     'padding: 0.5rem 0.875rem',
+    'max-width: calc(100vw - 2.5rem)',
+    'box-sizing: border-box',
     'background: rgba(24, 24, 27, 0.88)',
     'backdrop-filter: blur(16px)',
     '-webkit-backdrop-filter: blur(16px)',
@@ -170,7 +172,7 @@ export function showUpdateCapsule(waitingWorker) {
 
   capsule.innerHTML = `
     <span style="width: 8px; height: 8px; border-radius: 9999px; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; display: inline-block;"></span>
-    <span style="font-weight: 500; letter-spacing: -0.01em;">Đã có bản cập nhật mới (${displayVer})</span>
+    <span style="font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Đã có bản cập nhật mới (${displayVer})</span>
     <button type="button" id="ds-update-reload-btn" style="
       padding: 0.25rem 0.625rem;
       border-radius: 9999px;
@@ -181,6 +183,7 @@ export function showUpdateCapsule(waitingWorker) {
       border: none;
       cursor: pointer;
       line-height: 1.2;
+      flex-shrink: 0;
     ">Làm mới</button>
     <button type="button" id="ds-update-dismiss-btn" style="
       background: transparent;
@@ -193,27 +196,41 @@ export function showUpdateCapsule(waitingWorker) {
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     " title="Bỏ qua">✕</button>
   `;
 
   document.body.appendChild(capsule);
 
-  const reloadBtn = document.getElementById('ds-update-reload-btn');
-  const dismissBtn = document.getElementById('ds-update-dismiss-btn');
+  const reloadBtn = (capsule.querySelector && capsule.querySelector('#ds-update-reload-btn')) || document.getElementById('ds-update-reload-btn');
+  const dismissBtn = (capsule.querySelector && capsule.querySelector('#ds-update-dismiss-btn')) || document.getElementById('ds-update-dismiss-btn');
 
   reloadBtn?.addEventListener('click', () => {
+    // 1. Verify no in-flight background tasks or active jobs
     if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
       console.log('[PWA] Tasks are active in background. Skipping reload.');
       return;
     }
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('ds_studocu_active_job')) {
+      console.log('[PWA] Studocu job active. Skipping reload.');
+      return;
+    }
+
     userRequestedReload = true;
+    capsule.remove();
+
     if (waitingWorker) {
       try {
         waitingWorker.postMessage({ type: 'SKIP_WAITING' });
       } catch {}
+      // In controllerchange, safe reload will execute when worker takes control.
+      // Fallback timer ensures reload executes if controllerchange doesn't fire (e.g. worker was already controlling)
+      setTimeout(() => {
+        performSafeReload('User confirmed update (controllerchange fallback)', true);
+      }, 1000);
+    } else {
+      performSafeReload('User clicked update capsule', true);
     }
-    performSafeReload('User clicked update capsule', true);
-    capsule.remove();
   });
 
   dismissBtn?.addEventListener('click', () => {
@@ -318,7 +335,7 @@ export async function checkForAppUpdate() {
       if (reg) {
         reg.update().catch(() => {});
         if (reg.waiting && navigator.serviceWorker?.controller) {
-          promptUserToApplyUpdate(reg.waiting, true);
+          showUpdateCapsule(reg.waiting);
         }
       }
 
@@ -332,7 +349,7 @@ export async function checkForAppUpdate() {
     if (reg) {
       reg.update().catch(() => {});
       if (reg.waiting && navigator.serviceWorker?.controller) {
-        promptUserToApplyUpdate(reg.waiting, true);
+        showUpdateCapsule(reg.waiting);
       }
     }
 

@@ -389,71 +389,195 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
   });
 
   describe('5. PWA Update Capsule & Interactive Refresh Flow', () => {
-    it('showUpdateCapsule renders Sequoia glass pill with reload & dismiss buttons', () => {
-      const mockElements: Record<string, any> = {};
-      const mockBodyAppend = vi.fn((el) => {
-        if (el.id) mockElements[el.id] = el;
-      });
+    let elementsById: Record<string, any>;
+    let removeCalls: string[];
+    let fakeDoc: any;
+    let mockSessionStore: Record<string, string>;
+    let mockLocalStore: Record<string, string>;
+    let mockWin: any;
 
-      const fakeDoc = {
-        body: { appendChild: mockBodyAppend },
-        createElement: (tag: string) => {
-          const el: any = {
-            tagName: tag,
-            style: {},
-            listeners: {} as Record<string, Function>,
-            setAttribute: vi.fn(),
-            addEventListener: (evt: string, cb: Function) => {
-              el.listeners[evt] = cb;
-            },
-            remove: vi.fn()
-          };
-          return el;
+    let originalDocProp: any;
+    let originalWinProp: any;
+    let originalSession: any;
+    let originalLocal: any;
+
+    function createEl(tag: string): any {
+      const el: any = {
+        tagName: tag,
+        id: '',
+        innerHTML: '',
+        style: {},
+        listeners: {} as Record<string, Function[]>,
+        setAttribute: vi.fn(),
+        addEventListener: (evt: string, cb: Function) => {
+          el.listeners[evt] = el.listeners[evt] || [];
+          el.listeners[evt].push(cb);
         },
-        getElementById: (id: string) => mockElements[id] || null
+        trigger: (evt: string) => {
+          (el.listeners[evt] || []).forEach((cb: Function) => cb());
+        },
+        remove: vi.fn(() => {
+          if (el.id) removeCalls.push(el.id);
+        }),
+        querySelector: (selector: string) => {
+          const cleanId = selector.replace(/^#/, '');
+          return elementsById[cleanId] || null;
+        }
+      };
+      return el;
+    }
+
+    beforeEach(() => {
+      elementsById = {};
+      removeCalls = [];
+      mockSessionStore = {};
+      mockLocalStore = {};
+
+      fakeDoc = {
+        body: {
+          appendChild: vi.fn((el) => {
+            if (el.id) elementsById[el.id] = el;
+            if (el.innerHTML) {
+              if (el.innerHTML.includes('id="ds-update-reload-btn"')) {
+                const reloadBtn = createEl('button');
+                reloadBtn.id = 'ds-update-reload-btn';
+                elementsById['ds-update-reload-btn'] = reloadBtn;
+              }
+              if (el.innerHTML.includes('id="ds-update-dismiss-btn"')) {
+                const dismissBtn = createEl('button');
+                dismissBtn.id = 'ds-update-dismiss-btn';
+                elementsById['ds-update-dismiss-btn'] = dismissBtn;
+              }
+            }
+          })
+        },
+        createElement: (tag: string) => createEl(tag),
+        getElementById: (id: string) => elementsById[id] || null
       };
 
-      const originalDoc = (globalThis as any).document;
-      (globalThis as any).document = fakeDoc;
+      const mockSession = {
+        getItem: vi.fn((k: string) => mockSessionStore[k] || null),
+        setItem: vi.fn((k: string, v: string) => { mockSessionStore[k] = v; }),
+        removeItem: vi.fn((k: string) => { delete mockSessionStore[k]; })
+      };
 
-      try {
-        const mockWorker = { postMessage: vi.fn() };
-        showUpdateCapsule(mockWorker as any);
+      const mockLocal = {
+        getItem: vi.fn((k: string) => mockLocalStore[k] || null),
+        setItem: vi.fn((k: string, v: string) => { mockLocalStore[k] = v; }),
+        removeItem: vi.fn((k: string) => { delete mockLocalStore[k]; })
+      };
 
-        expect(mockBodyAppend).toHaveBeenCalledTimes(1);
-        const capsule = mockElements['ds-update-capsule'];
-        expect(capsule).toBeDefined();
-        expect(capsule.innerHTML).toContain('Đã có bản cập nhật mới');
-        expect(capsule.innerHTML).toContain('Làm mới');
-        expect(capsule.innerHTML).toContain('✕');
-      } finally {
-        (globalThis as any).document = originalDoc;
-      }
+      mockWin = {
+        location: { reload: vi.fn() },
+        sessionStorage: mockSession,
+        localStorage: mockLocal,
+        document: fakeDoc
+      };
+
+      originalDocProp = Object.getOwnPropertyDescriptor(globalThis, 'document');
+      originalWinProp = Object.getOwnPropertyDescriptor(globalThis, 'window');
+      originalSession = (globalThis as any).sessionStorage;
+      originalLocal = (globalThis as any).localStorage;
+
+      Object.defineProperty(globalThis, 'document', { value: fakeDoc, configurable: true, writable: true });
+      Object.defineProperty(globalThis, 'window', { value: mockWin, configurable: true, writable: true });
+      (globalThis as any).sessionStorage = mockSession;
+      (globalThis as any).localStorage = mockLocal;
+      setUserRequestedReload(false);
+    });
+
+    afterEach(() => {
+      if (originalDocProp) Object.defineProperty(globalThis, 'document', originalDocProp);
+      else delete (globalThis as any).document;
+
+      if (originalWinProp) Object.defineProperty(globalThis, 'window', originalWinProp);
+      else delete (globalThis as any).window;
+
+      (globalThis as any).sessionStorage = originalSession;
+      (globalThis as any).localStorage = originalLocal;
+    });
+
+    it('showUpdateCapsule renders Sequoia glass pill with reload & dismiss buttons', () => {
+      const mockWorker = { postMessage: vi.fn() };
+      showUpdateCapsule(mockWorker as any);
+
+      expect(fakeDoc.body.appendChild).toHaveBeenCalledTimes(1);
+      const capsule = elementsById['ds-update-capsule'];
+      expect(capsule).toBeDefined();
+      expect(capsule.innerHTML).toContain('Đã có bản cập nhật mới');
+      expect(capsule.innerHTML).toContain('Làm mới');
+      expect(capsule.innerHTML).toContain('✕');
     });
 
     it('showUpdateCapsule respects sessionStorage dismissal', () => {
-      const mockBodyAppend = vi.fn();
-      const fakeDoc = {
-        body: { appendChild: mockBodyAppend },
-        createElement: vi.fn(),
-        getElementById: vi.fn().mockReturnValue(null)
+      mockSessionStore['ds_update_capsule_dismissed'] = 'true';
+
+      showUpdateCapsule(null);
+      expect(fakeDoc.body.appendChild).not.toHaveBeenCalled();
+    });
+
+    it('clicking [Làm mới] sets userRequestedReload, sends SKIP_WAITING to waiting worker and removes capsule', () => {
+      const mockWorker = { postMessage: vi.fn() };
+      showUpdateCapsule(mockWorker as any);
+
+      const reloadBtn = elementsById['ds-update-reload-btn'];
+      expect(reloadBtn).toBeDefined();
+
+      reloadBtn.trigger('click');
+
+      expect(getUserRequestedReload()).toBe(true);
+      expect(mockWorker.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      expect(removeCalls).toContain('ds-update-capsule');
+    });
+
+    it('clicking [Làm mới] is blocked when in-flight tasks exist', () => {
+      mockWin.__ds_taskCoordinator = {
+        getActiveTasks: () => [{ id: 'active-1' }]
       };
 
-      const originalDoc = (globalThis as any).document;
-      const originalSession = (globalThis as any).sessionStorage;
-      (globalThis as any).document = fakeDoc;
-      (globalThis as any).sessionStorage = {
-        getItem: (k: string) => (k === 'ds_update_capsule_dismissed' ? 'true' : null),
-        setItem: vi.fn()
-      };
+      const mockWorker = { postMessage: vi.fn() };
+      showUpdateCapsule(mockWorker as any);
 
-      try {
-        showUpdateCapsule(null);
-        expect(mockBodyAppend).not.toHaveBeenCalled();
-      } finally {
-        (globalThis as any).document = originalDoc;
-        (globalThis as any).sessionStorage = originalSession;
-      }
+      const reloadBtn = elementsById['ds-update-reload-btn'];
+      reloadBtn.trigger('click');
+
+      expect(getUserRequestedReload()).toBe(false);
+      expect(mockWorker.postMessage).not.toHaveBeenCalled();
+      expect(removeCalls).not.toContain('ds-update-capsule');
+    });
+
+    it('clicking [Làm mới] is blocked when ds_studocu_active_job is active in localStorage', () => {
+      mockLocalStore['ds_studocu_active_job'] = 'job-active-doc';
+
+      const mockWorker = { postMessage: vi.fn() };
+      showUpdateCapsule(mockWorker as any);
+
+      const reloadBtn = elementsById['ds-update-reload-btn'];
+      reloadBtn.trigger('click');
+
+      expect(getUserRequestedReload()).toBe(false);
+      expect(mockWorker.postMessage).not.toHaveBeenCalled();
+      expect(removeCalls).not.toContain('ds-update-capsule');
+    });
+
+    it('clicking [✕] sets ds_update_capsule_dismissed in sessionStorage and removes capsule', () => {
+      showUpdateCapsule(null);
+
+      const dismissBtn = elementsById['ds-update-dismiss-btn'];
+      expect(dismissBtn).toBeDefined();
+
+      dismissBtn.trigger('click');
+
+      expect(mockSessionStore['ds_update_capsule_dismissed']).toBe('true');
+      expect(removeCalls).toContain('ds-update-capsule');
+    });
+
+    it('showUpdateCapsule does not render duplicates if capsule is already mounted', () => {
+      showUpdateCapsule(null);
+      expect(fakeDoc.body.appendChild).toHaveBeenCalledTimes(1);
+
+      showUpdateCapsule(null);
+      expect(fakeDoc.body.appendChild).toHaveBeenCalledTimes(1);
     });
   });
 });
