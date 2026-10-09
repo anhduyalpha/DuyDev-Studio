@@ -35,7 +35,7 @@ export function renderRecentActivity() {
 
           return `
             <div data-recent-card-id="${item.id}"
-              class="recent-activity-card p-3.5 sm:p-4 rounded-xl glass-pill flex flex-col justify-between gap-3 text-sm hover:border-zinc-300 dark:hover:border-white/20 transition">
+              class="recent-activity-card p-3.5 sm:p-4 rounded-xl flex flex-col justify-between gap-3 text-sm hover:border-zinc-300 dark:hover:border-white/20 transition">
               
               <!-- File Meta Info (Full width, clear hierarchy) -->
               <div class="flex items-start gap-3 min-w-0">
