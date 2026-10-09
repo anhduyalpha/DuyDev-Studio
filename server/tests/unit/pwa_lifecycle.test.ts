@@ -10,7 +10,8 @@ import {
   listenForWaitingWorker,
   registerServiceWorker,
   checkForAppUpdate,
-  getCurrentVersion
+  getCurrentVersion,
+  showUpdateCapsule
 } from '../../../src/utilities/pwa.js';
 
 describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
@@ -384,6 +385,75 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
 
       // Must not delete cache keys inside checkForAppUpdate
       expect(body).not.toMatch(/caches\.delete/);
+    });
+  });
+
+  describe('5. PWA Update Capsule & Interactive Refresh Flow', () => {
+    it('showUpdateCapsule renders Sequoia glass pill with reload & dismiss buttons', () => {
+      const mockElements: Record<string, any> = {};
+      const mockBodyAppend = vi.fn((el) => {
+        if (el.id) mockElements[el.id] = el;
+      });
+
+      const fakeDoc = {
+        body: { appendChild: mockBodyAppend },
+        createElement: (tag: string) => {
+          const el: any = {
+            tagName: tag,
+            style: {},
+            listeners: {} as Record<string, Function>,
+            setAttribute: vi.fn(),
+            addEventListener: (evt: string, cb: Function) => {
+              el.listeners[evt] = cb;
+            },
+            remove: vi.fn()
+          };
+          return el;
+        },
+        getElementById: (id: string) => mockElements[id] || null
+      };
+
+      const originalDoc = (globalThis as any).document;
+      (globalThis as any).document = fakeDoc;
+
+      try {
+        const mockWorker = { postMessage: vi.fn() };
+        showUpdateCapsule(mockWorker as any);
+
+        expect(mockBodyAppend).toHaveBeenCalledTimes(1);
+        const capsule = mockElements['ds-update-capsule'];
+        expect(capsule).toBeDefined();
+        expect(capsule.innerHTML).toContain('Đã có bản cập nhật mới');
+        expect(capsule.innerHTML).toContain('Làm mới');
+        expect(capsule.innerHTML).toContain('✕');
+      } finally {
+        (globalThis as any).document = originalDoc;
+      }
+    });
+
+    it('showUpdateCapsule respects sessionStorage dismissal', () => {
+      const mockBodyAppend = vi.fn();
+      const fakeDoc = {
+        body: { appendChild: mockBodyAppend },
+        createElement: vi.fn(),
+        getElementById: vi.fn().mockReturnValue(null)
+      };
+
+      const originalDoc = (globalThis as any).document;
+      const originalSession = (globalThis as any).sessionStorage;
+      (globalThis as any).document = fakeDoc;
+      (globalThis as any).sessionStorage = {
+        getItem: (k: string) => (k === 'ds_update_capsule_dismissed' ? 'true' : null),
+        setItem: vi.fn()
+      };
+
+      try {
+        showUpdateCapsule(null);
+        expect(mockBodyAppend).not.toHaveBeenCalled();
+      } finally {
+        (globalThis as any).document = originalDoc;
+        (globalThis as any).sessionStorage = originalSession;
+      }
     });
   });
 });

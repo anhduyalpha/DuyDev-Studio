@@ -3,22 +3,24 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v21.7';
+const CACHE_NAME = 'duydev-studio-v21.8';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=21.7',
-  './src/styles/studocu.css?v=21.7',
-  './src/styles/highlight-theme.css?v=21.7',
+  './src/styles/stitch-tokens.css?v=21.8',
+  './src/styles/studocu.css?v=21.8',
+  './src/styles/highlight-theme.css?v=21.8',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=21.7',
+  './src/app.js?v=21.8',
+  './src/hooks/useToolRegistry.js',
+  './src/pages/DashboardPage.js',
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',
@@ -336,8 +338,17 @@ self.addEventListener('fetch', (event) => {
 
   // 3. Same-origin assets: Network-First with Cache Fallback for offline PWA
   if (url.origin === self.location.origin) {
+    const isScriptOrStyle =
+      event.request.destination === 'script' ||
+      event.request.destination === 'style' ||
+      /\.(js|mjs|css)$/i.test(url.pathname);
+
+    const networkFetch = isScriptOrStyle
+      ? fetch(event.request, { cache: 'no-cache' })
+      : fetch(event.request);
+
     event.respondWith(
-      fetch(event.request)
+      networkFetch
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const contentType = networkResponse.headers.get('content-type') || '';

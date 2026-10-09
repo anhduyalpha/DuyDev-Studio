@@ -227,13 +227,13 @@ function isAllowedStaticAsset(pathname: string): boolean {
           if (normalizedPath.endsWith('sw.js')) {
             res.setHeader('Service-Worker-Allowed', '/');
           }
+        } else if (reqUrl.includes('?v=') || reqUrl.includes('/vendor/') || normalizedPath.includes('/vendor/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (/\.(png|svg|ico|webp|jpe?g|woff2?|ttf|eot)$/i.test(normalizedPath)) {
+          res.setHeader('Cache-Control', 'public, max-age=2592000, stale-while-revalidate=86400');
         } else {
-          const isVersioned = reqUrl.includes('?v=') || reqUrl.includes('/vendor/') || normalizedPath.includes('/vendor/');
-          if (isVersioned) {
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-          } else {
-            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-          }
+          // Unversioned application source code files (.js, .mjs, .css in /src/)
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         }
       }
     });

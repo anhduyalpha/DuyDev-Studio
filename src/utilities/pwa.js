@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v21.7';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v21.8';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -97,6 +97,135 @@ export function resetUpdateToastShown() {
   updateToastShown = false;
 }
 
+let refreshing = false;
+
+/**
+ * Execute a safe, controlled reload to apply updated SW assets.
+ * @param {string} reason
+ * @param {boolean} [isUserConfirmed=false]
+ */
+export function performSafeReload(reason = 'App update', isUserConfirmed = false) {
+  if (refreshing) return;
+  const lastReload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ds_sw_just_reloaded') : null;
+  if (!isUserConfirmed && lastReload && Date.now() - Number(lastReload) < 10000) {
+    console.log(`[PWA] Skipping reload (${reason}): already reloaded recently`);
+    return;
+  }
+  refreshing = true;
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('ds_sw_just_reloaded', String(Date.now()));
+    }
+  } catch {}
+  console.log(`[PWA] ${reason} -> Reloading to apply new assets...`);
+  if (typeof window !== 'undefined' && window.location?.reload) {
+    window.location.reload();
+  }
+}
+
+/**
+ * Renders a discreet, non-intrusive floating Update Capsule in the corner
+ * adhering to Apple Sequoia aesthetic (dark frosted glass pill, glowing dot, dismissable).
+ * @param {ServiceWorker | null} waitingWorker
+ */
+export function showUpdateCapsule(waitingWorker) {
+  if (typeof document === 'undefined' || !document.body || typeof document.createElement !== 'function') {
+    return;
+  }
+
+  try {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ds_update_capsule_dismissed') === 'true') {
+      return;
+    }
+  } catch {}
+
+  if (document.getElementById('ds-update-capsule')) {
+    return;
+  }
+
+  const capsule = document.createElement('div');
+  capsule.id = 'ds-update-capsule';
+  capsule.setAttribute('role', 'alert');
+  capsule.style.cssText = [
+    'position: fixed',
+    'bottom: 1.25rem',
+    'right: 1.25rem',
+    'z-index: 9999',
+    'display: flex',
+    'align-items: center',
+    'gap: 0.75rem',
+    'padding: 0.5rem 0.875rem',
+    'background: rgba(24, 24, 27, 0.88)',
+    'backdrop-filter: blur(16px)',
+    '-webkit-backdrop-filter: blur(16px)',
+    'border: 1px solid rgba(255, 255, 255, 0.12)',
+    'border-radius: 9999px',
+    'box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
+    'color: #e4e4e7',
+    'font-size: 0.75rem',
+    'user-select: none'
+  ].join(';');
+
+  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v21.8';
+
+  capsule.innerHTML = `
+    <span style="width: 8px; height: 8px; border-radius: 9999px; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; display: inline-block;"></span>
+    <span style="font-weight: 500; letter-spacing: -0.01em;">Đã có bản cập nhật mới (${displayVer})</span>
+    <button type="button" id="ds-update-reload-btn" style="
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      background: #4f46e5;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.75rem;
+      border: none;
+      cursor: pointer;
+      line-height: 1.2;
+    ">Làm mới</button>
+    <button type="button" id="ds-update-dismiss-btn" style="
+      background: transparent;
+      border: none;
+      color: #a1a1aa;
+      font-size: 0.875rem;
+      cursor: pointer;
+      padding: 0.125rem 0.25rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    " title="Bỏ qua">✕</button>
+  `;
+
+  document.body.appendChild(capsule);
+
+  const reloadBtn = document.getElementById('ds-update-reload-btn');
+  const dismissBtn = document.getElementById('ds-update-dismiss-btn');
+
+  reloadBtn?.addEventListener('click', () => {
+    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+      console.log('[PWA] Tasks are active in background. Skipping reload.');
+      return;
+    }
+    userRequestedReload = true;
+    if (waitingWorker) {
+      try {
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      } catch {}
+    }
+    performSafeReload('User clicked update capsule', true);
+    capsule.remove();
+  });
+
+  dismissBtn?.addEventListener('click', () => {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('ds_update_capsule_dismissed', 'true');
+      }
+    } catch {}
+    capsule.remove();
+  });
+}
+
 /**
  * Activates pending worker immediately when commanded.
  * @param {ServiceWorker | null} waitingWorker
@@ -113,6 +242,7 @@ export function promptUserToApplyUpdate(waitingWorker, _force = false) {
 /**
  * Listens for waiting or newly installed workers and activates them in the background
  * without triggering an unannounced page reload during the user's active session.
+ * Displays a non-intrusive Update Capsule when an update is ready while an active controller exists.
  * @param {ServiceWorkerRegistration | null} reg
  */
 export function listenForWaitingWorker(reg) {
@@ -125,9 +255,14 @@ export function listenForWaitingWorker(reg) {
     } catch (_) {}
   }
 
+  const hasController = Boolean(typeof navigator !== 'undefined' && navigator.serviceWorker?.controller);
+
   // 1. If a waiting worker already exists, activate it immediately in background
   if (reg.waiting) {
     activateWorker(reg.waiting);
+    if (hasController) {
+      showUpdateCapsule(reg.waiting);
+    }
   }
 
   // 2. If a worker is currently installing when registration resolves
@@ -135,6 +270,9 @@ export function listenForWaitingWorker(reg) {
     reg.installing.addEventListener('statechange', () => {
       if (reg.installing?.state === 'installed') {
         activateWorker(reg.installing);
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+          showUpdateCapsule(reg.installing);
+        }
       }
     });
   }
@@ -146,6 +284,9 @@ export function listenForWaitingWorker(reg) {
       worker.addEventListener('statechange', () => {
         if (worker.state === 'installed') {
           activateWorker(worker);
+          if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+            showUpdateCapsule(worker);
+          }
         }
       });
     }
@@ -216,20 +357,7 @@ export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
   const hadExistingController = Boolean(navigator.serviceWorker.controller);
-  let refreshing = false;
-
-  const performSafeReload = (reason, isUserConfirmed = false) => {
-    if (refreshing) return;
-    const lastReload = sessionStorage.getItem('ds_sw_just_reloaded');
-    if (!isUserConfirmed && lastReload && Date.now() - Number(lastReload) < 10000) {
-      console.log(`[PWA] Skipping reload (${reason}): already reloaded recently`);
-      return;
-    }
-    refreshing = true;
-    try { sessionStorage.setItem('ds_sw_just_reloaded', String(Date.now())); } catch {}
-    console.log(`[PWA] ${reason} -> Reloading to apply new assets...`);
-    window.location.reload();
-  };
+  refreshing = false;
 
   // When a new SW takes over, reload to apply new assets ONLY if the user explicitly commanded an update.
   // Otherwise, allow the new SW to control background requests without disrupting the active page session (zero double loading).

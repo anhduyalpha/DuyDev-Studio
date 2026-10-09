@@ -113,7 +113,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(cacheControl).toBe('public, max-age=31536000, immutable');
     });
 
-    it('unversioned internal modules must return public, max-age=86400, stale-while-revalidate', async () => {
+    it('unversioned internal modules must return no-cache, must-revalidate and support ETag 304', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/src/utilities/pwa.js'
@@ -121,7 +121,30 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
 
       expect(res.statusCode).toBe(200);
       const cacheControl = res.headers['cache-control'] as string;
-      expect(cacheControl).toBe('public, max-age=86400, stale-while-revalidate=604800');
+      expect(cacheControl).toBe('no-cache, must-revalidate');
+      const etag = res.headers.etag as string;
+      expect(etag).toBeTruthy();
+
+      const revalidated = await app.inject({
+        method: 'GET',
+        url: '/src/utilities/pwa.js',
+        headers: {
+          'if-none-match': etag
+        }
+      });
+      expect(revalidated.statusCode).toBe(304);
+      expect(revalidated.body).toBe('');
+    });
+
+    it('static media and icons must return max-age=2592000, stale-while-revalidate=86400', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/src/assets/logo-ds.svg'
+      });
+
+      expect(res.statusCode).toBe(200);
+      const cacheControl = res.headers['cache-control'] as string;
+      expect(cacheControl).toBe('public, max-age=2592000, stale-while-revalidate=86400');
     });
 
     it('SPA navigation fallback must return index.html with no-cache, must-revalidate', async () => {
@@ -243,9 +266,9 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(swContent).toContain(`'./src/app.js?v=${v}'`);
     });
 
-    it('sw.js same-origin assets fetch handler must allow browser disk cache', () => {
+    it('sw.js same-origin script/style fetch handler must enforce conditional revalidation with no-cache', () => {
       const sameOriginSection = swContent.slice(swContent.indexOf('// 3. Same-origin assets:'));
-      expect(sameOriginSection).not.toContain("fetch(event.request, { cache: 'no-cache' })");
+      expect(sameOriginSection).toContain("fetch(event.request, { cache: 'no-cache' })");
       expect(sameOriginSection).toContain("fetch(event.request)");
     });
   });
