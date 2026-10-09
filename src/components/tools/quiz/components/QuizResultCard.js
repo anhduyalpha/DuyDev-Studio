@@ -36,8 +36,8 @@ function renderProcessingState(state) {
               <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
             </div>
             <div class="min-w-0">
-              <h4 class="text-sm font-semibold text-zinc-100">Đang biên soạn đề bài & đáp án</h4>
-              <p id="quizProgressStage" class="text-xs text-zinc-400 truncate">${escapeHtml(state.stage || 'Đang xử lý...')}</p>
+              <h4 class="text-sm font-semibold text-zinc-100">✨ Đang dồn hết tâm huyết soạn đề cho bạn nè... 💖</h4>
+              <p id="quizProgressStage" class="text-xs text-zinc-400 truncate">${escapeHtml(state.stage || '🌱 Đang chăm chỉ chuẩn bị tài liệu thật xịn sò... ✨')}</p>
             </div>
           </div>
           <span id="quizProgressText" class="text-sm font-mono font-semibold text-zinc-200 shrink-0">${pct}%</span>
@@ -199,11 +199,17 @@ function renderErrorState(state) {
   ) {
     errorMsg = 'Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng bấm Thử lại để tiếp tục.';
   } else if (
+    lower.includes('range_mismatch') ||
+    lower.includes('dải câu hỏi') ||
+    lower.includes('không tìm thấy đủ câu hỏi')
+  ) {
+    errorMsg = 'Ui, mình tìm quanh các trang này mà chưa thấy đủ số câu bạn cần rồi 🥺 Bạn nghía lại số trang hoặc số câu giúp mình xíu nha! ✨';
+  } else if (
     lower.includes('không có câu hỏi') ||
     lower.includes('không tìm thấy câu hỏi') ||
     lower.includes('no questions')
   ) {
-    errorMsg = 'Không có câu hỏi trong trang, vui lòng chọn lại.';
+    errorMsg = 'Ui, không có câu hỏi nào trong trang bạn chọn rồi 🥺 Bạn nghía lại số trang giúp mình nha! ✨';
   } else if (errorMsg.includes('Traceback (most recent call last):')) {
     const lines = errorMsg.trim().split('\n');
     const lastLine = lines[lines.length - 1].trim();

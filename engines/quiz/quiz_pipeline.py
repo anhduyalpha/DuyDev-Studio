@@ -92,7 +92,7 @@ def main() -> None:
         max_repair_iterations=2,
     )
 
-    emit_json_event({"progress": 0, "stage": "Bắt đầu khởi động pipeline xử lý"})
+    emit_json_event({"progress": 0, "stage": "🚀 Đang khởi động phép thuật biên soạn đề thi siêu xinh... ✨"})
 
     state = orchestrator.run(
         pdf_path=args.pdf_path,
