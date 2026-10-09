@@ -154,7 +154,7 @@ export function renderQuizConfigPanel(state) {
             <button type="button" id="btnQuizParsePrompt" ${state.isAnalyzingPrompt ? 'disabled' : ''} class="px-3.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
               ${
                 state.isAnalyzingPrompt
-                  ? `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Đang lắng nghe... ✨</span>`
+                  ? `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Đang phân tích...</span>`
                   : `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Phân tích</span>`
               }
             </button>
@@ -237,7 +237,7 @@ export function renderQuizConfigPanel(state) {
                 : 'bg-zinc-900 text-zinc-600 border border-zinc-800/80 cursor-not-allowed'
             }">
               <i data-lucide="sparkles" class="w-4 h-4"></i>
-              <span>${state.isProcessing ? '✨ Đang chăm chỉ biên soạn...' : 'Tạo Đề bài & Đáp án A4'}</span>
+              <span>${state.isProcessing ? 'Đang tạo bài tập trắc nghiệm...' : 'Tạo Đề bài & Đáp án A4'}</span>
             </button>
           </div>
         </div>

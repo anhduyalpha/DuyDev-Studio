@@ -158,23 +158,23 @@ function cleanQuizErrorMessage(rawErr: string): string {
   ) {
     const pageMatch = rawErr.match(/không\s*(?:có|tìm\s*thấy)\s*câu\s*hỏi\s*trong\s*([^,\.]+)/i);
     if (pageMatch) {
-      return `Ui, mình không tìm thấy câu hỏi nào trong ${pageMatch[1].trim()} rồi 🥺 Bạn kiểm tra lại số trang giúp mình nha! ✨`;
+      return `Không có câu hỏi trong ${pageMatch[1].trim()}, vui lòng kiểm tra lại số trang.`;
     }
-    return 'Ui, không có câu hỏi nào trong trang bạn chọn rồi 🥺 Bạn kiểm tra lại số trang giúp mình nha! ✨';
+    return 'Không có câu hỏi trong trang đã chọn, vui lòng kiểm tra lại số trang.';
   }
   if (
     lowerErr.includes('không chứa văn bản') ||
     lowerErr.includes('ảnh scan thuần túy') ||
     lowerErr.includes('ảnh quét')
   ) {
-    return 'Trang này là ảnh quét mờ không có chữ số nhận diện được 🥺 Bạn chọn trang có chữ sắc nét hơn giúp mình nha! ✨';
+    return 'Trang tài liệu dạng ảnh quét thuần túy không có lớp chữ số. Vui lòng chọn trang có văn bản rõ ràng.';
   }
   if (
     lowerErr.includes('range_mismatch') ||
     lowerErr.includes('không tìm thấy đủ câu hỏi') ||
     lowerErr.includes('tuyệt đối không xuất bản đề thi thiếu câu hỏi')
   ) {
-    return 'Ui, mình tìm quanh các trang này mà chưa thấy đủ số câu bạn cần rồi 🥺 Bạn nghía lại số trang hoặc số câu giúp mình xíu nha! ✨';
+    return 'Dải câu hỏi phát hiện không khớp với yêu cầu của bạn. Vui lòng kiểm tra lại số trang hoặc số câu.';
   }
   if (lowerErr.includes('vượt quá tổng số')) {
     const lastLine = rawErr.trim().split('\n').pop() || '';
@@ -228,9 +228,9 @@ function executeQuizEngine(
       try {
         const payload: PythonProgressEvent = JSON.parse(line.trim());
         if (payload.progress !== undefined) {
-          const rawStage = payload.stage || '✨ Đang tỉ mẩn biên soạn đề thi cho bạn nè... 🌸';
+          const rawStage = payload.stage || 'Đang xử lý đề thi...';
           const cleanStage = rawStage.replace(/Agnes(\s*3\.0\s*Flash)?\s*/gi, '').trim();
-          const p = onProgress(payload.progress, cleanStage || '✨ Đang tỉ mẩn biên soạn đề thi cho bạn nè... 🌸').catch(() => {});
+          const p = onProgress(payload.progress, cleanStage || 'Đang xử lý đề thi...').catch(() => {});
           pendingPromises.push(p);
         }
         if (payload.success) {
@@ -260,15 +260,7 @@ function executeQuizEngine(
           try {
             const errJson = JSON.parse(line);
             if (errJson && (errJson.error_code || errJson.message)) {
-              let msg = errJson.message || cleanQuizErrorMessage(stderr);
-              if (
-                errJson.error_code === 'RANGE_MISMATCH' ||
-                msg.includes('RANGE_MISMATCH') ||
-                msg.includes('không tìm thấy đủ câu hỏi')
-              ) {
-                msg = 'Ui, mình tìm quanh các trang này mà chưa thấy đủ số câu bạn cần rồi 🥺 Bạn nghía lại số trang hoặc số câu giúp mình xíu nha! ✨';
-              }
-              const customErr: any = new Error(msg);
+              const customErr: any = new Error(errJson.message || cleanQuizErrorMessage(stderr));
               customErr.errorCode = errJson.error_code || 'INTERNAL_ERROR';
               customErr.diagnosticLayer = errJson.diagnostic_layer || null;
               return reject(customErr);
@@ -361,7 +353,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       inputSource = fileRecord.storagePath;
       originalSizeBytes = Number(fileRecord.sizeBytes);
     } else if (gdriveUrl && typeof gdriveUrl === 'string' && gdriveUrl.trim() !== '') {
-      await emitProgress(3, '☁️ Đang kéo tài liệu từ Google Drive về tổ ấm nè... Bạn đợi xíu nha! 📥✨');
+      await emitProgress(3, 'Đang tải tệp PDF từ Google Drive...');
       const gdrivePdfPath = path.join(tmpOutputDir, 'gdrive_source.pdf');
       originalSizeBytes = await downloadGoogleDrivePdf(gdriveUrl.trim(), gdrivePdfPath);
       inputSource = gdrivePdfPath;
@@ -406,7 +398,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       pyArgs.push('--model', process.env.AGNES_AI_MODEL.trim());
     }
 
-    await emitProgress(5, '🌱 Gieo mầm kiến thức, chuẩn bị những câu hỏi thật xịn sò... 🌸');
+    await emitProgress(5, 'Đang khởi chạy tiến trình trích xuất câu hỏi...');
     let resultMeta: PythonProgressEvent;
     try {
       resultMeta = await executeQuizEngine(pythonBin, scriptPath, pyArgs, emitProgress);

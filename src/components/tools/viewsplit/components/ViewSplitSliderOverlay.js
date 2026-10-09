@@ -82,7 +82,7 @@ export function renderViewSplitSliderOverlay(state) {
           <button
             type="button"
             data-action="swap-overlay-panes"
-            title="Đảo vị trí Trước / Sau (Pane A ⇄ Pane B)"
+            title="Đảo vị trí Trước / Sau"
             class="px-2.5 py-1 rounded-xl bg-black/70 hover:bg-black/90 text-zinc-300 hover:text-white border border-white/10 text-xs font-medium transition cursor-pointer flex items-center gap-1 shadow-md"
           >
             <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
@@ -121,10 +121,10 @@ export function renderViewSplitSliderOverlay(state) {
         !isDiffMode && isReady
           ? `
             <div class="absolute bottom-3 left-3 pointer-events-none z-10 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-bold text-white shadow-sm">
-              BEFORE (${paneA.title})
+              Trước • ${paneA.title}
             </div>
             <div class="absolute bottom-3 right-3 pointer-events-none z-10 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-bold text-cyan-400 shadow-sm">
-              AFTER (${paneB.title})
+              Sau • ${paneB.title}
             </div>
           `
           : ''
@@ -140,7 +140,7 @@ export function renderViewSplitSliderOverlay(state) {
                 <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2">
                   <i data-lucide="image" class="w-5 h-5"></i>
                 </div>
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Gốc (Before - ${paneA.title})</h4>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Trước • ${paneA.title}</h4>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasA ? paneA.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button
@@ -178,7 +178,7 @@ export function renderViewSplitSliderOverlay(state) {
                 <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2">
                   <i data-lucide="image" class="w-5 h-5"></i>
                 </div>
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Đích (After - ${paneB.title})</h4>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Sau • ${paneB.title}</h4>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasB ? paneB.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button

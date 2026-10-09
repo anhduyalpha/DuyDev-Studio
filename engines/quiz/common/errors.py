@@ -40,7 +40,7 @@ class ErrorCode(str, Enum):
 
 ERROR_MESSAGES_VI: dict[ErrorCode, str] = {
     ErrorCode.RANGE_MISMATCH: (
-        "Ui, mình tìm quanh các trang này mà chưa thấy đủ số câu bạn cần rồi 🥺 Bạn nghía lại số trang hoặc số câu giúp mình xíu nha! ✨"
+        "Dải câu hỏi phát hiện không khớp với yêu cầu của người dùng. Vui lòng kiểm tra lại số trang hoặc số câu."
     ),
     ErrorCode.OPTION_MISSING: (
         "Câu hỏi trắc nghiệm bị thiếu phương án lựa chọn trong tài liệu nguồn."

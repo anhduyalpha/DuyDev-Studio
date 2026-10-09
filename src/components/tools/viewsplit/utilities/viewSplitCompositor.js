@@ -63,8 +63,14 @@ export function composeMergedComparisonCanvas(panes, layout, {
     const paneA = panes[0]?.image ? panes[0] : validPanes[0];
     const paneB = panes[1]?.image ? panes[1] : (validPanes[1] || validPanes[0]);
 
-    const targetWidth = Math.max(paneA.width, paneB.width);
-    const targetHeight = Math.max(paneA.height, paneB.height);
+    let targetWidth = Math.max(paneA.width, paneB.width);
+    let targetHeight = Math.max(paneA.height, paneB.height);
+    const MAX_CANVAS_DIM = 8192;
+    if (targetWidth > MAX_CANVAS_DIM || targetHeight > MAX_CANVAS_DIM) {
+      const scale = Math.min(MAX_CANVAS_DIM / targetWidth, MAX_CANVAS_DIM / targetHeight);
+      targetWidth = Math.round(targetWidth * scale);
+      targetHeight = Math.round(targetHeight * scale);
+    }
     canvas.width = targetWidth;
     canvas.height = targetHeight;
 
@@ -113,42 +119,25 @@ export function composeMergedComparisonCanvas(panes, layout, {
       ctx.fillText('⬌', splitX, targetHeight / 2);
       ctx.restore();
     } else {
-      // DIFFERENCE DIFF MODE
-      // Render difference directly pixel by pixel
-      const tempA = document.createElement('canvas');
-      tempA.width = targetWidth;
-      tempA.height = targetHeight;
-      const ctxA = tempA.getContext('2d');
-      ctxA.drawImage(paneA.image, 0, 0, targetWidth, targetHeight);
-      const dataA = ctxA.getImageData(0, 0, targetWidth, targetHeight);
+      // DIFFERENCE DIFF MODE: Hardware-accelerated GPU difference composite
+      ctx.drawImage(paneA.image, 0, 0, targetWidth, targetHeight);
+      ctx.globalCompositeOperation = 'difference';
+      ctx.drawImage(paneB.image, 0, 0, targetWidth, targetHeight);
 
-      const tempB = document.createElement('canvas');
-      tempB.width = targetWidth;
-      tempB.height = targetHeight;
-      const ctxB = tempB.getContext('2d');
-      ctxB.drawImage(paneB.image, 0, 0, targetWidth, targetHeight);
-      const dataB = ctxB.getImageData(0, 0, targetWidth, targetHeight);
-
-      const outData = ctx.createImageData(targetWidth, targetHeight);
-      const len = dataA.data.length;
-
-      for (let i = 0; i < len; i += 4) {
-        const diff = calculateDifferencePixel(
-          dataA.data[i],
-          dataA.data[i + 1],
-          dataA.data[i + 2],
-          dataB.data[i],
-          dataB.data[i + 1],
-          dataB.data[i + 2],
-          diffMultiplier
-        );
-        outData.data[i] = diff.r;
-        outData.data[i + 1] = diff.g;
-        outData.data[i + 2] = diff.b;
-        outData.data[i + 3] = 255;
+      if (diffMultiplier > 1) {
+        const scratch = document.createElement('canvas');
+        scratch.width = targetWidth;
+        scratch.height = targetHeight;
+        const sCtx = scratch.getContext('2d');
+        if (sCtx) {
+          sCtx.drawImage(canvas, 0, 0);
+          ctx.globalCompositeOperation = 'lighter';
+          for (let m = 1; m < diffMultiplier; m++) {
+            ctx.drawImage(scratch, 0, 0);
+          }
+        }
       }
-
-      ctx.putImageData(outData, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
       drawLabel(ctx, `Difference Diff (${diffMultiplier}x) | |${paneA.title} - ${paneB.title}|`, 16, 24);
     }
 
@@ -276,18 +265,30 @@ export function composeMergedComparisonCanvas(panes, layout, {
 
       const cellW = Math.max(p1.width, p2.width, p3.width, p4.width);
       const cellH = Math.max(p1.height, p2.height, p3.height, p4.height);
-      canvas.width = cellW * 2;
-      canvas.height = cellH * 2;
+      let totalW = cellW * 2;
+      let totalH = cellH * 2;
+      let cw = cellW;
+      let ch = cellH;
+      const MAX_CANVAS_DIM = 8192;
+      if (totalW > MAX_CANVAS_DIM || totalH > MAX_CANVAS_DIM) {
+        const scale = Math.min(MAX_CANVAS_DIM / totalW, MAX_CANVAS_DIM / totalH);
+        cw = Math.round(cellW * scale);
+        ch = Math.round(cellH * scale);
+        totalW = cw * 2;
+        totalH = ch * 2;
+      }
+      canvas.width = totalW;
+      canvas.height = totalH;
 
-      ctx.drawImage(p1.image, 0, 0, cellW, cellH);
-      ctx.drawImage(p2.image, cellW, 0, cellW, cellH);
-      ctx.drawImage(p3.image, 0, cellH, cellW, cellH);
-      ctx.drawImage(p4.image, cellW, cellH, cellW, cellH);
+      ctx.drawImage(p1.image, 0, 0, cw, ch);
+      ctx.drawImage(p2.image, cw, 0, cw, ch);
+      ctx.drawImage(p3.image, 0, ch, cw, ch);
+      ctx.drawImage(p4.image, cw, ch, cw, ch);
 
       drawLabel(ctx, p1.title, 16, 24);
-      drawLabel(ctx, p2.title, cellW + 16, 24);
-      drawLabel(ctx, p3.title, 16, cellH + 24);
-      drawLabel(ctx, p4.title, cellW + 16, cellH + 24);
+      drawLabel(ctx, p2.title, cw + 16, 24);
+      drawLabel(ctx, p3.title, 16, ch + 24);
+      drawLabel(ctx, p4.title, cw + 16, ch + 24);
       break;
     }
   }

@@ -295,7 +295,7 @@ class QuizManager {
 
     this.state.isProcessing = true;
     this.state.progress = 5;
-    this.state.stage = '🌱 Đang gieo mầm ý tưởng, chuẩn bị đề thi thật xịn sò... ✨';
+    this.state.stage = 'Khởi tạo tác vụ tạo bài tập trắc nghiệm...';
     this.state.result = null;
     this.state.error = null;
     this.notify('job-started');
@@ -331,14 +331,14 @@ class QuizManager {
           if (evt.stage) {
             this.state.stage = evt.stage;
           } else if (!this.state.stage) {
-            this.state.stage = '✨ Đang tỉ mẩn biên soạn từng trang tài liệu cho bạn... 📄';
+            this.state.stage = 'Đang xử lý tài liệu và xuất PDF...';
           }
           this.notify('job-progress');
         },
         onCompleted: (evt) => {
           this.state.isProcessing = false;
           this.state.progress = 100;
-          this.state.stage = '🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖';
+          this.state.stage = 'Hoàn tất xuất bản 2 tệp PDF A4!';
 
           let res = null;
           if (evt && evt.worksheet && evt.answer) {
@@ -433,15 +433,15 @@ class QuizManager {
 
           this.state.isProcessing = false;
           this.state.progress = 100;
-          this.state.stage = '🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖';
+          this.state.stage = 'Hoàn tất xuất bản 2 tệp PDF A4!';
           this.state.result = res;
 
           this.notify('job-completed');
-          showToast('🎉 Ten ten! Bộ đề thi và đáp án A4 đã sẵn sàng cho bạn rồi nè! 💖', 'success');
+          showToast('Tạo bài tập trắc nghiệm và đáp án A4 thành công!', 'success');
         },
         onError: (err) => {
           this.state.isProcessing = false;
-          let errorMsg = err?.message || 'Tác vụ tạo bài tập trắc nghiệm chưa thành công';
+          let errorMsg = err?.message || 'Tác vụ tạo bài tập trắc nghiệm thất bại';
           const lower = errorMsg.toLowerCase();
           if (
             lower.includes('prisma') ||
@@ -452,17 +452,11 @@ class QuizManager {
           ) {
             errorMsg = 'Hệ thống cơ sở dữ liệu tạm thời bận, vui lòng bấm Thử lại để tiếp tục.';
           } else if (
-            lower.includes('range_mismatch') ||
-            lower.includes('dải câu hỏi') ||
-            lower.includes('không tìm thấy đủ câu hỏi')
-          ) {
-            errorMsg = 'Ui, mình tìm quanh các trang này mà chưa thấy đủ số câu bạn cần rồi 🥺 Bạn nghía lại số trang hoặc số câu giúp mình xíu nha! ✨';
-          } else if (
             lower.includes('không có câu hỏi') ||
             lower.includes('không tìm thấy câu hỏi') ||
             lower.includes('no questions')
           ) {
-            errorMsg = 'Ui, không có câu hỏi nào trong trang bạn chọn rồi 🥺 Bạn nghía lại số trang giúp mình nha! ✨';
+            errorMsg = 'Không có câu hỏi trong trang, vui lòng chọn lại.';
           } else if (errorMsg.includes('Traceback (most recent call last):')) {
             const lines = errorMsg.trim().split('\n');
             const lastLine = lines[lines.length - 1].trim();

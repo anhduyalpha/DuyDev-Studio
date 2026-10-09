@@ -418,4 +418,52 @@ describe('ViewSplit Reactive Store (useViewSplit)', () => {
     expect(normP2.x).toBeCloseTo(0.5, 4);
     expect(normP2.y).toBeCloseTo(0.5, 4);
   });
+
+  it('should clear other panes cursor when cursor leaves source pane or image bounds', () => {
+    const p1 = viewSplitStore.getPane(1);
+    const p2 = viewSplitStore.getPane(2);
+    p1.image = { width: 500, height: 500 } as any;
+    p1.width = 500;
+    p1.height = 500;
+    p2.image = { width: 500, height: 500 } as any;
+    p2.width = 500;
+    p2.height = 500;
+
+    // Move cursor inside p1
+    viewSplitStore.updateCursor(1, 250, 250, true);
+    expect(p1.cursor.inside).toBe(true);
+    expect(p2.cursor.inside).toBe(true);
+
+    // Cursor exits p1
+    viewSplitStore.updateCursor(1, 250, 250, false);
+    expect(p1.cursor.inside).toBe(false);
+    expect(p2.cursor.inside).toBe(false);
+  });
+
+  it('should clear other panes cursor when syncCursor is disabled', () => {
+    const p1 = viewSplitStore.getPane(1);
+    const p2 = viewSplitStore.getPane(2);
+    p1.image = { width: 500, height: 500 } as any;
+    p1.width = 500;
+    p1.height = 500;
+    p2.image = { width: 500, height: 500 } as any;
+    p2.width = 500;
+    p2.height = 500;
+
+    viewSplitStore.updateCursor(1, 250, 250, true);
+    expect(p2.cursor.inside).toBe(true);
+
+    viewSplitStore.setSyncCursor(false);
+    expect(p2.cursor.inside).toBe(false);
+    expect(viewSplitStore.syncCursor).toBe(false);
+  });
+
+  it('should not fire cursor-cleared notification when clearAllCursors is called while already idle', () => {
+    const listener = vi.fn();
+    viewSplitStore.subscribe(listener);
+
+    // Initial state: all cursors already outside
+    viewSplitStore.clearAllCursors();
+    expect(listener).not.toHaveBeenCalledWith(viewSplitStore, 'cursor-cleared');
+  });
 });

@@ -97,8 +97,8 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
               <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                 <i data-lucide="image-plus" class="w-6 h-6"></i>
               </div>
-              <h4 class="text-sm font-semibold text-zinc-200 mb-1">Nạp ảnh cho ${pane.title}</h4>
-              <p class="text-xs text-zinc-400 max-w-xs mb-4">Kéo thả tệp tin ảnh, dán trực tiếp từ Clipboard hoặc tải từ liên kết.</p>
+              <h4 class="text-sm font-semibold text-zinc-200 mb-1">Kéo thả hoặc tải tệp lên</h4>
+              <p class="text-xs text-zinc-400 max-w-xs mb-4">PNG, JPG, WEBP, SVG • Dán từ Clipboard [Ctrl+V]</p>
 
               <div class="flex items-center flex-wrap justify-center gap-2">
                 <button

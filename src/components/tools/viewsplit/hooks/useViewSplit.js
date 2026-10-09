@@ -153,6 +153,13 @@ class ViewSplitStore {
 
   setSyncCursor(enabled) {
     this.syncCursor = Boolean(enabled);
+    if (!this.syncCursor) {
+      this.panes.forEach((p) => {
+        if (p.id !== this.activePaneId) {
+          p.cursor.inside = false;
+        }
+      });
+    }
     this.notify('sync-cursor');
   }
 
@@ -375,6 +382,13 @@ class ViewSplitStore {
     sourcePane.cursor.inside = isInside;
 
     if (!isInside || !sourcePane.image) {
+      if (this.syncCursor) {
+        this.panes.forEach((other) => {
+          if (other.id !== sourcePaneId) {
+            other.cursor.inside = false;
+          }
+        });
+      }
       if (this.pixelInspectorState.paneId === sourcePaneId) {
         this.clearPixelInspector();
       }
@@ -392,6 +406,13 @@ class ViewSplitStore {
     );
 
     if (!isImagePixel) {
+      if (this.syncCursor) {
+        this.panes.forEach((other) => {
+          if (other.id !== sourcePaneId) {
+            other.cursor.inside = false;
+          }
+        });
+      }
       if (this.pixelInspectorState.paneId === sourcePaneId) {
         this.clearPixelInspector();
       }
@@ -443,11 +464,18 @@ class ViewSplitStore {
   }
 
   clearAllCursors() {
+    let hadActiveCursor = false;
     this.panes.forEach((p) => {
+      if (p.cursor.inside) hadActiveCursor = true;
       p.cursor.inside = false;
     });
-    this.clearPixelInspector();
-    this.notify('cursor-cleared');
+    const hadInspector = this.pixelInspectorState.isValid;
+    if (hadInspector) {
+      this.clearPixelInspector();
+    }
+    if (hadActiveCursor) {
+      this.notify('cursor-cleared');
+    }
   }
 
   clearPixelInspector() {

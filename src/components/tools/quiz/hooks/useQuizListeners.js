@@ -30,30 +30,6 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
-export function getCuteQuizProgressQuote(pct, rawStage) {
-  if (rawStage && rawStage.trim()) {
-    const s = rawStage.trim();
-    // If the stage is already customized with an emoji or cute icon, use it directly
-    if (/[\p{Extended_Pictographic}]/u.test(s)) {
-      return s;
-    }
-  }
-
-  // Fallback quote based on percentage
-  if (pct < 10) return '🌱 Gieo mầm kiến thức, chuẩn bị những câu hỏi thật xịn sò... 🌸';
-  if (pct < 20) return '🔍 Đang lật giở từng trang PDF và ngắm nghía câu chữ nè... 📖';
-  if (pct < 30) return '🧭 Đang lên kế hoạch chi tiết cho các câu hỏi bạn yêu thích... 📑';
-  if (pct < 40) return '✍️ Đang cặm cụi nắn nót từng câu hỏi và phương án A, B, C, D... 📝';
-  if (pct < 50) return '🎨 Đang tỉ mẩn gọt giũa hình vẽ và ghép đúng câu hỏi nè... 🖼️';
-  if (pct < 62) return '🧠 Đang vắt óc suy nghĩ để viết lời giải chi tiết siêu dễ hiểu... 💡';
-  if (pct < 70) return '🧪 Đang trau chuốt các công thức Toán - Hóa lung linh chuẩn quốc tế... 🔬';
-  if (pct < 75) return '🛡️ Đang soi kính lúp kiểm tra từng dấu và chỉ số công thức cho chuẩn chỉnh... 🔍';
-  if (pct < 85) return '📐 Đang xếp chữ và dàn trang A4 siêu ngay ngắn, chuẩn mực in ấn... 📄';
-  if (pct < 95) return '✨ Đang soi lại từng trang để bộ đề đạt điểm 10 chất lượng... 🔎';
-  if (pct < 100) return '🎁 Đang thắt nơ đóng gói bộ tài liệu thật đẹp để gửi tới bạn nè... 🎀';
-  return '🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖';
-}
-
 export function attachQuizListeners() {
   if (window.lucide?.createIcons) window.lucide.createIcons();
 
@@ -214,7 +190,7 @@ export function attachQuizListeners() {
       if (progressText && progressStage && progressBar) {
         const pct = Math.max(5, Math.min(100, state.progress || 0));
         progressText.textContent = `${pct}%`;
-        progressStage.textContent = getCuteQuizProgressQuote(pct, state.stage);
+        progressStage.textContent = state.stage || 'Đang xử lý...';
         progressBar.style.width = `${pct}%`;
         syncGenerateButton();
         return;

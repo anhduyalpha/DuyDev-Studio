@@ -74,7 +74,7 @@ class QuizPipelineOrchestrator:
             job_id=active_job_id,
             current_stage=JobStage.CREATED,
             progress_pct=0,
-            message="🌱 Đang chuẩn bị không gian làm việc xinh xắn để soạn bài... ✨",
+            message="Khởi tạo tác vụ tạo bài tập trắc nghiệm",
             max_repair_iterations=self.max_repair_iterations,
         )
 
@@ -87,13 +87,13 @@ class QuizPipelineOrchestrator:
                 except Exception:
                     pass
 
-        emit(JobStage.CREATED, 0, "🚀 Đang khởi động cỗ máy biên soạn đề thi siêu xịn sò... ✨")
+        emit(JobStage.CREATED, 0, "Bắt đầu khởi động pipeline xử lý")
         start_total_time = time.perf_counter()
         render_time_ms = 0.0
 
         try:
             # 1. PERCEPTION (0% - 15%)
-            emit(JobStage.INSPECTING, 10, "🔍 Đang lật giở từng trang PDF và ngắm nghía câu chữ nè... 📖")
+            emit(JobStage.INSPECTING, 10, "Bóc tách và phân tích hình học trang PDF gốc")
             
             # Check Layer 1 Perception Cache
             cached_pages = get_perception_cache(pdf_path, user_instruction)
@@ -128,7 +128,7 @@ class QuizPipelineOrchestrator:
                 )
 
             # 2. PLANNING (15% - 30%)
-            emit(JobStage.PLANNING, 20, "🧭 Đang lên kế hoạch chi tiết cho các câu hỏi bạn yêu thích... 📑")
+            emit(JobStage.PLANNING, 20, "Phân tích yêu cầu và xác định dải trang cần xử lý")
             smart_res = resolve_smart_range(
                 instruction=user_instruction,
                 doc_reps=page_representations,
@@ -141,7 +141,7 @@ class QuizPipelineOrchestrator:
             end_num = start_num + effective_count - 1
 
             # PLAN-05: Page Neighborhood Scanner & Question Index Validation (HARD GATE)
-            emit(JobStage.PLANNING, 25, "📋 Đang sắp xếp danh mục câu hỏi thật ngăn nắp và chỉn chu... 🌸")
+            emit(JobStage.PLANNING, 25, "Lập danh mục câu hỏi (Question Index) và kiểm định dải trang yêu cầu")
             index_service = QuestionIndexService(ai_provider=self.provider)
             target_range_pages = list(range(start_page, end_page + 1))
             neighborhood = index_service.build_multi_page_neighborhood_index(
@@ -209,11 +209,11 @@ class QuizPipelineOrchestrator:
             )
 
             # 3. RECONSTRUCTING (30% - 50%)
-            emit(JobStage.RECONSTRUCTING, 35, f"✍️ Đang cặm cụi nắn nót từng câu hỏi qua {len(batches)} đợt xử lý siêu tốc... 📝")
+            emit(JobStage.RECONSTRUCTING, 35, f"Tái cấu trúc câu hỏi qua {len(batches)} lô thích ứng")
             reconstructor = QuestionReconstructor(ai_provider=self.provider)
             raw_questions = reconstructor.reconstruct_all(batches)
 
-            emit(JobStage.RECONSTRUCTING, 45, "🎨 Đang tỉ mẩn gọt giũa hình vẽ và ghép đúng câu hỏi nè... 🖼️")
+            emit(JobStage.RECONSTRUCTING, 45, "Chuẩn hóa thứ tự câu và liên kết đồ thị đối tượng hình ảnh")
             full_source_text = "\n\n".join(p.raw_text for p in page_representations)
             cleaned_questions = post_process_questions(
                 raw_questions,
@@ -249,12 +249,12 @@ class QuizPipelineOrchestrator:
             )
 
             # 4. SOLVING (50% - 62%)
-            emit(JobStage.SOLVING, 55, "🧠 Đang vắt óc suy nghĩ để viết lời giải chi tiết siêu dễ hiểu... 💡")
+            emit(JobStage.SOLVING, 55, "Giải đề và tạo ma trận đáp án cùng lời giải sư phạm")
             solver = AnswerSolver(ai_provider=self.provider)
             answer_keys = solver.solve_all(cleaned_questions)
 
             # 5. NORMALIZING & IR PACKAGING (62% - 70%)
-            emit(JobStage.NORMALIZING, 65, "🧪 Đang trau chuốt các công thức Toán - Hóa lung linh chuẩn quốc tế... 🔬")
+            emit(JobStage.NORMALIZING, 65, "Chuẩn hóa ký hiệu toán/hóa và đóng gói Canonical Document IR v3.0.0")
             crops_dir = os.path.join(output_dir, "crops")
             os.makedirs(crops_dir, exist_ok=True)
 
@@ -284,7 +284,7 @@ class QuizPipelineOrchestrator:
                 fitz_doc.close()
 
             # 5b. FORMULA INTEGRITY VERIFICATION GATE (68% - 70%)
-            emit(JobStage.FORMULA_VERIFICATION, 68, "🛡️ Đang soi kính lúp kiểm tra từng dấu và chỉ số công thức cho chuẩn chỉnh... 🔍")
+            emit(JobStage.FORMULA_VERIFICATION, 68, "Kiểm định toàn vẹn công thức Toán / Hóa / Lý (Formula Integrity Gate)")
             formula_gate_res = FormulaVerificationGate.verify_and_repair(
                 doc_ir=doc_ir,
                 pdf_path=pdf_path,
@@ -315,12 +315,12 @@ class QuizPipelineOrchestrator:
                 emit(
                     JobStage.RENDERING,
                     72 + iteration * 6,
-                    f"📐 Đang xếp chữ và dàn trang A4 siêu ngay ngắn, chuẩn mực in ấn... 📄 (Lần {iteration + 1})",
+                    f"Tổng hợp tài liệu HTML và dàn trang CSS Paged Media (Lần {iteration + 1})",
                 )
                 emit(
                     JobStage.COMPILING,
                     78 + iteration * 6,
-                    f"🖨️ Máy in tí hon đang rục rịch xuất bản 2 bản PDF lung linh... 📑 (Lần {iteration + 1})",
+                    f"Biên dịch 2 file PDF qua Headless Chrome (Lần {iteration + 1})",
                 )
 
                 compile_start = time.perf_counter()
@@ -334,7 +334,7 @@ class QuizPipelineOrchestrator:
                 render_time_ms += (time.perf_counter() - compile_start) * 1000
 
                 # QA Stage
-                emit(JobStage.QA, 85 + iteration * 3, f"✨ Đang soi lại từng trang để bộ đề đạt điểm 10 chất lượng... 🔎 (Lần {iteration + 1})")
+                emit(JobStage.QA, 85 + iteration * 3, f"Thực hiện kiểm định đa tầng QA (Lần {iteration + 1})")
                 geom_result = validate_pdf_geometry(debai_pdf_path, doc_ir=doc_ir)
                 sem_result = validate_semantic_integrity(doc_ir, debai_pdf_path, dapan_pdf_path)
                 final_qa = validate_final_pdf(debai_pdf_path, doc_ir=doc_ir, dapan_pdf_path=dapan_pdf_path)
@@ -403,7 +403,7 @@ class QuizPipelineOrchestrator:
                     emit(
                         JobStage.REPAIRING,
                         88 + iteration * 3,
-                        f"🩹 Đang nhẹ nhàng căn chỉnh lại bố cục cho thật hoàn hảo... 🌷 (Lần {iteration + 1})",
+                        f"Kích hoạt sửa lỗi an toàn: Điều chỉnh bố cục (Lần {iteration + 1})",
                     )
                     doc_ir, current_preset, was_repaired = SafeRepairEngine.evaluate_and_repair(
                         doc_ir=doc_ir,
@@ -420,7 +420,7 @@ class QuizPipelineOrchestrator:
                     break
 
             # 7. FINALIZING & STRICT FINAL GATE (95% - 100%)
-            emit(JobStage.FINALIZING, 95, "🎁 Đang thắt nơ đóng gói bộ tài liệu thật đẹp để gửi tới bạn nè... 🎀")
+            emit(JobStage.FINALIZING, 95, "Xác minh cổng nghiệm thu cuối cùng và lưu trữ kết quả")
 
             if not os.path.isfile(debai_pdf_path) or os.path.getsize(debai_pdf_path) < 1024:
                 raise QuizEngineError(
@@ -499,7 +499,7 @@ class QuizPipelineOrchestrator:
                 "cache_hits": ai_summary.get("cache_hits", 0),
             }
 
-            emit(JobStage.COMPLETED, 100, "🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖")
+            emit(JobStage.COMPLETED, 100, "Hoàn tất tạo thành công 2 tệp PDF đạt chuẩn in ấn!")
             return state
 
         except Exception as exc:

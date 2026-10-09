@@ -22,13 +22,13 @@ export function renderViewSplitToolbar(state) {
   const isOverlay = layout === LAYOUT_MODES.SLIDER || layout === LAYOUT_MODES.DIFF;
 
   const layoutButtons = [
-    { id: LAYOUT_MODES.SINGLE, label: '1', title: '1 Khung hình (Single)' },
-    { id: LAYOUT_MODES.SPLIT_H, label: '2H', title: '2 Khung ngang (Split Horizontal)' },
-    { id: LAYOUT_MODES.SPLIT_V, label: '2V', title: '2 Khung dọc (Split Vertical)' },
-    { id: LAYOUT_MODES.TRIPLE_H, label: '3H', title: '3 Khung ngang (Triple Horizontal)' },
-    { id: LAYOUT_MODES.TRIPLE_L, label: '3L', title: '3 Khung chính trái (Triple Left)' },
-    { id: LAYOUT_MODES.TRIPLE_T, label: '3T', title: '3 Khung chính trên (Triple Top)' },
-    { id: LAYOUT_MODES.QUAD, label: '4G', title: 'Lưới 4 khung (Quad Grid 2x2)' }
+    { id: LAYOUT_MODES.SINGLE, label: '1', title: '1 Khung hình' },
+    { id: LAYOUT_MODES.SPLIT_H, label: '2H', title: '2 Khung ngang' },
+    { id: LAYOUT_MODES.SPLIT_V, label: '2V', title: '2 Khung dọc' },
+    { id: LAYOUT_MODES.TRIPLE_H, label: '3H', title: '3 Khung ngang' },
+    { id: LAYOUT_MODES.TRIPLE_L, label: '3L', title: '3 Khung chính trái' },
+    { id: LAYOUT_MODES.TRIPLE_T, label: '3T', title: '3 Khung chính trên' },
+    { id: LAYOUT_MODES.QUAD, label: '4G', title: 'Lưới 4 khung' }
   ];
 
   return `
@@ -67,7 +67,7 @@ export function renderViewSplitToolbar(state) {
             type="button"
             data-action="set-layout"
             data-layout="${LAYOUT_MODES.SLIDER}"
-            title="Thanh trượt gạt so sánh Before/After"
+            title="Thanh trượt gạt so sánh"
             class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
               layout === LAYOUT_MODES.SLIDER
                 ? 'bg-white dark:bg-zinc-800 text-cyan-600 dark:text-cyan-400 shadow-sm'
@@ -81,7 +81,7 @@ export function renderViewSplitToolbar(state) {
             type="button"
             data-action="set-layout"
             data-layout="${LAYOUT_MODES.DIFF}"
-            title="So sánh sai khác điểm ảnh (Difference Heatmap)"
+            title="So sánh sai khác điểm ảnh"
             class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
               layout === LAYOUT_MODES.DIFF
                 ? 'bg-white dark:bg-zinc-800 text-rose-500 shadow-sm'
@@ -101,7 +101,7 @@ export function renderViewSplitToolbar(state) {
           <button
             type="button"
             data-action="toggle-sync-view"
-            title="Đồng bộ thu phóng & cuộn (S)"
+            title="Đồng bộ thu phóng và cuộn [S]"
             class="px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
               syncView
                 ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
@@ -114,7 +114,7 @@ export function renderViewSplitToolbar(state) {
           <button
             type="button"
             data-action="toggle-sync-cursor"
-            title="Đồng bộ con trỏ chữ thập (C)"
+            title="Đồng bộ con trỏ chữ thập [C]"
             class="px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
               syncCursor
                 ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
@@ -130,7 +130,7 @@ export function renderViewSplitToolbar(state) {
         <button
           type="button"
           data-action="toggle-filter"
-          title="Chế độ lọc: Bilinear (Mịn) vs Nearest Neighbor (Pixel thô) (N)"
+          title="Chế độ lọc: Bilinear / Nearest Neighbor [N]"
           class="px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
             filter === 'nearest'
               ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
@@ -146,16 +146,16 @@ export function renderViewSplitToolbar(state) {
           <button
             type="button"
             data-action="fit-all"
-            title="Vừa vặn khung hình (F)"
+            title="Vừa vặn khung hình [F]"
             class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-zinc-100 dark:bg-black/40 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/5 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
           >
             <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-            <span class="hidden lg:inline">Fit (F)</span>
+            <span class="hidden lg:inline">Fit</span>
           </button>
           <button
             type="button"
             data-action="actual-size"
-            title="Kích thước gốc 100% (1)"
+            title="Kích thước gốc 100% [1]"
             class="p-1.5 sm:px-2 sm:py-1.5 rounded-xl bg-zinc-100 dark:bg-black/40 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/5 text-xs font-mono font-semibold transition cursor-pointer"
           >
             1:1
@@ -163,7 +163,7 @@ export function renderViewSplitToolbar(state) {
           <button
             type="button"
             data-action="reset-view"
-            title="Đặt lại góc nhìn (R)"
+            title="Đặt lại góc nhìn [R]"
             class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-zinc-100 dark:bg-black/40 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/5 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
           >
             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
@@ -175,7 +175,7 @@ export function renderViewSplitToolbar(state) {
         <button
           type="button"
           data-action="toggle-inspector"
-          title="Bật/tắt HUD Kính lúp soi điểm ảnh (I)"
+          title="Kính lúp soi điểm ảnh [I]"
           class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
             inspectorOpen
               ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-600 dark:text-cyan-400'

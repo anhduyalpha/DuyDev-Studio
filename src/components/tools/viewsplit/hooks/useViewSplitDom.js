@@ -32,6 +32,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
   let isAlive = true;
   let rafId = null;
   const activeBlobUrls = new Set();
+  let scratchCanvas = null;
+  let scratchCtx = null;
 
   // Helper to load File or Blob into an HTMLImageElement
   const loadImageSource = (src, meta = {}) => {
@@ -192,39 +194,46 @@ export function attachViewSplitDomListeners(store, onReRender) {
               );
               ctx.restore();
             } else if (store.layout === LAYOUT_MODES.DIFF) {
-              // Difference Diff mode using canvas difference blending with hardware additive amplification
-              const scratch = document.createElement('canvas');
-              scratch.width = overlayCanvas.width;
-              scratch.height = overlayCanvas.height;
-              const sCtx = scratch.getContext('2d');
-              if (sCtx) {
-                sCtx.scale(dpr, dpr);
-                sCtx.imageSmoothingEnabled = store.filter === 'bilinear';
-                sCtx.drawImage(
+              // Difference Diff mode using persistent scratch canvas to prevent GC thrashing
+              if (!scratchCanvas) {
+                scratchCanvas = document.createElement('canvas');
+                scratchCtx = scratchCanvas.getContext('2d');
+              }
+              if (scratchCanvas.width !== overlayCanvas.width || scratchCanvas.height !== overlayCanvas.height) {
+                scratchCanvas.width = overlayCanvas.width;
+                scratchCanvas.height = overlayCanvas.height;
+              }
+              if (scratchCtx) {
+                scratchCtx.save();
+                scratchCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                scratchCtx.scale(dpr, dpr);
+                scratchCtx.imageSmoothingEnabled = store.filter === 'bilinear';
+                scratchCtx.drawImage(
                   paneA.image,
                   paneA.panX,
                   paneA.panY,
                   paneA.width * paneA.zoom,
                   paneA.height * paneA.zoom
                 );
-                sCtx.globalCompositeOperation = 'difference';
-                sCtx.drawImage(
+                scratchCtx.globalCompositeOperation = 'difference';
+                scratchCtx.drawImage(
                   paneB.image,
                   paneB.panX,
                   paneB.panY,
                   paneB.width * paneB.zoom,
                   paneB.height * paneB.zoom
                 );
+                scratchCtx.restore();
 
                 // Draw base difference
-                ctx.drawImage(scratch, 0, 0, rect.width, rect.height);
+                ctx.drawImage(scratchCanvas, 0, 0, rect.width, rect.height);
 
                 // Amplify differences if multiplier > 1 using GPU additive blending
                 const mult = Math.min(10, Math.max(1, store.diffMultiplier || 1));
                 if (mult > 1) {
                   ctx.globalCompositeOperation = 'lighter';
                   for (let m = 1; m < mult; m++) {
-                    ctx.drawImage(scratch, 0, 0, rect.width, rect.height);
+                    ctx.drawImage(scratchCanvas, 0, 0, rect.width, rect.height);
                   }
                   ctx.globalCompositeOperation = 'source-over';
                 }
@@ -398,6 +407,37 @@ export function attachViewSplitDomListeners(store, onReRender) {
   };
 
   const onSliderMouseUp = () => {
+    isDraggingSlider = false;
+  };
+
+  const onSliderTouchStart = (e) => {
+    const divider = e.target.closest('#viewsplit-slider-divider');
+    if (!divider || e.touches.length !== 1) return;
+    e.preventDefault();
+    isDraggingSlider = true;
+  };
+
+  const onSliderTouchMove = (e) => {
+    if (!isDraggingSlider || e.touches.length !== 1) return;
+    const overlay = document.querySelector('.viewsplit-overlay-container');
+    if (!overlay) return;
+
+    e.preventDefault();
+    const rect = overlay.getBoundingClientRect();
+    const pos = (e.touches[0].clientX - rect.left) / rect.width;
+    store.setSliderPos(pos);
+
+    const divider = document.getElementById('viewsplit-slider-divider');
+    if (divider) {
+      divider.style.left = `${store.sliderPos * 100}%`;
+    }
+    const sliderBadge = document.getElementById('viewsplit-slider-pct-badge');
+    if (sliderBadge) {
+      sliderBadge.textContent = `${Math.round(store.sliderPos * 100)}%`;
+    }
+  };
+
+  const onSliderTouchEnd = () => {
     isDraggingSlider = false;
   };
 
@@ -952,6 +992,10 @@ export function attachViewSplitDomListeners(store, onReRender) {
   window.addEventListener('touchmove', onTouchMove, { passive: false });
   window.addEventListener('touchend', onTouchEnd);
 
+  window.addEventListener('touchstart', onSliderTouchStart, { passive: false });
+  window.addEventListener('touchmove', onSliderTouchMove, { passive: false });
+  window.addEventListener('touchend', onSliderTouchEnd);
+
   window.addEventListener('touchstart', onHudTouchStart, { passive: false });
   window.addEventListener('touchmove', onHudTouchMove, { passive: false });
   window.addEventListener('touchend', onHudTouchEnd);
@@ -990,6 +1034,10 @@ export function attachViewSplitDomListeners(store, onReRender) {
     window.removeEventListener('touchstart', onTouchStart);
     window.removeEventListener('touchmove', onTouchMove);
     window.removeEventListener('touchend', onTouchEnd);
+
+    window.removeEventListener('touchstart', onSliderTouchStart);
+    window.removeEventListener('touchmove', onSliderTouchMove);
+    window.removeEventListener('touchend', onSliderTouchEnd);
 
     window.removeEventListener('touchstart', onHudTouchStart);
     window.removeEventListener('touchmove', onHudTouchMove);
