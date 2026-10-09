@@ -69,11 +69,14 @@ jobs:
           body: |
             ## DuyDev Studio Native Android Wrapper (${{ github.ref_name }})
 
-            ### Điểm nổi bật:
+            ### Điểm nổi bật phiên bản ${{ github.ref_name }}:
+            - **Tối ưu hóa thời lượng Pin đột phá**: Triệt tiêu 5 nguồn hao pin phần cứng (Radio Tail State modem wakelock, GPU shader thrashing, concurrent polling).
+            - **Cắt giảm tải GPU & Màn hình**: Tắt hiệu ứng xoay vô tận khi hoàn tất bài tập, cách ly GPU compositing layer cho background, bảo vệ vòng lặp canvas tự ngủ khi tab ẩn.
+            - **Tối ưu hóa WebView Lifecycle**: Bổ sung `onStop()`, phát sự kiện `ds:native-app-paused` ngắt kết nối nền, kích hoạt đầy đủ HTTP Disk Cache 304 Not Modified.
+            - **Tên miền Đám mây Mới**: Tích hợp trực tiếp highway domain `https://studio.duydev.cloud`.
             - **Khởi động siêu tốc (<80ms)**: Shell Native Kotlin (~3MB) loại bỏ hoàn toàn Splash Screen 2–3s của Chromium WebAPK.
             - **Chia sẻ tức thì (0ms Splash)**: Giao diện `ShareReceiverActivity` trong suốt hiển thị Bottom Sheet trực tiếp trên ứng dụng nguồn.
             - **Cầu nối Native Bridge**: Truyền tải dữ liệu và tệp tin qua RAM với `@JavascriptInterface`.
-            - **Hỗ trợ mạng cá nhân**: Tương thích hoàn toàn với Cloudflare Tunnel và mạng LAN Homeserver.
 
             ### Cài đặt:
             Tải tệp **`duydev-studio.apk`** đính kèm bên dưới và cài đặt trên thiết bị Android của bạn.
