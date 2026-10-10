@@ -22,6 +22,7 @@ import { renderArchivePage, attachArchivePageListeners } from './pages/ArchivePa
 import { renderArchiveCompressWorkspace, attachArchiveCompressListeners } from './components/tools/archive/ArchiveCompressWorkspace.js';
 import { renderHistoryPage, attachHistoryPageListeners } from './pages/HistoryPage.js';
 import { renderServerPage, attachServerPageListeners } from './pages/ServerPage.js';
+import { renderAdminPage, attachAdminPageListeners, stopAdminPolling } from './pages/AdminPage.js';
 import { renderStoragePage, attachStoragePageListeners } from './pages/StoragePage.js';
 import { renderTermsPage, attachTermsPageListeners } from './pages/TermsPage.js';
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
@@ -306,6 +307,7 @@ class App {
   }
 
   cleanupCurrentView() {
+    stopAdminPolling();
     this.currentCleanups.forEach(fn => typeof fn === 'function' && fn());
     this.currentCleanups = [];
   }
@@ -368,7 +370,9 @@ class App {
       setView(renderHistoryPage(hash === '#trash' ? 'trash' : 'history'), () => attachHistoryPageListeners(onSoftReRender));
     } else if (hash === '#storage' || hash.startsWith('#storage/') || hash.startsWith('#storage?')) {
       setView(renderStoragePage(), () => attachStoragePageListeners(onSoftReRender));
-    } else if (hash === '#settings' || hash === '#server' || hash === '#admin') {
+    } else if (hash === '#admin' || hash === '#admin-dashboard' || hash === '#telemetry' || hash === '#monitoring') {
+      setView(renderAdminPage(), () => attachAdminPageListeners(onSoftReRender));
+    } else if (hash === '#settings' || hash === '#server') {
       setView(renderServerPage(), () => attachServerPageListeners(onSoftReRender));
     } else if (hash === '#terms' || hash === '#terms-of-service' || hash === '#dieu-khoan') {
       setView(renderTermsPage(), () => attachTermsPageListeners(onSoftReRender));

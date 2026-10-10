@@ -6,6 +6,7 @@ import { createQuizJobSchema, parsePromptSchema } from '../../schemas/quiz.schem
 import { enqueueQuizJob as enqueueQuizTask } from '../../queues/task.queue.js';
 import { isPermanentRetention } from '../../config/limits.config.js';
 import { logger } from '../../lib/logger.js';
+import { aiMetricsService } from '../../services/ai-metrics.service.js';
 
 export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyReply) {
   const body = createQuizJobSchema.parse(request.body);
@@ -179,6 +180,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
   const model = process.env.AGNES_AI_MODEL || 'agnes-3.0-flash';
 
   if (apiKey) {
+    const aiStartTime = Date.now();
     try {
       const res = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
@@ -212,8 +214,22 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
         })
       });
 
+      const aiLatency = Date.now() - aiStartTime;
+
       if (res.ok) {
         const json = (await res.json()) as any;
+        const usage = json.usage;
+
+        aiMetricsService.recordCall({
+          module: 'quiz-prompt',
+          provider: 'agnes',
+          model,
+          promptTokens: usage?.prompt_tokens || 120,
+          completionTokens: usage?.completion_tokens || 40,
+          latencyMs: aiLatency,
+          statusCode: res.status
+        });
+
         const rawContent = json.choices?.[0]?.message?.content;
         if (rawContent) {
           const parsed = JSON.parse(rawContent);
@@ -260,8 +276,25 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
             }
           });
         }
+      } else {
+        aiMetricsService.recordCall({
+          module: 'quiz-prompt',
+          provider: 'agnes',
+          model,
+          latencyMs: aiLatency,
+          statusCode: res.status,
+          errorMsg: res.statusText
+        });
       }
-    } catch (aiErr) {
+    } catch (aiErr: any) {
+      aiMetricsService.recordCall({
+        module: 'quiz-prompt',
+        provider: 'agnes',
+        model,
+        latencyMs: Date.now() - aiStartTime,
+        statusCode: 504,
+        errorMsg: aiErr?.message || 'AI request failed'
+      });
       logger.warn({ aiErr }, 'Agnes AI prompt parsing failed or timed out, falling back to regex parser');
     }
   }

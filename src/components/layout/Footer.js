@@ -16,6 +16,8 @@ export function renderFooter() {
           <a href="#terms" class="hover:text-black dark:hover:text-white transition">Điều khoản</a>
           <span>•</span>
           <a href="#settings" class="hover:text-black dark:hover:text-white transition">Cài đặt</a>
+          <span>•</span>
+          <a href="#admin" class="hover:text-orange-500 dark:hover:text-orange-400 transition">Quản trị</a>
         </div>
       </div>
     </footer>

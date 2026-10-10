@@ -35,6 +35,8 @@ import { getConverterWorker, closeConverterWorker } from './workers/converter.wo
 import { quizRoute } from './api/routes/quiz.route.js';
 import { getQuizWorker, closeQuizWorker } from './workers/quiz.worker.js';
 import { systemRoute } from './api/routes/system.route.js';
+import { adminRoute } from './api/routes/admin.route.js';
+import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -93,12 +95,19 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // 4. Register Request Logging & Default Content-Type Hook
   app.addHook('onRequest', async (req) => {
+    (req as any)._startTime = Date.now();
     if (!req.headers['content-type'] && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
       req.headers['content-type'] = 'application/json';
     }
     logger.debug({ reqId: req.id, method: req.method, url: req.url, range: req.headers.range }, 'Incoming request');
   });
 
+  // 4.1. Response Telemetry Tracker Hook
+  app.addHook('onResponse', async (req, reply) => {
+    const startTime = (req as any)._startTime || Date.now();
+    const latency = Math.max(0, Date.now() - startTime);
+    telemetryTracker.recordRequest(req, reply, latency);
+  });
 
   // 5. Base Health Check Routes
   app.get('/health', async () => ({ status: 'UP', timestamp: new Date().toISOString() }));
@@ -125,6 +134,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(viewerRoute);
   await app.register(quizRoute);
   await app.register(systemRoute);
+  await app.register(adminRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)

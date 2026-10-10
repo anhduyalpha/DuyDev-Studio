@@ -63,6 +63,29 @@ export function renderServerPage() {
         </div>
       </div>
 
+      <!-- Banner Admin Control Center -->
+      <a href="#admin" class="block p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/5 border border-orange-500/30 hover:border-orange-500/50 transition-all shadow-md group">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-500 dark:text-orange-400">
+              <i data-lucide="shield" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-orange-500 transition-colors flex items-center gap-2">
+                Trung Tâm Quản Trị & Telemetry
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/20 text-orange-600 dark:text-orange-400">
+                  Dashboard
+                </span>
+              </h3>
+              <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">Giám sát tài nguyên máy chủ, lưu lượng mạng, hàng đợi BullMQ và hạn ngạch AI Agents</p>
+            </div>
+          </div>
+          <div class="text-orange-500 dark:text-orange-400 group-hover:translate-x-1 transition-transform">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </div>
+        </div>
+      </a>
+
       <!-- 2. Quản trị Hệ thống & Đường truyền (Bảo vệ bằng mật khẩu Admin) -->
       <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
         ${!isAdmin ? `

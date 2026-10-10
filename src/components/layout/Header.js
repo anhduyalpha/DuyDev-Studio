@@ -66,11 +66,17 @@ export function renderHeader() {
           <div id="headerSystemStatus" 
                role="status"
                aria-label="Trạng thái hệ thống"
-               title="Máy chủ: Đang kiểm tra... • Redis: Đang kết nối..." 
-               class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg glass-pill text-[11px] font-mono text-zinc-600 dark:text-zinc-400 cursor-default select-none transition">
+               title="Máy chủ: Đang kiểm tra... • Bấm để mở Admin Control Center" 
+               onclick="window.location.hash = '#admin'"
+               class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg glass-pill text-[11px] font-mono text-zinc-600 dark:text-zinc-400 cursor-pointer select-none transition hover:bg-zinc-200/50 dark:hover:bg-white/10">
             <span id="headerSystemDot" class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"></span>
             <span id="headerSystemLabel" class="hidden lg:inline text-[10px] font-semibold tracking-wide">ONLINE</span>
           </div>
+
+          <!-- Admin Dashboard Shield Button -->
+          <a href="#admin" id="headerAdminBtn" title="Trung tâm Quản trị & Telemetry" aria-label="Trung tâm Quản trị" class="relative inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-orange-600 dark:text-zinc-300 dark:hover:text-orange-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <i data-lucide="shield" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+          </a>
 
           <!-- Theme Toggle Button -->
           <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
