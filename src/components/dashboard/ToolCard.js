@@ -2,7 +2,6 @@
  * Tool Card Component (Dark Professional Minimalism with Soft Color Accents)
  */
 
-import { renderBadge } from '../common/Badge.js';
 
 const CATEGORY_LABELS = {
   all: 'Tất cả',
@@ -43,12 +42,11 @@ export function renderToolCard(tool) {
       <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
 
       <div class="relative z-10">
-        <!-- Header: Icon & Badge -->
-        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+        <!-- Header: Icon -->
+        <div class="flex items-center mb-3.5 min-h-[44px]">
           <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
             <i data-lucide="${tool.icon}" class="w-5 h-5 sm:w-6 sm:h-6"></i>
           </div>
-          ${tool.badge ? renderBadge(tool.badge, accent) : ''}
         </div>
 
         <!-- Title & Description -->
