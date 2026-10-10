@@ -24,7 +24,7 @@ import { renderConverterWorkspace, attachConverterListeners } from '../component
 import { renderStudocuWorkspace, attachStudocuListeners } from '../components/tools/studocu/StudocuWorkspace.js';
 import { renderStoragePage, attachStoragePageListeners } from './StoragePage.js';
 import { renderQuizWorkspace, attachQuizListeners } from '../components/tools/quiz/QuizWorkspace.js';
-import { renderViewSplitWorkspace, attachViewSplitWorkspaceListeners } from '../components/tools/viewsplit/ViewSplitWorkspace.js';
+import { renderViewSplitWorkspace, attachViewSplitWorkspaceListeners } from '../components/tools/viewsplit/ViewSplitWorkspace.js?v=22.11';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';

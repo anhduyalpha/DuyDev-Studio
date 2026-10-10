@@ -4,14 +4,14 @@
  * floating glass pixel loupe, and event listener attachments.
  */
 
-import { viewSplitStore, LAYOUT_MODES } from './hooks/useViewSplit.js';
-import { renderViewSplitToolbar } from './components/ViewSplitToolbar.js';
-import { renderViewSplitPane } from './components/ViewSplitPane.js';
-import { renderViewSplitSliderOverlay } from './components/ViewSplitSliderOverlay.js';
-import { renderViewSplitPixelInspector } from './components/ViewSplitPixelInspector.js';
-import { renderViewSplitMobileTabs } from './components/ViewSplitMobileTabs.js';
-import { renderViewSplitUrlModal } from './components/ViewSplitUrlModal.js';
-import { attachViewSplitDomListeners } from './hooks/useViewSplitDom.js';
+import { viewSplitStore, LAYOUT_MODES } from './hooks/useViewSplit.js?v=22.11';
+import { renderViewSplitToolbar } from './components/ViewSplitToolbar.js?v=22.11';
+import { renderViewSplitPane } from './components/ViewSplitPane.js?v=22.11';
+import { renderViewSplitSliderOverlay } from './components/ViewSplitSliderOverlay.js?v=22.11';
+import { renderViewSplitPixelInspector } from './components/ViewSplitPixelInspector.js?v=22.11';
+import { renderViewSplitMobileTabs } from './components/ViewSplitMobileTabs.js?v=22.11';
+import { renderViewSplitUrlModal } from './components/ViewSplitUrlModal.js?v=22.11';
+import { attachViewSplitDomListeners } from './hooks/useViewSplitDom.js?v=22.11';
 
 /**
  * Renders the full ViewSplit workspace HTML.
