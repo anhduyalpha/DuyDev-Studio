@@ -34,17 +34,17 @@ const ASSETS_TO_PRECACHE = [
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
-  './src/assets/logo-ds.svg',
-  './src/assets/icon-192.png',
-  './src/assets/icon-512.png',
-  './src/assets/icon-maskable-192.png',
-  './src/assets/icon-maskable-512.png',
+  './src/assets/logo-ds.svg?v=22.12',
+  './src/assets/icon-192.png?v=22.12',
+  './src/assets/icon-512.png?v=22.12',
+  './src/assets/icon-maskable-192.png?v=22.12',
+  './src/assets/icon-maskable-512.png?v=22.12',
   './src/assets/shortcut-pdf.png',
   './src/assets/shortcut-archive.png',
   './src/assets/shortcut-qr.png',
-  './src/assets/icon-192.svg',
-  './src/assets/icon-512.svg',
-  './src/assets/icon-maskable.svg'
+  './src/assets/icon-192.svg?v=22.12',
+  './src/assets/icon-512.svg?v=22.12',
+  './src/assets/icon-maskable.svg?v=22.12'
 ];
 
 // ─── IndexedDB helpers for Share Target ───
