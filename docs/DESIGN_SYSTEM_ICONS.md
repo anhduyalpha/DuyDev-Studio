@@ -1,7 +1,7 @@
 # DuyDev Studio - Dual-Mode Tool Icon System
 
 > **Tài liệu tham khảo nhanh và Triết lý thiết kế bộ Icon công cụ độc quyền của DuyDev Studio.**  
-> Chi tiết chuẩn kiến thức: Xem thêm [KI-CON-002](knowledge-base/KI-CON-002-tool-icon-design-philosophy.md).
+> Chi tiết chuẩn kiến thức: Xem thêm [KI-CON-007](knowledge-base/KI-CON-007-tool-icon-design-philosophy.md).
 
 ---
 

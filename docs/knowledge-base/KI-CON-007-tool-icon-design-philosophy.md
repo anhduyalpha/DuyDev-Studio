@@ -1,5 +1,5 @@
 ---
-id: KI-CON-002-tool-icon-design-philosophy
+id: KI-CON-007-tool-icon-design-philosophy
 title: "Proprietary Tool Icon System & Dual-Mode Vector Design Philosophy"
 type: concept
 status: verified
@@ -20,7 +20,7 @@ related_kis:
   - KI-CON-001-ui-production-minimalism
 ---
 
-# [KI-CON-002] Triết Lý Thiết Kế Bộ Icon Độc Quyền & Hướng Dẫn Mở Rộng Module Mới
+# [KI-CON-007] Triết Lý Thiết Kế Bộ Icon Độc Quyền & Hướng Dẫn Mở Rộng Module Mới
 
 ## 1. Bối Cảnh & Mục Tiêu (Context & Purpose)
 
