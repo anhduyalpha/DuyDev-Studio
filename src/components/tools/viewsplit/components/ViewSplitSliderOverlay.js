@@ -167,7 +167,7 @@ export function renderViewSplitSliderOverlay(state) {
                 data-action="select-pane"
                 data-pane-id="1"
                 title="Bấm để chọn Ảnh Trước (${paneA.title})"
-                class="flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 1
                     ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
                     : 'border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
@@ -178,7 +178,7 @@ export function renderViewSplitSliderOverlay(state) {
                 </div>
                 <div class="flex items-center gap-1.5 mb-1">
                   <h4 class="text-xs font-bold text-white uppercase tracking-wider">Ảnh Trước • ${paneA.title}</h4>
-                  ${activePaneId === 1 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}
+                  <span class="viewsplit-overlay-badge-1">${activePaneId === 1 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}</span>
                 </div>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasA ? paneA.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
@@ -217,7 +217,7 @@ export function renderViewSplitSliderOverlay(state) {
                 data-action="select-pane"
                 data-pane-id="2"
                 title="Bấm để chọn Ảnh Sau (${paneB.title})"
-                class="flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 2
                     ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
                     : 'border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
@@ -228,7 +228,7 @@ export function renderViewSplitSliderOverlay(state) {
                 </div>
                 <div class="flex items-center gap-1.5 mb-1">
                   <h4 class="text-xs font-bold text-white uppercase tracking-wider">Ảnh Sau • ${paneB.title}</h4>
-                  ${activePaneId === 2 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}
+                  <span class="viewsplit-overlay-badge-2">${activePaneId === 2 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}</span>
                 </div>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasB ? paneB.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">

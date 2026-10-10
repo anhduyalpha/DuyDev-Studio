@@ -31,7 +31,7 @@ import {
 export function attachViewSplitDomListeners(store, onReRender) {
   let isAlive = true;
   let rafId = null;
-  const activeBlobUrls = new Set();
+  const paneBlobUrls = new Map();
   let scratchCanvas = null;
   let scratchCtx = null;
 
@@ -43,6 +43,115 @@ export function attachViewSplitDomListeners(store, onReRender) {
       img.onload = () => resolve(img);
       img.onerror = (e) => reject(new Error('Không thể nạp tệp hình ảnh'));
       img.src = src;
+    });
+  };
+
+  /**
+   * Fast in-place DOM synchronization for active pane indicators across all UI surfaces
+   * (Panes, badges, toolbar segmented pills, slider overlay slots, and mobile tabs).
+   *
+   * @param {number} activeId
+   */
+  const syncActivePaneUI = (activeId) => {
+    // A. Multi-pane grid panes
+    document.querySelectorAll('.viewsplit-pane').forEach((paneEl) => {
+      const pId = parseInt(paneEl.dataset.paneId, 10);
+      const isActive = pId === activeId;
+
+      paneEl.classList.toggle('border-cyan-500/80', isActive);
+      paneEl.classList.toggle('ring-2', isActive);
+      paneEl.classList.toggle('ring-cyan-500/30', isActive);
+      paneEl.classList.toggle('shadow-lg', isActive);
+      paneEl.classList.toggle('shadow-cyan-500/10', isActive);
+
+      paneEl.classList.toggle('border-zinc-200/80', !isActive);
+      paneEl.classList.toggle('dark:border-white/10', !isActive);
+      paneEl.classList.toggle('hover:border-zinc-400', !isActive);
+      paneEl.classList.toggle('dark:hover:border-white/30', !isActive);
+      paneEl.classList.toggle('cursor-pointer', !isActive);
+
+      paneEl.title = isActive
+        ? 'Khung hình đang được chọn để dán/nạp ảnh'
+        : 'Bấm để chọn khung hình này';
+
+      const dot = paneEl.querySelector('.viewsplit-pane-dot');
+      if (dot) {
+        dot.className = `viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}`;
+      }
+
+      const badge = paneEl.querySelector('.viewsplit-pane-badge');
+      if (badge) {
+        badge.innerHTML = isActive
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          : '';
+      }
+    });
+
+    // B. Toolbar pills & header selectors
+    document.querySelectorAll('[data-action="select-pane"][data-pane-id]').forEach((btn) => {
+      if (!btn.classList.contains('viewsplit-pane') && !btn.classList.contains('viewsplit-overlay-slot')) {
+        const pId = parseInt(btn.dataset.paneId, 10);
+        const isSelected = pId === activeId;
+        btn.classList.toggle('bg-cyan-500/15', isSelected);
+        btn.classList.toggle('text-cyan-600', isSelected);
+        btn.classList.toggle('dark:text-cyan-400', isSelected);
+        btn.classList.toggle('border', isSelected);
+        btn.classList.toggle('border-cyan-500/30', isSelected);
+        btn.classList.toggle('shadow-sm', isSelected);
+
+        const dot = btn.querySelector('.w-1\\.5.h-1\\.5');
+        if (dot) {
+          dot.classList.toggle('bg-cyan-400', isSelected);
+          dot.classList.toggle('animate-pulse', isSelected);
+        }
+      }
+    });
+
+    // C. Slider overlay slot cards (Slot A & Slot B)
+    const slotACard = document.querySelector('.viewsplit-overlay-slot[data-pane-id="1"]');
+    const slotBCard = document.querySelector('.viewsplit-overlay-slot[data-pane-id="2"]');
+    if (slotACard) {
+      const isA = activeId === 1;
+      slotACard.classList.toggle('border-cyan-500/80', isA);
+      slotACard.classList.toggle('ring-2', isA);
+      slotACard.classList.toggle('ring-cyan-500/30', isA);
+      slotACard.classList.toggle('shadow-lg', isA);
+      slotACard.classList.toggle('shadow-cyan-500/10', isA);
+      slotACard.classList.toggle('border-white/10', !isA);
+      const b1 = document.querySelector('.viewsplit-overlay-badge-1');
+      if (b1) {
+        b1.innerHTML = isA
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          : '';
+      }
+    }
+    if (slotBCard) {
+      const isB = activeId === 2;
+      slotBCard.classList.toggle('border-cyan-500/80', isB);
+      slotBCard.classList.toggle('ring-2', isB);
+      slotBCard.classList.toggle('ring-cyan-500/30', isB);
+      slotBCard.classList.toggle('shadow-lg', isB);
+      slotBCard.classList.toggle('shadow-cyan-500/10', isB);
+      slotBCard.classList.toggle('border-white/10', !isB);
+      const b2 = document.querySelector('.viewsplit-overlay-badge-2');
+      if (b2) {
+        b2.innerHTML = isB
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          : '';
+      }
+    }
+
+    // D. Mobile tabs
+    document.querySelectorAll('.viewsplit-mobile-tab[data-pane-id]').forEach((tab) => {
+      const pId = parseInt(tab.dataset.paneId, 10);
+      const isActive = pId === activeId;
+      tab.classList.toggle('bg-white', isActive);
+      tab.classList.toggle('dark:bg-zinc-800', isActive);
+      tab.classList.toggle('text-cyan-600', isActive);
+      tab.classList.toggle('dark:text-cyan-400', isActive);
+      tab.classList.toggle('shadow-sm', isActive);
+      tab.classList.toggle('text-zinc-600', !isActive);
+      tab.classList.toggle('dark:text-zinc-400', !isActive);
     });
   };
 
@@ -63,8 +172,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
         showToast('Tệp được chọn không phải là hình ảnh hợp lệ', 'warning');
         return;
       }
+      if (paneBlobUrls.has(paneId)) {
+        try { URL.revokeObjectURL(paneBlobUrls.get(paneId)); } catch {}
+      }
       blobUrl = URL.createObjectURL(source);
-      activeBlobUrls.add(blobUrl);
+      paneBlobUrls.set(paneId, blobUrl);
       if (!fileName) {
         fileName = source.name || 'Ảnh đã dán';
       }
@@ -350,8 +462,6 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const pane = store.getPane(paneId);
     if (!pane) return;
 
-    store.setActivePane(pane.id);
-
     isDragging = true;
     activeDragPaneId = pane.id;
     dragStartX = e.clientX;
@@ -576,8 +686,6 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const pane = store.getPane(paneId);
     if (!pane) return;
 
-    store.setActivePane(pane.id);
-
     if (e.touches.length === 1) {
       // Single finger drag
       isDragging = true;
@@ -664,11 +772,9 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const paneEl = e.target.closest('.viewsplit-pane');
     if (paneEl && !e.target.closest('button, [data-action], input')) {
       const paneId = parseInt(paneEl.dataset.paneId, 10);
-      if (paneId && paneId >= 1 && paneId <= 4) {
-        if (store.activePaneId !== paneId) {
-          store.setActivePane(paneId);
-          onReRender();
-        }
+      if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
+        store.setActivePane(paneId);
+        syncActivePaneUI(paneId);
         return;
       }
     }
@@ -680,10 +786,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const clickX = e.clientX - rect.left;
       const splitX = rect.width * store.sliderPos;
       const targetId = (store.layout === LAYOUT_MODES.SLIDER && clickX >= splitX) ? 2 : 1;
-      if (store.activePaneId !== targetId) {
-        store.setActivePane(targetId);
-        onReRender();
-      }
+      store.setActivePane(targetId);
+      syncActivePaneUI(targetId);
       return;
     }
 
@@ -692,16 +796,16 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const action = btn.dataset.action;
     if (!action) return;
 
-    e.preventDefault();
+    if (btn.tagName === 'BUTTON' || btn.tagName === 'A') {
+      e.preventDefault();
+    }
 
     switch (action) {
       case 'select-pane': {
         const paneId = parseInt(btn.dataset.paneId, 10);
-        if (paneId && paneId >= 1 && paneId <= 4) {
-          if (store.activePaneId !== paneId) {
-            store.setActivePane(paneId);
-            onReRender();
-          }
+        if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
+          store.setActivePane(paneId);
+          syncActivePaneUI(paneId);
         }
         break;
       }
@@ -753,14 +857,23 @@ export function attachViewSplitDomListeners(store, onReRender) {
       }
 
       case 'pick-file': {
-        const paneId = parseInt(btn.dataset.paneId, 10);
-        const input = document.querySelector(`.viewsplit-file-input[data-pane-id="${paneId}"]`);
-        if (input) input.click();
+        const paneId = parseInt(btn.dataset.paneId, 10) || store.activePaneId;
+        if (paneId) {
+          store.setActivePane(paneId);
+          syncActivePaneUI(paneId);
+          const input = document.querySelector(`.viewsplit-file-input[data-pane-id="${paneId}"]`);
+          if (input) input.click();
+        }
         break;
       }
 
       case 'paste-clipboard': {
-        const paneId = parseInt(btn.dataset.paneId, 10);
+        const paneId = parseInt(btn.dataset.paneId, 10) || store.activePaneId;
+        if (paneId) {
+          store.setActivePane(paneId);
+          syncActivePaneUI(paneId);
+        }
+        let clipboardPasted = false;
         try {
           if (navigator.clipboard && navigator.clipboard.read) {
             const items = await navigator.clipboard.read();
@@ -769,20 +882,30 @@ export function attachViewSplitDomListeners(store, onReRender) {
               if (imageType) {
                 const blob = await item.getType(imageType);
                 await loadFileIntoPane(blob, paneId, { name: 'Ảnh từ Clipboard' });
+                clipboardPasted = true;
                 return;
               }
             }
           }
-          showToast('Nhấn Ctrl+V để dán ảnh trực tiếp từ bộ nhớ tạm', 'info');
         } catch (err) {
-          showToast('Vui lòng cấp quyền Clipboard hoặc nhấn Ctrl+V', 'warning');
+          // Clipboard read denied or not available
+        }
+
+        if (!clipboardPasted) {
+          showToast(`Đã chọn ${PANE_TITLES[paneId - 1] || 'Khung hình'}. Nhấn Ctrl+V để dán ảnh ngay lập tức.`, 'info');
         }
         break;
       }
 
       case 'clear-pane': {
         const paneId = parseInt(btn.dataset.paneId, 10);
+        if (paneBlobUrls.has(paneId)) {
+          try { URL.revokeObjectURL(paneBlobUrls.get(paneId)); } catch {}
+          paneBlobUrls.delete(paneId);
+        }
         store.clearPane(paneId);
+        store.setActivePane(paneId);
+        syncActivePaneUI(paneId);
         onReRender();
         break;
       }
@@ -856,7 +979,9 @@ export function attachViewSplitDomListeners(store, onReRender) {
       }
 
       case 'open-url-modal': {
-        const paneId = parseInt(btn.dataset.paneId, 10);
+        const paneId = parseInt(btn.dataset.paneId, 10) || store.activePaneId;
+        store.setActivePane(paneId);
+        syncActivePaneUI(paneId);
         store.openUrlModal(paneId);
         onReRender();
         loadDriveFiles();
@@ -942,26 +1067,42 @@ export function attachViewSplitDomListeners(store, onReRender) {
   };
 
   // ─── 10. Global Paste Event (Ctrl+V) ───
+  let lastGlobalPasteTs = 0;
   const onGlobalPaste = async (e) => {
-    // Skip if typing in an input
-    if (e.target.matches('input, textarea')) return;
+    // Skip if typing in an input or editable field
+    if (e.target && (e.target.matches?.('input, textarea') || e.target.isContentEditable)) return;
 
+    // Deduplicate rapid dual events from window & document
+    const now = Date.now();
+    if (now - lastGlobalPasteTs < 300) return;
+
+    let imageFile = null;
+
+    // A. Check clipboardData.items
     const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const file = items[i].getAsFile();
-        if (file) {
-          e.preventDefault();
-          const visibleCount = store.getVisiblePaneCount();
-          const targetId = (store.activePaneId >= 1 && store.activePaneId <= visibleCount)
-            ? store.activePaneId
-            : 1;
-          await loadFileIntoPane(file, targetId);
-          return;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          imageFile = items[i].getAsFile();
+          if (imageFile) break;
         }
       }
+    }
+
+    // B. Fallback: check clipboardData.files (e.g. copied from file explorer or browser image)
+    if (!imageFile && e.clipboardData?.files) {
+      const files = Array.from(e.clipboardData.files);
+      imageFile = files.find((f) => f.type && f.type.startsWith('image/')) || null;
+    }
+
+    if (imageFile) {
+      e.preventDefault();
+      lastGlobalPasteTs = now;
+      const visibleCount = store.getVisiblePaneCount();
+      const targetId = (store.activePaneId >= 1 && store.activePaneId <= visibleCount)
+        ? store.activePaneId
+        : 1;
+      await loadFileIntoPane(imageFile, targetId, { name: imageFile.name || 'Ảnh đã dán' });
     }
   };
 
@@ -1078,15 +1219,13 @@ export function attachViewSplitDomListeners(store, onReRender) {
   window.addEventListener('dragover', onDragOver);
   window.addEventListener('drop', onDrop);
   window.addEventListener('paste', onGlobalPaste);
+  document.addEventListener('paste', onGlobalPaste);
   window.addEventListener('keydown', onKeyDown);
 
   // Return cleanup function
   return () => {
     isAlive = false;
     if (rafId) cancelAnimationFrame(rafId);
-
-    activeBlobUrls.forEach((url) => URL.revokeObjectURL(url));
-    activeBlobUrls.clear();
 
     window.removeEventListener('wheel', onWheel);
     window.removeEventListener('mousedown', onMouseDown);
@@ -1121,6 +1260,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
     window.removeEventListener('dragover', onDragOver);
     window.removeEventListener('drop', onDrop);
     window.removeEventListener('paste', onGlobalPaste);
+    document.removeEventListener('paste', onGlobalPaste);
     window.removeEventListener('keydown', onKeyDown);
   };
 }

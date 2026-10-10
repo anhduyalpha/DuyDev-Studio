@@ -1,16 +1,34 @@
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
   <title>DuyDev Studio - Utility Hub</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#09090B">
+  <meta name="theme-color" content="#F4F4F6">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DuyDev Studio">
   <meta name="description" content="Personal Utility Hub & File Processing Suite">
+
+  <!-- Immediate Theme Initialization (Default Light Mode with Zero-Flash Restoration) -->
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('ds_theme');
+        if (t === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', '#09090B');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      } catch (_) {}
+    })();
+  </script>
   
   <!-- Manifest & Icons -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -95,9 +113,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=22.2">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=22.2">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=22.2">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=22.3">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=22.3">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=22.3">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -368,7 +386,7 @@
   <script src="src/vendor/qr-code-styling.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=22.2"></script>
+  <script type="module" src="src/app.js?v=22.3"></script>
 </body>
 </html>
 

@@ -173,7 +173,8 @@ class StudocuManager {
       const cvs = document.getElementById('thinkingOrbCanvas');
       if (cvs && window.ThinkingOrbs) {
         this.stopThinkingOrbs();
-        this.orbInstance = window.ThinkingOrbs.createThinkingOrb(cvs, { state: 'working', size: 20, isDark: true, speed: 1.25 });
+        const isDark = document.documentElement.classList.contains('dark');
+        this.orbInstance = window.ThinkingOrbs.createThinkingOrb(cvs, { state: 'working', size: 20, isDark, speed: 1.25 });
       }
     });
   }

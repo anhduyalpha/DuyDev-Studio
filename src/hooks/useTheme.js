@@ -4,7 +4,7 @@
 
 export function getStoredTheme() {
   const saved = localStorage.getItem('ds_theme');
-  return saved === 'light' ? 'light' : 'dark';
+  return saved === 'dark' ? 'dark' : 'light';
 }
 
 export function updateThemeUI(theme) {
@@ -14,22 +14,23 @@ export function updateThemeUI(theme) {
   const btnHeader = document.getElementById('btnThemeToggle');
   if (btnHeader) {
     btnHeader.innerHTML = isDark
-      ? '<i data-lucide="sun" class="w-4 h-4"></i>'
-      : '<i data-lucide="moon" class="w-4 h-4"></i>';
-    btnHeader.title = isDark ? 'Chế độ sáng' : 'Chế độ tối';
+      ? '<i data-lucide="sun" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>'
+      : '<i data-lucide="moon" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>';
+    btnHeader.title = isDark ? 'Giao diện sáng' : 'Giao diện tối';
+    btnHeader.setAttribute('aria-label', isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối');
   }
 
   // 2. Settings page theme toggle button
   const btnServer = document.getElementById('btnServerThemeToggle');
   if (btnServer) {
     btnServer.innerHTML = isDark
-      ? '<i data-lucide="sun" class="w-4 h-4"></i> <span>Chế độ sáng</span>'
-      : '<i data-lucide="moon" class="w-4 h-4"></i> <span>Chế độ tối</span>';
+      ? '<i data-lucide="sun" class="w-4 h-4"></i> <span>Chuyển sang giao diện sáng</span>'
+      : '<i data-lucide="moon" class="w-4 h-4"></i> <span>Chuyển sang giao diện tối</span>';
   }
 
   const statusText = document.getElementById('serverThemeStatus');
   if (statusText) {
-    statusText.textContent = isDark ? 'Chế độ tối' : 'Chế độ sáng';
+    statusText.textContent = isDark ? 'Giao diện tối' : 'Giao diện sáng';
   }
 
   // 3. Refresh Lucide icons if available

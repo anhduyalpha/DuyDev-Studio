@@ -694,5 +694,63 @@ describe('ViewSplit Auto-Advancement & Click-To-Select', () => {
       expect(html1).toContain('data-pane-id="1"');
       expect(html1).not.toContain('data-pane-id="2"');
     });
+
+    it('renderViewSplitPane includes data-action="select-pane" on outer container for robust click delegation', () => {
+      const pane = {
+        id: 2,
+        title: 'Ảnh B',
+        image: null,
+        name: '',
+        width: 0,
+        height: 0,
+        zoom: 1.0
+      };
+
+      const html = renderViewSplitPane(pane as any, false, 'bilinear');
+      expect(html).toContain('data-action="select-pane"');
+      expect(html).toContain('data-pane-id="2"');
+      expect(html).toContain('viewsplit-pane-dot');
+      expect(html).toContain('viewsplit-pane-badge');
+    });
+
+    it('renderViewSplitSliderOverlay includes viewsplit-overlay-slot and badge containers on both slots', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SLIDER);
+      store.activePaneId = 2;
+
+      const html = renderViewSplitSliderOverlay(store);
+      expect(html).toContain('viewsplit-overlay-slot');
+      expect(html).toContain('viewsplit-overlay-badge-1');
+      expect(html).toContain('viewsplit-overlay-badge-2');
+    });
+
+    it('simulates full two-pane ingestion sequence: auto-advances from Box 1 to Box 2 and cycles back to Box 1', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H); // 2 panes: Box A (1) and Box B (2)
+
+      // Initial state: Box 1 active, both empty
+      expect(store.activePaneId).toBe(1);
+      expect(store.panes[0].image).toBeNull();
+      expect(store.panes[1].image).toBeNull();
+
+      // Step 1: User pastes/loads image into Box 1
+      store.panes[0].image = { width: 1920, height: 1080 } as any;
+      const nextAfter1 = store.getNextTargetPaneId(1);
+      expect(nextAfter1).toBe(2);
+      store.setActivePane(nextAfter1);
+      expect(store.activePaneId).toBe(2);
+
+      // Step 2: User pastes/loads image into Box 2
+      store.panes[1].image = { width: 1920, height: 1080 } as any;
+      const nextAfter2 = store.getNextTargetPaneId(2);
+      expect(nextAfter2).toBe(1);
+      store.setActivePane(nextAfter2);
+      expect(store.activePaneId).toBe(1);
+
+      // Step 3: User manually clicks Box 2 to switch back
+      store.setActivePane(2);
+      expect(store.activePaneId).toBe(2);
+    });
   });
 });
+
