@@ -1,19 +1,19 @@
-# DuyDev Studio - Dual-Mode Tool Icon System
+# DuyDev Studio - Apple-Grade Dual-Mode Tool Icon System
 
-> **Tài liệu tham khảo nhanh và Triết lý thiết kế bộ Icon công cụ độc quyền của DuyDev Studio.**  
-> Chi tiết chuẩn kiến thức: Xem thêm [KI-CON-007](knowledge-base/KI-CON-007-tool-icon-design-philosophy.md).
+> **Tài liệu tham khảo nhanh & Triết lý thiết kế bộ Icon công cụ chuẩn Apple (macOS Sequoia / iOS 18 / visionOS).**  
+> Chi tiết chuẩn kiến thức: Xem thêm [KI-CON-002](knowledge-base/KI-CON-002-tool-icon-design-philosophy.md).
 
 ---
 
 ## 1. Tổng Quan Kiến Trúc
 
-Hệ thống icon của DuyDev Studio được đặt tại [`src/components/common/ToolIcons.js`](../src/components/common/ToolIcons.js) và được tích hợp trực tiếp vào thẻ [`ToolCard.js`](../src/components/dashboard/ToolCard.js).
+Hệ thống icon của DuyDev Studio được đặt tại [`src/components/common/ToolIcons.js`](../src/components/common/ToolIcons.js) và được nhúng trực tiếp vào thẻ [`ToolCard.js`](../src/components/dashboard/ToolCard.js).
 
-Mỗi icon là một SVG chuẩn hóa trên lưới toạ độ **24×24**, tự động chuyển đổi tương thích giữa **Light Mode** và **Dark Mode** thông qua 3 tầng chiều sâu:
+Mỗi icon là một SVG chuẩn hóa trên lưới toạ độ **24×24**, tự động chuyển đổi tương thích giữa **Light Mode** và **Dark Mode** thông qua 3 tầng chiều sâu vật lý:
 
-1. **Lớp 1 (Base Substrate)**: Mặt phẳng nền bán trong suốt (`fill-{accent}-500/10 dark:fill-{accent}-400/15`).
-2. **Lớp 2 (Structural Anatomy)**: Bộ khung cơ học nét vẽ `1.6px` (`stroke-zinc-700 dark:stroke-zinc-200`).
-3. **Lớp 3 (Chromatic Engine Spark)**: Điểm nhấn động cơ mang màu sắc thương hiệu nét vẽ `1.8px-2.0px` (`stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]`).
+1. **Tầng 1 (Substrate Base Plate)**: Mặt phẳng đế nền nhận ánh sáng 135° với dải gradient mờ nhẹ (`10%-25%` opacity).
+2. **Tầng 2 (Structural Titanium/Glass)**: Khung kim loại / kính mờ bo tròn chuẩn Apple nét vẽ `1.5px - 1.6px` (`stroke-zinc-700/80` trong Light Mode, `stroke-zinc-300` trong Dark Mode).
+3. **Tầng 3 (Specular Engine Gem)**: Linh kiện hội tụ quang học đa diện mang màu sắc thương hiệu (`--accent` và `--accent-contrast`), có điểm chói sáng (optical glints) và viền phản xạ sắc sảo.
 
 ---
 
@@ -36,7 +36,7 @@ Mỗi icon là một SVG chuẩn hóa trên lưới toạ độ **24×24**, tự
 ```javascript
 import { renderToolIcon } from '../common/ToolIcons.js';
 
-// Tự động lấy SVG độc quyền của tool, hoặc fallback về icon Lucide nếu chưa có
+// Tự động render SVG độc quyền của tool, hoặc fallback về icon Lucide nếu chưa có
 const iconHtml = renderToolIcon(tool.id, tool.icon, 'w-6 h-6 sm:w-6.5 sm:h-6.5');
 ```
 
@@ -49,19 +49,21 @@ Khi tạo module mới trong [`src/components/common/ToolIcons.js`](../src/compo
 ```javascript
 '{tool-id}': (className = 'w-6 h-6') => `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
-    <!-- Layer 1: Nền bóng thể (Base Substrate) -->
-    <rect x="4" y="4" width="16" height="16" rx="2.5" 
-          class="fill-indigo-500/10 dark:fill-indigo-400/15 stroke-zinc-400/20 dark:stroke-white/10 transition-colors duration-200" stroke-width="1.2" />
+    <defs>
+      <linearGradient id="ds-apple-{id}-base" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22" />
+        <stop offset="100%" stop-color="var(--accent-contrast)" stop-opacity="0.06" />
+      </linearGradient>
+    </defs>
 
-    <!-- Layer 2: Kết cấu chính (Structural Anatomy) -->
-    <path d="M7 9h10 M7 13h7" 
-          class="stroke-zinc-700 dark:stroke-zinc-200 transition-colors duration-200" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Tầng 1: Đế nền bo góc mềm -->
+    <rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="url(#ds-apple-{id}-base)" class="stroke-zinc-400/30 dark:stroke-white/10" stroke-width="1.2" />
 
-    <!-- Layer 3: Điểm nhấn động cơ (Chromatic Engine Spark) -->
-    <circle cx="16" cy="15" r="2" 
-            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] transition-colors duration-200" />
-    <path d="M14 17l4-4" 
-          class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200" stroke-width="1.8" stroke-linecap="round" />
+    <!-- Tầng 2: Kết cấu cơ học chính -->
+    <path d="M..." class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Tầng 3: Linh kiện hội tụ quang học -->
+    <circle cx="12" cy="12" r="2.5" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900" stroke-width="1" />
   </svg>
 `
 ```
