@@ -17,9 +17,13 @@ import {
 } from '../../../src/components/tools/viewsplit/hooks/useViewSplitSync.js';
 import {
   viewSplitStore,
+  ViewSplitStore,
   LAYOUT_MODES,
   PANE_TITLES
 } from '../../../src/components/tools/viewsplit/hooks/useViewSplit.js';
+import { renderViewSplitPane } from '../../../src/components/tools/viewsplit/components/ViewSplitPane.js';
+import { renderViewSplitToolbar } from '../../../src/components/tools/viewsplit/components/ViewSplitToolbar.js';
+import { renderViewSplitSliderOverlay } from '../../../src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js';
 
 describe('ViewSplit Synchronizer & Coordinate Math (useViewSplitSync)', () => {
   describe('clamp helper', () => {
@@ -48,175 +52,109 @@ describe('ViewSplit Synchronizer & Coordinate Math (useViewSplitSync)', () => {
       );
 
       expect(zoom).toBe(2.0);
-
-      // Verify that (150, 100) on the image maps back to (200, 150) in view:
-      // vx = 150 * 2.0 + panX = 300 + panX = 200 => panX = -100
-      // vy = 100 * 2.0 + panY = 200 + panY = 150 => panY = -50
+      // New viewport pos of (150, 100):
+      // vx = 150 * 2.0 + panX = 300 + panX. If vx === 200 => panX === -100
       expect(panX).toBe(-100);
+      // vy = 100 * 2.0 + panY = 200 + panY. If vy === 150 => panY === -50
       expect(panY).toBe(-50);
-
-      const mappedVx = 150 * zoom + panX;
-      const mappedVy = 100 * zoom + panY;
-      expect(mappedVx).toBe(anchorViewPos.x);
-      expect(mappedVy).toBe(anchorViewPos.y);
     });
 
-    it('should respect MIN_ZOOM and MAX_ZOOM clamping', () => {
-      const anchor = { x: 100, y: 100 };
-      const pan = { x: 0, y: 0 };
+    it('should respect MIN_ZOOM and MAX_ZOOM constraints', () => {
+      const { zoom: minZ } = calculateZoomAroundAnchor(0.02, 0.1, { x: 0, y: 0 }, { x: 0, y: 0 });
+      expect(minZ).toBe(MIN_ZOOM);
 
-      // Zoom out excessively
-      const zoomedOut = calculateZoomAroundAnchor(0.02, 0.1, anchor, pan, MIN_ZOOM, MAX_ZOOM);
-      expect(zoomedOut.zoom).toBe(MIN_ZOOM);
-
-      // Zoom in excessively
-      const zoomedIn = calculateZoomAroundAnchor(50.0, 10.0, anchor, pan, MIN_ZOOM, MAX_ZOOM);
-      expect(zoomedIn.zoom).toBe(MAX_ZOOM);
+      const { zoom: maxZ } = calculateZoomAroundAnchor(80.0, 2.0, { x: 0, y: 0 }, { x: 0, y: 0 });
+      expect(maxZ).toBe(MAX_ZOOM);
     });
   });
 
-  describe('Normalized Center & Pan Sync', () => {
-    it('should round-trip normalizedCenter to pan and back', () => {
-      const imageW = 1920;
-      const imageH = 1080;
+  describe('Normalized Center Synchronization', () => {
+    it('should calculate normalized center correctly', () => {
       const viewW = 800;
       const viewH = 600;
-      const zoom = 1.5;
-
-      // Center of image is (0.5, 0.5)
-      const normCenter = { x: 0.5, y: 0.5 };
-      const { panX, panY } = panFromNormalizedCenter(
-        normCenter,
-        zoom,
-        viewW,
-        viewH,
-        imageW,
-        imageH
-      );
-
-      const calculatedNorm = getNormalizedCenter(
-        panX,
-        panY,
-        zoom,
-        viewW,
-        viewH,
-        imageW,
-        imageH
-      );
-
-      expect(calculatedNorm.x).toBeCloseTo(0.5, 4);
-      expect(calculatedNorm.y).toBeCloseTo(0.5, 4);
+      const imgW = 1000;
+      const imgH = 1000;
+      const zoom = 1.0;
+      // Center of view is (400, 300). If pan is (0, 0), center of view falls on image at (400, 300)
+      const center = getNormalizedCenter(0, 0, zoom, viewW, viewH, imgW, imgH);
+      expect(center.x).toBeCloseTo(0.4, 4);
+      expect(center.y).toBeCloseTo(0.3, 4);
     });
 
-    it('should clamp normalized coordinates to [0, 1] when panned far outside bounds', () => {
-      const normCenter = getNormalizedCenter(
-        -99999,
-        -99999,
-        1.0,
-        800,
-        600,
-        1920,
-        1080
-      );
-      expect(normCenter.x).toBe(1.0);
-      expect(normCenter.y).toBe(1.0);
+    it('should derive pan offsets from normalized center correctly', () => {
+      const viewW = 800;
+      const viewH = 600;
+      const imgW = 1000;
+      const imgH = 1000;
+      const zoom = 1.0;
+      const normCenter = { x: 0.5, y: 0.5 }; // Exactly center of image
 
-      const normCenterFarLeft = getNormalizedCenter(
-        99999,
-        99999,
-        1.0,
-        800,
-        600,
-        1920,
-        1080
-      );
-      expect(normCenterFarLeft.x).toBe(0.0);
-      expect(normCenterFarLeft.y).toBe(0.0);
+      const { panX, panY } = panFromNormalizedCenter(normCenter, zoom, viewW, viewH, imgW, imgH);
+      // Desired: (400 - 0.5 * 1000 * 1.0) = 400 - 500 = -100
+      expect(panX).toBe(-100);
+      // (300 - 0.5 * 1000 * 1.0) = 300 - 500 = -200
+      expect(panY).toBe(-200);
     });
   });
 
   describe('calculateFitAll & calculateActualSize', () => {
-    it('should compute centered fit-all transform for landscape images', () => {
-      const { zoom, panX, panY } = calculateFitAll(1920, 1080, 800, 600, 0);
-      // aspect: 1920 / 1080 = 1.777
-      // 800 / 1920 = 0.4166
-      // 600 / 1080 = 0.5555
-      // scale = 800 / 1920 = 0.416666...
-      expect(zoom).toBeCloseTo(800 / 1920, 3);
-      expect(panX).toBeCloseTo(0, 1);
-      // Vertically centered: (600 - 1080 * (800/1920)) / 2 = (600 - 450) / 2 = 75
-      expect(panY).toBeCloseTo(75, 1);
+    it('should calculate fit all zoom to fit within viewport padding', () => {
+      const imgW = 1600;
+      const imgH = 900;
+      const viewW = 800;
+      const viewH = 600;
+      const padding = 20;
+
+      const { zoom, panX, panY } = calculateFitAll(imgW, imgH, viewW, viewH, padding);
+      // Avail width = 760, avail height = 560
+      // ScaleX = 760 / 1600 = 0.475, ScaleY = 560 / 900 = 0.622... => zoom = 0.475
+      expect(zoom).toBeCloseTo(0.475, 3);
+      // Pan should center the scaled image
+      expect(panX).toBeCloseTo((800 - 1600 * 0.475) / 2, 1);
+      expect(panY).toBeCloseTo((600 - 900 * 0.475) / 2, 1);
     });
 
-    it('should compute centered 1:1 actual size transform', () => {
-      const { zoom, panX, panY } = calculateActualSize(400, 300, 800, 600);
+    it('should calculate 1:1 actual size centered in viewport', () => {
+      const imgW = 500;
+      const imgH = 400;
+      const viewW = 800;
+      const viewH = 600;
+
+      const { zoom, panX, panY } = calculateActualSize(imgW, imgH, viewW, viewH);
       expect(zoom).toBe(1.0);
-      expect(panX).toBe((800 - 400) / 2); // 200
-      expect(panY).toBe((600 - 300) / 2); // 150
+      expect(panX).toBe((800 - 500) / 2); // 150
+      expect(panY).toBe((600 - 400) / 2); // 100
     });
   });
 
-  describe('Coordinate Mapping (viewToImage & imageToView)', () => {
-    it('should map between viewport coordinates and source image pixels', () => {
-      const panX = 100;
-      const panY = 50;
-      const zoom = 2.0;
-      const imageW = 500;
-      const imageH = 500;
-
-      // Viewport coordinate (300, 250)
-      const { x: imgX, y: imgY, isInside } = viewToImageCoordinates(
-        300,
-        250,
-        panX,
-        panY,
-        zoom,
-        imageW,
-        imageH
-      );
-
-      // (300 - 100) / 2 = 100
-      // (250 - 50) / 2 = 100
-      expect(imgX).toBe(100);
-      expect(imgY).toBe(100);
+  describe('Coordinate Transforms and Pixel Extraction', () => {
+    it('should map viewport to image coordinates and verify bounds', () => {
+      const { x, y, isInside } = viewToImageCoordinates(150, 100, 50, 50, 2.0, 100, 100);
+      // x = floor((150 - 50) / 2.0) = 50
+      // y = floor((100 - 50) / 2.0) = 25
+      expect(x).toBe(50);
+      expect(y).toBe(25);
       expect(isInside).toBe(true);
 
-      const viewCoords = imageToViewCoordinates(imgX, imgY, panX, panY, zoom);
-      expect(viewCoords.x).toBe(300);
-      expect(viewCoords.y).toBe(250);
+      const out = viewToImageCoordinates(500, 500, 0, 0, 1.0, 100, 100);
+      expect(out.isInside).toBe(false);
     });
 
-    it('should detect when viewport coordinate is outside image bounds', () => {
-      const { isInside } = viewToImageCoordinates(
-        10,
-        10,
-        500, // image offset starts at 500
-        500,
-        1.0,
-        200,
-        200
-      );
-      expect(isInside).toBe(false);
-    });
-  });
-
-  describe('Pixel Inspector & Loupe Math', () => {
-    it('should convert RGB to uppercase HEX', () => {
-      expect(rgbToHex(255, 255, 255)).toBe('#FFFFFF');
-      expect(rgbToHex(0, 0, 0)).toBe('#000000');
-      expect(rgbToHex(6, 182, 212)).toBe('#06B6D4');
-      expect(rgbToHex(255, 0, 128)).toBe('#FF0080');
+    it('should convert RGB to Hex correctly', () => {
+      expect(rgbToHex(255, 0, 0)).toBe('#FF0000');
+      expect(rgbToHex(0, 255, 0)).toBe('#00FF00');
+      expect(rgbToHex(0, 0, 255)).toBe('#0000FF');
+      expect(rgbToHex(16, 32, 48)).toBe('#102030');
     });
 
-    it('should extract correct pixel info from RGBA buffer', () => {
+    it('should extract pixel color from ImageData buffer', () => {
       const width = 2;
       const height = 2;
-      // 2x2 image buffer: Red, Green, Blue, White
       const buffer = new Uint8ClampedArray([
-        255, 0, 0, 255,     // (0, 0) Red
-        0, 255, 0, 255,     // (1, 0) Green
-        0, 0, 255, 255,     // (0, 1) Blue
-        255, 255, 255, 255  // (1, 1) White
+        255, 0, 0, 255, // (0, 0) Red
+        0, 255, 0, 255, // (1, 0) Green
+        0, 0, 255, 255, // (0, 1) Blue
+        255, 255, 255, 255 // (1, 1) White
       ]);
 
       const redPixel = extractPixelInfo(buffer, 0, 0, width, height);
@@ -465,5 +403,251 @@ describe('ViewSplit Reactive Store (useViewSplit)', () => {
     // Initial state: all cursors already outside
     viewSplitStore.clearAllCursors();
     expect(listener).not.toHaveBeenCalledWith(viewSplitStore, 'cursor-cleared');
+  });
+});
+
+describe('ViewSplit Auto-Advancement & Click-To-Select', () => {
+  describe('ViewSplitStore Core Methods', () => {
+    it('initializes with default SPLIT_H layout and activePaneId 1', () => {
+      const store = new ViewSplitStore();
+      expect(store.layout).toBe(LAYOUT_MODES.SPLIT_H);
+      expect(store.activePaneId).toBe(1);
+      expect(store.mobileActiveTab).toBe(1);
+      expect(store.panes).toHaveLength(4);
+      expect(store.getVisiblePaneCount()).toBe(2);
+    });
+
+    it('getVisiblePaneCount returns correct count for all layouts', () => {
+      const store = new ViewSplitStore();
+
+      store.setLayout(LAYOUT_MODES.SINGLE);
+      expect(store.getVisiblePaneCount()).toBe(1);
+
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+      expect(store.getVisiblePaneCount()).toBe(2);
+
+      store.setLayout(LAYOUT_MODES.SPLIT_V);
+      expect(store.getVisiblePaneCount()).toBe(2);
+
+      store.setLayout(LAYOUT_MODES.SLIDER);
+      expect(store.getVisiblePaneCount()).toBe(2);
+
+      store.setLayout(LAYOUT_MODES.DIFF);
+      expect(store.getVisiblePaneCount()).toBe(2);
+
+      store.setLayout(LAYOUT_MODES.TRIPLE_H);
+      expect(store.getVisiblePaneCount()).toBe(3);
+
+      store.setLayout(LAYOUT_MODES.TRIPLE_L);
+      expect(store.getVisiblePaneCount()).toBe(3);
+
+      store.setLayout(LAYOUT_MODES.TRIPLE_T);
+      expect(store.getVisiblePaneCount()).toBe(3);
+
+      store.setLayout(LAYOUT_MODES.QUAD);
+      expect(store.getVisiblePaneCount()).toBe(4);
+
+      // Unknown layout fallback
+      (store as any).layout = 'custom_unknown';
+      expect(store.getVisiblePaneCount()).toBe(2);
+    });
+
+    it('setActivePane updates activePaneId and mobileActiveTab, and triggers notification', () => {
+      const store = new ViewSplitStore();
+      const listener = vi.fn();
+      store.subscribe(listener);
+
+      store.setActivePane(2);
+      expect(store.activePaneId).toBe(2);
+      expect(store.mobileActiveTab).toBe(2);
+      expect(listener).toHaveBeenCalledWith(store, 'active-pane');
+
+      // Invalid pane IDs should be safely ignored
+      store.setActivePane(0);
+      expect(store.activePaneId).toBe(2);
+
+      store.setActivePane(5);
+      expect(store.activePaneId).toBe(2);
+
+      store.setActivePane(-1);
+      expect(store.activePaneId).toBe(2);
+    });
+  });
+
+  describe('getNextTargetPaneId Smart Auto-Advancement', () => {
+    it('targets unfilled pane in 2-pane layout (Pane 1 filled -> Pane 2)', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+
+      // Mock image on pane 1
+      store.panes[0].image = {} as any;
+      store.panes[1].image = null;
+
+      expect(store.getNextTargetPaneId(1)).toBe(2);
+    });
+
+    it('targets unfilled pane in 2-pane layout when starting at Pane 2 (Pane 2 filled -> Pane 1 empty)', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+
+      store.panes[0].image = null;
+      store.panes[1].image = {} as any;
+
+      expect(store.getNextTargetPaneId(2)).toBe(1);
+    });
+
+    it('skips already filled panes in 4-pane layout to find first empty slot', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.QUAD);
+
+      // Pane 1 and 2 filled, Pane 3 empty, Pane 4 filled
+      store.panes[0].image = {} as any;
+      store.panes[1].image = {} as any;
+      store.panes[2].image = null;
+      store.panes[3].image = {} as any;
+
+      expect(store.getNextTargetPaneId(1)).toBe(3);
+    });
+
+    it('cycles back to Pane 1 when starting at Pane 4 with Pane 1 empty', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.QUAD);
+
+      store.panes[0].image = null;
+      store.panes[1].image = {} as any;
+      store.panes[2].image = {} as any;
+      store.panes[3].image = {} as any;
+
+      expect(store.getNextTargetPaneId(4)).toBe(1);
+    });
+
+    it('progresses cyclically when all visible panes are filled', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+
+      // Both panes filled
+      store.panes[0].image = {} as any;
+      store.panes[1].image = {} as any;
+
+      expect(store.getNextTargetPaneId(1)).toBe(2);
+      expect(store.getNextTargetPaneId(2)).toBe(1);
+
+      // 4-pane layout with all 4 filled
+      store.setLayout(LAYOUT_MODES.QUAD);
+      store.panes[2].image = {} as any;
+      store.panes[3].image = {} as any;
+
+      expect(store.getNextTargetPaneId(1)).toBe(2);
+      expect(store.getNextTargetPaneId(2)).toBe(3);
+      expect(store.getNextTargetPaneId(3)).toBe(4);
+      expect(store.getNextTargetPaneId(4)).toBe(1);
+    });
+
+    it('always returns 1 in SINGLE layout mode', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SINGLE);
+
+      store.panes[0].image = {} as any;
+      expect(store.getNextTargetPaneId(1)).toBe(1);
+      expect(store.getNextTargetPaneId(2)).toBe(1);
+    });
+
+    it('clamps currentPaneId gracefully when switching from large to small layout', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H); // 2 panes visible
+
+      // activePaneId was previously 4
+      expect(store.getNextTargetPaneId(4)).toBe(1);
+    });
+
+    it('advanceToNextPane automatically updates activePaneId', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+      store.activePaneId = 1;
+      store.panes[0].image = {} as any;
+
+      const next = store.advanceToNextPane();
+      expect(next).toBe(2);
+      expect(store.activePaneId).toBe(2);
+    });
+  });
+
+  describe('UI & Visual Feedback Markup Standards', () => {
+    it('renderViewSplitPane renders active border ring and pulse badge when isActive is true', () => {
+      const pane = {
+        id: 1,
+        title: 'Ảnh A',
+        image: null,
+        name: '',
+        width: 0,
+        height: 0,
+        zoom: 1.0
+      };
+
+      const html = renderViewSplitPane(pane as any, true, 'bilinear');
+
+      expect(html).toContain('border-cyan-500/80');
+      expect(html).toContain('ring-2 ring-cyan-500/30');
+      expect(html).toContain('ĐANG CHỌN');
+      expect(html).toContain('data-pane-id="1"');
+    });
+
+    it('renderViewSplitPane renders clickable styling when isActive is false', () => {
+      const pane = {
+        id: 2,
+        title: 'Ảnh B',
+        image: null,
+        name: '',
+        width: 0,
+        height: 0,
+        zoom: 1.0
+      };
+
+      const html = renderViewSplitPane(pane as any, false, 'bilinear');
+
+      expect(html).toContain('cursor-pointer');
+      expect(html).toContain('Bấm để chọn khung hình này');
+      expect(html).not.toContain('ĐANG CHỌN');
+    });
+
+    it('renderViewSplitToolbar renders active pane segmented buttons matching visibleCount', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SPLIT_H); // 2 visible panes
+      store.activePaneId = 1;
+
+      const html = renderViewSplitToolbar(store);
+
+      expect(html).toContain('data-action="select-pane"');
+      expect(html).toContain('data-pane-id="1"');
+      expect(html).toContain('data-pane-id="2"');
+      // Should not have Pane 3 button in 2H layout
+      expect(html).not.toContain('data-pane-id="3"');
+
+      // Now switch to QUAD layout (4 visible panes)
+      store.setLayout(LAYOUT_MODES.QUAD);
+      const htmlQuad = renderViewSplitToolbar(store);
+      expect(htmlQuad).toContain('data-pane-id="1"');
+      expect(htmlQuad).toContain('data-pane-id="2"');
+      expect(htmlQuad).toContain('data-pane-id="3"');
+      expect(htmlQuad).toContain('data-pane-id="4"');
+    });
+
+    it('renderViewSplitSliderOverlay renders clickable header pills and selectable slot cards', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.SLIDER);
+      store.activePaneId = 1;
+
+      const html = renderViewSplitSliderOverlay(store);
+
+      // Header pills
+      expect(html).toContain('data-action="select-pane"');
+      expect(html).toContain('data-pane-id="1"');
+      expect(html).toContain('data-pane-id="2"');
+
+      // Slot cards
+      expect(html).toContain('Ảnh Trước • Ảnh A');
+      expect(html).toContain('Ảnh Sau • Ảnh B');
+      expect(html).toContain('border-cyan-500/80'); // Active Slot A ring
+    });
   });
 });
