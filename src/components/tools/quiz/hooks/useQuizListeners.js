@@ -11,7 +11,8 @@ import {
   renderQuizHistoryList,
   setQuizHistoryTab,
   getQuizHistoryTab,
-  toggleQuizDropbox
+  toggleQuizDropbox,
+  toggleQuizHistoryBox
 } from '../components/QuizHistoryList.js';
 import {
   moveQuizPairToTrash,
@@ -544,6 +545,15 @@ export function attachQuizListeners() {
 
   // Attach History & Trash Handlers
   function attachHistoryHandlers() {
+    // 0. Master Dropbox Box Toggle
+    const btnToggleMasterBox = document.getElementById('btnToggleQuizHistoryBox');
+    if (btnToggleMasterBox) {
+      btnToggleMasterBox.onclick = () => {
+        toggleQuizHistoryBox();
+        renderAndBindHistory();
+      };
+    }
+
     // 1. Tab Switching (Lịch sử vs Thùng rác)
     const btnTabHistory = document.getElementById('btnQuizTabHistory');
     if (btnTabHistory) {

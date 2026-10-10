@@ -13,6 +13,15 @@ import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { updateHeaderTrashIndicator } from '../../../layout/Header.js';
 
 let activePdfHistoryTab = 'history';
+let isPdfHistoryOpen = false;
+
+export function setPdfHistoryOpen(open) {
+  isPdfHistoryOpen = open;
+}
+
+export function isPdfHistoryExpanded() {
+  return isPdfHistoryOpen;
+}
 
 /**
  * Maps PDF history item to operation metadata, icon, and semantic badge style.
@@ -84,147 +93,179 @@ export function renderPdfHistoryList() {
   const trashItems = getPdfTrashItems(10);
   const isTrash = activePdfHistoryTab === 'trash';
   const currentList = isTrash ? trashItems : historyItems;
+  const isOpen = isPdfHistoryOpen;
 
   return `
-    <div class="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-white/[0.07] p-4 sm:p-5 space-y-4 shadow-xs select-none">
-      <!-- Header with Segmented Tabs & Actions -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/[0.06]">
-        <div class="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] rounded-xl text-xs font-semibold">
-          <button type="button" id="btnPdfTabHistory"
-            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${!isTrash ? 'bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
-            <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
-            <span>Lịch sử</span>
-            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 font-bold">${historyItems.length}</span>
-          </button>
-          <button type="button" id="btnPdfTabTrash"
-            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${isTrash ? 'bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
-            <span>Thùng rác</span>
-            ${trashItems.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">${trashItems.length}</span>` : ''}
-          </button>
-        </div>
-
-        <div class="flex items-center gap-3 text-xs">
-          ${!isTrash ? `
-            ${historyItems.length > 0 ? `
-              <button id="btnClearPdfHistory" type="button" class="text-zinc-500 hover:text-red-500 dark:text-zinc-400 dark:hover:text-red-400 font-semibold transition cursor-pointer flex items-center gap-1">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                <span>Xóa tất cả</span>
-              </button>
-              <span class="text-zinc-300 dark:text-zinc-700">|</span>
-            ` : ''}
-            <a href="#history" class="text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white font-semibold transition flex items-center gap-1">
-              <span>Xem tất cả</span>
-              <i data-lucide="external-link" class="w-3 h-3"></i>
-            </a>
-          ` : `
-            ${trashItems.length > 0 ? `
-              <button id="btnRestoreAllPdfTrash" type="button" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold transition cursor-pointer flex items-center gap-1">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                <span>Khôi phục tất cả</span>
-              </button>
-              <span class="text-zinc-300 dark:text-zinc-700">|</span>
-              <button id="btnEmptyPdfTrash" type="button" class="text-red-500 hover:text-red-600 dark:text-red-400 font-semibold transition cursor-pointer flex items-center gap-1">
-                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                <span>Dọn sạch</span>
-              </button>
-            ` : `
-              <span class="text-zinc-400 dark:text-zinc-500 font-mono text-[11px]">Thùng rác trống</span>
-            `}
-          `}
-        </div>
-      </div>
-
-      <!-- Item Rows -->
-      ${currentList.length === 0 ? `
-        <div class="text-center py-8 space-y-2">
-          <div class="w-10 h-10 rounded-xl mx-auto flex items-center justify-center bg-zinc-100 dark:bg-white/[0.04] text-zinc-400">
-            <i data-lucide="${isTrash ? 'trash' : 'inbox'}" class="w-5 h-5"></i>
+    <div class="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-white/[0.07] overflow-hidden transition-all shadow-xs select-none">
+      <!-- Clickable Dropbox Header -->
+      <button type="button" id="btnTogglePdfHistory" class="w-full flex items-center justify-between p-4 sm:p-4.5 cursor-pointer select-none text-left hover:bg-zinc-50/70 dark:hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="layers" class="w-4 h-4"></i>
           </div>
-          <p class="text-xs font-mono text-zinc-400 dark:text-zinc-500">
-            ${isTrash ? 'Thùng rác PDF hiện đang trống' : 'Chưa có lịch sử xử lý tài liệu PDF'}
-          </p>
+          <div class="flex items-center gap-2 min-w-0 flex-wrap">
+            <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Lịch sử & Thùng rác PDF</span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              ${historyItems.length} mục
+            </span>
+            ${trashItems.length > 0 ? `
+              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                ${trashItems.length} trong thùng rác
+              </span>
+            ` : ''}
+          </div>
         </div>
-      ` : `
-        <div class="space-y-2.5">
-          ${currentList.map((item) => {
-            const time = item.timestamp || item.createdAt || Date.now();
-            const origSize = Number(item.originalSize || 0);
-            const resSize = Number(item.resultSize || item.size || 0);
-            const meta = getPdfOperationMeta(item);
-            const savedPct = Number(item.savedPct || 0);
-            const hasSavings = meta.isCompress && origSize > 0 && resSize > 0 && origSize > resSize;
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-xs text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline">
+            ${isOpen ? 'Thu gọn' : 'Xem lịch sử'}
+          </span>
+          <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 text-zinc-900 dark:text-zinc-100' : ''}">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </button>
 
-            return `
-              <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/60 dark:border-white/[0.06] hover:border-zinc-300 dark:hover:border-white/10 gap-3 transition">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                  <div class="w-9 h-9 rounded-xl ${meta.badgeClass} flex items-center justify-center shrink-0 shadow-2xs">
-                    <i data-lucide="${meta.icon}" class="w-4 h-4"></i>
+      <!-- Collapsible Body (Revealed on Click) -->
+      <div id="pdfHistoryBody" class="${isOpen ? 'block' : 'hidden'} border-t border-zinc-100 dark:border-white/[0.06] p-4 sm:p-5 space-y-4 bg-zinc-50/30 dark:bg-black/20">
+        <!-- Header with Segmented Tabs & Actions -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/[0.06]">
+          <div class="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] rounded-xl text-xs font-semibold">
+            <button type="button" id="btnPdfTabHistory"
+              class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${!isTrash ? 'bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Lịch sử</span>
+              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 font-bold">${historyItems.length}</span>
+            </button>
+            <button type="button" id="btnPdfTabTrash"
+              class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${isTrash ? 'bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
+              <span>Thùng rác</span>
+              ${trashItems.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold">${trashItems.length}</span>` : ''}
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3 text-xs">
+            ${!isTrash ? `
+              ${historyItems.length > 0 ? `
+                <button id="btnClearPdfHistory" type="button" class="text-zinc-500 hover:text-red-500 dark:text-zinc-400 dark:hover:text-red-400 font-semibold transition cursor-pointer flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Xóa tất cả</span>
+                </button>
+                <span class="text-zinc-300 dark:text-zinc-700">|</span>
+              ` : ''}
+              <a href="#history" class="text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white font-semibold transition flex items-center gap-1">
+                <span>Xem tất cả</span>
+                <i data-lucide="external-link" class="w-3 h-3"></i>
+              </a>
+            ` : `
+              ${trashItems.length > 0 ? `
+                <button id="btnRestoreAllPdfTrash" type="button" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold transition cursor-pointer flex items-center gap-1">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <span>Khôi phục tất cả</span>
+                </button>
+                <span class="text-zinc-300 dark:text-zinc-700">|</span>
+                <button id="btnEmptyPdfTrash" type="button" class="text-red-500 hover:text-red-600 dark:text-red-400 font-semibold transition cursor-pointer flex items-center gap-1">
+                  <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                  <span>Dọn sạch</span>
+                </button>
+              ` : `
+                <span class="text-zinc-400 dark:text-zinc-500 font-mono text-[11px]">Thùng rác trống</span>
+              `}
+            `}
+          </div>
+        </div>
+
+        <!-- Item Rows -->
+        ${currentList.length === 0 ? `
+          <div class="text-center py-8 space-y-2">
+            <div class="w-10 h-10 rounded-xl mx-auto flex items-center justify-center bg-zinc-100 dark:bg-white/[0.04] text-zinc-400">
+              <i data-lucide="${isTrash ? 'trash' : 'inbox'}" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs font-mono text-zinc-400 dark:text-zinc-500">
+              ${isTrash ? 'Thùng rác PDF hiện đang trống' : 'Chưa có lịch sử xử lý tài liệu PDF'}
+            </p>
+          </div>
+        ` : `
+          <div class="space-y-2.5">
+            ${currentList.map((item) => {
+              const time = item.timestamp || item.createdAt || Date.now();
+              const origSize = Number(item.originalSize || 0);
+              const resSize = Number(item.resultSize || item.size || 0);
+              const meta = getPdfOperationMeta(item);
+              const savedPct = Number(item.savedPct || 0);
+              const hasSavings = meta.isCompress && origSize > 0 && resSize > 0 && origSize > resSize;
+
+              return `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/60 dark:border-white/[0.06] hover:border-zinc-300 dark:hover:border-white/10 gap-3 transition">
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-9 h-9 rounded-xl ${meta.badgeClass} flex items-center justify-center shrink-0 shadow-2xs">
+                      <i data-lucide="${meta.icon}" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${meta.badgeClass}">
+                          ${meta.label}
+                        </span>
+                        <p class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate font-mono" title="${item.fileName || 'Tài liệu'}">
+                          ${item.fileName || 'Tài liệu PDF'}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-2 mt-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400 flex-wrap">
+                        ${hasSavings ? `
+                          <span>${formatBytes(origSize)} → <strong class="text-zinc-800 dark:text-zinc-200">${formatBytes(resSize)}</strong></span>
+                          <span class="px-1.5 py-0.2 rounded font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">-${savedPct || Math.round(((origSize - resSize) / origSize) * 100)}%</span>
+                        ` : `
+                          <span>${formatBytes(resSize || origSize)}</span>
+                        `}
+                        <span>•</span>
+                        <span>${isTrash ? `Đã xóa ${formatRelativeTime(item.deletedAt || time)}` : formatRelativeTime(time)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${meta.badgeClass}">
-                        ${meta.label}
-                      </span>
-                      <p class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate font-mono" title="${item.fileName || 'Tài liệu'}">
-                        ${item.fileName || 'Tài liệu PDF'}
-                      </p>
-                    </div>
-                    <div class="flex items-center gap-2 mt-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400 flex-wrap">
-                      ${hasSavings ? `
-                        <span>${formatBytes(origSize)} → <strong class="text-zinc-800 dark:text-zinc-200">${formatBytes(resSize)}</strong></span>
-                        <span class="px-1.5 py-0.2 rounded font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">-${savedPct || Math.round(((origSize - resSize) / origSize) * 100)}%</span>
-                      ` : `
-                        <span>${formatBytes(resSize || origSize)}</span>
-                      `}
-                      <span>•</span>
-                      <span>${isTrash ? `Đã xóa ${formatRelativeTime(item.deletedAt || time)}` : formatRelativeTime(time)}</span>
-                    </div>
+
+                  <div class="flex items-center gap-1 shrink-0">
+                    ${!isTrash ? `
+                      <button type="button" data-preview-pdf-id="${item.id}" title="Xem trước"
+                        class="btn-preview-pdf-history p-1.5 text-zinc-600 hover:text-amber-500 dark:text-zinc-400 dark:hover:text-amber-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button type="button" data-reuse-pdf-id="${item.id}" title="Xử lý tiếp"
+                        class="btn-reuse-pdf-history p-1.5 text-zinc-600 hover:text-indigo-500 dark:text-zinc-400 dark:hover:text-indigo-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <a href="${item.downloadUrl || '#'}" download="${item.fileName || 'document.pdf'}" title="Tải về"
+                        class="p-1.5 text-zinc-600 hover:text-emerald-500 dark:text-zinc-400 dark:hover:text-emerald-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition inline-flex items-center">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                      </a>
+                      <button type="button" data-copy-pdf-url="${item.downloadUrl || ''}" title="Sao chép link"
+                        class="btn-copy-pdf-history p-1.5 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button type="button" data-trash-pdf-id="${item.id}" title="Chuyển vào thùng rác"
+                        class="btn-trash-pdf-history p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition cursor-pointer">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    ` : `
+                      <button type="button" data-preview-pdf-id="${item.id}" title="Xem trước"
+                        class="btn-preview-pdf-history p-1.5 text-zinc-600 hover:text-amber-500 dark:text-zinc-400 dark:hover:text-amber-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button type="button" data-restore-pdf-id="${item.id}" title="Khôi phục"
+                        class="btn-restore-single-trash p-1.5 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition cursor-pointer">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button type="button" data-delete-pdf-id="${item.id}" title="Xóa vĩnh viễn"
+                        class="btn-delete-single-trash p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition cursor-pointer">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                      </button>
+                    `}
                   </div>
                 </div>
-
-                <div class="flex items-center gap-1 shrink-0">
-                  ${!isTrash ? `
-                    <button type="button" data-preview-pdf-id="${item.id}" title="Xem trước"
-                      class="btn-preview-pdf-history p-1.5 text-zinc-600 hover:text-amber-500 dark:text-zinc-400 dark:hover:text-amber-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
-                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button type="button" data-reuse-pdf-id="${item.id}" title="Xử lý tiếp"
-                      class="btn-reuse-pdf-history p-1.5 text-zinc-600 hover:text-indigo-500 dark:text-zinc-400 dark:hover:text-indigo-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
-                      <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <a href="${item.downloadUrl || '#'}" download="${item.fileName || 'document.pdf'}" title="Tải về"
-                      class="p-1.5 text-zinc-600 hover:text-emerald-500 dark:text-zinc-400 dark:hover:text-emerald-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition inline-flex items-center">
-                      <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                    </a>
-                    <button type="button" data-copy-pdf-url="${item.downloadUrl || ''}" title="Sao chép link"
-                      class="btn-copy-pdf-history p-1.5 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
-                      <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button type="button" data-trash-pdf-id="${item.id}" title="Chuyển vào thùng rác"
-                      class="btn-trash-pdf-history p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition cursor-pointer">
-                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                  ` : `
-                    <button type="button" data-preview-pdf-id="${item.id}" title="Xem trước"
-                      class="btn-preview-pdf-history p-1.5 text-zinc-600 hover:text-amber-500 dark:text-zinc-400 dark:hover:text-amber-400 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] rounded-lg transition cursor-pointer">
-                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button type="button" data-restore-pdf-id="${item.id}" title="Khôi phục"
-                      class="btn-restore-single-trash p-1.5 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition cursor-pointer">
-                      <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <button type="button" data-delete-pdf-id="${item.id}" title="Xóa vĩnh viễn"
-                      class="btn-delete-single-trash p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition cursor-pointer">
-                      <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                  `}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `}
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
     </div>
   `.trim();
 }
@@ -240,6 +281,14 @@ export function updatePdfHistoryDom(qm) {
 export function bindPdfHistory(qm) {
   const el = document.getElementById('pdfHistoryContainer');
   if (!el) return;
+
+  const btnToggle = el.querySelector('#btnTogglePdfHistory');
+  if (btnToggle) {
+    btnToggle.onclick = () => {
+      isPdfHistoryOpen = !isPdfHistoryOpen;
+      updatePdfHistoryDom(qm);
+    };
+  }
 
   el.querySelector('#btnPdfTabHistory')?.addEventListener('click', () => {
     activePdfHistoryTab = 'history';

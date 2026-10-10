@@ -9,6 +9,7 @@ import { getQuizHistoryList, getQuizTrashList } from '../utilities/quizHistoryHe
 import { formatBytes, formatRelativeTime } from '../../../../utilities/formatters.js';
 
 let activeQuizTab = 'history'; // 'history' | 'trash'
+let isQuizHistoryBoxOpen = false;
 const openDropboxes = new Set(); // Set of pair IDs currently expanded
 
 export function setQuizHistoryTab(tab) {
@@ -17,6 +18,18 @@ export function setQuizHistoryTab(tab) {
 
 export function getQuizHistoryTab() {
   return activeQuizTab;
+}
+
+export function toggleQuizHistoryBox(forceState) {
+  isQuizHistoryBoxOpen = typeof forceState === 'boolean' ? forceState : !isQuizHistoryBoxOpen;
+}
+
+export function isQuizHistoryBoxExpanded() {
+  return isQuizHistoryBoxOpen;
+}
+
+export function setQuizHistoryBoxOpen(open) {
+  isQuizHistoryBoxOpen = open;
 }
 
 export function toggleQuizDropbox(pairId) {
@@ -40,59 +53,91 @@ export function renderQuizHistoryList() {
   const trashItems = getQuizTrashList();
   const isTrash = activeQuizTab === 'trash';
   const currentList = isTrash ? trashItems : historyItems;
+  const isOpen = isQuizHistoryBoxOpen;
 
   return `
-    <div id="quizHistoryCard" class="bg-white dark:bg-[#0d0d10] border border-zinc-200/80 dark:border-zinc-800/60 rounded-2xl p-4 sm:p-5 space-y-4 select-none shadow-xs dark:shadow-none">
-      <!-- Header with Tabs & Global Actions -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800/60">
-        <!-- Segmented Tab: Lịch sử vs Thùng rác -->
-        <div class="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800/70 rounded-xl text-xs font-semibold">
-          <button type="button" id="btnQuizTabHistory"
-            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${!isTrash ? 'bg-white dark:bg-zinc-800/90 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/50 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-transparent'}">
-            <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
-            <span>Lịch sử</span>
-            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300">
-              ${historyItems.length}
+    <div id="quizHistoryCard" class="bg-white dark:bg-[#0d0d10] border border-zinc-200/80 dark:border-zinc-800/60 rounded-2xl overflow-hidden select-none shadow-xs dark:shadow-none transition-all">
+      <!-- Clickable Master Dropbox Header -->
+      <button type="button" id="btnToggleQuizHistoryBox" class="w-full flex items-center justify-between p-4 sm:p-4.5 cursor-pointer select-none text-left hover:bg-zinc-50/70 dark:hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+          </div>
+          <div class="flex items-center gap-2 min-w-0 flex-wrap">
+            <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Lịch sử tạo bài tập</span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+              ${historyItems.length} bộ đề
             </span>
-          </button>
-          <button type="button" id="btnQuizTabTrash"
-            class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${isTrash ? 'bg-white dark:bg-zinc-800/90 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/50 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-transparent'}">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
-            <span>Thùng rác</span>
             ${trashItems.length > 0 ? `
-              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400">
-                ${trashItems.length}
+              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                ${trashItems.length} thùng rác
               </span>
             ` : ''}
-          </button>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-xs text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline">
+            ${isOpen ? 'Thu gọn' : 'Xem lịch sử'}
+          </span>
+          <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 text-zinc-900 dark:text-zinc-100' : ''}">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </button>
+
+      <!-- Collapsible Master Body (Revealed on Click) -->
+      <div id="quizHistoryBoxBody" class="${isOpen ? 'block' : 'hidden'} border-t border-zinc-200 dark:border-zinc-800/60 p-4 sm:p-5 space-y-4 bg-zinc-50/30 dark:bg-black/20">
+        <!-- Header with Tabs & Global Actions -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800/60">
+          <!-- Segmented Tab: Lịch sử vs Thùng rác -->
+          <div class="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800/70 rounded-xl text-xs font-semibold">
+            <button type="button" id="btnQuizTabHistory"
+              class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${!isTrash ? 'bg-white dark:bg-zinc-800/90 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/50 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-transparent'}">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Lịch sử</span>
+              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-zinc-200 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300">
+                ${historyItems.length}
+              </span>
+            </button>
+            <button type="button" id="btnQuizTabTrash"
+              class="px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${isTrash ? 'bg-white dark:bg-zinc-800/90 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/50 shadow-xs' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-transparent'}">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
+              <span>Thùng rác</span>
+              ${trashItems.length > 0 ? `
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                  ${trashItems.length}
+                </span>
+              ` : ''}
+            </button>
+          </div>
+
+          <!-- Right Header Actions -->
+          <div class="flex items-center gap-2 text-xs">
+            ${!isTrash ? `
+              ${historyItems.length > 0 ? `
+                <button type="button" id="btnQuizTrashAll" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900/80 hover:bg-rose-500/10 dark:hover:bg-rose-950/40 text-zinc-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 border border-zinc-200 dark:border-zinc-800/80 hover:border-rose-300 dark:hover:border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  <span>Chuyển tất cả vào thùng rác</span>
+                </button>
+              ` : ''}
+            ` : `
+              ${trashItems.length > 0 ? `
+                <button type="button" id="btnQuizRestoreAllTrash" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900/80 hover:bg-emerald-500/10 dark:hover:bg-emerald-950/40 text-zinc-600 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-zinc-200 dark:border-zinc-800/80 hover:border-emerald-300 dark:hover:border-emerald-500/30 transition flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                  <span>Khôi phục tất cả</span>
+                </button>
+                <button type="button" id="btnQuizEmptyTrash" class="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 border border-rose-500/20 dark:border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="trash" class="w-3 h-3"></i>
+                  <span>Dọn sạch thùng rác</span>
+                </button>
+              ` : ''}
+            `}
+          </div>
         </div>
 
-        <!-- Right Header Actions -->
-        <div class="flex items-center gap-2 text-xs">
-          ${!isTrash ? `
-            ${historyItems.length > 0 ? `
-              <button type="button" id="btnQuizTrashAll" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900/80 hover:bg-rose-500/10 dark:hover:bg-rose-950/40 text-zinc-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 border border-zinc-200 dark:border-zinc-800/80 hover:border-rose-300 dark:hover:border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
-                <i data-lucide="trash-2" class="w-3 h-3"></i>
-                <span>Chuyển tất cả vào thùng rác</span>
-              </button>
-            ` : ''}
-          ` : `
-            ${trashItems.length > 0 ? `
-              <button type="button" id="btnQuizRestoreAllTrash" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900/80 hover:bg-emerald-500/10 dark:hover:bg-emerald-950/40 text-zinc-600 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-zinc-200 dark:border-zinc-800/80 hover:border-emerald-300 dark:hover:border-emerald-500/30 transition flex items-center gap-1.5 cursor-pointer">
-                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
-                <span>Khôi phục tất cả</span>
-              </button>
-              <button type="button" id="btnQuizEmptyTrash" class="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 border border-rose-500/20 dark:border-rose-500/30 transition flex items-center gap-1.5 cursor-pointer">
-                <i data-lucide="trash" class="w-3 h-3"></i>
-                <span>Dọn sạch thùng rác</span>
-              </button>
-            ` : ''}
-          `}
-        </div>
+        <!-- Item List or Empty Placeholder -->
+        ${currentList.length === 0 ? renderEmptyPlaceholder(isTrash) : renderDropboxList(currentList, isTrash)}
       </div>
-
-      <!-- Item List or Empty Placeholder -->
-      ${currentList.length === 0 ? renderEmptyPlaceholder(isTrash) : renderDropboxList(currentList, isTrash)}
     </div>
   `.trim();
 }

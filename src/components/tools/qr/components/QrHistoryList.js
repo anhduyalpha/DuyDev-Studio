@@ -63,6 +63,16 @@ function parseQrDetails(fileName = '') {
   };
 }
 
+const isQrHistoryOpen = { create: false, scan: false, all: false };
+
+export function setQrHistoryOpen(mode, open) {
+  isQrHistoryOpen[mode] = open;
+}
+
+export function isQrHistoryExpanded(mode = 'all') {
+  return Boolean(isQrHistoryOpen[mode]);
+}
+
 export function renderQrHistoryList(filterMode = 'all') {
   const allHistory = storage.getLocalHistory();
   const qrItems = allHistory.filter(item => {
@@ -75,79 +85,108 @@ export function renderQrHistoryList(filterMode = 'all') {
 
   if (qrItems.length === 0) return '';
 
+  const isOpen = Boolean(isQrHistoryOpen[filterMode]);
   const titleText = filterMode === 'create' ? 'Lịch sử tạo QR' : (filterMode === 'scan' ? 'Lịch sử quét QR' : 'Lịch sử QR');
+  const iconName = filterMode === 'scan' ? 'scan' : 'qr-code';
+  const iconColor = filterMode === 'scan' ? 'text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/20' : 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20';
 
   return `
-    <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] space-y-4 shadow-sm">
-      <div class="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-white/[0.05]">
-        <h4 class="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-          <i data-lucide="history" class="w-4 h-4 text-indigo-500"></i> ${titleText}
-        </h4>
-        <span class="text-xs text-zinc-400 font-mono">${qrItems.length} tác vụ</span>
-      </div>
+    <div class="rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] overflow-hidden shadow-xs transition-all select-none">
+      <!-- Clickable Dropbox Header -->
+      <button type="button" class="btn-toggle-qr-history w-full flex items-center justify-between p-4 sm:p-4.5 cursor-pointer select-none text-left hover:bg-zinc-50/70 dark:hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50" data-filter-mode="${filterMode}">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-xl ${iconColor} border flex items-center justify-center shrink-0">
+            <i data-lucide="${iconName}" class="w-4 h-4"></i>
+          </div>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">${titleText}</span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              ${qrItems.length} tác vụ
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-xs text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline">
+            ${isOpen ? 'Thu gọn' : 'Xem lịch sử'}
+          </span>
+          <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 text-zinc-900 dark:text-zinc-100' : ''}">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </button>
 
-      <div class="divide-y divide-zinc-100 dark:divide-white/[0.05]">
-        ${qrItems.map(item => {
-          const info = parseQrDetails(item.fileName || '');
-          const isUrl = item.downloadUrl && (item.downloadUrl.startsWith('http://') || item.downloadUrl.startsWith('https://'));
-          const copyVal = isUrl ? item.downloadUrl : (info.raw || item.fileName || '');
+      <!-- Collapsible Body (Revealed on Click) -->
+      <div class="qr-history-body ${isOpen ? 'block' : 'hidden'} border-t border-zinc-100 dark:border-white/[0.06] p-4 sm:p-5 space-y-3 bg-zinc-50/30 dark:bg-black/20">
+        <div class="divide-y divide-zinc-100 dark:divide-white/[0.05]">
+          ${qrItems.map(item => {
+            const info = parseQrDetails(item.fileName || '');
+            const isUrl = item.downloadUrl && (item.downloadUrl.startsWith('http://') || item.downloadUrl.startsWith('https://'));
+            const copyVal = isUrl ? item.downloadUrl : (info.raw || item.fileName || '');
 
-          return `
-            <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                <div class="w-9 h-9 rounded-xl ${info.iconBg} border flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                  <i data-lucide="${info.icon}" class="w-4 h-4"></i>
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight ${info.badgeClass}">
-                      ${info.tag}
-                    </span>
-                    <span class="font-semibold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm truncate font-mono" title="${info.mainTitle}">
-                      ${info.mainTitle}
-                    </span>
+            return `
+              <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  <div class="w-9 h-9 rounded-xl ${info.iconBg} border flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                    <i data-lucide="${info.icon}" class="w-4 h-4"></i>
                   </div>
-                  ${info.subtitle ? `
-                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-mono truncate" title="${info.subtitle}">
-                      ${info.subtitle}
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight ${info.badgeClass}">
+                        ${info.tag}
+                      </span>
+                      <span class="font-semibold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm truncate font-mono" title="${info.mainTitle}">
+                        ${info.mainTitle}
+                      </span>
+                    </div>
+                    ${info.subtitle ? `
+                      <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-mono truncate" title="${info.subtitle}">
+                        ${info.subtitle}
+                      </p>
+                    ` : ''}
+                    <p class="text-[10px] text-zinc-400 font-mono mt-0.5">
+                      ${formatRelativeTime(item.createdAt || item.timestamp)}
                     </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                  <button type="button" data-copy-qr-id="${item.id}" data-copy-text="${copyVal.replace(/"/g, '&quot;')}" title="Sao chép" class="btn-copy-qr-history px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1 transition cursor-pointer">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Sao chép
+                  </button>
+
+                  ${isUrl ? `
+                    <a href="${item.downloadUrl}" target="_blank" rel="noopener noreferrer" title="Mở link" class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition">
+                      <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
                   ` : ''}
-                  <p class="text-[10px] text-zinc-400 font-mono mt-0.5">
-                    ${formatRelativeTime(item.createdAt || item.timestamp)}
-                  </p>
+
+                  ${item.downloadUrl && item.downloadUrl.startsWith('data:image') ? `
+                    <button type="button" data-preview-qr="${item.id}" title="Xem" class="btn-preview-qr-item p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.05] transition cursor-pointer">
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+
+                  <button type="button" data-trash-qr="${item.id}" data-url="${item.downloadUrl || ''}" title="Xóa" class="btn-trash-qr-item p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
                 </div>
               </div>
-
-              <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                <button type="button" data-copy-qr-id="${item.id}" data-copy-text="${copyVal.replace(/"/g, '&quot;')}" title="Sao chép" class="btn-copy-qr-history px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1 transition cursor-pointer">
-                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> Sao chép
-                </button>
-
-                ${isUrl ? `
-                  <a href="${item.downloadUrl}" target="_blank" rel="noopener noreferrer" title="Mở link" class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition">
-                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                  </a>
-                ` : ''}
-
-                ${item.downloadUrl && item.downloadUrl.startsWith('data:image') ? `
-                  <button type="button" data-preview-qr="${item.id}" title="Xem" class="btn-preview-qr-item p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.05] transition cursor-pointer">
-                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                  </button>
-                ` : ''}
-
-                <button type="button" data-trash-qr="${item.id}" data-url="${item.downloadUrl || ''}" title="Xóa" class="btn-trash-qr-item p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('')}
+            `;
+          }).join('')}
+        </div>
       </div>
     </div>
   `.trim();
 }
 
 export function attachQrHistoryListeners(onReRender) {
+  document.querySelectorAll('.btn-toggle-qr-history').forEach(btn => {
+    btn.onclick = () => {
+      const mode = btn.dataset.filterMode || 'all';
+      isQrHistoryOpen[mode] = !isQrHistoryOpen[mode];
+      if (onReRender) onReRender();
+    };
+  });
   document.querySelectorAll('.btn-preview-qr-item').forEach(btn => {
     btn.onclick = () => {
       const id = btn.dataset.previewQr;

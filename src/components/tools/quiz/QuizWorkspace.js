@@ -36,18 +36,8 @@ export function renderQuizWorkspace() {
           ${renderQuizResultCard(state)}
         </div>
 
-        <!-- Section Divider: Clear boundary between Active Workspace & Historical Archive -->
-        <div class="pt-2">
-          <div class="relative flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600"></div>
-              <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Kho lưu trữ & Lịch sử</span>
-            </div>
-            <div class="h-px bg-gradient-to-r from-zinc-300 dark:from-zinc-800/80 via-zinc-200 dark:via-zinc-800/40 to-transparent flex-1 ml-4"></div>
-          </div>
-        </div>
-
-        <div id="quizHistoryContainer">
+        <!-- Collapsible History Section -->
+        <div id="quizHistoryContainer" class="pt-2">
           ${renderQuizHistoryList()}
         </div>
       </div>
