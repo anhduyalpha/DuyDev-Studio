@@ -19,10 +19,10 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
 
   return `
     <div
-      class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border-2 transition-all select-none ${
+      class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-white dark:bg-zinc-950 border-2 transition-all select-none ${
         isActive
-          ? 'border-cyan-500 ring-2 ring-cyan-400/40 shadow-xl shadow-cyan-500/15'
-          : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30 cursor-pointer'
+          ? 'border-cyan-500 ring-2 ring-cyan-400/50 shadow-xl shadow-cyan-500/20 bg-cyan-500/[0.02]'
+          : 'border-zinc-300 dark:border-white/10 hover:border-cyan-400/60 dark:hover:border-white/30 cursor-pointer'
       }"
       data-action="select-pane"
       data-pane-id="${pane.id}"
@@ -97,7 +97,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
         !hasImage
           ? `
             <div
-              class="viewsplit-dropzone absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-50/90 dark:bg-zinc-900/30 backdrop-blur-sm z-0 cursor-pointer"
+              class="viewsplit-dropzone absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-white/95 dark:bg-zinc-900/40 backdrop-blur-sm z-0 cursor-pointer"
               data-action="select-pane"
               data-pane-id="${pane.id}"
             >
@@ -110,7 +110,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
               <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform pointer-events-none">
                 <i data-lucide="image-plus" class="w-6 h-6"></i>
               </div>
-              <h4 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1 pointer-events-none">Kéo thả hoặc tải tệp lên</h4>
+              <h4 class="text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-1 pointer-events-none">Kéo thả hoặc tải tệp lên</h4>
               <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mb-4 pointer-events-none">PNG, JPG, WEBP, SVG • Dán từ Clipboard [Ctrl+V]</p>
 
               <div class="flex items-center flex-wrap justify-center gap-2">
@@ -127,7 +127,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
                   type="button"
                   data-action="paste-clipboard"
                   data-pane-id="${pane.id}"
-                  class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition cursor-pointer flex items-center gap-1.5"
+                  class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-300 dark:border-white/10 transition cursor-pointer flex items-center gap-1.5"
                 >
                   <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                   <span>Dán ảnh</span>
@@ -136,7 +136,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
                   type="button"
                   data-action="open-url-modal"
                   data-pane-id="${pane.id}"
-                  class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition cursor-pointer flex items-center gap-1.5"
+                  class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-300 dark:border-white/10 transition cursor-pointer flex items-center gap-1.5"
                 >
                   <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
                   <span>URL / Drive</span>

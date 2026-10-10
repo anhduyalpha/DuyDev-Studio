@@ -4,6 +4,7 @@
  */
 
 import { LAYOUT_MODES, PANE_TITLES } from '../hooks/useViewSplit.js';
+import { getStoredTheme } from '../../../../hooks/useTheme.js';
 
 /**
  * Renders toolbar markup.
@@ -21,6 +22,9 @@ export function renderViewSplitToolbar(state) {
   } = state;
 
   const isOverlay = layout === LAYOUT_MODES.SLIDER || layout === LAYOUT_MODES.DIFF;
+  const isDark = typeof document !== 'undefined'
+    ? (document.documentElement.classList.contains('dark') || getStoredTheme() === 'dark')
+    : true;
   const visibleCount = typeof state.getVisiblePaneCount === 'function'
     ? state.getVisiblePaneCount()
     : (layout === LAYOUT_MODES.SINGLE ? 1 : layout === LAYOUT_MODES.QUAD ? 4 : (layout === LAYOUT_MODES.TRIPLE_H || layout === LAYOUT_MODES.TRIPLE_L || layout === LAYOUT_MODES.TRIPLE_T ? 3 : 2));
@@ -214,6 +218,17 @@ export function renderViewSplitToolbar(state) {
         >
           <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
           <span class="hidden sm:inline">Loupe</span>
+        </button>
+
+        <!-- Dedicated Theme Toggle Button -->
+        <button
+          type="button"
+          data-action="toggle-theme"
+          title="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}"
+          class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-zinc-100 dark:bg-black/40 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/5 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+        >
+          <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-3.5 h-3.5 ${isDark ? 'text-amber-400' : 'text-cyan-600'}"></i>
+          <span class="hidden sm:inline">${isDark ? 'Sáng' : 'Tối'}</span>
         </button>
 
         <!-- Export Dropdown / Buttons -->

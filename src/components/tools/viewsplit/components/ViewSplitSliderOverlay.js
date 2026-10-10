@@ -161,16 +161,16 @@ export function renderViewSplitSliderOverlay(state) {
       ${
         !isReady
           ? `
-            <div class="absolute inset-0 z-0 flex flex-col md:flex-row items-center justify-center gap-4 p-6 bg-zinc-50/90 dark:bg-zinc-950/80 backdrop-blur-md">
+            <div class="absolute inset-0 z-0 flex flex-col md:flex-row items-center justify-center gap-4 p-6 bg-zinc-100/90 dark:bg-zinc-950/80 backdrop-blur-md">
               <!-- Slot A Card -->
               <div
                 data-action="select-pane"
                 data-pane-id="1"
                 title="Bấm để chọn Ảnh Trước (${paneA.title})"
-                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border-2 transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white dark:bg-zinc-900/60 border-2 transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 1
-                    ? 'border-cyan-500 ring-2 ring-cyan-400/40 shadow-xl shadow-cyan-500/15'
-                    : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
+                    ? 'border-cyan-500 ring-2 ring-cyan-400/50 shadow-xl shadow-cyan-500/20 bg-cyan-500/[0.02]'
+                    : 'border-zinc-300 dark:border-white/10 hover:border-cyan-400/60 dark:hover:border-white/30'
                 }"
               >
                 <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2">
@@ -195,7 +195,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="paste-clipboard"
                     data-pane-id="1"
-                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-300 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                     <span>Dán ảnh</span>
@@ -204,7 +204,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="open-url-modal"
                     data-pane-id="1"
-                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-300 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
                     <span>URL / Drive</span>
@@ -217,10 +217,10 @@ export function renderViewSplitSliderOverlay(state) {
                 data-action="select-pane"
                 data-pane-id="2"
                 title="Bấm để chọn Ảnh Sau (${paneB.title})"
-                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border-2 transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white dark:bg-zinc-900/60 border-2 transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 2
-                    ? 'border-cyan-500 ring-2 ring-cyan-400/40 shadow-xl shadow-cyan-500/15'
-                    : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
+                    ? 'border-cyan-500 ring-2 ring-cyan-400/50 shadow-xl shadow-cyan-500/20 bg-cyan-500/[0.02]'
+                    : 'border-zinc-300 dark:border-white/10 hover:border-cyan-400/60 dark:hover:border-white/30'
                 }"
               >
                 <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2">
@@ -245,7 +245,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="paste-clipboard"
                     data-pane-id="2"
-                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-300 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                     <span>Dán ảnh</span>
@@ -254,7 +254,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="open-url-modal"
                     data-pane-id="2"
-                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-300 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
                     <span>URL / Drive</span>

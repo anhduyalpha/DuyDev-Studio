@@ -20,6 +20,7 @@ import {
   downloadComparisonImage,
   copyComparisonImageToClipboard
 } from '../utilities/viewSplitCompositor.js';
+import { toggleTheme } from '../../../../hooks/useTheme.js';
 
 /**
  * Attaches all DOM event listeners, starts RAF canvas render loop, and handles shortcuts.
@@ -63,31 +64,37 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       if (isActive) {
         paneEl.classList.remove(
+          'border-zinc-300',
           'border-zinc-200/80',
           'dark:border-white/10',
           'hover:border-zinc-400',
+          'hover:border-cyan-400/60',
           'dark:hover:border-white/30',
           'cursor-pointer'
         );
         paneEl.classList.add(
           'border-cyan-500',
           'ring-2',
-          'ring-cyan-400/40',
+          'ring-cyan-400/50',
           'shadow-xl',
-          'shadow-cyan-500/15'
+          'shadow-cyan-500/20',
+          'bg-cyan-500/[0.02]'
         );
       } else {
         paneEl.classList.remove(
           'border-cyan-500',
           'ring-2',
+          'ring-cyan-400/50',
           'ring-cyan-400/40',
           'shadow-xl',
-          'shadow-cyan-500/15'
+          'shadow-cyan-500/20',
+          'shadow-cyan-500/15',
+          'bg-cyan-500/[0.02]'
         );
         paneEl.classList.add(
-          'border-zinc-200/80',
+          'border-zinc-300',
           'dark:border-white/10',
-          'hover:border-zinc-400',
+          'hover:border-cyan-400/60',
           'dark:hover:border-white/30',
           'cursor-pointer'
         );
@@ -136,11 +143,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (slotACard) {
       const isA = numActiveId === 1;
       if (isA) {
-        slotACard.classList.remove('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
-        slotACard.classList.add('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
+        slotACard.classList.remove('border-zinc-300', 'border-zinc-200/80', 'dark:border-white/10', 'hover:border-cyan-400/60', 'cursor-pointer');
+        slotACard.classList.add('border-cyan-500', 'ring-2', 'ring-cyan-400/50', 'shadow-xl', 'shadow-cyan-500/20', 'bg-cyan-500/[0.02]');
       } else {
-        slotACard.classList.remove('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
-        slotACard.classList.add('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
+        slotACard.classList.remove('border-cyan-500', 'ring-2', 'ring-cyan-400/50', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/20', 'shadow-cyan-500/15', 'bg-cyan-500/[0.02]');
+        slotACard.classList.add('border-zinc-300', 'dark:border-white/10', 'hover:border-cyan-400/60', 'cursor-pointer');
       }
       const b1 = document.querySelector('.viewsplit-overlay-badge-1');
       if (b1) {
@@ -152,11 +159,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (slotBCard) {
       const isB = numActiveId === 2;
       if (isB) {
-        slotBCard.classList.remove('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
-        slotBCard.classList.add('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
+        slotBCard.classList.remove('border-zinc-300', 'border-zinc-200/80', 'dark:border-white/10', 'hover:border-cyan-400/60', 'cursor-pointer');
+        slotBCard.classList.add('border-cyan-500', 'ring-2', 'ring-cyan-400/50', 'shadow-xl', 'shadow-cyan-500/20', 'bg-cyan-500/[0.02]');
       } else {
-        slotBCard.classList.remove('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
-        slotBCard.classList.add('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
+        slotBCard.classList.remove('border-cyan-500', 'ring-2', 'ring-cyan-400/50', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/20', 'shadow-cyan-500/15', 'bg-cyan-500/[0.02]');
+        slotBCard.classList.add('border-zinc-300', 'dark:border-white/10', 'hover:border-cyan-400/60', 'cursor-pointer');
       }
       const b2 = document.querySelector('.viewsplit-overlay-badge-2');
       if (b2) {
@@ -279,8 +286,9 @@ export function attachViewSplitDomListeners(store, onReRender) {
           const cy = pane.cursor.viewY;
 
           ctx.save();
+          const isDarkTheme = document.documentElement.classList.contains('dark');
           // Horizontal line
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.strokeStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.75)' : 'rgba(0, 0, 0, 0.65)';
           ctx.lineWidth = 1;
           ctx.setLineDash([4, 4]);
           ctx.beginPath();
@@ -300,7 +308,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
           ctx.beginPath();
           ctx.arc(cx, cy, 3, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#FFFFFF';
+          ctx.strokeStyle = isDarkTheme ? '#FFFFFF' : '#000000';
           ctx.lineWidth = 1;
           ctx.stroke();
           ctx.restore();
@@ -922,6 +930,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
         break;
       }
 
+      case 'toggle-theme': {
+        toggleTheme();
+        onReRender();
+        break;
+      }
+
       case 'set-layout': {
         const newLayout = btn.dataset.layout;
         store.setLayout(newLayout);
@@ -1338,13 +1352,20 @@ export function attachViewSplitDomListeners(store, onReRender) {
   window.addEventListener('dragover', onDragOver);
   window.addEventListener('drop', onDrop);
   window.addEventListener('paste', onGlobalPaste);
-  document.addEventListener('paste', onGlobalPaste);
+  const onThemeChange = () => {
+    if (isAlive) {
+      onReRender();
+    }
+  };
+  window.addEventListener('ds-theme-change', onThemeChange);
+
   window.addEventListener('keydown', onKeyDown);
 
   // Return cleanup function
   return () => {
     isAlive = false;
     if (rafId) cancelAnimationFrame(rafId);
+    window.removeEventListener('ds-theme-change', onThemeChange);
 
     window.removeEventListener('wheel', onWheel);
     window.removeEventListener('mousedown', onMouseDown);

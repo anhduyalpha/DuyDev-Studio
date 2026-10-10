@@ -751,6 +751,29 @@ describe('ViewSplit Auto-Advancement & Click-To-Select', () => {
       store.setActivePane(2);
       expect(store.activePaneId).toBe(2);
     });
+
+    it('renders dedicated theme toggle button and active cyan border indicators in markup', () => {
+      const store = new ViewSplitStore();
+      store.setActivePane(2);
+
+      // Toolbar must include data-action="toggle-theme"
+      const toolbarHtml = renderViewSplitToolbar(store);
+      expect(toolbarHtml).toContain('data-action="toggle-theme"');
+      expect(toolbarHtml).toContain('data-action="select-pane"');
+
+      // Active pane 2 must render cyan active border and badge
+      const pane2Html = renderViewSplitPane(store.panes[1], true);
+      expect(pane2Html).toContain('border-cyan-500');
+      expect(pane2Html).toContain('ring-2');
+      expect(pane2Html).toContain('ring-cyan-400/50');
+      expect(pane2Html).toContain('ĐANG CHỌN');
+
+      // Inactive pane 1 must render crisp neutral border
+      const pane1Html = renderViewSplitPane(store.panes[0], false);
+      expect(pane1Html).toContain('border-zinc-300');
+      expect(pane1Html).not.toContain('ĐANG CHỌN');
+    });
   });
 });
+
 
