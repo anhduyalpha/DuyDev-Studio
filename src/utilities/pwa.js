@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v22.7';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v22.8';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -168,7 +168,7 @@ export function showUpdateCapsule(waitingWorker) {
     'user-select: none'
   ].join(';');
 
-  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.7';
+  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.8';
 
   capsule.innerHTML = `
     <span style="width: 8px; height: 8px; border-radius: 9999px; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; display: inline-block;"></span>

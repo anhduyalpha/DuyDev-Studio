@@ -3,6 +3,8 @@
  */
 
 
+import { renderToolIcon } from '../common/ToolIcons.js';
+
 const CATEGORY_LABELS = {
   all: 'Tất cả',
   pdf: 'PDF',
@@ -45,7 +47,7 @@ export function renderToolCard(tool) {
         <!-- Header: Icon -->
         <div class="flex items-center mb-3.5 min-h-[44px]">
           <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
-            <i data-lucide="${tool.icon}" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            ${renderToolIcon(tool.id, tool.icon, 'w-6 h-6 sm:w-6.5 sm:h-6.5')}
           </div>
         </div>
 
