@@ -32,7 +32,7 @@ export function renderQuizWorkspace() {
           ${renderQuizConfigPanel(state)}
         </div>
 
-        <div id="quizResultContainer">
+        <div id="quizResultContainer" class="empty:hidden">
           ${renderQuizResultCard(state)}
         </div>
 

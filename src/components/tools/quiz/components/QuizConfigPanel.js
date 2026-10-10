@@ -116,7 +116,7 @@ export function renderQuizConfigPanel(state) {
           <!-- Divider -->
           <div class="flex items-center gap-3 my-1">
             <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800/80"></div>
-            <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Hoặc Google Drive</span>
+            <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Hoặc Link Google Drive</span>
             <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800/80"></div>
           </div>
 

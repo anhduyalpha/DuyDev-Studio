@@ -17,7 +17,7 @@ export function renderQuizResultCard(state) {
     return renderErrorState(state);
   }
 
-  return renderEmptyPlaceholder();
+  return '';
 }
 
 function renderProcessingState(state) {
@@ -231,42 +231,6 @@ function renderErrorState(state) {
         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
         <span>Thử lại</span>
       </button>
-    </div>
-  `.trim();
-}
-
-function renderEmptyPlaceholder() {
-  return `
-    <div class="relative overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700/80 bg-white/60 dark:bg-gradient-to-b dark:from-zinc-900/25 dark:via-[#111114]/40 dark:to-zinc-950/70 p-6 sm:p-7 text-center transition-all">
-      <div class="flex flex-col items-center justify-center space-y-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
-          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-          <span>Khu vực xuất kết quả</span>
-        </div>
-
-        <div class="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shadow-xs">
-          <i data-lucide="file-check-2" class="w-5 h-5"></i>
-        </div>
-
-        <div class="space-y-1">
-          <h4 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Đề bài & Đáp án A4</h4>
-          <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-            Tệp PDF đề bài và đáp án chi tiết sẽ tự động xuất hiện tại đây sau khi hoàn tất xử lý.
-          </p>
-        </div>
-
-        <!-- Visual Slot Previews (Dashed Ghost Cards) -->
-        <div class="grid grid-cols-2 gap-3 w-full max-w-md pt-1.5">
-          <div class="border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-50 dark:bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-500 text-xs font-mono">
-            <i data-lucide="file-text" class="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-600"></i>
-            <span>Đề bài (PDF)</span>
-          </div>
-          <div class="border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-50 dark:bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-500 text-xs font-mono">
-            <i data-lucide="check-square" class="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-600"></i>
-            <span>Đáp án & Lời giải</span>
-          </div>
-        </div>
-      </div>
     </div>
   `.trim();
 }
