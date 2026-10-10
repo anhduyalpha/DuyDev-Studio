@@ -19,7 +19,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
 
   return `
     <div
-      class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-zinc-950 border transition-all select-none ${
+      class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border transition-all select-none ${
         isActive
           ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
           : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30 cursor-pointer'
@@ -41,19 +41,19 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
       <!-- Top Overlay Bar (Floating HUD) -->
       <div class="absolute top-2.5 inset-x-2.5 flex items-center justify-between gap-2 pointer-events-none z-10">
         <!-- Pane Identifier & File Name -->
-        <div class="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 dark:bg-black/75 backdrop-blur-md border border-white/10 text-xs shadow-sm">
-          <span class="viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
-          <span class="font-bold text-white tracking-wide">${pane.title}</span>
+        <div class="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/85 dark:bg-black/75 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-xs shadow-sm">
+          <span class="viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-500 dark:bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
+          <span class="font-bold text-zinc-900 dark:text-white tracking-wide">${pane.title}</span>
           <span class="viewsplit-pane-badge">
           ${
             isActive
-              ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+              ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
               : ''
           }
           </span>
           ${
             hasImage
-              ? `<span class="text-zinc-400 truncate max-w-[120px] sm:max-w-[160px] hidden sm:inline" title="${pane.name}">${pane.name}</span>`
+              ? `<span class="text-zinc-600 dark:text-zinc-400 truncate max-w-[120px] sm:max-w-[160px] hidden sm:inline" title="${pane.name}">${pane.name}</span>`
               : ''
           }
         </div>
@@ -63,17 +63,17 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
           ${
             hasImage
               ? `
-                <div class="flex items-center gap-1 px-2 py-1 rounded-xl bg-black/60 dark:bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-mono text-zinc-300 shadow-sm">
+                <div class="flex items-center gap-1 px-2 py-1 rounded-xl bg-white/85 dark:bg-black/75 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 shadow-sm">
                   <span>${pane.width}×${pane.height}</span>
-                  <span class="text-zinc-500">•</span>
-                  <span id="viewsplit-zoom-badge-${pane.id}" class="text-cyan-400 font-semibold">${zoomPercent}%</span>
+                  <span class="text-zinc-400 dark:text-zinc-500">•</span>
+                  <span id="viewsplit-zoom-badge-${pane.id}" class="text-cyan-600 dark:text-cyan-400 font-semibold">${zoomPercent}%</span>
                 </div>
                 <button
                   type="button"
                   data-action="open-url-modal"
                   data-pane-id="${pane.id}"
                   title="Thay đổi ảnh từ URL / Drive"
-                  class="p-1 rounded-lg bg-black/60 hover:bg-black/80 text-zinc-400 hover:text-white border border-white/10 transition cursor-pointer"
+                  class="p-1 rounded-lg bg-white/85 hover:bg-zinc-100 dark:bg-black/60 dark:hover:bg-black/80 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white border border-zinc-200/80 dark:border-white/10 transition cursor-pointer"
                 >
                   <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
                 </button>
@@ -82,7 +82,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
                   data-action="clear-pane"
                   data-pane-id="${pane.id}"
                   title="Đóng / Gỡ bỏ ảnh này"
-                  class="p-1 rounded-lg bg-black/60 hover:bg-red-500/30 text-zinc-400 hover:text-red-400 border border-white/10 transition cursor-pointer"
+                  class="p-1 rounded-lg bg-white/85 hover:bg-rose-500/10 dark:bg-black/60 dark:hover:bg-rose-500/20 text-zinc-600 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 border border-zinc-200/80 dark:border-white/10 transition cursor-pointer"
                 >
                   <i data-lucide="x" class="w-3.5 h-3.5"></i>
                 </button>
@@ -96,18 +96,18 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
       ${
         !hasImage
           ? `
-            <div class="viewsplit-dropzone absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-900/30 backdrop-blur-sm z-0">
+            <div class="viewsplit-dropzone absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-50/90 dark:bg-zinc-900/30 backdrop-blur-sm z-0">
               <input
                 type="file"
                 accept="image/*"
                 class="viewsplit-file-input hidden"
                 data-pane-id="${pane.id}"
               />
-              <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                 <i data-lucide="image-plus" class="w-6 h-6"></i>
               </div>
-              <h4 class="text-sm font-semibold text-zinc-200 mb-1">Kéo thả hoặc tải tệp lên</h4>
-              <p class="text-xs text-zinc-400 max-w-xs mb-4">PNG, JPG, WEBP, SVG • Dán từ Clipboard [Ctrl+V]</p>
+              <h4 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1">Kéo thả hoặc tải tệp lên</h4>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mb-4">PNG, JPG, WEBP, SVG • Dán từ Clipboard [Ctrl+V]</p>
 
               <div class="flex items-center flex-wrap justify-center gap-2">
                 <button
@@ -123,7 +123,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
                   type="button"
                   data-action="paste-clipboard"
                   data-pane-id="${pane.id}"
-                  class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 transition cursor-pointer flex items-center gap-1.5"
+                  class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition cursor-pointer flex items-center gap-1.5"
                 >
                   <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                   <span>Dán ảnh</span>
@@ -132,7 +132,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
                   type="button"
                   data-action="open-url-modal"
                   data-pane-id="${pane.id}"
-                  class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 transition cursor-pointer flex items-center gap-1.5"
+                  class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition cursor-pointer flex items-center gap-1.5"
                 >
                   <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
                   <span>URL / Drive</span>

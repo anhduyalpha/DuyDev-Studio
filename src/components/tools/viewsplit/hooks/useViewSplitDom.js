@@ -117,11 +117,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
       slotACard.classList.toggle('ring-cyan-500/30', isA);
       slotACard.classList.toggle('shadow-lg', isA);
       slotACard.classList.toggle('shadow-cyan-500/10', isA);
-      slotACard.classList.toggle('border-white/10', !isA);
+      slotACard.classList.toggle('border-zinc-200/80', !isA);
+      slotACard.classList.toggle('dark:border-white/10', !isA);
       const b1 = document.querySelector('.viewsplit-overlay-badge-1');
       if (b1) {
         b1.innerHTML = isA
-          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
           : '';
       }
     }
@@ -132,11 +133,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
       slotBCard.classList.toggle('ring-cyan-500/30', isB);
       slotBCard.classList.toggle('shadow-lg', isB);
       slotBCard.classList.toggle('shadow-cyan-500/10', isB);
-      slotBCard.classList.toggle('border-white/10', !isB);
+      slotBCard.classList.toggle('border-zinc-200/80', !isB);
+      slotBCard.classList.toggle('dark:border-white/10', !isB);
       const b2 = document.querySelector('.viewsplit-overlay-badge-2');
       if (b2) {
         b2.innerHTML = isB
-          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
           : '';
       }
     }
@@ -950,10 +952,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       case 'copy-composite': {
         showToast('Đang tạo và sao chép ảnh ghép...', 'info');
+        const isDark = document.documentElement.classList.contains('dark');
         const ok = await copyComparisonImageToClipboard(store.panes, store.layout, {
           sliderPos: store.sliderPos,
           diffMultiplier: store.diffMultiplier,
-          filter: store.filter
+          filter: store.filter,
+          background: isDark ? '#09090B' : '#F4F4F6'
         });
         if (ok) {
           showToast('Đã sao chép ảnh so sánh vào Clipboard', 'success');
@@ -962,7 +966,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
           await downloadComparisonImage(store.panes, store.layout, {
             sliderPos: store.sliderPos,
             diffMultiplier: store.diffMultiplier,
-            filter: store.filter
+            filter: store.filter,
+            background: isDark ? '#09090B' : '#F4F4F6'
           });
         }
         break;
@@ -970,10 +975,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       case 'download-composite': {
         showToast('Đang tải ảnh so sánh...', 'info');
+        const isDark = document.documentElement.classList.contains('dark');
         await downloadComparisonImage(store.panes, store.layout, {
           sliderPos: store.sliderPos,
           diffMultiplier: store.diffMultiplier,
-          filter: store.filter
+          filter: store.filter,
+          background: isDark ? '#09090B' : '#F4F4F6'
         });
         break;
       }
@@ -1163,15 +1170,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       listContainer.innerHTML = items.map((item) => `
         <div
-          class="viewsplit-drive-item flex items-center justify-between p-2 rounded-lg hover:bg-white/10 transition cursor-pointer"
+          class="viewsplit-drive-item flex items-center justify-between p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 transition cursor-pointer"
           data-drive-path="${item.path}"
           data-drive-name="${item.name}"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <i data-lucide="image" class="w-4 h-4 text-cyan-400 shrink-0"></i>
-            <span class="truncate text-zinc-200 text-xs">${item.name}</span>
+            <i data-lucide="image" class="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0"></i>
+            <span class="truncate text-zinc-800 dark:text-zinc-200 text-xs">${item.name}</span>
           </div>
-          <span class="text-[10px] text-zinc-500 font-mono shrink-0">${item.sizeFormatted || ''}</span>
+          <span class="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono shrink-0">${item.sizeFormatted || ''}</span>
         </div>
       `).join('');
 

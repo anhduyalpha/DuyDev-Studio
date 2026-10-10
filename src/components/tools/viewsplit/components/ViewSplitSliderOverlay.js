@@ -28,7 +28,7 @@ export function renderViewSplitSliderOverlay(state) {
   const isReady = hasA && hasB;
 
   return `
-    <div class="viewsplit-overlay-container relative w-full h-full min-h-[420px] rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-200/80 dark:border-white/10 shadow-lg select-none">
+    <div class="viewsplit-overlay-container relative w-full h-full min-h-[420px] rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/80 dark:border-white/10 shadow-lg select-none">
       <!-- Underlying Composite Canvas -->
       <canvas
         id="viewsplit-overlay-canvas"
@@ -39,12 +39,12 @@ export function renderViewSplitSliderOverlay(state) {
       <!-- Top Overlay Header -->
       <div class="absolute top-3 inset-x-3 flex items-center justify-between gap-2 pointer-events-none z-20">
         <!-- Mode Badge & Image Labels -->
-        <div class="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs shadow-md">
-          <span class="w-2.5 h-2.5 rounded-full ${isDiffMode ? 'bg-rose-500 animate-pulse' : 'bg-cyan-400'}"></span>
-          <span class="font-bold text-white uppercase tracking-wider text-[11px]">
+        <div class="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/85 dark:bg-black/70 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-xs shadow-md">
+          <span class="w-2.5 h-2.5 rounded-full ${isDiffMode ? 'bg-rose-500 animate-pulse' : 'bg-cyan-500 dark:bg-cyan-400'}"></span>
+          <span class="font-bold text-zinc-900 dark:text-white uppercase tracking-wider text-[11px]">
             ${isDiffMode ? 'Difference Diff' : 'Slider Wipe'}
           </span>
-          <span class="text-zinc-500">•</span>
+          <span class="text-zinc-400 dark:text-zinc-500">•</span>
           <button
             type="button"
             data-action="select-pane"
@@ -52,14 +52,14 @@ export function renderViewSplitSliderOverlay(state) {
             title="Chọn ${paneA.title} để dán/thay ảnh"
             class="px-2 py-0.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
               activePaneId === 1
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                ? 'bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 dark:border-cyan-500/40 shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10'
             }"
           >
-            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 1 ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
+            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 1 ? 'bg-cyan-500 dark:bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
             <span>${paneA.title}</span>
           </button>
-          <span class="text-zinc-500">vs</span>
+          <span class="text-zinc-400 dark:text-zinc-500">vs</span>
           <button
             type="button"
             data-action="select-pane"
@@ -67,11 +67,11 @@ export function renderViewSplitSliderOverlay(state) {
             title="Chọn ${paneB.title} để dán/thay ảnh"
             class="px-2 py-0.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
               activePaneId === 2
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                ? 'bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 dark:border-cyan-500/40 shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10'
             }"
           >
-            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 2 ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
+            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 2 ? 'bg-cyan-500 dark:bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
             <span>${paneB.title}</span>
           </button>
         </div>
@@ -82,8 +82,8 @@ export function renderViewSplitSliderOverlay(state) {
             isDiffMode
               ? `
                 <!-- Diff Multiplier Picker -->
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs text-zinc-300 shadow-md">
-                  <span class="text-[11px] text-zinc-400">Độ lệch:</span>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/85 dark:bg-black/70 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-xs text-zinc-700 dark:text-zinc-300 shadow-md">
+                  <span class="text-[11px] text-zinc-500 dark:text-zinc-400">Độ lệch:</span>
                   <input
                     type="range"
                     min="1"
@@ -94,12 +94,12 @@ export function renderViewSplitSliderOverlay(state) {
                     class="w-20 accent-rose-500 cursor-pointer"
                     title="Khuếch đại sai khác: ${diffMultiplier}x"
                   />
-                  <span class="font-mono text-rose-400 font-bold text-[11px]">${diffMultiplier}x</span>
+                  <span class="font-mono text-rose-500 dark:text-rose-400 font-bold text-[11px]">${diffMultiplier}x</span>
                 </div>
               `
               : `
                 <!-- Slider Percentage Badge -->
-                <div id="viewsplit-slider-pct-badge" class="px-2.5 py-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-[11px] font-mono text-cyan-400 font-semibold shadow-md">
+                <div id="viewsplit-slider-pct-badge" class="px-2.5 py-1 rounded-xl bg-white/85 dark:bg-black/70 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-[11px] font-mono text-cyan-600 dark:text-cyan-400 font-semibold shadow-md">
                   ${Math.round(sliderPos * 100)}%
                 </div>
               `
@@ -110,7 +110,7 @@ export function renderViewSplitSliderOverlay(state) {
             type="button"
             data-action="swap-overlay-panes"
             title="Đảo vị trí Trước / Sau"
-            class="px-2.5 py-1 rounded-xl bg-black/70 hover:bg-black/90 text-zinc-300 hover:text-white border border-white/10 text-xs font-medium transition cursor-pointer flex items-center gap-1 shadow-md"
+            class="px-2.5 py-1 rounded-xl bg-white/85 hover:bg-zinc-100 dark:bg-black/70 dark:hover:bg-black/90 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white border border-zinc-200/80 dark:border-white/10 text-xs font-medium transition cursor-pointer flex items-center gap-1 shadow-md"
           >
             <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Đảo ảnh</span>
@@ -135,8 +135,8 @@ export function renderViewSplitSliderOverlay(state) {
               <div class="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.8)] pointer-events-none"></div>
 
               <!-- Center Pill Handle -->
-              <div class="relative w-8 h-8 rounded-full bg-white dark:bg-zinc-900 border-2 border-white shadow-xl flex items-center justify-center text-zinc-900 dark:text-white text-xs font-bold transition-transform hover:scale-110 active:scale-95">
-                <i data-lucide="chevrons-left-right" class="w-4 h-4 text-cyan-500"></i>
+              <div class="relative w-8 h-8 rounded-full bg-white dark:bg-zinc-900 border-2 border-zinc-300 dark:border-white shadow-xl flex items-center justify-center text-zinc-900 dark:text-white text-xs font-bold transition-transform hover:scale-110 active:scale-95">
+                <i data-lucide="chevrons-left-right" class="w-4 h-4 text-cyan-600 dark:text-cyan-400"></i>
               </div>
             </div>
           `
@@ -147,10 +147,10 @@ export function renderViewSplitSliderOverlay(state) {
       ${
         !isDiffMode && isReady
           ? `
-            <div class="absolute bottom-3 left-3 pointer-events-none z-10 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-bold text-white shadow-sm">
+            <div class="absolute bottom-3 left-3 pointer-events-none z-10 px-2.5 py-1 rounded-xl bg-white/85 dark:bg-black/60 backdrop-blur-sm border border-zinc-200/80 dark:border-white/10 text-[11px] font-bold text-zinc-800 dark:text-white shadow-sm">
               Trước • ${paneA.title}
             </div>
-            <div class="absolute bottom-3 right-3 pointer-events-none z-10 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-bold text-cyan-400 shadow-sm">
+            <div class="absolute bottom-3 right-3 pointer-events-none z-10 px-2.5 py-1 rounded-xl bg-white/85 dark:bg-black/60 backdrop-blur-sm border border-zinc-200/80 dark:border-white/10 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 shadow-sm">
               Sau • ${paneB.title}
             </div>
           `
@@ -161,26 +161,26 @@ export function renderViewSplitSliderOverlay(state) {
       ${
         !isReady
           ? `
-            <div class="absolute inset-0 z-0 flex flex-col md:flex-row items-center justify-center gap-4 p-6 bg-zinc-950/80 backdrop-blur-md">
+            <div class="absolute inset-0 z-0 flex flex-col md:flex-row items-center justify-center gap-4 p-6 bg-zinc-50/90 dark:bg-zinc-950/80 backdrop-blur-md">
               <!-- Slot A Card -->
               <div
                 data-action="select-pane"
                 data-pane-id="1"
                 title="Bấm để chọn Ảnh Trước (${paneA.title})"
-                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 1
                     ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                    : 'border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
+                    : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
                 }"
               >
-                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2">
                   <i data-lucide="image" class="w-5 h-5"></i>
                 </div>
                 <div class="flex items-center gap-1.5 mb-1">
-                  <h4 class="text-xs font-bold text-white uppercase tracking-wider">Ảnh Trước • ${paneA.title}</h4>
-                  <span class="viewsplit-overlay-badge-1">${activePaneId === 1 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}</span>
+                  <h4 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Ảnh Trước • ${paneA.title}</h4>
+                  <span class="viewsplit-overlay-badge-1">${activePaneId === 1 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}</span>
                 </div>
-                <p class="text-[11px] text-zinc-400 mb-3">${hasA ? paneA.name : 'Chưa chọn ảnh'}</p>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-3">${hasA ? paneA.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     type="button"
@@ -195,7 +195,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="paste-clipboard"
                     data-pane-id="1"
-                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                     <span>Dán ảnh</span>
@@ -204,7 +204,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="open-url-modal"
                     data-pane-id="1"
-                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
                     <span>URL / Drive</span>
@@ -217,20 +217,20 @@ export function renderViewSplitSliderOverlay(state) {
                 data-action="select-pane"
                 data-pane-id="2"
                 title="Bấm để chọn Ảnh Sau (${paneB.title})"
-                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 2
                     ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                    : 'border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
+                    : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
                 }"
               >
-                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2">
                   <i data-lucide="image" class="w-5 h-5"></i>
                 </div>
                 <div class="flex items-center gap-1.5 mb-1">
-                  <h4 class="text-xs font-bold text-white uppercase tracking-wider">Ảnh Sau • ${paneB.title}</h4>
-                  <span class="viewsplit-overlay-badge-2">${activePaneId === 2 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}</span>
+                  <h4 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Ảnh Sau • ${paneB.title}</h4>
+                  <span class="viewsplit-overlay-badge-2">${activePaneId === 2 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}</span>
                 </div>
-                <p class="text-[11px] text-zinc-400 mb-3">${hasB ? paneB.name : 'Chưa chọn ảnh'}</p>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-3">${hasB ? paneB.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     type="button"
@@ -245,7 +245,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="paste-clipboard"
                     data-pane-id="2"
-                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                     <span>Dán ảnh</span>
@@ -254,7 +254,7 @@ export function renderViewSplitSliderOverlay(state) {
                     type="button"
                     data-action="open-url-modal"
                     data-pane-id="2"
-                    class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 cursor-pointer flex items-center gap-1"
                   >
                     <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
                     <span>URL / Drive</span>
