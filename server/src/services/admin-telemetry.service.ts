@@ -12,7 +12,7 @@ import { telemetryTracker } from '../api/middleware/telemetry.middleware.js';
 import { aiMetricsService } from './ai-metrics.service.js';
 import { R2Service } from './r2.service.js';
 import { logger } from '../lib/logger.js';
-import { env } from '../config/env.config.js';
+import { env, resolvedStoragePaths } from '../config/env.config.js';
 
 interface FolderSizeInfo {
   sizeBytes: number;
@@ -86,11 +86,10 @@ export class AdminTelemetryService {
     const cpuCount = cpus.length;
 
     // 2. Disk Storage Analysis
-    const storageRoot = path.resolve(process.cwd(), env.STORAGE_ROOT);
-    const uploadsStats = getFolderStats(path.join(storageRoot, 'uploads'));
-    const processedStats = getFolderStats(path.join(storageRoot, 'processed'));
-    const tempStats = getFolderStats(path.join(storageRoot, 'temp'));
-    const driveStats = getFolderStats(path.join(storageRoot, 'drive'));
+    const uploadsStats = getFolderStats(resolvedStoragePaths.uploads);
+    const processedStats = getFolderStats(resolvedStoragePaths.processed);
+    const tempStats = getFolderStats(resolvedStoragePaths.temp);
+    const driveStats = getFolderStats(resolvedStoragePaths.drive);
 
     const totalStorageBytes = uploadsStats.sizeBytes + processedStats.sizeBytes + tempStats.sizeBytes + driveStats.sizeBytes;
     const totalStorageMb = Math.round((totalStorageBytes / (1024 * 1024)) * 10) / 10;
@@ -254,8 +253,7 @@ export class AdminTelemetryService {
   }
 
   public async cleanTempStorage(): Promise<{ cleanedFiles: number; freedMb: number }> {
-    const storageRoot = path.resolve(process.cwd(), env.STORAGE_ROOT);
-    const tempDir = path.join(storageRoot, 'temp');
+    const tempDir = resolvedStoragePaths.temp;
     let cleanedFiles = 0;
     let freedBytes = 0;
 
@@ -294,6 +292,29 @@ export class AdminTelemetryService {
     }
 
     return { cleanedJobs: cleaned };
+  }
+
+  public async optimizeDatabase(): Promise<{ success: boolean; message: string }> {
+    try {
+      await prisma.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);');
+      await prisma.$executeRawUnsafe('PRAGMA optimize;');
+      return { success: true, message: 'Đã tối ưu hóa và checkpoint SQLite thành công' };
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to optimize SQLite database');
+      return { success: false, message: `Lỗi tối ưu database: ${err?.message || 'Không xác định'}` };
+    }
+  }
+
+  public async cleanHistoryRecords(): Promise<{ deletedCount: number }> {
+    try {
+      const res = await prisma.historyRecord.deleteMany({
+        where: { isDeleted: true }
+      });
+      return { deletedCount: res.count };
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to clean history records');
+      return { deletedCount: 0 };
+    }
   }
 }
 

@@ -123,6 +123,10 @@ export class AuthService {
       .update(String(expiresAt))
       .digest('hex');
 
-    return crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'));
+    const sigBuf = Buffer.from(signature, 'hex');
+    const expBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expBuf.length || sigBuf.length === 0) return false;
+
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   }
 }

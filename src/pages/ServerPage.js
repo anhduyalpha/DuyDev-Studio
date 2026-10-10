@@ -1,5 +1,6 @@
 /**
- * SettingsPage Controller (User Preferences, Admin Protection & App Installation)
+ * SettingsPage Controller (User Preferences & App Installation)
+ * Contains only client preferences. All system management & telemetry is moved to Admin Mission Control (#admin).
  */
 
 import { pwaInstall } from '../hooks/usePWAInstall.js';
@@ -15,18 +16,9 @@ import {
 } from '../utilities/apkUpdater.js';
 import { toggleTheme, getStoredTheme } from '../hooks/useTheme.js';
 import { showToast } from '../utilities/toast.js';
-import { clearAllModuleStates } from '../utilities/moduleState.js';
-import { 
-  isAdminAuthenticated, 
-  verifyAdminPassword, 
-  lockAdminSession, 
-  showChangePasswordModal 
-} from '../utilities/adminAuth.js';
-import { renderR2TelemetryCard, attachR2TelemetryListeners } from '../components/server/R2TelemetryCard.js';
 
 export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
-  const isAdmin = isAdminAuthenticated();
   const isStandalone = isStandaloneMode();
   const isNative = isNativeApp();
 
@@ -63,118 +55,7 @@ export function renderServerPage() {
         </div>
       </div>
 
-      <!-- Banner Admin Control Center -->
-      <a href="#admin" class="block p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/5 border border-orange-500/30 hover:border-orange-500/50 transition-all shadow-md group">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-500 dark:text-orange-400">
-              <i data-lucide="shield" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-orange-500 transition-colors flex items-center gap-2">
-                Trung Tâm Quản Trị & Telemetry
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/20 text-orange-600 dark:text-orange-400">
-                  Dashboard
-                </span>
-              </h3>
-              <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">Giám sát tài nguyên máy chủ, lưu lượng mạng, hàng đợi BullMQ và hạn ngạch AI Agents</p>
-            </div>
-          </div>
-          <div class="text-orange-500 dark:text-orange-400 group-hover:translate-x-1 transition-transform">
-            <i data-lucide="arrow-right" class="w-5 h-5"></i>
-          </div>
-        </div>
-      </a>
-
-      <!-- 2. Quản trị Hệ thống & Đường truyền (Bảo vệ bằng mật khẩu Admin) -->
-      <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
-        ${!isAdmin ? `
-          <!-- Trạng thái đã khóa -->
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i> Quản trị Hệ thống & Đường truyền
-            </h3>
-            <span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold flex items-center gap-1.5">
-              <i data-lucide="lock" class="w-3 h-3"></i> ĐÃ KHÓA
-            </span>
-          </div>
-
-          <div class="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/[0.05] space-y-3">
-            <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
-              <span>Khu vực Quản trị viên. Nhập mật khẩu để mở khóa.</span>
-            </div>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <input 
-                type="password" 
-                id="inputAdminUnlockPassword" 
-                placeholder="Nhập mật khẩu quản trị..." 
-                class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-indigo-500 font-sans" 
-              />
-              <button 
-                id="btnAdminUnlockSubmit" 
-                class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <i data-lucide="key" class="w-3.5 h-3.5"></i> Mở khóa
-              </button>
-            </div>
-            <p id="adminUnlockError" class="text-[11px] text-red-500 font-medium hidden">Mật khẩu không chính xác</p>
-          </div>
-        ` : `
-          <!-- Trạng thái đã mở khóa -->
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-white/5 pb-3">
-            <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> Quản trị Hệ thống
-            </h3>
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1.5">
-                <i data-lucide="unlock" class="w-3 h-3"></i> QUẢN TRỊ VIÊN
-              </span>
-              <button id="btnChangeAdminPwd" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
-                Đổi mật khẩu
-              </button>
-              <button id="btnLockAdminSession" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition cursor-pointer flex items-center gap-1">
-                <i data-lucide="lock" class="w-3 h-3"></i> Khóa
-              </button>
-            </div>
-          </div>
-
-          <!-- Cloudflare R2 Transit & Quota Telemetry -->
-          <div id="r2TelemetryContainer" class="py-1">
-            ${renderR2TelemetryCard()}
-          </div>
-
-          <div class="flex items-center justify-between text-sm py-2 border-b border-zinc-100 dark:border-white/5">
-            <div>
-              <p class="font-semibold text-zinc-900 dark:text-zinc-100">Tự động hủy tệp tạm</p>
-              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa tệp tải lên sau 30 phút</p>
-            </div>
-            <span class="px-2.5 py-1 rounded-md text-xs font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">ĐÃ BẬT</span>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5 border-b border-zinc-100 dark:border-white/5">
-            <div>
-              <p class="font-semibold text-zinc-900 dark:text-zinc-100">Bộ nhớ tạm công cụ</p>
-              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa dữ liệu nháp và cấu hình đã lưu</p>
-            </div>
-            <button id="btnClearAllModuleStates" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 hover:text-zinc-950 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-zinc-200 border border-zinc-200 dark:border-white/10 text-sm font-semibold transition shadow-2xs text-center cursor-pointer">
-              Đặt lại toàn bộ
-            </button>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2">
-            <div>
-              <p class="font-semibold text-zinc-900 dark:text-zinc-100">Lịch sử tác vụ trên trình duyệt</p>
-              <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Xóa danh sách các tệp đã xử lý</p>
-            </div>
-            <button id="btnClearServerHistory" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 border border-red-200 dark:border-red-500/20 text-sm font-semibold transition shadow-2xs text-center cursor-pointer">
-              Xóa lịch sử
-            </button>
-          </div>
-        `}
-      </div>
-
-      <!-- 3. Ứng dụng & Cập nhật -->
+      <!-- 2. Ứng dụng & Cập nhật -->
       <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -246,9 +127,10 @@ export function renderServerPage() {
         </div>
       </div>
 
-      <!-- 4. Thông tin ứng dụng -->
-      <div class="text-center py-4 text-sm text-zinc-600 dark:text-zinc-400">
+      <!-- 3. Thông tin ứng dụng -->
+      <div class="text-center py-4 text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
         <p class="font-bold text-zinc-800 dark:text-zinc-300">DuyDev Studio</p>
+        <p class="text-xs text-zinc-500">Nền tảng tiện ích cá nhân & xử lý tệp tốc độ cao</p>
       </div>
 
     </div>
@@ -273,78 +155,7 @@ export function attachServerPageListeners(onRerender) {
     });
   }
 
-  // 2. Admin unlock submission
-  const btnUnlock = document.getElementById('btnAdminUnlockSubmit');
-  const inputUnlock = document.getElementById('inputAdminUnlockPassword');
-  const errorUnlock = document.getElementById('adminUnlockError');
-
-  const handleUnlock = async () => {
-    if (!inputUnlock) return;
-    const ok = await verifyAdminPassword(inputUnlock.value);
-    if (ok) {
-      showToast('Đã mở khóa Quản trị viên', 'success');
-      triggerUpdate();
-    } else {
-      if (errorUnlock) errorUnlock.classList.remove('hidden');
-      inputUnlock.classList.add('border-red-500');
-      inputUnlock.focus();
-      inputUnlock.select();
-    }
-  };
-
-  if (btnUnlock) btnUnlock.onclick = handleUnlock;
-  if (inputUnlock) {
-    inputUnlock.onkeydown = (e) => {
-      if (e.key === 'Enter') handleUnlock();
-    };
-  }
-
-  // 3. Admin lock session
-  const btnLock = document.getElementById('btnLockAdminSession');
-  if (btnLock) {
-    btnLock.onclick = () => {
-      lockAdminSession();
-      showToast('Đã khóa phiên Quản trị', 'info');
-      triggerUpdate();
-    };
-  }
-
-  // 3.1 R2 Telemetry Card listeners (when admin section is unlocked)
-  if (document.getElementById('btnRefreshR2Stats')) {
-    attachR2TelemetryListeners();
-  }
-
-
-  // 4. Change admin password
-  const btnChangePwd = document.getElementById('btnChangeAdminPwd');
-  if (btnChangePwd) {
-    btnChangePwd.onclick = () => {
-      showChangePasswordModal(() => {
-        triggerUpdate();
-      });
-    };
-  }
-
-  // 5. Clear history
-  const btnClear = document.getElementById('btnClearServerHistory');
-  if (btnClear) {
-    btnClear.addEventListener('click', () => {
-      localStorage.removeItem('ds_job_history_v2');
-      showToast('Đã xoá lịch sử tác vụ', 'info');
-    });
-  }
-
-  // 6. Reset all module states
-  const btnClearState = document.getElementById('btnClearAllModuleStates');
-  if (btnClearState) {
-    btnClearState.addEventListener('click', () => {
-      clearAllModuleStates();
-      showToast('Đã đặt lại dữ liệu công cụ', 'info');
-      setTimeout(() => window.location.reload(), 300);
-    });
-  }
-
-  // 7. PWA Install (shown only when not standalone)
+  // 2. PWA Install (shown only when not standalone)
   const btnInstall = document.getElementById('btnSettingsInstallPwa');
   if (btnInstall) {
     btnInstall.addEventListener('click', () => {
@@ -352,7 +163,7 @@ export function attachServerPageListeners(onRerender) {
     });
   }
 
-  // 8. Check for app update
+  // 3. Check for app update
   const btnCheckUpdate = document.getElementById('btnCheckAppUpdate');
   const isNative = isNativeApp();
 
@@ -455,21 +266,20 @@ export function attachServerPageListeners(onRerender) {
     }
   }
 
-  // 9. Force purge cache & reload (reuse emergencyResetApp from index.html)
+  // 4. Force purge cache & reload
   const btnPurge = document.getElementById('btnForcePurgeUpdate');
   if (btnPurge) {
     btnPurge.addEventListener('click', () => {
       if (typeof window.emergencyResetApp === 'function') {
         window.emergencyResetApp();
       } else {
-        // Fallback: manual cache purge
         caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
         window.location.replace(window.location.origin + window.location.pathname + '?clear=' + Date.now());
       }
     });
   }
 
-  // 10. Populate version badge
+  // 5. Populate version badge
   const badgeVersion = document.getElementById('badgeAppVersion');
   if (badgeVersion) {
     if (isNative) {

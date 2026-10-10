@@ -139,6 +139,9 @@ export async function verifyAdminPassword(password) {
   if (isValid) {
     try {
       sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
+      if (!sessionStorage.getItem(SESSION_KEY_TOKEN)) {
+        sessionStorage.setItem(SESSION_KEY_TOKEN, trimmed);
+      }
     } catch {}
   }
   return isValid;

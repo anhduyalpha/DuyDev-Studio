@@ -129,3 +129,28 @@ export async function cleanQueuesHandler(_request: FastifyRequest, reply: Fastif
     data: result
   });
 }
+
+/**
+ * POST /api/v1/admin/actions/optimize-db
+ * Runs SQLite WAL checkpoint and optimization
+ */
+export async function optimizeDatabaseHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.optimizeDatabase();
+  return reply.send({
+    success: result.success,
+    message: result.message
+  });
+}
+
+/**
+ * POST /api/v1/admin/actions/clean-history
+ * Purges deleted history records across database
+ */
+export async function cleanHistoryHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.cleanHistoryRecords();
+  return reply.send({
+    success: true,
+    message: `Đã dọn dẹp ${result.deletedCount} bản ghi lịch sử đã xóa`,
+    data: result
+  });
+}

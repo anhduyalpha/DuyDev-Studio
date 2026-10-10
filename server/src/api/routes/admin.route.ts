@@ -11,7 +11,9 @@ import {
   testAiKeyHandler,
   cleanTempStorageHandler,
   cleanR2OrphansHandler,
-  cleanQueuesHandler
+  cleanQueuesHandler,
+  optimizeDatabaseHandler,
+  cleanHistoryHandler
 } from '../controllers/admin.controller.js';
 
 export async function adminRoute(app: FastifyInstance) {
@@ -23,8 +25,10 @@ export async function adminRoute(app: FastifyInstance) {
   app.post('/api/v1/admin/ai/keys', { preHandler: adminAuthGuard }, updateAiKeyHandler);
   app.post('/api/v1/admin/ai/test-key', { preHandler: adminAuthGuard }, testAiKeyHandler);
 
-  // Quick Actions
+  // Quick Actions & Maintenance
   app.post('/api/v1/admin/actions/clean-temp', { preHandler: adminAuthGuard }, cleanTempStorageHandler);
   app.post('/api/v1/admin/actions/clean-r2', { preHandler: adminAuthGuard }, cleanR2OrphansHandler);
   app.post('/api/v1/admin/actions/clean-queues', { preHandler: adminAuthGuard }, cleanQueuesHandler);
+  app.post('/api/v1/admin/actions/optimize-db', { preHandler: adminAuthGuard }, optimizeDatabaseHandler);
+  app.post('/api/v1/admin/actions/clean-history', { preHandler: adminAuthGuard }, cleanHistoryHandler);
 }
