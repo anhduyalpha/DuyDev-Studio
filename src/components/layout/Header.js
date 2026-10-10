@@ -23,9 +23,7 @@ export function renderHeader() {
         
         <!-- Left: Clean Branding -->
         <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0 group" onclick="window.location.hash = ''">
-          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-white/90 to-zinc-100 dark:from-white/[0.12] dark:to-white/[0.04] backdrop-blur-md border border-zinc-300/80 dark:border-white/[0.18] flex items-center justify-center transition-all duration-200 group-hover:border-indigo-500/50 dark:group-hover:border-indigo-400/50 shadow-xs group-hover:scale-105">
-            <span class="font-bold text-xs sm:text-sm tracking-wider text-zinc-900 dark:text-white font-mono">DS</span>
-          </div>
+          <img src="src/assets/logo-ds.svg" alt="DuyDev Studio" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain transition-all duration-200 group-hover:scale-105 group-hover:ring-2 group-hover:ring-orange-500/30 group-hover:shadow-md group-hover:shadow-orange-500/10 shrink-0" />
           <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
         </div>
 

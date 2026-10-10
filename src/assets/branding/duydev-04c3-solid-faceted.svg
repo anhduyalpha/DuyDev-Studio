@@ -1,44 +1,61 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
   <defs>
-    <linearGradient id="facetTop_4c3" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="50%" stop-color="#D4D4D8" />
-      <stop offset="100%" stop-color="#A1A1AA" />
+    <!-- Upper Facet: Radiant Solar Amber-Orange Specular Reflection -->
+    <linearGradient id="facetTop_4c3_orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD6A4" />
+      <stop offset="42%" stop-color="#FF7A00" />
+      <stop offset="100%" stop-color="#EA580C" />
     </linearGradient>
-    <linearGradient id="facetBottom_4c3" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#71717A" />
-      <stop offset="50%" stop-color="#3F3F46" />
-      <stop offset="100%" stop-color="#27272A" />
+
+    <!-- Lower Facet: Deep Volcanic Copper & Molten Ember Bevel -->
+    <linearGradient id="facetBottom_4c3_orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C2410C" />
+      <stop offset="52%" stop-color="#9A3412" />
+      <stop offset="100%" stop-color="#431407" />
     </linearGradient>
-    <linearGradient id="innerFacet_4c3" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FAFAFA" />
-      <stop offset="100%" stop-color="#E4E4E7" />
+
+    <!-- Inner Core: Luminous Neon Amber Interlocking Stroke -->
+    <linearGradient id="innerFacet_4c3_orange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFF7ED" />
+      <stop offset="48%" stop-color="#FDBA74" />
+      <stop offset="100%" stop-color="#FB923C" />
     </linearGradient>
+
+    <!-- Ambient Solar Energy Glow -->
+    <radialGradient id="ambientOrange_4c3" cx="62%" cy="54%" r="48%">
+      <stop offset="0%" stop-color="#FF7A00" stop-opacity="0.18" />
+      <stop offset="65%" stop-color="#EA580C" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#EA580C" stop-opacity="0" />
+    </radialGradient>
   </defs>
-  <!-- Background Container -->
-  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0B0B0E" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+
+  <!-- Background Container: Obsidian Slate with Warm Amber Border -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0A0908" stroke="rgba(249, 115, 22, 0.28)" stroke-width="1.5" />
   
-  <!-- Outer Faceted Upper Armor Wing -->
+  <!-- Subtle Internal Glow Atmosphere -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#ambientOrange_4c3)" />
+
+  <!-- Outer Faceted Upper Armor Wing (Lit Facet) -->
   <path d="M 28 26 L 66 26 C 86 26 98 42 98 60 L 52 60 L 46 60 Z" 
-        fill="url(#facetTop_4c3)" />
+        fill="url(#facetTop_4c3_orange)" />
         
-  <!-- Outer Faceted Lower Armor Wing (Darker Bevel) -->
+  <!-- Outer Faceted Lower Armor Wing (Darker Copper Bevel) -->
   <path d="M 28 94 L 66 94 C 86 94 98 78 98 60 L 52 60 L 46 60 Z" 
-        fill="url(#facetBottom_4c3)" />
+        fill="url(#facetBottom_4c3_orange)" />
 
   <!-- Negative Center Cutout to form Monogram D hollow -->
-  <polygon points="40,36 60,36 78,52 60,60 46,60" fill="#0B0B0E" opacity="0.95" />
-  <polygon points="40,84 60,84 78,68 60,60 46,60" fill="#0B0B0E" opacity="0.95" />
+  <polygon points="40,36 60,36 78,52 60,60 46,60" fill="#0A0908" opacity="0.96" />
+  <polygon points="40,84 60,84 78,68 60,60 46,60" fill="#0A0908" opacity="0.96" />
 
   <!-- Inner Interlocking Stealth Core (Second D Facet) -->
   <path d="M 48 40 L 68 40 C 78 40 84 48 84 60 C 84 72 78 80 68 80 L 48 80 L 58 60 Z" 
-        stroke="url(#innerFacet_4c3)" stroke-width="4.5" stroke-linejoin="miter" fill="#18181B" />
+        stroke="url(#innerFacet_4c3_orange)" stroke-width="4.5" stroke-linejoin="miter" fill="#1A120B" />
 
   <!-- Facet Crease Spine Lines -->
-  <line x1="28" y1="26" x2="46" y2="60" stroke="#FFFFFF" stroke-width="1.5" opacity="0.8" />
-  <line x1="28" y1="94" x2="46" y2="60" stroke="#71717A" stroke-width="1.5" />
-  <line x1="66" y1="26" x2="98" y2="60" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9" />
+  <line x1="28" y1="26" x2="46" y2="60" stroke="#FFF7ED" stroke-width="1.5" opacity="0.85" />
+  <line x1="28" y1="94" x2="46" y2="60" stroke="#9A3412" stroke-width="1.5" />
+  <line x1="66" y1="26" x2="98" y2="60" stroke="#FFD6A4" stroke-width="1.5" opacity="0.95" />
 
   <!-- Diamond Mach Apex Indicator -->
-  <polygon points="98,60 102,57 106,60 102,63" fill="#FFFFFF" />
+  <polygon points="98,60 102,57 106,60 102,63" fill="#FFF7ED" />
 </svg>

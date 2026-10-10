@@ -3,33 +3,33 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v22.11';
+const CACHE_NAME = 'duydev-studio-v22.12';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=22.11',
-  './src/styles/studocu.css?v=22.11',
-  './src/styles/highlight-theme.css?v=22.11',
+  './src/styles/stitch-tokens.css?v=22.12',
+  './src/styles/studocu.css?v=22.12',
+  './src/styles/highlight-theme.css?v=22.12',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=22.11',
+  './src/app.js?v=22.12',
   './src/hooks/useToolRegistry.js',
   './src/pages/DashboardPage.js',
   './src/components/dashboard/ToolCard.js',
   './src/components/common/ToolIcons.js',
-  './src/components/tools/viewsplit/ViewSplitWorkspace.js?v=22.11',
-  './src/components/tools/viewsplit/hooks/useViewSplit.js?v=22.11',
-  './src/components/tools/viewsplit/hooks/useViewSplitDom.js?v=22.11',
-  './src/components/tools/viewsplit/components/ViewSplitPane.js?v=22.11',
-  './src/components/tools/viewsplit/components/ViewSplitToolbar.js?v=22.11',
-  './src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js?v=22.11',
-  './src/components/tools/viewsplit/components/ViewSplitPixelInspector.js?v=22.11',
+  './src/components/tools/viewsplit/ViewSplitWorkspace.js?v=22.12',
+  './src/components/tools/viewsplit/hooks/useViewSplit.js?v=22.12',
+  './src/components/tools/viewsplit/hooks/useViewSplitDom.js?v=22.12',
+  './src/components/tools/viewsplit/components/ViewSplitPane.js?v=22.12',
+  './src/components/tools/viewsplit/components/ViewSplitToolbar.js?v=22.12',
+  './src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js?v=22.12',
+  './src/components/tools/viewsplit/components/ViewSplitPixelInspector.js?v=22.12',
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',
@@ -43,7 +43,8 @@ const ASSETS_TO_PRECACHE = [
   './src/assets/shortcut-archive.png',
   './src/assets/shortcut-qr.png',
   './src/assets/icon-192.svg',
-  './src/assets/icon-512.svg'
+  './src/assets/icon-512.svg',
+  './src/assets/icon-maskable.svg'
 ];
 
 // ─── IndexedDB helpers for Share Target ───
