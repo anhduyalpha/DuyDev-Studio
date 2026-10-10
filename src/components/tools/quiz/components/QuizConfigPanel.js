@@ -27,26 +27,26 @@ export function renderQuizConfigPanel(state) {
   const isReadyToGenerate = isSourceReady && hasValidPages && hasValidPrefix && !state.isProcessing;
 
   return `
-    <div class="bg-[#111114] border border-zinc-800/80 rounded-2xl p-5 space-y-5 shadow-sm">
+    <div class="bg-white dark:bg-[#111114] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 space-y-5 shadow-xs dark:shadow-sm">
       ${
         shouldHideSourceBox
           ? `
         <!-- Nguồn tài liệu đã nạp (Ẩn box nguồn lớn, hiện thanh trạng thái tối giản) -->
-        <div id="quizSourceCompactBar" class="flex items-center justify-between p-3 rounded-xl bg-zinc-950/80 border border-zinc-800/80 text-xs text-zinc-300 animate-fadeIn">
+        <div id="quizSourceCompactBar" class="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800/80 text-xs text-zinc-700 dark:text-zinc-300 animate-fadeIn">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
               <i data-lucide="${isFileReady ? 'file-text' : 'link'}" class="w-3.5 h-3.5"></i>
             </div>
             <div class="min-w-0">
-              <div class="font-medium text-zinc-200 truncate">${escapeHtml(isFileReady ? state.file?.name : 'Google Drive')}</div>
+              <div class="font-medium text-zinc-900 dark:text-zinc-200 truncate">${escapeHtml(isFileReady ? state.file?.name : 'Google Drive')}</div>
               <div class="text-[11px] text-zinc-500 font-mono flex items-center gap-1.5">
                 <span>${isFileReady && state.file?.size ? formatBytes(state.file.size) : 'Liên kết trực tuyến'}</span>
-                <span class="text-zinc-600">•</span>
-                <span class="text-emerald-400 font-medium">✨ Đã sẵn sàng nè</span>
+                <span class="text-zinc-400 dark:text-zinc-600">•</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-medium">Đã sẵn sàng</span>
               </div>
             </div>
           </div>
-          <button type="button" id="btnQuizChangeSource" class="text-xs px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer shrink-0">
+          <button type="button" id="btnQuizChangeSource" class="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition cursor-pointer shrink-0">
             Đổi tệp
           </button>
         </div>
@@ -55,11 +55,11 @@ export function renderQuizConfigPanel(state) {
         <!-- 1. Nguồn tài liệu Section -->
         <div id="quizSourceSection" class="space-y-3">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <span>Nguồn tài liệu</span>
               <span class="text-rose-500 font-bold">*</span>
               <span id="quizSourceStatus">
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>
               </span>
             </label>
             <div id="quizSourceDetail">
@@ -70,43 +70,43 @@ export function renderQuizConfigPanel(state) {
           <!-- 1. PDF File Dropzone -->
           <div id="quizDropzone" class="relative group border-2 border-dashed ${
             hasFile
-              ? 'border-zinc-700 bg-zinc-900/40'
-              : 'border-rose-500/30 hover:border-rose-500/50 bg-rose-950/5'
+              ? 'border-zinc-300 dark:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/40'
+              : 'border-rose-500/30 hover:border-rose-500/50 bg-rose-50/40 dark:bg-rose-950/5'
           } rounded-xl p-4 transition flex flex-col items-center justify-center text-center cursor-pointer">
             <input type="file" id="quizFileInput" accept=".pdf,application/pdf" class="hidden" />
             ${
               hasFile
                 ? `
               <div class="w-full space-y-2">
-                <div class="flex items-center justify-between gap-3 bg-[#18181b] p-3 rounded-lg border border-zinc-800 text-left">
+                <div class="flex items-center justify-between gap-3 bg-white dark:bg-[#18181b] p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-left">
                   <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-9 h-9 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center shrink-0">
+                    <div class="w-9 h-9 rounded-lg bg-red-500/10 text-red-500 dark:text-red-400 flex items-center justify-center shrink-0">
                       <i data-lucide="file-text" class="w-5 h-5"></i>
                     </div>
                     <div class="min-w-0">
-                      <div class="text-sm font-medium text-zinc-200 truncate">${escapeHtml(state.file?.name)}</div>
+                      <div class="text-sm font-medium text-zinc-900 dark:text-zinc-200 truncate">${escapeHtml(state.file?.name)}</div>
                       <div class="text-xs text-zinc-500 font-mono">${formatBytes(state.file?.size || 0)}</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-2 shrink-0">
                     ${
                       state.file?.status === 'uploading'
-                        ? `<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-1"><i data-lucide="loader" class="w-3 h-3 animate-spin"></i><span>Đang nạp ${state.file?.uploadProgress || 0}%... ✨</span></span>`
-                        : `<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">Lỗi rồi 🥺</span>`
+                        ? `<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 flex items-center gap-1"><i data-lucide="loader" class="w-3 h-3 animate-spin"></i><span>Đang nạp ${state.file?.uploadProgress || 0}%...</span></span>`
+                        : `<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20">Lỗi nạp tệp</span>`
                     }
-                    <button type="button" id="btnQuizChangeFile" class="text-xs px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition cursor-pointer">Đổi tệp</button>
+                    <button type="button" id="btnQuizChangeFile" class="text-xs px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">Đổi tệp</button>
                   </div>
                 </div>
               </div>
             `
                 : `
               <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center group-hover:scale-105 transition shrink-0">
+                <div class="w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 flex items-center justify-center group-hover:scale-105 transition shrink-0">
                   <i data-lucide="upload-cloud" class="w-4 h-4"></i>
                 </div>
                 <div class="text-left">
-                  <p class="text-xs sm:text-sm font-medium text-zinc-300">Chọn hoặc kéo thả tệp PDF vào đây nha 📑✨</p>
-                  <p class="text-[11px] text-zinc-500 font-mono">Tự động nhận diện siêu tốc</p>
+                  <p class="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-300">Kéo thả hoặc chọn tệp PDF</p>
+                  <p class="text-[11px] text-zinc-500 font-mono">Định dạng .pdf tối đa 500MB</p>
                 </div>
               </div>
             `
@@ -115,14 +115,14 @@ export function renderQuizConfigPanel(state) {
 
           <!-- Divider -->
           <div class="flex items-center gap-3 my-1">
-            <div class="flex-1 h-px bg-zinc-800/80"></div>
+            <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800/80"></div>
             <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Hoặc Google Drive</span>
-            <div class="flex-1 h-px bg-zinc-800/80"></div>
+            <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800/80"></div>
           </div>
 
           <!-- 2. Google Drive Link Input (Tự động nhận diện) -->
           <div class="relative">
-            <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="Dán link Google Drive vào đây nè... ☁️✨" class="w-full bg-zinc-950 border-2 border-dashed border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-950/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-hidden transition" />
+            <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="Dán liên kết Google Drive (chế độ công khai)" class="w-full bg-white dark:bg-zinc-950 border-2 border-dashed border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-50/30 dark:bg-rose-950/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden transition" />
           </div>
         </div>
       `
@@ -132,16 +132,16 @@ export function renderQuizConfigPanel(state) {
       ${
         showPrompt
           ? `
-        <div id="quizPromptBox" class="space-y-2 bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/60 animate-fadeIn">
+        <div id="quizPromptBox" class="space-y-2 bg-zinc-50/80 dark:bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-200/80 dark:border-zinc-800/60 animate-fadeIn">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400"></i>
               <span>Nhận diện thông minh</span>
             </label>
             ${
               !showParams
                 ? `
-              <button type="button" id="btnQuizSkipPrompt" class="text-[11px] text-zinc-500 hover:text-indigo-400 transition flex items-center gap-1 cursor-pointer">
+              <button type="button" id="btnQuizSkipPrompt" class="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-1 cursor-pointer">
                 <span>Nhập thông số thủ công</span>
                 <i data-lucide="arrow-down" class="w-3 h-3"></i>
               </button>
@@ -150,11 +150,11 @@ export function renderQuizConfigPanel(state) {
             }
           </div>
           <div class="flex gap-2">
-            <input type="text" id="quizPromptInput" ${state.isAnalyzingPrompt ? 'disabled' : ''} placeholder="Ví dụ: Trang 11, 20 câu, từ câu 1" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500/50 transition disabled:opacity-50" />
-            <button type="button" id="btnQuizParsePrompt" ${state.isAnalyzingPrompt ? 'disabled' : ''} class="px-3.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <input type="text" id="quizPromptInput" ${state.isAnalyzingPrompt ? 'disabled' : ''} placeholder="Ví dụ: Trang 11, 20 câu, từ câu 1" class="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500 transition disabled:opacity-50" />
+            <button type="button" id="btnQuizParsePrompt" ${state.isAnalyzingPrompt ? 'disabled' : ''} class="px-3.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
               ${
                 state.isAnalyzingPrompt
-                  ? `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Đang lắng nghe... ✨</span>`
+                  ? `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Đang phân tích...</span>`
                   : `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Phân tích</span>`
               }
             </button>
@@ -172,72 +172,72 @@ export function renderQuizConfigPanel(state) {
           <!-- Pages Input (Mandatory) -->
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+              <label class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                 <span>Trang trích xuất</span>
                 <span class="text-rose-500 font-bold">*</span>
                 <span id="quizPagesStatus">
                   ${
                     hasValidPages
-                      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(state.pages)}</span>`
-                      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
+                      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(state.pages)}</span>`
+                      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>`
                   }
                 </span>
               </label>
               <span class="text-[11px] text-zinc-500 font-mono">vd: 11 hoặc 11-15</span>
             </div>
-            <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="Ví dụ: 11 hoặc 11-15" class="w-full bg-zinc-950 border ${
+            <input type="text" id="quizPagesInput" value="${escapeHtml(state.pages)}" placeholder="Ví dụ: 11 hoặc 11-15" class="w-full bg-white dark:bg-zinc-950 border ${
               hasValidPages ? 'border-emerald-500/40 focus:border-emerald-500' : 'border-rose-500/40 focus:border-rose-500'
-            } rounded-xl px-3.5 py-2 text-sm text-zinc-200 placeholder-zinc-600 font-mono focus:outline-hidden transition" />
+            } rounded-xl px-3.5 py-2 text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 font-mono focus:outline-hidden transition" />
           </div>
 
           <!-- Question Count Input -->
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-zinc-300">Số lượng câu hỏi</label>
+              <label class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Số lượng câu hỏi</label>
               <span class="text-[11px] text-zinc-500 font-mono">vd: 20, 23, 37...</span>
             </div>
-            <input type="number" id="quizCountInput" min="1" max="200" value="${state.count || 20}" placeholder="20" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
+            <input type="number" id="quizCountInput" min="1" max="200" value="${state.count || 20}" placeholder="20" class="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-900 dark:text-zinc-200 font-mono focus:outline-hidden focus:border-indigo-500 transition" />
           </div>
 
           <!-- Start Number & Mandatory File Name Box -->
           <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div class="sm:col-span-4 space-y-1.5">
-              <label class="text-xs font-medium text-zinc-300">Bắt đầu từ câu</label>
-              <input type="number" id="quizStartInput" min="1" max="500" value="${state.start}" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 font-mono focus:outline-hidden focus:border-zinc-600 transition" />
+              <label class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Bắt đầu từ câu</label>
+              <input type="number" id="quizStartInput" min="1" max="500" value="${state.start}" class="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-900 dark:text-zinc-200 font-mono focus:outline-hidden focus:border-indigo-500 transition" />
             </div>
             <div class="sm:col-span-8 space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+              <label class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                 <span>Tên file</span>
                 <span class="text-rose-500 font-bold">*</span>
                 <span id="quizPrefixStatus">
                   ${
                     hasValidPrefix
-                      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>`
-                      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>`
+                      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>`
+                      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>`
                   }
                 </span>
               </label>
-              <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: Ester Lipid,..." autocomplete="off" spellcheck="false" class="w-full bg-zinc-950 border ${
+              <input type="text" id="quizPrefixInput" value="${escapeHtml(state.prefix)}" placeholder="Ví dụ: Ester Lipid,..." autocomplete="off" spellcheck="false" class="w-full bg-white dark:bg-zinc-950 border ${
                 hasValidPrefix ? 'border-emerald-500/40 focus:border-emerald-500' : 'border-rose-500/40 focus:border-rose-500'
-              } rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden transition" />
+              } rounded-xl px-3.5 py-2 text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden transition" />
             </div>
           </div>
 
           <!-- Header Title -->
           <div class="space-y-1.5">
-            <label class="text-xs font-medium text-zinc-300">Tiêu đề in đầu trang</label>
-            <input type="text" id="quizTitleInput" value="${escapeHtml(state.title)}" placeholder="BÀI TẬP TRẮC NGHIỆM" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-hidden focus:border-zinc-600 transition" />
+            <label class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Tiêu đề in đầu trang</label>
+            <input type="text" id="quizTitleInput" value="${escapeHtml(state.title)}" placeholder="BÀI TẬP TRẮC NGHIỆM" class="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500 transition" />
           </div>
 
           <!-- Action Button -->
           <div class="pt-2">
-            <button type="button" id="btnQuizGenerate" ${!isReadyToGenerate ? 'disabled' : ''} class="w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition shadow-md ${
+            <button type="button" id="btnQuizGenerate" ${!isReadyToGenerate ? 'disabled' : ''} class="w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition shadow-sm ${
               isReadyToGenerate
-                ? 'bg-zinc-100 hover:bg-white text-zinc-950 cursor-pointer'
-                : 'bg-zinc-900 text-zinc-600 border border-zinc-800/80 cursor-not-allowed'
+                ? 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-950 cursor-pointer'
+                : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 border border-zinc-200 dark:border-zinc-800/80 cursor-not-allowed'
             }">
               <i data-lucide="sparkles" class="w-4 h-4"></i>
-              <span>${state.isProcessing ? '✨ Đang chăm chỉ biên soạn...' : 'Tạo Đề bài & Đáp án A4'}</span>
+              <span>${state.isProcessing ? 'Đang biên soạn...' : 'Tạo Đề bài & Đáp án A4'}</span>
             </button>
           </div>
         </div>

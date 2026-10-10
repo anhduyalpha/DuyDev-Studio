@@ -29,27 +29,27 @@ function renderProcessingState(state) {
       <div class="quiz-border-processing" aria-hidden="true"></div>
 
       <!-- Inner Card Body -->
-      <div class="relative z-[1] w-full rounded-[14.5px] bg-gradient-to-b from-[#141419] to-[#0f0f13] p-6 space-y-5">
+      <div class="relative z-[1] w-full rounded-[14.5px] bg-white dark:bg-gradient-to-b dark:from-[#141419] dark:to-[#0f0f13] p-6 space-y-5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/25">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/25">
               <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
             </div>
             <div class="min-w-0">
-              <h4 class="text-sm font-semibold text-zinc-100">✨ Đang dồn hết tâm huyết soạn đề cho bạn nè... 💖</h4>
-              <p id="quizProgressStage" class="text-xs text-zinc-400 truncate">${escapeHtml(state.stage || '🌱 Đang chăm chỉ chuẩn bị tài liệu thật xịn sò... ✨')}</p>
+              <h4 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Đang biên soạn đề bài và đáp án...</h4>
+              <p id="quizProgressStage" class="text-xs text-zinc-500 dark:text-zinc-400 truncate">${escapeHtml(state.stage || 'Đang chuẩn bị tài liệu...')}</p>
             </div>
           </div>
-          <span id="quizProgressText" class="text-sm font-mono font-semibold text-zinc-200 shrink-0">${pct}%</span>
+          <span id="quizProgressText" class="text-sm font-mono font-semibold text-zinc-800 dark:text-zinc-200 shrink-0">${pct}%</span>
         </div>
 
         <!-- Progress bar -->
-        <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
+        <div class="w-full bg-zinc-100 dark:bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-200 dark:border-zinc-800">
           <div id="quizProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
         </div>
 
         <div class="flex items-center justify-end pt-2">
-          <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition cursor-pointer">
+          <button type="button" id="btnQuizCancelJob" class="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition cursor-pointer">
             Hủy tác vụ
           </button>
         </div>
@@ -100,14 +100,14 @@ function renderCompletedState(state) {
       <div class="quiz-border-completed" aria-hidden="true"></div>
 
       <!-- Inner Card Body -->
-      <div class="relative z-[1] w-full rounded-[14.5px] bg-gradient-to-b from-[#141419] to-[#0f0f13] p-4 sm:p-5 space-y-4">
+      <div class="relative z-[1] w-full rounded-[14.5px] bg-white dark:bg-gradient-to-b dark:from-[#141419] dark:to-[#0f0f13] p-4 sm:p-5 space-y-4">
         <!-- Result Header -->
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] shrink-0"></span>
             <div class="flex items-center gap-2 flex-wrap min-w-0">
-              <h4 class="text-sm font-bold text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <h4 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Đã tạo Đề bài & Đáp án A4</h4>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 Hoàn tất
               </span>
             </div>
@@ -117,26 +117,26 @@ function renderCompletedState(state) {
         <!-- Dual Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <!-- Worksheet Card -->
-          <div class="bg-[#121217] border border-blue-500/30 hover:border-blue-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
+          <div class="bg-blue-50/40 dark:bg-[#121217] border border-blue-500/25 dark:border-blue-500/30 hover:border-blue-500/50 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
             <div class="space-y-2">
               <div class="flex items-center justify-between">
-                <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Đề bài</span>
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Đề bài</span>
                 <span class="text-xs text-zinc-500 font-mono">${wsPages} trang A4</span>
               </div>
-              <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(wsName)}">${escapeHtml(wsName)}</div>
-              <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
-                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${count} câu</span>
+              <div class="text-sm font-medium text-zinc-900 dark:text-zinc-200 truncate" title="${escapeHtml(wsName)}">${escapeHtml(wsName)}</div>
+              <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                <span class="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">${count} câu</span>
                 ${imgBadge}
                 ${typeBadges}
-                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(wsSize)}</span>
+                <span class="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">${formatBytes(wsSize)}</span>
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-              <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${wsViewUrl}" data-download-url="${wsDownloadUrl || ''}">
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-200/80 dark:border-zinc-800/60">
+              <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${wsId}" data-file-name="${escapeHtml(wsName)}" data-view-url="${wsViewUrl}" data-download-url="${wsDownloadUrl || ''}">
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                 <span>Xem trước</span>
               </button>
-              <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
+              <a href="${wsDownloadUrl}" download="${escapeHtml(wsName)}" data-file-url="${wsDownloadUrl}" data-file-name="${escapeHtml(wsName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
                 <span>Tải về</span>
               </a>
@@ -144,25 +144,25 @@ function renderCompletedState(state) {
           </div>
 
           <!-- Answer Key Card -->
-          <div class="bg-[#121217] border border-emerald-500/30 hover:border-emerald-500/55 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
+          <div class="bg-emerald-50/40 dark:bg-[#121217] border border-emerald-500/25 dark:border-emerald-500/30 hover:border-emerald-500/50 rounded-xl p-4 flex flex-col justify-between space-y-4 transition shadow-xs">
             <div class="space-y-2">
               <div class="flex items-center justify-between">
-                <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Đáp án & Lời giải</span>
                 <span class="text-xs text-zinc-500 font-mono">${ansPages} trang A4</span>
               </div>
-              <div class="text-sm font-medium text-zinc-200 truncate" title="${escapeHtml(ansName)}">${escapeHtml(ansName)}</div>
-              <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-400">
-                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">Ma trận + Lời giải</span>
+              <div class="text-sm font-medium text-zinc-900 dark:text-zinc-200 truncate" title="${escapeHtml(ansName)}">${escapeHtml(ansName)}</div>
+              <div class="flex flex-wrap gap-1.5 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                <span class="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">Ma trận + Lời giải</span>
                 ${imgBadge}
-                <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">${formatBytes(ansSize)}</span>
+                <span class="px-2 py-0.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">${formatBytes(ansSize)}</span>
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60">
-              <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ansViewUrl}" data-download-url="${ansDownloadUrl || ''}">
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-200/80 dark:border-zinc-800/60">
+              <button type="button" class="btn-quiz-preview w-full py-2 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer" data-file-id="${ansId}" data-file-name="${escapeHtml(ansName)}" data-view-url="${ansViewUrl}" data-download-url="${ansDownloadUrl || ''}">
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                 <span>Xem trước</span>
               </button>
-              <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
+              <a href="${ansDownloadUrl}" download="${escapeHtml(ansName)}" data-file-url="${ansDownloadUrl}" data-file-name="${escapeHtml(ansName)}" class="btn-quiz-download w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 transition touch-manipulation min-h-[42px] cursor-pointer">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
                 <span>Tải về</span>
               </a>
@@ -171,10 +171,10 @@ function renderCompletedState(state) {
         </div>
 
         <!-- Bottom Action Bar / Làm tài liệu khác -->
-        <div class="pt-3 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div class="flex items-center gap-2 text-xs text-zinc-400">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
-            <span class="font-mono text-[11px] text-zinc-400">Đã lưu trữ vào lịch sử bài tập</span>
+        <div class="pt-3 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
+            <span class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">Đã lưu trữ vào lịch sử bài tập</span>
           </div>
           <button type="button" id="btnQuizReset" class="btn-quiz-reset w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30 border border-indigo-400/40 hover:border-indigo-300 transition-all cursor-pointer active:scale-98">
             <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
@@ -203,13 +203,13 @@ function renderErrorState(state) {
     lower.includes('dải câu hỏi') ||
     lower.includes('không tìm thấy đủ câu hỏi')
   ) {
-    errorMsg = 'Ui, mình tìm quanh các trang này mà chưa thấy đủ số câu bạn cần rồi 🥺 Bạn nghía lại số trang hoặc số câu giúp mình xíu nha! ✨';
+    errorMsg = 'Không tìm thấy đủ số câu hỏi trong các trang đã chọn. Vui lòng kiểm tra lại dải trang hoặc số câu.';
   } else if (
     lower.includes('không có câu hỏi') ||
     lower.includes('không tìm thấy câu hỏi') ||
     lower.includes('no questions')
   ) {
-    errorMsg = 'Ui, không có câu hỏi nào trong trang bạn chọn rồi 🥺 Bạn nghía lại số trang giúp mình nha! ✨';
+    errorMsg = 'Không tìm thấy câu hỏi nào trong các trang đã chọn. Vui lòng kiểm tra lại dải trang.';
   } else if (errorMsg.includes('Traceback (most recent call last):')) {
     const lines = errorMsg.trim().split('\n');
     const lastLine = lines[lines.length - 1].trim();
@@ -222,11 +222,11 @@ function renderErrorState(state) {
 
   return `
     <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 space-y-3">
-      <div class="flex items-center gap-2 text-red-400 text-sm font-semibold">
+      <div class="flex items-center gap-2 text-red-500 dark:text-red-400 text-sm font-semibold">
         <i data-lucide="alert-circle" class="w-4 h-4"></i>
         <span>Lỗi tạo bài tập</span>
       </div>
-      <p class="text-xs text-red-300/90 leading-relaxed font-medium">${escapeHtml(errorMsg)}</p>
+      <p class="text-xs text-red-600 dark:text-red-300/90 leading-relaxed font-medium">${escapeHtml(errorMsg)}</p>
       <button type="button" id="btnQuizReset" class="btn-quiz-reset text-xs px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-semibold border border-red-400/30 transition shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95">
         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
         <span>Thử lại</span>
@@ -237,32 +237,32 @@ function renderErrorState(state) {
 
 function renderEmptyPlaceholder() {
   return `
-    <div class="relative overflow-hidden rounded-2xl border-2 border-dashed border-zinc-800/90 hover:border-zinc-700/80 bg-gradient-to-b from-zinc-900/25 via-[#111114]/40 to-zinc-950/70 p-6 sm:p-7 text-center transition-all">
+    <div class="relative overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700/80 bg-white/60 dark:bg-gradient-to-b dark:from-zinc-900/25 dark:via-[#111114]/40 dark:to-zinc-950/70 p-6 sm:p-7 text-center transition-all">
       <div class="flex flex-col items-center justify-center space-y-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/80 border border-zinc-800 text-[11px] font-mono text-zinc-400">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
           <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
           <span>Khu vực xuất kết quả</span>
         </div>
 
-        <div class="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-xs">
+        <div class="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shadow-xs">
           <i data-lucide="file-check-2" class="w-5 h-5"></i>
         </div>
 
         <div class="space-y-1">
-          <h4 class="text-sm font-semibold text-zinc-200">Đề bài & Đáp án A4</h4>
-          <p class="text-xs text-zinc-500 max-w-md mx-auto">
+          <h4 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Đề bài & Đáp án A4</h4>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
             Tệp PDF đề bài và đáp án chi tiết sẽ tự động xuất hiện tại đây sau khi hoàn tất xử lý.
           </p>
         </div>
 
         <!-- Visual Slot Previews (Dashed Ghost Cards) -->
         <div class="grid grid-cols-2 gap-3 w-full max-w-md pt-1.5">
-          <div class="border border-dashed border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-500 text-xs font-mono">
-            <i data-lucide="file-text" class="w-3.5 h-3.5 text-zinc-600"></i>
+          <div class="border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-50 dark:bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-500 text-xs font-mono">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-600"></i>
             <span>Đề bài (PDF)</span>
           </div>
-          <div class="border border-dashed border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-500 text-xs font-mono">
-            <i data-lucide="check-square" class="w-3.5 h-3.5 text-zinc-600"></i>
+          <div class="border border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-xl py-2 px-3 bg-zinc-50 dark:bg-zinc-900/30 flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-500 text-xs font-mono">
+            <i data-lucide="check-square" class="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-600"></i>
             <span>Đáp án & Lời giải</span>
           </div>
         </div>

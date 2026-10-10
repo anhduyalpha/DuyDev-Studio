@@ -32,26 +32,18 @@ function escapeHtml(str) {
 
 export function getCuteQuizProgressQuote(pct, rawStage) {
   if (rawStage && rawStage.trim()) {
-    const s = rawStage.trim();
-    // If the stage is already customized with an emoji or cute icon, use it directly
-    if (/[\p{Extended_Pictographic}]/u.test(s)) {
-      return s;
-    }
+    return rawStage.trim();
   }
 
-  // Fallback quote based on percentage
-  if (pct < 10) return '🌱 Gieo mầm kiến thức, chuẩn bị những câu hỏi thật xịn sò... 🌸';
-  if (pct < 20) return '🔍 Đang lật giở từng trang PDF và ngắm nghía câu chữ nè... 📖';
-  if (pct < 30) return '🧭 Đang lên kế hoạch chi tiết cho các câu hỏi bạn yêu thích... 📑';
-  if (pct < 40) return '✍️ Đang cặm cụi nắn nót từng câu hỏi và phương án A, B, C, D... 📝';
-  if (pct < 50) return '🎨 Đang tỉ mẩn gọt giũa hình vẽ và ghép đúng câu hỏi nè... 🖼️';
-  if (pct < 62) return '🧠 Đang vắt óc suy nghĩ để viết lời giải chi tiết siêu dễ hiểu... 💡';
-  if (pct < 70) return '🧪 Đang trau chuốt các công thức Toán - Hóa lung linh chuẩn quốc tế... 🔬';
-  if (pct < 75) return '🛡️ Đang soi kính lúp kiểm tra từng dấu và chỉ số công thức cho chuẩn chỉnh... 🔍';
-  if (pct < 85) return '📐 Đang xếp chữ và dàn trang A4 siêu ngay ngắn, chuẩn mực in ấn... 📄';
-  if (pct < 95) return '✨ Đang soi lại từng trang để bộ đề đạt điểm 10 chất lượng... 🔎';
-  if (pct < 100) return '🎁 Đang thắt nơ đóng gói bộ tài liệu thật đẹp để gửi tới bạn nè... 🎀';
-  return '🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖';
+  // Fallback status based on percentage
+  if (pct < 15) return 'Đang khởi tạo pipeline và kiểm tra tài liệu nguồn...';
+  if (pct < 30) return 'Đang phân tích cấu trúc trang và trích xuất câu hỏi...';
+  if (pct < 50) return 'Đang bóc tách đề bài, phân loại phương án lựa chọn...';
+  if (pct < 65) return 'Đang phân tích công thức, hình ảnh và sinh lời giải chi tiết...';
+  if (pct < 80) return 'Đang chuẩn hóa LaTeX và kiểm tra đối chiếu dữ liệu...';
+  if (pct < 95) return 'Đang dàn trang A4 chuẩn Paged Media và xuất PDF...';
+  if (pct < 100) return 'Đang hoàn tất đóng gói bộ tài liệu đề bài và lời giải...';
+  return 'Đã hoàn tất biên soạn bộ đề bài và đáp án.';
 }
 
 export function attachQuizListeners() {
@@ -88,11 +80,32 @@ export function attachQuizListeners() {
 
       btnGen.disabled = !isReady;
       if (isReady) {
-        btnGen.classList.remove('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
-        btnGen.classList.add('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+        btnGen.classList.remove(
+          'bg-zinc-100', 'dark:bg-zinc-900',
+          'text-zinc-400', 'dark:text-zinc-600',
+          'border', 'border-zinc-200', 'dark:border-zinc-800/80',
+          'cursor-not-allowed',
+          'bg-zinc-900', 'text-zinc-600', 'border-zinc-800/80'
+        );
+        btnGen.classList.add(
+          'bg-zinc-900', 'hover:bg-zinc-800',
+          'dark:bg-zinc-100', 'dark:hover:bg-white',
+          'text-white', 'dark:text-zinc-950',
+          'cursor-pointer'
+        );
       } else {
-        btnGen.classList.add('bg-zinc-900', 'text-zinc-600', 'border', 'border-zinc-800/80', 'cursor-not-allowed');
-        btnGen.classList.remove('bg-zinc-100', 'hover:bg-white', 'text-zinc-950', 'cursor-pointer');
+        btnGen.classList.remove(
+          'bg-zinc-900', 'hover:bg-zinc-800',
+          'dark:bg-zinc-100', 'dark:hover:bg-white',
+          'text-white', 'dark:text-zinc-950',
+          'cursor-pointer'
+        );
+        btnGen.classList.add(
+          'bg-zinc-100', 'dark:bg-zinc-900',
+          'text-zinc-400', 'dark:text-zinc-600',
+          'border', 'border-zinc-200', 'dark:border-zinc-800/80',
+          'cursor-not-allowed'
+        );
       }
     } catch (err) {
       console.warn('syncGenerateButton warning:', err);
@@ -130,29 +143,29 @@ export function attachQuizListeners() {
       const dropzone = document.getElementById('quizDropzone');
       if (srcStatus) {
         if (isSourceReady) {
-          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
           if (dropzone && !state.file) {
-            dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
-            dropzone.classList.add('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
+            dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-50/50', 'dark:bg-rose-950/5');
+            dropzone.classList.add('border-zinc-300', 'dark:border-zinc-800', 'hover:border-zinc-400', 'dark:hover:border-zinc-600', 'bg-zinc-50/50', 'dark:bg-zinc-950/40');
           }
           if (driveInput) {
             if (isDriveValid) {
-              driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+              driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-50/50', 'dark:bg-rose-950/5');
               driveInput.classList.add('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500');
             } else {
-              driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
-              driveInput.classList.add('border-solid', 'border-zinc-800', 'focus:border-zinc-600');
+              driveInput.classList.remove('border-dashed', 'border-rose-500/20', 'focus:border-rose-500/50', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-50/50', 'dark:bg-rose-950/5');
+              driveInput.classList.add('border-solid', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600');
             }
           }
         } else {
-          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>';
           if (dropzone && !state.file) {
-            dropzone.classList.remove('border-zinc-800', 'hover:border-zinc-600', 'bg-zinc-950/40');
-            dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-950/5');
+            dropzone.classList.remove('border-zinc-300', 'dark:border-zinc-800', 'hover:border-zinc-400', 'dark:hover:border-zinc-600', 'bg-zinc-50/50', 'dark:bg-zinc-950/40');
+            dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-50/50', 'dark:bg-rose-950/5');
           }
           if (driveInput) {
-            driveInput.classList.remove('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
-            driveInput.classList.add('border-dashed', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-950/5');
+            driveInput.classList.remove('border-solid', 'border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600', 'border-rose-500/20', 'focus:border-rose-500/50');
+            driveInput.classList.add('border-dashed', 'border-rose-500/40', 'hover:border-rose-500/60', 'focus:border-rose-500', 'bg-rose-50/50', 'dark:bg-rose-950/5');
           }
         }
       }
@@ -161,12 +174,12 @@ export function attachQuizListeners() {
       const pagesStatus = document.getElementById('quizPagesStatus');
       if (pagesStatus && pagesInput) {
         if (hasPages) {
-          pagesStatus.innerHTML = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(effectivePages)}</span>`;
-          pagesInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
+          pagesStatus.innerHTML = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Trang ${escapeHtml(effectivePages)}</span>`;
+          pagesInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600');
           pagesInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
         } else {
-          pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
-          pagesInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+          pagesStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+          pagesInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600');
           pagesInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
         }
       }
@@ -175,12 +188,12 @@ export function attachQuizListeners() {
       const prefixStatus = document.getElementById('quizPrefixStatus');
       if (prefixStatus && prefixInput) {
         if (hasPrefix) {
-          prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
-          prefixInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-800', 'focus:border-zinc-600');
+          prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+          prefixInput.classList.remove('border-rose-500/40', 'focus:border-rose-500', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600');
           prefixInput.classList.add('border-emerald-500/40', 'focus:border-emerald-500');
         } else {
-          prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bắt buộc</span>';
-          prefixInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-800', 'focus:border-zinc-600');
+          prefixStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+          prefixInput.classList.remove('border-emerald-500/40', 'focus:border-emerald-500', 'border-zinc-300', 'dark:border-zinc-800', 'focus:border-zinc-500', 'dark:focus:border-zinc-600');
           prefixInput.classList.add('border-rose-500/40', 'focus:border-rose-500');
         }
       }
@@ -311,16 +324,16 @@ export function attachQuizListeners() {
 
       dropzone.ondragover = (e) => {
         e.preventDefault();
-        dropzone.classList.add('border-zinc-500', 'bg-zinc-900/60');
+        dropzone.classList.add('border-zinc-400', 'dark:border-zinc-500', 'bg-zinc-100/80', 'dark:bg-zinc-900/60');
       };
 
       dropzone.ondragleave = () => {
-        dropzone.classList.remove('border-zinc-500', 'bg-zinc-900/60');
+        dropzone.classList.remove('border-zinc-400', 'dark:border-zinc-500', 'bg-zinc-100/80', 'dark:bg-zinc-900/60');
       };
 
       dropzone.ondrop = (e) => {
         e.preventDefault();
-        dropzone.classList.remove('border-zinc-500', 'bg-zinc-900/60');
+        dropzone.classList.remove('border-zinc-400', 'dark:border-zinc-500', 'bg-zinc-100/80', 'dark:bg-zinc-900/60');
         const file = e.dataTransfer?.files?.[0];
         if (file) quizManager.setFile(file);
       };

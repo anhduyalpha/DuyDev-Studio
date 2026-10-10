@@ -61,9 +61,9 @@ export function renderLiveTerminalCard(state) {
       : '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HOÀN TẤT</span>';
 
   return `
-    <div id="studocuTerminalCard" class="${isVisible ? '' : 'hidden'} rounded-xl overflow-hidden border border-zinc-800 bg-[#0d0d10] shadow-xl space-y-0">
+    <div id="studocuTerminalCard" class="${isVisible ? '' : 'hidden'} rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-[#0d0d10] shadow-md dark:shadow-xl space-y-0">
       <!-- macOS Chrome Header -->
-      <div class="flex items-center justify-between gap-2 px-3 py-2 bg-[#111114] border-b border-zinc-800/80">
+      <div class="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 dark:bg-[#111114] border-b border-zinc-800/80">
         <div class="flex items-center gap-2 sm:gap-3 min-w-0">
           <div class="terminal-dots hidden sm:flex">
             <span class="dot red"></span>

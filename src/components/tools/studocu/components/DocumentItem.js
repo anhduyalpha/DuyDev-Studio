@@ -47,7 +47,7 @@ export function renderDocumentItem(doc, isTrash = false) {
               <i data-lucide="user" class="w-3 h-3"></i>
               <span>${escapeHtml(uploader)}</span>
             </span>
-            ${isTrash ? '<span class="meta-pill text-rose-400 border-rose-500/25">Thùng rác</span>' : ''}
+            ${isTrash ? '<span class="meta-pill text-rose-500 dark:text-rose-400 border-rose-500/25">Thùng rác</span>' : ''}
           </div>
         </div>
       </div>
