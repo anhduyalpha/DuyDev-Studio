@@ -3,26 +3,33 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v22.9';
+const CACHE_NAME = 'duydev-studio-v22.10';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=22.9',
-  './src/styles/studocu.css?v=22.9',
-  './src/styles/highlight-theme.css?v=22.9',
+  './src/styles/stitch-tokens.css?v=22.10',
+  './src/styles/studocu.css?v=22.10',
+  './src/styles/highlight-theme.css?v=22.10',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=22.9',
+  './src/app.js?v=22.10',
   './src/hooks/useToolRegistry.js',
   './src/pages/DashboardPage.js',
   './src/components/dashboard/ToolCard.js',
   './src/components/common/ToolIcons.js',
+  './src/components/tools/viewsplit/ViewSplitWorkspace.js',
+  './src/components/tools/viewsplit/hooks/useViewSplit.js',
+  './src/components/tools/viewsplit/hooks/useViewSplitDom.js',
+  './src/components/tools/viewsplit/components/ViewSplitPane.js',
+  './src/components/tools/viewsplit/components/ViewSplitToolbar.js',
+  './src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js',
+  './src/components/tools/viewsplit/components/ViewSplitPixelInspector.js',
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/components/common/ShareTargetModal.js',

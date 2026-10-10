@@ -151,7 +151,9 @@ export class ViewSplitStore {
     const visibleCount = this.getVisiblePaneCount();
     if (visibleCount <= 1) return 1;
 
-    const current = Math.min(Math.max(1, currentPaneId || 1), visibleCount);
+    const parsedId = parseInt(currentPaneId, 10);
+    const safeId = !isNaN(parsedId) ? parsedId : 1;
+    const current = Math.min(Math.max(1, safeId), visibleCount);
 
     // 1. Search for the first unfilled pane starting after currentPaneId (wrapping around)
     for (let offset = 1; offset < visibleCount; offset++) {
@@ -167,9 +169,10 @@ export class ViewSplitStore {
   }
 
   setActivePane(id) {
-    if (id >= 1 && id <= MAX_PANES) {
-      this.activePaneId = id;
-      this.mobileActiveTab = id;
+    const numId = parseInt(id, 10);
+    if (!isNaN(numId) && numId >= 1 && numId <= MAX_PANES) {
+      this.activePaneId = numId;
+      this.mobileActiveTab = numId;
       this.notify('active-pane');
     }
   }

@@ -53,22 +53,45 @@ export function attachViewSplitDomListeners(store, onReRender) {
    * @param {number} activeId
    */
   const syncActivePaneUI = (activeId) => {
+    const numActiveId = parseInt(activeId, 10);
+    if (isNaN(numActiveId)) return;
+
     // A. Multi-pane grid panes
     document.querySelectorAll('.viewsplit-pane').forEach((paneEl) => {
       const pId = parseInt(paneEl.dataset.paneId, 10);
-      const isActive = pId === activeId;
+      const isActive = pId === numActiveId;
 
-      paneEl.classList.toggle('border-cyan-500', isActive);
-      paneEl.classList.toggle('ring-2', isActive);
-      paneEl.classList.toggle('ring-cyan-400/40', isActive);
-      paneEl.classList.toggle('shadow-xl', isActive);
-      paneEl.classList.toggle('shadow-cyan-500/15', isActive);
-
-      paneEl.classList.toggle('border-zinc-200/80', !isActive);
-      paneEl.classList.toggle('dark:border-white/10', !isActive);
-      paneEl.classList.toggle('hover:border-zinc-400', !isActive);
-      paneEl.classList.toggle('dark:hover:border-white/30', !isActive);
-      paneEl.classList.toggle('cursor-pointer', !isActive);
+      if (isActive) {
+        paneEl.classList.remove(
+          'border-zinc-200/80',
+          'dark:border-white/10',
+          'hover:border-zinc-400',
+          'dark:hover:border-white/30',
+          'cursor-pointer'
+        );
+        paneEl.classList.add(
+          'border-cyan-500',
+          'ring-2',
+          'ring-cyan-400/40',
+          'shadow-xl',
+          'shadow-cyan-500/15'
+        );
+      } else {
+        paneEl.classList.remove(
+          'border-cyan-500',
+          'ring-2',
+          'ring-cyan-400/40',
+          'shadow-xl',
+          'shadow-cyan-500/15'
+        );
+        paneEl.classList.add(
+          'border-zinc-200/80',
+          'dark:border-white/10',
+          'hover:border-zinc-400',
+          'dark:hover:border-white/30',
+          'cursor-pointer'
+        );
+      }
 
       paneEl.title = isActive
         ? 'Khung hình đang được chọn để dán/nạp ảnh'
@@ -76,13 +99,13 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       const dot = paneEl.querySelector('.viewsplit-pane-dot');
       if (dot) {
-        dot.className = `viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}`;
+        dot.className = `viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-500 dark:bg-cyan-400 animate-pulse' : 'bg-zinc-400'}`;
       }
 
       const badge = paneEl.querySelector('.viewsplit-pane-badge');
       if (badge) {
         badge.innerHTML = isActive
-          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
           : '';
       }
     });
@@ -91,7 +114,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
     document.querySelectorAll('[data-action="select-pane"][data-pane-id]').forEach((btn) => {
       if (!btn.classList.contains('viewsplit-pane') && !btn.classList.contains('viewsplit-overlay-slot')) {
         const pId = parseInt(btn.dataset.paneId, 10);
-        const isSelected = pId === activeId;
+        const isSelected = pId === numActiveId;
         btn.classList.toggle('bg-cyan-500/15', isSelected);
         btn.classList.toggle('text-cyan-600', isSelected);
         btn.classList.toggle('dark:text-cyan-400', isSelected);
@@ -111,14 +134,14 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const slotACard = document.querySelector('.viewsplit-overlay-slot[data-pane-id="1"]');
     const slotBCard = document.querySelector('.viewsplit-overlay-slot[data-pane-id="2"]');
     if (slotACard) {
-      const isA = activeId === 1;
-      slotACard.classList.toggle('border-cyan-500', isA);
-      slotACard.classList.toggle('ring-2', isA);
-      slotACard.classList.toggle('ring-cyan-400/40', isA);
-      slotACard.classList.toggle('shadow-xl', isA);
-      slotACard.classList.toggle('shadow-cyan-500/15', isA);
-      slotACard.classList.toggle('border-zinc-200/80', !isA);
-      slotACard.classList.toggle('dark:border-white/10', !isA);
+      const isA = numActiveId === 1;
+      if (isA) {
+        slotACard.classList.remove('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
+        slotACard.classList.add('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
+      } else {
+        slotACard.classList.remove('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
+        slotACard.classList.add('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
+      }
       const b1 = document.querySelector('.viewsplit-overlay-badge-1');
       if (b1) {
         b1.innerHTML = isA
@@ -127,14 +150,14 @@ export function attachViewSplitDomListeners(store, onReRender) {
       }
     }
     if (slotBCard) {
-      const isB = activeId === 2;
-      slotBCard.classList.toggle('border-cyan-500', isB);
-      slotBCard.classList.toggle('ring-2', isB);
-      slotBCard.classList.toggle('ring-cyan-400/40', isB);
-      slotBCard.classList.toggle('shadow-xl', isB);
-      slotBCard.classList.toggle('shadow-cyan-500/15', isB);
-      slotBCard.classList.toggle('border-zinc-200/80', !isB);
-      slotBCard.classList.toggle('dark:border-white/10', !isB);
+      const isB = numActiveId === 2;
+      if (isB) {
+        slotBCard.classList.remove('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
+        slotBCard.classList.add('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
+      } else {
+        slotBCard.classList.remove('border-cyan-500', 'ring-2', 'ring-cyan-400/40', 'shadow-xl', 'shadow-cyan-500/15');
+        slotBCard.classList.add('border-zinc-200/80', 'dark:border-white/10', 'cursor-pointer');
+      }
       const b2 = document.querySelector('.viewsplit-overlay-badge-2');
       if (b2) {
         b2.innerHTML = isB
@@ -144,13 +167,13 @@ export function attachViewSplitDomListeners(store, onReRender) {
     }
 
     // D. Mobile tabs
-    document.querySelectorAll('.viewsplit-mobile-tab[data-pane-id]').forEach((tab) => {
+    document.querySelectorAll('.viewsplit-mobile-tab[data-pane-id], [data-action="set-mobile-tab"][data-pane-id]').forEach((tab) => {
       const pId = parseInt(tab.dataset.paneId, 10);
-      const isActive = pId === activeId;
-      tab.classList.toggle('bg-white', isActive);
-      tab.classList.toggle('dark:bg-zinc-800', isActive);
+      const isActive = pId === numActiveId;
+      tab.classList.toggle('bg-cyan-500/15', isActive);
       tab.classList.toggle('text-cyan-600', isActive);
       tab.classList.toggle('dark:text-cyan-400', isActive);
+      tab.classList.toggle('border-cyan-500/30', isActive);
       tab.classList.toggle('shadow-sm', isActive);
       tab.classList.toggle('text-zinc-600', !isActive);
       tab.classList.toggle('dark:text-zinc-400', !isActive);
@@ -197,14 +220,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const paneTitle = PANE_TITLES[paneId - 1] || `Ảnh ${paneId}`;
       if (nextPaneId !== paneId) {
         store.setActivePane(nextPaneId);
-        syncActivePaneUI(nextPaneId);
         const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
         showToast(`Đã nạp ${fileName} vào ${paneTitle}. Tự động chuyển sang ${nextTitle} để sẵn sàng dán ảnh tiếp theo.`, 'success');
       } else {
-        syncActivePaneUI(paneId);
         showToast(`Đã nạp ${fileName} vào ${paneTitle}`, 'success');
       }
       onReRender();
+      requestAnimationFrame(() => {
+        syncActivePaneUI(store.activePaneId);
+      });
     } catch (err) {
       console.error('[ViewSplit] Error loading image:', err);
       showToast('Lỗi khi nạp ảnh', 'error');
@@ -448,11 +472,57 @@ export function attachViewSplitDomListeners(store, onReRender) {
   let isDragging = false;
 
   const onMouseDown = (e) => {
+    if (e.button !== 0) return;
     // If clicking slider divider, handled separately
     if (e.target.closest('#viewsplit-slider-divider')) return;
 
+    // Immediate Pane Selection on MouseDown: Clicking anywhere inside a pane
+    const paneEl = e.target.closest('.viewsplit-pane');
+    if (paneEl) {
+      const actionBtn = e.target.closest('button[data-action], a[data-action]');
+      const subAction = actionBtn ? actionBtn.dataset.action : null;
+      if (!subAction || subAction === 'select-pane' || subAction === 'paste-clipboard') {
+        const paneId = parseInt(paneEl.dataset.paneId, 10);
+        if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
+          if (store.activePaneId !== paneId) {
+            store.setActivePane(paneId);
+            syncActivePaneUI(paneId);
+          }
+        }
+      }
+    }
+
+    // Immediate Overlay Slot Selection on MouseDown
+    const overlaySlot = e.target.closest('.viewsplit-overlay-slot');
+    if (overlaySlot) {
+      const actionBtn = e.target.closest('button[data-action], a[data-action]');
+      const subAction = actionBtn ? actionBtn.dataset.action : null;
+      if (!subAction || subAction === 'select-pane' || subAction === 'paste-clipboard') {
+        const slotId = parseInt(overlaySlot.dataset.paneId, 10);
+        if (slotId && (slotId === 1 || slotId === 2)) {
+          if (store.activePaneId !== slotId) {
+            store.setActivePane(slotId);
+            syncActivePaneUI(slotId);
+          }
+        }
+      }
+    }
+
+    // Direct Overlay Canvas Click on MouseDown
+    const overlayCanvas = e.target.closest('#viewsplit-overlay-canvas');
+    if (overlayCanvas && !e.target.closest('button, [data-action], input, #viewsplit-slider-divider')) {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const splitX = rect.width * store.sliderPos;
+      const targetId = (store.layout === LAYOUT_MODES.SLIDER && clickX >= splitX) ? 2 : 1;
+      if (store.activePaneId !== targetId) {
+        store.setActivePane(targetId);
+        syncActivePaneUI(targetId);
+      }
+    }
+
     const canvas = e.target.closest('.viewsplit-canvas, #viewsplit-overlay-canvas');
-    if (!canvas || e.button !== 0) return;
+    if (!canvas) return;
 
     let paneId;
     if (canvas.id === 'viewsplit-overlay-canvas') {
@@ -683,6 +753,38 @@ export function attachViewSplitDomListeners(store, onReRender) {
   let touchInitialPan = { x: 0, y: 0 };
 
   const onTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const paneEl = e.target.closest('.viewsplit-pane');
+      if (paneEl) {
+        const actionBtn = e.target.closest('button[data-action], a[data-action]');
+        const subAction = actionBtn ? actionBtn.dataset.action : null;
+        if (!subAction || subAction === 'select-pane' || subAction === 'paste-clipboard') {
+          const paneId = parseInt(paneEl.dataset.paneId, 10);
+          if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
+            if (store.activePaneId !== paneId) {
+              store.setActivePane(paneId);
+              syncActivePaneUI(paneId);
+            }
+          }
+        }
+      }
+
+      const overlaySlot = e.target.closest('.viewsplit-overlay-slot');
+      if (overlaySlot) {
+        const actionBtn = e.target.closest('button[data-action], a[data-action]');
+        const subAction = actionBtn ? actionBtn.dataset.action : null;
+        if (!subAction || subAction === 'select-pane' || subAction === 'paste-clipboard') {
+          const slotId = parseInt(overlaySlot.dataset.paneId, 10);
+          if (slotId && (slotId === 1 || slotId === 2)) {
+            if (store.activePaneId !== slotId) {
+              store.setActivePane(slotId);
+              syncActivePaneUI(slotId);
+            }
+          }
+        }
+      }
+    }
+
     const canvas = e.target.closest('.viewsplit-canvas, #viewsplit-overlay-canvas');
     if (!canvas) return;
 
@@ -784,7 +886,6 @@ export function attachViewSplitDomListeners(store, onReRender) {
         if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
           store.setActivePane(paneId);
           syncActivePaneUI(paneId);
-          onReRender();
           return;
         }
       }
@@ -799,7 +900,6 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const targetId = (store.layout === LAYOUT_MODES.SLIDER && clickX >= splitX) ? 2 : 1;
       store.setActivePane(targetId);
       syncActivePaneUI(targetId);
-      onReRender();
       return;
     }
 
@@ -818,7 +918,6 @@ export function attachViewSplitDomListeners(store, onReRender) {
         if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
           store.setActivePane(paneId);
           syncActivePaneUI(paneId);
-          onReRender();
         }
         break;
       }
@@ -906,7 +1005,6 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
         if (!clipboardPasted) {
           showToast(`Đã chọn ${PANE_TITLES[paneId - 1] || 'Khung hình'}. Nhấn Ctrl+V để dán ảnh ngay lập tức.`, 'info');
-          onReRender();
         }
         break;
       }
@@ -1036,6 +1134,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
       case 'set-mobile-tab': {
         const paneId = parseInt(btn.dataset.paneId, 10);
         store.setMobileActiveTab(paneId);
+        store.setActivePane(paneId);
+        syncActivePaneUI(paneId);
         onReRender();
         break;
       }

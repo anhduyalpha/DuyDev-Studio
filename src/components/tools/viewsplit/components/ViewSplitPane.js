@@ -96,18 +96,22 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
       ${
         !hasImage
           ? `
-            <div class="viewsplit-dropzone absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-50/90 dark:bg-zinc-900/30 backdrop-blur-sm z-0">
+            <div
+              class="viewsplit-dropzone absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-50/90 dark:bg-zinc-900/30 backdrop-blur-sm z-0 cursor-pointer"
+              data-action="select-pane"
+              data-pane-id="${pane.id}"
+            >
               <input
                 type="file"
                 accept="image/*"
                 class="viewsplit-file-input hidden"
                 data-pane-id="${pane.id}"
               />
-              <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform pointer-events-none">
                 <i data-lucide="image-plus" class="w-6 h-6"></i>
               </div>
-              <h4 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1">Kéo thả hoặc tải tệp lên</h4>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mb-4">PNG, JPG, WEBP, SVG • Dán từ Clipboard [Ctrl+V]</p>
+              <h4 class="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1 pointer-events-none">Kéo thả hoặc tải tệp lên</h4>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mb-4 pointer-events-none">PNG, JPG, WEBP, SVG • Dán từ Clipboard [Ctrl+V]</p>
 
               <div class="flex items-center flex-wrap justify-center gap-2">
                 <button
