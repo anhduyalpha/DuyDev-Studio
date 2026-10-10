@@ -12,11 +12,13 @@ import { PANE_TITLES } from '../hooks/useViewSplit.js';
  */
 export function renderViewSplitMobileTabs(state) {
   const { panes, mobileActiveTab } = state;
+  const visibleCount = typeof state.getVisiblePaneCount === 'function' ? state.getVisiblePaneCount() : 2;
+  const visiblePanes = panes.slice(0, visibleCount);
 
   return `
     <nav aria-label="Khung nhìn di động" class="w-full md:hidden flex items-center justify-center p-1.5 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200/80 dark:border-white/10 rounded-2xl shadow-sm mb-3">
-      <div class="grid grid-cols-4 w-full gap-1">
-        ${panes.map((pane) => {
+      <div class="grid w-full gap-1" style="grid-template-columns: repeat(${visibleCount}, minmax(0, 1fr));">
+        ${visiblePanes.map((pane) => {
           const isActive = mobileActiveTab === pane.id;
           const hasImage = Boolean(pane.image);
           const title = PANE_TITLES[pane.id - 1] || `Ảnh ${pane.id}`;

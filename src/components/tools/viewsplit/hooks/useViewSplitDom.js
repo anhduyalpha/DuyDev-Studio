@@ -46,30 +46,52 @@ export function attachViewSplitDomListeners(store, onReRender) {
     });
   };
 
-  const loadFileIntoPane = async (file, paneId) => {
-    if (!file || !file.type.startsWith('image/')) {
-      showToast('Tệp được chọn không phải là hình ảnh hợp lệ', 'warning');
+  const loadFileIntoPane = async (source, paneId, meta = {}) => {
+    if (!source) return;
+
+    let blobUrl = null;
+    let fileName = meta.name;
+    let fileSize = meta.size || 0;
+
+    if (typeof source === 'string') {
+      blobUrl = source;
+      if (!fileName) {
+        fileName = source.split('/').pop()?.split('?')[0] || 'Ảnh từ URL';
+      }
+    } else if (source instanceof Blob || (typeof File !== 'undefined' && source instanceof File) || (source && source.type)) {
+      if (source.type && !source.type.startsWith('image/')) {
+        showToast('Tệp được chọn không phải là hình ảnh hợp lệ', 'warning');
+        return;
+      }
+      blobUrl = URL.createObjectURL(source);
+      activeBlobUrls.add(blobUrl);
+      if (!fileName) {
+        fileName = source.name || 'Ảnh đã dán';
+      }
+      if (!fileSize) {
+        fileSize = source.size || 0;
+      }
+    } else {
+      showToast('Nguồn ảnh không hợp lệ', 'warning');
       return;
     }
-    const blobUrl = URL.createObjectURL(file);
-    activeBlobUrls.add(blobUrl);
 
     try {
       const img = await loadImageSource(blobUrl);
-      store.setImageForPane(paneId, img, { name: file.name, size: file.size });
+      store.setImageForPane(paneId, img, { name: fileName, size: fileSize });
       const nextPaneId = store.getNextTargetPaneId(paneId);
       const paneTitle = PANE_TITLES[paneId - 1] || `Ảnh ${paneId}`;
       if (nextPaneId !== paneId) {
         store.setActivePane(nextPaneId);
         const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
-        showToast(`Đã nạp ${file.name} vào ${paneTitle}. Tự động chuyển sang ${nextTitle} để sẵn sàng dán ảnh tiếp theo.`, 'success');
+        showToast(`Đã nạp ${fileName} vào ${paneTitle}. Tự động chuyển sang ${nextTitle} để sẵn sàng dán ảnh tiếp theo.`, 'success');
       } else {
-        showToast(`Đã nạp ${file.name} vào ${paneTitle}`, 'success');
+        showToast(`Đã nạp ${fileName} vào ${paneTitle}`, 'success');
       }
       onReRender();
     } catch (err) {
-      console.error('[ViewSplit] Error loading file:', err);
-      showToast('Lỗi khi nạp ảnh từ tệp tin', 'error');
+      console.error('[ViewSplit] Error loading image:', err);
+      showToast('Lỗi khi nạp ảnh', 'error');
     }
   };
 
@@ -316,7 +338,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const canvas = e.target.closest('.viewsplit-canvas, #viewsplit-overlay-canvas');
     if (!canvas || e.button !== 0) return;
 
-    const paneId = canvas.id === 'viewsplit-overlay-canvas' ? 1 : parseInt(canvas.dataset.paneId, 10);
+    let paneId;
+    if (canvas.id === 'viewsplit-overlay-canvas') {
+      const rect = canvas.getBoundingClientRect();
+      const vx = e.clientX - rect.left;
+      const splitX = rect.width * store.sliderPos;
+      paneId = (store.layout === LAYOUT_MODES.SLIDER && vx >= splitX) ? 2 : 1;
+    } else {
+      paneId = parseInt(canvas.dataset.paneId, 10);
+    }
     const pane = store.getPane(paneId);
     if (!pane) return;
 
@@ -624,24 +654,9 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const path = driveItem.dataset.drivePath;
       const name = driveItem.dataset.driveName;
       const imgUrl = `/api/v1/storage/download?path=${encodeURIComponent(path)}&inline=true`;
-      try {
-        const img = await loadImageSource(imgUrl);
-        const targetId = store.urlModalTargetPaneId;
-        store.setImageForPane(targetId, img, { name });
-        store.closeUrlModal();
-        const nextPaneId = store.getNextTargetPaneId(targetId);
-        const paneTitle = PANE_TITLES[targetId - 1] || `Ảnh ${targetId}`;
-        if (nextPaneId !== targetId) {
-          store.setActivePane(nextPaneId);
-          const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
-          showToast(`Đã nạp ${name} từ Storage Drive vào ${paneTitle}. Tự động chuyển sang ${nextTitle}.`, 'success');
-        } else {
-          showToast(`Đã nạp ${name} từ Storage Drive vào ${paneTitle}`, 'success');
-        }
-        onReRender();
-      } catch (err) {
-        showToast('Không thể tải tệp từ Storage Drive', 'error');
-      }
+      const targetId = store.urlModalTargetPaneId;
+      store.closeUrlModal();
+      await loadFileIntoPane(imgUrl, targetId, { name });
       return;
     }
 
@@ -650,10 +665,26 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (paneEl && !e.target.closest('button, [data-action], input')) {
       const paneId = parseInt(paneEl.dataset.paneId, 10);
       if (paneId && paneId >= 1 && paneId <= 4) {
-        store.setActivePane(paneId);
-        onReRender();
+        if (store.activePaneId !== paneId) {
+          store.setActivePane(paneId);
+          onReRender();
+        }
         return;
       }
+    }
+
+    // Direct Overlay Canvas Click: Clicking on Slider Wipe or Diff canvas selects Slot A or Slot B
+    const overlayCanvas = e.target.closest('#viewsplit-overlay-canvas');
+    if (overlayCanvas && !e.target.closest('button, [data-action], input, #viewsplit-slider-divider')) {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const splitX = rect.width * store.sliderPos;
+      const targetId = (store.layout === LAYOUT_MODES.SLIDER && clickX >= splitX) ? 2 : 1;
+      if (store.activePaneId !== targetId) {
+        store.setActivePane(targetId);
+        onReRender();
+      }
+      return;
     }
 
     const btn = e.target.closest('button, [data-action]');
@@ -667,8 +698,10 @@ export function attachViewSplitDomListeners(store, onReRender) {
       case 'select-pane': {
         const paneId = parseInt(btn.dataset.paneId, 10);
         if (paneId && paneId >= 1 && paneId <= 4) {
-          store.setActivePane(paneId);
-          onReRender();
+          if (store.activePaneId !== paneId) {
+            store.setActivePane(paneId);
+            onReRender();
+          }
         }
         break;
       }
@@ -735,7 +768,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
               const imageType = item.types.find((t) => t.startsWith('image/'));
               if (imageType) {
                 const blob = await item.getType(imageType);
-                await loadFileIntoPane(blob, paneId);
+                await loadFileIntoPane(blob, paneId, { name: 'Ảnh từ Clipboard' });
                 return;
               }
             }
@@ -843,26 +876,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
           showToast('Vui lòng nhập liên kết hình ảnh (URL)', 'warning');
           return;
         }
-        try {
-          showToast('Đang nạp ảnh từ URL...', 'info');
-          const img = await loadImageSource(url);
-          const fileName = url.split('/').pop()?.split('?')[0] || 'Ảnh từ URL';
-          const targetId = store.urlModalTargetPaneId;
-          store.setImageForPane(targetId, img, { name: fileName });
-          store.closeUrlModal();
-          const nextPaneId = store.getNextTargetPaneId(targetId);
-          const paneTitle = PANE_TITLES[targetId - 1] || `Ảnh ${targetId}`;
-          if (nextPaneId !== targetId) {
-            store.setActivePane(nextPaneId);
-            const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
-            showToast(`Đã nạp ${fileName} từ URL vào ${paneTitle}. Tự động chuyển sang ${nextTitle}.`, 'success');
-          } else {
-            showToast(`Đã nạp ${fileName} từ URL vào ${paneTitle}`, 'success');
-          }
-          onReRender();
-        } catch (err) {
-          showToast('Không thể nạp ảnh từ URL chỉ định', 'error');
-        }
+        showToast('Đang nạp ảnh từ URL...', 'info');
+        const fileName = url.split('/').pop()?.split('?')[0] || 'Ảnh từ URL';
+        const targetId = store.urlModalTargetPaneId;
+        store.closeUrlModal();
+        await loadFileIntoPane(url, targetId, { name: fileName });
         break;
       }
 
@@ -903,7 +921,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
     e.preventDefault();
   };
 
-  const onDrop = (e) => {
+  const onDrop = async (e) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/'));
     if (files.length === 0) return;
@@ -911,12 +929,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const targetPaneEl = e.target.closest('.viewsplit-pane');
     if (targetPaneEl) {
       const targetId = parseInt(targetPaneEl.dataset.paneId, 10);
-      loadFileIntoPane(files[0], targetId);
+      await loadFileIntoPane(files[0], targetId);
+    } else if (e.target.closest('.viewsplit-overlay-container, #viewsplit-overlay-canvas')) {
+      await loadFileIntoPane(files[0], store.activePaneId);
     } else {
-      // Distribute multiple files across panes
-      files.slice(0, 4).forEach((file, idx) => {
-        loadFileIntoPane(file, idx + 1);
-      });
+      // Distribute multiple files across panes sequentially
+      const maxPanes = store.getVisiblePaneCount();
+      for (let idx = 0; idx < Math.min(files.length, maxPanes); idx++) {
+        await loadFileIntoPane(files[idx], idx + 1);
+      }
     }
   };
 
@@ -933,7 +954,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
         const file = items[i].getAsFile();
         if (file) {
           e.preventDefault();
-          await loadFileIntoPane(file, store.activePaneId);
+          const visibleCount = store.getVisiblePaneCount();
+          const targetId = (store.activePaneId >= 1 && store.activePaneId <= visibleCount)
+            ? store.activePaneId
+            : 1;
+          await loadFileIntoPane(file, targetId);
           return;
         }
       }

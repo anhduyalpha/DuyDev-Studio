@@ -24,6 +24,7 @@ import {
 import { renderViewSplitPane } from '../../../src/components/tools/viewsplit/components/ViewSplitPane.js';
 import { renderViewSplitToolbar } from '../../../src/components/tools/viewsplit/components/ViewSplitToolbar.js';
 import { renderViewSplitSliderOverlay } from '../../../src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js';
+import { renderViewSplitMobileTabs } from '../../../src/components/tools/viewsplit/components/ViewSplitMobileTabs.js';
 
 describe('ViewSplit Synchronizer & Coordinate Math (useViewSplitSync)', () => {
   describe('clamp helper', () => {
@@ -648,6 +649,50 @@ describe('ViewSplit Auto-Advancement & Click-To-Select', () => {
       expect(html).toContain('Ảnh Trước • Ảnh A');
       expect(html).toContain('Ảnh Sau • Ảnh B');
       expect(html).toContain('border-cyan-500/80'); // Active Slot A ring
+    });
+
+    it('setLayout automatically resets activePaneId to 1 when current pane is invisible in new layout', () => {
+      const store = new ViewSplitStore();
+      store.setLayout(LAYOUT_MODES.QUAD); // 4 panes
+      store.setActivePane(4);
+      expect(store.activePaneId).toBe(4);
+
+      // Switch to SPLIT_H (only 2 panes visible)
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+      expect(store.getVisiblePaneCount()).toBe(2);
+      expect(store.activePaneId).toBe(1);
+
+      // Switch to SINGLE (only 1 pane visible)
+      store.setActivePane(2);
+      store.setLayout(LAYOUT_MODES.SINGLE);
+      expect(store.getVisiblePaneCount()).toBe(1);
+      expect(store.activePaneId).toBe(1);
+    });
+
+    it('renderViewSplitMobileTabs restricts rendered tabs to getVisiblePaneCount', () => {
+      const store = new ViewSplitStore();
+
+      // In 2H layout, should only render 2 tabs
+      store.setLayout(LAYOUT_MODES.SPLIT_H);
+      const html2H = renderViewSplitMobileTabs(store);
+      expect(html2H).toContain('data-pane-id="1"');
+      expect(html2H).toContain('data-pane-id="2"');
+      expect(html2H).not.toContain('data-pane-id="3"');
+      expect(html2H).not.toContain('data-pane-id="4"');
+
+      // In 4G layout, should render all 4 tabs
+      store.setLayout(LAYOUT_MODES.QUAD);
+      const html4G = renderViewSplitMobileTabs(store);
+      expect(html4G).toContain('data-pane-id="1"');
+      expect(html4G).toContain('data-pane-id="2"');
+      expect(html4G).toContain('data-pane-id="3"');
+      expect(html4G).toContain('data-pane-id="4"');
+
+      // In SINGLE layout, should render 1 tab
+      store.setLayout(LAYOUT_MODES.SINGLE);
+      const html1 = renderViewSplitMobileTabs(store);
+      expect(html1).toContain('data-pane-id="1"');
+      expect(html1).not.toContain('data-pane-id="2"');
     });
   });
 });

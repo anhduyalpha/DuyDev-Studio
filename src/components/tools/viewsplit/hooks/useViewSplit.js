@@ -189,6 +189,10 @@ export class ViewSplitStore {
   setLayout(layout) {
     if (this.layout !== layout) {
       this.layout = layout;
+      const visibleCount = this.getVisiblePaneCount();
+      if (this.activePaneId > visibleCount) {
+        this.setActivePane(1);
+      }
       this.notify('layout');
     }
   }
