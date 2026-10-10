@@ -46,9 +46,9 @@ export class PdfCanvasViewer {
     let html = `<div id="pdfPagesWrapper" class="flex flex-col items-center gap-4 transition-all duration-300">`;
     for (let i = 1; i <= this.totalPages; i++) {
       html += `
-        <div id="pdfPageBox_${i}" data-page="${i}" class="pdf-page-box relative bg-white shadow-xl dark:shadow-2xl rounded-xs overflow-hidden transition-all duration-200" 
+        <div id="pdfPageBox_${i}" data-page="${i}" class="pdf-page-box relative bg-white shadow-md dark:shadow-2xl rounded-xs overflow-hidden transition-all duration-200 border border-zinc-200/60 dark:border-transparent" 
           style="width: ${pageW}px; height: ${pageH}px;">
-          <div class="absolute inset-0 flex items-center justify-center text-zinc-400 font-mono text-xs select-none">
+          <div class="absolute inset-0 flex items-center justify-center text-zinc-400 dark:text-zinc-500 font-mono text-xs select-none">
             Trang ${i}
           </div>
         </div>

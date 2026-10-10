@@ -129,29 +129,29 @@ export function openFileViewer(state) {
     : isArchive ? `/#archive` : (state.viewUrl || '');
 
   const modalHtml = `
-    <div id="fileViewerCoreModal" class="fixed inset-0 z-50 flex items-center justify-center ${isFullHeight ? 'p-0 sm:p-4' : 'p-2.5 sm:p-5'} bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div id="fileViewerCoreModal" class="fixed inset-0 z-50 flex items-center justify-center ${isFullHeight ? 'p-0 sm:p-4' : 'p-2.5 sm:p-5'} bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn">
       <div class="${isFullHeight ? 'relative w-full h-full sm:h-auto sm:max-h-[95vh] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col' : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]'}">
         
         <!-- Header Bar -->
-        <div class="px-4 sm:px-5 py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-3 bg-zinc-50/50 dark:bg-white/[0.02] shrink-0">
+        <div class="px-4 sm:px-5 py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-3 bg-zinc-50/80 dark:bg-[#16161a] shrink-0">
           <div class="flex items-center gap-2.5 min-w-0">
             <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               ${ext}
             </span>
             <span class="font-medium text-sm text-zinc-900 dark:text-white truncate font-mono">${state.name}</span>
-            ${state.size > 0 ? `<span class="text-xs text-zinc-400 font-mono hidden sm:inline">(${formatBytes(state.size)})</span>` : ''}
+            ${state.size > 0 ? `<span class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden sm:inline">(${formatBytes(state.size)})</span>` : ''}
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btnCopyViewerLink" type="button" class="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" title="Sao chép liên kết">
+            <button id="btnCopyViewerLink" type="button" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" title="Sao chép liên kết">
               <i data-lucide="link" class="w-4 h-4"></i>
             </button>
             ${canOpenInTab && openTabUrl ? `
-              <a href="${openTabUrl}" target="_blank" class="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Mở tab mới">
+              <a href="${openTabUrl}" target="_blank" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Mở tab mới">
                 <i data-lucide="external-link" class="w-4 h-4"></i>
               </a>
             ` : ''}
-            <a href="${state.downloadUrl}" download="${state.name}" class="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Tải về">
+            <a href="${state.downloadUrl}" download="${state.name}" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Tải về">
               <i data-lucide="download" class="w-4 h-4"></i>
             </a>
             <div class="w-px h-4 bg-zinc-200 dark:bg-white/10 mx-1"></div>
@@ -162,7 +162,7 @@ export function openFileViewer(state) {
         </div>
 
         <!-- Body Viewport -->
-        <div id="fileViewerBody" class="${isFullHeight ? 'p-0 flex-1 overflow-hidden flex flex-col' : 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center'}">
+        <div id="fileViewerBody" class="${isFullHeight ? 'p-0 flex-1 overflow-hidden flex flex-col bg-zinc-100/70 dark:bg-[#09090b]' : 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center bg-zinc-50/50 dark:bg-[#0e0e11]'}">
           ${bodyHtml}
         </div>
       </div>

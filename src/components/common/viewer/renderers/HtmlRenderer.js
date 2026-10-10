@@ -47,7 +47,7 @@ export function renderHtmlViewer(state) {
 
       <!-- Source Viewport -->
       <div id="htmlSourceContainer" class="flex-1 overflow-auto custom-scrollbar p-3 hidden">
-        <pre class="p-4 rounded-xl bg-zinc-900 text-zinc-100 font-mono text-xs leading-relaxed overflow-auto custom-scrollbar select-text"><code id="htmlSourceCode" class="hljs">Đang tải mã nguồn...</code></pre>
+        <pre class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] text-zinc-900 dark:text-zinc-100 font-mono text-xs leading-relaxed overflow-auto custom-scrollbar select-text"><code id="htmlSourceCode" class="hljs">Đang tải mã nguồn...</code></pre>
       </div>
     </div>
   `;
@@ -93,7 +93,7 @@ export function attachHtmlListeners(state, registerCleanup) {
     if (!isPrev && !rawSource) {
       const getSourcePromise = (state.rawFile instanceof Blob)
         ? state.rawFile.text()
-        : fetch(state.viewUrl, { signal: abortController.signal }).then(r => {
+        : fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' }).then(r => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             return r.text();
           });

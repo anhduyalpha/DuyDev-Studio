@@ -39,7 +39,7 @@ export function renderFallbackViewer(state) {
       </div>
 
       <!-- Hex Dump Viewport -->
-      <div id="hexDumpContainer" class="flex-1 overflow-auto custom-scrollbar p-3 sm:p-4 bg-zinc-950 font-mono text-[11px] sm:text-xs text-zinc-300 leading-relaxed select-text">
+      <div id="hexDumpContainer" class="flex-1 overflow-auto custom-scrollbar p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-950 font-mono text-[11px] sm:text-xs text-zinc-800 dark:text-zinc-300 leading-relaxed select-text border-t border-zinc-200/80 dark:border-white/[0.04]">
         <div id="hexDumpContent" class="space-y-0.5 whitespace-pre">Đang tải dữ liệu nhị phân...</div>
       </div>
     </div>
@@ -99,7 +99,8 @@ export function attachFallbackListeners(state, registerCleanup) {
       } else {
         const res = await fetch(state.viewUrl, {
           headers: { Range: 'bytes=0-16383' },
-          signal: abortController.signal
+          signal: abortController.signal,
+          credentials: 'same-origin'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         buffer = await res.arrayBuffer();

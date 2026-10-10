@@ -142,7 +142,7 @@ export function attachTextListeners(state, registerCleanup) {
 
   const getContentPromise = (state.rawFile instanceof Blob)
     ? state.rawFile.text()
-    : fetch(state.viewUrl, { signal: abortController.signal }).then((res) => {
+    : fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' }).then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.text();
       });

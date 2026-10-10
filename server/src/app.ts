@@ -53,10 +53,22 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // 2. Register CORS (Uncapped LAN & Local Access)
   await app.register(cors, {
-    origin: true,
+    origin: (origin, cb) => {
+      // If no Origin header (same-origin, curl, server-to-server)
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+      // If Origin is 'null' (sandboxed workers/iframes), do not echo 'null' with credentials: true
+      if (origin === 'null') {
+        cb(null, false);
+        return;
+      }
+      cb(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    exposedHeaders: ['Content-Range', 'Content-Length', 'Accept-Ranges']
+    exposedHeaders: ['Content-Range', 'Content-Length', 'Accept-Ranges', 'ETag']
   });
 
   // 3. Register Multipart Streaming (Uncapped Upload Limits)

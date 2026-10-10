@@ -6,70 +6,70 @@
 export function renderFloatingDock(currentPage = 1, totalPages = 1, zoomPct = 100) {
   return `
     <div id="pdfFloatingDock" class="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 
-      px-2 sm:px-3 py-1.5 rounded-2xl bg-zinc-950/85 dark:bg-[#101014]/90 backdrop-blur-md border border-zinc-800/80 dark:border-white/10 text-zinc-200 shadow-2xl 
+      px-2 sm:px-3 py-1.5 rounded-2xl bg-white/95 dark:bg-[#101014]/90 backdrop-blur-md border border-zinc-200/90 dark:border-white/10 text-zinc-800 dark:text-zinc-200 shadow-xl dark:shadow-2xl 
       flex items-center gap-1 sm:gap-2 opacity-95 hover:opacity-100 transition-all duration-200 select-none">
       
       <!-- Outline / Table of Contents Toggle -->
       <button id="btnPdfToggleOutline" type="button" title="Mục lục" 
-        class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+        class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
         <i data-lucide="list" class="w-4 h-4"></i>
       </button>
 
-      <div class="w-px h-3.5 bg-zinc-800 dark:bg-white/10 mx-0.5"></div>
+      <div class="w-px h-3.5 bg-zinc-200 dark:bg-white/10 mx-0.5"></div>
 
       <!-- Page Stepper -->
       <div class="flex items-center gap-1">
         <button id="btnPdfPrevPage" type="button" title="Trang trước" 
-          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none">
+          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none">
           <i data-lucide="chevron-left" class="w-4 h-4"></i>
         </button>
 
         <div class="flex items-center gap-1 px-1">
           <input id="inputPdfCurrentPage" type="text" inputmode="numeric" value="${currentPage}" 
-            class="w-8 sm:w-10 text-center py-1 rounded-lg bg-white/[0.08] border border-white/15 text-xs font-mono font-bold text-white focus:outline-none focus:border-indigo-400 transition" />
-          <span class="text-xs text-zinc-500 font-mono">/</span>
-          <span id="pdfTotalPagesLabel" class="text-xs text-zinc-400 font-mono">${totalPages}</span>
+            class="w-8 sm:w-10 text-center py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.08] border border-zinc-200 dark:border-white/15 text-xs font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500 transition" />
+          <span class="text-xs text-zinc-400 dark:text-zinc-500 font-mono">/</span>
+          <span id="pdfTotalPagesLabel" class="text-xs text-zinc-500 dark:text-zinc-400 font-mono">${totalPages}</span>
         </div>
 
         <button id="btnPdfNextPage" type="button" title="Trang kế" 
-          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none">
+          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none">
           <i data-lucide="chevron-right" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <div class="w-px h-3.5 bg-zinc-800 dark:bg-white/10 mx-0.5"></div>
+      <div class="w-px h-3.5 bg-zinc-200 dark:bg-white/10 mx-0.5"></div>
 
       <!-- Zoom Controls -->
       <div class="flex items-center gap-0.5 sm:gap-1">
         <button id="btnPdfZoomOut" type="button" title="Thu nhỏ" 
-          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
           <i data-lucide="minus" class="w-3.5 h-3.5"></i>
         </button>
 
         <button id="btnPdfZoomFit" type="button" title="Vừa trang" 
-          class="min-h-[40px] px-2.5 py-1.5 rounded-xl hover:bg-white/10 active:bg-white/15 text-[11px] font-mono font-semibold text-zinc-300 hover:text-white flex items-center justify-center transition cursor-pointer">
+          class="min-h-[40px] px-2.5 py-1.5 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-[11px] font-mono font-semibold text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
           <span id="pdfZoomPctLabel">${zoomPct}%</span>
         </button>
 
         <button id="btnPdfZoomIn" type="button" title="Phóng to" 
-          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
         </button>
       </div>
 
-      <div class="w-px h-3.5 bg-zinc-800 dark:bg-white/10 mx-0.5"></div>
+      <div class="w-px h-3.5 bg-zinc-200 dark:bg-white/10 mx-0.5"></div>
 
       <!-- Night Mode Toggle (Normal -> Dark Invert -> Sepia) -->
       <button id="btnPdfNightMode" type="button" title="Chế độ đọc ban đêm" 
-        class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-amber-400 hover:text-amber-300 flex items-center justify-center transition cursor-pointer">
+        class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 flex items-center justify-center transition cursor-pointer">
         <i data-lucide="moon" class="w-4 h-4"></i>
       </button>
 
-      <div class="w-px h-3.5 bg-zinc-800 dark:bg-white/10 mx-0.5"></div>
+      <div class="w-px h-3.5 bg-zinc-200 dark:bg-white/10 mx-0.5"></div>
 
       <!-- Fullscreen Toggle -->
       <button id="btnPdfFullscreen" type="button" title="Toàn màn hình" 
-        class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-white/10 active:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+        class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
         <i data-lucide="maximize" class="w-4 h-4"></i>
       </button>
     </div>

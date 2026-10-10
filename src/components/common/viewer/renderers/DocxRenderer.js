@@ -173,7 +173,7 @@ export function attachDocxListeners(state, registerCleanup) {
       if (state.rawFile instanceof Blob) {
         fileBuffer = await state.rawFile.arrayBuffer();
       } else {
-        const res = await fetch(state.viewUrl, { signal: abortController.signal });
+        const res = await fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fileBuffer = await res.arrayBuffer();
       }

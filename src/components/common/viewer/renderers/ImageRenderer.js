@@ -13,41 +13,41 @@ export function renderImageViewer(state) {
     <div id="imageViewerWrapper" class="relative w-full h-full min-h-[350px] max-h-[75vh] flex flex-col items-center justify-center">
       ${isSvg ? `
         <!-- SVG Mode Toggle Header -->
-        <div class="absolute top-2 left-3 z-30 flex items-center gap-1.5 p-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-xs font-semibold text-white">
-          <button id="btnSvgModeVector" type="button" class="px-2.5 py-1 rounded-md bg-white/20 text-white shadow-xs cursor-pointer transition">
+        <div class="absolute top-2 left-3 z-30 flex items-center gap-1.5 p-0.5 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-md border border-zinc-200/90 dark:border-white/10 text-xs font-semibold text-zinc-800 dark:text-white shadow-sm">
+          <button id="btnSvgModeVector" type="button" class="px-2.5 py-1 rounded-md bg-zinc-200/80 dark:bg-white/20 text-zinc-900 dark:text-white shadow-xs cursor-pointer transition">
             Xem Vector
           </button>
-          <button id="btnSvgModeCode" type="button" class="px-2.5 py-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition">
+          <button id="btnSvgModeCode" type="button" class="px-2.5 py-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white cursor-pointer transition">
             Mã nguồn SVG
           </button>
         </div>
 
-        <button id="btnCopySvgCode" type="button" class="hidden absolute top-2 right-3 z-30 px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 text-xs font-semibold text-white items-center gap-1.5 transition cursor-pointer">
+        <button id="btnCopySvgCode" type="button" class="hidden absolute top-2 right-3 z-30 px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white dark:bg-black/60 dark:hover:bg-black/80 backdrop-blur-md border border-zinc-200/90 dark:border-white/10 text-xs font-semibold text-zinc-800 dark:text-white items-center gap-1.5 transition cursor-pointer shadow-sm">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i> Sao chép
         </button>
       ` : ''}
 
       <!-- Vector / Image Canvas -->
-      <div id="imageViewerContainer" class="relative w-full h-full min-h-[350px] max-h-[75vh] flex items-center justify-center overflow-hidden select-none bg-zinc-950/40 rounded-xl cursor-grab active:cursor-grabbing">
-        <div id="imageLoadingSpinner" class="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-xs z-10 transition-opacity duration-200">
-          <i data-lucide="loader-2" class="w-8 h-8 text-indigo-400 animate-spin"></i>
+      <div id="imageViewerContainer" class="relative w-full h-full min-h-[350px] max-h-[75vh] flex items-center justify-center overflow-hidden select-none bg-zinc-100/70 dark:bg-zinc-950/40 border border-zinc-200/50 dark:border-transparent rounded-xl cursor-grab active:cursor-grabbing">
+        <div id="imageLoadingSpinner" class="absolute inset-0 flex items-center justify-center bg-black/10 dark:bg-black/20 backdrop-blur-xs z-10 transition-opacity duration-200">
+          <i data-lucide="loader-2" class="w-8 h-8 text-indigo-500 dark:text-indigo-400 animate-spin"></i>
         </div>
         
         <div id="imageViewport" class="transition-transform duration-100 ease-out origin-center flex items-center justify-center p-2">
-          <img id="activePreviewImage" src="${state.viewUrl}" alt="${state.name}" class="max-h-[70vh] max-w-full rounded-lg object-contain shadow-2xl pointer-events-none" />
+          <img id="activePreviewImage" src="${state.viewUrl}" alt="${state.name}" class="max-h-[70vh] max-w-full rounded-lg object-contain shadow-xl dark:shadow-2xl pointer-events-none" />
         </div>
 
         <!-- Image Controls Floating Bar -->
-        <div id="imageControlsBar" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 shadow-xl text-white text-xs font-mono">
-          <button id="btnZoomOut" type="button" class="p-1.5 rounded-lg hover:bg-white/10 transition cursor-pointer" title="Thu nhỏ">
+        <div id="imageControlsBar" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 dark:bg-black/75 backdrop-blur-md border border-zinc-200/90 dark:border-white/10 shadow-lg dark:shadow-xl text-zinc-800 dark:text-white text-xs font-mono">
+          <button id="btnZoomOut" type="button" class="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition cursor-pointer" title="Thu nhỏ">
             <i data-lucide="zoom-out" class="w-4 h-4"></i>
           </button>
-          <span id="zoomLevelText" class="px-2 font-medium min-w-[50px] text-center">100%</span>
-          <button id="btnZoomIn" type="button" class="p-1.5 rounded-lg hover:bg-white/10 transition cursor-pointer" title="Phóng to">
+          <span id="zoomLevelText" class="px-2 font-medium min-w-[50px] text-center text-zinc-900 dark:text-white">100%</span>
+          <button id="btnZoomIn" type="button" class="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition cursor-pointer" title="Phóng to">
             <i data-lucide="zoom-in" class="w-4 h-4"></i>
           </button>
-          <div class="w-px h-3.5 bg-white/20 mx-1"></div>
-          <button id="btnResetZoom" type="button" class="px-2 py-1 rounded-lg hover:bg-white/10 transition text-[11px] cursor-pointer" title="Đặt lại">
+          <div class="w-px h-3.5 bg-zinc-200 dark:bg-white/20 mx-1"></div>
+          <button id="btnResetZoom" type="button" class="px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition text-[11px] cursor-pointer" title="Đặt lại">
             Reset
           </button>
         </div>
@@ -55,8 +55,8 @@ export function renderImageViewer(state) {
 
       <!-- SVG Source Code Viewport (Initially hidden) -->
       ${isSvg ? `
-        <div id="svgSourceContainer" class="hidden w-full h-full min-h-[350px] max-h-[75vh] overflow-auto custom-scrollbar p-3 rounded-xl bg-zinc-950 border border-white/10">
-          <pre class="p-4 font-mono text-xs text-zinc-200 select-text leading-relaxed"><code id="svgSourceCode" class="hljs">Đang tải mã nguồn...</code></pre>
+        <div id="svgSourceContainer" class="hidden w-full h-full min-h-[350px] max-h-[75vh] overflow-auto custom-scrollbar p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-white/10">
+          <pre class="p-4 font-mono text-xs text-zinc-800 dark:text-zinc-200 select-text leading-relaxed"><code id="svgSourceCode" class="hljs">Đang tải mã nguồn...</code></pre>
         </div>
       ` : ''}
     </div>
@@ -183,7 +183,7 @@ export function attachImageListeners(state, registerCleanup) {
         try {
           const fetchPromise = (state.rawFile instanceof Blob)
             ? state.rawFile.text()
-            : fetch(state.viewUrl).then(r => {
+            : fetch(state.viewUrl, { credentials: 'same-origin' }).then(r => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 return r.text();
               });
