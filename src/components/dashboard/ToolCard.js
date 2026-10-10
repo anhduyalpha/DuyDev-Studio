@@ -33,14 +33,14 @@ export function renderToolCard(tool) {
        aria-label="${tool.title} - ${tool.description}"
        style="--accent: ${accent}; --accent-contrast: ${contrastColor};">
       
-      <!-- Top Precision Accent Beam (Permanent 35% resting glow, 100% on hover) -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-35 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft colored radial aura behind icon -->
-      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full bg-[var(--accent)] opacity-[0.08] dark:opacity-[0.15] blur-2xl group-hover:opacity-[0.24] dark:group-hover:opacity-[0.30] group-hover:scale-125 transition-all duration-500 pointer-events-none"></div>
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-[var(--accent)] opacity-[0.04] dark:opacity-[0.07] blur-2xl group-hover:opacity-[0.10] dark:group-hover:opacity-[0.12] transition-opacity duration-500 pointer-events-none"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Badge -->
