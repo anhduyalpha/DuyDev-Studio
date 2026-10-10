@@ -359,6 +359,10 @@ html.dark .glass-search:hover {
   border-radius: 1rem;
   padding: 1.5px;
   overflow: hidden;
+  background-color: #e4e4e7;
+}
+
+html.dark .quiz-animated-box {
   background-color: #18181b;
 }
 
