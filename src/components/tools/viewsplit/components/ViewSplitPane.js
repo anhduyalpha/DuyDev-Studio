@@ -19,9 +19,9 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
 
   return `
     <div
-      class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border transition-all select-none ${
+      class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border-2 transition-all select-none ${
         isActive
-          ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+          ? 'border-cyan-500 ring-2 ring-cyan-400/40 shadow-xl shadow-cyan-500/15'
           : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30 cursor-pointer'
       }"
       data-action="select-pane"

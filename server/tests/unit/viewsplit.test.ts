@@ -587,8 +587,8 @@ describe('ViewSplit Auto-Advancement & Click-To-Select', () => {
 
       const html = renderViewSplitPane(pane as any, true, 'bilinear');
 
-      expect(html).toContain('border-cyan-500/80');
-      expect(html).toContain('ring-2 ring-cyan-500/30');
+      expect(html).toContain('border-cyan-500');
+      expect(html).toContain('ring-cyan-400');
       expect(html).toContain('ĐANG CHỌN');
       expect(html).toContain('data-pane-id="1"');
     });
@@ -648,7 +648,7 @@ describe('ViewSplit Auto-Advancement & Click-To-Select', () => {
       // Slot cards
       expect(html).toContain('Ảnh Trước • Ảnh A');
       expect(html).toContain('Ảnh Sau • Ảnh B');
-      expect(html).toContain('border-cyan-500/80'); // Active Slot A ring
+      expect(html).toContain('border-cyan-500'); // Active Slot A ring
     });
 
     it('setLayout automatically resets activePaneId to 1 when current pane is invisible in new layout', () => {

@@ -167,9 +167,9 @@ export function renderViewSplitSliderOverlay(state) {
                 data-action="select-pane"
                 data-pane-id="1"
                 title="Bấm để chọn Ảnh Trước (${paneA.title})"
-                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border-2 transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 1
-                    ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                    ? 'border-cyan-500 ring-2 ring-cyan-400/40 shadow-xl shadow-cyan-500/15'
                     : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
                 }"
               >
@@ -217,9 +217,9 @@ export function renderViewSplitSliderOverlay(state) {
                 data-action="select-pane"
                 data-pane-id="2"
                 title="Bấm để chọn Ảnh Sau (${paneB.title})"
-                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                class="viewsplit-overlay-slot flex-1 max-w-sm w-full p-5 rounded-2xl bg-white/90 dark:bg-zinc-900/60 border-2 transition-all text-center flex flex-col items-center cursor-pointer ${
                   activePaneId === 2
-                    ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                    ? 'border-cyan-500 ring-2 ring-cyan-400/40 shadow-xl shadow-cyan-500/15'
                     : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
                 }"
               >

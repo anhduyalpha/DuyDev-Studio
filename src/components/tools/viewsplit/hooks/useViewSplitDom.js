@@ -58,11 +58,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const pId = parseInt(paneEl.dataset.paneId, 10);
       const isActive = pId === activeId;
 
-      paneEl.classList.toggle('border-cyan-500/80', isActive);
+      paneEl.classList.toggle('border-cyan-500', isActive);
       paneEl.classList.toggle('ring-2', isActive);
-      paneEl.classList.toggle('ring-cyan-500/30', isActive);
-      paneEl.classList.toggle('shadow-lg', isActive);
-      paneEl.classList.toggle('shadow-cyan-500/10', isActive);
+      paneEl.classList.toggle('ring-cyan-400/40', isActive);
+      paneEl.classList.toggle('shadow-xl', isActive);
+      paneEl.classList.toggle('shadow-cyan-500/15', isActive);
 
       paneEl.classList.toggle('border-zinc-200/80', !isActive);
       paneEl.classList.toggle('dark:border-white/10', !isActive);
@@ -99,7 +99,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         btn.classList.toggle('border-cyan-500/30', isSelected);
         btn.classList.toggle('shadow-sm', isSelected);
 
-        const dot = btn.querySelector('.w-1\\.5.h-1\\.5');
+        const dot = btn.querySelector('.rounded-full');
         if (dot) {
           dot.classList.toggle('bg-cyan-400', isSelected);
           dot.classList.toggle('animate-pulse', isSelected);
@@ -112,11 +112,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const slotBCard = document.querySelector('.viewsplit-overlay-slot[data-pane-id="2"]');
     if (slotACard) {
       const isA = activeId === 1;
-      slotACard.classList.toggle('border-cyan-500/80', isA);
+      slotACard.classList.toggle('border-cyan-500', isA);
       slotACard.classList.toggle('ring-2', isA);
-      slotACard.classList.toggle('ring-cyan-500/30', isA);
-      slotACard.classList.toggle('shadow-lg', isA);
-      slotACard.classList.toggle('shadow-cyan-500/10', isA);
+      slotACard.classList.toggle('ring-cyan-400/40', isA);
+      slotACard.classList.toggle('shadow-xl', isA);
+      slotACard.classList.toggle('shadow-cyan-500/15', isA);
       slotACard.classList.toggle('border-zinc-200/80', !isA);
       slotACard.classList.toggle('dark:border-white/10', !isA);
       const b1 = document.querySelector('.viewsplit-overlay-badge-1');
@@ -128,11 +128,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
     }
     if (slotBCard) {
       const isB = activeId === 2;
-      slotBCard.classList.toggle('border-cyan-500/80', isB);
+      slotBCard.classList.toggle('border-cyan-500', isB);
       slotBCard.classList.toggle('ring-2', isB);
-      slotBCard.classList.toggle('ring-cyan-500/30', isB);
-      slotBCard.classList.toggle('shadow-lg', isB);
-      slotBCard.classList.toggle('shadow-cyan-500/10', isB);
+      slotBCard.classList.toggle('ring-cyan-400/40', isB);
+      slotBCard.classList.toggle('shadow-xl', isB);
+      slotBCard.classList.toggle('shadow-cyan-500/15', isB);
       slotBCard.classList.toggle('border-zinc-200/80', !isB);
       slotBCard.classList.toggle('dark:border-white/10', !isB);
       const b2 = document.querySelector('.viewsplit-overlay-badge-2');
@@ -197,9 +197,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const paneTitle = PANE_TITLES[paneId - 1] || `Ảnh ${paneId}`;
       if (nextPaneId !== paneId) {
         store.setActivePane(nextPaneId);
+        syncActivePaneUI(nextPaneId);
         const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
         showToast(`Đã nạp ${fileName} vào ${paneTitle}. Tự động chuyển sang ${nextTitle} để sẵn sàng dán ảnh tiếp theo.`, 'success');
       } else {
+        syncActivePaneUI(paneId);
         showToast(`Đã nạp ${fileName} vào ${paneTitle}`, 'success');
       }
       onReRender();
@@ -770,14 +772,21 @@ export function attachViewSplitDomListeners(store, onReRender) {
       return;
     }
 
-    // Direct Pane Selection Click: Clicking anywhere on .viewsplit-pane (except action buttons or inputs)
+    // Direct Pane Selection Click: Clicking anywhere on a .viewsplit-pane (except sub-action buttons like clear-pane, pick-file, open-url-modal)
     const paneEl = e.target.closest('.viewsplit-pane');
-    if (paneEl && !e.target.closest('button, [data-action], input')) {
-      const paneId = parseInt(paneEl.dataset.paneId, 10);
-      if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
-        store.setActivePane(paneId);
-        syncActivePaneUI(paneId);
-        return;
+    if (paneEl) {
+      const actionBtn = e.target.closest('button[data-action], a[data-action]');
+      const subAction = actionBtn ? actionBtn.dataset.action : null;
+
+      // If no sub-action button, OR the action is specifically 'select-pane':
+      if (!subAction || subAction === 'select-pane') {
+        const paneId = parseInt(paneEl.dataset.paneId, 10);
+        if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
+          store.setActivePane(paneId);
+          syncActivePaneUI(paneId);
+          onReRender();
+          return;
+        }
       }
     }
 
@@ -790,6 +799,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const targetId = (store.layout === LAYOUT_MODES.SLIDER && clickX >= splitX) ? 2 : 1;
       store.setActivePane(targetId);
       syncActivePaneUI(targetId);
+      onReRender();
       return;
     }
 
@@ -808,6 +818,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
           store.setActivePane(paneId);
           syncActivePaneUI(paneId);
+          onReRender();
         }
         break;
       }
@@ -871,7 +882,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       case 'paste-clipboard': {
         const paneId = parseInt(btn.dataset.paneId, 10) || store.activePaneId;
-        if (paneId) {
+        if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
           store.setActivePane(paneId);
           syncActivePaneUI(paneId);
         }
@@ -895,6 +906,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
         if (!clipboardPasted) {
           showToast(`Đã chọn ${PANE_TITLES[paneId - 1] || 'Khung hình'}. Nhấn Ctrl+V để dán ảnh ngay lập tức.`, 'info');
+          onReRender();
         }
         break;
       }
