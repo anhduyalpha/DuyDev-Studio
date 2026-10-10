@@ -57,8 +57,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
     try {
       const img = await loadImageSource(blobUrl);
       store.setImageForPane(paneId, img, { name: file.name, size: file.size });
+      const nextPaneId = store.getNextTargetPaneId(paneId);
       const paneTitle = PANE_TITLES[paneId - 1] || `Ảnh ${paneId}`;
-      showToast(`Đã nạp ${file.name} vào ${paneTitle}`, 'success');
+      if (nextPaneId !== paneId) {
+        store.setActivePane(nextPaneId);
+        const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
+        showToast(`Đã nạp ${file.name} vào ${paneTitle}. Tự động chuyển sang ${nextTitle} để sẵn sàng dán ảnh tiếp theo.`, 'success');
+      } else {
+        showToast(`Đã nạp ${file.name} vào ${paneTitle}`, 'success');
+      }
       onReRender();
     } catch (err) {
       console.error('[ViewSplit] Error loading file:', err);
@@ -619,14 +626,34 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const imgUrl = `/api/v1/storage/download?path=${encodeURIComponent(path)}&inline=true`;
       try {
         const img = await loadImageSource(imgUrl);
-        store.setImageForPane(store.urlModalTargetPaneId, img, { name });
+        const targetId = store.urlModalTargetPaneId;
+        store.setImageForPane(targetId, img, { name });
         store.closeUrlModal();
-        showToast(`Đã nạp ${name} từ Storage Drive`, 'success');
+        const nextPaneId = store.getNextTargetPaneId(targetId);
+        const paneTitle = PANE_TITLES[targetId - 1] || `Ảnh ${targetId}`;
+        if (nextPaneId !== targetId) {
+          store.setActivePane(nextPaneId);
+          const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
+          showToast(`Đã nạp ${name} từ Storage Drive vào ${paneTitle}. Tự động chuyển sang ${nextTitle}.`, 'success');
+        } else {
+          showToast(`Đã nạp ${name} từ Storage Drive vào ${paneTitle}`, 'success');
+        }
         onReRender();
       } catch (err) {
         showToast('Không thể tải tệp từ Storage Drive', 'error');
       }
       return;
+    }
+
+    // Direct Pane Selection Click: Clicking anywhere on .viewsplit-pane (except action buttons or inputs)
+    const paneEl = e.target.closest('.viewsplit-pane');
+    if (paneEl && !e.target.closest('button, [data-action], input')) {
+      const paneId = parseInt(paneEl.dataset.paneId, 10);
+      if (paneId && paneId >= 1 && paneId <= 4) {
+        store.setActivePane(paneId);
+        onReRender();
+        return;
+      }
     }
 
     const btn = e.target.closest('button, [data-action]');
@@ -637,6 +664,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
     e.preventDefault();
 
     switch (action) {
+      case 'select-pane': {
+        const paneId = parseInt(btn.dataset.paneId, 10);
+        if (paneId && paneId >= 1 && paneId <= 4) {
+          store.setActivePane(paneId);
+          onReRender();
+        }
+        break;
+      }
+
       case 'set-layout': {
         const newLayout = btn.dataset.layout;
         store.setLayout(newLayout);
@@ -811,9 +847,18 @@ export function attachViewSplitDomListeners(store, onReRender) {
           showToast('Đang nạp ảnh từ URL...', 'info');
           const img = await loadImageSource(url);
           const fileName = url.split('/').pop()?.split('?')[0] || 'Ảnh từ URL';
-          store.setImageForPane(store.urlModalTargetPaneId, img, { name: fileName });
+          const targetId = store.urlModalTargetPaneId;
+          store.setImageForPane(targetId, img, { name: fileName });
           store.closeUrlModal();
-          showToast(`Đã nạp ${fileName} từ URL`, 'success');
+          const nextPaneId = store.getNextTargetPaneId(targetId);
+          const paneTitle = PANE_TITLES[targetId - 1] || `Ảnh ${targetId}`;
+          if (nextPaneId !== targetId) {
+            store.setActivePane(nextPaneId);
+            const nextTitle = PANE_TITLES[nextPaneId - 1] || `Ảnh ${nextPaneId}`;
+            showToast(`Đã nạp ${fileName} từ URL vào ${paneTitle}. Tự động chuyển sang ${nextTitle}.`, 'success');
+          } else {
+            showToast(`Đã nạp ${fileName} từ URL vào ${paneTitle}`, 'success');
+          }
           onReRender();
         } catch (err) {
           showToast('Không thể nạp ảnh từ URL chỉ định', 'error');

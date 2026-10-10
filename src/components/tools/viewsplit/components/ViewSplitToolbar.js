@@ -3,7 +3,7 @@
  * Layout pickers, Synchronizer locks, Sampling filters, Fit/Reset, and Export commands.
  */
 
-import { LAYOUT_MODES } from '../hooks/useViewSplit.js';
+import { LAYOUT_MODES, PANE_TITLES } from '../hooks/useViewSplit.js';
 
 /**
  * Renders toolbar markup.
@@ -16,10 +16,14 @@ export function renderViewSplitToolbar(state) {
     syncView,
     syncCursor,
     filter,
-    inspectorOpen
+    inspectorOpen,
+    activePaneId
   } = state;
 
   const isOverlay = layout === LAYOUT_MODES.SLIDER || layout === LAYOUT_MODES.DIFF;
+  const visibleCount = typeof state.getVisiblePaneCount === 'function'
+    ? state.getVisiblePaneCount()
+    : (layout === LAYOUT_MODES.SINGLE ? 1 : layout === LAYOUT_MODES.QUAD ? 4 : (layout === LAYOUT_MODES.TRIPLE_H || layout === LAYOUT_MODES.TRIPLE_L || layout === LAYOUT_MODES.TRIPLE_T ? 3 : 2));
 
   const layoutButtons = [
     { id: LAYOUT_MODES.SINGLE, label: '1', title: '1 Khung hình' },
@@ -91,6 +95,32 @@ export function renderViewSplitToolbar(state) {
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
             <span class="hidden md:inline">Diff</span>
           </button>
+        </div>
+
+        <!-- Active Box Selector Group (Pills) -->
+        <div class="flex items-center bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-zinc-200/60 dark:border-white/5 gap-0.5">
+          ${Array.from({ length: visibleCount }, (_, i) => i + 1).map((id) => {
+            const isSelected = activePaneId === id;
+            const title = PANE_TITLES[id - 1] || `Ảnh ${id}`;
+            const pane = typeof state.getPane === 'function' ? state.getPane(id) : state.panes?.[id - 1];
+            const hasImage = Boolean(pane?.image);
+            return `
+              <button
+                type="button"
+                data-action="select-pane"
+                data-pane-id="${id}"
+                title="Chọn ${title} để nạp / dán ảnh"
+                class="px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                }"
+              >
+                <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-cyan-400 animate-pulse' : hasImage ? 'bg-emerald-400' : 'bg-zinc-400/50'}"></span>
+                <span>${title}</span>
+              </button>
+            `;
+          }).join('')}
         </div>
       </div>
 

@@ -21,11 +21,12 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
     <div
       class="viewsplit-pane group relative flex-1 min-w-0 min-h-[280px] h-full rounded-2xl overflow-hidden bg-zinc-950 border transition-all select-none ${
         isActive
-          ? 'border-cyan-500/60 ring-2 ring-cyan-500/20 shadow-lg'
-          : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/20'
+          ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+          : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/30 cursor-pointer'
       }"
       data-pane-id="${pane.id}"
       tabindex="0"
+      title="${isActive ? 'Khung hình đang được chọn để dán/nạp ảnh' : 'Bấm để chọn khung hình này'}"
     >
       <!-- Canvas Layer -->
       <canvas
@@ -42,6 +43,11 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
         <div class="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 dark:bg-black/75 backdrop-blur-md border border-white/10 text-xs shadow-sm">
           <span class="w-2 h-2 rounded-full ${isActive ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
           <span class="font-bold text-white tracking-wide">${pane.title}</span>
+          ${
+            isActive
+              ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+              : ''
+          }
           ${
             hasImage
               ? `<span class="text-zinc-400 truncate max-w-[120px] sm:max-w-[160px] hidden sm:inline" title="${pane.name}">${pane.name}</span>`

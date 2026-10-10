@@ -14,6 +14,7 @@ export function renderViewSplitSliderOverlay(state) {
   const {
     layout,
     panes,
+    activePaneId,
     sliderPos,
     diffMultiplier,
     filter
@@ -44,9 +45,35 @@ export function renderViewSplitSliderOverlay(state) {
             ${isDiffMode ? 'Difference Diff' : 'Slider Wipe'}
           </span>
           <span class="text-zinc-500">•</span>
-          <span class="text-zinc-300 font-medium">${paneA.title}</span>
+          <button
+            type="button"
+            data-action="select-pane"
+            data-pane-id="1"
+            title="Chọn ${paneA.title} để dán/thay ảnh"
+            class="px-2 py-0.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+              activePaneId === 1
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+            }"
+          >
+            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 1 ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
+            <span>${paneA.title}</span>
+          </button>
           <span class="text-zinc-500">vs</span>
-          <span class="text-zinc-300 font-medium">${paneB.title}</span>
+          <button
+            type="button"
+            data-action="select-pane"
+            data-pane-id="2"
+            title="Chọn ${paneB.title} để dán/thay ảnh"
+            class="px-2 py-0.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+              activePaneId === 2
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+            }"
+          >
+            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 2 ? 'bg-cyan-400 animate-pulse' : 'bg-zinc-400'}"></span>
+            <span>${paneB.title}</span>
+          </button>
         </div>
 
         <!-- Controls: Swap Images & Diff Multiplier -->
@@ -136,11 +163,23 @@ export function renderViewSplitSliderOverlay(state) {
           ? `
             <div class="absolute inset-0 z-0 flex flex-col md:flex-row items-center justify-center gap-4 p-6 bg-zinc-950/80 backdrop-blur-md">
               <!-- Slot A Card -->
-              <div class="flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border border-white/10 text-center flex flex-col items-center">
+              <div
+                data-action="select-pane"
+                data-pane-id="1"
+                title="Bấm để chọn Ảnh Trước (${paneA.title})"
+                class="flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                  activePaneId === 1
+                    ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                    : 'border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
+                }"
+              >
                 <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2">
                   <i data-lucide="image" class="w-5 h-5"></i>
                 </div>
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Trước • ${paneA.title}</h4>
+                <div class="flex items-center gap-1.5 mb-1">
+                  <h4 class="text-xs font-bold text-white uppercase tracking-wider">Ảnh Trước • ${paneA.title}</h4>
+                  ${activePaneId === 1 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}
+                </div>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasA ? paneA.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button
@@ -174,11 +213,23 @@ export function renderViewSplitSliderOverlay(state) {
               </div>
 
               <!-- Slot B Card -->
-              <div class="flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border border-white/10 text-center flex flex-col items-center">
+              <div
+                data-action="select-pane"
+                data-pane-id="2"
+                title="Bấm để chọn Ảnh Sau (${paneB.title})"
+                class="flex-1 max-w-sm w-full p-5 rounded-2xl bg-zinc-900/60 border transition-all text-center flex flex-col items-center cursor-pointer ${
+                  activePaneId === 2
+                    ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                    : 'border-white/10 hover:border-zinc-400 dark:hover:border-white/30'
+                }"
+              >
                 <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-2">
                   <i data-lucide="image" class="w-5 h-5"></i>
                 </div>
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Ảnh Sau • ${paneB.title}</h4>
+                <div class="flex items-center gap-1.5 mb-1">
+                  <h4 class="text-xs font-bold text-white uppercase tracking-wider">Ảnh Sau • ${paneB.title}</h4>
+                  ${activePaneId === 2 ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>' : ''}
+                </div>
                 <p class="text-[11px] text-zinc-400 mb-3">${hasB ? paneB.name : 'Chưa chọn ảnh'}</p>
                 <div class="flex items-center gap-2 flex-wrap justify-center">
                   <button

@@ -55,7 +55,7 @@ function createInitialPane(id) {
   };
 }
 
-class ViewSplitStore {
+export class ViewSplitStore {
   constructor() {
     this.layout = LAYOUT_MODES.SPLIT_H;
     this.activePaneId = 1;
@@ -116,12 +116,74 @@ class ViewSplitStore {
     return this.getPane(this.activePaneId);
   }
 
+  /**
+   * Returns the number of visible panes for current layout mode.
+   * @returns {number}
+   */
+  getVisiblePaneCount() {
+    switch (this.layout) {
+      case LAYOUT_MODES.SINGLE:
+        return 1;
+      case LAYOUT_MODES.SPLIT_H:
+      case LAYOUT_MODES.SPLIT_V:
+      case LAYOUT_MODES.SLIDER:
+      case LAYOUT_MODES.DIFF:
+        return 2;
+      case LAYOUT_MODES.TRIPLE_H:
+      case LAYOUT_MODES.TRIPLE_L:
+      case LAYOUT_MODES.TRIPLE_T:
+        return 3;
+      case LAYOUT_MODES.QUAD:
+        return 4;
+      default:
+        return 2;
+    }
+  }
+
+  /**
+   * Computes the next target pane ID for smart auto-advancing after file ingestion.
+   * Prioritizes unfilled panes within visible count, or cycles to next pane if all filled.
+   *
+   * @param {number} [currentPaneId=this.activePaneId]
+   * @returns {number}
+   */
+  getNextTargetPaneId(currentPaneId = this.activePaneId) {
+    const visibleCount = this.getVisiblePaneCount();
+    if (visibleCount <= 1) return 1;
+
+    const current = Math.min(Math.max(1, currentPaneId || 1), visibleCount);
+
+    // 1. Search for the first unfilled pane starting after currentPaneId (wrapping around)
+    for (let offset = 1; offset < visibleCount; offset++) {
+      const candidateId = ((current - 1 + offset) % visibleCount) + 1;
+      const pane = this.getPane(candidateId);
+      if (pane && !pane.image) {
+        return candidateId;
+      }
+    }
+
+    // 2. If all visible panes already have images, advance cyclically
+    return ((current - 1 + 1) % visibleCount) + 1;
+  }
+
   setActivePane(id) {
-    if (this.activePaneId !== id && id >= 1 && id <= MAX_PANES) {
+    if (id >= 1 && id <= MAX_PANES) {
       this.activePaneId = id;
       this.mobileActiveTab = id;
       this.notify('active-pane');
     }
+  }
+
+  /**
+   * Automatically advances activePaneId to the next target pane.
+   *
+   * @param {number} [currentPaneId=this.activePaneId]
+   * @returns {number}
+   */
+  advanceToNextPane(currentPaneId = this.activePaneId) {
+    const nextId = this.getNextTargetPaneId(currentPaneId);
+    this.setActivePane(nextId);
+    return nextId;
   }
 
   setLayout(layout) {
@@ -220,14 +282,16 @@ class ViewSplitStore {
     try {
       const offscreen = typeof OffscreenCanvas !== 'undefined'
         ? new OffscreenCanvas(pane.width, pane.height)
-        : document.createElement('canvas');
-      offscreen.width = pane.width;
-      offscreen.height = pane.height;
-      const ctx = offscreen.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(imgElement, 0, 0);
-        const imgData = ctx.getImageData(0, 0, pane.width, pane.height);
-        pane.imageData = imgData.data;
+        : (typeof document !== 'undefined' ? document.createElement('canvas') : null);
+      if (offscreen) {
+        offscreen.width = pane.width;
+        offscreen.height = pane.height;
+        const ctx = offscreen.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+          const imgData = ctx.getImageData(0, 0, pane.width, pane.height);
+          pane.imageData = imgData.data;
+        }
       }
     } catch (err) {
       console.warn('[ViewSplitStore] Failed to cache pixel buffer for sampling:', err);

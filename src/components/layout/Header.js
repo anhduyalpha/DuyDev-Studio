@@ -64,6 +64,16 @@ export function renderHeader() {
             <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
           </a>
 
+          <!-- Micro System Telemetry Indicator -->
+          <div id="headerSystemStatus" 
+               role="status"
+               aria-label="Trạng thái hệ thống"
+               title="Máy chủ: Đang kiểm tra... • Redis: Đang kết nối..." 
+               class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg glass-pill text-[11px] font-mono text-zinc-600 dark:text-zinc-400 cursor-default select-none transition">
+            <span id="headerSystemDot" class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"></span>
+            <span id="headerSystemLabel" class="hidden lg:inline text-[10px] font-semibold tracking-wide">ONLINE</span>
+          </div>
+
           <!-- Theme Toggle Button -->
           <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
@@ -79,6 +89,49 @@ export function renderHeader() {
       </div>
     </header>
   `;
+}
+
+export async function syncHeaderSystemTelemetry() {
+  const statusEl = document.getElementById('headerSystemStatus');
+  const dotEl = document.getElementById('headerSystemDot');
+  const labelEl = document.getElementById('headerSystemLabel');
+  if (!statusEl || !dotEl || !labelEl) return;
+
+  try {
+    const res = await fetch('/api/v1/system/telemetry');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const body = await res.json();
+    const data = body?.data;
+
+    if (data?.gateway === 'online') {
+      const activeJobs = data.queues?.totalActive || 0;
+      const isDegraded = data.redis !== 'connected';
+
+      if (activeJobs > 0) {
+        dotEl.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]';
+        labelEl.textContent = `${activeJobs} TÁC VỤ`;
+        labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-400';
+        statusEl.title = `Máy chủ: Hoạt động • Đang xử lý: ${activeJobs} tác vụ • Redis: ${data.redis}`;
+      } else if (isDegraded) {
+        dotEl.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]';
+        labelEl.textContent = 'DEGRADED';
+        labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-400';
+        statusEl.title = `Máy chủ: Hoạt động • Redis: ${data.redis}`;
+      } else {
+        dotEl.className = 'w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]';
+        labelEl.textContent = 'ONLINE';
+        labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-emerald-600 dark:text-emerald-400';
+        statusEl.title = `Máy chủ: Trực tuyến • Redis: Sẵn sàng • RAM: ${data.memoryMb || 0}MB`;
+      }
+    } else {
+      throw new Error('Gateway not online');
+    }
+  } catch {
+    dotEl.className = 'w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]';
+    labelEl.textContent = 'OFFLINE';
+    labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-rose-600 dark:text-rose-400';
+    statusEl.title = 'Máy chủ: Mất kết nối';
+  }
 }
 
 export function attachHeaderListeners(onSearch) {
@@ -110,5 +163,45 @@ export function attachHeaderListeners(onSearch) {
         searchInput.select();
       }
     }
+  });
+
+  // Initial telemetry fetch
+  syncHeaderSystemTelemetry();
+
+  // Low-frequency background telemetry refresh (every 30s when tab is active)
+  let telemetryInterval = null;
+  const startTelemetryTimer = () => {
+    if (!telemetryInterval) {
+      telemetryInterval = setInterval(() => {
+        if (typeof document !== 'undefined' && !document.hidden) {
+          syncHeaderSystemTelemetry();
+        }
+      }, 30000);
+    }
+  };
+  const stopTelemetryTimer = () => {
+    if (telemetryInterval) {
+      clearInterval(telemetryInterval);
+      telemetryInterval = null;
+    }
+  };
+
+  startTelemetryTimer();
+
+  // Throttle timer on visibility change to preserve battery & avoid unnecessary wakeups
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopTelemetryTimer();
+    } else {
+      syncHeaderSystemTelemetry();
+      startTelemetryTimer();
+    }
+  });
+
+  // Handle native Android lifecycle pausing if dispatched
+  window.addEventListener('ds:native-app-paused', stopTelemetryTimer);
+  window.addEventListener('ds:native-app-resumed', () => {
+    syncHeaderSystemTelemetry();
+    startTelemetryTimer();
   });
 }
