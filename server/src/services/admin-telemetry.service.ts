@@ -845,17 +845,32 @@ export class AdminTelemetryService {
    * Inspects SQLite database file sizes, table counts, and PRAGMA settings
    */
   public async inspectSqliteDatabase(): Promise<InspectedSqliteDb> {
-    const candidatePaths = [
-      { name: 'dev.db', path: path.resolve(process.cwd(), 'server', 'dev.db') },
-      { name: 'dev.db-wal', path: path.resolve(process.cwd(), 'server', 'dev.db-wal') },
-      { name: 'dev.db-shm', path: path.resolve(process.cwd(), 'server', 'dev.db-shm') }
+    const candidateDirs = [
+      path.resolve(process.cwd(), 'server', 'prisma'),
+      path.resolve(process.cwd(), 'prisma'),
+      path.resolve(process.cwd(), 'server'),
+      path.resolve(process.cwd())
     ];
 
-    if (!fs.existsSync(candidatePaths[0].path) && fs.existsSync(path.resolve(process.cwd(), 'dev.db'))) {
-      candidatePaths[0].path = path.resolve(process.cwd(), 'dev.db');
-      candidatePaths[1].path = path.resolve(process.cwd(), 'dev.db-wal');
-      candidatePaths[2].path = path.resolve(process.cwd(), 'dev.db-shm');
+    let chosenDir = candidateDirs[0];
+    for (const dir of candidateDirs) {
+      const dbPath = path.join(dir, 'dev.db');
+      if (fs.existsSync(dbPath)) {
+        try {
+          const stat = fs.statSync(dbPath);
+          if (stat.size > 0) {
+            chosenDir = dir;
+            break;
+          }
+        } catch {}
+      }
     }
+
+    const candidatePaths = [
+      { name: 'dev.db', path: path.join(chosenDir, 'dev.db') },
+      { name: 'dev.db-wal', path: path.join(chosenDir, 'dev.db-wal') },
+      { name: 'dev.db-shm', path: path.join(chosenDir, 'dev.db-shm') }
+    ];
 
     const files: Array<{ name: string; path: string; sizeBytes: number; sizeFormatted: string; exists: boolean }> = [];
     let totalSizeBytes = 0;

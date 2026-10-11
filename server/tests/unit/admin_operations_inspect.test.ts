@@ -152,6 +152,11 @@ describe('Admin Operations Inspection & Fallback Unit Tests', () => {
 
       expect(dbInfo).toHaveProperty('files');
       expect(Array.isArray(dbInfo.files)).toBe(true);
+      const devDbFile = dbInfo.files.find(f => f.name === 'dev.db');
+      expect(devDbFile).toBeDefined();
+      expect(devDbFile?.exists).toBe(true);
+      expect(devDbFile?.sizeBytes).toBeGreaterThan(0);
+      expect(dbInfo.totalSizeBytes).toBeGreaterThan(0);
       expect(dbInfo).toHaveProperty('tables');
       expect(dbInfo).toHaveProperty('pragma');
       expect(typeof dbInfo.tables.jobs).toBe('number');
