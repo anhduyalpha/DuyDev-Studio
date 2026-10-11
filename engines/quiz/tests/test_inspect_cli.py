@@ -137,6 +137,80 @@ class TestInspectCliAndStatements(unittest.TestCase):
         self.assertNotIn("IMAGE_REF", cleaned_stem)
         self.assertNotIn("Câu 15:", cleaned_stem)
 
+    def test_statement_formatter_roman_numerals(self):
+        """Test parsing statement questions with Roman numerals I., II., III. or (I), (II)."""
+        stem = (
+            "Cho các phát biểu sau: "
+            "I. Hợp chất hữu cơ nhất thiết phải chứa carbon. "
+            "II. Liên kết hóa học trong phân tử chất hữu cơ chủ yếu là liên kết cộng hóa trị. "
+            "III. Các chất hữu cơ thường kém bền với nhiệt. "
+            "Số phát biểu đúng là:"
+        )
+        parsed = parse_statement_question(stem)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(len(parsed["statements"]), 3)
+        self.assertEqual(parsed["statements"][0]["label"], "I.")
+        self.assertEqual(parsed["statements"][1]["label"], "II.")
+        self.assertEqual(parsed["conclusion"], "Số phát biểu đúng là:")
+
+    def test_statement_formatter_lowercase_roman(self):
+        """Test parsing statement questions with lowercase Roman numerals (i), (ii), (iii)."""
+        stem = (
+            "Cho các phát biểu sau: "
+            "(i) Benzene không làm mất màu nước bromine ở điều kiện thường. "
+            "(ii) Toluene làm mất màu dung dịch KMnO4 khi đun nóng. "
+            "(iii) Styrene có khả năng tham gia phản ứng trùng hợp. "
+            "Số phát biểu đúng là:"
+        )
+        parsed = parse_statement_question(stem)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(len(parsed["statements"]), 3)
+        self.assertEqual(parsed["statements"][0]["label"], "(i)")
+        self.assertEqual(parsed["statements"][2]["label"], "(iii)")
+        self.assertEqual(parsed["conclusion"], "Số phát biểu đúng là:")
+
+    def test_statement_formatter_experiment_counting(self):
+        """Test chemistry experiment counting question with conclusion 'Số thí nghiệm xảy ra là:'."""
+        stem = (
+            "Cho các thí nghiệm sau: "
+            "a) Cho Fe vào dung dịch CuSO4. "
+            "b) Cho Cu vào dung dịch FeCl3. "
+            "c) Cho Ag vào dung dịch HCl. "
+            "Số thí nghiệm xảy ra phản ứng là:"
+        )
+        parsed = parse_statement_question(stem)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(len(parsed["statements"]), 3)
+        self.assertEqual(parsed["statements"][0]["label"], "a)")
+        self.assertEqual(parsed["statements"][1]["label"], "b)")
+        self.assertEqual(parsed["statements"][2]["text"], "Cho Ag vào dung dịch HCl.")
+        self.assertEqual(parsed["conclusion"], "Số thí nghiệm xảy ra phản ứng là:")
+
+    def test_statement_formatter_dash_bullets(self):
+        """Test parsing statement questions with dash bullets '- '."""
+        stem = (
+            "Cho các nhận định sau:\n"
+            "- Glucose là hợp chất tạp chức.\n"
+            "- Fructose là đồng phân của glucose.\n"
+            "Số nhận định đúng là:"
+        )
+        parsed = parse_statement_question(stem)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(len(parsed["statements"]), 2)
+        self.assertEqual(parsed["statements"][0]["label"], "-")
+        self.assertEqual(parsed["conclusion"], "Số nhận định đúng là:")
+
+    def test_inspect_single_question_on_page(self):
+        """Test inspecting a single question on page: 'câu 47 trang 41' -> start=47, count=1."""
+        if not os.path.isfile(self.sample_pdf):
+            self.skipTest("Sample PDF not found")
+
+        res = inspect_page_ground_truth(self.sample_pdf, query_arg="câu 47 trang 41")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["start"], 47)
+        self.assertEqual(res["count"], 1)
+        self.assertEqual(res["detected_questions"], [47])
+
 
 if __name__ == "__main__":
     unittest.main()

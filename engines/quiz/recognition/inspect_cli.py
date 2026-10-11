@@ -240,9 +240,19 @@ def inspect_page_ground_truth(
         active_cands = [c for c in active_cands if q_min <= c.candidate_number <= q_max]
     else:
         m_from_end = re.search(r"(?:từ\s*)?câu\s*(\d+)\s*(?:đến\s*hết|trở\s*đi)", query, re.IGNORECASE)
+        m_single_q = re.search(
+            r"(?:(?:chỉ\s*(?:lấy|làm)?\s*|duy\s*nhất\s*|đúng\s*)câu\s*(\d+)|\bcâu\s*(\d+)\s+(?:trang|ở|tại))",
+            query,
+            re.IGNORECASE
+        )
         if m_from_end:
             q_min = int(m_from_end.group(1))
             active_cands = [c for c in active_cands if c.candidate_number >= q_min]
+        elif m_single_q:
+            q_target = int(m_single_q.group(1) or m_single_q.group(2))
+            matching = [c for c in active_cands if c.candidate_number == q_target]
+            if matching:
+                active_cands = matching
 
     # Apply Head / Tail / Limit Filter
     m_head = re.search(r"(\d+)\s*câu\s*đầu", query, re.IGNORECASE)

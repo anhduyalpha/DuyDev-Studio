@@ -48,4 +48,5 @@ def clean_image_markers(text: str) -> str:
         return ""
     cleaned = re.sub(r"\[\s*IMAGE_REF\s*:?\s*[^\]]*\]", "", str(text), flags=re.IGNORECASE)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([,.:;?!])", r"\1", cleaned)
     return cleaned.strip()

@@ -22,20 +22,36 @@ class ParsedStatementQuestion(TypedDict):
     conclusion: str
 
 
+ITEMS_TERMS = r"(?:phát\s*biểu|nhận\s*định|mệnh\s*đề|câu|thí\s*nghiệm|chất|phản\s*ứng|trường\s*hợp|phương\s*trình|kết\s*luận|ý)"
+
 # Matches statement markers:
 # 1. a), b), c), d) or a., b., c., d.
 # 2. (a), (b), (c), (d)
 # 3. (1), (2), (3), (4) or 1), 2), 3), 4) or 1., 2., 3., 4.
-# 4. (I), (II), (III), (IV) or I), II), III)
+# 4. (I), (II), (III), (IV) or I), II), III) or I., II., III. or (i), (ii)
+# 5. Dash / bullet points: -, •, *, +
 STATEMENT_SPLIT_REGEX = re.compile(
-    r"(?:^|\n|\s{2,}|\.\s+)(?:\(?([a-eA-E]|\d{1,2}|[IVXLCDM]{1,4})\)|\b([a-eA-E]|\d{1,2})\.)\s+",
+    r"(?:^|\n|\s{2,}|\.\s+|(?<=:)\s*)(?:(\(?([a-eA-E]|\d{1,2}|[IVXivx]{1,4})\))|([a-eA-E]|\d{1,2}|[IVXivx]{1,4})\.|([-•*+]))\s+",
     re.UNICODE
 )
 
 CONCLUSION_PATTERNS = [
-    re.compile(r"(?:^|\n|\.\s+|\s{2,})((?:Số|Có\s+bao\s+nhiêu)\s+(?:phát\s*biểu|nhận\s*định|mệnh\s*đề|câu)\s*(?:đúng|sai|không\s*đúng)?\s*(?:là|gồm)?.*$)", re.IGNORECASE),
-    re.compile(r"(?:^|\n|\.\s+|\s{2,})((?:Các|Những|Liệt\s*kê\s*các)\s+(?:phát\s*biểu|nhận\s*định|mệnh\s*đề)\s*(?:đúng|sai|không\s*đúng)?\s*(?:là|gồm)?.*$)", re.IGNORECASE),
-    re.compile(r"(?:^|\n|\.\s+|\s{2,})((?:Số\s+lượng\s+phát\s*biểu|Số\s+ý\s+đúng).*$)", re.IGNORECASE),
+    re.compile(
+        rf"(?:(?<=\.)\s*|(?<=;)\s*|^|\n|\s{{2,}}|\,\s*)((?:Số|Có\s+bao\s+nhiêu|Hỏi\s+có\s+bao\s+nhiêu)\s+{ITEMS_TERMS}\s*(?:đúng|sai|không\s*đúng|thỏa\s*mãn|phù\s*hợp|xảy\s*ra|tạo\s*thành|sinh\s*ra|kết\s*tủa)?\s*(?:là|gồm)?.*$)",
+        re.IGNORECASE
+    ),
+    re.compile(
+        rf"(?:(?<=\.)\s*|(?<=;)\s*|^|\n|\s{{2,}}|\,\s*)((?:Liệt\s*kê|Các|Những)\s+{ITEMS_TERMS}\s*(?:đúng|sai|không\s*đúng|thỏa\s*mãn|phù\s*hợp|xảy\s*ra)\s*(?:là|gồm).*$)",
+        re.IGNORECASE
+    ),
+    re.compile(
+        rf"(?:(?<=\.)\s*|(?<=;)\s*|^|\n|\s{{2,}}|\,\s*)((?:Số\s+lượng\s+{ITEMS_TERMS}|Số\s+ý\s+(?:đúng|sai)).*?$)",
+        re.IGNORECASE
+    ),
+    re.compile(
+        rf"(?:(?<=\.)\s*|(?<=;)\s*|^|\n|\s{{2,}}|\,\s*)((?:Trong\s+các\s+{ITEMS_TERMS}\s+trên,?\s*(?:số|có\s+bao\s+nhiêu)\s+{ITEMS_TERMS}?).*?$)",
+        re.IGNORECASE
+    ),
 ]
 
 
@@ -50,37 +66,28 @@ def parse_statement_question(stem: str) -> Optional[ParsedStatementQuestion]:
     text = stem.strip()
 
     # Must contain indicative keywords for statement questions
-    if not re.search(r"(?:phát\s*biểu|mệnh\s*đề|nhận\s*định|thí\s*nghiệm|chất\s*dưới\s*đây|thông\s*tin\s*sau|bước\s*sau)", text, re.IGNORECASE):
+    if not re.search(r"(?:phát\s*biểu|mệnh\s*đề|nhận\s*định|thí\s*nghiệm|chất|phản\s*ứng|trường\s*hợp|thông\s*tin|bước\s*sau|sau\s*đây)", text, re.IGNORECASE):
         # Also check if conclusion exists
         has_conclusion = any(p.search(text) for p in CONCLUSION_PATTERNS)
         if not has_conclusion:
             return None
 
     # Find statement markers in text
-    # We look for patterns like:
-    # "a)" or "(a)" or "(1)" or "1)" or "(I)"
-    marker_finder = re.compile(
-        r"(?:^|\n|\s{2,}|\.\s+|(?<=:)\s*)(?:(\(?([a-eA-E]|\d{1,2}|[IVXLCDM]{1,4})\))|([a-eA-E]|\d{1,2})\.)\s+",
-        re.UNICODE
-    )
-
-    matches = list(marker_finder.finditer(text))
+    matches = list(STATEMENT_SPLIT_REGEX.finditer(text))
     if len(matches) < 2:
         return None
 
     # Group matches and check sequence validity
-    # Valid sequences: [a, b, c...], [1, 2, 3...], [I, II, III...]
     first_match = matches[0]
     lead_in = text[:first_match.start()].strip()
     if lead_in.endswith(":"):
         lead_in = lead_in[:-1].strip() + ":"
 
     statements: list[StatementItem] = []
-    last_text = ""
 
     for i, m in enumerate(matches):
-        raw_label = m.group(1) or (m.group(3) + ".")
-        raw_label = raw_label.strip()
+        raw_label = m.group(1) or (m.group(3) + "." if m.group(3) else None) or m.group(4)
+        raw_label = (raw_label or "").strip()
 
         start_content = m.end()
         end_content = matches[i + 1].start() if i + 1 < len(matches) else len(text)

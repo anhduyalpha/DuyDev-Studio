@@ -70,7 +70,7 @@ function renderLockedAdminView() {
         <div class="relative mx-auto w-16 h-16 flex items-center justify-center">
           <div class="absolute inset-0 rounded-2xl bg-orange-500/20 blur-xl"></div>
           <img
-            src="src/assets/logo-ds.svg?v=22.19"
+            src="src/assets/logo-ds.svg?v=22.21"
             alt="DuyDev Studio"
             class="w-14 h-14 relative z-10 drop-shadow-md rounded-2xl"
           />

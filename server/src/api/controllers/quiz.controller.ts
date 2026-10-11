@@ -133,14 +133,26 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       const fileRecord = await prisma.fileRecord.findUnique({
         where: { id: body.fileId }
       });
-      if (fileRecord && fileRecord.storagePath && existsSync(fileRecord.storagePath)) {
-        const inspectScript = resolveInspectScript();
-        const pythonBin = resolvePythonBin();
-        const inspectRes = spawnSync(pythonBin, [inspectScript, fileRecord.storagePath, '--query', text], {
-          encoding: 'utf-8',
-          timeout: 4000,
-          env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
-        });
+      if (fileRecord && fileRecord.storagePath) {
+        let absStoragePath = fileRecord.storagePath;
+        if (!existsSync(absStoragePath)) {
+          const cand1 = path.resolve(process.cwd(), fileRecord.storagePath);
+          const cand2 = path.resolve(process.cwd(), '..', fileRecord.storagePath);
+          if (existsSync(cand1)) {
+            absStoragePath = cand1;
+          } else if (existsSync(cand2)) {
+            absStoragePath = cand2;
+          }
+        }
+
+        if (existsSync(absStoragePath)) {
+          const inspectScript = resolveInspectScript();
+          const pythonBin = resolvePythonBin();
+          const inspectRes = spawnSync(pythonBin, [inspectScript, absStoragePath, '--query', text], {
+            encoding: 'utf-8',
+            timeout: 4000,
+            env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+          });
 
         if (inspectRes.status === 0 && inspectRes.stdout) {
           try {
@@ -171,10 +183,11 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
           }
         }
       }
-    } catch (inspectErr) {
-      logger.warn({ inspectErr }, 'Ground-truth inspection failed, falling back to AI/regex parser');
     }
+  } catch (inspectErr) {
+    logger.warn({ inspectErr }, 'Ground-truth inspection failed, falling back to AI/regex parser');
   }
+}
 
   // Helper for deterministic regex parsing
   function extractWithRegex(input: string) {

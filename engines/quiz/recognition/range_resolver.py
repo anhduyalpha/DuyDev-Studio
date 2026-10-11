@@ -75,6 +75,23 @@ def _find_page_by_printed_page_number(doc_reps: list[PageRepresentation], printe
     return None
 
 
+def _filter_valid_candidates_on_page(candidates: list[QuestionCandidate], start_q: int) -> list[QuestionCandidate]:
+    """
+    Filters candidates on start page:
+    Includes all candidates starting from start_q, and preserves subsequent candidates
+    even if numbering resets (e.g. Part II starting back at Question 1).
+    """
+    valid: list[QuestionCandidate] = []
+    entered_range = False
+    for c in candidates:
+        if c.candidate_number >= start_q:
+            entered_range = True
+            valid.append(c)
+        elif entered_range:
+            valid.append(c)
+    return valid if valid else list(candidates)
+
+
 def resolve_smart_range(
     instruction: str,
     doc_reps: list[PageRepresentation],
@@ -213,10 +230,11 @@ def resolve_smart_range(
             for p in range(start_p, end_p + 1):
                 rep = page_map.get(p)
                 if rep:
-                    valid_cands = [
-                        c for c in rep.candidates
-                        if p > start_p or c.candidate_number >= start_q or (start_q > 10 and c.candidate_number <= 10)
-                    ]
+                    valid_cands = (
+                        list(rep.candidates)
+                        if p > start_p
+                        else _filter_valid_candidates_on_page(rep.candidates, start_q)
+                    )
                     total_detected += len(valid_cands)
             resolved_count = max(1, total_detected) if total_detected > 0 else 10
         else:
@@ -242,11 +260,12 @@ def resolve_smart_range(
         while curr_p <= traversal_limit:
             rep = page_map.get(curr_p)
             if rep and rep.candidates:
-                # Filter candidates >= start_q if on start_page
-                valid_candidates = [
-                    c for c in rep.candidates
-                    if curr_p > start_p or c.candidate_number >= start_q or (start_q > 10 and c.candidate_number <= 10)
-                ]
+                # Filter candidates >= start_q if on start_page, preserving Part II
+                valid_candidates = (
+                    list(rep.candidates)
+                    if curr_p > start_p
+                    else _filter_valid_candidates_on_page(rep.candidates, start_q)
+                )
                 accumulated_count += len(valid_candidates)
             else:
                 # If page has no detected candidates, estimate 5 questions per page
