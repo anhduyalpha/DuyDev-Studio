@@ -62,15 +62,14 @@ export function renderHeader() {
             <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
           </a>
 
-          <!-- Secret Admin Trigger & Status Dot -->
-          <button id="headerSystemStatus" 
-                  type="button"
-                  aria-label="Trạng thái hệ thống"
-                  title="Trực tuyến" 
-                  onclick="window.location.hash = '#admin'"
-                  class="inline-flex items-center justify-center w-8 h-8 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer select-none">
+          <!-- Pure System Status Dot (Non-clickable, Indicator Only) -->
+          <div id="headerSystemStatus" 
+               role="status"
+               aria-label="Trạng thái hệ thống"
+               title="Trực tuyến" 
+               class="inline-flex items-center justify-center w-6 h-6 select-none">
             <span id="headerSystemDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-          </button>
+          </div>
 
           <!-- Theme Toggle Button -->
           <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
