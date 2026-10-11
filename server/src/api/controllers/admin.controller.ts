@@ -756,10 +756,24 @@ export async function resetIpTrafficHandler(request: FastifyRequest, reply: Fast
   if (!paramResult.success) {
     throw new BadRequestError('Địa chỉ IP không hợp lệ');
   }
-  ipAccessService.resetIpStats(paramResult.data.ip);
+  const cleanIp = paramResult.data.ip;
+  ipAccessService.resetIpStats(cleanIp);
+  telemetryTracker.resetClientIp(cleanIp);
   return reply.send({
     success: true,
-    message: `Đã đặt lại bộ đếm lưu lượng cho IP '${paramResult.data.ip}'`
+    message: `Đã đặt lại bộ đếm lưu lượng cho IP '${cleanIp}'`
+  });
+}
+
+/**
+ * POST /api/v1/admin/actions/reset-traffic
+ * Resets rolling traffic window buckets and cumulative metrics
+ */
+export async function resetTrafficHandler(_request: FastifyRequest, reply: FastifyReply) {
+  telemetryTracker.resetBuckets();
+  return reply.send({
+    success: true,
+    message: 'Đã đặt lại bộ đếm lưu lượng mạng và tỷ lệ lỗi thời gian thực'
   });
 }
 

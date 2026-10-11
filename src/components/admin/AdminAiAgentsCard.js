@@ -649,8 +649,8 @@ function openAiCallDetailModal(log) {
 
         ${log.errorDetails || log.errorMsg ? `
           <!-- Error Details Callout -->
-          <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-mono space-y-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Nguyên Nhân Thất Bại (Error Details):</div>
+          <div class="p-3 rounded-xl ${isRecovered ? 'bg-amber-500/10 border border-amber-500/25 text-amber-200' : 'bg-rose-500/10 border border-rose-500/25 text-rose-300'} text-xs font-mono space-y-1">
+            <div class="text-[10px] font-bold uppercase tracking-wider ${isRecovered ? 'text-amber-400' : 'text-rose-400'}">${isRecovered ? 'Lý Do Chuyển Tiếp Khóa Dự Phòng (Upstream Error):' : 'Nguyên Nhân Thất Bại (Error Details):'}</div>
             <div class="whitespace-pre-wrap break-all leading-relaxed">${escapeHtml(log.errorDetails || log.errorMsg)}</div>
           </div>
         ` : ''}

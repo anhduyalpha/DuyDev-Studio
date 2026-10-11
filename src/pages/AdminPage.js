@@ -343,6 +343,15 @@ function renderUnlockedDashboardView() {
                   : `${errRate.toFixed(1)}% Lỗi (Sạch bot scan)`;
                 return `<span id="adminTrafficNoiseBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${badgeColor}" title="Đã tự động loại bỏ các yêu cầu quét bot tự động (.env, wp-login, v.v.) khỏi tỷ lệ lỗi hệ thống">${text}</span>`;
               })()}
+              <button
+                type="button"
+                id="btnAdminResetTraffic"
+                class="px-2 py-0.5 rounded-lg bg-zinc-100 hover:bg-rose-500 hover:text-white dark:bg-zinc-800 dark:hover:bg-rose-500 text-zinc-600 dark:text-zinc-300 text-[10px] font-semibold border border-zinc-200 dark:border-white/10 transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                title="Đặt lại bộ đếm lưu lượng mạng và tỷ lệ lỗi thời gian thực (60s)"
+              >
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                <span>Đặt lại</span>
+              </button>
             </div>
           </div>
 
@@ -1103,6 +1112,34 @@ export function attachAdminPageListeners(onRerender) {
     };
   }
 
+  // Reset Traffic Telemetry Button
+  const btnResetTraffic = document.getElementById('btnAdminResetTraffic');
+  if (btnResetTraffic) {
+    btnResetTraffic.onclick = () => {
+      openSlideConfirmModal({
+        title: 'Đặt lại lưu lượng mạng 60s',
+        description: 'Xóa sạch các bộ đếm request, bytes in/out và tỷ lệ lỗi trong cửa sổ trượt 60 giây.',
+        warningText: 'Toàn bộ chỉ số RPS, biểu đồ timeline và tỷ lệ lỗi thời gian thực sẽ được đặt lại về 0.',
+        actionText: 'Kéo sang phải để đặt lại lưu lượng',
+        confirmingText: 'Đang đặt lại lưu lượng...',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/api/v1/admin/actions/reset-traffic', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            const json = await resp.json();
+            showToast(json.message || 'Đã đặt lại bộ đếm lưu lượng mạng thời gian thực', json.success ? 'success' : 'error');
+            trafficHistoryRps = [];
+            fetchAdminTelemetry(onRerender);
+          } catch (err) {
+            showToast(`Lỗi: ${err.message}`, 'error');
+          }
+        }
+      });
+    };
+  }
+
   // Quick Action & Maintenance Buttons with Verification Guard
   const btnInspectStorage = document.getElementById('btnAdminInspectStorage');
   if (btnInspectStorage) {
@@ -1410,9 +1447,15 @@ async function fetchAdminTelemetry(onRerender) {
         });
         const failedJson = await failedResp.json();
         if (failedJson.success && Array.isArray(failedJson.data?.jobs)) {
-          cachedFailedJobsData = failedJson.data.jobs;
+          const newJobs = failedJson.data.jobs;
           const failedJobsContainer = document.getElementById('adminFailedJobsContainer');
-          if (failedJobsContainer) {
+          const hasChanged = !cachedFailedJobsData ||
+            newJobs.length !== cachedFailedJobsData.length ||
+            (newJobs.length > 0 && newJobs[0]?.id !== cachedFailedJobsData[0]?.id) ||
+            (!failedJobsContainer || failedJobsContainer.children.length === 0);
+
+          cachedFailedJobsData = newJobs;
+          if (failedJobsContainer && hasChanged) {
             failedJobsContainer.innerHTML = renderFailedJobsInspector(cachedFailedJobsData);
             attachFailedJobsListeners(failedJobsContainer, onRerender);
           }

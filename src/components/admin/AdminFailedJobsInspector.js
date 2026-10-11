@@ -88,14 +88,23 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
   if (
     lower.includes('user_cancelled') ||
     lower.includes('user cancelled') ||
+    lower.includes('user aborted') ||
+    lower.includes('the user aborted') ||
     lower.includes('người dùng huỷ') ||
     lower.includes('người dùng hủy') ||
     lower.includes('cancelled by user') ||
     lower.includes('job cancelled') ||
     lower.includes('tác vụ đã bị hủy') ||
     lower.includes('tác vụ bị hủy') ||
+    lower.includes('hủy tác vụ') ||
     lower.includes('aborted by user') ||
     lower.includes('request aborted') ||
+    lower.includes('operation aborted') ||
+    lower.includes('task aborted') ||
+    lower.includes('job aborted') ||
+    lower.includes('aborterror') ||
+    lower.includes('was aborted') ||
+    lower.includes('client closed') ||
     lower.includes('hủy bởi người dùng')
   ) {
     return {
@@ -109,7 +118,50 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
     };
   }
 
-  // 0b. BAD_INPUT: User uploaded empty or malformed/corrupted file
+  // 0b. PASSWORD_PROTECTED: User uploaded encrypted or password-protected document
+  if (
+    lower.includes('password') ||
+    lower.includes('encrypted') ||
+    lower.includes('mật khẩu') ||
+    lower.includes('bảo vệ bằng mật khẩu') ||
+    lower.includes('tệp có mật khẩu')
+  ) {
+    return {
+      category: 'Input Validation',
+      rootCauseTitle: 'Password Protected / Encrypted Document (Tệp có mật khẩu bảo vệ)',
+      normalizedSummary: 'Document is password-protected or encrypted. Decryption key required.',
+      signature: 'user::password_protected',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Tệp tài liệu đã được người dùng cài đặt mật khẩu hoặc mã hóa bảo mật. Yêu cầu người dùng gỡ bỏ mật khẩu trước khi tải lên xử lý.'
+    };
+  }
+
+  // 0c. UNSUPPORTED_FORMAT: User uploaded unsupported or unrecognized file format
+  if (
+    lower.includes('unsupported file') ||
+    lower.includes('unsupported format') ||
+    lower.includes('định dạng không được hỗ trợ') ||
+    lower.includes('định dạng không hỗ trợ') ||
+    lower.includes('không hỗ trợ định dạng') ||
+    lower.includes('unrecognized file format') ||
+    lower.includes('tệp không được hỗ trợ') ||
+    lower.includes('chưa hỗ trợ định dạng') ||
+    lower.includes('invalid pdf header') ||
+    lower.includes('not a valid pdf')
+  ) {
+    return {
+      category: 'Input Validation',
+      rootCauseTitle: 'Unsupported File Format / Invalid Structure (Định dạng tệp không được hỗ trợ)',
+      normalizedSummary: 'Source file format is unsupported or contains an invalid header structure.',
+      signature: 'user::unsupported_format',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Yêu cầu người dùng kiểm tra định dạng và cấu trúc tệp nguồn. Chỉ tải lên các tệp hợp lệ theo định dạng được hệ thống hỗ trợ.'
+    };
+  }
+
+  // 0d. BAD_INPUT: User uploaded empty or malformed/corrupted file
   if (
     lower.includes('bad_input') ||
     lower.includes('bad input') ||
@@ -138,10 +190,11 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
     };
   }
 
-  // 0c. ACCESS_RESTRICTED: Google Drive private or non-public link
+  // 0e. ACCESS_RESTRICTED: Google Drive private or non-public link
   if (
-    (lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) &&
-    (lower.includes('private') || lower.includes('restricted') || lower.includes('access denied') || lower.includes('permission denied') || lower.includes('quyền riêng tư') || lower.includes('chưa công khai') || lower.includes('không công khai') || lower.includes('403') || lower.includes('404'))
+    lower.includes('access_restricted') ||
+    ((lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) &&
+    (lower.includes('private') || lower.includes('restricted') || lower.includes('access denied') || lower.includes('permission denied') || lower.includes('quyền riêng tư') || lower.includes('chưa công khai') || lower.includes('không công khai') || lower.includes('403') || lower.includes('404')))
   ) {
     return {
       category: 'Drive / Access Permission',
@@ -569,6 +622,7 @@ function renderFailedJobsItemsMarkup(jobs) {
       ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">USER_ACTION</span>`
       : `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">CRITICAL</span>`;
 
+    const fixText = job.suggestedFix || semantic.suggestedFix;
     const calloutBox = isUserAction
       ? `
         <div class="p-3 rounded-xl bg-sky-500/5 dark:bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-mono space-y-1">
@@ -576,7 +630,7 @@ function renderFailedJobsItemsMarkup(jobs) {
             <i data-lucide="info" class="w-4 h-4 text-sky-500 shrink-0 mt-0.5"></i>
             <div class="flex-1 whitespace-pre-wrap break-all leading-relaxed"><strong class="text-sky-600 dark:text-sky-400">[Đầu vào / Thao tác người dùng]:</strong> ${cleanError}</div>
           </div>
-          ${semantic.suggestedFix ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-sky-500/10">💡 Gợi ý: ${escapeHtml(semantic.suggestedFix)}</div>` : ''}
+          ${fixText ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-sky-500/10">💡 Gợi ý: ${escapeHtml(fixText)}</div>` : ''}
         </div>
       `
       : `
@@ -585,7 +639,7 @@ function renderFailedJobsItemsMarkup(jobs) {
             <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 shrink-0 mt-0.5"></i>
             <div class="flex-1 whitespace-pre-wrap break-all leading-relaxed"><strong class="text-rose-600 dark:text-rose-400">[Lỗi hệ thống]:</strong> ${cleanError}</div>
           </div>
-          ${semantic.suggestedFix ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-rose-500/10">💡 Khắc phục: ${escapeHtml(semantic.suggestedFix)}</div>` : ''}
+          ${fixText ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-rose-500/10">💡 Khắc phục: ${escapeHtml(fixText)}</div>` : ''}
         </div>
       `;
 
@@ -685,7 +739,7 @@ export function attachFailedJobsListeners(container, onReload) {
               badgeEl.textContent = `0 lỗi hệ thống · ${usrCount} thao tác người dùng`;
               badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
             } else {
-              badgeEl.textContent = `${sysCount} lỗi hệ thống · ${usrCount} người dùng`;
+              badgeEl.textContent = `${sysCount} lỗi hệ thống · ${usrCount} thao tác người dùng`;
               badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25';
             }
           }
@@ -818,6 +872,15 @@ export function attachFailedJobsListeners(container, onReload) {
               badgeEl.textContent = '0 lỗi hệ thống · 0 thao tác người dùng';
               badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
             }
+            container.querySelectorAll('.btn-failed-filter').forEach(b => {
+              const filterType = b.dataset.filterType;
+              if (filterType === 'all') b.textContent = 'Tất cả (0)';
+              else if (filterType === 'system') b.textContent = 'Lỗi Hệ Thống (0)';
+              else if (filterType === 'user') b.textContent = 'Thao Tác Người Dùng (0)';
+              else if (filterType === 'pdf') b.textContent = 'PDF Studio (0)';
+              else if (filterType === 'conv') b.textContent = 'Converter (0)';
+              else if (filterType === 'quiz') b.textContent = 'Quiz (0)';
+            });
             if (btnClear) btnClear.remove();
             if (onReload) onReload();
           } catch (err) {

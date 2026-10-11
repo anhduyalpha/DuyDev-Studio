@@ -44,7 +44,8 @@ import {
   deleteIpRuleHandler,
   toggleIpBlockHandler,
   setIpRateLimitHandler,
-  resetIpTrafficHandler
+  resetIpTrafficHandler,
+  resetTrafficHandler
 } from '../controllers/admin.controller.js';
 
 export async function adminRoute(app: FastifyInstance) {
@@ -89,6 +90,7 @@ export async function adminRoute(app: FastifyInstance) {
   app.post('/api/v1/admin/actions/clean-queues', { preHandler: adminAuthGuard }, cleanQueuesHandler);
   app.post('/api/v1/admin/actions/optimize-db', { preHandler: adminAuthGuard }, optimizeDatabaseHandler);
   app.post('/api/v1/admin/actions/clean-history', { preHandler: adminAuthGuard }, cleanHistoryHandler);
+  app.post('/api/v1/admin/actions/reset-traffic', { preHandler: adminAuthGuard }, resetTrafficHandler);
 
   // User Accounts Management (Prisma User)
   app.get('/api/v1/admin/users', { preHandler: adminAuthGuard }, getAdminUsersHandler);

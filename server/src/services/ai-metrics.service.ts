@@ -179,6 +179,7 @@ export class AiMetricsService {
     isFallbackRecovered?: boolean;
     status?: string;
     recoveredByKey?: string;
+    isIntermediateAttempt?: boolean;
   }): AiCallLog {
     const now = Date.now();
     const today = new Date().toISOString().split('T')[0];
@@ -198,7 +199,7 @@ export class AiMetricsService {
     this.metrics.cumulative.totalCompletionTokens += cTokens;
     this.metrics.cumulative.totalTokens += tTokens;
 
-    if (data.statusCode >= 400 && !data.isFallbackRecovered && data.status !== 'FALLBACK_RECOVERED') {
+    if (data.statusCode >= 400 && !data.isFallbackRecovered && data.status !== 'FALLBACK_RECOVERED' && !data.isIntermediateAttempt) {
       this.metrics.cumulative.errorCalls++;
       if (data.statusCode === 429) {
         this.metrics.cumulative.rateLimitedCalls++;
@@ -385,16 +386,6 @@ export class AiMetricsService {
             failedLog.isFallbackRecovered = true;
             failedLog.status = 'FALLBACK_RECOVERED';
             failedLog.recoveredByKey = key.name;
-
-            // Revert error increment so it does not count as a global failure
-            if (failedLog.statusCode >= 400) {
-              if (this.metrics.cumulative.errorCalls > 0) {
-                this.metrics.cumulative.errorCalls--;
-              }
-              if (failedLog.statusCode === 429 && this.metrics.cumulative.rateLimitedCalls > 0) {
-                this.metrics.cumulative.rateLimitedCalls--;
-              }
-            }
           }
           this.saveMetrics();
         }
@@ -417,7 +408,8 @@ export class AiMetricsService {
           keyId: key.id,
           keyName: key.name,
           errorDetails,
-          promptSnippet: context?.promptSnippet
+          promptSnippet: context?.promptSnippet,
+          isIntermediateAttempt: true
         });
         failedAttemptLogs.push(callLog);
 
@@ -427,6 +419,17 @@ export class AiMetricsService {
         );
       }
     }
+
+    // If all keys failed, ensure cumulative.errorCalls reflects the global failure
+    for (const failedLog of failedAttemptLogs) {
+      if (failedLog.statusCode >= 400 && !failedLog.isFallbackRecovered) {
+        this.metrics.cumulative.errorCalls++;
+        if (failedLog.statusCode === 429) {
+          this.metrics.cumulative.rateLimitedCalls++;
+        }
+      }
+    }
+    this.saveMetrics();
 
     throw lastError || new Error('Tất cả API key dự phòng đều thất bại');
   }

@@ -15,6 +15,49 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
       const details2 = extractSemanticErrorDetails('Job aborted by user cancellation token', 'universal_convert');
       expect(details2.errorClass).toBe('USER_ACTION');
       expect(details2.severity).toBe('USER_ACTION');
+
+      // Abortion variants
+      const detailsAbort1 = extractSemanticErrorDetails('The user aborted a request', 'pdf_split');
+      expect(detailsAbort1.errorClass).toBe('USER_ACTION');
+      expect(detailsAbort1.severity).toBe('USER_ACTION');
+
+      const detailsAbort2 = extractSemanticErrorDetails('AbortError: The operation was aborted', 'pdf_compress');
+      expect(detailsAbort2.errorClass).toBe('USER_ACTION');
+      expect(detailsAbort2.severity).toBe('USER_ACTION');
+
+      const detailsAbort3 = extractSemanticErrorDetails('client closed the connection prematurely', 'pdf_merge');
+      expect(detailsAbort3.errorClass).toBe('USER_ACTION');
+      expect(detailsAbort3.severity).toBe('USER_ACTION');
+    });
+
+    it('classifies password-protected and encrypted documents as USER_ACTION', () => {
+      const detailsPwd = extractSemanticErrorDetails('Password required to open encrypted PDF: locked_statement.pdf', 'pdf_merge');
+      expect(detailsPwd.errorClass).toBe('USER_ACTION');
+      expect(detailsPwd.severity).toBe('USER_ACTION');
+      expect(detailsPwd.signature).toBe('user::password_protected');
+      expect(detailsPwd.rootCauseTitle).toContain('Tệp có mật khẩu bảo vệ');
+      expect(detailsPwd.suggestedFix).toContain('mật khẩu');
+      expect(detailsPwd.normalizedSummary).toBeDefined();
+
+      const detailsVnPwd = extractSemanticErrorDetails('Tệp PDF có mật khẩu bảo vệ, vui lòng nhập mật khẩu', 'pdf_split');
+      expect(detailsVnPwd.errorClass).toBe('USER_ACTION');
+      expect(detailsVnPwd.signature).toBe('user::password_protected');
+    });
+
+    it('classifies unsupported file formats as USER_ACTION', () => {
+      const detailsUnsupported = extractSemanticErrorDetails('Unsupported file format: sample.xyz is not recognized', 'universal_convert');
+      expect(detailsUnsupported.errorClass).toBe('USER_ACTION');
+      expect(detailsUnsupported.severity).toBe('USER_ACTION');
+      expect(detailsUnsupported.signature).toBe('user::unsupported_format');
+      expect(detailsUnsupported.suggestedFix).toContain('định dạng');
+
+      const detailsVnUnsupported = extractSemanticErrorDetails('Định dạng tệp không được hỗ trợ', 'universal_convert');
+      expect(detailsVnUnsupported.errorClass).toBe('USER_ACTION');
+      expect(detailsVnUnsupported.signature).toBe('user::unsupported_format');
+
+      const detailsInvalidHeader = extractSemanticErrorDetails('Invalid PDF header structure / not a valid pdf', 'pdf_compress');
+      expect(detailsInvalidHeader.errorClass).toBe('USER_ACTION');
+      expect(detailsInvalidHeader.signature).toBe('user::unsupported_format');
     });
 
     it('classifies invalid input and empty files as USER_ACTION', () => {
@@ -22,6 +65,7 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
       expect(detailsEmpty.errorClass).toBe('USER_ACTION');
       expect(detailsEmpty.severity).toBe('USER_ACTION');
       expect(detailsEmpty.rootCauseTitle).toContain('Tệp đầu vào rỗng hoặc sai cấu trúc');
+      expect(detailsEmpty.normalizedSummary).toBeDefined();
 
       const detailsBadInput = extractSemanticErrorDetails('BAD_INPUT: Unsupported file format or corrupt header', 'pdf_compress');
       expect(detailsBadInput.errorClass).toBe('USER_ACTION');
@@ -32,6 +76,7 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
       const detailsRestricted = extractSemanticErrorDetails('ACCESS_RESTRICTED: Link Google Drive ở chế độ riêng tư, không có quyền truy cập', 'drive_download');
       expect(detailsRestricted.errorClass).toBe('USER_ACTION');
       expect(detailsRestricted.severity).toBe('USER_ACTION');
+      expect(detailsRestricted.signature).toBe('user::access_restricted');
       expect(detailsRestricted.suggestedFix).toContain('chia sẻ');
     });
 
@@ -248,6 +293,38 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
 
       // c4xx still reports total for backward compatibility
       expect(snapshot.statusCodes.c4xx).toBeGreaterThanOrEqual(snapshot.statusCodes.c4xxNoise);
+    });
+
+    it('clears specific client IP from registry on resetClientIp', () => {
+      const tracker = TelemetryTracker.getInstance();
+      const testReq = { headers: {}, ip: '198.51.100.42', raw: { url: '/api/v1/health' } } as any;
+      const testReply = { statusCode: 200, getHeader: () => '10' } as any;
+      tracker.recordRequest(testReq, testReply, 20);
+
+      const beforeList = tracker.getIpClientsList();
+      expect(beforeList.some(c => c.ip === '198.51.100.42')).toBe(true);
+
+      const deleted = tracker.resetClientIp('198.51.100.42');
+      expect(deleted).toBe(true);
+
+      const afterList = tracker.getIpClientsList();
+      expect(afterList.some(c => c.ip === '198.51.100.42')).toBe(false);
+    });
+
+    it('resets cumulative traffic and rolling buckets on resetBuckets', () => {
+      const tracker = TelemetryTracker.getInstance();
+      const testReq = { headers: { 'content-length': '500' }, ip: '127.0.0.1', raw: { url: '/api/v1/health' } } as any;
+      const testReply = { statusCode: 200, getHeader: () => '1000' } as any;
+      tracker.recordRequest(testReq, testReply, 20);
+
+      expect(tracker.getSnapshot().cumulative.totalRequests).toBeGreaterThan(0);
+
+      tracker.resetBuckets();
+
+      const snapshot = tracker.getSnapshot();
+      expect(snapshot.cumulative.totalRequests).toBe(0);
+      expect(snapshot.cumulative.totalMbIn).toBe(0);
+      expect(snapshot.cumulative.totalMbOut).toBe(0);
     });
   });
 

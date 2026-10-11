@@ -140,14 +140,23 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
   if (
     lower.includes('user_cancelled') ||
     lower.includes('user cancelled') ||
+    lower.includes('user aborted') ||
+    lower.includes('the user aborted') ||
     lower.includes('người dùng huỷ') ||
     lower.includes('người dùng hủy') ||
     lower.includes('cancelled by user') ||
     lower.includes('job cancelled') ||
     lower.includes('tác vụ đã bị hủy') ||
     lower.includes('tác vụ bị hủy') ||
+    lower.includes('hủy tác vụ') ||
     lower.includes('aborted by user') ||
     lower.includes('request aborted') ||
+    lower.includes('operation aborted') ||
+    lower.includes('task aborted') ||
+    lower.includes('job aborted') ||
+    lower.includes('aborterror') ||
+    lower.includes('was aborted') ||
+    lower.includes('client closed') ||
     lower.includes('hủy bởi người dùng')
   ) {
     return {
@@ -162,7 +171,52 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
     };
   }
 
-  // 0b. BAD_INPUT: User uploaded empty or malformed/corrupted file
+  // 0b. PASSWORD_PROTECTED: User uploaded encrypted or password-protected document
+  if (
+    lower.includes('password') ||
+    lower.includes('encrypted') ||
+    lower.includes('mật khẩu') ||
+    lower.includes('bảo vệ bằng mật khẩu') ||
+    lower.includes('tệp có mật khẩu')
+  ) {
+    return {
+      category: 'Input Validation',
+      rootCauseTitle: 'Password Protected / Encrypted Document (Tệp có mật khẩu bảo vệ)',
+      normalizedSummary: 'Document is password-protected or encrypted. Decryption key required.',
+      fullErrorSnippet: trimmed,
+      signature: 'user::password_protected',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Tệp tài liệu đã được người dùng cài đặt mật khẩu hoặc mã hóa bảo mật. Yêu cầu người dùng gỡ bỏ mật khẩu trước khi tải lên xử lý.'
+    };
+  }
+
+  // 0c. UNSUPPORTED_FORMAT: User uploaded unsupported or unrecognized file format
+  if (
+    lower.includes('unsupported file') ||
+    lower.includes('unsupported format') ||
+    lower.includes('định dạng không được hỗ trợ') ||
+    lower.includes('định dạng không hỗ trợ') ||
+    lower.includes('không hỗ trợ định dạng') ||
+    lower.includes('unrecognized file format') ||
+    lower.includes('tệp không được hỗ trợ') ||
+    lower.includes('chưa hỗ trợ định dạng') ||
+    lower.includes('invalid pdf header') ||
+    lower.includes('not a valid pdf')
+  ) {
+    return {
+      category: 'Input Validation',
+      rootCauseTitle: 'Unsupported File Format / Invalid Structure (Định dạng tệp không được hỗ trợ)',
+      normalizedSummary: 'Source file format is unsupported or contains an invalid header structure.',
+      fullErrorSnippet: trimmed,
+      signature: 'user::unsupported_format',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Yêu cầu người dùng kiểm tra định dạng và cấu trúc tệp nguồn. Chỉ tải lên các tệp hợp lệ theo định dạng được hệ thống hỗ trợ.'
+    };
+  }
+
+  // 0d. BAD_INPUT: User uploaded empty or malformed/corrupted file
   if (
     lower.includes('bad_input') ||
     lower.includes('bad input') ||
@@ -192,10 +246,11 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
     };
   }
 
-  // 0c. ACCESS_RESTRICTED: Google Drive private or non-public link
+  // 0e. ACCESS_RESTRICTED: Google Drive private or non-public link
   if (
-    (lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) &&
-    (lower.includes('private') || lower.includes('restricted') || lower.includes('access denied') || lower.includes('permission denied') || lower.includes('quyền riêng tư') || lower.includes('chưa công khai') || lower.includes('không công khai') || lower.includes('403') || lower.includes('404'))
+    lower.includes('access_restricted') ||
+    ((lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) &&
+    (lower.includes('private') || lower.includes('restricted') || lower.includes('access denied') || lower.includes('permission denied') || lower.includes('quyền riêng tư') || lower.includes('chưa công khai') || lower.includes('không công khai') || lower.includes('403') || lower.includes('404')))
   ) {
     return {
       category: 'Drive / Access Permission',
@@ -435,6 +490,8 @@ export interface FailedJobItem {
   errorClass: 'SYSTEM_ERROR' | 'USER_ACTION';
   severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK' | 'INFO' | 'USER_ACTION';
   rootCauseTitle: string;
+  normalizedSummary?: string;
+  suggestedFix?: string;
 }
 
 export interface DeduplicatedErrorGroup {
@@ -912,7 +969,9 @@ export class AdminTelemetryService {
           durationMs,
           errorClass: semantic.errorClass,
           severity: semantic.severity,
-          rootCauseTitle: semantic.rootCauseTitle
+          rootCauseTitle: semantic.rootCauseTitle,
+          normalizedSummary: semantic.normalizedSummary,
+          suggestedFix: semantic.suggestedFix
         };
       });
     } catch (err: any) {

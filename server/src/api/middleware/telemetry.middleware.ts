@@ -134,11 +134,16 @@ export function isBotScannerNoise(url: string, statusCode: number): boolean {
     clean.startsWith('/pdfjs/') ||
     clean.startsWith('/q/') ||
     clean.startsWith('/share-target') ||
+    clean.startsWith('/webhook/') ||
+    clean.startsWith('/webhooks/') ||
     clean === '/' ||
     clean === '/index.html' ||
     clean === '/sw.js' ||
     clean === '/manifest.webmanifest' ||
-    clean === '/favicon.ico';
+    clean === '/favicon.ico' ||
+    clean === '/robots.txt' ||
+    clean === '/sitemap.xml' ||
+    clean === '/apple-touch-icon.png';
 
   if (!isAppRoute) {
     return true;
@@ -535,6 +540,14 @@ export class TelemetryTracker {
   }
 
   /**
+   * Resets and clears the in-memory profile and logs for a specific client IP
+   */
+  public resetClientIp(ip: string): boolean {
+    const cleanIp = (ip || '').replace(/^::ffff:/, '').trim();
+    return this.ipClientRegistry.delete(cleanIp);
+  }
+
+  /**
    * Clears the in-memory client IP registry
    */
   public clearIpRegistry(): { clearedCount: number } {
@@ -556,4 +569,8 @@ export function getIpRequestLogs(ip: string) {
 
 export function clearIpRegistry() {
   return telemetryTracker.clearIpRegistry();
+}
+
+export function resetClientIp(ip: string) {
+  return telemetryTracker.resetClientIp(ip);
 }
