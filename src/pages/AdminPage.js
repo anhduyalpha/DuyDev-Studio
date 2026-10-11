@@ -73,7 +73,7 @@ function renderLockedAdminView() {
         <div class="relative mx-auto w-16 h-16 flex items-center justify-center">
           <div class="absolute inset-0 rounded-2xl bg-orange-500/20 blur-xl"></div>
           <img
-            src="src/assets/logo-ds.svg?v=22.21"
+            src="src/assets/logo-ds.svg?v=22.25"
             alt="DuyDev Studio"
             class="w-14 h-14 relative z-10 drop-shadow-md rounded-2xl"
           />
@@ -158,7 +158,7 @@ function renderUnlockedDashboardView() {
         <div class="flex items-center gap-3.5">
           <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/30 flex items-center justify-center shrink-0">
             <img
-              src="src/assets/logo-ds.svg?v=22.15"
+              src="src/assets/logo-ds.svg?v=22.25"
               alt="DuyDev Studio Logo"
               class="w-8 h-8 drop-shadow rounded-xl"
             />
