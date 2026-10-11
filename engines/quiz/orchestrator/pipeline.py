@@ -9,13 +9,15 @@ import os
 import re
 import time
 import uuid
-from typing import Callable, Any
+import logging
+from typing import Callable, Any, Optional, Dict, List
 from datetime import datetime, timezone
 import pymupdf
 
 from engines.quiz.common.errors import ErrorCode, DiagnosticLayer, QuizEngineError
 from engines.quiz.quiz_cache import get_perception_cache, set_perception_cache
 from engines.quiz.perception.models import PageRepresentation, PageKind
+from engines.quiz.perception.layout import is_non_content_page
 from engines.quiz.perception.extractor import extract_document_representations
 from engines.quiz.recognition.range_resolver import resolve_smart_range
 from engines.quiz.recognition.rule_parser import parse_numeric_instruction
@@ -23,6 +25,8 @@ from engines.quiz.recognition.question_index import QuestionIndexService
 from engines.quiz.reconstruction.batch_planner import BatchPlanner
 from engines.quiz.reconstruction.reconstructor import QuestionReconstructor
 from engines.quiz.reconstruction.post_processor import post_process_questions
+
+logger = logging.getLogger("engines.quiz.orchestrator.pipeline")
 from engines.quiz.assets.extractor import RichAssetExtractor
 from engines.quiz.graph.object_graph import DocumentObjectGraph
 from engines.quiz.ir.builder import CanonicalIRBuilder
@@ -48,10 +52,12 @@ class QuizPipelineOrchestrator:
         provider: Any = None,
         style_preset_id: str = "blue_black_classic",
         max_repair_iterations: int = 2,
+        chrome_timeout: float = 60.0,
     ) -> None:
         self.provider = provider
         self.style_preset = style_registry.get(style_preset_id)
         self.max_repair_iterations = max_repair_iterations
+        self.chrome_timeout = chrome_timeout
 
     def run(
         self,
@@ -160,6 +166,8 @@ class QuizPipelineOrchestrator:
                 plan_end_q = end_num
                 plan_count = effective_count
 
+            # Auto-Expand Page Scanning Algorithm (Ticket #01 & #05)
+            # 1. Initial attempt with current target pages
             extraction_plan = index_service.build_extraction_plan(
                 neighborhood=neighborhood,
                 start_q=plan_start_q,
@@ -167,8 +175,85 @@ class QuizPipelineOrchestrator:
                 count=plan_count,
                 doc_reps=page_representations,
                 ai_provider=self.provider,
-                raise_on_mismatch=True
+                raise_on_mismatch=False,
+                allow_partial=False
             )
+            detected_count = len(extraction_plan.target_question_numbers)
+
+            # 2. If extracted count K < N, automatically scan contiguous subsequent pages
+            max_doc_page = max(p.page_number for p in page_representations) if page_representations else end_page
+            curr_page = max(target_range_pages) + 1 if target_range_pages else end_page + 1
+
+            while detected_count < plan_count and curr_page <= max_doc_page:
+                curr_rep = next((p for p in page_representations if p.page_number == curr_page), None)
+                if curr_rep:
+                    is_nc, nc_reason = is_non_content_page(curr_rep)
+                    if not is_nc:
+                        target_range_pages.append(curr_page)
+                        neighborhood = index_service.build_multi_page_neighborhood_index(
+                            target_pages=sorted(list(set(target_range_pages))),
+                            doc_reps=page_representations
+                        )
+                        extraction_plan = index_service.build_extraction_plan(
+                            neighborhood=neighborhood,
+                            start_q=plan_start_q,
+                            end_q=plan_start_q + plan_count - 1,
+                            count=plan_count,
+                            doc_reps=page_representations,
+                            ai_provider=self.provider,
+                            raise_on_mismatch=False,
+                            allow_partial=False
+                        )
+                        detected_count = len(extraction_plan.target_question_numbers)
+                        logger.info(
+                            f"Auto-expanded to page {curr_page}: detected questions count now {detected_count}/{plan_count}"
+                        )
+                curr_page += 1
+
+            # 3. Finalize plan: Exact or Flexible Publishing
+            partial_note = None
+            if detected_count >= plan_count:
+                extraction_plan = index_service.build_extraction_plan(
+                    neighborhood=neighborhood,
+                    start_q=plan_start_q,
+                    end_q=plan_start_q + plan_count - 1,
+                    count=plan_count,
+                    doc_reps=page_representations,
+                    ai_provider=self.provider,
+                    raise_on_mismatch=True,
+                    allow_partial=False
+                )
+            elif detected_count > 0:
+                # Flexible Publishing: Do NOT crash! Publish all K available questions.
+                extraction_plan = index_service.build_extraction_plan(
+                    neighborhood=neighborhood,
+                    start_q=plan_start_q,
+                    end_q=plan_start_q + detected_count - 1,
+                    count=detected_count,
+                    doc_reps=page_representations,
+                    ai_provider=self.provider,
+                    raise_on_mismatch=False,
+                    allow_partial=True
+                )
+                partial_note = f"Đã trích xuất {detected_count}/{plan_count} câu hỏi có sẵn trên tài liệu"
+                logger.info(f"Flexible publishing enabled: {partial_note}")
+                emit(JobStage.PLANNING, 28, f"📋 {partial_note} - chuẩn bị xuất bản... ✨")
+            else:
+                # detected_count == 0: No questions found across range
+                target_reps = [p for p in page_representations if p.page_number in target_range_pages]
+                reasons = []
+                for rep in target_reps:
+                    is_nc, r = is_non_content_page(rep)
+                    if is_nc:
+                        reasons.append(f"Trang {rep.page_number}: {r}")
+                detail_str = f" ({'; '.join(reasons)})" if reasons else ""
+                raise QuizEngineError(
+                    ErrorCode.NO_QUESTIONS_FOUND,
+                    DiagnosticLayer.RECOGNITION_FAILURE,
+                    f"Không tìm thấy câu hỏi trắc nghiệm nào trong phạm vi trang đã chọn{detail_str}. "
+                    f"Vui lòng kiểm tra lại số trang hoặc tài liệu nguồn.",
+                    stage=JobStage.PLANNING.value
+                )
 
             # Align effective count and start_num with validated extraction plan
             start_num = extraction_plan.requested_start_question
@@ -229,18 +314,24 @@ class QuizPipelineOrchestrator:
                 actual_nums = {q.source_number or q.number for q in cleaned_questions}
                 missing_nums = sorted(list(expected_nums - actual_nums))
                 if missing_nums:
-                    raise QuizEngineError(
-                        ErrorCode.RANGE_MISMATCH,
-                        DiagnosticLayer.RECONSTRUCTION_FAILURE,
-                        f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu {len(missing_nums)} câu: {missing_nums[:5]}). "
-                        f"Tuyệt đối không xuất bản đề thi thiếu câu hỏi.",
-                        stage=JobStage.RECONSTRUCTING.value,
-                        details={
-                            "expected_count": len(extraction_plan.target_question_numbers),
-                            "actual_count": len(cleaned_questions),
-                            "missing_questions": missing_nums
-                        }
-                    )
+                    if partial_note and len(actual_nums) > 0:
+                        logger.warning(
+                            f"Flexible publishing tolerance: missing {len(missing_nums)} questions from extraction plan, "
+                            f"continuing with {len(cleaned_questions)} reconstructed questions."
+                        )
+                    else:
+                        raise QuizEngineError(
+                            ErrorCode.RANGE_MISMATCH,
+                            DiagnosticLayer.RECONSTRUCTION_FAILURE,
+                            f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu {len(missing_nums)} câu: {missing_nums[:5]}). "
+                            f"Tuyệt đối không xuất bản đề thi thiếu câu hỏi.",
+                            stage=JobStage.RECONSTRUCTING.value,
+                            details={
+                                "expected_count": len(extraction_plan.target_question_numbers),
+                                "actual_count": len(cleaned_questions),
+                                "missing_questions": missing_nums
+                            }
+                        )
 
             # Associate visual assets from Document Object Graph
             attachments_map = doc_graph.associate_assets_to_questions(
@@ -330,6 +421,7 @@ class QuizPipelineOrchestrator:
                     prefix=clean_prefix,
                     preset=current_preset,
                     force_break_ids=force_break_ids,
+                    timeout=self.chrome_timeout,
                 )
                 render_time_ms += (time.perf_counter() - compile_start) * 1000
 
@@ -489,6 +581,8 @@ class QuizPipelineOrchestrator:
                 "doc_ir": doc_ir,
                 "formula_verification": formula_gate_res.to_dict(),
                 "questions_count": len(cleaned_questions),
+                "requested_count": plan_count,
+                "note": partial_note if partial_note else None,
                 "total_latency_ms": round(total_latency_ms, 2),
                 "pipeline_ms": round(total_latency_ms, 2),
                 "render_time_ms": round(render_time_ms, 2),

@@ -8,10 +8,10 @@ import { prisma } from '../../lib/prisma.js';
 import { StorageManager } from '../../storage/storage.manager.js';
 import { limits, isPermanentRetention, computeExpiresAt } from '../../config/limits.config.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
-import { fileIdParamSchema, uploadPurposeSchema, fileDownloadQuerySchema, importDriveBodySchema } from '../../schemas/files.schema.js';
+import { fileIdParamSchema, uploadPurposeSchema, fileDownloadQuerySchema, importDriveBodySchema, probeDriveBodySchema } from '../../schemas/files.schema.js';
 import { getMimeTypeForExt } from '../../schemas/converter.schema.js';
 import { logger } from '../../lib/logger.js';
-import { downloadGoogleDriveFile } from '../../services/drive-download.service.js';
+import { downloadGoogleDriveFile, probeGoogleDriveFile } from '../../services/drive-download.service.js';
 
 export async function uploadFile(request: FastifyRequest, reply: FastifyReply) {
   const data = await request.file();
@@ -102,6 +102,10 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
 
   const { inline } = fileDownloadQuerySchema.parse(request.query || {});
   const isInline = forceInline || inline;
+
+  if (!fileId || !fileId.trim()) {
+    throw new BadRequestError('fileId is required');
+  }
 
   const fileRecord = await prisma.fileRecord.findUnique({
     where: { id: fileId }
@@ -266,6 +270,17 @@ export async function importDriveFile(request: FastifyRequest, reply: FastifyRep
       downloadUrl: `/api/v1/files/download/${fileRecord.id}`,
       viewUrl: `/api/v1/files/view/${fileRecord.id}`
     }
+  });
+}
+
+export async function probeGoogleDriveFileHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parsed = probeDriveBodySchema.parse(request.body);
+  const targetUrl = (parsed.url || parsed.driveUrl || '').trim();
+
+  const result = await probeGoogleDriveFile(targetUrl);
+  return reply.send({
+    success: true,
+    data: result
   });
 }
 

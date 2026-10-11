@@ -47,9 +47,9 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
 
   let originalSizeBytes = 0;
 
-  if (fileId) {
+  if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
     const fileRecord = await prisma.fileRecord.findUnique({
-      where: { id: fileId }
+      where: { id: fileId.trim() }
     });
 
     if (!fileRecord || fileRecord.isPurged || (!isPermanentRetention && fileRecord.expiresAt <= new Date())) {
@@ -128,10 +128,10 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
   const text = (body.instruction || body.prompt || '').trim();
 
   // 0. Ground-Truth Page Inspection if source PDF is available
-  if (body.fileId) {
+  if (body.fileId && typeof body.fileId === 'string' && body.fileId.trim() !== '') {
     try {
       const fileRecord = await prisma.fileRecord.findUnique({
-        where: { id: body.fileId }
+        where: { id: body.fileId.trim() }
       });
       if (fileRecord && fileRecord.storagePath) {
         let absStoragePath = fileRecord.storagePath;

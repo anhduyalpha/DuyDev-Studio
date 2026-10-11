@@ -194,7 +194,7 @@ export async function permanentlyDeleteTrashItem(req: FastifyRequest, reply: Fas
   if (!existing) throw new NotFoundError(`Item ${id} not found`);
 
   const fileId = existing.resultFileId || existing.downloadUrl?.match(/fil_[a-zA-Z0-9_]+/)?.[0];
-  if (fileId) {
+  if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
     const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } }).catch(() => null);
     if (fileRecord?.storagePath) await StorageManager.unlinkSafe(fileRecord.storagePath);
     await prisma.fileRecord.delete({ where: { id: fileId } }).catch(() => {});

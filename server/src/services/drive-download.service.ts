@@ -219,3 +219,118 @@ export async function downloadGoogleDriveFile(driveUrl: string): Promise<Downloa
     driveId
   };
 }
+
+export interface ProbeDriveResult {
+  valid: boolean;
+  driveId?: string;
+  fileSize?: number;
+  mimeType?: string;
+  fileName?: string;
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Rapid pre-flight probe (< 3s) checking accessibility and public permissions of a Google Drive URL.
+ */
+export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDriveResult> {
+  const driveId = extractGoogleDriveId(driveUrl);
+  if (!driveId) {
+    return {
+      valid: false,
+      error: 'INVALID_URL',
+      message: 'Đường dẫn Google Drive không hợp lệ hoặc không tìm thấy mã tệp.'
+    };
+  }
+
+  let downloadUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+  if (driveUrl.includes('docs.google.com/document')) {
+    downloadUrl = `https://docs.google.com/document/d/${driveId}/export?format=pdf`;
+  } else if (driveUrl.includes('docs.google.com/presentation')) {
+    downloadUrl = `https://docs.google.com/presentation/d/${driveId}/export?format=pdf`;
+  } else if (driveUrl.includes('docs.google.com/spreadsheets')) {
+    downloadUrl = `https://docs.google.com/spreadsheets/d/${driveId}/export?format=pdf`;
+  }
+
+  const baseHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+  };
+
+  try {
+    const res = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: { ...baseHeaders, 'Range': 'bytes=0-1024' },
+      signal: AbortSignal.timeout(3500)
+    });
+
+    if (res.status === 404) {
+      return {
+        valid: false,
+        error: 'NOT_FOUND',
+        message: 'Tệp không tồn tại hoặc đã bị xóa khỏi Google Drive.'
+      };
+    }
+
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    const finalDisposition = res.headers.get('content-disposition');
+    const contentLength = res.headers.get('content-length');
+
+    if (contentType.includes('text/html')) {
+      const text = await res.text();
+      if (
+        text.includes('accounts.google.com') ||
+        text.includes('ServiceLogin') ||
+        text.includes('Sign in') ||
+        text.includes('Đăng nhập') ||
+        text.includes('You need access') ||
+        text.includes('Bạn cần quyền truy cập') ||
+        text.includes('không thể mở tệp') ||
+        text.includes('Yêu cầu quyền truy cập')
+      ) {
+        return {
+          valid: false,
+          error: 'PRIVATE_ACCESS_REQUIRED',
+          message: 'Tệp chưa được mở quyền chia sẻ công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".'
+        };
+      }
+
+      if (text.includes('confirm=') || text.includes('uc-download-link') || text.includes('download_warning')) {
+        return {
+          valid: true,
+          driveId,
+          fileName: extractFileNameFromDisposition(finalDisposition, driveId),
+          mimeType: 'application/pdf'
+        };
+      }
+    }
+
+    if (!res.ok && res.status !== 206) {
+      return {
+        valid: false,
+        error: 'HTTP_ERROR',
+        message: `Máy chủ Google Drive phản hồi mã ${res.status}. Vui lòng kiểm tra quyền chia sẻ công khai.`
+      };
+    }
+
+    return {
+      valid: true,
+      driveId,
+      fileSize: contentLength ? parseInt(contentLength, 10) : undefined,
+      mimeType: contentType.includes('pdf') ? 'application/pdf' : contentType,
+      fileName: extractFileNameFromDisposition(finalDisposition, driveId)
+    };
+  } catch (err: any) {
+    if (err.name === 'TimeoutError' || err.message?.includes('timeout')) {
+      return {
+        valid: false,
+        error: 'PROBE_TIMEOUT',
+        message: 'Kết nối thăm dò Google Drive vượt quá 3 giây. Vui lòng kiểm tra lại liên kết.'
+      };
+    }
+    return {
+      valid: false,
+      error: 'NETWORK_ERROR',
+      message: 'Không thể kết nối đến máy chủ Google Drive. Vui lòng kiểm tra lại đường truyền.'
+    };
+  }
+}

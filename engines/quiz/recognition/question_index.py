@@ -300,13 +300,14 @@ class QuestionIndexService:
         count: int,
         doc_reps: list[PageRepresentation],
         ai_provider: Optional[IAIProvider] = None,
-        raise_on_mismatch: bool = False
+        raise_on_mismatch: bool = False,
+        allow_partial: bool = False
     ) -> tuple[bool, list[int], list[int], list[QuestionIndexEntry]]:
         """
         Validates detected question range against requested range.
         HARD GATE: If any question is missing, executes Missing Question Recovery.
-        If still mismatched, raises QuizEngineError(RANGE_MISMATCH) or returns False.
-        NEVER accepts partial range silently!
+        If still mismatched, raises QuizEngineError(RANGE_MISMATCH) or returns False (unless allow_partial=True).
+        NEVER accepts partial range silently unless explicit flexible publishing is enabled!
         """
         expected_numbers = list(range(start_q, end_q + 1))
         detected_entries = [
@@ -348,6 +349,13 @@ class QuestionIndexService:
             logger.info("Missing question recovery SUCCESS: All requested questions verified.")
             return True, detected_numbers, [], detected_entries
 
+        # Flexible Publishing: If allow_partial is requested and at least some questions were found
+        if allow_partial and detected_numbers:
+            logger.info(
+                f"Flexible publishing accepted partial range: {len(detected_numbers)}/{count} questions available."
+            )
+            return True, detected_numbers, missing_numbers, detected_entries
+
         # HARD GATE: Still missing after recovery
         error_msg = (
             f"RANGE_MISMATCH: Yêu cầu {count} câu hỏi (từ Câu {start_q} đến Câu {end_q}) "
@@ -386,11 +394,13 @@ class QuestionIndexService:
         count: int,
         doc_reps: list[PageRepresentation],
         ai_provider: Optional[IAIProvider] = None,
-        raise_on_mismatch: bool = False
+        raise_on_mismatch: bool = False,
+        allow_partial: bool = False
     ) -> ExtractionPlan:
         """
         Builds exact extraction plan for PLAN-04.
         Ensures context pages are strictly isolated and target questions are validated.
+        Supports flexible publishing via allow_partial.
         """
         is_valid, detected_nums, missing_nums, entries = self.validate_requested_range(
             neighborhood=neighborhood,
@@ -399,7 +409,8 @@ class QuestionIndexService:
             count=count,
             doc_reps=doc_reps,
             ai_provider=ai_provider,
-            raise_on_mismatch=raise_on_mismatch
+            raise_on_mismatch=raise_on_mismatch,
+            allow_partial=allow_partial
         )
 
         target_pages: list[int] = [
@@ -426,15 +437,17 @@ class QuestionIndexService:
                 context_pages.append(p)
 
         warnings: list[str] = []
-        if missing_nums:
+        if missing_nums and not allow_partial:
             warnings.append(f"RANGE_MISMATCH: Thiếu câu {missing_nums}")
+        elif missing_nums and allow_partial:
+            warnings.append(f"PARTIAL_PUBLISHED: Xuất bản {len(detected_nums)}/{count} câu có sẵn")
 
-        status = "RANGE_VALID" if is_valid else "RANGE_MISMATCH"
+        status = "RANGE_VALID_PARTIAL" if (allow_partial and missing_nums and is_valid) else ("RANGE_VALID" if is_valid else "RANGE_MISMATCH")
 
         plan = ExtractionPlan(
             requested_start_question=start_q,
-            requested_end_question=end_q,
-            requested_count=count,
+            requested_end_question=detected_nums[-1] if (allow_partial and detected_nums) else end_q,
+            requested_count=len(detected_nums) if (allow_partial and detected_nums) else count,
             target_pages=target_pages,
             continuation_pages=sorted(list(set(active_continuation))),
             context_pages=sorted(list(set(context_pages))),

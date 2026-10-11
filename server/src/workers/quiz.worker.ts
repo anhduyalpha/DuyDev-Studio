@@ -11,6 +11,7 @@ import { prisma } from '../lib/prisma.js';
 import { StorageManager } from '../storage/storage.manager.js';
 import { logger } from '../lib/logger.js';
 import { FileCorruptedError, NotFoundError } from '../lib/errors.js';
+import { adminTelemetryService } from '../services/admin-telemetry.service.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -219,7 +220,7 @@ function executeQuizEngine(
             child.kill('SIGKILL');
           } catch {}
         }, 3000);
-        reject(new Error('Quá trình xử lý bài tập trắc nghiệm vượt quá giới hạn thời gian (180s)'));
+        reject(new Error(`Quá trình xử lý bài tập trắc nghiệm vượt quá giới hạn thời gian (${Math.round(timeoutMs / 1000)}s)`));
       }
     }, timeoutMs);
 
@@ -406,10 +407,21 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       pyArgs.push('--model', process.env.AGNES_AI_MODEL.trim());
     }
 
+    const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
+      aiCallSec: 120,
+      chromePdfSec: 60,
+      pdfHeavyTaskSec: 180,
+      converterTaskSec: 300
+    }));
+
+    pyArgs.push('--chrome-timeout', String(engineTimeouts.chromePdfSec));
+    pyArgs.push('--ai-timeout', String(engineTimeouts.aiCallSec));
+    const maxWatchdogMs = (engineTimeouts.aiCallSec * 2 + engineTimeouts.chromePdfSec * 2 + 60) * 1000;
+
     await emitProgress(5, '🌱 Gieo mầm kiến thức, chuẩn bị những câu hỏi thật xịn sò... 🌸');
     let resultMeta: PythonProgressEvent;
     try {
-      resultMeta = await executeQuizEngine(pythonBin, scriptPath, pyArgs, emitProgress);
+      resultMeta = await executeQuizEngine(pythonBin, scriptPath, pyArgs, emitProgress, maxWatchdogMs);
     } catch (engineErr) {
       // Defensive recovery: If Python threw an error near completion (e.g. process termination race),
       // check if both output PDF files were already written to disk and are non-empty.

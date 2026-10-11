@@ -61,3 +61,13 @@ export const importDriveBodySchema = z.object({
 
 export type ImportDriveBody = z.infer<typeof importDriveBodySchema>;
 
+export const probeDriveBodySchema = z.object({
+  url: z.string().optional(),
+  driveUrl: z.string().optional()
+}).refine((data) => Boolean(data.url || data.driveUrl), {
+  message: 'url hoặc driveUrl là bắt buộc'
+});
+
+export type ProbeDriveBody = z.infer<typeof probeDriveBodySchema>;
+
+

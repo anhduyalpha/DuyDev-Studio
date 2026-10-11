@@ -451,3 +451,74 @@ export async function getIpTrafficLogsHandler(request: FastifyRequest, reply: Fa
     data: result
   });
 }
+
+const updateEngineTimeoutsBodySchema = z.object({
+  aiCallSec: z.number().min(10).max(600).optional(),
+  chromePdfSec: z.number().min(10).max(300).optional(),
+  pdfHeavyTaskSec: z.number().min(30).max(1800).optional(),
+  converterTaskSec: z.number().min(30).max(3600).optional()
+});
+
+const retryJobParamsSchema = z.object({
+  jobId: z.string().min(1, 'jobId không được để trống')
+});
+
+/**
+ * GET /api/v1/admin/config/engine-timeouts
+ * Returns dynamic engine timeouts
+ */
+export async function getEngineTimeoutsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const data = await adminTelemetryService.getEngineTimeouts();
+  return reply.send({
+    success: true,
+    data
+  });
+}
+
+/**
+ * PUT /api/v1/admin/config/engine-timeouts
+ * Updates dynamic engine timeouts
+ */
+export async function updateEngineTimeoutsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = updateEngineTimeoutsBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'Dữ liệu cấu hình timeout không hợp lệ');
+  }
+  const data = await adminTelemetryService.updateEngineTimeouts(parseResult.data);
+  return reply.send({
+    success: true,
+    message: 'Đã cập nhật thời gian chờ (timeout) cho các công cụ xử lý',
+    data
+  });
+}
+
+/**
+ * POST /api/v1/admin/logs/retry-job/:jobId
+ * Retries a specific failed job
+ */
+export async function retryJobHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = retryJobParamsSchema.safeParse(request.params);
+  if (!parseResult.success) {
+    throw new BadRequestError('jobId không hợp lệ');
+  }
+  const result = await adminTelemetryService.retryFailedJob(parseResult.data.jobId);
+  return reply.send({
+    success: true,
+    message: result.message,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/logs/retry-all-failed
+ * Retries all failed jobs in batch
+ */
+export async function retryAllFailedJobsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.retryAllFailedJobs();
+  return reply.send({
+    success: true,
+    message: `Đã kích hoạt thử lại cho ${result.retriedCount}/${result.totalFailed} tác vụ thất bại`,
+    data: result
+  });
+}
+

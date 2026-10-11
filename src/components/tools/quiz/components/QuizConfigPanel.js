@@ -15,16 +15,17 @@ export function renderQuizConfigPanel(state) {
   const isFileReady = state.file?.status === 'ready';
   const hasDriveUrl = Boolean(state.gdriveUrl?.trim());
   const isDriveValid = isValidDriveUrl(state.gdriveUrl);
-  const isSourceReady = isFileReady || isDriveValid;
+  const isDriveConfirmed = isDriveValid && state.driveProbeStatus === 'valid';
+  const isSourceReady = isFileReady || isDriveConfirmed;
   const step = state.step || (isSourceReady ? 2 : 1);
-  const shouldHideSourceBox = isSourceReady || step >= 2;
-  const showPrompt = step >= 2;
-  const showParams = step >= 3;
+  const shouldHideSourceBox = isFileReady || isDriveConfirmed;
+  const showPrompt = step >= 2 && isSourceReady;
+  const showParams = step >= 3 && isSourceReady;
 
   const hasValidPrefix = Boolean(state.prefix?.trim());
   const hasValidPages = Boolean(state.pages?.trim());
 
-  const isReadyToGenerate = isSourceReady && hasValidPages && hasValidPrefix && !state.isProcessing;
+  const isReadyToGenerate = isSourceReady && hasValidPages && hasValidPrefix && !state.isProcessing && state.driveProbeStatus !== 'invalid' && state.driveProbeStatus !== 'probing';
 
   return `
     <div class="bg-white dark:bg-[#111114] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 space-y-5 shadow-xs dark:shadow-sm">
@@ -122,8 +123,35 @@ export function renderQuizConfigPanel(state) {
 
           <!-- 2. Google Drive Link Input (Tự động nhận diện) -->
           <div class="relative">
-            <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="Dán liên kết Google Drive (chế độ công khai)" class="w-full bg-white dark:bg-zinc-950 border-2 border-dashed border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-50/30 dark:bg-rose-950/5 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden transition" />
+            <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="Dán liên kết Google Drive (chế độ công khai)" class="w-full bg-white dark:bg-zinc-950 border-2 border-dashed ${state.driveProbeStatus === 'valid' ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10' : state.driveProbeStatus === 'invalid' ? 'border-amber-500/60 bg-amber-50/30 dark:bg-amber-950/10' : 'border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-50/30 dark:bg-rose-950/5'} rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden transition" />
           </div>
+          ${
+            state.driveProbeStatus === 'probing'
+              ? `
+              <div class="mt-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2 animate-fadeIn">
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin shrink-0"></i>
+                <span>Đang kiểm tra quyền truy cập Google Drive...</span>
+              </div>
+            `
+              : state.driveProbeStatus === 'invalid'
+              ? `
+              <div class="mt-2 p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-fadeIn shadow-xs">
+                <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"></i>
+                <div class="space-y-0.5">
+                  <p class="font-semibold text-amber-900 dark:text-amber-100">⚠️ Tệp chưa được mở quyền xem công khai</p>
+                  <p class="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">${escapeHtml(state.driveProbeMessage || 'Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".')}</p>
+                </div>
+              </div>
+            `
+              : state.driveProbeStatus === 'valid'
+              ? `
+              <div class="mt-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
+                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-emerald-500"></i>
+                <span>Tệp công khai hợp lệ${state.driveProbeData?.fileName ? `: ${escapeHtml(state.driveProbeData.fileName)}` : ''}</span>
+              </div>
+            `
+              : ''
+          }
         </div>
       `
       }

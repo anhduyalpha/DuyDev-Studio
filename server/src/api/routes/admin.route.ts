@@ -29,17 +29,27 @@ import {
   deleteTrashRecordHandler,
   inspectSqliteDbHandler,
   getIpTrafficClientsHandler,
-  getIpTrafficLogsHandler
+  getIpTrafficLogsHandler,
+  getEngineTimeoutsHandler,
+  updateEngineTimeoutsHandler,
+  retryJobHandler,
+  retryAllFailedJobsHandler
 } from '../controllers/admin.controller.js';
 
 export async function adminRoute(app: FastifyInstance) {
   // Telemetry Snapshot
   app.get('/api/v1/admin/telemetry', { preHandler: adminAuthGuard }, getAdminTelemetryHandler);
 
+  // Dynamic Engine Timeouts
+  app.get('/api/v1/admin/config/engine-timeouts', { preHandler: adminAuthGuard }, getEngineTimeoutsHandler);
+  app.put('/api/v1/admin/config/engine-timeouts', { preHandler: adminAuthGuard }, updateEngineTimeoutsHandler);
+
   // Failed Jobs & Error Logs
   app.get('/api/v1/admin/logs/failed-jobs', { preHandler: adminAuthGuard }, getFailedJobsHandler);
   app.get('/api/v1/admin/logs/export-txt', { preHandler: adminAuthGuard }, exportErrorLogsTxtHandler);
   app.post('/api/v1/admin/logs/clear-failed', { preHandler: adminAuthGuard }, clearFailedJobsHandler);
+  app.post('/api/v1/admin/logs/retry-job/:jobId', { preHandler: adminAuthGuard }, retryJobHandler);
+  app.post('/api/v1/admin/logs/retry-all-failed', { preHandler: adminAuthGuard }, retryAllFailedJobsHandler);
 
   // Storage Inspection & Item Management
   app.get('/api/v1/admin/storage/inspect', { preHandler: adminAuthGuard }, inspectStorageHandler);

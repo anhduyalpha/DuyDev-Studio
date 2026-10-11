@@ -11,7 +11,8 @@ import { prisma } from '../lib/prisma.js';
 import { StorageManager } from '../storage/storage.manager.js';
 import { R2Service } from '../services/r2.service.js';
 import { logger } from '../lib/logger.js';
-import { FileCorruptedError, NotFoundError } from '../lib/errors.js';
+import { BadRequestError, FileCorruptedError, NotFoundError } from '../lib/errors.js';
+import { adminTelemetryService } from '../services/admin-telemetry.service.js';
 import { fileURLToPath } from 'url';
 import { PdfJobOptions, PdfOperation } from '../schemas/jobs.schema.js';
 
@@ -168,7 +169,11 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
     await safePdfJobUpdate({ status: 'PROCESSING', startedAt: new Date(), progress: 5 });
     await emitProgress(10, 'Locating uploaded file artifact');
 
-    const allInputFileIds = [fileId, ...(options?.fileIds || [])];
+    if (!fileId || typeof fileId !== 'string' || !fileId.trim()) {
+      throw new BadRequestError('fileId parameter is required');
+    }
+
+    const allInputFileIds = [fileId, ...(options?.fileIds || [])].filter((fid): fid is string => Boolean(fid && typeof fid === 'string' && fid.trim() !== ''));
     for (const fid of allInputFileIds) {
       if (R2Service.isIngesting(fid)) {
         await emitProgress(10, 'Đang đồng bộ tệp từ Cloudflare R2 về máy chủ...');
@@ -247,7 +252,14 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
         if (options?.password) pyArgs.push('--password', options.password);
       }
       if (options?.stripMetadata) pyArgs.push('--strip-metadata');
-      await executePythonEngine(pythonBin, scriptPath, pyArgs, emitProgress);
+      const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
+        aiCallSec: 120,
+        chromePdfSec: 60,
+        pdfHeavyTaskSec: 180,
+        converterTaskSec: 300
+      }));
+      const watchdogMs = (engineTimeouts.pdfHeavyTaskSec || 180) * 1000;
+      await executePythonEngine(pythonBin, scriptPath, pyArgs, emitProgress, watchdogMs);
     }
 
     let resultStats = await fs.stat(resultPath);

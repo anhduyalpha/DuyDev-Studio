@@ -49,6 +49,8 @@ def main() -> None:
     parser.add_argument("--api-key", default=None, help="Agnes API Key")
     parser.add_argument("--base-url", default=None, help="Agnes Base URL")
     parser.add_argument("--model", default=None, help="Agnes Model")
+    parser.add_argument("--chrome-timeout", type=float, default=60.0, help="Headless Chrome compile timeout in seconds")
+    parser.add_argument("--ai-timeout", type=float, default=90.0, help="Agnes AI call timeout in seconds")
     parser.add_argument("--mock", action="store_true", help="Run with MockAIProvider")
 
     args = parser.parse_args()
@@ -65,7 +67,7 @@ def main() -> None:
             api_key=api_key,
             base_url=base_url,
             model=model,
-            timeout_seconds=90,
+            timeout_seconds=int(args.ai_timeout),
             max_retries=3,
         )
         provider = AgnesAIProvider(config)
@@ -90,6 +92,7 @@ def main() -> None:
         provider=provider,
         style_preset_id=args.style,
         max_repair_iterations=2,
+        chrome_timeout=args.chrome_timeout,
     )
 
     emit_json_event({"progress": 0, "stage": "🚀 Đang khởi động phép thuật biên soạn đề thi siêu xinh... ✨"})
@@ -135,6 +138,8 @@ def main() -> None:
             img_count = len([f for f in os.listdir(crops_dir) if f.endswith(".png")])
 
         actual_questions_count = state.artifacts.get("questions_count", args.count)
+        requested_count = state.artifacts.get("requested_count", args.count)
+        note = state.artifacts.get("note")
 
         final_payload = {
             "success": True,
@@ -143,6 +148,8 @@ def main() -> None:
             "worksheet_pages": ws_pages,
             "answer_pages": ans_pages,
             "questions_count": actual_questions_count,
+            "requested_count": requested_count,
+            "note": note,
             "extracted_images_count": img_count,
             "question_types": {
                 "mcq": actual_questions_count,

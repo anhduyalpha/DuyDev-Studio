@@ -7,7 +7,7 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../lib/prisma.js';
-import { redisConnection, taskQueue, converterQueue, quizQueue } from '../queues/task.queue.js';
+import { redisConnection, taskQueue, converterQueue, quizQueue, enqueueJob, enqueueConverterJob, enqueueQuizJob } from '../queues/task.queue.js';
 import { telemetryTracker } from '../api/middleware/telemetry.middleware.js';
 import { aiMetricsService } from './ai-metrics.service.js';
 import { R2Service } from './r2.service.js';
@@ -95,6 +95,25 @@ export interface SemanticErrorDetail {
   signature: string;
   severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK';
   suggestedFix: string;
+}
+
+export interface EngineTimeoutsConfig {
+  aiCallSec: number;
+  chromePdfSec: number;
+  pdfHeavyTaskSec: number;
+  converterTaskSec: number;
+}
+
+export const DEFAULT_ENGINE_TIMEOUTS: EngineTimeoutsConfig = {
+  aiCallSec: 120,
+  chromePdfSec: 60,
+  pdfHeavyTaskSec: 180,
+  converterTaskSec: 300
+};
+
+function getSystemConfigPath(): string {
+  const dataDir = path.resolve(resolvedStoragePaths.root, '..');
+  return path.join(dataDir, 'system_config.json');
 }
 
 /**
@@ -1097,6 +1116,175 @@ export class AdminTelemetryService {
       logger.error({ err }, 'Failed to clear failed jobs');
     }
     return { deletedCount };
+  }
+
+  /**
+   * Retries an individual failed job by resetting status to QUEUED and re-enqueuing into BullMQ
+   */
+  public async retryFailedJob(jobId: string): Promise<{ success: boolean; jobId: string; type: string; message: string }> {
+    if (!jobId || !jobId.trim()) {
+      throw new BadRequestError('jobId is required');
+    }
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId }
+    });
+
+    if (!job) {
+      throw new NotFoundError(`Job ${jobId} not found`);
+    }
+
+    let parsedOptions: any = {};
+    try {
+      parsedOptions = JSON.parse(job.optionsJson || '{}');
+    } catch {
+      parsedOptions = {};
+    }
+
+    // Reset status in DB
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: 'QUEUED',
+        progress: 0,
+        errorMessage: null,
+        startedAt: new Date(),
+        completedAt: null
+      }
+    });
+
+    const jt = job.type.toLowerCase();
+    if (jt.startsWith('quiz')) {
+      const payload = {
+        jobId: job.id,
+        fileId: parsedOptions.fileId,
+        gdriveUrl: parsedOptions.gdriveUrl,
+        pages: parsedOptions.pages || '',
+        count: parsedOptions.count || 20,
+        startNum: parsedOptions.startNum || 1,
+        title: parsedOptions.title || 'BÀI TẬP TRẮC NGHIỆM',
+        subtitle: parsedOptions.subtitle || '',
+        prefix: parsedOptions.prefix || 'DeThi',
+        duration: parsedOptions.duration || '',
+        stylePresetId: parsedOptions.stylePresetId || 'blue_black_classic',
+        apiKey: parsedOptions.apiKey
+      };
+      await enqueueQuizJob(payload, { jobId: job.id });
+    } else if (jt.startsWith('converter') || jt.includes('transcode') || jt.includes('convert')) {
+      const payload = {
+        jobId: job.id,
+        fileId: parsedOptions.fileId,
+        targetFormat: parsedOptions.targetFormat || 'pdf',
+        options: parsedOptions.options || parsedOptions
+      };
+      await enqueueConverterJob(payload, { jobId: job.id });
+    } else {
+      // Default / PDF Studio Pro
+      const operation = parsedOptions.operation || job.type.replace(/^pdf_/, '') || 'compress';
+      const payload = {
+        jobId: job.id,
+        fileId: parsedOptions.fileId,
+        operation,
+        options: parsedOptions.options || parsedOptions
+      };
+      await enqueueJob(job.type, payload, { jobId: job.id });
+    }
+
+    return {
+      success: true,
+      jobId: job.id,
+      type: job.type,
+      message: `Tác vụ ${job.id} (${job.type}) đã được đưa lại vào hàng đợi xử lý.`
+    };
+  }
+
+  /**
+   * Retries all failed jobs in batch
+   */
+  public async retryAllFailedJobs(): Promise<{ totalFailed: number; retriedCount: number; skippedCount: number }> {
+    const failedJobs = await prisma.job.findMany({
+      where: { status: 'FAILED' },
+      take: 100
+    });
+
+    let retriedCount = 0;
+    let skippedCount = 0;
+
+    for (const j of failedJobs) {
+      try {
+        await this.retryFailedJob(j.id);
+        retriedCount++;
+      } catch (err) {
+        logger.warn({ jobId: j.id, err }, 'Failed to retry job');
+        skippedCount++;
+      }
+    }
+
+    return {
+      totalFailed: failedJobs.length,
+      retriedCount,
+      skippedCount
+    };
+  }
+
+  /**
+   * Reads dynamic engine timeouts configuration from data/system_config.json
+   */
+  public async getEngineTimeouts(): Promise<EngineTimeoutsConfig> {
+    try {
+      const configPath = getSystemConfigPath();
+      if (fs.existsSync(configPath)) {
+        const raw = await fs.promises.readFile(configPath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed.engineTimeouts) {
+          return {
+            aiCallSec: Number(parsed.engineTimeouts.aiCallSec) || DEFAULT_ENGINE_TIMEOUTS.aiCallSec,
+            chromePdfSec: Number(parsed.engineTimeouts.chromePdfSec) || DEFAULT_ENGINE_TIMEOUTS.chromePdfSec,
+            pdfHeavyTaskSec: Number(parsed.engineTimeouts.pdfHeavyTaskSec) || DEFAULT_ENGINE_TIMEOUTS.pdfHeavyTaskSec,
+            converterTaskSec: Number(parsed.engineTimeouts.converterTaskSec) || DEFAULT_ENGINE_TIMEOUTS.converterTaskSec
+          };
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, 'Failed to read engine timeouts from config file');
+    }
+    return { ...DEFAULT_ENGINE_TIMEOUTS };
+  }
+
+  /**
+   * Updates dynamic engine timeouts configuration and writes to data/system_config.json
+   */
+  public async updateEngineTimeouts(config: Partial<EngineTimeoutsConfig>): Promise<EngineTimeoutsConfig> {
+    const current = await this.getEngineTimeouts();
+    const updated: EngineTimeoutsConfig = {
+      aiCallSec: config.aiCallSec ? Math.max(10, Math.min(600, Number(config.aiCallSec))) : current.aiCallSec,
+      chromePdfSec: config.chromePdfSec ? Math.max(10, Math.min(300, Number(config.chromePdfSec))) : current.chromePdfSec,
+      pdfHeavyTaskSec: config.pdfHeavyTaskSec ? Math.max(30, Math.min(1800, Number(config.pdfHeavyTaskSec))) : current.pdfHeavyTaskSec,
+      converterTaskSec: config.converterTaskSec ? Math.max(30, Math.min(3600, Number(config.converterTaskSec))) : current.converterTaskSec
+    };
+
+    try {
+      const configPath = getSystemConfigPath();
+      const parentDir = path.dirname(configPath);
+      if (!fs.existsSync(parentDir)) {
+        await fs.promises.mkdir(parentDir, { recursive: true });
+      }
+      let existingObj: Record<string, any> = {};
+      if (fs.existsSync(configPath)) {
+        try {
+          const raw = await fs.promises.readFile(configPath, 'utf-8');
+          existingObj = JSON.parse(raw);
+        } catch {}
+      }
+      existingObj.engineTimeouts = updated;
+      existingObj.updatedAt = new Date().toISOString();
+      await fs.promises.writeFile(configPath, JSON.stringify(existingObj, null, 2), 'utf-8');
+      logger.info({ updated }, 'Engine timeouts updated successfully');
+    } catch (err) {
+      logger.error({ err }, 'Failed to write engine timeouts to config file');
+      throw err;
+    }
+    return updated;
   }
 
   /**

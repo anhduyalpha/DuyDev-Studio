@@ -12,7 +12,8 @@ import { StorageManager } from '../storage/storage.manager.js';
 import { R2Service } from '../services/r2.service.js';
 import { resolvedStoragePaths } from '../config/env.config.js';
 import { logger } from '../lib/logger.js';
-import { NotFoundError } from '../lib/errors.js';
+import { BadRequestError, NotFoundError } from '../lib/errors.js';
+import { adminTelemetryService } from '../services/admin-telemetry.service.js';
 import { fileURLToPath } from 'url';
 import { ConverterJobPayload, getMimeTypeForExt } from '../schemas/converter.schema.js';
 
@@ -47,13 +48,29 @@ function executeConverterCli(
   pythonBin: string,
   scriptPath: string,
   args: string[],
-  onProgress: (pct: number, stage: string) => Promise<void>
+  onProgress: (pct: number, stage: string) => Promise<void>,
+  timeoutMs: number = 300_000
 ): Promise<CliResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(pythonBin, [scriptPath, ...args]);
     let stderr = '';
     let parsedResult: CliResult | null = null;
     const pendingPromises: Promise<void>[] = [];
+    let isSettled = false;
+
+    const timer = setTimeout(() => {
+      if (!isSettled) {
+        isSettled = true;
+        try {
+          if (process.platform === 'win32' && child.pid) {
+            spawn('taskkill', ['/pid', child.pid.toString(), '/T', '/F']);
+          } else {
+            child.kill('SIGKILL');
+          }
+        } catch {}
+        reject(new Error(`Thời gian chuyển đổi tệp vượt quá giới hạn cho phép (${Math.round(timeoutMs / 1000)}s)`));
+      }
+    }, timeoutMs);
 
     const rl = readline.createInterface({ input: child.stdout });
     rl.on('line', (line) => {
@@ -68,11 +85,20 @@ function executeConverterCli(
 
     child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
     child.on('close', async (code) => {
+      clearTimeout(timer);
+      if (isSettled) return;
+      isSettled = true;
+      try { rl.close(); } catch {}
       await Promise.allSettled(pendingPromises);
       if (code === 0 && parsedResult?.success) resolve(parsedResult);
       else reject(new Error(parsedResult?.error || stderr.trim() || `Converter engine error (exit ${code})`));
     });
-    child.on('error', (err) => reject(err));
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      if (isSettled) return;
+      isSettled = true;
+      reject(err);
+    });
   });
 }
 
@@ -118,6 +144,10 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     await safeConverterJobUpdate({ status: 'PROCESSING', startedAt: new Date(), progress: 5 });
     await emitProgress(10, 'Locating uploaded file artifact');
 
+    if (!fileId || typeof fileId !== 'string' || !fileId.trim()) {
+      throw new BadRequestError('fileId parameter is required');
+    }
+
     if (R2Service.isIngesting(fileId)) {
       await emitProgress(10, 'Đang đồng bộ tệp từ Cloudflare R2 về máy chủ...');
       await R2Service.waitForIngestion(fileId);
@@ -148,7 +178,14 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     if (options?.bitrate) pyArgs.push('--bitrate', String(options.bitrate));
 
     await emitProgress(20, 'Invoking Python Converter Bridge');
-    const cliResult = await executeConverterCli(resolvePythonBin(), resolveCliScript(), pyArgs, emitProgress);
+    const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
+      aiCallSec: 120,
+      chromePdfSec: 60,
+      pdfHeavyTaskSec: 180,
+      converterTaskSec: 300
+    }));
+    const watchdogMs = (engineTimeouts.converterTaskSec || 300) * 1000;
+    const cliResult = await executeConverterCli(resolvePythonBin(), resolveCliScript(), pyArgs, emitProgress, watchdogMs);
 
     const resolvedOutputPath = cliResult.output_path || path.join(processedDir, `${path.parse(fileRecord.originalName).name}.${targetFormat}`);
     const actualExt = (path.extname(resolvedOutputPath).slice(1) || targetFormat).toLowerCase();

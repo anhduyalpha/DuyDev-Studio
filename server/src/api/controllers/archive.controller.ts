@@ -82,6 +82,9 @@ export async function inspectArchiveHandler(request: FastifyRequest, reply: Fast
 
 export async function inspectNestedArchiveHandler(request: FastifyRequest, reply: FastifyReply) {
   const { parentFileId, memberPath } = inspectNestedArchiveSchema.parse(request.body);
+  if (!parentFileId || !parentFileId.trim()) {
+    throw new BadRequestError('parentFileId is required');
+  }
 
   const parentRecord = await prisma.fileRecord.findUnique({
     where: { id: parentFileId }

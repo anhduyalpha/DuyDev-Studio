@@ -67,7 +67,8 @@ export function attachQuizListeners() {
 
       const domDrive = driveInput ? driveInput.value.trim() : '';
       const isDriveValid = isValidDriveUrl(domDrive || state.gdriveUrl);
-      const isSourceReady = Boolean(state.file?.status === 'ready') || isDriveValid;
+      const isDriveConfirmed = isDriveValid && state.driveProbeStatus === 'valid';
+      const isSourceReady = Boolean(state.file?.status === 'ready') || isDriveConfirmed;
 
       const domPages = pagesInput ? pagesInput.value.trim() : '';
       const effectivePages = domPages || state.pages?.trim() || '';
@@ -123,7 +124,8 @@ export function attachQuizListeners() {
 
       const domDrive = driveInput ? driveInput.value.trim() : '';
       const isDriveValid = isValidDriveUrl(domDrive || state.gdriveUrl);
-      const isSourceReady = isFileReady || isDriveValid;
+      const isDriveConfirmed = isDriveValid && state.driveProbeStatus === 'valid';
+      const isSourceReady = isFileReady || isDriveConfirmed;
 
       const domPages = pagesInput ? pagesInput.value.trim() : '';
       const effectivePages = domPages || state.pages?.trim() || '';

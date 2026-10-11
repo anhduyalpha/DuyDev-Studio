@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { prisma } from '../../lib/prisma.js';
-import { NotFoundError } from '../../lib/errors.js';
+import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import {
   converterDetectSchema,
   enqueueConverterJobSchema,
@@ -51,8 +51,8 @@ export async function detectFormat(request: FastifyRequest, reply: FastifyReply)
   let originalName = (body.fileName || '').trim();
   let mimeType = (body.mimeType || '').trim();
 
-  if (body.fileId) {
-    const fileRecord = await prisma.fileRecord.findUnique({ where: { id: body.fileId } });
+  if (body.fileId && typeof body.fileId === 'string' && body.fileId.trim() !== '') {
+    const fileRecord = await prisma.fileRecord.findUnique({ where: { id: body.fileId.trim() } });
     if (fileRecord && existsSync(fileRecord.storagePath)) {
       size = Number(fileRecord.sizeBytes);
       originalName = originalName || (fileRecord.originalName || '').trim();
@@ -98,8 +98,11 @@ export async function detectFormat(request: FastifyRequest, reply: FastifyReply)
 export async function enqueueConverterTask(request: FastifyRequest, reply: FastifyReply) {
   const body = enqueueConverterJobSchema.parse(request.body);
   const { fileId, targetFormat, options } = body;
+  if (!fileId || typeof fileId !== 'string' || !fileId.trim()) {
+    throw new BadRequestError('fileId is required');
+  }
 
-  const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId } });
+  const fileRecord = await prisma.fileRecord.findUnique({ where: { id: fileId.trim() } });
   if (!fileRecord || fileRecord.isPurged || (!isPermanentRetention && fileRecord.expiresAt <= new Date())) {
     throw new NotFoundError(`Source file ${fileId} does not exist or has expired`);
   }

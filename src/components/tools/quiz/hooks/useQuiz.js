@@ -34,6 +34,9 @@ class QuizManager {
       file: null,
       fileId: null,
       gdriveUrl: '',
+      driveProbeStatus: 'idle', // 'idle' | 'probing' | 'valid' | 'invalid'
+      driveProbeMessage: '',
+      driveProbeData: null,
       pages: '',
       count: 20,
       start: 1,
@@ -54,6 +57,7 @@ class QuizManager {
     this.listeners = new Set();
     this.disconnectEvents = null;
     this.uploadAbortController = null;
+    this.driveProbeTimer = null;
   }
 
   getState() {
@@ -98,6 +102,13 @@ class QuizManager {
 
     // Clear Google Drive URL when a file is explicitly chosen
     this.state.gdriveUrl = '';
+    this.state.driveProbeStatus = 'idle';
+    this.state.driveProbeMessage = '';
+    this.state.driveProbeData = null;
+    if (this.driveProbeTimer) {
+      clearTimeout(this.driveProbeTimer);
+      this.driveProbeTimer = null;
+    }
     this.state.file = {
       name: file.name,
       size: file.size,
@@ -140,12 +151,67 @@ class QuizManager {
     }
   }
 
+  async probeDriveUrl(cleanUrl) {
+    if (!cleanUrl || !isValidDriveUrl(cleanUrl)) {
+      this.state.driveProbeStatus = 'idle';
+      this.state.driveProbeMessage = '';
+      this.state.driveProbeData = null;
+      this.notify('drive-probe-updated');
+      return;
+    }
+
+    this.state.driveProbeStatus = 'probing';
+    this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
+    this.notify('drive-probe-updated');
+
+    try {
+      const resp = await fetch('/api/v1/files/probe-gdrive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: cleanUrl })
+      });
+      const json = await resp.json();
+      if (json.success && json.data?.valid) {
+        this.state.driveProbeStatus = 'valid';
+        this.state.driveProbeMessage = 'Tệp hợp lệ và sẵn sàng xử lý';
+        this.state.driveProbeData = json.data;
+        if (this.state.step < 2) {
+          this.state.step = 2;
+        }
+        showToast('☁️ Đã xác thực link Google Drive thành công! ✨', 'success');
+        this.notify('source-ready');
+      } else {
+        this.state.driveProbeStatus = 'invalid';
+        this.state.driveProbeMessage = json.data?.message || 'Tệp chưa được mở quyền xem công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".';
+        this.state.driveProbeData = null;
+        if (this.state.step !== 1) {
+          this.state.step = 1;
+        }
+        this.notify('drive-probe-updated');
+      }
+    } catch (err) {
+      this.state.driveProbeStatus = 'invalid';
+      this.state.driveProbeMessage = 'Không thể kết nối đến máy chủ để xác thực link Google Drive.';
+      this.state.driveProbeData = null;
+      if (this.state.step !== 1) {
+        this.state.step = 1;
+      }
+      this.notify('drive-probe-updated');
+    }
+  }
+
   setGdriveUrl(url) {
     let clean = (url || '').trim();
     if (clean && !clean.startsWith('http://') && !clean.startsWith('https://') && (clean.includes('drive.google.com') || clean.includes('docs.google.com'))) {
       clean = 'https://' + clean;
     }
+    const urlChanged = this.state.gdriveUrl !== clean;
     this.state.gdriveUrl = clean;
+
+    if (this.driveProbeTimer) {
+      clearTimeout(this.driveProbeTimer);
+      this.driveProbeTimer = null;
+    }
 
     // If user enters a drive link, clear any previously chosen file
     if (clean) {
@@ -163,15 +229,21 @@ class QuizManager {
     const isDriveValid = isValidDriveUrl(clean);
 
     if (isDriveValid) {
-      if (this.state.step < 2) {
-        this.state.step = 2;
-        showToast('☁️ Đã nhận link Google Drive rồi nè! Đợi mình một xíu nha ✨', 'success');
+      if (urlChanged || this.state.driveProbeStatus === 'idle') {
+        this.state.driveProbeStatus = 'probing';
+        this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
+        this.driveProbeTimer = setTimeout(() => {
+          this.probeDriveUrl(clean);
+        }, 300);
       }
-      this.notify('source-ready');
-      return;
-    } else if (!this.state.file || this.state.file.status !== 'ready') {
-      if (this.state.step !== 1) {
-        this.state.step = 1;
+    } else {
+      this.state.driveProbeStatus = 'idle';
+      this.state.driveProbeMessage = '';
+      this.state.driveProbeData = null;
+      if (!this.state.file || this.state.file.status !== 'ready') {
+        if (this.state.step !== 1) {
+          this.state.step = 1;
+        }
       }
     }
 

@@ -21,12 +21,14 @@ import { openStorageInspectorModal } from '../components/admin/AdminStorageInspe
 import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
 import { openOperationsInspectorModal } from '../components/admin/AdminOperationsInspectorModal.js';
 import { renderIpTrafficManager, attachIpTrafficListeners } from '../components/admin/AdminIpTrafficManager.js';
+import { renderEngineTimeoutsCard, attachEngineTimeoutsListeners, fetchEngineTimeouts } from '../components/admin/AdminEngineTimeoutsCard.js';
 
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
 let isPollingPaused = false;
 let latestTelemetryData = null;
 let cachedFailedJobsData = [];
+let cachedEngineTimeoutsData = null;
 let trafficHistoryRps = [];
 let lastUserInteractionTime = Date.now();
 let idleAutoLockTimer = null;
@@ -547,7 +549,12 @@ function renderUnlockedDashboardView() {
         ${renderFailedJobsInspector(cachedFailedJobsData)}
       </div>
 
-      <!-- 7. Web System Configuration & Maintenance Dock -->
+      <!-- 7. Dynamic Engine Watchdog Timeouts Card -->
+      <div id="adminEngineTimeoutsContainer">
+        ${renderEngineTimeoutsCard(cachedEngineTimeoutsData)}
+      </div>
+
+      <!-- 8. Web System Configuration & Maintenance Dock -->
       <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -1254,6 +1261,14 @@ export function attachAdminPageListeners(onRerender) {
     attachFailedJobsListeners(failedJobsContainer, () => fetchAdminTelemetry(onRerender));
   }
 
+  // Attach Engine Timeouts Card listeners
+  const engineTimeoutsContainer = document.getElementById('adminEngineTimeoutsContainer');
+  if (engineTimeoutsContainer) {
+    attachEngineTimeoutsListeners(engineTimeoutsContainer, (newTimeouts) => {
+      cachedEngineTimeoutsData = newTimeouts;
+    });
+  }
+
   // Attach AI Agents Card listeners
   const aiContainer = document.getElementById('adminAiAgentsContainer');
   if (aiContainer) {
@@ -1345,6 +1360,22 @@ async function fetchAdminTelemetry(onRerender) {
         }
       } catch (err) {
         console.warn('[AdminPage] Failed to fetch failed jobs log:', err);
+      }
+
+      // Also fetch engine timeouts if not yet loaded
+      if (!cachedEngineTimeoutsData) {
+        try {
+          cachedEngineTimeoutsData = await fetchEngineTimeouts();
+          const engineContainer = document.getElementById('adminEngineTimeoutsContainer');
+          if (engineContainer) {
+            engineContainer.innerHTML = renderEngineTimeoutsCard(cachedEngineTimeoutsData);
+            attachEngineTimeoutsListeners(engineContainer, (newTimeouts) => {
+              cachedEngineTimeoutsData = newTimeouts;
+            });
+          }
+        } catch (err) {
+          console.warn('[AdminPage] Failed to fetch engine timeouts:', err);
+        }
       }
 
       // Refresh icons if lucide is present

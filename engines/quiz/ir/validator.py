@@ -4,8 +4,9 @@ Strict gatekeeper validating 100% compliance with IR schema, cardinality, 1:1 qu
 and non-overlapping unique identifiers before passing data to downstream renderers.
 """
 
-from typing import Optional
+from typing import Optional, Any
 from .models import CanonicalDocumentIR, SectionType, SchemaVersion
+from .repair import repair_empty_option, repair_empty_tf_statement
 
 
 class IRValidationError(Exception):
@@ -83,9 +84,7 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
             for opt in q.options:
                 has_visual = bool(getattr(opt, "image_path", None)) or bool(getattr(q, "rich_elements", None))
                 if not (opt.text and opt.text.strip()) and not has_visual:
-                    raise IRValidationError(
-                        f"Question '{q.id}' (Câu {q.number}) has empty text for option '{opt.label}'."
-                    )
+                    repair_empty_option(q, opt)
         elif q.type == SectionType.PART_II_TF:
             if len(q.sub_statements) != 4:
                 raise IRValidationError(
@@ -103,9 +102,7 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
             for stmt in q.sub_statements:
                 has_visual = bool(getattr(q, "rich_elements", None))
                 if not (stmt.statement and stmt.statement.strip()) and not has_visual:
-                    raise IRValidationError(
-                        f"Question '{q.id}' (Câu {q.number}) has empty statement text for '{stmt.label}'."
-                    )
+                    repair_empty_tf_statement(q, stmt)
 
         # Rich elements validation
         for elem in q.rich_elements:

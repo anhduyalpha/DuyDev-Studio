@@ -7,8 +7,9 @@ import { getStorageAuthHeaders } from '../../utilities/adminAuth.js';
 import { showToast } from '../../utilities/toast.js';
 import { openSlideConfirmModal } from '../common/SlideConfirmModal.js';
 import { clearAllModuleStates } from '../../utilities/moduleState.js';
+import { renderEngineTimeoutsCard, attachEngineTimeoutsListeners, fetchEngineTimeouts } from './AdminEngineTimeoutsCard.js';
 
-let activeBoxTab = 'r2'; // 'r2' | 'queues' | 'trash' | 'db' | 'cache'
+let activeBoxTab = 'r2'; // 'r2' | 'queues' | 'trash' | 'db' | 'cache' | 'timeouts'
 let onModalCloseCallback = null;
 
 function escapeHtml(str) {
@@ -124,6 +125,14 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
             <span>Bộ Nhớ Trình Duyệt</span>
           </button>
+          <button
+            type="button"
+            data-box-tab="timeouts"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'timeouts' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+          >
+            <i data-lucide="timer" class="w-3.5 h-3.5"></i>
+            <span>Thời Hạn Engine</span>
+          </button>
         </div>
 
         <!-- Dynamic Content Body -->
@@ -187,6 +196,8 @@ async function loadActiveTabContent(modalEl) {
       await renderSqliteDbTab(bodyEl, modalEl);
     } else if (activeBoxTab === 'cache') {
       renderBrowserCacheTab(bodyEl, modalEl);
+    } else if (activeBoxTab === 'timeouts') {
+      await renderTimeoutsTab(bodyEl, modalEl);
     }
   } catch (err) {
     bodyEl.innerHTML = `
@@ -795,5 +806,25 @@ function renderBrowserCacheTab(bodyEl, modalEl) {
         }
       });
     };
+  }
+}
+
+/**
+ * TAB 6: Engine Watchdog Timeouts
+ */
+async function renderTimeoutsTab(bodyEl, modalEl) {
+  try {
+    const timeouts = await fetchEngineTimeouts();
+    bodyEl.innerHTML = renderEngineTimeoutsCard(timeouts);
+    attachEngineTimeoutsListeners(bodyEl, () => {
+      // Refresh preview if needed
+    });
+  } catch (err) {
+    bodyEl.innerHTML = `
+      <div class="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs space-y-2">
+        <p class="font-bold">Lỗi khi tải cấu hình thời gian chờ engine:</p>
+        <p class="font-mono">${escapeHtml(err.message)}</p>
+      </div>
+    `;
   }
 }

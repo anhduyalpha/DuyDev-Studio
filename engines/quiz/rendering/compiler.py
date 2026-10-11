@@ -113,7 +113,7 @@ def _terminate_proc_safely(proc: subprocess.Popen) -> None:
             pass
 
 
-def compile_html_to_pdf(chrome_path: str, html_path: str, pdf_path: str, timeout: float = 45.0) -> None:
+def compile_html_to_pdf(chrome_path: str, html_path: str, pdf_path: str, timeout: float = 60.0) -> None:
     """
     Compile an HTML file to PDF via Headless Chrome with isolated profile,
     anti-hang timeout guard, and verification.
@@ -151,7 +151,6 @@ def compile_html_to_pdf(chrome_path: str, html_path: str, pdf_path: str, timeout
             "--mute-audio",
             "--allow-file-access-from-files",
             "--run-all-compositor-stages-before-draw",
-            "--virtual-time-budget=8000",
             "--disable-features=NetworkService",
             f"--user-data-dir={temp_profile}",
             "--no-pdf-header-footer",
@@ -247,7 +246,7 @@ class PDFCompiler:
         preset: StylePreset | str | None = None,
         answer_preset: StylePreset | str | None = None,
         force_break_ids: set[str] | None = None,
-        timeout: float = 45.0,
+        timeout: float = 60.0,
     ) -> tuple[str, str]:
         """
         Compile both `{prefix}_DeBai.pdf` and `{prefix}_DapAn.pdf` from CanonicalDocumentIR.
@@ -323,3 +322,16 @@ class PDFCompiler:
         )
 
         return debai_pdf_path, dapan_pdf_path
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Compile HTML to PDF via headless Chrome")
+    parser.add_argument("html", help="Path to input HTML file")
+    parser.add_argument("pdf", help="Path to output PDF file")
+    parser.add_argument("--chrome-path", default=None, help="Path to chrome executable")
+    parser.add_argument("--chrome-timeout", "--timeout", dest="timeout", type=float, default=60.0, help="Compilation timeout in seconds")
+    args = parser.parse_args()
+
+    chrome_bin = args.chrome_path or find_chrome_executable()
+    compile_html_to_pdf(chrome_path=chrome_bin, html_path=args.html, pdf_path=args.pdf, timeout=args.timeout)

@@ -352,6 +352,15 @@ export function renderFailedJobsInspector(jobs = []) {
           ${jobs.length > 0 ? `
             <button
               type="button"
+              id="btnRetryAllFailedJobs"
+              class="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+              title="Thử lại toàn bộ các tác vụ lỗi"
+            >
+              <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
+              <span>Thử Lại Tất Cả</span>
+            </button>
+            <button
+              type="button"
               id="btnClearFailedJobs"
               class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
               title="Dọn sạch toàn bộ nhật ký lỗi"
@@ -439,9 +448,20 @@ function renderFailedJobsItemsMarkup(jobs) {
             </span>
           </div>
 
-          <div class="flex items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-            <span>Thời lượng: <strong class="text-zinc-800 dark:text-zinc-200">${duration}</strong></span>
-            <span>${formatRelativeTime(job.createdAt)} (${formatExactTime(job.createdAt)})</span>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              data-retry-job-id="${escapeHtml(job.id)}"
+              class="btn-retry-job px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
+              title="Thử lại tác vụ này"
+            >
+              <i data-lucide="play" class="w-3 h-3"></i>
+              <span>Thử lại</span>
+            </button>
+            <div class="flex items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+              <span>Thời lượng: <strong class="text-zinc-800 dark:text-zinc-200">${duration}</strong></span>
+              <span>${formatRelativeTime(job.createdAt)} (${formatExactTime(job.createdAt)})</span>
+            </div>
           </div>
         </div>
 
@@ -584,7 +604,33 @@ export function attachFailedJobsListeners(container, onReload) {
     };
   }
 
-  // 3. Clear all failed jobs with Slide-To-Confirm verification
+  // 3. Retry all failed jobs
+  const btnRetryAll = container.querySelector('#btnRetryAllFailedJobs');
+  if (btnRetryAll) {
+    btnRetryAll.onclick = async () => {
+      const origHtml = btnRetryAll.innerHTML;
+      btnRetryAll.disabled = true;
+      btnRetryAll.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Đang gửi...</span>';
+      if (window.lucide) window.lucide.createIcons();
+      try {
+        const resp = await fetch('/api/v1/admin/logs/retry-all-failed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+        });
+        const json = await resp.json();
+        showToast(json.message || 'Đã kích hoạt thử lại cho các tác vụ thất bại', json.success ? 'success' : 'error');
+        if (onReload) onReload();
+      } catch (err) {
+        showToast(`Lỗi khi thử lại: ${err.message}`, 'error');
+      } finally {
+        btnRetryAll.disabled = false;
+        btnRetryAll.innerHTML = origHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    };
+  }
+
+  // 4. Clear all failed jobs with Slide-To-Confirm verification
   const btnClear = container.querySelector('#btnClearFailedJobs');
   if (btnClear) {
     btnClear.onclick = () => {
@@ -646,7 +692,32 @@ export function attachFailedJobsListeners(container, onReload) {
   });
 
   // 4. Toggle payload container
-  container.addEventListener('click', (e) => {
+  container.addEventListener('click', async (e) => {
+    const retryBtn = e.target.closest('[data-retry-job-id]');
+    if (retryBtn) {
+      const jid = retryBtn.dataset.retryJobId;
+      if (!jid) return;
+      const origHtml = retryBtn.innerHTML;
+      retryBtn.disabled = true;
+      retryBtn.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin"></i>';
+      if (window.lucide) window.lucide.createIcons();
+      try {
+        const resp = await fetch(`/api/v1/admin/logs/retry-job/${encodeURIComponent(jid)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+        });
+        const json = await resp.json();
+        showToast(json.message || `Đã kích hoạt thử lại tác vụ ${jid}`, json.success ? 'success' : 'error');
+        if (onReload) onReload();
+      } catch (err) {
+        showToast(`Lỗi khi thử lại: ${err.message}`, 'error');
+        retryBtn.disabled = false;
+        retryBtn.innerHTML = origHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+      return;
+    }
+
     const toggleBtn = e.target.closest('[data-toggle-job-payload]');
     if (!toggleBtn) return;
     const jobId = toggleBtn.dataset.toggleJobPayload;

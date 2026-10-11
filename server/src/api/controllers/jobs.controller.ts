@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import crypto from 'crypto';
 import { prisma } from '../../lib/prisma.js';
-import { NotFoundError } from '../../lib/errors.js';
+import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { enqueuePdfJobSchema, jobIdParamSchema } from '../../schemas/jobs.schema.js';
 import { enqueueJob, createRedisSubscriber } from '../../queues/task.queue.js';
 import { isPermanentRetention } from '../../config/limits.config.js';
@@ -11,8 +11,12 @@ export async function enqueuePdfJob(request: FastifyRequest, reply: FastifyReply
   const body = enqueuePdfJobSchema.parse(request.body);
   const { fileId, operation, options } = body;
 
+  if (!fileId || typeof fileId !== 'string' || !fileId.trim()) {
+    throw new BadRequestError('fileId is required');
+  }
+
   const fileRecord = await prisma.fileRecord.findUnique({
-    where: { id: fileId }
+    where: { id: fileId.trim() }
   });
 
   if (!fileRecord || fileRecord.isPurged || (!isPermanentRetention && fileRecord.expiresAt <= new Date())) {

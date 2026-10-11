@@ -45,9 +45,9 @@ export async function previewPdfHandler(request: FastifyRequest, reply: FastifyR
     if (!existsSync(sourcePath)) {
       throw new NotFoundError(`Tệp '${relPath}' không tồn tại trên hệ thống`);
     }
-  } else if (fileId) {
+  } else if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
     const fileRecord = await prisma.fileRecord.findUnique({
-      where: { id: fileId }
+      where: { id: fileId.trim() }
     });
 
     if (!fileRecord || fileRecord.isPurged) {
