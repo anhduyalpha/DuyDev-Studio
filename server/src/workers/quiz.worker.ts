@@ -116,6 +116,8 @@ interface PythonProgressEvent {
   worksheet_pages?: number;
   answer_pages?: number;
   questions_count?: number;
+  requested_count?: number;
+  note?: string | null;
   extracted_images_count?: number;
   question_types?: {
     mcq: number;
@@ -408,10 +410,10 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     }
 
     const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
-      aiCallSec: 120,
+      aiCallSec: 45,
       chromePdfSec: 60,
-      pdfHeavyTaskSec: 180,
-      converterTaskSec: 300
+      pdfHeavyTaskSec: 300,
+      converterTaskSec: 600
     }));
 
     pyArgs.push('--chrome-timeout', String(engineTimeouts.chromePdfSec));
@@ -534,6 +536,8 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
         viewUrl: `/api/v1/files/view/${ansFileId}/${ansEncodedName}`
       },
       questionsCount: resultMeta.questions_count || count,
+      requestedCount: resultMeta.requested_count || count,
+      note: resultMeta.note || null,
       extractedImagesCount: resultMeta.extracted_images_count || 0,
       questionTypes: resultMeta.question_types || {
         mcq: resultMeta.questions_count || count,

@@ -82,8 +82,8 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                     f"Question '{q.id}' (Câu {q.number}) must have options ordered ['A', 'B', 'C', 'D'] (found {opt_labels})."
                 )
             for opt in q.options:
-                has_visual = bool(getattr(opt, "image_path", None)) or bool(getattr(q, "rich_elements", None))
-                if not (opt.text and opt.text.strip()) and not has_visual:
+                opt_has_image = bool(getattr(opt, "image_path", None) and opt.image_path.strip())
+                if not (opt.text and opt.text.strip()) and not opt_has_image:
                     repair_empty_option(q, opt)
         elif q.type == SectionType.PART_II_TF:
             if len(q.sub_statements) != 4:
@@ -100,8 +100,7 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                     f"Question '{q.id}' (Câu {q.number}) must have statement labels ordered ['a', 'b', 'c', 'd'] (found {tf_labels})."
                 )
             for stmt in q.sub_statements:
-                has_visual = bool(getattr(q, "rich_elements", None))
-                if not (stmt.statement and stmt.statement.strip()) and not has_visual:
+                if not (stmt.statement and stmt.statement.strip()):
                     repair_empty_tf_statement(q, stmt)
 
         # Rich elements validation

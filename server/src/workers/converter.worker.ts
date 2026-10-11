@@ -179,12 +179,12 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
 
     await emitProgress(20, 'Invoking Python Converter Bridge');
     const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
-      aiCallSec: 120,
+      aiCallSec: 45,
       chromePdfSec: 60,
-      pdfHeavyTaskSec: 180,
-      converterTaskSec: 300
+      pdfHeavyTaskSec: 300,
+      converterTaskSec: 600
     }));
-    const watchdogMs = (engineTimeouts.converterTaskSec || 300) * 1000;
+    const watchdogMs = (engineTimeouts.converterTaskSec || 600) * 1000;
     const cliResult = await executeConverterCli(resolvePythonBin(), resolveCliScript(), pyArgs, emitProgress, watchdogMs);
 
     const resolvedOutputPath = cliResult.output_path || path.join(processedDir, `${path.parse(fileRecord.originalName).name}.${targetFormat}`);

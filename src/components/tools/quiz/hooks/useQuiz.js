@@ -58,6 +58,7 @@ class QuizManager {
     this.disconnectEvents = null;
     this.uploadAbortController = null;
     this.driveProbeTimer = null;
+    this.driveProbeAbortController = null;
   }
 
   getState() {
@@ -108,6 +109,10 @@ class QuizManager {
     if (this.driveProbeTimer) {
       clearTimeout(this.driveProbeTimer);
       this.driveProbeTimer = null;
+    }
+    if (this.driveProbeAbortController) {
+      this.driveProbeAbortController.abort();
+      this.driveProbeAbortController = null;
     }
     this.state.file = {
       name: file.name,
@@ -160,6 +165,12 @@ class QuizManager {
       return;
     }
 
+    if (this.driveProbeAbortController) {
+      this.driveProbeAbortController.abort();
+    }
+    this.driveProbeAbortController = new AbortController();
+    const { signal } = this.driveProbeAbortController;
+
     this.state.driveProbeStatus = 'probing';
     this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
     this.notify('drive-probe-updated');
@@ -168,9 +179,13 @@ class QuizManager {
       const resp = await fetch('/api/v1/files/probe-gdrive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: cleanUrl })
+        body: JSON.stringify({ url: cleanUrl }),
+        signal
       });
+      if (this.state.gdriveUrl !== cleanUrl) return;
       const json = await resp.json();
+      if (this.state.gdriveUrl !== cleanUrl) return;
+
       if (json.success && json.data?.valid) {
         this.state.driveProbeStatus = 'valid';
         this.state.driveProbeMessage = 'Tệp hợp lệ và sẵn sàng xử lý';
@@ -190,6 +205,8 @@ class QuizManager {
         this.notify('drive-probe-updated');
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
+      if (this.state.gdriveUrl !== cleanUrl) return;
       this.state.driveProbeStatus = 'invalid';
       this.state.driveProbeMessage = 'Không thể kết nối đến máy chủ để xác thực link Google Drive.';
       this.state.driveProbeData = null;
@@ -211,6 +228,10 @@ class QuizManager {
     if (this.driveProbeTimer) {
       clearTimeout(this.driveProbeTimer);
       this.driveProbeTimer = null;
+    }
+    if (this.driveProbeAbortController) {
+      this.driveProbeAbortController.abort();
+      this.driveProbeAbortController = null;
     }
 
     // If user enters a drive link, clear any previously chosen file

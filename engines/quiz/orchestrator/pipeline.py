@@ -228,14 +228,15 @@ class QuizPipelineOrchestrator:
                 extraction_plan = index_service.build_extraction_plan(
                     neighborhood=neighborhood,
                     start_q=plan_start_q,
-                    end_q=plan_start_q + detected_count - 1,
-                    count=detected_count,
+                    end_q=plan_start_q + plan_count - 1,
+                    count=plan_count,
                     doc_reps=page_representations,
                     ai_provider=self.provider,
                     raise_on_mismatch=False,
                     allow_partial=True
                 )
-                partial_note = f"Đã trích xuất {detected_count}/{plan_count} câu hỏi có sẵn trên tài liệu"
+                actual_k = len(extraction_plan.target_question_numbers)
+                partial_note = f"Đã trích xuất {actual_k}/{plan_count} câu hỏi có sẵn trên tài liệu"
                 logger.info(f"Flexible publishing enabled: {partial_note}")
                 emit(JobStage.PLANNING, 28, f"📋 {partial_note} - chuẩn bị xuất bản... ✨")
             else:

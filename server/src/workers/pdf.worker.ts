@@ -253,12 +253,12 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
       }
       if (options?.stripMetadata) pyArgs.push('--strip-metadata');
       const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
-        aiCallSec: 120,
+        aiCallSec: 45,
         chromePdfSec: 60,
-        pdfHeavyTaskSec: 180,
-        converterTaskSec: 300
+        pdfHeavyTaskSec: 300,
+        converterTaskSec: 600
       }));
-      const watchdogMs = (engineTimeouts.pdfHeavyTaskSec || 180) * 1000;
+      const watchdogMs = (engineTimeouts.pdfHeavyTaskSec || 300) * 1000;
       await executePythonEngine(pythonBin, scriptPath, pyArgs, emitProgress, watchdogMs);
     }
 

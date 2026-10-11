@@ -8,10 +8,10 @@ import { getStorageAuthHeaders } from '../../utilities/adminAuth.js';
 import { showToast } from '../../utilities/toast.js';
 
 let cachedTimeouts = {
-  aiCallSec: 120,
+  aiCallSec: 45,
   chromePdfSec: 60,
-  pdfHeavyTaskSec: 180,
-  converterTaskSec: 300
+  pdfHeavyTaskSec: 300,
+  converterTaskSec: 600
 };
 
 export function renderEngineTimeoutsCard(timeouts = null) {
@@ -76,7 +76,7 @@ export function renderEngineTimeoutsCard(timeouts = null) {
           />
           <div class="flex justify-between text-[10px] text-zinc-400 font-mono">
             <span>10s</span>
-            <span>Mặc định: 120s</span>
+            <span>Mặc định: 45s</span>
             <span>600s</span>
           </div>
         </div>
@@ -126,7 +126,7 @@ export function renderEngineTimeoutsCard(timeouts = null) {
           />
           <div class="flex justify-between text-[10px] text-zinc-400 font-mono">
             <span>30s</span>
-            <span>Mặc định: 180s</span>
+            <span>Mặc định: 300s</span>
             <span>1800s</span>
           </div>
         </div>
@@ -151,7 +151,7 @@ export function renderEngineTimeoutsCard(timeouts = null) {
           />
           <div class="flex justify-between text-[10px] text-zinc-400 font-mono">
             <span>30s</span>
-            <span>Mặc định: 300s</span>
+            <span>Mặc định: 600s</span>
             <span>3600s</span>
           </div>
         </div>

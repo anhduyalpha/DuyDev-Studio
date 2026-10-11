@@ -105,10 +105,10 @@ export interface EngineTimeoutsConfig {
 }
 
 export const DEFAULT_ENGINE_TIMEOUTS: EngineTimeoutsConfig = {
-  aiCallSec: 120,
+  aiCallSec: 45,
   chromePdfSec: 60,
-  pdfHeavyTaskSec: 180,
-  converterTaskSec: 300
+  pdfHeavyTaskSec: 300,
+  converterTaskSec: 600
 };
 
 function getSystemConfigPath(): string {
@@ -1169,6 +1169,10 @@ export class AdminTelemetryService {
         stylePresetId: parsedOptions.stylePresetId || 'blue_black_classic',
         apiKey: parsedOptions.apiKey
       };
+      const existingQueueJob = await quizQueue.getJob(job.id).catch(() => null);
+      if (existingQueueJob) {
+        await existingQueueJob.remove().catch(() => {});
+      }
       await enqueueQuizJob(payload, { jobId: job.id });
     } else if (jt.startsWith('converter') || jt.includes('transcode') || jt.includes('convert')) {
       const payload = {
@@ -1177,6 +1181,10 @@ export class AdminTelemetryService {
         targetFormat: parsedOptions.targetFormat || 'pdf',
         options: parsedOptions.options || parsedOptions
       };
+      const existingQueueJob = await converterQueue.getJob(job.id).catch(() => null);
+      if (existingQueueJob) {
+        await existingQueueJob.remove().catch(() => {});
+      }
       await enqueueConverterJob(payload, { jobId: job.id });
     } else {
       // Default / PDF Studio Pro
@@ -1187,6 +1195,10 @@ export class AdminTelemetryService {
         operation,
         options: parsedOptions.options || parsedOptions
       };
+      const existingQueueJob = await taskQueue.getJob(job.id).catch(() => null);
+      if (existingQueueJob) {
+        await existingQueueJob.remove().catch(() => {});
+      }
       await enqueueJob(job.type, payload, { jobId: job.id });
     }
 
