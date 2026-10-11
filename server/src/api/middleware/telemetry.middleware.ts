@@ -15,6 +15,8 @@ interface SecondBucket {
   status4xx: number;
   status5xx: number;
   totalLatencyMs: number;
+  status4xxNoise: number;
+  status4xxValid: number;
 }
 
 export interface IpRequestLogItem {
@@ -62,6 +64,56 @@ export function parseDeviceSummary(ua: string): string {
   else if (/curl|python|wget|postman/i.test(ua)) browser = 'CLI/Bot';
 
   return `${os} · ${browser}`;
+}
+
+/**
+ * Distinguishes automated web bot scanning probes (such as .env, wp-login, phpmyadmin, or 403 blocked probes)
+ * from genuine application user requests.
+ */
+export function isBotScannerNoise(url: string, statusCode: number): boolean {
+  if (statusCode !== 404 && statusCode !== 403 && statusCode !== 400) {
+    return false;
+  }
+  const clean = (url || '').toLowerCase().split('?')[0];
+  const scannerPatterns = [
+    '.env',
+    'wp-login',
+    'wp-admin',
+    'wp-content',
+    'wp-includes',
+    'phpmyadmin',
+    'pma',
+    'mysql',
+    '.git',
+    '.svn',
+    '.hg',
+    'xmlrpc.php',
+    'actuator',
+    'swagger',
+    'api-docs',
+    'boaform',
+    'shell',
+    'setup.cgi',
+    '.aws',
+    '.ssh',
+    'config.json',
+    'eval-stdin',
+    'solr',
+    'telescope',
+    'phpunit',
+    'vendor',
+    'cgi-bin',
+    'autodiscover',
+    'webdav'
+  ];
+  if (scannerPatterns.some(pat => clean.includes(pat))) {
+    return true;
+  }
+  // All 403 Forbidden responses (IP block rules, blocked crawlers) are noise isolation candidates
+  if (statusCode === 403) {
+    return true;
+  }
+  return false;
 }
 
 export class TelemetryTracker {
@@ -128,6 +180,8 @@ export class TelemetryTracker {
     }
 
     const statusCode = reply.statusCode;
+    const route = req.raw?.url || req.url || '/';
+    const isNoise = isBotScannerNoise(route, statusCode);
 
     let bucket = this.buckets.get(nowSec);
     if (!bucket) {
@@ -140,7 +194,9 @@ export class TelemetryTracker {
         status3xx: 0,
         status4xx: 0,
         status5xx: 0,
-        totalLatencyMs: 0
+        totalLatencyMs: 0,
+        status4xxNoise: 0,
+        status4xxValid: 0
       };
       this.buckets.set(nowSec, bucket);
     }
@@ -152,7 +208,14 @@ export class TelemetryTracker {
 
     if (statusCode >= 200 && statusCode < 300) bucket.status2xx++;
     else if (statusCode >= 300 && statusCode < 400) bucket.status3xx++;
-    else if (statusCode >= 400 && statusCode < 500) bucket.status4xx++;
+    else if (statusCode >= 400 && statusCode < 500) {
+      bucket.status4xx++;
+      if (isNoise) {
+        bucket.status4xxNoise++;
+      } else {
+        bucket.status4xxValid++;
+      }
+    }
     else if (statusCode >= 500) bucket.status5xx++;
 
     // Record per-IP tracking
@@ -164,7 +227,6 @@ export class TelemetryTracker {
     const countryHeader = req.headers['cf-ipcountry'] as string;
     const country = countryHeader || (isLan ? 'LAN' : 'VN');
     const userAgent = (req.headers['user-agent'] as string) || 'Unknown';
-    const route = req.raw?.url || req.url || '/';
     const method = req.method || 'GET';
     const nowIso = new Date().toISOString();
 
@@ -258,6 +320,9 @@ export class TelemetryTracker {
     let status4xxLast60 = 0;
     let status5xxLast60 = 0;
 
+    let status4xxNoiseLast60 = 0;
+    let status4xxValidLast60 = 0;
+
     // Build timeline for the last 60 seconds (oldest to newest)
     for (let i = this.WINDOW_SECONDS - 1; i >= 0; i--) {
       const sec = currentSec - i;
@@ -271,6 +336,8 @@ export class TelemetryTracker {
         status3xxLast60 += bucket.status3xx;
         status4xxLast60 += bucket.status4xx;
         status5xxLast60 += bucket.status5xx;
+        status4xxNoiseLast60 += bucket.status4xxNoise || 0;
+        status4xxValidLast60 += bucket.status4xxValid || 0;
 
         const avgLat = bucket.requests > 0 ? Math.round(bucket.totalLatencyMs / bucket.requests) : 0;
         timeline.push({
@@ -311,6 +378,18 @@ export class TelemetryTracker {
 
     const avgLatency = sumRequestsLast60 > 0 ? Math.round(sumLatencyLast60 / sumRequestsLast60) : 0;
 
+    // System Health & Error Rate isolates bot scanner noise (genuine requests only)
+    const validRequestsLast60 = Math.max(0, sumRequestsLast60 - status4xxNoiseLast60);
+    const errorRatePercent = validRequestsLast60 > 0
+      ? Math.round((status5xxLast60 / validRequestsLast60) * 1000) / 10
+      : 0;
+
+    const systemHealth = status5xxLast60 === 0
+      ? 'HEALTHY'
+      : status5xxLast60 < 5
+      ? 'DEGRADED'
+      : 'UNHEALTHY';
+
     return {
       live: {
         rps: liveRps,
@@ -327,16 +406,30 @@ export class TelemetryTracker {
         totalBytesIn: this.totalBytesIn,
         totalBytesOut: this.totalBytesOut,
         lanRequests: this.lanRequests,
-        wanRequests: this.wanRequests
+        wanRequests: this.wanRequests,
+        errorRatePercent,
+        systemHealth,
+        scannerNoiseIsolated: status4xxNoiseLast60,
+        validRequests: validRequestsLast60
       },
       statusCodes: {
         c2xx: status2xxLast60,
         c3xx: status3xxLast60,
         c4xx: status4xxLast60,
+        c4xxValid: status4xxValidLast60,
+        c4xxNoise: status4xxNoiseLast60,
         c5xx: status5xxLast60
+      },
+      health: {
+        systemHealth,
+        errorRatePercent,
+        scannerNoiseIsolated: status4xxNoiseLast60,
+        validRequests: validRequestsLast60
       },
       last60s: {
         totalRequests: sumRequestsLast60,
+        validRequests: validRequestsLast60,
+        scannerNoiseIsolated: status4xxNoiseLast60,
         mbIn: Math.round((sumBytesInLast60 / (1024 * 1024)) * 100) / 100,
         mbOut: Math.round((sumBytesOutLast60 / (1024 * 1024)) * 100) / 100,
         status: {

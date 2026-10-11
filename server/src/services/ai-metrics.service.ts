@@ -37,6 +37,9 @@ export interface AiCallLog {
   errorDetails?: string;
   promptSnippet?: string;
   errorMsg?: string;
+  isFallbackRecovered?: boolean;
+  status?: string;
+  recoveredByKey?: string;
 }
 
 interface StoredAiMetrics {
@@ -173,7 +176,10 @@ export class AiMetricsService {
     keyName?: string;
     errorDetails?: string;
     promptSnippet?: string;
-  }) {
+    isFallbackRecovered?: boolean;
+    status?: string;
+    recoveredByKey?: string;
+  }): AiCallLog {
     const now = Date.now();
     const today = new Date().toISOString().split('T')[0];
 
@@ -192,7 +198,7 @@ export class AiMetricsService {
     this.metrics.cumulative.totalCompletionTokens += cTokens;
     this.metrics.cumulative.totalTokens += tTokens;
 
-    if (data.statusCode >= 400) {
+    if (data.statusCode >= 400 && !data.isFallbackRecovered && data.status !== 'FALLBACK_RECOVERED') {
       this.metrics.cumulative.errorCalls++;
       if (data.statusCode === 429) {
         this.metrics.cumulative.rateLimitedCalls++;
@@ -222,7 +228,10 @@ export class AiMetricsService {
       keyName: data.keyName,
       errorDetails: data.errorDetails,
       promptSnippet: data.promptSnippet,
-      errorMsg: data.errorMsg
+      errorMsg: data.errorMsg,
+      isFallbackRecovered: data.isFallbackRecovered,
+      status: data.status,
+      recoveredByKey: data.recoveredByKey
     };
 
     this.metrics.recentLogs.unshift(logItem);
@@ -231,6 +240,7 @@ export class AiMetricsService {
     }
 
     this.saveMetrics();
+    return logItem;
   }
 
   public getLiveRateLimits() {
@@ -361,12 +371,34 @@ export class AiMetricsService {
     }
 
     let lastError: any = null;
+    const failedAttemptLogs: AiCallLog[] = [];
 
     for (const key of activeKeys) {
       const startTime = Date.now();
       try {
         const result = await fn(key);
         const latencyMs = Date.now() - startTime;
+
+        // If prior attempts failed but current fallback key succeeded:
+        if (failedAttemptLogs.length > 0) {
+          for (const failedLog of failedAttemptLogs) {
+            failedLog.isFallbackRecovered = true;
+            failedLog.status = 'FALLBACK_RECOVERED';
+            failedLog.recoveredByKey = key.name;
+
+            // Revert error increment so it does not count as a global failure
+            if (failedLog.statusCode >= 400) {
+              if (this.metrics.cumulative.errorCalls > 0) {
+                this.metrics.cumulative.errorCalls--;
+              }
+              if (failedLog.statusCode === 429 && this.metrics.cumulative.rateLimitedCalls > 0) {
+                this.metrics.cumulative.rateLimitedCalls--;
+              }
+            }
+          }
+          this.saveMetrics();
+        }
+
         return { result, usedKey: key, latencyMs };
       } catch (err: any) {
         const latencyMs = Date.now() - startTime;
@@ -374,7 +406,7 @@ export class AiMetricsService {
         const statusCode = Number(err?.status || err?.statusCode) || 504;
         const errorDetails = err?.message || 'Upstream did not respond or returned error';
 
-        this.recordCall({
+        const callLog = this.recordCall({
           module: context?.module || 'ai-execution',
           provider: key.provider,
           model: key.model,
@@ -386,6 +418,7 @@ export class AiMetricsService {
           errorDetails,
           promptSnippet: context?.promptSnippet
         });
+        failedAttemptLogs.push(callLog);
 
         logger.warn(
           { keyId: key.id, keyName: key.name, latencyMs, statusCode, errorDetails },

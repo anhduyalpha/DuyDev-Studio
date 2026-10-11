@@ -70,6 +70,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       rootCauseTitle: 'Unknown Error (Không xác định nguyên nhân)',
       normalizedSummary: 'Unknown error occurred.',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: 'Kiểm tra optionsJson và worker trace log để tái hiện lỗi.',
       signature: 'system::unknown_error'
     };
@@ -83,6 +84,89 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
   else if (t.includes('pdf')) category = 'PDF Studio Pro';
   else if (t.includes('quiz')) category = 'Quiz Generator';
 
+  // 0a. USER_CANCELLED: User voluntarily cancelled the task
+  if (
+    lower.includes('user_cancelled') ||
+    lower.includes('user cancelled') ||
+    lower.includes('người dùng huỷ') ||
+    lower.includes('người dùng hủy') ||
+    lower.includes('cancelled by user') ||
+    lower.includes('job cancelled') ||
+    lower.includes('tác vụ đã bị hủy') ||
+    lower.includes('tác vụ bị hủy') ||
+    lower.includes('aborted by user') ||
+    lower.includes('request aborted') ||
+    lower.includes('hủy bởi người dùng')
+  ) {
+    return {
+      category: 'User Interaction',
+      rootCauseTitle: 'User Cancelled Task (Người dùng chủ động hủy tác vụ)',
+      normalizedSummary: 'Processing task was voluntarily cancelled by user request.',
+      signature: 'user::cancelled',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Thao tác chủ động từ người dùng. Không phải lỗi phần mềm hay hệ thống.'
+    };
+  }
+
+  // 0b. BAD_INPUT: User uploaded empty or malformed/corrupted file
+  if (
+    lower.includes('bad_input') ||
+    lower.includes('bad input') ||
+    lower.includes('tệp rỗng') ||
+    lower.includes('file rỗng') ||
+    lower.includes('empty file') ||
+    lower.includes('0 bytes') ||
+    lower.includes('tệp không có nội dung') ||
+    lower.includes('empty input') ||
+    lower.includes('tệp tải lên rỗng') ||
+    lower.includes('tệp đầu vào rỗng') ||
+    lower.includes('corrupted input') ||
+    lower.includes('tệp bị hỏng') ||
+    lower.includes('tệp đầu vào hỏng') ||
+    lower.includes('không có dữ liệu hợp lệ') ||
+    lower.includes('invalid input')
+  ) {
+    return {
+      category: 'Input Validation',
+      rootCauseTitle: 'Bad Input / Empty File (Tệp đầu vào rỗng hoặc sai cấu trúc)',
+      normalizedSummary: 'Input file is empty (0 bytes) or malformed/corrupted by user upload.',
+      signature: 'user::bad_input',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Yêu cầu người dùng kiểm tra tệp nguồn. Tệp tải lên rỗng hoặc cấu trúc bị lỗi trước khi tải lên hệ thống.'
+    };
+  }
+
+  // 0c. ACCESS_RESTRICTED: Google Drive private or non-public link
+  if (
+    (lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) &&
+    (lower.includes('private') || lower.includes('restricted') || lower.includes('access denied') || lower.includes('permission denied') || lower.includes('quyền riêng tư') || lower.includes('chưa công khai') || lower.includes('không công khai') || lower.includes('403') || lower.includes('404'))
+  ) {
+    return {
+      category: 'Drive / Access Permission',
+      rootCauseTitle: 'Access Restricted / Private Link (Link Google Drive chưa công khai)',
+      normalizedSummary: 'Cannot access Google Drive resource: link is private or restricted by owner.',
+      signature: 'user::access_restricted',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Yêu cầu người dùng bật chia sẻ công khai cho liên kết Google Drive (Bất kỳ ai có đường liên kết đều có thể xem).'
+    };
+  }
+
+  // 0d. Core Engine Fatal Crash / Segfault / Pointer Exception
+  if (lower.includes('segmentation fault') || lower.includes('sigsegv') || lower.includes('core dump') || lower.includes('pointer exception') || lower.includes('out of memory')) {
+    return {
+      category,
+      rootCauseTitle: 'Engine Fatal Crash / Segmentation Fault (Lỗi crash lõi nhị phân)',
+      normalizedSummary: 'Low-level engine crashed unexpectedly (SIGSEGV / Out-Of-Memory / Segmentation Fault).',
+      signature: `${category.toLowerCase().replace(/\s+/g, '_')}::fatal_crash`,
+      severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
+      suggestedFix: 'Kiểm tra tệp nhị phân lõi Python/C++ và phiên bản phụ thuộc. Tránh xử lý tài liệu bị hỏng sâu gây tràn bộ nhớ.'
+    };
+  }
+
   // 1. CairoSVG Missing
   if (lower.includes('cairosvg')) {
     return {
@@ -91,6 +175,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: "CairoSVG library is not installed: SVG conversion requires CairoSVG ('pip install cairosvg').",
       signature: 'converter::cairosvg_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt CairoSVG trên máy chủ ('sudo apt install libcairo2 && pip install cairosvg')."
     };
   }
@@ -103,6 +188,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: "PyPDF2 module is not installed ('pip install PyPDF2' or migrate to pypdf / pymupdf).",
       signature: 'converter::pypdf2_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt PyPDF2 ('pip install PyPDF2') hoặc chuyển sang sử dụng PyMuPDF (fitz)."
     };
   }
@@ -115,6 +201,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: 'LibreOffice headless binary is not available for office document conversion.',
       signature: 'converter::libreoffice_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt LibreOffice trên máy chủ ('sudo apt install libreoffice-headless libreoffice-writer libreoffice-calc')."
     };
   }
@@ -127,6 +214,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: "pdf2docx library is required for PDF to DOCX conversion ('pip install pdf2docx').",
       signature: 'pdf::pdf2docx_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt pdf2docx trong môi trường Python: 'pip install pdf2docx'."
     };
   }
@@ -139,6 +227,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: "NameError: name 'Any' is not defined in quiz engine Python script.",
       signature: 'quiz::nameerror_any',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Thêm 'from typing import Any' vào đầu file Python bị lỗi (engines/quiz/quiz_pipeline.py hoặc orchestrator)."
     };
   }
@@ -151,6 +240,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: "AttributeError: type object 'DiagnosticLayer' has no attribute 'RECONSTRUCTION_FAILURE'.",
       signature: 'quiz::diagnostic_layer_reconstruction_failure',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Định nghĩa enum / hằng số RECONSTRUCTION_FAILURE trong class DiagnosticLayer hoặc import đúng module."
     };
   }
@@ -163,6 +253,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: 'TimeoutError: The read operation timed out while communicating with Agnes AI API.',
       signature: 'quiz::agnes_timeout',
       severity: 'TIMEOUT',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Kiểm tra độ trễ mạng đến endpoint Agnes AI, mở rộng timeout hoặc kích hoạt fallback API Key dự phòng."
     };
   }
@@ -174,7 +265,8 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       rootCauseTitle: 'Google Drive Download Failure (HTTP 404 / Quyền truy cập riêng tư)',
       normalizedSummary: 'Cannot download file from Google Drive: HTTP 404 Not Found or link is not public.',
       signature: 'quiz::gdrive_download_404',
-      severity: 'NETWORK',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Đảm bảo liên kết Google Drive được bật chia sẻ công khai ('Bất kỳ ai có đường liên kết đều có thể xem')."
     };
   }
@@ -187,18 +279,20 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: 'Argument where of type FileRecordWhereUniqueInput received undefined id.',
       signature: 'backend::prisma_filerecord_undefined',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Kiểm tra logic gọi prisma.fileRecord.findUnique: đảm bảo tham số fileId đã được truyền trước khi query."
     };
   }
 
   // 10. Question Range Mismatch
-  if (lower.includes('dải câu hỏi') || lower.includes('không thấy đủ số câu') || lower.includes('chưa thấy đủ số câu') || lower.includes('nghía lại số trang')) {
+  if (lower.includes('dải câu hỏi') || lower.includes('không thấy đủ số câu') || lower.includes('chưa thấy đủ số câu') || lower.includes('nghía lại số trang') || (lower.includes('số câu') && (lower.includes('không khớp') || lower.includes('khác'))) || lower.includes('question count mismatch')) {
     return {
       category: 'Quiz Generator',
       rootCauseTitle: 'Question Count Range Mismatch (Dải câu hỏi trích xuất không khớp)',
       normalizedSummary: 'Extracted question count does not match user requested range.',
       signature: 'quiz::question_count_mismatch',
-      severity: 'WARNING',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Kiểm tra định dạng đề thi PDF (số câu, thứ tự cột) hoặc kiểm tra lại khoảng trang người dùng đã chỉ định."
     };
   }
@@ -210,7 +304,8 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       rootCauseTitle: 'No Questions Detected on Selected Page (Không tìm thấy câu hỏi trên trang)',
       normalizedSummary: 'No multiple-choice questions found within the selected document pages.',
       signature: 'quiz::no_questions_on_page',
-      severity: 'WARNING',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Kiểm tra xem trang đã chọn có chứa câu hỏi trắc nghiệm hay là trang bìa/mục lục."
     };
   }
@@ -222,7 +317,8 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       rootCauseTitle: 'Question Option Text Empty (Lựa chọn A/B/C/D bị rỗng)',
       normalizedSummary: "Extracted question has empty option text (e.g. Option 'A' is blank).",
       signature: 'quiz::empty_option_text',
-      severity: 'WARNING',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Cải thiện regex bóc tách phương án lựa chọn trong quiz_pipeline.py đối với câu hỏi có bảng biểu."
     };
   }
@@ -235,6 +331,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       normalizedSummary: 'Operation timed out: Process exceeded maximum execution time watchdog.',
       signature: `${category.toLowerCase().replace(/\s+/g, '_')}::timeout`,
       severity: 'TIMEOUT',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Tối ưu hóa thuật toán xử lý hoặc tăng ngưỡng giới hạn watchdog timeout đối với các tệp lớn."
     };
   }
@@ -248,6 +345,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
     normalizedSummary: norm,
     signature: sig,
     severity: 'ERROR',
+    errorClass: 'SYSTEM_ERROR',
     suggestedFix: 'Kiểm tra log chi tiết và optionsJson để tái hiện lỗi.'
   };
 }
@@ -301,29 +399,42 @@ function getJobTypeBadge(type) {
  */
 export function renderFailedJobsInspector(jobs = []) {
   cachedFailedJobs = jobs;
-  const filteredJobs = activeTypeFilter === 'all'
-    ? jobs
-    : jobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+  const systemErrorsCount = jobs.filter(j => {
+    const ec = j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass;
+    return ec === 'SYSTEM_ERROR';
+  }).length;
+  const userActionsCount = jobs.length - systemErrorsCount;
+
+  let filteredJobs = jobs;
+  if (activeTypeFilter === 'system') {
+    filteredJobs = jobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
+  } else if (activeTypeFilter === 'user') {
+    filteredJobs = jobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
+  } else if (activeTypeFilter !== 'all') {
+    filteredJobs = jobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+  }
+
+  const badgeHtml = systemErrorsCount === 0
+    ? `<span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">0 lỗi hệ thống · ${userActionsCount} thao tác người dùng</span>`
+    : `<span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">${systemErrorsCount} lỗi hệ thống · ${userActionsCount} người dùng</span>`;
 
   return `
     <div id="adminFailedJobsCard" class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-5">
       <!-- Header -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0 shadow-inner">
-            <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+          <div class="w-10 h-10 rounded-2xl ${systemErrorsCount === 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'} border flex items-center justify-center shrink-0 shadow-inner">
+            <i data-lucide="${systemErrorsCount === 0 ? 'shield-check' : 'alert-octagon'}" class="w-5 h-5"></i>
           </div>
           <div>
             <div class="flex items-center gap-2">
               <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 Nhật Ký Lỗi & Tác Vụ Thất Bại (Failed Jobs Diagnostics)
               </h3>
-              <span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${jobs.length > 0 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'}">
-                ${jobs.length} lỗi
-              </span>
+              ${badgeHtml}
             </div>
             <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Truy vết nguyên nhân gốc rễ, stack trace và tham số đầu vào khi các worker nền gặp sự cố
+              Phân tách rạch ròi giữa lỗi hệ thống (core engine) và thao tác người dùng (hủy, tệp rỗng, link riêng tư)
             </p>
           </div>
         </div>
@@ -383,6 +494,20 @@ export function renderFailedJobsInspector(jobs = []) {
         </button>
         <button
           type="button"
+          data-filter-type="system"
+          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'system' ? 'bg-rose-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+        >
+          Lỗi Hệ Thống (${systemErrorsCount})
+        </button>
+        <button
+          type="button"
+          data-filter-type="user"
+          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'user' ? 'bg-sky-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+        >
+          Thao Tác Người Dùng (${userActionsCount})
+        </button>
+        <button
+          type="button"
           data-filter-type="pdf"
           class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'pdf' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
@@ -433,19 +558,48 @@ function renderFailedJobsItemsMarkup(jobs) {
     const duration = job.durationMs != null ? `${(job.durationMs / 1000).toFixed(2)}s` : '--';
     const cleanError = escapeHtml(normalizeErrorMessageToEnglish(job.errorMessage));
     const jsonPretty = escapeHtml(typeof job.options === 'object' ? JSON.stringify(job.options, null, 2) : String(job.optionsRaw || '{}'));
+    const semantic = extractSemanticErrorDetailsClient(job.errorMessage, job.type);
+    const isUserAction = (job.errorClass === 'USER_ACTION') || (semantic.errorClass === 'USER_ACTION');
+
+    const classificationBadge = isUserAction
+      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center gap-1"><i data-lucide="user-check" class="w-3 h-3 inline"></i> THAO TÁC NGƯỜI DÙNG</span>`
+      : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25 flex items-center gap-1"><i data-lucide="alert-octagon" class="w-3 h-3 inline"></i> LỖI HỆ THỐNG</span>`;
+
+    const statusBadge = isUserAction
+      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">USER_ACTION</span>`
+      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">CRITICAL</span>`;
+
+    const calloutBox = isUserAction
+      ? `
+        <div class="p-3 rounded-xl bg-sky-500/5 dark:bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-mono space-y-1">
+          <div class="flex items-start gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-sky-500 shrink-0 mt-0.5"></i>
+            <div class="flex-1 whitespace-pre-wrap break-all leading-relaxed"><strong class="text-sky-600 dark:text-sky-400">[Đầu vào / Thao tác người dùng]:</strong> ${cleanError}</div>
+          </div>
+          ${semantic.suggestedFix ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-sky-500/10">💡 Gợi ý: ${escapeHtml(semantic.suggestedFix)}</div>` : ''}
+        </div>
+      `
+      : `
+        <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-300 text-xs font-mono space-y-1">
+          <div class="flex items-start gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 shrink-0 mt-0.5"></i>
+            <div class="flex-1 whitespace-pre-wrap break-all leading-relaxed"><strong class="text-rose-600 dark:text-rose-400">[Lỗi hệ thống]:</strong> ${cleanError}</div>
+          </div>
+          ${semantic.suggestedFix ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-rose-500/10">💡 Khắc phục: ${escapeHtml(semantic.suggestedFix)}</div>` : ''}
+        </div>
+      `;
 
     return `
-      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 space-y-3 hover:border-rose-500/30 transition shadow-xs">
+      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 space-y-3 ${isUserAction ? 'hover:border-sky-500/30' : 'hover:border-rose-500/30'} transition shadow-xs">
         <!-- Top Row -->
         <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-2">
             ${getJobTypeBadge(job.type)}
+            ${classificationBadge}
             <span class="font-mono text-zinc-500 dark:text-zinc-400 text-[11px]" title="${escapeHtml(job.id)}">
               #${escapeHtml(job.id.substring(0, 10))}...
             </span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-              FAILED
-            </span>
+            ${statusBadge}
           </div>
 
           <div class="flex items-center gap-2">
@@ -466,12 +620,7 @@ function renderFailedJobsItemsMarkup(jobs) {
         </div>
 
         <!-- Error Reason Callout -->
-        <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-300 text-xs font-mono space-y-1">
-          <div class="flex items-start gap-2">
-            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 shrink-0 mt-0.5"></i>
-            <div class="flex-1 whitespace-pre-wrap break-all leading-relaxed">${cleanError}</div>
-          </div>
-        </div>
+        ${calloutBox}
 
         <!-- Expandable Options / Payload Container -->
         <div>
@@ -518,16 +667,29 @@ export function attachFailedJobsListeners(container, onReload) {
           cachedFailedJobs = json.data.jobs;
           const listEl = container.querySelector('#adminFailedJobsList');
           if (listEl) {
-            const filtered = activeTypeFilter === 'all'
-              ? cachedFailedJobs
-              : cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+            let filtered = cachedFailedJobs;
+            if (activeTypeFilter === 'system') {
+              filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
+            } else if (activeTypeFilter === 'user') {
+              filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
+            } else if (activeTypeFilter !== 'all') {
+              filtered = cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+            }
             listEl.innerHTML = renderFailedJobsItemsMarkup(filtered);
           }
           const badgeEl = container.querySelector('#adminFailedJobsCountBadge');
           if (badgeEl) {
-            badgeEl.textContent = `${cachedFailedJobs.length} lỗi`;
+            const sysCount = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR').length;
+            const usrCount = cachedFailedJobs.length - sysCount;
+            if (sysCount === 0) {
+              badgeEl.textContent = `0 lỗi hệ thống · ${usrCount} thao tác người dùng`;
+              badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+            } else {
+              badgeEl.textContent = `${sysCount} lỗi hệ thống · ${usrCount} người dùng`;
+              badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25';
+            }
           }
-          showToast(`Đã làm mới: tìm thấy ${cachedFailedJobs.length} tác vụ lỗi`, 'info');
+          showToast(`Đã làm mới: tìm thấy ${cachedFailedJobs.length} tác vụ`, 'info');
         }
       } catch (err) {
         showToast(`Lỗi khi nạp danh sách: ${err.message}`, 'error');
@@ -673,18 +835,27 @@ export function attachFailedJobsListeners(container, onReload) {
       activeTypeFilter = type;
       container.querySelectorAll('.btn-failed-filter').forEach(b => {
         const isActive = b.dataset.filterType === type;
+        let activeClass = 'bg-orange-500 text-white font-bold shadow-xs';
+        if (type === 'system') activeClass = 'bg-rose-500 text-white font-bold shadow-xs';
+        else if (type === 'user') activeClass = 'bg-sky-500 text-white font-bold shadow-xs';
+
         b.className = `btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${
           isActive
-            ? 'bg-orange-500 text-white font-bold shadow-xs'
+            ? activeClass
             : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
         }`;
       });
 
       const listEl = container.querySelector('#adminFailedJobsList');
       if (listEl) {
-        const filtered = activeTypeFilter === 'all'
-          ? cachedFailedJobs
-          : cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+        let filtered = cachedFailedJobs;
+        if (activeTypeFilter === 'system') {
+          filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
+        } else if (activeTypeFilter === 'user') {
+          filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
+        } else if (activeTypeFilter !== 'all') {
+          filtered = cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+        }
         listEl.innerHTML = renderFailedJobsItemsMarkup(filtered);
         if (window.lucide) window.lucide.createIcons();
       }
@@ -771,6 +942,7 @@ export function generateClientDeduplicatedExport(jobs = []) {
     if (!groupMap.has(sig)) {
       groupMap.set(sig, {
         category: semantic.category,
+        errorClass: semantic.errorClass,
         rootCauseTitle: semantic.rootCauseTitle,
         normalizedSummary: semantic.normalizedSummary,
         severity: semantic.severity,
@@ -801,6 +973,8 @@ export function generateClientDeduplicatedExport(jobs = []) {
   const uniqueCount = groups.length;
   const duplicatesMerged = Math.max(0, totalErrors - uniqueCount);
   const reductionPct = totalErrors > 0 ? ((duplicatesMerged / totalErrors) * 100).toFixed(1) : '0';
+  const totalSystemErrors = groups.filter(g => g.errorClass === 'SYSTEM_ERROR').reduce((sum, g) => sum + g.count, 0);
+  const totalUserActions = totalErrors - totalSystemErrors;
 
   const sep100 = '='.repeat(100);
   const sepDash = '-'.repeat(100);
@@ -814,6 +988,8 @@ export function generateClientDeduplicatedExport(jobs = []) {
   lines.push(`Total Raw Failures   : ${totalErrors} records`);
   lines.push(`Unique Root Causes   : ${uniqueCount} distinct error signatures`);
   lines.push(`Duplicates Merged    : ${duplicatesMerged} redundant records eliminated (${reductionPct}% noise reduction)`);
+  lines.push(`System Core Defects  : ${totalSystemErrors} critical / system defects`);
+  lines.push(`User Actions / Input : ${totalUserActions} user cancellations / invalid inputs`);
   lines.push(`Deduplication Mode   : ENABLED (Grouped by Engine + Semantic Root Cause)`);
   lines.push(sep100);
   lines.push('');
@@ -862,6 +1038,7 @@ export function generateClientDeduplicatedExport(jobs = []) {
     lines.push(`[PHIẾU LỖI #${String(idx + 1).padStart(2, '0')} / ${String(uniqueCount).padStart(2, '0')}] ${g.rootCauseTitle}`);
     lines.push(sepDash);
     lines.push(`* Phân hệ (Engine)    : ${g.category} (Job types: ${typesList})`);
+    lines.push(`* Phân loại lỗi       : [${g.errorClass === 'USER_ACTION' ? 'THAO TÁC NGƯỜI DÙNG / USER_ACTION' : 'LỖI HỆ THỐNG / SYSTEM_ERROR'}]`);
     lines.push(`* Mức độ nghiêm trọng : [${g.severity}]`);
     lines.push(`* Tần suất xuất hiện  : ${g.count} lần (${share}% tổng số lỗi hệ thống)`);
     lines.push(`* Thời điểm ghi nhận  : Từ ${firstStr} đến ${lastStr}`);

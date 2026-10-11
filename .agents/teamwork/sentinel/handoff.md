@@ -1,30 +1,29 @@
-# Handoff Report — Sentinel Resumed Dispatch (Quiz Pipeline v3.0 Gen 2)
+# Handoff Report — Sentinel (Dispatch Phase)
 
 ## Observation
-- Yêu cầu tiếp tục triển khai Quiz Pipeline v3.0 đã được tiếp nhận từ caller/user tại timestamp `2026-10-04T00:01:34Z`.
-- Hiện trạng:
-  - Milestone 1 (WP1 & WP2) đã hoàn tất 100% (mcq_parser.py, text_utils.py, fix duplicate questions P0, 19 tests test_mcq_parser, 20 tests test_adversarial_wp2, 25 tests test_quiz_pipeline_v2 pass).
-  - Milestone 2 (WP3 & WP8): Code trong engines/quiz/quiz_pipeline.py đã hoàn tất (batch size 5, ThreadPoolExecutor 4 luồng, _EMIT_LOCK, DEFAULT_API_KEY không hardcode key thật, _salvage_truncated_json, retry temp 0.0). Cần bổ sung 10 unit tests và verify.
-  - Các Milestone còn lại: M3 (WP5 KaTeX vendor offline P0), M4 (WP6 sweep-line O(n log n) & WP4 explanation phase 2), M5 (WP7 cache đa tầng & janitor), và DoD toàn diện.
+- Yêu cầu mới nhận lúc 2026-10-11T22:37:24Z yêu cầu hoàn thiện trang quản trị Admin Mission Control của DuyDev Studio, loại bỏ cảnh báo lỗi giả, chuẩn hóa telemetry, cách ly bot scanning và đảm bảo queues hiển thị IDLE/READY khi rỗng.
+- Prompt mở đầu với tín hiệu rõ ràng: `"This is a single self-contained fix; keep it small and focused."`
 
 ## Logic Chain
-1. Ghi nhận nguyên văn yêu cầu vào `.agents/teamwork/ORIGINAL_REQUEST.md`.
-2. Kiểm tra Routing Decision Table: Task thuộc danh mục General (SWE nâng cấp kiến trúc nhiều milestone) -> Chỉ định `teamwork_preview_orchestrator`. Không yêu cầu pre-flight audit.
-3. Chuẩn bị thư mục điều phối Generation 2: `.agents/teamwork/orchestrator_quiz_gen2`. Khởi tạo `progress.md`.
-4. Spawn Project Orchestrator Gen 2 (`973de344-1990-4ba0-bff2-d8fc79ff96f1`) với đầy đủ context, ràng buộc và phạm vi công việc.
-5. Thiết lập 2 cron giám sát:
-   - Cron 1: Progress Reporting (`*/8 * * * *`, task-38)
-   - Cron 2: Liveness Check (`*/10 * * * *`, task-40)
-6. Cập nhật `BRIEFING.md` bảo toàn các mục append-only.
+- Áp dụng Routing Decision Table:
+  - Không có tài liệu đính kèm để đánh giá/phê bình (không chọn Document Review).
+  - Không phải bài toán toán học / định lý (không chọn Math / Proof).
+  - Tác vụ là một thay đổi code đơn lẻ, tự khép kín trên trang Admin Mission Control VÀ có tín hiệu rõ ràng yêu cầu xử lý nhỏ/gọn/nhẹ (`"This is a single self-contained fix; keep it small and focused."`).
+  - Lựa chọn path: **SWE Light** (`teamwork_preview_swe`).
+- Không yêu cầu pre-flight audit.
+- Khởi tạo working directory `.agents/teamwork/swe_admin_fix/`.
+- Điều phối subagent `teamwork_preview_swe` (ID: `c2316682-cc1c-4f7e-8ae8-83a545a57d8c`).
+- Kích hoạt 2 cron: Cron 1 (Progress Reporting `*/8 * * * *`, task-32) và Cron 2 (Liveness Check `*/10 * * * *`, task-34).
 
 ## Caveats
-- Sentinel tuân thủ nguyên tắc relay-only, không can thiệp code hay ra quyết định kỹ thuật.
-- Khi Orchestrator báo hoàn thành (victory claim), Sentinel bắt buộc phải spawn `teamwork_preview_victory_auditor` độc lập trước khi báo cáo kết quả hoàn thành cuối cùng.
+- Kết quả hoàn thành của orchestrator bắt buộc phải qua bước kiểm chứng độc lập của Victory Auditor (`teamwork_preview_victory_auditor`) trước khi báo cáo hoàn thành cho caller.
+- Cần đảm bảo các tiêu chí nghiệm thu: unit test `admin_false_positive_elimination.test.ts`, build backend 0 lỗi, kiểm tra JS frontend, và deploy homeserver 192.168.2.171.
 
 ## Conclusion
-- Project Orchestrator Gen 2 đã được kích hoạt thành công và đang quản lý các subagents thực thi Milestone 2 đến Milestone 5.
-- Hệ thống giám sát sentinel đã đi vào hoạt động.
+- Subagent SWE Light Orchestrator đã được khởi chạy thành công.
+- Sentinel chuyển sang trạng thái giám sát định kỳ qua các cron và chờ kết quả từ orchestrator.
 
 ## Verification Method
-- Cron tasks: task-38 và task-40 đã được kích hoạt.
-- Subagent: `973de344-1990-4ba0-bff2-d8fc79ff96f1` đang chạy.
+- Kiểm tra tiến độ qua `swe_admin_fix/progress.md`.
+- Theo dõi thông báo từ Cron 1 và Cron 2.
+- Kiểm tra kết quả kiểm thử tự động và build khi orchestrator báo cáo hoàn tất.

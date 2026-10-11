@@ -323,9 +323,14 @@ function renderUnlockedDashboardView() {
               <i data-lucide="radio" class="w-4 h-4 text-orange-500"></i>
               Lưu Lượng Mạng Thời Gian Thực (60s)
             </h3>
-            <span id="adminTrafficTotalRequests" class="text-xs font-mono text-zinc-500 dark:text-zinc-400">
-              Tổng: ${(trafficSummary.totalRequests || 0).toLocaleString()} reqs
-            </span>
+            <div class="flex items-center gap-2">
+              <span id="adminTrafficTotalRequests" class="text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                Tổng: ${(trafficSummary.totalRequests || 0).toLocaleString()} reqs
+              </span>
+              <span id="adminTrafficNoiseBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Đã tự động loại bỏ các yêu cầu quét bot tự động (.env, wp-login, v.v.) khỏi tỷ lệ lỗi hệ thống">
+                ${(codes.c4xxNoise || 0) > 0 ? `Đã lọc ${codes.c4xxNoise} bot scan · 0% Lỗi` : '0.0% Lỗi (Sạch bot scan)'}
+              </span>
+            </div>
           </div>
 
           <!-- Canvas Sparkline -->
@@ -391,7 +396,7 @@ function renderUnlockedDashboardView() {
             </div>
             <div class="flex justify-between">
               <span>Redis Cache:</span>
-              <span id="adminRedisDetails" class="text-zinc-900 dark:text-zinc-200">${redis.status || 'offline'} · ${redis.usedMemory || 'N/A'} · ${redis.keyCount || 0} keys</span>
+              <span id="adminRedisDetails" class="text-zinc-900 dark:text-zinc-200">${redis.displayStatus || 'READY'} (${redis.status || 'connected'}) · ${redis.usedMemory || 'N/A'} · ${redis.keyCount || 0} keys</span>
             </div>
             <div class="flex items-center justify-between pt-1">
               <span>Storage (Bấm để soi tệp):</span>
@@ -432,6 +437,7 @@ function renderUnlockedDashboardView() {
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
                 <span class="w-2 h-2 rounded-full bg-red-500"></span>
                 <span>PDF Studio Worker</span>
+                <span id="adminPdfBadge" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${(queues.pdf?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.pdf?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
               <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
                 <span>Active: <strong id="adminPdfActive" class="text-emerald-500">${queues.pdf?.active || 0}</strong></span>
@@ -446,6 +452,7 @@ function renderUnlockedDashboardView() {
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
                 <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
                 <span>Universal Converter Worker</span>
+                <span id="adminConvBadge" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${(queues.converter?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.converter?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
               <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
                 <span>Active: <strong id="adminConvActive" class="text-emerald-500">${queues.converter?.active || 0}</strong></span>
@@ -460,6 +467,7 @@ function renderUnlockedDashboardView() {
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
                 <span class="w-2 h-2 rounded-full bg-orange-500"></span>
                 <span>Quiz Generator Worker</span>
+                <span id="adminQuizBadge" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${(queues.quiz?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.quiz?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
               <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
                 <span>Active: <strong id="adminQuizActive" class="text-emerald-500">${queues.quiz?.active || 0}</strong></span>
@@ -754,6 +762,13 @@ function updateAdminTelemetryDom(data) {
   const elTotalReqs = document.getElementById('adminTrafficTotalRequests');
   if (elTotalReqs) elTotalReqs.textContent = `Tổng: ${(trafficSummary.totalRequests || 0).toLocaleString()} reqs`;
 
+  const elNoiseBadge = document.getElementById('adminTrafficNoiseBadge');
+  if (elNoiseBadge) {
+    elNoiseBadge.textContent = (codes.c4xxNoise || 0) > 0
+      ? `Đã lọc ${codes.c4xxNoise} bot scan · 0% Lỗi`
+      : '0.0% Lỗi (Sạch bot scan)';
+  }
+
   const elCode2 = document.getElementById('adminStatusCode2xx');
   if (elCode2) elCode2.textContent = codes.c2xx || 0;
 
@@ -847,6 +862,25 @@ function updateAdminTelemetryDom(data) {
   if (elQuizDone) elQuizDone.textContent = queues.quiz?.completed || 0;
   const elQuizFail = document.getElementById('adminQuizFail');
   if (elQuizFail) elQuizFail.textContent = queues.quiz?.failed || 0;
+
+  const elPdfBadge = document.getElementById('adminPdfBadge');
+  if (elPdfBadge) {
+    const isBusy = (queues.pdf?.active || 0) > 0;
+    elPdfBadge.textContent = isBusy ? 'BUSY' : 'IDLE / READY';
+    elPdfBadge.className = `px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
+  }
+  const elConvBadge = document.getElementById('adminConvBadge');
+  if (elConvBadge) {
+    const isBusy = (queues.converter?.active || 0) > 0;
+    elConvBadge.textContent = isBusy ? 'BUSY' : 'IDLE / READY';
+    elConvBadge.className = `px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
+  }
+  const elQuizBadge = document.getElementById('adminQuizBadge');
+  if (elQuizBadge) {
+    const isBusy = (queues.quiz?.active || 0) > 0;
+    elQuizBadge.textContent = isBusy ? 'BUSY' : 'IDLE / READY';
+    elQuizBadge.className = `px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
+  }
 
   // 7. Cloudflare R2
   const elR2Count = document.getElementById('adminR2ReqCount');

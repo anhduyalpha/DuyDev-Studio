@@ -1,7 +1,7 @@
-# BRIEFING — 2026-10-04T00:03:15Z
+# BRIEFING — 2026-10-12T05:39:30Z
 
 ## Mission
-Giám sát và điều phối việc triển khai nâng cấp Quiz Pipeline v3.0 của DuyDev Studio theo docs/QUIZ_PIPELINE_UPGRADE_PLAN.md từ Milestone 2 đến Milestone 5 và nghiệm thu DoD.
+Giám sát và điều phối việc hoàn thiện trang quản trị Admin Mission Control của DuyDev Studio, triệt tiêu false-positive errors, chuẩn hóa telemetry và kiểm chứng toàn diện.
 
 ## 🔒 My Identity
 - Archetype: sentinel
@@ -14,6 +14,8 @@ Giám sát và điều phối việc triển khai nâng cấp Quiz Pipeline v3.0
 - Active Orchestrator (Quiz v3): 82523155-5971-4e42-a66e-a71df58f4d82
 - Active Orchestrator (Quiz v3 Gen 2): 973de344-1990-4ba0-bff2-d8fc79ff96f1
 - Victory Auditor (Quiz v3): TBD
+- Active Orchestrator (SWE Admin Fix): c2316682-cc1c-4f7e-8ae8-83a545a57d8c
+- Victory Auditor (SWE Admin Fix): TBD
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
@@ -23,24 +25,25 @@ Giám sát và điều phối việc triển khai nâng cấp Quiz Pipeline v3.0
 - Full verification (tsc, vitest, node --check, homeserver sync) required before victory
 - Polyglot Quiz Pipeline v3 upgrade per docs/QUIZ_PIPELINE_UPGRADE_PLAN.md
 - Independent Victory Auditor mandatory before completion report
+- SWE Light path selected per "single self-contained fix; keep it small and focused"
 
 ## User Context
-- **Last user request**: Resumed execution: Tiếp tục triển khai các task còn lại trong kế hoạch nâng cấp kiến trúc Quiz Pipeline v3.0 (Milestones 2, 3, 4, 5, DoD).
+- **Last user request**: Hoàn thiện Admin Mission Control, loại bỏ lỗi giả (USER_CANCELLED, BAD_INPUT, ACCESS_RESTRICTED), trạng thái FALLBACK_RECOVERED cho AI key, noise isolation cho scanner bots, queues IDLE/READY, pass unit test, typecheck, frontend check, deploy homeserver 192.168.2.171.
 - **Pending clarifications**: none
 - **Delivered results**:
   - Request recorded in ORIGINAL_REQUEST.md
-  - Route evaluated: General path (`teamwork_preview_orchestrator`)
-  - Project Orchestrator Gen 2 spawned: `973de344-1990-4ba0-bff2-d8fc79ff96f1`
-  - Cron 1 (Progress Reporting `*/8 * * * *`) scheduled: `4d6f8980-5ed0-4b3d-8f58-d821524b3ed8/task-38`
-  - Cron 2 (Liveness Check `*/10 * * * *`) scheduled: `4d6f8980-5ed0-4b3d-8f58-d821524b3ed8/task-40`
+  - Route evaluated: SWE Light (`teamwork_preview_swe`)
+  - SWE Light Orchestrator spawned: `c2316682-cc1c-4f7e-8ae8-83a545a57d8c`
+  - Cron 1 (Progress Reporting `*/8 * * * *`) scheduled: `c2f542b7-41ec-464b-86a3-206da46ca9d4/task-32`
+  - Cron 2 (Liveness Check `*/10 * * * *`) scheduled: `c2f542b7-41ec-464b-86a3-206da46ca9d4/task-34`
 
 ## Project Status
 - **Phase**: in progress
-- **Route**: General (`teamwork_preview_orchestrator`)
-- **Active Orchestrator**: 973de344-1990-4ba0-bff2-d8fc79ff96f1 (Gen 2)
+- **Route**: SWE Light (`teamwork_preview_swe`)
+- **Active Orchestrator**: c2316682-cc1c-4f7e-8ae8-83a545a57d8c
 - **Crons**:
-  - Cron 1 (Progress Reporting): 4d6f8980-5ed0-4b3d-8f58-d821524b3ed8/task-38
-  - Cron 2 (Liveness Check): 4d6f8980-5ed0-4b3d-8f58-d821524b3ed8/task-40
+  - Cron 1 (Progress Reporting): c2f542b7-41ec-464b-86a3-206da46ca9d4/task-32
+  - Cron 2 (Liveness Check): c2f542b7-41ec-464b-86a3-206da46ca9d4/task-34
 
 ## Victory Audit Status
 - **Triggered**: no
@@ -50,5 +53,4 @@ Giám sát và điều phối việc triển khai nâng cấp Quiz Pipeline v3.0
 ## Artifact Index
 - c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\ORIGINAL_REQUEST.md — Authoritative verbatim user request
 - c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\sentinel\BRIEFING.md — Sentinel persistent memory
-- c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\orchestrator_quiz_gen2\progress.md — Active orchestrator progress log
-- c:\Users\AnhDuy\Code\Project\DD Studio\docs\QUIZ_PIPELINE_UPGRADE_PLAN.md — Technical design and upgrade specification
+- c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\swe_admin_fix\progress.md — Active SWE Light orchestrator progress log

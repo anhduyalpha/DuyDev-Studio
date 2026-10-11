@@ -93,7 +93,8 @@ export interface SemanticErrorDetail {
   normalizedSummary: string;
   fullErrorSnippet: string;
   signature: string;
-  severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK';
+  severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK' | 'INFO' | 'USER_ACTION';
+  errorClass: 'SYSTEM_ERROR' | 'USER_ACTION';
   suggestedFix: string;
 }
 
@@ -135,6 +136,93 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
     category = 'Universal Converter';
   }
 
+  // 0a. USER_CANCELLED: User voluntarily cancelled the task
+  if (
+    lower.includes('user_cancelled') ||
+    lower.includes('user cancelled') ||
+    lower.includes('người dùng huỷ') ||
+    lower.includes('người dùng hủy') ||
+    lower.includes('cancelled by user') ||
+    lower.includes('job cancelled') ||
+    lower.includes('tác vụ đã bị hủy') ||
+    lower.includes('tác vụ bị hủy') ||
+    lower.includes('aborted by user') ||
+    lower.includes('request aborted') ||
+    lower.includes('hủy bởi người dùng')
+  ) {
+    return {
+      category: 'User Interaction',
+      rootCauseTitle: 'User Cancelled Task (Người dùng chủ động hủy tác vụ)',
+      normalizedSummary: 'Processing task was voluntarily cancelled by user request.',
+      fullErrorSnippet: trimmed,
+      signature: 'user::cancelled',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Không cần khắc phục kỹ thuật. Đây là hành động chủ động dừng xử lý từ phía người dùng.'
+    };
+  }
+
+  // 0b. BAD_INPUT: User uploaded empty or malformed/corrupted file
+  if (
+    lower.includes('bad_input') ||
+    lower.includes('bad input') ||
+    lower.includes('tệp rỗng') ||
+    lower.includes('file rỗng') ||
+    lower.includes('empty file') ||
+    lower.includes('0 bytes') ||
+    lower.includes('tệp không có nội dung') ||
+    lower.includes('empty input') ||
+    lower.includes('tệp tải lên rỗng') ||
+    lower.includes('tệp đầu vào rỗng') ||
+    lower.includes('corrupted input') ||
+    lower.includes('tệp bị hỏng') ||
+    lower.includes('tệp đầu vào hỏng') ||
+    lower.includes('không có dữ liệu hợp lệ') ||
+    lower.includes('invalid input')
+  ) {
+    return {
+      category: 'Input Validation',
+      rootCauseTitle: 'Bad Input / Empty File (Tệp đầu vào rỗng hoặc sai cấu trúc)',
+      normalizedSummary: 'Input file is empty (0 bytes) or malformed/corrupted by user upload.',
+      fullErrorSnippet: trimmed,
+      signature: 'user::bad_input',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Yêu cầu người dùng kiểm tra tệp nguồn. Tệp tải lên rỗng hoặc cấu trúc bị lỗi trước khi tải lên hệ thống.'
+    };
+  }
+
+  // 0c. ACCESS_RESTRICTED: Google Drive private or non-public link
+  if (
+    (lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) &&
+    (lower.includes('private') || lower.includes('restricted') || lower.includes('access denied') || lower.includes('permission denied') || lower.includes('quyền riêng tư') || lower.includes('chưa công khai') || lower.includes('không công khai') || lower.includes('403') || lower.includes('404'))
+  ) {
+    return {
+      category: 'Drive / Access Permission',
+      rootCauseTitle: 'Access Restricted / Private Link (Link Google Drive chưa công khai)',
+      normalizedSummary: 'Cannot access Google Drive resource: link is private or restricted by owner.',
+      fullErrorSnippet: trimmed,
+      signature: 'user::access_restricted',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
+      suggestedFix: 'Yêu cầu người dùng bật chia sẻ công khai cho liên kết Google Drive (Bất kỳ ai có đường liên kết đều có thể xem).'
+    };
+  }
+
+  // 0d. Core Engine Fatal Crash / Segfault / Pointer Exception
+  if (lower.includes('segmentation fault') || lower.includes('sigsegv') || lower.includes('core dump') || lower.includes('pointer exception') || lower.includes('out of memory')) {
+    return {
+      category,
+      rootCauseTitle: 'Engine Fatal Crash / Segmentation Fault (Lỗi crash lõi nhị phân)',
+      normalizedSummary: 'Low-level engine crashed unexpectedly (SIGSEGV / Out-Of-Memory / Segmentation Fault).',
+      fullErrorSnippet: trimmed,
+      signature: `${category.toLowerCase().replace(/\s+/g, '_')}::fatal_crash`,
+      severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
+      suggestedFix: 'Kiểm tra tệp nhị phân lõi Python/C++ và phiên bản phụ thuộc. Tránh xử lý tài liệu bị hỏng sâu gây tràn bộ nhớ.'
+    };
+  }
+
   // 1. CairoSVG Missing
   if (lower.includes('cairosvg')) {
     return {
@@ -144,6 +232,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'converter::cairosvg_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt 'pip install cairosvg' trong môi trường Python của server, hoặc chuyển hướng tệp SVG sang bộ render PyMuPDF/Playwright client-side không phụ thuộc CairoSVG."
     };
   }
@@ -157,6 +246,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'converter::pypdf2_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Chạy 'pip install PyPDF2' trên máy chủ, hoặc refactor các hàm đọc PDF sang PyMuPDF (fitz) có sẵn."
     };
   }
@@ -170,6 +260,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'converter::libreoffice_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt LibreOffice trên máy chủ ('sudo apt install libreoffice-headless libreoffice-writer libreoffice-calc')."
     };
   }
@@ -183,6 +274,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'pdf::pdf2docx_missing',
       severity: 'CRITICAL',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Cài đặt pdf2docx trong môi trường Python: 'pip install pdf2docx'."
     };
   }
@@ -196,6 +288,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'quiz::nameerror_any',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Thêm 'from typing import Any' vào đầu file Python bị lỗi (engines/quiz/quiz_pipeline.py hoặc orchestrator)."
     };
   }
@@ -209,6 +302,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'quiz::diagnostic_layer_reconstruction_failure',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Định nghĩa enum / hằng số RECONSTRUCTION_FAILURE trong class DiagnosticLayer hoặc import đúng module."
     };
   }
@@ -222,6 +316,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'quiz::agnes_timeout',
       severity: 'TIMEOUT',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Kiểm tra độ trễ mạng đến endpoint Agnes AI, mở rộng timeout (vd: 35s lên 60s) hoặc kích hoạt fallback API Key dự phòng (Gemini/OpenAI)."
     };
   }
@@ -234,7 +329,8 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       normalizedSummary: 'Cannot download file from Google Drive: HTTP 404 Not Found or link is not public.',
       fullErrorSnippet: trimmed,
       signature: 'quiz::gdrive_download_404',
-      severity: 'NETWORK',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Đảm bảo liên kết Google Drive được bật chia sẻ công khai ('Bất kỳ ai có đường liên kết đều có thể xem') và kiểm tra fileId hợp lệ."
     };
   }
@@ -248,19 +344,21 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: 'backend::prisma_filerecord_undefined',
       severity: 'ERROR',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Kiểm tra logic gọi prisma.fileRecord.findUnique: đảm bảo tham số fileId đã được truyền và khác undefined trước khi query."
     };
   }
 
   // 10. Question Range Mismatch (Dải câu hỏi không khớp / không đủ câu)
-  if (lower.includes('dải câu hỏi') || lower.includes('không thấy đủ số câu') || lower.includes('chưa thấy đủ số câu') || lower.includes('nghía lại số trang')) {
+  if (lower.includes('dải câu hỏi') || lower.includes('không thấy đủ số câu') || lower.includes('chưa thấy đủ số câu') || lower.includes('nghía lại số trang') || (lower.includes('số câu') && (lower.includes('không khớp') || lower.includes('khác'))) || lower.includes('question count mismatch')) {
     return {
       category: 'Quiz Generator',
       rootCauseTitle: 'Question Count Range Mismatch (Dải câu hỏi trích xuất không khớp)',
       normalizedSummary: 'Extracted question count does not match user requested range. Page numbers or question stems missing.',
       fullErrorSnippet: trimmed,
       signature: 'quiz::question_count_mismatch',
-      severity: 'WARNING',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Kiểm tra định dạng đề thi PDF (số câu, thứ tự cột) hoặc kiểm tra lại khoảng trang người dùng đã chỉ định."
     };
   }
@@ -273,7 +371,8 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       normalizedSummary: 'No multiple-choice questions found within the selected document pages.',
       fullErrorSnippet: trimmed,
       signature: 'quiz::no_questions_on_page',
-      severity: 'WARNING',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Kiểm tra xem trang đã chọn có chứa văn bản thuần hay là trang bìa/mục lục không chứa câu hỏi."
     };
   }
@@ -286,7 +385,8 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       normalizedSummary: "Extracted question has empty option text (e.g. Option 'A' is blank).",
       fullErrorSnippet: trimmed,
       signature: 'quiz::empty_option_text',
-      severity: 'WARNING',
+      severity: 'USER_ACTION',
+      errorClass: 'USER_ACTION',
       suggestedFix: "Cải thiện regex bóc tách phương án lựa chọn trong quiz_pipeline.py đối với các câu hỏi có bảng hoặc hình ảnh đè lên chữ."
     };
   }
@@ -300,6 +400,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
       fullErrorSnippet: trimmed,
       signature: `${category.toLowerCase().replace(/\s+/g, '_')}::timeout`,
       severity: 'TIMEOUT',
+      errorClass: 'SYSTEM_ERROR',
       suggestedFix: "Tối ưu hóa thuật toán xử lý hoặc tăng ngưỡng giới hạn watchdog timeout đối với các tệp dung lượng lớn."
     };
   }
@@ -314,6 +415,7 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
     fullErrorSnippet: trimmed,
     signature: sig,
     severity: 'ERROR',
+    errorClass: 'SYSTEM_ERROR',
     suggestedFix: 'Kiểm tra log chi tiết và optionsJson để tái hiện lỗi.'
   };
 }
@@ -330,6 +432,9 @@ export interface FailedJobItem {
   startedAt: string | null;
   completedAt: string | null;
   durationMs: number | null;
+  errorClass: 'SYSTEM_ERROR' | 'USER_ACTION';
+  severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK' | 'INFO' | 'USER_ACTION';
+  rootCauseTitle: string;
 }
 
 export interface DeduplicatedErrorGroup {
@@ -337,7 +442,8 @@ export interface DeduplicatedErrorGroup {
   category: string;
   rootCauseTitle: string;
   normalizedSummary: string;
-  severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK';
+  severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'TIMEOUT' | 'NETWORK' | 'INFO' | 'USER_ACTION';
+  errorClass: 'SYSTEM_ERROR' | 'USER_ACTION';
   suggestedFix: string;
   types: Set<string>;
   rawErrors: Set<string>;
@@ -635,16 +741,36 @@ export class AdminTelemetryService {
         },
         redis: {
           status: isRedisReady ? 'connected' : 'offline',
+          displayStatus: isRedisReady ? 'READY' : 'OFFLINE',
           usedMemory: redisMemoryHuman,
           keyCount: redisKeyCount
         }
       },
       queues: {
-        pdf: { waiting: pdfWaiting, active: pdfActive, completed: pdfCompleted, failed: pdfFailed },
-        converter: { waiting: convWaiting, active: convActive, completed: convCompleted, failed: convFailed },
-        quiz: { waiting: quizWaiting, active: quizActive, completed: quizCompleted, failed: quizFailed },
+        pdf: {
+          waiting: pdfWaiting,
+          active: pdfActive,
+          completed: pdfCompleted,
+          failed: pdfFailed,
+          status: pdfActive > 0 ? 'BUSY' : 'IDLE / READY'
+        },
+        converter: {
+          waiting: convWaiting,
+          active: convActive,
+          completed: convCompleted,
+          failed: convFailed,
+          status: convActive > 0 ? 'BUSY' : 'IDLE / READY'
+        },
+        quiz: {
+          waiting: quizWaiting,
+          active: quizActive,
+          completed: quizCompleted,
+          failed: quizFailed,
+          status: quizActive > 0 ? 'BUSY' : 'IDLE / READY'
+        },
         totalActive: pdfActive + convActive + quizActive,
-        totalWaiting: pdfWaiting + convWaiting + quizWaiting
+        totalWaiting: pdfWaiting + convWaiting + quizWaiting,
+        status: (pdfActive + convActive + quizActive) > 0 ? 'BUSY' : 'IDLE / READY'
       },
       cloudflare: {
         tunnel: {
@@ -770,6 +896,8 @@ export class AdminTelemetryService {
           durationMs = Math.max(0, Date.now() - j.startedAt.getTime());
         }
 
+        const semantic = extractSemanticErrorDetails(j.errorMessage, j.type);
+
         return {
           id: j.id,
           type: j.type,
@@ -781,7 +909,10 @@ export class AdminTelemetryService {
           createdAt: j.createdAt.toISOString(),
           startedAt: j.startedAt ? j.startedAt.toISOString() : null,
           completedAt: j.completedAt ? j.completedAt.toISOString() : null,
-          durationMs
+          durationMs,
+          errorClass: semantic.errorClass,
+          severity: semantic.severity,
+          rootCauseTitle: semantic.rootCauseTitle
         };
       });
     } catch (err: any) {
@@ -874,6 +1005,7 @@ export class AdminTelemetryService {
           rootCauseTitle: semantic.rootCauseTitle,
           normalizedSummary: semantic.normalizedSummary,
           severity: semantic.severity,
+          errorClass: semantic.errorClass,
           suggestedFix: semantic.suggestedFix,
           types: new Set(j.type ? [j.type] : []),
           rawErrors: new Set(j.errorMessage ? [j.errorMessage] : []),
@@ -903,6 +1035,8 @@ export class AdminTelemetryService {
     const uniqueErrors = groups.length;
     const duplicateCount = Math.max(0, totalErrors - uniqueErrors);
     const reductionPercentage = totalErrors > 0 ? Math.round((duplicateCount / totalErrors) * 1000) / 10 : 0;
+    const totalSystemErrors = groups.filter(g => g.errorClass === 'SYSTEM_ERROR').reduce((sum, g) => sum + g.count, 0);
+    const totalUserActions = totalErrors - totalSystemErrors;
 
     // Build TXT Document
     const sep100 = '='.repeat(100);
@@ -920,6 +1054,8 @@ export class AdminTelemetryService {
     lines.push(`Total Raw Failures   : ${totalErrors} records`);
     lines.push(`Unique Root Causes   : ${uniqueErrors} distinct error signatures`);
     lines.push(`Duplicates Merged    : ${duplicateCount} redundant records eliminated (${reductionPercentage}% noise reduction)`);
+    lines.push(`System Core Defects  : ${totalSystemErrors} critical / system defects`);
+    lines.push(`User Actions / Input : ${totalUserActions} user cancellations / invalid inputs`);
     lines.push(`Engine Filter        : ${typeFilter || 'ALL ENGINES (Universal Converter, PDF Studio, Quiz Generator)'}`);
     lines.push(`Deduplication Mode   : ${isDedupe ? 'ENABLED (Grouped by Engine + Normalized Root Cause)' : 'DISABLED'}`);
     lines.push(sep100);
