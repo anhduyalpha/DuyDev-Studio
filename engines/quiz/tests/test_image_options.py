@@ -131,12 +131,12 @@ class TestImageOptions(unittest.TestCase):
             provenance=ProvenanceIR(source_pages=[1])
         )
         doc_ir = self._create_minimal_doc_ir([q])
-        with self.assertRaises(IRValidationError) as ctx:
-            validate_canonical_document_ir(doc_ir)
-        self.assertIn("has empty text for option 'A'", str(ctx.exception))
+        validate_canonical_document_ir(doc_ir)
+        self.assertTrue(bool(q.options[0].text and q.options[0].text.strip()))
+        self.assertIn("Xem hình vẽ", q.options[0].text)
 
     def test_validation_tf_statements_with_rich_elements(self):
-        """Part II TF statements with empty text pass validation only if visual elements are present."""
+        """Part II TF statements with empty text are auto-repaired gracefully."""
         rich_elem = RichElementIR(
             element_id="elem_tf_img",
             type=RichElementType.IMAGE_CROP,
@@ -162,8 +162,8 @@ class TestImageOptions(unittest.TestCase):
         doc_ir = self._create_minimal_doc_ir([q_pass])
         validate_canonical_document_ir(doc_ir)
 
-        # Without rich element, it must fail
-        q_fail = QuestionIR(
+        # Without rich element, it auto-repairs with safe placeholder
+        q_no_visual = QuestionIR(
             id="q_tf_no_visual",
             number=1,
             source_number=1,
@@ -177,9 +177,10 @@ class TestImageOptions(unittest.TestCase):
             ],
             provenance=ProvenanceIR(source_pages=[1])
         )
-        doc_ir_fail = self._create_minimal_doc_ir([q_fail])
-        with self.assertRaises(IRValidationError):
-            validate_canonical_document_ir(doc_ir_fail)
+        doc_ir_no_visual = self._create_minimal_doc_ir([q_no_visual])
+        validate_canonical_document_ir(doc_ir_no_visual)
+        self.assertTrue(bool(q_no_visual.sub_statements[0].statement and q_no_visual.sub_statements[0].statement.strip()))
+        self.assertIn("Xem nội dung đính kèm", q_no_visual.sub_statements[0].statement)
 
     def test_canonical_ir_builder_pairs_attachments_to_image_options(self):
         """CanonicalIRBuilder must detect 4 attachments matching 4 options and pair them in reading order."""
