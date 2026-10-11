@@ -60,6 +60,198 @@ export function normalizeErrorMessageToEnglish(rawMsg) {
   return trimmed;
 }
 
+/**
+ * Classifies error message into standardized semantic category and actionable fix hints
+ */
+export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
+  if (!rawMsg || !String(rawMsg).trim()) {
+    return {
+      category: 'System Core',
+      rootCauseTitle: 'Unknown Error (Không xác định nguyên nhân)',
+      normalizedSummary: 'Unknown error occurred.',
+      severity: 'ERROR',
+      suggestedFix: 'Kiểm tra optionsJson và worker trace log để tái hiện lỗi.',
+      signature: 'system::unknown_error'
+    };
+  }
+
+  const trimmed = String(rawMsg).trim();
+  const lower = trimmed.toLowerCase();
+  const t = String(jobType || '').toLowerCase();
+  let category = 'System Core';
+  if (t.includes('conv') || t.includes('media') || t.includes('format')) category = 'Universal Converter';
+  else if (t.includes('pdf')) category = 'PDF Studio Pro';
+  else if (t.includes('quiz')) category = 'Quiz Generator';
+
+  // 1. CairoSVG Missing
+  if (lower.includes('cairosvg')) {
+    return {
+      category: 'Universal Converter',
+      rootCauseTitle: 'CairoSVG Library Missing (Thiếu thư viện cairosvg)',
+      normalizedSummary: "CairoSVG library is not installed: SVG conversion requires CairoSVG ('pip install cairosvg').",
+      signature: 'converter::cairosvg_missing',
+      severity: 'CRITICAL',
+      suggestedFix: "Cài đặt CairoSVG trên máy chủ ('sudo apt install libcairo2 && pip install cairosvg')."
+    };
+  }
+
+  // 2. PyPDF2 Missing
+  if (lower.includes('pypdf2')) {
+    return {
+      category: 'Universal Converter',
+      rootCauseTitle: 'PyPDF2 Deprecated / Missing (Thiếu thư viện PyPDF2)',
+      normalizedSummary: "PyPDF2 module is not installed ('pip install PyPDF2' or migrate to pypdf / pymupdf).",
+      signature: 'converter::pypdf2_missing',
+      severity: 'CRITICAL',
+      suggestedFix: "Cài đặt PyPDF2 ('pip install PyPDF2') hoặc chuyển sang sử dụng PyMuPDF (fitz)."
+    };
+  }
+
+  // 3. LibreOffice Missing
+  if (lower.includes('soffice') || lower.includes('libreoffice')) {
+    return {
+      category: 'Universal Converter',
+      rootCauseTitle: 'LibreOffice Binary Missing (Thiếu bộ công cụ LibreOffice)',
+      normalizedSummary: 'LibreOffice headless binary is not available for office document conversion.',
+      signature: 'converter::libreoffice_missing',
+      severity: 'CRITICAL',
+      suggestedFix: "Cài đặt LibreOffice trên máy chủ ('sudo apt install libreoffice-headless libreoffice-writer libreoffice-calc')."
+    };
+  }
+
+  // 4. pdf2docx Missing
+  if (lower.includes('pdf2docx')) {
+    return {
+      category: 'PDF Studio Pro',
+      rootCauseTitle: 'pdf2docx Library Missing (Thiếu thư viện pdf2docx)',
+      normalizedSummary: "pdf2docx library is required for PDF to DOCX conversion ('pip install pdf2docx').",
+      signature: 'pdf::pdf2docx_missing',
+      severity: 'CRITICAL',
+      suggestedFix: "Cài đặt pdf2docx trong môi trường Python: 'pip install pdf2docx'."
+    };
+  }
+
+  // 5. Python NameError 'Any'
+  if (lower.includes("name 'any' is not defined") || lower.includes("nameerror: name 'any'")) {
+    return {
+      category: 'Quiz Generator',
+      rootCauseTitle: "Python NameError: 'Any' Not Defined",
+      normalizedSummary: "NameError: name 'Any' is not defined in quiz engine Python script.",
+      signature: 'quiz::nameerror_any',
+      severity: 'ERROR',
+      suggestedFix: "Thêm 'from typing import Any' vào đầu file Python bị lỗi (engines/quiz/quiz_pipeline.py hoặc orchestrator)."
+    };
+  }
+
+  // 6. AttributeError 'DiagnosticLayer'
+  if (lower.includes('diagnosticlayer') && lower.includes('reconstruction_failure')) {
+    return {
+      category: 'Quiz Generator',
+      rootCauseTitle: "Python AttributeError: 'DiagnosticLayer.RECONSTRUCTION_FAILURE' Missing",
+      normalizedSummary: "AttributeError: type object 'DiagnosticLayer' has no attribute 'RECONSTRUCTION_FAILURE'.",
+      signature: 'quiz::diagnostic_layer_reconstruction_failure',
+      severity: 'ERROR',
+      suggestedFix: "Định nghĩa enum / hằng số RECONSTRUCTION_FAILURE trong class DiagnosticLayer hoặc import đúng module."
+    };
+  }
+
+  // 7. Agnes AI API Timeout
+  if (lower.includes('agnes ai api') || lower.includes('the read operation timed out') || lower.includes('timeouterror')) {
+    return {
+      category: 'Quiz Generator',
+      rootCauseTitle: 'Agnes AI API Gateway Timeout / Network Read Timeout',
+      normalizedSummary: 'TimeoutError: The read operation timed out while communicating with Agnes AI API.',
+      signature: 'quiz::agnes_timeout',
+      severity: 'TIMEOUT',
+      suggestedFix: "Kiểm tra độ trễ mạng đến endpoint Agnes AI, mở rộng timeout hoặc kích hoạt fallback API Key dự phòng."
+    };
+  }
+
+  // 8. Google Drive Download Error
+  if (lower.includes('google drive') || lower.includes('download_gdrive') || lower.includes('gdrive')) {
+    return {
+      category: 'Quiz / Drive Import',
+      rootCauseTitle: 'Google Drive Download Failure (HTTP 404 / Quyền truy cập riêng tư)',
+      normalizedSummary: 'Cannot download file from Google Drive: HTTP 404 Not Found or link is not public.',
+      signature: 'quiz::gdrive_download_404',
+      severity: 'NETWORK',
+      suggestedFix: "Đảm bảo liên kết Google Drive được bật chia sẻ công khai ('Bất kỳ ai có đường liên kết đều có thể xem')."
+    };
+  }
+
+  // 9. Prisma Database Query Error
+  if (lower.includes('filerecordwhereuniqueinput') || lower.includes('filerecord.findunique')) {
+    return {
+      category: 'System Backend',
+      rootCauseTitle: 'Prisma Query Error: FileRecord where.id is undefined',
+      normalizedSummary: 'Argument where of type FileRecordWhereUniqueInput received undefined id.',
+      signature: 'backend::prisma_filerecord_undefined',
+      severity: 'ERROR',
+      suggestedFix: "Kiểm tra logic gọi prisma.fileRecord.findUnique: đảm bảo tham số fileId đã được truyền trước khi query."
+    };
+  }
+
+  // 10. Question Range Mismatch
+  if (lower.includes('dải câu hỏi') || lower.includes('không thấy đủ số câu') || lower.includes('chưa thấy đủ số câu') || lower.includes('nghía lại số trang')) {
+    return {
+      category: 'Quiz Generator',
+      rootCauseTitle: 'Question Count Range Mismatch (Dải câu hỏi trích xuất không khớp)',
+      normalizedSummary: 'Extracted question count does not match user requested range.',
+      signature: 'quiz::question_count_mismatch',
+      severity: 'WARNING',
+      suggestedFix: "Kiểm tra định dạng đề thi PDF (số câu, thứ tự cột) hoặc kiểm tra lại khoảng trang người dùng đã chỉ định."
+    };
+  }
+
+  // 11. No Questions Detected
+  if (lower.includes('không có câu hỏi trong trang') || lower.includes('không tìm thấy câu hỏi')) {
+    return {
+      category: 'Quiz Generator',
+      rootCauseTitle: 'No Questions Detected on Selected Page (Không tìm thấy câu hỏi trên trang)',
+      normalizedSummary: 'No multiple-choice questions found within the selected document pages.',
+      signature: 'quiz::no_questions_on_page',
+      severity: 'WARNING',
+      suggestedFix: "Kiểm tra xem trang đã chọn có chứa câu hỏi trắc nghiệm hay là trang bìa/mục lục."
+    };
+  }
+
+  // 12. Question Option Text Empty
+  if (lower.includes('has empty text for option') || (lower.includes('câu') && lower.includes('option') && lower.includes('empty'))) {
+    return {
+      category: 'Quiz Generator',
+      rootCauseTitle: 'Question Option Text Empty (Lựa chọn A/B/C/D bị rỗng)',
+      normalizedSummary: "Extracted question has empty option text (e.g. Option 'A' is blank).",
+      signature: 'quiz::empty_option_text',
+      severity: 'WARNING',
+      suggestedFix: "Cải thiện regex bóc tách phương án lựa chọn trong quiz_pipeline.py đối với câu hỏi có bảng biểu."
+    };
+  }
+
+  // 13. Timeout
+  if (lower.includes('vượt quá giới hạn thời gian') || lower.includes('quá hạn') || lower.includes('timed out') || lower.includes('zaman aşımı')) {
+    return {
+      category,
+      rootCauseTitle: 'Worker Execution Timeout (Tác vụ vượt quá giới hạn thời gian)',
+      normalizedSummary: 'Operation timed out: Process exceeded maximum execution time watchdog.',
+      signature: `${category.toLowerCase().replace(/\s+/g, '_')}::timeout`,
+      severity: 'TIMEOUT',
+      suggestedFix: "Tối ưu hóa thuật toán xử lý hoặc tăng ngưỡng giới hạn watchdog timeout đối với các tệp lớn."
+    };
+  }
+
+  // 14. Fallback
+  const norm = normalizeErrorMessageToEnglish(trimmed);
+  const sig = `${category.toLowerCase().replace(/\s+/g, '_')}::${norm.toLowerCase().slice(0, 50).replace(/[^a-z0-9]/g, '_')}`;
+  return {
+    category,
+    rootCauseTitle: norm.slice(0, 70),
+    normalizedSummary: norm,
+    signature: sig,
+    severity: 'ERROR',
+    suggestedFix: 'Kiểm tra log chi tiết và optionsJson để tái hiện lỗi.'
+  };
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -150,11 +342,12 @@ export function renderFailedJobsInspector(jobs = []) {
           <button
             type="button"
             id="btnExportFailedJobsTxt"
-            class="px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
-            title="Xuất toàn bộ nhật ký lỗi đã lọc trùng ra file .txt để tải về"
+            class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-medium text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-95 border border-orange-400/30"
+            title="Xuất toàn bộ nhật ký lỗi ra file .txt đã gom nhóm & lọc trùng cho lập trình viên fix"
           >
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span>Xuất Log Lỗi (.txt)</span>
+            <i data-lucide="file-down" class="w-4 h-4 shrink-0"></i>
+            <span class="font-bold">Xuất Toàn Bộ Lỗi (.txt)</span>
+            <span class="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-mono tracking-tight uppercase">Lọc trùng</span>
           </button>
           ${jobs.length > 0 ? `
             <button
@@ -488,8 +681,8 @@ export function generateClientDeduplicatedExport(jobs = []) {
   const groupMap = new Map();
 
   for (const j of jobs) {
-    const normError = normalizeErrorMessageToEnglish(j.errorMessage);
-    const sig = `${j.type || 'unknown'}::${normError.toLowerCase().replace(/\s+/g, ' ')}`;
+    const semantic = extractSemanticErrorDetailsClient(j.errorMessage, j.type);
+    const sig = semantic.signature;
 
     let parsedOptions = j.options;
     if (!parsedOptions && j.optionsRaw) {
@@ -506,8 +699,12 @@ export function generateClientDeduplicatedExport(jobs = []) {
 
     if (!groupMap.has(sig)) {
       groupMap.set(sig, {
-        type: j.type || 'unknown',
-        normalizedError: normError,
+        category: semantic.category,
+        rootCauseTitle: semantic.rootCauseTitle,
+        normalizedSummary: semantic.normalizedSummary,
+        severity: semantic.severity,
+        suggestedFix: semantic.suggestedFix,
+        types: new Set(j.type ? [j.type] : []),
         rawErrors: new Set(j.errorMessage ? [j.errorMessage] : []),
         count: 1,
         firstSeen: cDate,
@@ -519,6 +716,7 @@ export function generateClientDeduplicatedExport(jobs = []) {
     } else {
       const g = groupMap.get(sig);
       g.count++;
+      if (j.type) g.types.add(j.type);
       if (cDate < g.firstSeen) g.firstSeen = cDate;
       if (cDate > g.lastSeen) g.lastSeen = cDate;
       g.jobIds.push(j.id);
@@ -545,7 +743,7 @@ export function generateClientDeduplicatedExport(jobs = []) {
   lines.push(`Total Raw Failures   : ${totalErrors} records`);
   lines.push(`Unique Root Causes   : ${uniqueCount} distinct error signatures`);
   lines.push(`Duplicates Merged    : ${duplicatesMerged} redundant records eliminated (${reductionPct}% noise reduction)`);
-  lines.push(`Deduplication Mode   : ENABLED (Grouped by Engine + Normalized Root Cause)`);
+  lines.push(`Deduplication Mode   : ENABLED (Grouped by Engine + Semantic Root Cause)`);
   lines.push(sep100);
   lines.push('');
 
@@ -556,48 +754,58 @@ export function generateClientDeduplicatedExport(jobs = []) {
     return { text: lines.join('\n'), fileName, uniqueCount: 0 };
   }
 
+  // Section 1: Bug Triage Summary Table
   lines.push(sepDash);
-  lines.push('[1] BẢNG TỔNG HỢP PHÂN BỐ LỖI HỆ THỐNG (ERROR SIGNATURE DISTRIBUTION)');
+  lines.push('[1] MỤC LỤC & BẢNG PHÂN LOẠI LỖI (BUG TRIAGE SUMMARY TABLE)');
   lines.push(sepDash);
-  lines.push('Index | Engine / Module       | Count | Share (%) | First Occurrence    | Latest Occurrence');
-  lines.push('------+-----------------------+-------+-----------+---------------------+--------------------');
+  lines.push('Index | Engine / Module       | Severity | Count | Share (%) | Root Cause Summary');
+  lines.push('------+-----------------------+----------+-------+-----------+---------------------------------------------------');
 
   groups.forEach((g, idx) => {
     const idxStr = `#${String(idx + 1).padStart(2, '0')}`;
-    const engineStr = (g.type || 'unknown').padEnd(21).slice(0, 21);
+    const engineStr = (g.category || Array.from(g.types)[0] || 'unknown').padEnd(21).slice(0, 21);
+    const sevStr = g.severity.padEnd(8).slice(0, 8);
     const countStr = String(g.count).padStart(5);
     const share = totalErrors > 0 ? ((g.count / totalErrors) * 100).toFixed(1) : '0.0';
     const shareStr = `${share}%`.padStart(9);
-    const firstStr = g.firstSeen.toISOString().replace('T', ' ').slice(0, 19);
-    const lastStr = g.lastSeen.toISOString().replace('T', ' ').slice(0, 19);
-    lines.push(`${idxStr}   | ${engineStr} | ${countStr} | ${shareStr} | ${firstStr} | ${lastStr}`);
+    const summaryStr = (g.rootCauseTitle || g.normalizedSummary).slice(0, 49);
+    lines.push(`${idxStr}   | ${engineStr} | ${sevStr} | ${countStr} | ${shareStr} | ${summaryStr}`);
   });
   lines.push(sepDash);
   lines.push('');
 
+  // Section 2: Actionable Bug Fix Tickets
   lines.push(sepDash);
-  lines.push('[2] CHI TIẾT NGUYÊN NHÂN LỖI ĐÃ LỌC TRÙNG (DEDUPLICATED ROOT CAUSE CATALOG)');
+  lines.push('[2] CHI TIẾT TỪNG PHIẾU LỖI ĐÃ GOM TRÙNG ĐỂ FIX (ACTIONABLE BUG FIX TICKETS)');
+  lines.push('    (Được tối ưu cho kỹ sư / lập trình viên kiểm tra nguyên nhân gốc rễ và sửa code)');
   lines.push(sepDash);
 
   groups.forEach((g, idx) => {
     const share = totalErrors > 0 ? ((g.count / totalErrors) * 100).toFixed(1) : '0.0';
+    const typesList = Array.from(g.types).join(', ') || 'n/a';
+    const firstStr = g.firstSeen.toISOString().replace('T', ' ').slice(0, 19);
+    const lastStr = g.lastSeen.toISOString().replace('T', ' ').slice(0, 19);
+
     lines.push('');
-    lines.push(`>>> ROOT CAUSE #${String(idx + 1).padStart(2, '0')} <<<`);
-    lines.push(`Engine / Module      : ${String(g.type).toUpperCase()} (${g.type})`);
-    lines.push(`Frequency            : ${g.count} occurrences (${share}% of all failures)`);
-    lines.push(`First Detected       : ${g.firstSeen.toISOString().replace('T', ' ').slice(0, 19)}`);
-    lines.push(`Latest Detected      : ${g.lastSeen.toISOString().replace('T', ' ').slice(0, 19)}`);
-    lines.push(`Normalized Error     : ${g.normalizedError}`);
+    lines.push(sep100);
+    lines.push(`[PHIẾU LỖI #${String(idx + 1).padStart(2, '0')} / ${String(uniqueCount).padStart(2, '0')}] ${g.rootCauseTitle}`);
+    lines.push(sepDash);
+    lines.push(`* Phân hệ (Engine)    : ${g.category} (Job types: ${typesList})`);
+    lines.push(`* Mức độ nghiêm trọng : [${g.severity}]`);
+    lines.push(`* Tần suất xuất hiện  : ${g.count} lần (${share}% tổng số lỗi hệ thống)`);
+    lines.push(`* Thời điểm ghi nhận  : Từ ${firstStr} đến ${lastStr}`);
+    lines.push(`* Tóm tắt lỗi chuẩn   : ${g.normalizedSummary}`);
+    lines.push(`* GỢI Ý KHẮC PHỤC     : >>> ${g.suggestedFix} <<<`);
 
     const filesList = Array.from(g.fileNames);
     if (filesList.length > 0) {
-      lines.push(`Affected Files (${filesList.length})  : ${filesList.slice(0, 10).join(', ')}${filesList.length > 10 ? ` ... (+${filesList.length - 10} more)` : ''}`);
+      lines.push(`* Tệp bị ảnh hưởng (${filesList.length}) : ${filesList.slice(0, 12).join(', ')}${filesList.length > 12 ? ` ... (+${filesList.length - 12} tệp khác)` : ''}`);
     }
 
-    lines.push(`Sample Job IDs (${g.jobIds.length})  : ${g.jobIds.slice(0, 8).map(id => `#${String(id).slice(0, 10)}`).join(', ')}${g.jobIds.length > 8 ? ` ... (+${g.jobIds.length - 8} more)` : ''}`);
+    lines.push(`* Danh sách Job IDs   : ${g.jobIds.slice(0, 8).map(id => `#${String(id).slice(0, 12)}`).join(', ')}${g.jobIds.length > 8 ? ` ... (+${g.jobIds.length - 8} jobs khác)` : ''}`);
 
     if (g.sampleOptions) {
-      lines.push('Sample Input Payload :');
+      lines.push('* Tham số mẫu (Input) :');
       try {
         const pretty = JSON.stringify(g.sampleOptions, null, 2).split('\n').map(l => `    ${l}`).join('\n');
         lines.push(pretty);
@@ -605,6 +813,19 @@ export function generateClientDeduplicatedExport(jobs = []) {
         lines.push(`    ${String(g.sampleOptions)}`);
       }
     }
+
+    const rawList = Array.from(g.rawErrors);
+    if (rawList.length > 0) {
+      lines.push('* Chi tiết Traceback / Thông báo lỗi gốc :');
+      rawList.slice(0, 3).forEach((raw, rIdx) => {
+        const cleanRaw = String(raw).trim();
+        lines.push(`    [Mẫu #${rIdx + 1}] ${cleanRaw.replace(/\n/g, '\n        ')}`);
+      });
+      if (rawList.length > 3) {
+        lines.push(`    ... (+${rawList.length - 3} biến thể lỗi khác có cùng bản chất)`);
+      }
+    }
+
     lines.push(sepDash);
   });
 
