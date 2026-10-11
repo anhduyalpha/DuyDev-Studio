@@ -12,6 +12,10 @@ model User {
   username     String    @unique
   passwordHash String    @map("password_hash")
   apiKey       String?   @unique @map("api_key")
+  role         String    @default("user") // admin | user
+  status       String    @default("active") // active | blocked
+  rateLimitRpm Int       @default(0) @map("rate_limit_rpm") // 0 = unlimited
+  notes        String?
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   jobs         Job[]
@@ -120,5 +124,19 @@ model HistoryRecord {
   @@index([isDeleted, deletedAt])
   @@index([resultFileId])
   @@map("history_records")
+}
+
+model IpAccessRule {
+  id           String    @id @default(cuid())
+  ip           String    @unique
+  alias        String?
+  note         String?
+  status       String    @default("active") // active | blocked | whitelisted | rate_limited
+  rateLimitRpm Int       @default(0) @map("rate_limit_rpm") // 0 = unlimited
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("ip_access_rules")
 }
 

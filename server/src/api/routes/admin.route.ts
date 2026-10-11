@@ -33,7 +33,18 @@ import {
   getEngineTimeoutsHandler,
   updateEngineTimeoutsHandler,
   retryJobHandler,
-  retryAllFailedJobsHandler
+  retryAllFailedJobsHandler,
+  getAdminUsersHandler,
+  createAdminUserHandler,
+  updateAdminUserHandler,
+  deleteAdminUserHandler,
+  resetUserApiKeyHandler,
+  getIpRulesHandler,
+  upsertIpRuleHandler,
+  deleteIpRuleHandler,
+  toggleIpBlockHandler,
+  setIpRateLimitHandler,
+  resetIpTrafficHandler
 } from '../controllers/admin.controller.js';
 
 export async function adminRoute(app: FastifyInstance) {
@@ -79,7 +90,20 @@ export async function adminRoute(app: FastifyInstance) {
   app.post('/api/v1/admin/actions/optimize-db', { preHandler: adminAuthGuard }, optimizeDatabaseHandler);
   app.post('/api/v1/admin/actions/clean-history', { preHandler: adminAuthGuard }, cleanHistoryHandler);
 
-  // User & IP Traffic Management
+  // User Accounts Management (Prisma User)
+  app.get('/api/v1/admin/users', { preHandler: adminAuthGuard }, getAdminUsersHandler);
+  app.post('/api/v1/admin/users', { preHandler: adminAuthGuard }, createAdminUserHandler);
+  app.put('/api/v1/admin/users/:id', { preHandler: adminAuthGuard }, updateAdminUserHandler);
+  app.delete('/api/v1/admin/users/:id', { preHandler: adminAuthGuard }, deleteAdminUserHandler);
+  app.post('/api/v1/admin/users/:id/reset-api-key', { preHandler: adminAuthGuard }, resetUserApiKeyHandler);
+
+  // IP Traffic & Access Control Rules
   app.get('/api/v1/admin/traffic/ips', { preHandler: adminAuthGuard }, getIpTrafficClientsHandler);
   app.get('/api/v1/admin/traffic/ips/:ip/logs', { preHandler: adminAuthGuard }, getIpTrafficLogsHandler);
+  app.get('/api/v1/admin/traffic/rules', { preHandler: adminAuthGuard }, getIpRulesHandler);
+  app.post('/api/v1/admin/traffic/rules', { preHandler: adminAuthGuard }, upsertIpRuleHandler);
+  app.delete('/api/v1/admin/traffic/rules/:ip', { preHandler: adminAuthGuard }, deleteIpRuleHandler);
+  app.post('/api/v1/admin/traffic/ips/:ip/toggle-block', { preHandler: adminAuthGuard }, toggleIpBlockHandler);
+  app.post('/api/v1/admin/traffic/ips/:ip/set-rate-limit', { preHandler: adminAuthGuard }, setIpRateLimitHandler);
+  app.post('/api/v1/admin/traffic/ips/:ip/reset', { preHandler: adminAuthGuard }, resetIpTrafficHandler);
 }

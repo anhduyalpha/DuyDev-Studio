@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { adminTelemetryService } from '../../services/admin-telemetry.service.js';
 import { aiMetricsService } from '../../services/ai-metrics.service.js';
 import { JanitorService } from '../../services/janitor.service.js';
+import { adminUsersService } from '../../services/admin-users.service.js';
+import { ipAccessService } from '../../services/ip-access.service.js';
 import { telemetryTracker } from '../middleware/telemetry.middleware.js';
 import { BadRequestError } from '../../lib/errors.js';
 
@@ -521,4 +523,244 @@ export async function retryAllFailedJobsHandler(_request: FastifyRequest, reply:
     data: result
   });
 }
+
+// ==========================================
+// USER ACCOUNTS SCHEMAS & CONTROLLERS
+// ==========================================
+
+const createUserBodySchema = z.object({
+  username: z.string().min(3, 'Tên đăng nhập phải có ít nhất 3 ký tự'),
+  password: z.string().min(4, 'Mật khẩu phải có ít nhất 4 ký tự'),
+  role: z.enum(['admin', 'user']).optional().default('user'),
+  rateLimitRpm: z.coerce.number().min(0).max(10000).optional().default(0),
+  notes: z.string().max(500).optional(),
+  generateApiKey: z.boolean().optional().default(false)
+});
+
+const updateUserBodySchema = z.object({
+  username: z.string().min(3).optional(),
+  password: z.string().min(4).optional(),
+  role: z.enum(['admin', 'user']).optional(),
+  status: z.enum(['active', 'blocked']).optional(),
+  rateLimitRpm: z.coerce.number().min(0).max(10000).optional(),
+  notes: z.string().max(500).optional(),
+  resetApiKey: z.boolean().optional(),
+  removeApiKey: z.boolean().optional()
+});
+
+const userIdParamsSchema = z.object({
+  id: z.string().min(1, 'ID người dùng không được để trống')
+});
+
+/**
+ * GET /api/v1/admin/users
+ * Returns list of registered database users
+ */
+export async function getAdminUsersHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const users = await adminUsersService.listUsers();
+  return reply.send({
+    success: true,
+    data: users
+  });
+}
+
+/**
+ * POST /api/v1/admin/users
+ * Creates a new user account
+ */
+export async function createAdminUserHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = createUserBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'Dữ liệu người dùng không hợp lệ');
+  }
+  const user = await adminUsersService.createUser(parseResult.data);
+  return reply.status(201).send({
+    success: true,
+    message: `Đã tạo tài khoản '${user.username}' thành công`,
+    data: user
+  });
+}
+
+/**
+ * PUT /api/v1/admin/users/:id
+ * Updates an existing user account
+ */
+export async function updateAdminUserHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = userIdParamsSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('ID người dùng không hợp lệ');
+  }
+  const bodyResult = updateUserBodySchema.safeParse(request.body);
+  if (!bodyResult.success) {
+    throw new BadRequestError(bodyResult.error.errors[0]?.message || 'Dữ liệu cập nhật không hợp lệ');
+  }
+
+  const user = await adminUsersService.updateUser(paramResult.data.id, bodyResult.data);
+  return reply.send({
+    success: true,
+    message: `Đã cập nhật thông tin tài khoản '${user.username}'`,
+    data: user
+  });
+}
+
+/**
+ * DELETE /api/v1/admin/users/:id
+ * Deletes a user account
+ */
+export async function deleteAdminUserHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = userIdParamsSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('ID người dùng không hợp lệ');
+  }
+  await adminUsersService.deleteUser(paramResult.data.id);
+  return reply.send({
+    success: true,
+    message: 'Đã xóa tài khoản người dùng thành công'
+  });
+}
+
+/**
+ * POST /api/v1/admin/users/:id/reset-api-key
+ * Regenerates an API key for a user
+ */
+export async function resetUserApiKeyHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = userIdParamsSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('ID người dùng không hợp lệ');
+  }
+  const result = await adminUsersService.resetApiKey(paramResult.data.id);
+  return reply.send({
+    success: true,
+    message: 'Đã sinh API Key mới thành công',
+    data: result
+  });
+}
+
+// ==========================================
+// IP ACCESS RULES & RATE LIMITING SCHEMAS & CONTROLLERS
+// ==========================================
+
+const upsertIpRuleBodySchema = z.object({
+  ip: z.string().min(1, 'Địa chỉ IP không được để trống'),
+  alias: z.string().max(100).nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
+  status: z.enum(['active', 'blocked', 'whitelisted', 'rate_limited']).optional(),
+  rateLimitRpm: z.coerce.number().min(0).max(10000).optional()
+});
+
+const ipParamSchema = z.object({
+  ip: z.string().min(1, 'Địa chỉ IP không được để trống')
+});
+
+const setRateLimitBodySchema = z.object({
+  rateLimitRpm: z.coerce.number().min(0).max(10000, 'Hạn mức tối đa 10000 req/phút')
+});
+
+/**
+ * GET /api/v1/admin/traffic/rules
+ * Returns all configured IP access rules
+ */
+export async function getIpRulesHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const rules = await ipAccessService.listRules();
+  return reply.send({
+    success: true,
+    data: rules
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/rules
+ * Upserts an IP access rule
+ */
+export async function upsertIpRuleHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = upsertIpRuleBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'Dữ liệu quy tắc IP không hợp lệ');
+  }
+  const rule = await ipAccessService.upsertRule(parseResult.data.ip, parseResult.data);
+  return reply.send({
+    success: true,
+    message: `Đã lưu quy tắc kiểm soát cho IP '${rule.ip}'`,
+    data: rule
+  });
+}
+
+/**
+ * DELETE /api/v1/admin/traffic/rules/:ip
+ * Deletes an IP access rule (reverting IP to default active)
+ */
+export async function deleteIpRuleHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = ipParamSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('Địa chỉ IP không hợp lệ');
+  }
+  const deleted = await ipAccessService.deleteRule(paramResult.data.ip);
+  return reply.send({
+    success: true,
+    message: deleted ? `Đã xóa quy tắc kiểm soát cho IP '${paramResult.data.ip}'` : 'Không tìm thấy quy tắc cần xóa',
+    data: { deleted }
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/ips/:ip/toggle-block
+ * Toggles blocking status for an IP
+ */
+export async function toggleIpBlockHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = ipParamSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('Địa chỉ IP không hợp lệ');
+  }
+  const rule = await ipAccessService.toggleBlock(paramResult.data.ip);
+  const msg = rule.status === 'blocked'
+    ? `Đã chặn toàn diện IP '${rule.ip}' (HTTP 403 Forbidden)`
+    : `Đã mở khóa IP '${rule.ip}' (Hoạt động bình thường)`;
+  return reply.send({
+    success: true,
+    message: msg,
+    data: rule
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/ips/:ip/set-rate-limit
+ * Sets custom RPM rate limit for an IP
+ */
+export async function setIpRateLimitHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = ipParamSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('Địa chỉ IP không hợp lệ');
+  }
+  const bodyResult = setRateLimitBodySchema.safeParse(request.body);
+  if (!bodyResult.success) {
+    throw new BadRequestError(bodyResult.error.errors[0]?.message || 'Hạn mức rate limit không hợp lệ');
+  }
+
+  const rule = await ipAccessService.setRateLimit(paramResult.data.ip, bodyResult.data.rateLimitRpm);
+  const msg = rule.rateLimitRpm > 0
+    ? `Đã đặt giới hạn ${rule.rateLimitRpm} req/phút cho IP '${rule.ip}'`
+    : `Đã hủy giới hạn rate limit cho IP '${rule.ip}' (Không giới hạn)`;
+  return reply.send({
+    success: true,
+    message: msg,
+    data: rule
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/ips/:ip/reset
+ * Resets traffic counter and cache for an IP
+ */
+export async function resetIpTrafficHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = ipParamSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    throw new BadRequestError('Địa chỉ IP không hợp lệ');
+  }
+  ipAccessService.resetIpStats(paramResult.data.ip);
+  return reply.send({
+    success: true,
+    message: `Đã đặt lại bộ đếm lưu lượng cho IP '${paramResult.data.ip}'`
+  });
+}
+
 

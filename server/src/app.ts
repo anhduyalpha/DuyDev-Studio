@@ -37,6 +37,7 @@ import { getQuizWorker, closeQuizWorker } from './workers/quiz.worker.js';
 import { systemRoute } from './api/routes/system.route.js';
 import { adminRoute } from './api/routes/admin.route.js';
 import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
+import { ipAccessService } from './services/ip-access.service.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -50,6 +51,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // 1. Register Global Error Handler
   app.setErrorHandler(errorHandler);
+
+  // 1.1. Initialize IP Access Control Rules Cache
+  await ipAccessService.init();
 
   // 2. Register CORS (Uncapped LAN & Local Access)
   await app.register(cors, {
@@ -105,12 +109,39 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
-  // 4. Register Request Logging & Default Content-Type Hook
-  app.addHook('onRequest', async (req) => {
+  // 4. Register Request Logging & IP Access Control Hook
+  app.addHook('onRequest', async (req, reply) => {
     (req as any)._startTime = Date.now();
     if (!req.headers['content-type'] && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
       req.headers['content-type'] = 'application/json';
     }
+
+    const url = req.raw.url || req.url || '';
+    // Skip health checks, auth verification and static assets to prevent lockout
+    const isExcluded = url.startsWith('/health') ||
+      url.startsWith('/api/v1/health') ||
+      url.startsWith('/api/v1/auth/verify') ||
+      url.startsWith('/api/v1/auth/status');
+
+    if (!isExcluded) {
+      const cfIp = req.headers['cf-connecting-ip'] as string;
+      const cleanIp = (cfIp || ((req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()) || req.ip || '127.0.0.1').replace(/^::ffff:/, '');
+
+      const check = ipAccessService.checkAccess(cleanIp);
+      if (!check.allowed) {
+        if (check.status === 429) {
+          reply.header('Retry-After', '60');
+        }
+        return reply.status(check.status).send({
+          success: false,
+          error: check.status === 403 ? 'FORBIDDEN' : 'TOO_MANY_REQUESTS',
+          message: check.reason || 'Yêu cầu bị từ chối'
+        });
+      }
+
+      ipAccessService.recordHit(cleanIp);
+    }
+
     logger.debug({ reqId: req.id, method: req.method, url: req.url, range: req.headers.range }, 'Incoming request');
   });
 
