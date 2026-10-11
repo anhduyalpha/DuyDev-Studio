@@ -39,6 +39,15 @@ export interface R2Metrics {
   updatedAt: string;
 }
 
+export interface R2TransitObjectInfo {
+  key: string;
+  sizeBytes: number;
+  sizeFormatted: string;
+  lastModified: string;
+  ageMs: number;
+  target: 'primary' | 'fallback';
+}
+
 export class R2Service {
   private static primaryClient: S3Client | null = null;
   private static fallbackClient: S3Client | null = null;
@@ -533,6 +542,58 @@ export class R2Service {
     }
 
     return purgedCount;
+  }
+
+  static async listTransitObjects(): Promise<R2TransitObjectInfo[]> {
+    if (!this.isAvailable()) return [];
+    const results: R2TransitObjectInfo[] = [];
+
+    const fetchBucketObjects = async (target: 'primary' | 'fallback', bucket: string) => {
+      try {
+        const client = this.getClient(target);
+        const listCommand = new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: 'transit/'
+        });
+        const response = await client.send(listCommand);
+        this.recordRequest('classA', target);
+        if (response.Contents) {
+          const now = Date.now();
+          for (const obj of response.Contents) {
+            if (obj.Key) {
+              const size = obj.Size || 0;
+              const lm = obj.LastModified ? obj.LastModified.toISOString() : new Date().toISOString();
+              const age = obj.LastModified ? Math.max(0, now - obj.LastModified.getTime()) : 0;
+
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB'];
+              const i = size === 0 ? 0 : Math.floor(Math.log(size) / Math.log(k));
+              const sizeFormatted = `${(size / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'MB'}`;
+
+              results.push({
+                key: obj.Key,
+                sizeBytes: size,
+                sizeFormatted,
+                lastModified: lm,
+                ageMs: age,
+                target
+              });
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn({ err, target, bucket }, 'Failed to list transit objects from R2');
+      }
+    };
+
+    if (this.isPrimaryAvailable()) {
+      await fetchBucketObjects('primary', env.R2_BUCKET_NAME);
+    }
+    if (this.isFallbackConfigured() && this.isFallbackAvailable()) {
+      await fetchBucketObjects('fallback', env.R2_FALLBACK_BUCKET_NAME);
+    }
+
+    return results.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
   }
 
   static async getTelemetrySummary(): Promise<any> {

@@ -14,6 +14,7 @@ export interface AiKeyConfig {
   baseUrl: string;
   model: string;
   apiKey: string;
+  priority: number;
   isActive: boolean;
   lastPingMs?: number;
   lastPingStatus?: 'ok' | 'error' | 'rate_limited';
@@ -31,6 +32,10 @@ export interface AiCallLog {
   totalTokens: number;
   latencyMs: number;
   statusCode: number;
+  keyId?: string;
+  keyName?: string;
+  errorDetails?: string;
+  promptSnippet?: string;
   errorMsg?: string;
 }
 
@@ -83,6 +88,7 @@ export class AiMetricsService {
           baseUrl: process.env.AGNES_AI_BASE_URL || 'https://apihub.agnes-ai.com/v1',
           model: process.env.AGNES_AI_MODEL || 'agnes-3.0-flash',
           apiKey: process.env.AGNES_AI_API_KEY || process.env.AGNES_API_KEY || '',
+          priority: 1,
           isActive: true
         }
       ],
@@ -110,6 +116,13 @@ export class AiMetricsService {
         if (!parsed.keys || parsed.keys.length === 0) {
           parsed.keys = defaultData.keys;
         } else {
+          // Normalize existing keys with priority
+          parsed.keys = parsed.keys.map((k: AiKeyConfig, idx: number) => ({
+            ...k,
+            priority: typeof k.priority === 'number' ? k.priority : idx + 1,
+            provider: k.provider || (k.id === 'agnes-primary' ? 'agnes' : 'custom')
+          }));
+
           // Sync env key if empty in file
           const agnesKey = parsed.keys.find((k: AiKeyConfig) => k.id === 'agnes-primary');
           if (agnesKey && !agnesKey.apiKey && (process.env.AGNES_AI_API_KEY || process.env.AGNES_API_KEY)) {
@@ -156,6 +169,10 @@ export class AiMetricsService {
     latencyMs: number;
     statusCode: number;
     errorMsg?: string;
+    keyId?: string;
+    keyName?: string;
+    errorDetails?: string;
+    promptSnippet?: string;
   }) {
     const now = Date.now();
     const today = new Date().toISOString().split('T')[0];
@@ -189,7 +206,7 @@ export class AiMetricsService {
     this.metrics.daily.calls++;
     this.metrics.daily.tokens += tTokens;
 
-    // Log entry (keep up to 20 recent logs)
+    // Log entry (keep up to 50 recent logs)
     const logItem: AiCallLog = {
       id: `ai_${now}_${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date(now).toISOString(),
@@ -201,12 +218,16 @@ export class AiMetricsService {
       totalTokens: tTokens,
       latencyMs: data.latencyMs,
       statusCode: data.statusCode,
+      keyId: data.keyId,
+      keyName: data.keyName,
+      errorDetails: data.errorDetails,
+      promptSnippet: data.promptSnippet,
       errorMsg: data.errorMsg
     };
 
     this.metrics.recentLogs.unshift(logItem);
-    if (this.metrics.recentLogs.length > 20) {
-      this.metrics.recentLogs = this.metrics.recentLogs.slice(0, 20);
+    if (this.metrics.recentLogs.length > 50) {
+      this.metrics.recentLogs = this.metrics.recentLogs.slice(0, 50);
     }
 
     this.saveMetrics();
@@ -249,6 +270,7 @@ export class AiMetricsService {
         provider: k.provider,
         baseUrl: k.baseUrl,
         model: k.model,
+        priority: k.priority ?? 1,
         apiKeyMasked: this.maskKey(k.apiKey),
         hasKey: Boolean(k.apiKey),
         isActive: k.isActive,
@@ -266,9 +288,11 @@ export class AiMetricsService {
   public updateKey(data: {
     id: string;
     name?: string;
+    provider?: 'agnes' | 'gemini' | 'openai' | 'custom';
     baseUrl?: string;
     model?: string;
     apiKey?: string;
+    priority?: number;
     isActive?: boolean;
   }) {
     let key = this.metrics.keys.find(k => k.id === data.id);
@@ -276,18 +300,21 @@ export class AiMetricsService {
       key = {
         id: data.id,
         name: data.name || data.id,
-        provider: 'custom',
+        provider: data.provider || 'custom',
         baseUrl: data.baseUrl || 'https://apihub.agnes-ai.com/v1',
         model: data.model || 'agnes-3.0-flash',
         apiKey: data.apiKey || '',
+        priority: typeof data.priority === 'number' ? data.priority : this.metrics.keys.length + 1,
         isActive: data.isActive !== false
       };
       this.metrics.keys.push(key);
     } else {
       if (data.name !== undefined) key.name = data.name;
+      if (data.provider !== undefined) key.provider = data.provider;
       if (data.baseUrl !== undefined) key.baseUrl = data.baseUrl;
       if (data.model !== undefined) key.model = data.model;
       if (data.apiKey !== undefined && data.apiKey !== '') key.apiKey = data.apiKey;
+      if (data.priority !== undefined) key.priority = data.priority;
       if (data.isActive !== undefined) key.isActive = data.isActive;
     }
 
@@ -301,6 +328,73 @@ export class AiMetricsService {
 
     this.saveMetrics();
     return key;
+  }
+
+  public deleteKey(id: string): { success: boolean; message: string } {
+    if (id === 'agnes-primary') {
+      throw new Error('Không thể xóa API key chính (Agnes AI Primary). Bạn chỉ có thể tắt hoặc cập nhật thông tin key.');
+    }
+    const idx = this.metrics.keys.findIndex(k => k.id === id);
+    if (idx === -1) {
+      throw new Error(`Không tìm thấy API key với ID: ${id}`);
+    }
+    this.metrics.keys.splice(idx, 1);
+    this.saveMetrics();
+    return { success: true, message: `Đã xóa cấu hình API key ${id} thành công` };
+  }
+
+  /**
+   * Sequential Multi-Key Fallback Pipeline
+   * Tries active keys sorted by priority (Primary first, then Fallback 1, Fallback 2...).
+   * Detailed upstream errors (504, 429, timeouts) are captured into AiCallLog per key.
+   */
+  public async executeWithFallback<T>(
+    fn: (key: AiKeyConfig) => Promise<T>,
+    context?: { module?: string; promptSnippet?: string }
+  ): Promise<{ result: T; usedKey: AiKeyConfig; latencyMs: number }> {
+    const activeKeys = this.metrics.keys
+      .filter(k => k.isActive && Boolean(k.apiKey))
+      .sort((a, b) => (a.priority || 1) - (b.priority || 1));
+
+    if (activeKeys.length === 0) {
+      throw new Error('Không có API key nào đang hoạt động và có khóa API');
+    }
+
+    let lastError: any = null;
+
+    for (const key of activeKeys) {
+      const startTime = Date.now();
+      try {
+        const result = await fn(key);
+        const latencyMs = Date.now() - startTime;
+        return { result, usedKey: key, latencyMs };
+      } catch (err: any) {
+        const latencyMs = Date.now() - startTime;
+        lastError = err;
+        const statusCode = Number(err?.status || err?.statusCode) || 504;
+        const errorDetails = err?.message || 'Upstream did not respond or returned error';
+
+        this.recordCall({
+          module: context?.module || 'ai-execution',
+          provider: key.provider,
+          model: key.model,
+          latencyMs,
+          statusCode,
+          errorMsg: errorDetails,
+          keyId: key.id,
+          keyName: key.name,
+          errorDetails,
+          promptSnippet: context?.promptSnippet
+        });
+
+        logger.warn(
+          { keyId: key.id, keyName: key.name, latencyMs, statusCode, errorDetails },
+          'AI multi-key execution failed on key, attempting next fallback key'
+        );
+      }
+    }
+
+    throw lastError || new Error('Tất cả API key dự phòng đều thất bại');
   }
 
   public async testPingKey(keyId: string): Promise<{

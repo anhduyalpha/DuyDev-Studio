@@ -19,6 +19,8 @@ import { renderR2TelemetryCard, attachR2TelemetryListeners } from '../components
 import { renderFailedJobsInspector, attachFailedJobsListeners } from '../components/admin/AdminFailedJobsInspector.js';
 import { openStorageInspectorModal } from '../components/admin/AdminStorageInspectorModal.js';
 import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
+import { openOperationsInspectorModal } from '../components/admin/AdminOperationsInspectorModal.js';
+import { renderIpTrafficManager, attachIpTrafficListeners } from '../components/admin/AdminIpTrafficManager.js';
 
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
@@ -28,6 +30,7 @@ let cachedFailedJobsData = [];
 let trafficHistoryRps = [];
 let lastUserInteractionTime = Date.now();
 let idleAutoLockTimer = null;
+let currentAdminTab = 'overview'; // 'overview' | 'ip-manager'
 
 function formatBytes(bytes) {
   if (!bytes || isNaN(bytes) || bytes === 0) return '0 B';
@@ -214,8 +217,30 @@ function renderUnlockedDashboardView() {
         </div>
       </div>
 
-      <!-- 2. Top 5 KPI Summary Banner -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      <!-- Top Navigation Tabs (Overview vs User & IP Traffic) -->
+      <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl w-fit">
+        <button
+          type="button"
+          id="adminTabOverview"
+          class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${currentAdminTab === 'overview' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+        >
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-orange-500"></i>
+          <span>Tổng Quan & Telemetry</span>
+        </button>
+        <button
+          type="button"
+          id="adminTabIpManager"
+          class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${currentAdminTab === 'ip-manager' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+        >
+          <i data-lucide="users" class="w-4 h-4 text-orange-500"></i>
+          <span>Quản Lý Người Dùng & IP Traffic</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Overview & Telemetry View -->
+      <div id="adminOverviewViewContainer" class="${currentAdminTab === 'overview' ? 'space-y-6' : 'hidden space-y-6'}">
+        <!-- 2. Top 5 KPI Summary Banner -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <!-- KPI 1: Live RPS & Bandwidth -->
         <div class="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-md shadow-xs">
           <div class="flex items-center justify-between text-zinc-600 dark:text-zinc-400 text-xs font-medium mb-1">
@@ -534,92 +559,116 @@ function renderUnlockedDashboardView() {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           <!-- Action 0: Soi tệp lưu trữ máy chủ -->
-          <button
-            id="btnAdminInspectStorage"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-orange-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-orange-500 flex items-center justify-between">
-              <span>Soi Tệp Lưu Trữ Máy Chủ</span>
-              <i data-lucide="hard-drive" class="w-4 h-4 text-zinc-400 group-hover:text-orange-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="hard-drive" class="w-4 h-4 text-orange-500"></i> Soi Tệp Lưu Trữ Máy Chủ</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Kiểm tra chi tiết danh sách tệp đĩa trước khi dọn dẹp</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Kiểm tra chi tiết danh sách tệp đĩa trước khi dọn dẹp</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectStorage" class="w-full py-1.5 px-3 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-semibold transition cursor-pointer flex items-center justify-center gap-1.5">
+                <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                <span>Xem Chi Tiết Tệp Đĩa</span>
+              </button>
+            </div>
+          </div>
 
           <!-- Action 1: Dọn tệp tạm đĩa -->
-          <button
-            id="btnAdminCleanTemp"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-orange-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-orange-500 flex items-center justify-between">
-              <span>Dọn Rác Tệp Tạm Đĩa</span>
-              <i data-lucide="trash-2" class="w-4 h-4 text-zinc-400 group-hover:text-orange-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="trash-2" class="w-4 h-4 text-orange-500"></i> Dọn Rác Tệp Tạm Đĩa</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa sạch tệp tạm trong thư mục storage/temp</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa sạch tệp tạm trong thư mục storage/temp</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectTemp" class="px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-semibold transition cursor-pointer">Xem chi tiết</button>
+              <button type="button" id="btnAdminCleanTemp" class="ml-auto px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium transition cursor-pointer">Dọn dẹp</button>
+            </div>
+          </div>
 
           <!-- Action 2: Dọn tệp R2 mồ côi -->
-          <button
-            id="btnAdminCleanR2"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-orange-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-orange-500 flex items-center justify-between">
-              <span>Dọn R2 Transit Mồ Côi</span>
-              <i data-lucide="cloud-off" class="w-4 h-4 text-zinc-400 group-hover:text-orange-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="cloud-off" class="w-4 h-4 text-orange-500"></i> Dọn R2 Transit Mồ Côi</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa các tệp tải dở > 1h còn kẹt trên Cloudflare R2</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa các tệp tải dở > 1h còn kẹt trên Cloudflare R2</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectR2" class="px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-semibold transition cursor-pointer">Xem chi tiết</button>
+              <button type="button" id="btnAdminCleanR2" class="ml-auto px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium transition cursor-pointer">Dọn dẹp</button>
+            </div>
+          </div>
 
           <!-- Action 3: Dọn hàng đợi BullMQ -->
-          <button
-            id="btnAdminCleanQueues"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-orange-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-orange-500 flex items-center justify-between">
-              <span>Dọn Sạch Hàng Đợi BullMQ</span>
-              <i data-lucide="list-x" class="w-4 h-4 text-zinc-400 group-hover:text-orange-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="list-x" class="w-4 h-4 text-cyan-500"></i> Dọn Sạch Hàng Đợi BullMQ</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Dọn sạch các job completed và failed trong Redis</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Dọn sạch các job completed và failed trong Redis</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectQueues" class="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-[11px] font-semibold transition cursor-pointer">Xem chi tiết</button>
+              <button type="button" id="btnAdminCleanQueues" class="ml-auto px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium transition cursor-pointer">Dọn dẹp</button>
+            </div>
+          </div>
 
           <!-- Action 4: Tối ưu SQLite Database -->
-          <button
-            id="btnAdminOptimizeDb"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-emerald-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-emerald-500 flex items-center justify-between">
-              <span>Tối Ưu Hóa SQLite DB</span>
-              <i data-lucide="database" class="w-4 h-4 text-zinc-400 group-hover:text-emerald-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="database" class="w-4 h-4 text-emerald-500"></i> Tối Ưu Hóa SQLite DB</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Chạy PRAGMA wal_checkpoint(TRUNCATE) & optimize</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Chạy PRAGMA wal_checkpoint(TRUNCATE) & optimize</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectDb" class="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold transition cursor-pointer">Xem chi tiết</button>
+              <button type="button" id="btnAdminOptimizeDb" class="ml-auto px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium transition cursor-pointer">Tối ưu hóa</button>
+            </div>
+          </div>
 
           <!-- Action 5: Dọn lịch sử đã xóa -->
-          <button
-            id="btnAdminCleanHistory"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-amber-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-amber-500 flex items-center justify-between">
-              <span>Dọn Lịch Sử Thùng Rác</span>
-              <i data-lucide="archive-x" class="w-4 h-4 text-zinc-400 group-hover:text-amber-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="archive-x" class="w-4 h-4 text-amber-500"></i> Dọn Lịch Sử Thùng Rác</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa vĩnh viễn các bản ghi trong thùng rác hệ thống</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa vĩnh viễn các bản ghi trong thùng rác hệ thống</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectTrash" class="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-semibold transition cursor-pointer">Xem chi tiết</button>
+              <button type="button" id="btnAdminCleanHistory" class="ml-auto px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium transition cursor-pointer">Dọn rác</button>
+            </div>
+          </div>
 
           <!-- Action 6: Đặt lại trạng thái module -->
-          <button
-            id="btnAdminWipeStates"
-            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-rose-500/30 group cursor-pointer shadow-xs"
-          >
-            <div class="text-xs font-semibold group-hover:text-rose-500 flex items-center justify-between">
-              <span>Đặt Lại Bộ Nhớ Trình Duyệt</span>
-              <i data-lucide="rotate-ccw" class="w-4 h-4 text-zinc-400 group-hover:text-rose-500"></i>
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-500"></i> Đặt Lại Bộ Nhớ Trình Duyệt</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa toàn bộ cache localStorage nháp của các công cụ</p>
             </div>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Xóa toàn bộ cache localStorage nháp của các công cụ</p>
-          </button>
+            <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-white/5">
+              <button type="button" id="btnAdminInspectCache" class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-semibold transition cursor-pointer">Xem chi tiết</button>
+              <button type="button" id="btnAdminWipeStates" class="ml-auto px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium transition cursor-pointer">Đặt lại</button>
+            </div>
+          </div>
         </div>
       </div>
 
     </div>
+    <!-- End Tab 1 (Overview View Container) -->
+
+    <!-- Tab 2: User & IP Traffic Manager View -->
+    <div id="adminIpManagerViewContainer" class="${currentAdminTab === 'ip-manager' ? '' : 'hidden'}">
+      ${renderIpTrafficManager()}
+    </div>
+
+  </div>
   `;
 }
 
@@ -901,6 +950,49 @@ export function attachAdminPageListeners(onRerender) {
   }
 
   // 2. Unlocked State Handlers
+  // Top Tab Switcher: Overview vs IP Traffic Manager
+  const tabOverview = document.getElementById('adminTabOverview');
+  const tabIpManager = document.getElementById('adminTabIpManager');
+  const viewOverview = document.getElementById('adminOverviewViewContainer');
+  const viewIpManager = document.getElementById('adminIpManagerViewContainer');
+
+  const switchTab = (tab) => {
+    currentAdminTab = tab;
+    if (tab === 'overview') {
+      if (viewOverview) viewOverview.classList.remove('hidden');
+      if (viewIpManager) viewIpManager.classList.add('hidden');
+      if (tabOverview) {
+        tabOverview.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10';
+      }
+      if (tabIpManager) {
+        tabIpManager.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
+      }
+      updateCanvasSparkline();
+    } else {
+      if (viewOverview) viewOverview.classList.add('hidden');
+      if (viewIpManager) {
+        viewIpManager.classList.remove('hidden');
+        attachIpTrafficListeners(viewIpManager);
+      }
+      if (tabIpManager) {
+        tabIpManager.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10';
+      }
+      if (tabOverview) {
+        tabOverview.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
+      }
+    }
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  };
+
+  if (tabOverview) tabOverview.onclick = () => switchTab('overview');
+  if (tabIpManager) tabIpManager.onclick = () => switchTab('ip-manager');
+
+  if (currentAdminTab === 'ip-manager' && viewIpManager) {
+    attachIpTrafficListeners(viewIpManager);
+  }
+
   // Top bar controls
   const btnLock = document.getElementById('btnAdminLockSession');
   if (btnLock) {
@@ -950,6 +1042,48 @@ export function attachAdminPageListeners(onRerender) {
   if (btnInspectStorage) {
     btnInspectStorage.onclick = () => {
       openStorageInspectorModal('temp', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  const btnInspectTemp = document.getElementById('btnAdminInspectTemp');
+  if (btnInspectTemp) {
+    btnInspectTemp.onclick = () => {
+      openStorageInspectorModal('temp', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  const btnInspectR2 = document.getElementById('btnAdminInspectR2');
+  if (btnInspectR2) {
+    btnInspectR2.onclick = () => {
+      openOperationsInspectorModal('r2', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  const btnInspectQueues = document.getElementById('btnAdminInspectQueues');
+  if (btnInspectQueues) {
+    btnInspectQueues.onclick = () => {
+      openOperationsInspectorModal('queues', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  const btnInspectDb = document.getElementById('btnAdminInspectDb');
+  if (btnInspectDb) {
+    btnInspectDb.onclick = () => {
+      openOperationsInspectorModal('db', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  const btnInspectTrash = document.getElementById('btnAdminInspectTrash');
+  if (btnInspectTrash) {
+    btnInspectTrash.onclick = () => {
+      openOperationsInspectorModal('trash', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  const btnInspectCache = document.getElementById('btnAdminInspectCache');
+  if (btnInspectCache) {
+    btnInspectCache.onclick = () => {
+      openOperationsInspectorModal('cache', () => fetchAdminTelemetry(onRerender));
     };
   }
 

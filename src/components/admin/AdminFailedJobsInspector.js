@@ -10,6 +10,56 @@ import { openSlideConfirmModal } from '../common/SlideConfirmModal.js';
 let cachedFailedJobs = [];
 let activeTypeFilter = 'all';
 
+export function normalizeErrorMessageToEnglish(rawMsg) {
+  if (!rawMsg || !String(rawMsg).trim()) {
+    return 'Unknown error occurred.';
+  }
+  const trimmed = String(rawMsg).trim();
+  const lower = trimmed.toLowerCase();
+
+  if (lower.includes('cairosvg') && (lower.includes('yüklü değil') || lower.includes('yüklü') || lower.includes('not installed'))) {
+    return "CairoSVG library is not installed: SVG conversion requires CairoSVG ('pip install cairosvg').";
+  }
+  if (lower.includes('resim dönüşüm hatası') || lower.includes('resim donusum hatasi') || (lower.includes('resim') && lower.includes('dönüşüm'))) {
+    const details = trimmed.split(':').slice(1).join(':').trim();
+    return details
+      ? `Image conversion error: Failed to process source image (${details}).`
+      : 'Image conversion error: Failed to process source image.';
+  }
+  if (lower.includes('ffmpeg hatası') || lower.includes('ffmpeg hatasi')) {
+    const details = trimmed.split(':').slice(1).join(':').trim();
+    return details
+      ? `FFmpeg encoding error: Media stream conversion failed (${details}).`
+      : 'FFmpeg encoding error: Media stream conversion failed.';
+  }
+  if (lower.includes('sayfa dönüştürülemedi') || lower.includes('sayfa donusturulemedi')) {
+    return 'Page rendering error: Could not convert document page.';
+  }
+  if (lower.includes('dosya bulunamadı') || lower.includes('dosya bulunamadi')) {
+    return 'File not found: Source path does not exist.';
+  }
+  if (lower.includes('geçersiz dosya formatı') || lower.includes('gecersiz dosya formati')) {
+    return 'Invalid file format: Unrecognized or unsupported file type.';
+  }
+  if (lower.includes('bellek yetersiz') || lower.includes('yetersiz bellek')) {
+    return 'Out of memory: Insufficient RAM for processing.';
+  }
+  if (lower.includes('zaman aşımı') || lower.includes('zaman asimi')) {
+    return 'Operation timed out: Process exceeded maximum execution time.';
+  }
+  if (lower.includes('lỗi không xác định')) {
+    return 'Unknown error occurred.';
+  }
+  if (lower.includes('không thể đưa tác vụ') && lower.includes('vào hàng đợi')) {
+    return 'Queue failure: Unable to enqueue processing task. Please try again.';
+  }
+  if (lower.includes('không thể xếp hàng tạo bài tập trắc nghiệm')) {
+    return 'Queue failure: Unable to enqueue quiz generation task. Please try again.';
+  }
+
+  return trimmed;
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -170,7 +220,7 @@ function renderFailedJobsItemsMarkup(jobs) {
 
   return jobs.map(job => {
     const duration = job.durationMs != null ? `${(job.durationMs / 1000).toFixed(2)}s` : '--';
-    const cleanError = escapeHtml(job.errorMessage || 'Lỗi không xác định');
+    const cleanError = escapeHtml(normalizeErrorMessageToEnglish(job.errorMessage));
     const jsonPretty = escapeHtml(typeof job.options === 'object' ? JSON.stringify(job.options, null, 2) : String(job.optionsRaw || '{}'));
 
     return `

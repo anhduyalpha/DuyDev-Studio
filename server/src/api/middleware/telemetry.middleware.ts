@@ -17,10 +17,62 @@ interface SecondBucket {
   totalLatencyMs: number;
 }
 
+export interface IpRequestLogItem {
+  timestamp: string;
+  method: string;
+  route: string;
+  statusCode: number;
+  latencyMs: number;
+  contentLengthIn: number;
+  contentLengthOut: number;
+}
+
+export interface IpClientProfile {
+  ip: string;
+  isLan: boolean;
+  country: string;
+  userAgent: string;
+  deviceSummary: string;
+  totalRequests: number;
+  bytesIn: number;
+  bytesOut: number;
+  status2xx: number;
+  status3xx: number;
+  status4xx: number;
+  status5xx: number;
+  firstSeenAt: string;
+  lastActiveAt: string;
+  recentLogs: IpRequestLogItem[];
+}
+
+export function parseDeviceSummary(ua: string): string {
+  if (!ua || ua === 'Unknown') return 'Unknown Device';
+  let os = 'Unknown OS';
+  if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/windows/i.test(ua)) os = 'Windows';
+  else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = 'Browser';
+  if (/edg/i.test(ua)) browser = 'Edge';
+  else if (/chrome|crios/i.test(ua)) browser = 'Chrome';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/safari/i.test(ua)) browser = 'Safari';
+  else if (/curl|python|wget|postman/i.test(ua)) browser = 'CLI/Bot';
+
+  return `${os} · ${browser}`;
+}
+
 export class TelemetryTracker {
   private static instance: TelemetryTracker;
   private readonly WINDOW_SECONDS = 60;
   private buckets: Map<number, SecondBucket> = new Map();
+
+  // In-memory registry of active client IPs (up to 300 recent IPs)
+  private ipClientRegistry: Map<string, IpClientProfile> = new Map();
+  private readonly MAX_CLIENT_IPS = 300;
+  private readonly MAX_LOGS_PER_IP = 30;
 
   // Cumulative totals
   private totalRequests = 0;
@@ -102,6 +154,85 @@ export class TelemetryTracker {
     else if (statusCode >= 300 && statusCode < 400) bucket.status3xx++;
     else if (statusCode >= 400 && statusCode < 500) bucket.status4xx++;
     else if (statusCode >= 500) bucket.status5xx++;
+
+    // Record per-IP tracking
+    const rawIp = cfIp ||
+      ((req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()) ||
+      clientIp ||
+      '127.0.0.1';
+    const cleanIp = rawIp.replace(/^::ffff:/, '');
+    const countryHeader = req.headers['cf-ipcountry'] as string;
+    const country = countryHeader || (isLan ? 'LAN' : 'VN');
+    const userAgent = (req.headers['user-agent'] as string) || 'Unknown';
+    const route = req.raw?.url || req.url || '/';
+    const method = req.method || 'GET';
+    const nowIso = new Date().toISOString();
+
+    let profile = this.ipClientRegistry.get(cleanIp);
+    if (!profile) {
+      if (this.ipClientRegistry.size >= this.MAX_CLIENT_IPS) {
+        let oldestIp: string | null = null;
+        let oldestTime = Infinity;
+        for (const [key, p] of this.ipClientRegistry.entries()) {
+          const t = new Date(p.lastActiveAt).getTime();
+          if (t < oldestTime) {
+            oldestTime = t;
+            oldestIp = key;
+          }
+        }
+        if (oldestIp) this.ipClientRegistry.delete(oldestIp);
+      }
+
+      profile = {
+        ip: cleanIp,
+        isLan,
+        country,
+        userAgent,
+        deviceSummary: parseDeviceSummary(userAgent),
+        totalRequests: 0,
+        bytesIn: 0,
+        bytesOut: 0,
+        status2xx: 0,
+        status3xx: 0,
+        status4xx: 0,
+        status5xx: 0,
+        firstSeenAt: nowIso,
+        lastActiveAt: nowIso,
+        recentLogs: []
+      };
+      this.ipClientRegistry.set(cleanIp, profile);
+    }
+
+    profile.totalRequests++;
+    profile.bytesIn += contentLengthIn;
+    profile.bytesOut += contentLengthOut;
+    profile.lastActiveAt = nowIso;
+    if (countryHeader && profile.country !== countryHeader) {
+      profile.country = countryHeader;
+    }
+    if (userAgent !== 'Unknown') {
+      profile.userAgent = userAgent;
+      profile.deviceSummary = parseDeviceSummary(userAgent);
+    }
+
+    if (statusCode >= 200 && statusCode < 300) profile.status2xx++;
+    else if (statusCode >= 300 && statusCode < 400) profile.status3xx++;
+    else if (statusCode >= 400 && statusCode < 500) profile.status4xx++;
+    else if (statusCode >= 500) profile.status5xx++;
+
+    profile.recentLogs.unshift({
+      timestamp: nowIso,
+      method,
+      route,
+      statusCode,
+      latencyMs,
+      contentLengthIn,
+      contentLengthOut
+    });
+
+    if (profile.recentLogs.length > this.MAX_LOGS_PER_IP) {
+      profile.recentLogs = profile.recentLogs.slice(0, this.MAX_LOGS_PER_IP);
+    }
   }
 
   public getSnapshot() {
@@ -225,6 +356,68 @@ export class TelemetryTracker {
       timeline
     };
   }
+
+  /**
+   * Retrieves list of recently active client IPs and their aggregate metrics
+   */
+  public getIpClientsList(): Array<Omit<IpClientProfile, 'recentLogs'> & { recentLogsCount: number }> {
+    const list = Array.from(this.ipClientRegistry.values()).map(p => ({
+      ip: p.ip,
+      isLan: p.isLan,
+      country: p.country,
+      userAgent: p.userAgent,
+      deviceSummary: p.deviceSummary,
+      totalRequests: p.totalRequests,
+      bytesIn: p.bytesIn,
+      bytesOut: p.bytesOut,
+      status2xx: p.status2xx,
+      status3xx: p.status3xx,
+      status4xx: p.status4xx,
+      status5xx: p.status5xx,
+      firstSeenAt: p.firstSeenAt,
+      lastActiveAt: p.lastActiveAt,
+      recentLogsCount: p.recentLogs.length
+    }));
+
+    return list.sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime());
+  }
+
+  /**
+   * Retrieves detailed request stream logs for a specific client IP
+   */
+  public getIpRequestLogs(ip: string): { profile: Omit<IpClientProfile, 'recentLogs'> | null; logs: IpRequestLogItem[] } {
+    const cleanIp = (ip || '').replace(/^::ffff:/, '').trim();
+    const profile = this.ipClientRegistry.get(cleanIp);
+    if (!profile) {
+      return { profile: null, logs: [] };
+    }
+    const { recentLogs, ...meta } = profile;
+    return {
+      profile: meta,
+      logs: recentLogs
+    };
+  }
+
+  /**
+   * Clears the in-memory client IP registry
+   */
+  public clearIpRegistry(): { clearedCount: number } {
+    const count = this.ipClientRegistry.size;
+    this.ipClientRegistry.clear();
+    return { clearedCount: count };
+  }
 }
 
 export const telemetryTracker = TelemetryTracker.getInstance();
+
+export function getIpClientsList() {
+  return telemetryTracker.getIpClientsList();
+}
+
+export function getIpRequestLogs(ip: string) {
+  return telemetryTracker.getIpRequestLogs(ip);
+}
+
+export function clearIpRegistry() {
+  return telemetryTracker.clearIpRegistry();
+}

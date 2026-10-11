@@ -269,129 +269,128 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     };
   }
 
-  // 1. AI fallback if configured
-  const apiKey = process.env.AGNES_AI_API_KEY || process.env.AGNES_API_KEY;
-  const baseUrl = process.env.AGNES_AI_BASE_URL || 'https://apihub.agnes-ai.com/v1';
-  const model = process.env.AGNES_AI_MODEL || 'agnes-3.0-flash';
+  // 1. Sequential Multi-Key AI fallback pipeline
+  try {
+    const { result, usedKey, latencyMs } = await aiMetricsService.executeWithFallback(async (key) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-  if (apiKey) {
-    const aiStartTime = Date.now();
-    try {
-      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
-        signal: AbortSignal.timeout(3500),
-        body: JSON.stringify({
-          model,
-          temperature: 0.1,
-          response_format: { type: 'json_object' },
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert Vietnamese exam parameter extractor for a quiz generator tool. Given a user request, extract parameters and respond strictly with JSON having this schema:\n' +
-                '{\n' +
-                '  "pages": string (e.g. "11", "11-15", "4,5,6" - only the page number(s) or ranges. Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
-                '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18),\n' +
-                '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, count = Y - X + 1),\n' +
-                '  "title": string (formal Vietnamese exam uppercase title),\n' +
-                '  "prefix": string (optional short clean topic or file name if explicitly mentioned, otherwise "")\n' +
-                '}'
-            },
-            {
-              role: 'user',
-              content: `Parse this quiz generation request: "${text}"`
-            }
-          ]
-        })
-      });
-
-      const aiLatency = Date.now() - aiStartTime;
-
-      if (res.ok) {
-        const json = (await res.json()) as any;
-        const usage = json.usage;
-
-        aiMetricsService.recordCall({
-          module: 'quiz-prompt',
-          provider: 'agnes',
-          model,
-          promptTokens: usage?.prompt_tokens || 120,
-          completionTokens: usage?.completion_tokens || 40,
-          latencyMs: aiLatency,
-          statusCode: res.status
+      try {
+        const res = await fetch(`${key.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${key.apiKey}`
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: key.model,
+            temperature: 0.1,
+            response_format: { type: 'json_object' },
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You are an expert Vietnamese exam parameter extractor for a quiz generator tool. Given a user request, extract parameters and respond strictly with JSON having this schema:\n' +
+                  '{\n' +
+                  '  "pages": string (e.g. "11", "11-15", "4,5,6" - only the page number(s) or ranges. Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
+                  '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18),\n' +
+                  '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, count = Y - X + 1),\n' +
+                  '  "title": string (formal Vietnamese exam uppercase title),\n' +
+                  '  "prefix": string (optional short clean topic or file name if explicitly mentioned, otherwise "")\n' +
+                  '}'
+              },
+              {
+                role: 'user',
+                content: `Parse this quiz generation request: "${text}"`
+              }
+            ]
+          })
         });
 
-        const rawContent = json.choices?.[0]?.message?.content;
-        if (rawContent) {
-          const parsed = JSON.parse(rawContent);
-          const regexDefaults = extractWithRegex(text);
-          let pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
-
-          if (regexDefaults.pages && regexDefaults.pages !== pagesRes) {
-            if (regexDefaults.pages.includes(pagesRes) || pagesRes === '1' || !pagesRes) {
-              logger.info({ aiPages: pagesRes, regexPages: regexDefaults.pages }, 'Correcting AI page misparse using regex');
-              pagesRes = regexDefaults.pages;
-            }
-          }
-
-          let startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
-          let countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
-          if (regexDefaults.start && regexDefaults.start < startRes) {
-            startRes = regexDefaults.start;
-            countRes = regexDefaults.count;
-          }
-
-          let titleRes = pagesRes
-            ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pagesRes}`
-            : (regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM');
-          if (text.match(/(?:tiêu\s*đề|title)/i) && parsed.title) {
-            titleRes = String(parsed.title).trim();
-          }
-
-          const rawPrefix = String(parsed.prefix || regexDefaults.prefix || '').trim();
-          const prefixRes = rawPrefix ? rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') : '';
-
-          logger.info({ prompt: text, result: { pages: pagesRes, count: countRes, start: startRes, title: titleRes } }, 'Quiz prompt parsed via AI');
-
-          return reply.send({
-            success: true,
-            data: {
-              pages: pagesRes,
-              count: countRes,
-              start: startRes,
-              title: titleRes,
-              prefix: prefixRes,
-              confidence: 0.95,
-              warnings: [],
-              source: 'ai'
-            }
-          });
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          const error: any = new Error(`${res.status} ${res.statusText}: ${errBody.slice(0, 150)}`);
+          error.status = res.status;
+          throw error;
         }
-      } else {
-        aiMetricsService.recordCall({
-          module: 'quiz-prompt',
-          provider: 'agnes',
-          model,
-          latencyMs: aiLatency,
-          statusCode: res.status,
-          errorMsg: res.statusText
-        });
+
+        const json = (await res.json()) as any;
+        return json;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          const timeoutErr: any = new Error('504 Gateway Timeout: Upstream did not respond within 3500ms');
+          timeoutErr.status = 504;
+          throw timeoutErr;
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutId);
       }
-    } catch (aiErr: any) {
-      aiMetricsService.recordCall({
-        module: 'quiz-prompt',
-        provider: 'agnes',
-        model,
-        latencyMs: Date.now() - aiStartTime,
-        statusCode: 504,
-        errorMsg: aiErr?.message || 'AI request failed'
+    }, { module: 'quiz-prompt', promptSnippet: text.slice(0, 100) });
+
+    const usage = result?.usage;
+    aiMetricsService.recordCall({
+      module: 'quiz-prompt',
+      provider: usedKey.provider,
+      model: usedKey.model,
+      promptTokens: usage?.prompt_tokens || 120,
+      completionTokens: usage?.completion_tokens || 40,
+      latencyMs,
+      statusCode: 200,
+      keyId: usedKey.id,
+      keyName: usedKey.name,
+      promptSnippet: text.slice(0, 100)
+    });
+
+    const rawContent = result.choices?.[0]?.message?.content;
+    if (rawContent) {
+      const parsed = JSON.parse(rawContent);
+      const regexDefaults = extractWithRegex(text);
+      let pagesRes = String(parsed.pages ?? regexDefaults.pages ?? '').trim();
+
+      if (regexDefaults.pages && regexDefaults.pages !== pagesRes) {
+        if (regexDefaults.pages.includes(pagesRes) || pagesRes === '1' || !pagesRes) {
+          logger.info({ aiPages: pagesRes, regexPages: regexDefaults.pages }, 'Correcting AI page misparse using regex');
+          pagesRes = regexDefaults.pages;
+        }
+      }
+
+      let startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
+      let countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
+      if (regexDefaults.start && regexDefaults.start < startRes) {
+        startRes = regexDefaults.start;
+        countRes = regexDefaults.count;
+      }
+
+      let titleRes = pagesRes
+        ? `BÀI TẬP TRẮC NGHIỆM TRANG ${pagesRes}`
+        : (regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM');
+      if (text.match(/(?:tiêu\s*đề|title)/i) && parsed.title) {
+        titleRes = String(parsed.title).trim();
+      }
+
+      const rawPrefix = String(parsed.prefix || regexDefaults.prefix || '').trim();
+      const prefixRes = rawPrefix ? rawPrefix.replace(/[\\/*?:"<>|]/g, '').replace(/\s+/g, '_') : '';
+
+      logger.info({ prompt: text, result: { pages: pagesRes, count: countRes, start: startRes, title: titleRes } }, 'Quiz prompt parsed via AI fallback pipeline');
+
+      return reply.send({
+        success: true,
+        data: {
+          pages: pagesRes,
+          count: countRes,
+          start: startRes,
+          title: titleRes,
+          prefix: prefixRes,
+          confidence: 0.95,
+          warnings: [],
+          source: 'ai'
+        }
       });
-      logger.warn({ aiErr }, 'Agnes AI prompt parsing failed or timed out, falling back to regex parser');
     }
+  } catch (aiErr: any) {
+    logger.warn({ aiErr: aiErr?.message }, 'All AI prompt parsing keys failed or timed out, falling back to deterministic regex parser');
   }
 
   // 2. Offline / Deterministic Regex

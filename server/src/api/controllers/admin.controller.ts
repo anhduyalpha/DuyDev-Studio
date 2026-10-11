@@ -7,15 +7,22 @@ import { z } from 'zod';
 import { adminTelemetryService } from '../../services/admin-telemetry.service.js';
 import { aiMetricsService } from '../../services/ai-metrics.service.js';
 import { JanitorService } from '../../services/janitor.service.js';
+import { telemetryTracker } from '../middleware/telemetry.middleware.js';
 import { BadRequestError } from '../../lib/errors.js';
 
 const updateKeySchema = z.object({
   id: z.string().min(1, 'Key ID is required'),
   name: z.string().optional(),
+  provider: z.enum(['agnes', 'gemini', 'openai', 'custom']).optional(),
   baseUrl: z.string().optional(),
   model: z.string().optional(),
   apiKey: z.string().optional(),
+  priority: z.coerce.number().min(1).optional(),
   isActive: z.boolean().optional()
+});
+
+const deleteKeySchema = z.object({
+  id: z.string().min(1, 'Key ID is required')
 });
 
 const testKeySchema = z.object({
@@ -81,9 +88,32 @@ export async function updateAiKeyHandler(request: FastifyRequest, reply: Fastify
       provider: updatedKey.provider,
       baseUrl: updatedKey.baseUrl,
       model: updatedKey.model,
+      priority: updatedKey.priority,
       apiKeyMasked: aiMetricsService.maskKey(updatedKey.apiKey),
       isActive: updatedKey.isActive
     }
+  });
+}
+
+/**
+ * DELETE /api/v1/admin/ai/keys/:id
+ * POST /api/v1/admin/ai/keys/delete
+ * Deletes an AI agent fallback key configuration
+ */
+export async function deleteAiKeyHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramId = (request.params as any)?.id;
+  const bodyId = (request.body as any)?.id;
+  const keyId = paramId || bodyId;
+
+  if (!keyId) {
+    throw new BadRequestError('Vui lòng cung cấp keyId cần xóa');
+  }
+
+  const result = aiMetricsService.deleteKey(keyId);
+  return reply.send({
+    success: true,
+    message: result.message,
+    data: result
   });
 }
 
@@ -233,6 +263,166 @@ export async function deleteStorageFileHandler(request: FastifyRequest, reply: F
   return reply.send({
     success: true,
     message: `Đã xóa tệp ${result.fileName} (Giải phóng ${result.freedMb} MB)`,
+    data: result
+  });
+}
+
+const deleteR2ObjectBodySchema = z.object({
+  key: z.string().min(1, 'key is required')
+});
+
+const deleteQueueJobBodySchema = z.object({
+  queueName: z.string().min(1, 'queueName is required'),
+  jobId: z.string().min(1, 'jobId is required')
+});
+
+const trashRecordBodySchema = z.object({
+  id: z.string().min(1, 'id is required')
+});
+
+/**
+ * GET /api/v1/admin/actions/inspect-r2
+ * Lists objects in Cloudflare R2 transit/ prefix
+ */
+export async function inspectR2TransitHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.inspectR2Transit();
+  return reply.send({
+    success: true,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/actions/delete-r2-object
+ * Deletes an individual object from R2 transit
+ */
+export async function deleteR2ObjectHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = deleteR2ObjectBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'key không hợp lệ');
+  }
+  const result = await adminTelemetryService.deleteR2Object(parseResult.data.key);
+  return reply.send({
+    success: true,
+    message: `Đã xóa object ${result.key} trên R2 transit`,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/actions/inspect-queues
+ * Lists jobs across BullMQ queues (PDF Studio, Converter, Quiz)
+ */
+export async function inspectBullMqQueuesHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.inspectBullMqQueues();
+  return reply.send({
+    success: true,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/actions/delete-queue-job
+ * Removes an individual job from a BullMQ queue
+ */
+export async function deleteQueueJobHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = deleteQueueJobBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'Tham số queueName/jobId không hợp lệ');
+  }
+  const result = await adminTelemetryService.deleteQueueJob(parseResult.data.queueName, parseResult.data.jobId);
+  return reply.send({
+    success: true,
+    message: `Đã xóa tác vụ ${result.jobId} khỏi hàng đợi ${result.queueName}`,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/actions/inspect-trash
+ * Lists soft-deleted records in SQLite trash
+ */
+export async function inspectTrashHistoryHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.inspectTrashHistory();
+  return reply.send({
+    success: true,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/actions/restore-trash-record
+ * Restores a record from trash
+ */
+export async function restoreTrashRecordHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = trashRecordBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'id không hợp lệ');
+  }
+  const result = await adminTelemetryService.restoreTrashRecord(parseResult.data.id);
+  return reply.send({
+    success: true,
+    message: `Đã khôi phục bản ghi ${result.id}`,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/actions/delete-trash-record
+ * Permanently deletes a record from trash
+ */
+export async function deleteTrashRecordHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = trashRecordBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError(parseResult.error.errors[0]?.message || 'id không hợp lệ');
+  }
+  const result = await adminTelemetryService.deleteTrashRecord(parseResult.data.id);
+  return reply.send({
+    success: true,
+    message: `Đã xóa vĩnh viễn bản ghi ${result.id}`,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/actions/inspect-db
+ * Returns SQLite database file sizes, table counts, and PRAGMA settings
+ */
+export async function inspectSqliteDbHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.inspectSqliteDatabase();
+  return reply.send({
+    success: true,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/traffic/ips
+ * Returns list of client IPs with metrics
+ */
+export async function getIpTrafficClientsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const clients = telemetryTracker.getIpClientsList();
+  return reply.send({
+    success: true,
+    data: {
+      totalClients: clients.length,
+      clients
+    }
+  });
+}
+
+/**
+ * GET /api/v1/admin/traffic/ips/:ip/logs
+ * Returns detailed request stream logs for a specific IP
+ */
+export async function getIpTrafficLogsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const ipParam = (request.params as any)?.ip;
+  if (!ipParam) {
+    throw new BadRequestError('Vui lòng cung cấp địa chỉ IP');
+  }
+  const result = telemetryTracker.getIpRequestLogs(ipParam);
+  return reply.send({
+    success: true,
     data: result
   });
 }

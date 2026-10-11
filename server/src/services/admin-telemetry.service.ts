@@ -15,6 +15,77 @@ import { logger } from '../lib/logger.js';
 import { env, resolvedStoragePaths } from '../config/env.config.js';
 import { StorageManager } from '../storage/storage.manager.js';
 import { BadRequestError, NotFoundError } from '../lib/errors.js';
+import type { R2TransitObjectInfo } from './r2.service.js';
+
+/**
+ * Normalizes error messages (especially external/foreign/Turkish/Vietnamese raw errors) into standard technical English
+ */
+export function normalizeErrorMessageToEnglish(rawMsg: string | null | undefined): string {
+  if (!rawMsg || !rawMsg.trim()) {
+    return 'Unknown error occurred.';
+  }
+  const trimmed = rawMsg.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. CairoSVG missing
+  if (lower.includes('cairosvg') && (lower.includes('yüklü değil') || lower.includes('yüklü') || lower.includes('not installed'))) {
+    return "CairoSVG library is not installed: SVG conversion requires CairoSVG ('pip install cairosvg').";
+  }
+
+  // 2. Image conversion error
+  if (lower.includes('resim dönüşüm hatası') || lower.includes('resim donusum hatasi') || (lower.includes('resim') && lower.includes('dönüşüm'))) {
+    const details = trimmed.split(':').slice(1).join(':').trim();
+    return details
+      ? `Image conversion error: Failed to process source image (${details}).`
+      : 'Image conversion error: Failed to process source image.';
+  }
+
+  // 3. FFmpeg encoding error
+  if (lower.includes('ffmpeg hatası') || lower.includes('ffmpeg hatasi')) {
+    const details = trimmed.split(':').slice(1).join(':').trim();
+    return details
+      ? `FFmpeg encoding error: Media stream conversion failed (${details}).`
+      : 'FFmpeg encoding error: Media stream conversion failed.';
+  }
+
+  // 4. Page rendering error
+  if (lower.includes('sayfa dönüştürülemedi') || lower.includes('sayfa donusturulemedi')) {
+    return 'Page rendering error: Could not convert document page.';
+  }
+
+  // 5. File not found
+  if (lower.includes('dosya bulunamadı') || lower.includes('dosya bulunamadi')) {
+    return 'File not found: Source path does not exist.';
+  }
+
+  // 6. Invalid format
+  if (lower.includes('geçersiz dosya formatı') || lower.includes('gecersiz dosya formati')) {
+    return 'Invalid file format: Unrecognized or unsupported file type.';
+  }
+
+  // 7. Out of memory
+  if (lower.includes('bellek yetersiz') || lower.includes('yetersiz bellek')) {
+    return 'Out of memory: Insufficient RAM for processing.';
+  }
+
+  // 8. Timeout
+  if (lower.includes('zaman aşımı') || lower.includes('zaman asimi')) {
+    return 'Operation timed out: Process exceeded maximum execution time.';
+  }
+
+  // 9. Vietnamese error translations
+  if (lower.includes('lỗi không xác định')) {
+    return 'Unknown error occurred.';
+  }
+  if (lower.includes('không thể đưa tác vụ') && lower.includes('vào hàng đợi')) {
+    return 'Queue failure: Unable to enqueue processing task. Please try again.';
+  }
+  if (lower.includes('không thể xếp hàng tạo bài tập trắc nghiệm')) {
+    return 'Queue failure: Unable to enqueue quiz generation task. Please try again.';
+  }
+
+  return trimmed;
+}
 
 export interface FailedJobItem {
   id: string;
@@ -28,6 +99,54 @@ export interface FailedJobItem {
   startedAt: string | null;
   completedAt: string | null;
   durationMs: number | null;
+}
+
+export interface InspectedQueueJob {
+  id: string;
+  name: string;
+  queueName: 'pdf' | 'converter' | 'quiz';
+  queueLabel: string;
+  status: 'active' | 'waiting' | 'completed' | 'failed' | 'delayed' | 'unknown';
+  timestamp: string;
+  failedReason: string | null;
+  data: any;
+  progress: any;
+}
+
+export interface InspectedTrashRecord {
+  id: string;
+  toolId: string;
+  toolTitle: string;
+  fileName: string;
+  originalSize: number;
+  resultSize: number;
+  resultFileId: string | null;
+  downloadUrl: string | null;
+  status: string;
+  detailsJson: string | null;
+  isDeleted: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+}
+
+export interface InspectedSqliteDb {
+  files: Array<{ name: string; path: string; sizeBytes: number; sizeFormatted: string; exists: boolean }>;
+  totalSizeBytes: number;
+  totalSizeFormatted: string;
+  tables: {
+    users: number;
+    jobs: number;
+    files: number;
+    historyRecords: number;
+    dynamicQrs: number;
+    qrScanLogs: number;
+  };
+  pragma: {
+    journalMode: string;
+    pageSize: number;
+    pageCount: number;
+    freelistCount: number;
+  };
 }
 
 export interface StorageInspectedFile {
@@ -398,7 +517,7 @@ export class AdminTelemetryService {
           type: j.type,
           status: j.status,
           progress: j.progress,
-          errorMessage: j.errorMessage || 'Lỗi không xác định',
+          errorMessage: normalizeErrorMessageToEnglish(j.errorMessage),
           options: parsedOptions,
           optionsRaw: j.optionsJson,
           createdAt: j.createdAt.toISOString(),
@@ -560,6 +679,268 @@ export class AdminTelemetryService {
       fileName,
       freedBytes,
       freedMb: Math.round((freedBytes / (1024 * 1024)) * 100) / 100
+    };
+  }
+
+  /**
+   * Lists objects currently in Cloudflare R2 transit/ prefix
+   */
+  public async inspectR2Transit(): Promise<{ objects: R2TransitObjectInfo[]; totalCount: number; totalSizeBytes: number; totalSizeFormatted: string }> {
+    const objects = await R2Service.listTransitObjects();
+    const totalSizeBytes = objects.reduce((acc, o) => acc + o.sizeBytes, 0);
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = totalSizeBytes === 0 ? 0 : Math.floor(Math.log(totalSizeBytes) / Math.log(k));
+    const totalSizeFormatted = `${(totalSizeBytes / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'MB'}`;
+
+    return {
+      objects,
+      totalCount: objects.length,
+      totalSizeBytes,
+      totalSizeFormatted
+    };
+  }
+
+  /**
+   * Deletes an individual object from Cloudflare R2 transit/ prefix
+   */
+  public async deleteR2Object(key: string): Promise<{ success: boolean; key: string }> {
+    if (!key || !key.startsWith('transit/')) {
+      throw new BadRequestError('Object key không hợp lệ hoặc không nằm trong thư mục transit/');
+    }
+    const success = await R2Service.deleteTransitObject(key);
+    if (!success) {
+      throw new BadRequestError(`Không thể xóa object ${key} trên Cloudflare R2`);
+    }
+    return { success: true, key };
+  }
+
+  /**
+   * Inspects jobs across BullMQ queues (PDF Studio, Universal Converter, Quiz Generator)
+   */
+  public async inspectBullMqQueues(): Promise<{ jobs: InspectedQueueJob[]; totalCount: number; countsByQueue: Record<string, number> }> {
+    const queueConfigs = [
+      { q: taskQueue, name: 'pdf' as const, label: 'PDF Studio' },
+      { q: converterQueue, name: 'converter' as const, label: 'Universal Converter' },
+      { q: quizQueue, name: 'quiz' as const, label: 'Quiz Generator' }
+    ];
+
+    const jobsList: InspectedQueueJob[] = [];
+    const countsByQueue: Record<string, number> = { pdf: 0, converter: 0, quiz: 0 };
+
+    for (const { q, name, label } of queueConfigs) {
+      try {
+        const jobs = await q.getJobs(['active', 'waiting', 'completed', 'failed', 'delayed'], 0, 50, true);
+        countsByQueue[name] = jobs.length;
+        for (const j of jobs) {
+          if (!j) continue;
+          const state = await j.getState().catch(() => 'unknown');
+          jobsList.push({
+            id: String(j.id || ''),
+            name: j.name,
+            queueName: name,
+            queueLabel: label,
+            status: state as any,
+            timestamp: j.timestamp ? new Date(j.timestamp).toISOString() : new Date().toISOString(),
+            failedReason: j.failedReason ? normalizeErrorMessageToEnglish(j.failedReason) : null,
+            data: j.data,
+            progress: j.progress
+          });
+        }
+      } catch (err) {
+        logger.warn({ err, name }, 'Failed to inspect queue jobs');
+      }
+    }
+
+    // Sort newest jobs first
+    jobsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return {
+      jobs: jobsList,
+      totalCount: jobsList.length,
+      countsByQueue
+    };
+  }
+
+  /**
+   * Deletes a single job from a BullMQ queue
+   */
+  public async deleteQueueJob(queueName: string, jobId: string): Promise<{ success: boolean; queueName: string; jobId: string }> {
+    let targetQueue: any = null;
+    if (queueName === 'pdf' || queueName === 'ds-tasks') targetQueue = taskQueue;
+    else if (queueName === 'converter' || queueName === 'ds-converter-tasks') targetQueue = converterQueue;
+    else if (queueName === 'quiz' || queueName === 'ds-quiz-tasks') targetQueue = quizQueue;
+
+    if (!targetQueue) {
+      throw new BadRequestError(`Hàng đợi không hợp lệ: ${queueName}. Chỉ chấp nhận: pdf, converter, quiz`);
+    }
+    const job = await targetQueue.getJob(jobId);
+    if (!job) {
+      throw new NotFoundError(`Không tìm thấy tác vụ ${jobId} trong hàng đợi ${queueName}`);
+    }
+    await job.remove();
+    return { success: true, queueName, jobId };
+  }
+
+  /**
+   * Inspects soft-deleted records in SQLite trash (historyRecord with isDeleted: true)
+   */
+  public async inspectTrashHistory(): Promise<{ records: InspectedTrashRecord[]; totalCount: number }> {
+    const trashed = await prisma.historyRecord.findMany({
+      where: { isDeleted: true },
+      orderBy: { deletedAt: 'desc' },
+      take: 200
+    });
+
+    const records: InspectedTrashRecord[] = trashed.map(r => ({
+      id: r.id,
+      toolId: r.toolId,
+      toolTitle: r.toolTitle,
+      fileName: r.fileName,
+      originalSize: Number(r.originalSize || 0),
+      resultSize: Number(r.resultSize || 0),
+      resultFileId: r.resultFileId,
+      downloadUrl: r.downloadUrl,
+      status: r.status,
+      detailsJson: r.detailsJson,
+      isDeleted: r.isDeleted,
+      deletedAt: r.deletedAt ? r.deletedAt.toISOString() : null,
+      createdAt: r.createdAt.toISOString()
+    }));
+
+    return {
+      records,
+      totalCount: records.length
+    };
+  }
+
+  /**
+   * Restores a soft-deleted history record
+   */
+  public async restoreTrashRecord(id: string): Promise<{ success: boolean; id: string }> {
+    const record = await prisma.historyRecord.findUnique({ where: { id } });
+    if (!record) {
+      throw new NotFoundError(`Không tìm thấy bản ghi lịch sử: ${id}`);
+    }
+    await prisma.historyRecord.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null }
+    });
+    return { success: true, id };
+  }
+
+  /**
+   * Permanently deletes a single trash history record
+   */
+  public async deleteTrashRecord(id: string): Promise<{ success: boolean; id: string }> {
+    const record = await prisma.historyRecord.findUnique({ where: { id } });
+    if (!record) {
+      throw new NotFoundError(`Không tìm thấy bản ghi lịch sử: ${id}`);
+    }
+    await prisma.historyRecord.delete({ where: { id } });
+    return { success: true, id };
+  }
+
+  /**
+   * Inspects SQLite database file sizes, table counts, and PRAGMA settings
+   */
+  public async inspectSqliteDatabase(): Promise<InspectedSqliteDb> {
+    const candidatePaths = [
+      { name: 'dev.db', path: path.resolve(process.cwd(), 'server', 'dev.db') },
+      { name: 'dev.db-wal', path: path.resolve(process.cwd(), 'server', 'dev.db-wal') },
+      { name: 'dev.db-shm', path: path.resolve(process.cwd(), 'server', 'dev.db-shm') }
+    ];
+
+    if (!fs.existsSync(candidatePaths[0].path) && fs.existsSync(path.resolve(process.cwd(), 'dev.db'))) {
+      candidatePaths[0].path = path.resolve(process.cwd(), 'dev.db');
+      candidatePaths[1].path = path.resolve(process.cwd(), 'dev.db-wal');
+      candidatePaths[2].path = path.resolve(process.cwd(), 'dev.db-shm');
+    }
+
+    const files: Array<{ name: string; path: string; sizeBytes: number; sizeFormatted: string; exists: boolean }> = [];
+    let totalSizeBytes = 0;
+
+    for (const item of candidatePaths) {
+      let size = 0;
+      let exists = false;
+      try {
+        if (fs.existsSync(item.path)) {
+          const stat = fs.statSync(item.path);
+          size = stat.size;
+          exists = true;
+          totalSizeBytes += size;
+        }
+      } catch {}
+
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = size === 0 ? 0 : Math.floor(Math.log(size) / Math.log(k));
+      const sizeFormatted = `${(size / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'MB'}`;
+
+      files.push({
+        name: item.name,
+        path: item.path,
+        sizeBytes: size,
+        sizeFormatted,
+        exists
+      });
+    }
+
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = totalSizeBytes === 0 ? 0 : Math.floor(Math.log(totalSizeBytes) / Math.log(k));
+    const totalSizeFormatted = `${(totalSizeBytes / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'MB'}`;
+
+    // Table counts
+    const [users, jobs, fileRecords, historyRecords, dynamicQrs, qrScanLogs] = await Promise.all([
+      prisma.user.count().catch(() => 0),
+      prisma.job.count().catch(() => 0),
+      prisma.fileRecord.count().catch(() => 0),
+      prisma.historyRecord.count().catch(() => 0),
+      prisma.dynamicQr.count().catch(() => 0),
+      prisma.qrScanLog.count().catch(() => 0)
+    ]);
+
+    // PRAGMAs
+    let journalMode = 'wal';
+    let pageSize = 4096;
+    let pageCount = 0;
+    let freelistCount = 0;
+
+    try {
+      const jm: any = await prisma.$queryRawUnsafe('PRAGMA journal_mode;');
+      if (Array.isArray(jm) && jm[0]?.journal_mode) journalMode = jm[0].journal_mode;
+
+      const ps: any = await prisma.$queryRawUnsafe('PRAGMA page_size;');
+      if (Array.isArray(ps) && ps[0]?.page_size) pageSize = Number(ps[0].page_size);
+
+      const pc: any = await prisma.$queryRawUnsafe('PRAGMA page_count;');
+      if (Array.isArray(pc) && pc[0]?.page_count) pageCount = Number(pc[0].page_count);
+
+      const fc: any = await prisma.$queryRawUnsafe('PRAGMA freelist_count;');
+      if (Array.isArray(fc) && fc[0]?.freelist_count) freelistCount = Number(fc[0].freelist_count);
+    } catch (err) {
+      logger.warn({ err }, 'Failed to query some SQLite PRAGMA settings');
+    }
+
+    return {
+      files,
+      totalSizeBytes,
+      totalSizeFormatted,
+      tables: {
+        users,
+        jobs,
+        files: fileRecords,
+        historyRecords,
+        dynamicQrs,
+        qrScanLogs
+      },
+      pragma: {
+        journalMode,
+        pageSize,
+        pageCount,
+        freelistCount
+      }
     };
   }
 }
