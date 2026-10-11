@@ -11,6 +11,7 @@ import { enqueueQuizJob as enqueueQuizTask } from '../../queues/task.queue.js';
 import { isPermanentRetention } from '../../config/limits.config.js';
 import { logger } from '../../lib/logger.js';
 import { aiMetricsService } from '../../services/ai-metrics.service.js';
+import { adminTelemetryService } from '../../services/admin-telemetry.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -271,9 +272,14 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
 
   // 1. Sequential Multi-Key AI fallback pipeline
   try {
+    const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({
+      aiCallSec: 45
+    }));
+    const aiTimeoutMs = Math.max(12_000, (engineTimeouts.aiCallSec || 45) * 1000);
+
     const { result, usedKey, latencyMs } = await aiMetricsService.executeWithFallback(async (key) => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), aiTimeoutMs);
 
       try {
         const res = await fetch(`${key.baseUrl.replace(/\/$/, '')}/chat/completions`, {
@@ -319,7 +325,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
         return json;
       } catch (err: any) {
         if (err.name === 'AbortError') {
-          const timeoutErr: any = new Error('504 Gateway Timeout: Upstream did not respond within 3500ms');
+          const timeoutErr: any = new Error(`504 Gateway Timeout: Upstream did not respond within ${Math.round(aiTimeoutMs / 1000)}s`);
           timeoutErr.status = 504;
           throw timeoutErr;
         }

@@ -84,7 +84,13 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
             for opt in q.options:
                 opt_has_image = bool(getattr(opt, "image_path", None) and opt.image_path.strip())
                 if not (opt.text and opt.text.strip()) and not opt_has_image:
-                    repair_empty_option(q, opt)
+                    if q.rich_elements:
+                        repair_empty_option(q, opt)
+                    else:
+                        raise IRValidationError(
+                            f"Question '{q.id}' (Câu {q.number}) has empty text for option '{opt.label}'. "
+                            f"Options must contain non-empty text when no visual element is present."
+                        )
         elif q.type == SectionType.PART_II_TF:
             if len(q.sub_statements) != 4:
                 raise IRValidationError(
@@ -101,7 +107,13 @@ def validate_canonical_document_ir(doc_ir: CanonicalDocumentIR) -> None:
                 )
             for stmt in q.sub_statements:
                 if not (stmt.statement and stmt.statement.strip()):
-                    repair_empty_tf_statement(q, stmt)
+                    if q.rich_elements:
+                        repair_empty_tf_statement(q, stmt)
+                    else:
+                        raise IRValidationError(
+                            f"Question '{q.id}' (Câu {q.number}) has empty statement for sub-statement '{stmt.label}'. "
+                            f"Statements must contain non-empty text when no visual element is present."
+                        )
 
         # Rich elements validation
         for elem in q.rich_elements:

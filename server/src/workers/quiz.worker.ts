@@ -14,6 +14,8 @@ import { FileCorruptedError, NotFoundError } from '../lib/errors.js';
 import { adminTelemetryService } from '../services/admin-telemetry.service.js';
 import { fileURLToPath } from 'url';
 
+import { downloadGoogleDriveFile } from '../services/drive-download.service.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -33,54 +35,12 @@ export interface QuizJobPayload {
 }
 
 async function downloadGoogleDrivePdf(driveUrl: string, destPath: string): Promise<number> {
-  const match =
-    driveUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-    driveUrl.match(/id=([a-zA-Z0-9_-]+)/) ||
-    driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (!match) {
-    throw new Error('Đường dẫn Google Drive không hợp lệ hoặc không đúng định dạng');
-  }
-  const driveId = match[1];
-  const downloadUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
-
-  const res = await fetch(downloadUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-  });
-
-  if (!res.ok) {
-    throw new Error('Không thể tải tài liệu từ Google Drive. Vui lòng kiểm tra quyền chia sẻ công khai.');
-  }
-
-  const contentType = res.headers.get('content-type') || '';
-  if (contentType.includes('text/html')) {
-    const text = await res.text();
-    const confirmMatch =
-      text.match(/href="(\/uc\?export=download[^"]+)"/) ||
-      text.match(/confirm=([a-zA-Z0-9_-]+)/);
-    if (confirmMatch) {
-      const confirmUrl = confirmMatch[1].startsWith('http')
-        ? confirmMatch[1]
-        : `https://drive.google.com${confirmMatch[1].replace(/&amp;/g, '&')}`;
-      const res2 = await fetch(confirmUrl);
-      if (!res2.ok) {
-        throw new Error('Không thể tải tài liệu từ Google Drive sau bước xác nhận.');
-      }
-      const buffer = Buffer.from(await res2.arrayBuffer());
-      await fs.writeFile(destPath, buffer);
-      return buffer.length;
-    } else {
-      throw new Error('Không thể tải tài liệu từ Google Drive. Tệp có thể yêu cầu quyền truy cập hoặc bị giới hạn tải.');
-    }
-  }
-
-  const buffer = Buffer.from(await res.arrayBuffer());
-  if (buffer.length < 100) {
+  const result = await downloadGoogleDriveFile(driveUrl);
+  if (!result.buffer || result.buffer.length < 100) {
     throw new Error('Tệp tải từ Google Drive quá nhỏ hoặc không hợp lệ.');
   }
-  await fs.writeFile(destPath, buffer);
-  return buffer.length;
+  await fs.writeFile(destPath, result.buffer);
+  return result.buffer.length;
 }
 
 function resolvePythonBin(): string {

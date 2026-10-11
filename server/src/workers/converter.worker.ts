@@ -106,6 +106,7 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
   const { jobId, fileId, targetFormat, options } = payload;
   const startTime = Date.now();
   let isFinished = false;
+  let jobTmpDir: string | null = null;
 
   const safeConverterJobUpdate = async (data: Record<string, any>) => {
     try {
@@ -161,6 +162,10 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     const processedDir = resolvedStoragePaths.processed;
     await fs.mkdir(processedDir, { recursive: true });
 
+    // Job-isolated temporary directory to completely eliminate file collisions and race conditions
+    jobTmpDir = path.join(resolvedStoragePaths.temp, `converter_${jobId}_${Date.now().toString(36)}`);
+    await fs.mkdir(jobTmpDir, { recursive: true });
+
     let qualityArg = 'high';
     if (options?.quality !== undefined) {
       if (typeof options.quality === 'number') {
@@ -170,7 +175,7 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
       }
     }
 
-    const pyArgs = ['--input', fileRecord.storagePath, '--target', targetFormat, '--output-dir', processedDir, '--quality', qualityArg];
+    const pyArgs = ['--input', fileRecord.storagePath, '--target', targetFormat, '--output-dir', jobTmpDir, '--quality', qualityArg];
     if (options?.width) pyArgs.push('--width', String(options.width));
     if (options?.height) pyArgs.push('--height', String(options.height));
     if (options?.resolution && options.resolution !== 'original') pyArgs.push('--resolution', String(options.resolution));
@@ -187,7 +192,20 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     const watchdogMs = (engineTimeouts.converterTaskSec || 600) * 1000;
     const cliResult = await executeConverterCli(resolvePythonBin(), resolveCliScript(), pyArgs, emitProgress, watchdogMs);
 
-    const resolvedOutputPath = cliResult.output_path || path.join(processedDir, `${path.parse(fileRecord.originalName).name}.${targetFormat}`);
+    let resolvedOutputPath = cliResult.output_path;
+    if (!resolvedOutputPath || !existsSync(resolvedOutputPath)) {
+      const filesInTmp = await fs.readdir(jobTmpDir);
+      if (filesInTmp.length > 0) {
+        resolvedOutputPath = path.join(jobTmpDir, filesInTmp[0]);
+      } else {
+        resolvedOutputPath = path.join(jobTmpDir, `${path.parse(fileRecord.originalName).name}.${targetFormat}`);
+      }
+    }
+
+    if (!existsSync(resolvedOutputPath)) {
+      throw new Error(`Tệp kết quả chuyển đổi không tồn tại: ${resolvedOutputPath}`);
+    }
+
     const actualExt = (path.extname(resolvedOutputPath).slice(1) || targetFormat).toLowerCase();
     const resultStats = await fs.stat(resolvedOutputPath);
     const resultSizeBytes = resultStats.size;
@@ -201,9 +219,17 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
 
     const finalOutputPath = path.join(processedDir, `${resultFileId}.${actualExt}`);
     if (existsSync(resolvedOutputPath) && resolvedOutputPath !== finalOutputPath) {
-      await fs.rename(resolvedOutputPath, finalOutputPath).catch(() => {});
+      await fs.rename(resolvedOutputPath, finalOutputPath).catch(async () => {
+        await fs.copyFile(resolvedOutputPath, finalOutputPath);
+        await fs.unlink(resolvedOutputPath).catch(() => {});
+      });
     }
     const finalStoredPath = existsSync(finalOutputPath) ? finalOutputPath : resolvedOutputPath;
+
+    if (jobTmpDir) {
+      await fs.rm(jobTmpDir, { recursive: true, force: true }).catch(() => {});
+      jobTmpDir = null;
+    }
 
     await prisma.fileRecord.create({
       data: {
@@ -260,6 +286,9 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     logger.info({ jobId, resultFileId, originalSizeBytes, resultSizeBytes }, 'Converter job completed successfully');
     return resultFileId;
   } catch (err: unknown) {
+    if (jobTmpDir) {
+      await fs.rm(jobTmpDir, { recursive: true, force: true }).catch(() => {});
+    }
     isFinished = true;
     const errorMessage = err instanceof Error ? err.message : String(err);
     await safeConverterJobUpdate({ status: 'FAILED', errorMessage });

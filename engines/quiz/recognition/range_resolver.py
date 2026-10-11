@@ -8,7 +8,7 @@ from typing import Optional
 import logging
 from pydantic import BaseModel
 
-from engines.quiz.perception.models import PageRepresentation
+from engines.quiz.perception.models import PageRepresentation, QuestionCandidate
 from engines.quiz.perception.candidates import detect_continuation_candidate
 from engines.quiz.provider.base import IAIProvider, ProviderError
 from engines.quiz.provider.prompt_builder import PromptBuilder

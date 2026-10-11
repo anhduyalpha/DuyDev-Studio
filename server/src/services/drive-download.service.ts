@@ -20,11 +20,11 @@ export function extractGoogleDriveId(url: string): string | null {
   const cleanUrl = url.trim();
 
   const patterns = [
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,
-    /id=([a-zA-Z0-9_-]+)/,
-    /\/d\/([a-zA-Z0-9_-]+)/,
-    /open\?id=([a-zA-Z0-9_-]+)/,
-    /uc\?.*id=([a-zA-Z0-9_-]+)/
+    /\/file\/d\/([a-zA-Z0-9_-]{15,})/,
+    /id=([a-zA-Z0-9_-]{15,})/,
+    /\/d\/([a-zA-Z0-9_-]{15,})/,
+    /open\?id=([a-zA-Z0-9_-]{15,})/,
+    /uc\?.*id=([a-zA-Z0-9_-]{15,})/
   ];
 
   for (const regex of patterns) {
@@ -34,8 +34,8 @@ export function extractGoogleDriveId(url: string): string | null {
     }
   }
 
-  // Direct ID check if alphanumeric string of length 25-45
-  if (/^[a-zA-Z0-9_-]{25,50}$/.test(cleanUrl)) {
+  // Direct ID check if alphanumeric string of length 20-50
+  if (/^[a-zA-Z0-9_-]{20,50}$/.test(cleanUrl)) {
     return cleanUrl;
   }
 
@@ -92,7 +92,7 @@ function extractCookieHeader(res: Response): string {
 export async function downloadGoogleDriveFile(driveUrl: string): Promise<DownloadDriveResult> {
   const driveId = extractGoogleDriveId(driveUrl);
   if (!driveId) {
-    throw new BadRequestError('Đường dẫn Google Drive không hợp lệ hoặc không tìm thấy mã tệp.');
+    throw new BadRequestError('Đường dẫn Google Drive không hợp lệ hoặc mã tệp (File ID) quá ngắn (mã tệp Google Drive thường dài từ 25-45 ký tự).');
   }
 
   let downloadUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
@@ -114,7 +114,10 @@ export async function downloadGoogleDriveFile(driveUrl: string): Promise<Downloa
   });
 
   if (!res.ok) {
-    throw new BadRequestError('Không thể kết nối đến Google Drive. Vui lòng kiểm tra quyền chia sẻ công khai của tệp.');
+    if (res.status === 404) {
+      throw new BadRequestError('Tệp không tồn tại hoặc đã bị xóa khỏi Google Drive (HTTP 404).');
+    }
+    throw new BadRequestError(`Không thể kết nối đến Google Drive (HTTP ${res.status}). Vui lòng kiểm tra quyền chia sẻ công khai của tệp.`);
   }
 
   const cookieHeader = extractCookieHeader(res);
