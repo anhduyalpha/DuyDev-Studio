@@ -134,32 +134,39 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     let qualityArg = 'high';
     if (options?.quality !== undefined) {
       if (typeof options.quality === 'number') {
-        qualityArg = options.quality >= 80 ? 'high' : options.quality >= 50 ? 'medium' : 'low';
+        qualityArg = String(options.quality);
       } else if (typeof options.quality === 'string') {
         qualityArg = options.quality.toLowerCase();
       }
     }
 
     const pyArgs = ['--input', fileRecord.storagePath, '--target', targetFormat, '--output-dir', processedDir, '--quality', qualityArg];
+    if (options?.width) pyArgs.push('--width', String(options.width));
+    if (options?.height) pyArgs.push('--height', String(options.height));
+    if (options?.resolution && options.resolution !== 'original') pyArgs.push('--resolution', String(options.resolution));
+    if (options?.fps && options.fps !== 'original') pyArgs.push('--fps', String(options.fps));
+    if (options?.bitrate) pyArgs.push('--bitrate', String(options.bitrate));
+
     await emitProgress(20, 'Invoking Python Converter Bridge');
     const cliResult = await executeConverterCli(resolvePythonBin(), resolveCliScript(), pyArgs, emitProgress);
 
-    const outputPath = cliResult.output_path || path.join(processedDir, `${path.parse(fileRecord.originalName).name}.${targetFormat}`);
-    const resultStats = await fs.stat(outputPath);
+    const resolvedOutputPath = cliResult.output_path || path.join(processedDir, `${path.parse(fileRecord.originalName).name}.${targetFormat}`);
+    const actualExt = (path.extname(resolvedOutputPath).slice(1) || targetFormat).toLowerCase();
+    const resultStats = await fs.stat(resolvedOutputPath);
     const resultSizeBytes = resultStats.size;
     const originalSizeBytes = Number(fileRecord.sizeBytes);
-    const hashSha256 = await StorageManager.computeSha256(outputPath);
+    const hashSha256 = await StorageManager.computeSha256(resolvedOutputPath);
     const expiresAt = computeExpiresAt();
 
     const resultFileId = `fil_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
     const baseName = path.parse(fileRecord.originalName).name || 'converted_file';
-    const resultFileName = `${baseName}.${targetFormat}`;
+    const resultFileName = `${baseName}.${actualExt}`;
 
-    const finalOutputPath = path.join(processedDir, `${resultFileId}.${targetFormat}`);
-    if (existsSync(outputPath) && outputPath !== finalOutputPath) {
-      await fs.rename(outputPath, finalOutputPath).catch(() => {});
+    const finalOutputPath = path.join(processedDir, `${resultFileId}.${actualExt}`);
+    if (existsSync(resolvedOutputPath) && resolvedOutputPath !== finalOutputPath) {
+      await fs.rename(resolvedOutputPath, finalOutputPath).catch(() => {});
     }
-    const finalStoredPath = existsSync(finalOutputPath) ? finalOutputPath : outputPath;
+    const finalStoredPath = existsSync(finalOutputPath) ? finalOutputPath : resolvedOutputPath;
 
     await prisma.fileRecord.create({
       data: {
@@ -168,7 +175,7 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
         purpose: 'PROCESSED_ARTIFACT',
         originalName: resultFileName,
         storagePath: finalStoredPath,
-        mimeType: getMimeTypeForExt(targetFormat),
+        mimeType: getMimeTypeForExt(actualExt),
         sizeBytes: BigInt(resultSizeBytes),
         hashSha256,
         isPurged: false,

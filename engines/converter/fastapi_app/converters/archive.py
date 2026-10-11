@@ -48,7 +48,7 @@ def _process_archive(input_path: str, output_dir: str, target_format: str) -> di
                     
             elif ext_lower == '.7z':
                 if not HAS_7Z:
-                    return {"success": False, "error": "py7zr kütüphanesi yüklü değil. 'pip install py7zr' çalıştırın."}
+                    return {"success": False, "error": "Thư viện py7zr chưa được cài đặt. Vui lòng chạy 'pip install py7zr'"}
                 with py7zr.SevenZipFile(input_path, mode='r') as zf:
                     zf.extractall(path=extract_dir)
                     
@@ -85,7 +85,7 @@ def _process_archive(input_path: str, output_dir: str, target_format: str) -> di
                         with open(out_file, 'wb') as f_out:
                             shutil.copyfileobj(f_in, f_out)
             else:
-                return {"success": False, "error": f"Desteklenmeyen kaynak format: {ext}"}
+                return {"success": False, "error": f"Định dạng tệp nén nguồn không được hỗ trợ: {ext}"}
             
             # === COMPRESS TO TARGET ===
             if target_format == 'zip':
@@ -95,7 +95,7 @@ def _process_archive(input_path: str, output_dir: str, target_format: str) -> di
                 
             elif target_format == '7z':
                 if not HAS_7Z:
-                    return {"success": False, "error": "py7zr kütüphanesi yüklü değil. 'pip install py7zr' çalıştırın."}
+                    return {"success": False, "error": "Thư viện py7zr chưa được cài đặt. Vui lòng chạy 'pip install py7zr'"}
                 with py7zr.SevenZipFile(output_path, 'w') as zf:
                     for root, dirs, files in os.walk(extract_dir):
                         for file in files:
@@ -117,7 +117,7 @@ def _process_archive(input_path: str, output_dir: str, target_format: str) -> di
                         tf.add(os.path.join(extract_dir, item), arcname=item)
                         
             else:
-                return {"success": False, "error": f"Desteklenmeyen hedef format: {target_format}"}
+                return {"success": False, "error": f"Định dạng tệp nén đích không được hỗ trợ: {target_format}"}
                 
         finally:
             # Cleanup temp directory
@@ -127,4 +127,4 @@ def _process_archive(input_path: str, output_dir: str, target_format: str) -> di
         return {"success": True, "output_path": output_path, "filename": output_filename}
 
     except Exception as e:
-        return {"success": False, "error": f"Arşiv dönüşüm hatası: {str(e)}"}
+        return {"success": False, "error": f"Lỗi chuyển đổi tệp nén: {str(e)}"}

@@ -15,6 +15,7 @@ import {
 import { loadModuleState, saveModuleState } from '../../../../utilities/moduleState.js';
 import { storage } from '../../../../utilities/storage.js';
 import { runConcurrentQueue, processSingleItem, createZipBundleFromCompleted, startBackgroundUpload } from './useConverterBatch.js';
+import { canConvertClientSide } from '../services/clientConverterEngine.js';
 import { batchPresignFiles } from '../../../../utilities/resumableUploader.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 
@@ -244,9 +245,14 @@ export class ConverterManager {
         });
     }
 
-    // Trigger background eager upload for newly added files
+    // Fast-path routing: Client items are ready immediately (0ms upload).
+    // Server items start background upload immediately.
     newItems.forEach((it) => {
-      startBackgroundUpload(this, it);
+      if (canConvertClientSide(it, this.options)) {
+        it.uploadStatus = 'local-ready';
+      } else {
+        startBackgroundUpload(this, it);
+      }
     });
 
     this.persist();
@@ -305,6 +311,11 @@ export class ConverterManager {
       const itemExt = (it.detectedMeta?.extension || '').toLowerCase().trim();
       if (itemExt === ext && it.status !== 'converting' && it.status !== 'completed') {
         it.targetFormat = cleanFmt;
+        if (!canConvertClientSide(it, this.options) && !it.fileId && it.file && it.uploadStatus !== 'uploading' && it.uploadStatus !== 'uploaded') {
+          startBackgroundUpload(this, it);
+        } else if (canConvertClientSide(it, this.options) && !it.fileId && it.uploadStatus !== 'uploading') {
+          it.uploadStatus = 'local-ready';
+        }
       }
     });
     this.targetFormat = cleanFmt;
@@ -344,6 +355,11 @@ export class ConverterManager {
         const compatible = getCompatibleOutputs(itemExt);
         if (compatible.some((f) => f.id.toLowerCase() === cleanFmt)) {
           it.targetFormat = cleanFmt;
+          if (!canConvertClientSide(it, this.options) && !it.fileId && it.file && it.uploadStatus !== 'uploading' && it.uploadStatus !== 'uploaded') {
+            startBackgroundUpload(this, it);
+          } else if (canConvertClientSide(it, this.options) && !it.fileId && it.uploadStatus !== 'uploading') {
+            it.uploadStatus = 'local-ready';
+          }
         }
       }
     });
@@ -353,6 +369,11 @@ export class ConverterManager {
     const it = this.items.find((item) => item.id === id);
     if (it) {
       it.targetFormat = format;
+      if (!canConvertClientSide(it, this.options) && !it.fileId && it.file && it.uploadStatus !== 'uploading' && it.uploadStatus !== 'uploaded') {
+        startBackgroundUpload(this, it);
+      } else if (canConvertClientSide(it, this.options) && !it.fileId && it.uploadStatus !== 'uploading') {
+        it.uploadStatus = 'local-ready';
+      }
       if (this.items.length === 1) {
         this.targetFormat = format;
       }

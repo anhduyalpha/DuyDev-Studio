@@ -110,7 +110,8 @@ export function updateBatchButton(manager) {
   );
   const pendingCount = validItems.length;
 
-  startButton.disabled = pendingCount === 0 || isBusy || isUploading;
+  // Unlocked button: Users can start conversion anytime when pending items exist!
+  startButton.disabled = pendingCount === 0 || isBusy;
   startButton.className = `w-full py-4 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all duration-200 ${
     startButton.disabled
       ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
@@ -121,13 +122,15 @@ export function updateBatchButton(manager) {
   if (textElement) {
     if (isBusy) {
       textElement.textContent = 'Đang chuyển đổi theo lô...';
-    } else if (isUploading) {
-      const avgProg = Math.round(
-        uploadingItems.reduce((acc, it) => acc + (it.uploadProgress || 0), 0) / uploadingItems.length
-      );
-      textElement.textContent = `Đang tải lên máy chủ (${avgProg}%)...`;
     } else if (pendingCount > 0) {
-      textElement.textContent = `Chuyển đổi ${pendingCount} tệp tin`;
+      if (isUploading) {
+        const avgProg = Math.round(
+          uploadingItems.reduce((acc, it) => acc + (it.uploadProgress || 0), 0) / uploadingItems.length
+        );
+        textElement.textContent = `Chuyển đổi ${pendingCount} tệp (Tải ngầm ${avgProg}%)`;
+      } else {
+        textElement.textContent = `Chuyển đổi ${pendingCount} tệp tin`;
+      }
     } else {
       textElement.textContent = 'Chọn tệp để chuyển đổi';
     }
@@ -135,7 +138,7 @@ export function updateBatchButton(manager) {
 
   const iconElement = document.getElementById('btnStartConversionIcon');
   if (iconElement) {
-    iconElement.innerHTML = (isBusy || isUploading)
+    iconElement.innerHTML = isBusy
       ? '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>'
       : '<i data-lucide="zap" class="w-5 h-5 fill-current"></i>';
 

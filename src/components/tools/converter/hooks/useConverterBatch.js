@@ -1,10 +1,12 @@
 /**
  * Converter Batch Engine & Archive Packaging
- * Multi-file concurrency pool, SSE progress tracking, and server ZIP generation.
+ * Multi-file concurrency pool, Dual-Channel Watcher tracking, Client Fast-Path, and ZIP generation.
  */
 
 import { showToast } from '../../../../utilities/toast.js';
 import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
+import { canConvertClientSide, convertClientSide } from '../services/clientConverterEngine.js';
+import { watchJobProgress } from '../../../../utilities/jobWatcher.js';
 
 export function computeRenamedName(rawName, targetExt, idx, pattern = {}) {
   const base = (rawName || 'file').replace(/\.[^/.]+$/, '');
@@ -31,9 +33,19 @@ export async function runConcurrentQueue(manager, maxConcurrency = 3) {
         manager.isConverting = false;
         manager.persist();
         manager.notify('batch-completed');
+
         const done = manager.items.filter(i => i.status === 'completed').length;
         const total = manager.items.length;
-        showToast(`Chuyển đổi hoàn tất (${done}/${total})`, done === total ? 'success' : 'info');
+        const failed = manager.items.filter(i => i.status === 'error').length;
+
+        if (done === total && total > 0) {
+          showToast(`Chuyển đổi hoàn tất (${done}/${total})`, 'success');
+        } else if (done > 0 && done < total) {
+          showToast(`Hoàn tất ${done}/${total} tệp (${failed} tệp lỗi)`, 'warning');
+        } else if (done === 0 && total > 0) {
+          const firstErr = manager.items.find(i => i.error)?.error || 'Đã xảy ra lỗi khi chuyển đổi';
+          showToast(`Chuyển đổi thất bại: ${firstErr}`, 'error');
+        }
         return resolve();
       }
 
@@ -118,7 +130,7 @@ export function startBackgroundUpload(manager, item) {
         return;
       }
       if (!upData?.fileId) {
-        throw new Error('Máy chủ không trả về fileId');
+        throw new Error('Máy chủ không trả về mã tệp (fileId)');
       }
       item.fileId = upData.fileId;
       item.uploadStatus = 'uploaded';
@@ -158,23 +170,56 @@ export async function processSingleItem(manager, item) {
       throw new Error('Tệp chưa được tải lên máy chủ hoặc phiên làm việc đã hết hạn. Vui lòng nạp lại tệp.');
     }
 
-    // 1. Upload if missing fileId
+    // 1. Client-Side Fast-Path Check (< 200ms, 0ms upload)
+    if (canConvertClientSide(item, manager.options)) {
+      try {
+        item.progress = 20;
+        item.stage = 'Đang chuyển đổi tức thì trên trình duyệt...';
+        manager.notify('item-progress');
+
+        const clientResult = await convertClientSide(item, manager.options);
+        const idx = manager.items.indexOf(item);
+        const finalName = computeRenamedName(item.file?.name, item.targetFormat, idx, manager.renamePattern);
+        const downloadUrl = URL.createObjectURL(clientResult.blob);
+
+        item.status = 'completed';
+        item.progress = 100;
+        item.stage = 'Hoàn tất';
+        item.result = {
+          fileId: null,
+          clientBlob: clientResult.blob,
+          fileName: finalName,
+          originalSize: item.file?.size || clientResult.size,
+          resultSize: clientResult.size,
+          downloadUrl
+        };
+        manager.persist();
+        manager.notify('item-completed');
+        return;
+      } catch (clientErr) {
+        console.warn('[Converter] Client fast-path fallback to server:', clientErr);
+        // Fall through to server worker seamlessly!
+      }
+    }
+
+    // 2. Server Worker Path: Ensure file is uploaded
     if (!item.fileId && item.file) {
-      // If background upload is still in flight or queued in idle, wait for it
+      // If background upload is still in flight, wait for it with visual feedback
       if (item.uploadPromise && !item.fileId) {
-        item.stage = 'Đang chờ hoàn tất tải lên ngầm...';
+        item.stage = `Đang chờ tải lên máy chủ (${item.uploadProgress || 0}%)...`;
         manager.notify('item-progress');
         try {
           await item.uploadPromise;
         } catch (_) {}
       }
 
-      // If still missing fileId (e.g. background upload error or not started), perform direct upload
+      // If still missing fileId, perform direct foreground upload
       if (!item.fileId) {
         const abortController = new AbortController();
         item.abortController = abortController;
         item.uploadStatus = 'uploading';
         manager.notify('upload-progress');
+
         const upData = await smartUploadFile(item.file, {
           purpose: 'universal-converter',
           presignData: item.presignData,
@@ -185,7 +230,7 @@ export async function processSingleItem(manager, item) {
             manager.notify('item-progress');
           },
           onProgress: (p) => {
-            item.progress = Math.min(40, Math.round(p.percent * 0.4));
+            item.progress = Math.min(30, Math.round(p.percent * 0.3));
             item.uploadProgress = p.percent || 0;
             item.stage = `Đang tải lên ${p.percent}%...`;
             manager.notify('item-progress');
@@ -204,12 +249,15 @@ export async function processSingleItem(manager, item) {
       }
     }
 
-    // 1.1 Final verification of fileId before creating job
+    // Final verification of fileId before creating job
     if (!item.fileId) {
       throw new Error('Không thể xác thực mã tệp trên máy chủ (fileId missing)');
     }
 
-    // 2. Enqueue conversion job
+    // 3. Enqueue conversion job
+    item.stage = 'Đang gửi tác vụ tới worker...';
+    manager.notify('item-progress');
+
     const jobRes = await fetch('/api/v1/converter/job', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -223,25 +271,18 @@ export async function processSingleItem(manager, item) {
     item.jobId = jobData.data?.jobId;
     const eventsUrl = jobData.data?.eventsUrl || `/api/v1/jobs/${item.jobId}/events`;
 
-    // 3. Listen to SSE events
+    // 4. Dual-Channel Watcher (SSE streaming + instant poll + fallback polling)
     await new Promise((res, rej) => {
-      const es = new EventSource(eventsUrl);
-      item.eventSource = es;
-
-      es.addEventListener('progress', (e) => {
-        try {
-          const d = JSON.parse(e.data);
-          item.progress = d.percentage || d.progress || item.progress;
-          item.stage = d.stage || `Đang xử lý ${item.progress}%`;
+      const cleanupWatcher = watchJobProgress({
+        apiBase: '',
+        eventsUrl,
+        pollUrl: `/api/v1/jobs/${item.jobId}`,
+        onProgress: (pct, stage) => {
+          item.progress = pct || item.progress;
+          item.stage = stage || `Đang xử lý ${item.progress}%`;
           manager.notify('item-progress');
-        } catch {}
-      });
-
-      es.addEventListener('completed', (e) => {
-        es.close();
-        item.eventSource = null;
-        try {
-          const d = JSON.parse(e.data);
+        },
+        onCompleted: (d) => {
           const origSize = item.detectedMeta?.size || d.originalSizeBytes || 1024;
           const resSize = d.resultSizeBytes || Math.round(origSize * 0.7);
           const idx = manager.items.indexOf(item);
@@ -249,6 +290,7 @@ export async function processSingleItem(manager, item) {
 
           item.status = 'completed';
           item.progress = 100;
+          item.stage = 'Hoàn tất';
           item.result = {
             fileId: d.resultFileId || item.fileId,
             fileName: finalName,
@@ -259,48 +301,81 @@ export async function processSingleItem(manager, item) {
           manager.persist();
           manager.notify('item-completed');
           res();
-        } catch (err) { rej(err); }
-      });
-
-      es.addEventListener('failed', (e) => {
-        es.close();
-        item.eventSource = null;
-        try {
-          const d = JSON.parse(e.data);
-          rej(new Error(d.error || 'Xử lý chuyển đổi thất bại'));
-        } catch {
-          rej(new Error('Xử lý chuyển đổi thất bại'));
+        },
+        onFailed: (errMsg) => {
+          rej(new Error(errMsg || 'Xử lý chuyển đổi thất bại'));
         }
       });
 
-      es.onerror = () => {
-        es.close();
-        item.eventSource = null;
-        rej(new Error('Mất kết nối với worker SSE'));
-      };
+      item.abortController = { abort: cleanupWatcher };
     });
   } catch (err) {
     item.status = 'error';
     item.error = err.message || 'Chuyển đổi thất bại';
+    item.stage = item.error;
     manager.persist();
     manager.notify('item-error');
   }
 }
 
+async function ensureJsZipLoaded() {
+  if (window.JSZip) return window.JSZip;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = '/src/vendor/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => reject(new Error('Không thể tải thư viện JSZip'));
+    document.head.appendChild(s);
+  });
+}
+
 export async function createZipBundleFromCompleted(manager) {
-  const completed = manager.items.filter(it => it.status === 'completed' && it.result?.fileId);
+  const completed = manager.items.filter(it => it.status === 'completed' && it.result);
   if (completed.length === 0) {
     showToast('Không có tệp đã hoàn tất để tạo ZIP', 'warning');
     return;
   }
 
-  const fileIds = completed.map(it => it.result.fileId);
   const dateStr = new Date().toISOString().slice(0, 10);
   const archiveName = `FileConverter_${dateStr}.zip`;
 
   showToast('Đang nén tệp ZIP...', 'info');
 
   try {
+    const hasClientBlobs = completed.some(it => !it.result?.fileId || it.result?.clientBlob);
+
+    if (hasClientBlobs) {
+      // Client-side ZIP using JSZip
+      const JSZip = await ensureJsZipLoaded();
+      const zip = new JSZip();
+
+      for (const it of completed) {
+        let blob = it.result.clientBlob;
+        if (!blob && it.result.downloadUrl) {
+          const resp = await fetch(it.result.downloadUrl);
+          blob = await resp.blob();
+        }
+        if (blob) {
+          zip.file(it.result.fileName, blob);
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      const downloadUrl = URL.createObjectURL(zipBlob);
+
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = archiveName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast('Đang tải tệp ZIP', 'success');
+      return;
+    }
+
+    // Pure server files: use server compressor
+    const fileIds = completed.map(it => it.result.fileId).filter(Boolean);
     const res = await fetch('/api/v1/archive/compress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

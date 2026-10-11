@@ -108,7 +108,7 @@ describe('Converter Upload Resilience & Mobile Layout Suite', () => {
       return elements;
     }
 
-    it('should disable batch convert button while items are uploading and show live progress', () => {
+    it('should keep batch convert button enabled while items are uploading in background and show live progress', () => {
       const dom = setupMockDOM();
 
       manager.items = [
@@ -124,8 +124,9 @@ describe('Converter Upload Resilience & Mobile Layout Suite', () => {
 
       updateBatchButton(manager);
 
-      expect(dom.btnStartConversion.disabled).toBe(true);
-      expect(dom.btnStartConversionText.textContent).toContain('Đang tải lên máy chủ (42%)');
+      // Unlocked: Users can initiate conversion anytime
+      expect(dom.btnStartConversion.disabled).toBe(false);
+      expect(dom.btnStartConversionText.textContent).toContain('42%');
     });
 
     it('should enable batch convert button when all items have finished uploading', () => {

@@ -29,11 +29,14 @@
     </radialGradient>
   </defs>
 
-  <!-- Background Container: Obsidian Slate with Warm Amber Border -->
-  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0A0908" stroke="rgba(249, 115, 22, 0.28)" stroke-width="1.5" />
+  <!-- Background Container: Obsidian Slate -->
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0A0908" />
   
   <!-- Subtle Internal Glow Atmosphere -->
   <rect x="4" y="4" width="112" height="112" rx="24" fill="url(#ambientOrange_4c3)" />
+
+  <!-- Warm Amber Inset Border (aligned inside container edge to prevent outer alpha halo) -->
+  <rect x="4.75" y="4.75" width="110.5" height="110.5" rx="23.25" fill="none" stroke="#F97316" stroke-opacity="0.32" stroke-width="1.5" />
 
   <!-- Outer Faceted Upper Armor Wing (Lit Facet) -->
   <path d="M 28 26 L 66 26 C 86 26 98 42 98 60 L 52 60 L 46 60 Z" 

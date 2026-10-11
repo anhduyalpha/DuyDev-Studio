@@ -106,9 +106,9 @@ describe('Converter Registry & Compatibility Matrix Unit Tests', () => {
       expect(getDefaultTarget('png')).toBe('webp');
     });
 
-    it('SVG: should only output png, jpg, pdf (cairosvg limits), never svg as target', () => {
+    it('SVG: should output all supported raster formats, never svg as target', () => {
       const targets = getCompatibleFormats('svg');
-      expect(targets).toEqual(['png', 'jpg', 'pdf']);
+      expect(targets).toEqual(['png', 'jpg', 'webp', 'ico', 'pdf', 'bmp']);
       expect(targets).not.toContain('svg');
       expect(getDefaultTarget('svg')).toBe('png');
     });

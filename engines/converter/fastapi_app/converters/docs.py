@@ -42,7 +42,7 @@ def _process_data(input_path: str, output_dir: str, target_format: str) -> dict:
             if tables:
                 df = tables[0]
             else:
-                return {"success": False, "error": "No tables found in HTML file"}
+                return {"success": False, "error": "Không tìm thấy bảng dữ liệu (thẻ <table>) nào trong tệp HTML"}
         elif ext == '.txt':
             # Try tab-separated first, then comma
             try:
@@ -56,10 +56,10 @@ def _process_data(input_path: str, output_dir: str, target_format: str) -> dict:
                         lines = f.readlines()
                     df = pd.DataFrame({'content': [line.strip() for line in lines if line.strip()]})
         else:
-            return {"success": False, "error": f"Unsupported source format: {ext}"}
+            return {"success": False, "error": f"Định dạng tệp nguồn không được hỗ trợ cho xử lý bảng: {ext}"}
 
         if df is None or df.empty:
-            return {"success": False, "error": "Could not read data from file"}
+            return {"success": False, "error": "Không thể trích xuất cấu trúc dữ liệu từ tệp tin"}
 
         # === WRITE OUTPUT ===
         if target_format == 'csv':
@@ -122,9 +122,9 @@ def _process_data(input_path: str, output_dir: str, target_format: str) -> dict:
             df.to_csv(output_path, index=False, sep='\t', encoding='utf-8')
             
         else:
-            return {"success": False, "error": f"Unsupported target format: {target_format}"}
+            return {"success": False, "error": f"Định dạng đích không được hỗ trợ cho dữ liệu bảng: {target_format}"}
 
         return {"success": True, "output_path": output_path, "filename": output_filename}
 
     except Exception as e:
-        return {"success": False, "error": f"Data conversion error: {str(e)}"}
+        return {"success": False, "error": f"Lỗi chuyển đổi dữ liệu bảng tính: {str(e)}"}

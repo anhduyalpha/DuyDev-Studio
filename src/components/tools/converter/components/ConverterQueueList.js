@@ -67,6 +67,17 @@ function renderQueueItem(it, idx, isConverting) {
             <span>•</span>
             <span class="text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-semibold">${meta.categoryLabel || meta.category || 'Tài liệu'}</span>
           </div>
+          ${isError && it.error ? `
+            <p class="text-[11px] font-medium text-red-500 dark:text-red-400 mt-1 flex items-center gap-1.5 break-words" title="${it.error}">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0 text-red-500"></i>
+              <span class="line-clamp-2">${it.error}</span>
+            </p>
+          ` : isBusy && it.stage ? `
+            <p class="text-[11px] font-medium text-indigo-500 dark:text-indigo-400 mt-1 flex items-center gap-1 truncate" title="${it.stage}">
+              <i data-lucide="loader-2" class="w-3 h-3 animate-spin shrink-0"></i>
+              <span class="truncate">${it.stage}</span>
+            </p>
+          ` : ''}
         </div>
       </div>
 
@@ -94,7 +105,7 @@ function renderQueueItem(it, idx, isConverting) {
               <i data-lucide="download" class="w-3.5 h-3.5"></i> ${formatBytes(it.result.resultSize)}
             </a>
           ` : isError ? `
-            <button type="button" class="btn-retry-item px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-medium hover:bg-red-500/20 transition flex items-center gap-1"
+            <button type="button" class="btn-retry-item px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-medium hover:bg-red-500/20 transition flex items-center gap-1 cursor-pointer"
               data-item-id="${it.id}" title="${it.error || 'Lỗi'}">
               <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Thử lại
             </button>
@@ -105,6 +116,11 @@ function renderQueueItem(it, idx, isConverting) {
               </div>
               <span class="text-[10px] font-mono text-indigo-500 shrink-0">${it.progress}%</span>
             </div>
+          ` : it.uploadStatus === 'local-ready' ? `
+            <span class="badge-upload-status inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 shrink-0 whitespace-nowrap" title="Sẵn sàng chuyển đổi tức thì trên trình duyệt (0ms upload)">
+              <i data-lucide="zap" class="w-3 h-3 shrink-0"></i>
+              <span>Trình duyệt (0ms)</span>
+            </span>
           ` : it.uploadStatus === 'uploading' ? `
             <span class="badge-upload-status inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 shrink-0 whitespace-nowrap">
               <i data-lucide="loader-2" class="w-3 h-3 animate-spin shrink-0"></i>

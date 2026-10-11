@@ -52,7 +52,7 @@ describe('Frontend Converter Format Registry Unit Tests', () => {
 
     const svgOutputs = getCompatibleOutputs('svg');
     const svgIds = svgOutputs.map((f) => f.id);
-    expect(svgIds).toEqual(['png', 'jpg', 'pdf']);
+    expect(svgIds).toEqual(['png', 'jpg', 'webp', 'ico', 'pdf', 'bmp']);
   });
 
   it('getSmartDefaultTarget: should recommend optimal target', () => {
