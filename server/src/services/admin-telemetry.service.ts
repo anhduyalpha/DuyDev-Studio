@@ -1120,9 +1120,9 @@ export class AdminTelemetryService {
     lines.push(sep100);
     lines.push('');
 
-    if (totalErrors === 0) {
+    if (totalErrors === 0 && failedAiLogs.length === 0) {
       lines.push('>>> TRẠNG THÁI HỆ THỐNG HOÀN TOÀN KHỎE MẠNH (ALL SYSTEMS HEALTHY) <<<');
-      lines.push('Không có tác vụ nào bị lỗi trong cơ sở dữ liệu. Toàn bộ worker đang hoạt động bình thường.');
+      lines.push('Không có tác vụ nào bị lỗi trong cơ sở dữ liệu và không phát sinh lỗi AI. Toàn bộ worker đang hoạt động bình thường.');
       lines.push(sep100);
       return {
         text: lines.join('\n'),
@@ -1134,16 +1134,17 @@ export class AdminTelemetryService {
       };
     }
 
-    // Section 1: Bug Triage Summary Table
-    lines.push(sepDash);
-    lines.push('[1] MỤC LỤC & BẢNG PHÂN LOẠI LỖI (BUG TRIAGE SUMMARY TABLE)');
-    lines.push(sepDash);
-    lines.push(
-      'Index | Engine / Module       | Severity | Count | Share (%) | Root Cause Summary'
-    );
-    lines.push(
-      '------+-----------------------+----------+-------+-----------+---------------------------------------------------'
-    );
+    if (totalErrors > 0) {
+      // Section 1: Bug Triage Summary Table
+      lines.push(sepDash);
+      lines.push('[1] MỤC LỤC & BẢNG PHÂN LOẠI LỖI (BUG TRIAGE SUMMARY TABLE)');
+      lines.push(sepDash);
+      lines.push(
+        'Index | Engine / Module       | Severity | Count | Share (%) | Root Cause Summary'
+      );
+      lines.push(
+        '------+-----------------------+----------+-------+-----------+---------------------------------------------------'
+      );
 
     groups.forEach((g, idx) => {
       const idxStr = `#${String(idx + 1).padStart(2, '0')}`;
@@ -1223,6 +1224,7 @@ export class AdminTelemetryService {
 
       lines.push(sepDash);
     });
+    }
 
     // Section 3: AI Failures (if any)
     if (failedAiLogs.length > 0) {
@@ -1230,11 +1232,13 @@ export class AdminTelemetryService {
       lines.push(sepDash);
       lines.push('[3] NHẬT KÝ LỖI GỌI AI AGENT / MÔ HÌNH NGÔN NGỮ (AI INVOCATIONS - DEDUPLICATED)');
       lines.push(sepDash);
-      lines.push(`Total AI Failures    : ${failedAiLogs.length} calls`);
+      const aiUnrecovered = failedAiLogs.filter(l => !l.isFallbackRecovered && l.status !== 'FALLBACK_RECOVERED').length;
+      const aiRecovered = failedAiLogs.length - aiUnrecovered;
+      lines.push(`Total AI Events      : ${failedAiLogs.length} calls (${aiUnrecovered} critical defects, ${aiRecovered} fallback-recovered)`);
 
       const aiMap = new Map<string, { count: number; log: any }>();
       for (const al of failedAiLogs) {
-        const sig = `${al.keyName || 'Unknown'}::${al.statusCode || 0}::${al.errorDetails || al.errorMsg || 'Timeout'}`;
+        const sig = `${al.keyName || 'Unknown'}::${al.statusCode || 0}::${al.isFallbackRecovered ? 'RECOVERED' : 'FAILED'}::${al.errorDetails || al.errorMsg || 'Timeout'}`;
         if (!aiMap.has(sig)) {
           aiMap.set(sig, { count: 1, log: al });
         } else {
@@ -1243,11 +1247,15 @@ export class AdminTelemetryService {
       }
 
       Array.from(aiMap.values()).forEach((item, aIdx) => {
-        lines.push(`\n>>> AI ERROR #${aIdx + 1} (Occurrences: ${item.count}) <<<`);
+        const isRec = Boolean(item.log.isFallbackRecovered || item.log.status === 'FALLBACK_RECOVERED');
+        lines.push(`\n>>> ${isRec ? 'AI CALL RECOVERED (TỰ ĐỘNG CỨU QUA KHÓA DỰ PHÒNG)' : 'AI ERROR'} #${aIdx + 1} (Occurrences: ${item.count}) <<<`);
         lines.push(`Key Name / Provider  : ${item.log.keyName || 'Default'} (${item.log.keyId || 'n/a'})`);
-        lines.push(`Status Code          : ${item.log.statusCode || 500}`);
+        lines.push(`Status Code          : ${item.log.statusCode || 500}${isRec ? ' (FALLBACK_RECOVERED)' : ''}`);
+        if (isRec && item.log.recoveredByKey) {
+          lines.push(`Recovered By Key     : ${item.log.recoveredByKey}`);
+        }
         lines.push(`Latency              : ${item.log.latencyMs || 0}ms`);
-        lines.push(`Error Details        : ${item.log.errorDetails || item.log.errorMsg || 'Unknown AI error'}`);
+        lines.push(`${isRec ? 'Upstream Incident    :' : 'Error Details        :'} ${item.log.errorDetails || item.log.errorMsg || 'Unknown AI error'}`);
         if (item.log.promptSnippet) {
           lines.push(`Prompt Snippet       : "${item.log.promptSnippet.replace(/\n/g, ' ').slice(0, 120)}..."`);
         }

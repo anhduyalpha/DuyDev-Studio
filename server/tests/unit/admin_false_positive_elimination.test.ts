@@ -213,6 +213,24 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
       const afterMetrics = aiService.getTelemetryData();
       expect(afterMetrics.cumulative.errorCalls).toBeGreaterThan(initialErrorCalls);
     });
+
+    it('accurately reflects FALLBACK_RECOVERED in exportErrorLogsAsText without labeling as pure unrecovered failure', async () => {
+      const mockFn = vi.fn().mockImplementation(async (key) => {
+        if (key.id === 'agnes-primary') {
+          const err = new Error('504 Gateway Timeout: Upstream did not respond within 3500ms') as any;
+          err.statusCode = 504;
+          throw err;
+        }
+        return `Recovered via ${key.name}`;
+      });
+
+      await aiService.executeWithFallback(mockFn, { module: 'test-export-recovered' });
+
+      const service = AdminTelemetryService.getInstance();
+      const exportResult = await service.exportErrorLogsAsText({ dedupe: true });
+      expect(exportResult.text).toContain('FALLBACK_RECOVERED');
+      expect(exportResult.text).toContain('AI CALL RECOVERED');
+    });
   });
 
   describe('R3. Noise Isolation for Bot Scanners', () => {

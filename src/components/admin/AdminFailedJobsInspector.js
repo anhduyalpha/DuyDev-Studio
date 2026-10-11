@@ -469,7 +469,7 @@ export function renderFailedJobsInspector(jobs = []) {
 
   const badgeHtml = systemErrorsCount === 0
     ? `<span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">0 lỗi hệ thống · ${userActionsCount} thao tác người dùng</span>`
-    : `<span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">${systemErrorsCount} lỗi hệ thống · ${userActionsCount} người dùng</span>`;
+    : `<span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">${systemErrorsCount} lỗi hệ thống · ${userActionsCount} thao tác người dùng</span>`;
 
   return `
     <div id="adminFailedJobsCard" class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-5">
