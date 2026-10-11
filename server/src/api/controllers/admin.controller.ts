@@ -30,8 +30,13 @@ const testKeySchema = z.object({
 });
 
 const getFailedJobsQuerySchema = z.object({
-  limit: z.coerce.number().min(1).max(100).default(50),
+  limit: z.coerce.number().min(1).max(2000).default(50),
   type: z.string().optional()
+});
+
+const exportErrorLogsQuerySchema = z.object({
+  type: z.string().optional(),
+  dedupe: z.coerce.boolean().optional()
 });
 
 const inspectStorageQuerySchema = z.object({
@@ -227,6 +232,26 @@ export async function clearFailedJobsHandler(_request: FastifyRequest, reply: Fa
     message: `Đã dọn dẹp ${result.deletedCount} nhật ký tác vụ thất bại`,
     data: result
   });
+}
+
+/**
+ * GET /api/v1/admin/logs/export-txt
+ * Exports all system error logs to formatted TXT with deduplication
+ */
+export async function exportErrorLogsTxtHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = exportErrorLogsQuerySchema.safeParse(request.query);
+  const { type, dedupe } = parseResult.success ? parseResult.data : { type: undefined, dedupe: true };
+
+  const result = await adminTelemetryService.exportErrorLogsAsText({ type, dedupe });
+
+  reply.header('Content-Type', 'text/plain; charset=utf-8');
+  reply.header('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  reply.header('X-Total-Errors', String(result.totalErrors));
+  reply.header('X-Unique-Errors', String(result.uniqueErrors));
+  reply.header('X-Duplicates-Removed', String(result.duplicateCount));
+  reply.header('X-Reduction-Percent', String(result.reductionPercentage));
+
+  return reply.send(result.text);
 }
 
 /**

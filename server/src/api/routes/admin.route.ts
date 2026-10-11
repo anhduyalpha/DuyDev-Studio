@@ -17,6 +17,7 @@ import {
   cleanHistoryHandler,
   getFailedJobsHandler,
   clearFailedJobsHandler,
+  exportErrorLogsTxtHandler,
   inspectStorageHandler,
   deleteStorageFileHandler,
   inspectR2TransitHandler,
@@ -37,6 +38,7 @@ export async function adminRoute(app: FastifyInstance) {
 
   // Failed Jobs & Error Logs
   app.get('/api/v1/admin/logs/failed-jobs', { preHandler: adminAuthGuard }, getFailedJobsHandler);
+  app.get('/api/v1/admin/logs/export-txt', { preHandler: adminAuthGuard }, exportErrorLogsTxtHandler);
   app.post('/api/v1/admin/logs/clear-failed', { preHandler: adminAuthGuard }, clearFailedJobsHandler);
 
   // Storage Inspection & Item Management

@@ -147,6 +147,15 @@ export function renderFailedJobsInspector(jobs = []) {
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>Làm Mới</span>
           </button>
+          <button
+            type="button"
+            id="btnExportFailedJobsTxt"
+            class="px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+            title="Xuất toàn bộ nhật ký lỗi đã lọc trùng ra file .txt để tải về"
+          >
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Xuất Log Lỗi (.txt)</span>
+          </button>
           ${jobs.length > 0 ? `
             <button
               type="button"
@@ -317,7 +326,72 @@ export function attachFailedJobsListeners(container, onReload) {
     };
   }
 
-  // 2. Clear all failed jobs with Slide-To-Confirm verification
+  // 2. Export all failed jobs to TXT with deduplication
+  const btnExport = container.querySelector('#btnExportFailedJobsTxt');
+  if (btnExport) {
+    btnExport.onclick = async () => {
+      btnExport.disabled = true;
+      const originalHtml = btnExport.innerHTML;
+      btnExport.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> <span>Đang xử lý & lọc trùng...</span>';
+      if (window.lucide) window.lucide.createIcons();
+
+      try {
+        const resp = await fetch('/api/v1/admin/logs/export-txt', {
+          headers: { ...getStorageAuthHeaders(), 'Accept': 'text/plain' }
+        });
+
+        if (!resp.ok) {
+          throw new Error(`Máy chủ phản hồi mã lỗi ${resp.status}`);
+        }
+
+        const totalErrors = resp.headers.get('X-Total-Errors') || '0';
+        const uniqueErrors = resp.headers.get('X-Unique-Errors') || '0';
+        const contentDisposition = resp.headers.get('Content-Disposition') || '';
+        let fileName = `duydev-studio-error-logs-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.txt`;
+        const match = contentDisposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+
+        const text = await resp.text();
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast(`Đã tải về ${fileName}: ${totalErrors} lỗi (đã lọc trùng còn ${uniqueErrors} lỗi duy nhất)`, 'success');
+      } catch (err) {
+        console.warn('[AdminFailedJobs] Server export failed, falling back to client-side deduplication:', err);
+        try {
+          const clientExport = generateClientDeduplicatedExport(cachedFailedJobs);
+          const blob = new Blob([clientExport.text], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = clientExport.fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          showToast(`Đã xuất ${cachedFailedJobs.length} lỗi (lọc trùng còn ${clientExport.uniqueCount} lỗi) qua trình duyệt`, 'success');
+        } catch (clientErr) {
+          showToast(`Lỗi khi xuất file: ${err.message}`, 'error');
+        }
+      } finally {
+        btnExport.disabled = false;
+        btnExport.innerHTML = originalHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    };
+  }
+
+  // 3. Clear all failed jobs with Slide-To-Confirm verification
   const btnClear = container.querySelector('#btnClearFailedJobs');
   if (btnClear) {
     btnClear.onclick = () => {
@@ -398,4 +472,150 @@ export function attachFailedJobsListeners(container, onReload) {
   });
 
   if (window.lucide) window.lucide.createIcons();
+}
+
+/**
+  * Generates client-side deduplicated error report for offline/fallback export
+  */
+export function generateClientDeduplicatedExport(jobs = []) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const dateFormatted = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const fileTimestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const fileName = `duydev-studio-error-logs-${fileTimestamp}.txt`;
+
+  const totalErrors = jobs.length;
+  const groupMap = new Map();
+
+  for (const j of jobs) {
+    const normError = normalizeErrorMessageToEnglish(j.errorMessage);
+    const sig = `${j.type || 'unknown'}::${normError.toLowerCase().replace(/\s+/g, ' ')}`;
+
+    let parsedOptions = j.options;
+    if (!parsedOptions && j.optionsRaw) {
+      try { parsedOptions = JSON.parse(j.optionsRaw); } catch { parsedOptions = j.optionsRaw; }
+    }
+
+    const fileNames = [];
+    if (parsedOptions && typeof parsedOptions === 'object') {
+      const candidate = parsedOptions.fileName || parsedOptions.filename || parsedOptions.name || parsedOptions.file;
+      if (candidate) fileNames.push(candidate);
+    }
+
+    const cDate = j.createdAt ? new Date(j.createdAt) : now;
+
+    if (!groupMap.has(sig)) {
+      groupMap.set(sig, {
+        type: j.type || 'unknown',
+        normalizedError: normError,
+        rawErrors: new Set(j.errorMessage ? [j.errorMessage] : []),
+        count: 1,
+        firstSeen: cDate,
+        lastSeen: cDate,
+        jobIds: [j.id],
+        fileNames: new Set(fileNames),
+        sampleOptions: parsedOptions
+      });
+    } else {
+      const g = groupMap.get(sig);
+      g.count++;
+      if (cDate < g.firstSeen) g.firstSeen = cDate;
+      if (cDate > g.lastSeen) g.lastSeen = cDate;
+      g.jobIds.push(j.id);
+      if (j.errorMessage) g.rawErrors.add(j.errorMessage);
+      for (const fn of fileNames) g.fileNames.add(fn);
+      if (!g.sampleOptions && parsedOptions) g.sampleOptions = parsedOptions;
+    }
+  }
+
+  const groups = Array.from(groupMap.values()).sort((a, b) => b.count - a.count);
+  const uniqueCount = groups.length;
+  const duplicatesMerged = Math.max(0, totalErrors - uniqueCount);
+  const reductionPct = totalErrors > 0 ? ((duplicatesMerged / totalErrors) * 100).toFixed(1) : '0';
+
+  const sep100 = '='.repeat(100);
+  const sepDash = '-'.repeat(100);
+  const lines = [];
+
+  lines.push(sep100);
+  lines.push('           DUYDEV STUDIO - SYSTEM ERROR DIAGNOSTICS & AUDIT LOG REPORT');
+  lines.push('                     [DEDUPLICATED & CONSOLIDATED LOG EXPORT]');
+  lines.push(sep100);
+  lines.push(`Generated Date       : ${dateFormatted} (Local Client Time)`);
+  lines.push(`Total Raw Failures   : ${totalErrors} records`);
+  lines.push(`Unique Root Causes   : ${uniqueCount} distinct error signatures`);
+  lines.push(`Duplicates Merged    : ${duplicatesMerged} redundant records eliminated (${reductionPct}% noise reduction)`);
+  lines.push(`Deduplication Mode   : ENABLED (Grouped by Engine + Normalized Root Cause)`);
+  lines.push(sep100);
+  lines.push('');
+
+  if (totalErrors === 0) {
+    lines.push('>>> TRẠNG THÁI HỆ THỐNG HOÀN TOÀN KHỎE MẠNH (ALL SYSTEMS HEALTHY) <<<');
+    lines.push('Không có tác vụ nào bị lỗi. Toàn bộ các công cụ đang hoạt động bình thường.');
+    lines.push(sep100);
+    return { text: lines.join('\n'), fileName, uniqueCount: 0 };
+  }
+
+  lines.push(sepDash);
+  lines.push('[1] BẢNG TỔNG HỢP PHÂN BỐ LỖI HỆ THỐNG (ERROR SIGNATURE DISTRIBUTION)');
+  lines.push(sepDash);
+  lines.push('Index | Engine / Module       | Count | Share (%) | First Occurrence    | Latest Occurrence');
+  lines.push('------+-----------------------+-------+-----------+---------------------+--------------------');
+
+  groups.forEach((g, idx) => {
+    const idxStr = `#${String(idx + 1).padStart(2, '0')}`;
+    const engineStr = (g.type || 'unknown').padEnd(21).slice(0, 21);
+    const countStr = String(g.count).padStart(5);
+    const share = totalErrors > 0 ? ((g.count / totalErrors) * 100).toFixed(1) : '0.0';
+    const shareStr = `${share}%`.padStart(9);
+    const firstStr = g.firstSeen.toISOString().replace('T', ' ').slice(0, 19);
+    const lastStr = g.lastSeen.toISOString().replace('T', ' ').slice(0, 19);
+    lines.push(`${idxStr}   | ${engineStr} | ${countStr} | ${shareStr} | ${firstStr} | ${lastStr}`);
+  });
+  lines.push(sepDash);
+  lines.push('');
+
+  lines.push(sepDash);
+  lines.push('[2] CHI TIẾT NGUYÊN NHÂN LỖI ĐÃ LỌC TRÙNG (DEDUPLICATED ROOT CAUSE CATALOG)');
+  lines.push(sepDash);
+
+  groups.forEach((g, idx) => {
+    const share = totalErrors > 0 ? ((g.count / totalErrors) * 100).toFixed(1) : '0.0';
+    lines.push('');
+    lines.push(`>>> ROOT CAUSE #${String(idx + 1).padStart(2, '0')} <<<`);
+    lines.push(`Engine / Module      : ${String(g.type).toUpperCase()} (${g.type})`);
+    lines.push(`Frequency            : ${g.count} occurrences (${share}% of all failures)`);
+    lines.push(`First Detected       : ${g.firstSeen.toISOString().replace('T', ' ').slice(0, 19)}`);
+    lines.push(`Latest Detected      : ${g.lastSeen.toISOString().replace('T', ' ').slice(0, 19)}`);
+    lines.push(`Normalized Error     : ${g.normalizedError}`);
+
+    const filesList = Array.from(g.fileNames);
+    if (filesList.length > 0) {
+      lines.push(`Affected Files (${filesList.length})  : ${filesList.slice(0, 10).join(', ')}${filesList.length > 10 ? ` ... (+${filesList.length - 10} more)` : ''}`);
+    }
+
+    lines.push(`Sample Job IDs (${g.jobIds.length})  : ${g.jobIds.slice(0, 8).map(id => `#${String(id).slice(0, 10)}`).join(', ')}${g.jobIds.length > 8 ? ` ... (+${g.jobIds.length - 8} more)` : ''}`);
+
+    if (g.sampleOptions) {
+      lines.push('Sample Input Payload :');
+      try {
+        const pretty = JSON.stringify(g.sampleOptions, null, 2).split('\n').map(l => `    ${l}`).join('\n');
+        lines.push(pretty);
+      } catch {
+        lines.push(`    ${String(g.sampleOptions)}`);
+      }
+    }
+    lines.push(sepDash);
+  });
+
+  lines.push('');
+  lines.push(sep100);
+  lines.push('END OF DUYDEV STUDIO SYSTEM ERROR AUDIT REPORT');
+  lines.push(sep100);
+
+  return {
+    text: lines.join('\n'),
+    fileName,
+    uniqueCount
+  };
 }

@@ -101,6 +101,29 @@ export interface FailedJobItem {
   durationMs: number | null;
 }
 
+export interface DeduplicatedErrorGroup {
+  signature: string;
+  type: string;
+  normalizedError: string;
+  rawErrors: Set<string>;
+  count: number;
+  firstSeen: Date;
+  lastSeen: Date;
+  jobIds: string[];
+  fileNames: Set<string>;
+  sampleOptions: any;
+  durationsMs: number[];
+}
+
+export interface ErrorExportResult {
+  text: string;
+  fileName: string;
+  totalErrors: number;
+  uniqueErrors: number;
+  duplicateCount: number;
+  reductionPercentage: number;
+}
+
 export interface InspectedQueueJob {
   id: string;
   name: string;
@@ -530,6 +553,293 @@ export class AdminTelemetryService {
       logger.error({ err }, 'Failed to retrieve failed jobs log');
       return [];
     }
+  }
+
+  /**
+   * Exports full error logs with deduplication, grouping identical root causes and compiling a detailed TXT audit report.
+   */
+  public async exportErrorLogsAsText(options: { type?: string; dedupe?: boolean } = {}): Promise<ErrorExportResult> {
+    const isDedupe = options.dedupe !== false;
+    const typeFilter = options.type;
+
+    // 1. Fetch all failed jobs (up to 5000 records)
+    const jobs = await prisma.job.findMany({
+      where: {
+        status: 'FAILED',
+        ...(typeFilter ? { type: typeFilter } : {})
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5000,
+      include: {
+        files: {
+          select: {
+            originalName: true,
+            mimeType: true,
+            sizeBytes: true
+          }
+        }
+      }
+    });
+
+    const now = new Date();
+    const isoString = now.toISOString();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateFormatted = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const fileTimestamp = isoString.replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `duydev-studio-error-logs-${fileTimestamp}.txt`;
+
+    // 2. Fetch AI agent failure logs if any
+    let failedAiLogs: any[] = [];
+    try {
+      const aiTelemetry = aiMetricsService.getTelemetryData();
+      failedAiLogs = (aiTelemetry.recentLogs || []).filter(
+        l => (l.statusCode && l.statusCode >= 400) || l.errorDetails || l.errorMsg
+      );
+    } catch {}
+
+    const totalErrors = jobs.length;
+
+    // 3. Deduplication Algorithm
+    const groupMap = new Map<string, DeduplicatedErrorGroup>();
+
+    for (const j of jobs) {
+      const normError = normalizeErrorMessageToEnglish(j.errorMessage);
+      const signature = `${j.type}::${normError.toLowerCase().replace(/\s+/g, ' ')}`;
+
+      let parsedOptions: any = null;
+      try {
+        parsedOptions = JSON.parse(j.optionsJson);
+      } catch {
+        parsedOptions = j.optionsJson;
+      }
+
+      // Extract file names
+      const fileNames: string[] = [];
+      if (Array.isArray(j.files) && j.files.length > 0) {
+        for (const f of j.files) {
+          if (f.originalName) fileNames.push(f.originalName);
+        }
+      }
+      if (typeof parsedOptions === 'object' && parsedOptions !== null) {
+        const candidate = parsedOptions.fileName || parsedOptions.filename || parsedOptions.name || parsedOptions.file;
+        if (candidate && typeof candidate === 'string') {
+          fileNames.push(candidate);
+        }
+      }
+
+      let durationMs: number | null = null;
+      if (j.startedAt && j.completedAt) {
+        durationMs = j.completedAt.getTime() - j.startedAt.getTime();
+      }
+
+      if (!groupMap.has(signature)) {
+        groupMap.set(signature, {
+          signature,
+          type: j.type,
+          normalizedError: normError,
+          rawErrors: new Set(j.errorMessage ? [j.errorMessage] : []),
+          count: 1,
+          firstSeen: j.createdAt,
+          lastSeen: j.createdAt,
+          jobIds: [j.id],
+          fileNames: new Set(fileNames),
+          sampleOptions: parsedOptions,
+          durationsMs: durationMs !== null ? [durationMs] : []
+        });
+      } else {
+        const g = groupMap.get(signature)!;
+        g.count++;
+        if (j.createdAt < g.firstSeen) g.firstSeen = j.createdAt;
+        if (j.createdAt > g.lastSeen) g.lastSeen = j.createdAt;
+        g.jobIds.push(j.id);
+        if (j.errorMessage) g.rawErrors.add(j.errorMessage);
+        for (const fn of fileNames) g.fileNames.add(fn);
+        if (durationMs !== null) g.durationsMs.push(durationMs);
+        if (!g.sampleOptions && parsedOptions) g.sampleOptions = parsedOptions;
+      }
+    }
+
+    const groups = Array.from(groupMap.values()).sort((a, b) => b.count - a.count);
+    const uniqueErrors = groups.length;
+    const duplicateCount = Math.max(0, totalErrors - uniqueErrors);
+    const reductionPercentage = totalErrors > 0 ? Math.round((duplicateCount / totalErrors) * 1000) / 10 : 0;
+
+    // Build TXT Document
+    const sep100 = '='.repeat(100);
+    const sepDash = '-'.repeat(100);
+    const lines: string[] = [];
+
+    // Header
+    lines.push(sep100);
+    lines.push('           DUYDEV STUDIO - SYSTEM ERROR DIAGNOSTICS & AUDIT LOG REPORT');
+    lines.push('                     [DEDUPLICATED & CONSOLIDATED LOG EXPORT]');
+    lines.push(sep100);
+    lines.push(`Generated Date       : ${dateFormatted} (Local Server Time)`);
+    lines.push(`ISO Timestamp        : ${isoString}`);
+    lines.push(`Server Host          : ${os.hostname()} (${os.platform()} ${os.arch()})`);
+    lines.push(`Total Raw Failures   : ${totalErrors} records`);
+    lines.push(`Unique Root Causes   : ${uniqueErrors} distinct error signatures`);
+    lines.push(`Duplicates Merged    : ${duplicateCount} redundant records eliminated (${reductionPercentage}% noise reduction)`);
+    lines.push(`Engine Filter        : ${typeFilter || 'ALL ENGINES (Universal Converter, PDF Studio, Quiz Generator)'}`);
+    lines.push(`Deduplication Mode   : ${isDedupe ? 'ENABLED (Grouped by Engine + Normalized Root Cause)' : 'DISABLED'}`);
+    lines.push(sep100);
+    lines.push('');
+
+    if (totalErrors === 0) {
+      lines.push('>>> TRẠNG THÁI HỆ THỐNG HOÀN TOÀN KHỎE MẠNH (ALL SYSTEMS HEALTHY) <<<');
+      lines.push('Không có tác vụ nào bị lỗi trong cơ sở dữ liệu. Toàn bộ worker đang hoạt động bình thường.');
+      lines.push(sep100);
+      return {
+        text: lines.join('\n'),
+        fileName,
+        totalErrors: 0,
+        uniqueErrors: 0,
+        duplicateCount: 0,
+        reductionPercentage: 0
+      };
+    }
+
+    // Section 1: Distribution Table
+    lines.push(sepDash);
+    lines.push('[1] BẢNG TỔNG HỢP PHÂN BỐ LỖI HỆ THỐNG (ERROR SIGNATURE DISTRIBUTION)');
+    lines.push(sepDash);
+    lines.push(
+      'Index | Engine / Module       | Count | Share (%) | First Occurrence    | Latest Occurrence'
+    );
+    lines.push(
+      '------+-----------------------+-------+-----------+---------------------+--------------------'
+    );
+
+    groups.forEach((g, idx) => {
+      const idxStr = `#${String(idx + 1).padStart(2, '0')}`;
+      const engineStr = (g.type || 'unknown').padEnd(21).slice(0, 21);
+      const countStr = String(g.count).padStart(5);
+      const share = totalErrors > 0 ? ((g.count / totalErrors) * 100).toFixed(1) : '0.0';
+      const shareStr = `${share}%`.padStart(9);
+      const firstStr = g.firstSeen.toISOString().replace('T', ' ').slice(0, 19);
+      const lastStr = g.lastSeen.toISOString().replace('T', ' ').slice(0, 19);
+      lines.push(`${idxStr}   | ${engineStr} | ${countStr} | ${shareStr} | ${firstStr} | ${lastStr}`);
+    });
+    lines.push(sepDash);
+    lines.push('');
+
+    // Section 2: Detailed Root Causes (Deduplicated)
+    lines.push(sepDash);
+    lines.push('[2] CHI TIẾT NGUYÊN NHÂN LỖI ĐÃ LỌC TRÙNG (DEDUPLICATED ROOT CAUSE CATALOG)');
+    lines.push(sepDash);
+
+    groups.forEach((g, idx) => {
+      const share = totalErrors > 0 ? ((g.count / totalErrors) * 100).toFixed(1) : '0.0';
+      const avgDuration = g.durationsMs.length > 0
+        ? Math.round(g.durationsMs.reduce((a, b) => a + b, 0) / g.durationsMs.length)
+        : null;
+      const minDuration = g.durationsMs.length > 0 ? Math.min(...g.durationsMs) : null;
+      const maxDuration = g.durationsMs.length > 0 ? Math.max(...g.durationsMs) : null;
+
+      lines.push('');
+      lines.push(`>>> ROOT CAUSE #${String(idx + 1).padStart(2, '0')} <<<`);
+      lines.push(`Engine / Module      : ${g.type.toUpperCase()} (${g.type})`);
+      lines.push(`Frequency            : ${g.count} occurrences (${share}% of all failures)`);
+      lines.push(`First Detected       : ${g.firstSeen.toISOString().replace('T', ' ').slice(0, 19)}`);
+      lines.push(`Latest Detected      : ${g.lastSeen.toISOString().replace('T', ' ').slice(0, 19)}`);
+      if (avgDuration !== null) {
+        lines.push(`Execution Latency    : Avg ${avgDuration}ms (Min: ${minDuration}ms, Max: ${maxDuration}ms)`);
+      }
+      lines.push(`Normalized Error     : ${g.normalizedError}`);
+
+      const rawList = Array.from(g.rawErrors);
+      if (rawList.length > 0 && rawList[0] !== g.normalizedError) {
+        lines.push(`Original Raw Error   : ${rawList.slice(0, 3).join(' | ')}${rawList.length > 3 ? ' (and more)' : ''}`);
+      }
+
+      const filesList = Array.from(g.fileNames);
+      if (filesList.length > 0) {
+        lines.push(`Affected Files (${filesList.length})  : ${filesList.slice(0, 10).join(', ')}${filesList.length > 10 ? ` ... (+${filesList.length - 10} more)` : ''}`);
+      }
+
+      lines.push(`Sample Job IDs (${g.jobIds.length})  : ${g.jobIds.slice(0, 8).map(id => `#${id.slice(0, 10)}`).join(', ')}${g.jobIds.length > 8 ? ` ... (+${g.jobIds.length - 8} more)` : ''}`);
+
+      if (g.sampleOptions) {
+        lines.push('Sample Input Payload :');
+        try {
+          const pretty = JSON.stringify(g.sampleOptions, null, 2)
+            .split('\n')
+            .map(l => `    ${l}`)
+            .join('\n');
+          lines.push(pretty);
+        } catch {
+          lines.push(`    ${String(g.sampleOptions)}`);
+        }
+      }
+
+      lines.push(sepDash);
+    });
+
+    // Section 3: AI Failures (if any)
+    if (failedAiLogs.length > 0) {
+      lines.push('');
+      lines.push(sepDash);
+      lines.push('[3] NHẬT KÝ LỖI GỌI AI AGENT / MÔ HÌNH NGÔN NGỮ (AI INVOCATIONS - DEDUPLICATED)');
+      lines.push(sepDash);
+      lines.push(`Total AI Failures    : ${failedAiLogs.length} calls`);
+
+      const aiMap = new Map<string, { count: number; log: any }>();
+      for (const al of failedAiLogs) {
+        const sig = `${al.keyName || 'Unknown'}::${al.statusCode || 0}::${al.errorDetails || al.errorMsg || 'Timeout'}`;
+        if (!aiMap.has(sig)) {
+          aiMap.set(sig, { count: 1, log: al });
+        } else {
+          aiMap.get(sig)!.count++;
+        }
+      }
+
+      Array.from(aiMap.values()).forEach((item, aIdx) => {
+        lines.push(`\n>>> AI ERROR #${aIdx + 1} (Occurrences: ${item.count}) <<<`);
+        lines.push(`Key Name / Provider  : ${item.log.keyName || 'Default'} (${item.log.keyId || 'n/a'})`);
+        lines.push(`Status Code          : ${item.log.statusCode || 500}`);
+        lines.push(`Latency              : ${item.log.latencyMs || 0}ms`);
+        lines.push(`Error Details        : ${item.log.errorDetails || item.log.errorMsg || 'Unknown AI error'}`);
+        if (item.log.promptSnippet) {
+          lines.push(`Prompt Snippet       : "${item.log.promptSnippet.replace(/\n/g, ' ').slice(0, 120)}..."`);
+        }
+      });
+      lines.push(sepDash);
+    }
+
+    // Section 4: Chronological Audit Trail (Sample up to 100 recent entries)
+    lines.push('');
+    lines.push(sepDash);
+    lines.push('[4] NHẬT KÝ TRUY VẾT THEO DÒNG THỜI GIAN (CHRONOLOGICAL EVENT AUDIT TRAIL)');
+    lines.push('    (Hiển thị tối đa 100 bản ghi lỗi gần nhất)');
+    lines.push(sepDash);
+
+    const recentJobs = jobs.slice(0, 100);
+    recentJobs.forEach((rj, rIdx) => {
+      const timeStr = rj.createdAt.toISOString().replace('T', ' ').slice(0, 19);
+      const durStr = (rj.startedAt && rj.completedAt)
+        ? `${((rj.completedAt.getTime() - rj.startedAt.getTime()) / 1000).toFixed(2)}s`
+        : '--';
+      const cleanErr = normalizeErrorMessageToEnglish(rj.errorMessage);
+      lines.push(`[#${String(rIdx + 1).padStart(3, '0')}] ${timeStr} | ${rj.type.padEnd(10)} | ID: ${rj.id} | Duration: ${durStr}`);
+      lines.push(`      Lỗi   : ${cleanErr}`);
+      lines.push(sepDash);
+    });
+
+    lines.push('');
+    lines.push(sep100);
+    lines.push('END OF DUYDEV STUDIO SYSTEM ERROR AUDIT REPORT');
+    lines.push(sep100);
+
+    const fullText = lines.join('\n');
+
+    return {
+      text: fullText,
+      fileName,
+      totalErrors,
+      uniqueErrors,
+      duplicateCount,
+      reductionPercentage
+    };
   }
 
   /**
