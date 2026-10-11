@@ -22,6 +22,20 @@ const testKeySchema = z.object({
   keyId: z.string().min(1, 'Key ID is required')
 });
 
+const getFailedJobsQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  type: z.string().optional()
+});
+
+const inspectStorageQuerySchema = z.object({
+  folder: z.enum(['temp', 'uploads', 'processed', 'drive'])
+});
+
+const deleteStorageFileBodySchema = z.object({
+  folder: z.enum(['temp', 'uploads', 'processed', 'drive']),
+  fileName: z.string().min(1, 'fileName is required')
+});
+
 /**
  * GET /api/v1/admin/telemetry
  * Returns comprehensive telemetry snapshot
@@ -151,6 +165,74 @@ export async function cleanHistoryHandler(_request: FastifyRequest, reply: Fasti
   return reply.send({
     success: true,
     message: `Đã dọn dẹp ${result.deletedCount} bản ghi lịch sử đã xóa`,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/logs/failed-jobs
+ * Retrieves detailed log of failed processing jobs
+ */
+export async function getFailedJobsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = getFailedJobsQuerySchema.safeParse(request.query);
+  const { limit, type } = parseResult.success ? parseResult.data : { limit: 50, type: undefined };
+  const jobs = await adminTelemetryService.getFailedJobs(limit, type);
+  return reply.send({
+    success: true,
+    data: {
+      total: jobs.length,
+      jobs
+    }
+  });
+}
+
+/**
+ * POST /api/v1/admin/logs/clear-failed
+ * Cleans all failed job logs and Redis failed jobs
+ */
+export async function clearFailedJobsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = await adminTelemetryService.clearFailedJobs();
+  return reply.send({
+    success: true,
+    message: `Đã dọn dẹp ${result.deletedCount} nhật ký tác vụ thất bại`,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/storage/inspect
+ * Inspects physical files on disk in the specified folder
+ */
+export async function inspectStorageHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = inspectStorageQuerySchema.safeParse(request.query);
+  if (!parseResult.success) {
+    const msg = parseResult.error.errors[0]?.message || 'Thư mục không hợp lệ (temp, uploads, processed, drive)';
+    throw new BadRequestError(msg);
+  }
+  const result = await adminTelemetryService.inspectStorageFolder(parseResult.data.folder);
+  return reply.send({
+    success: true,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/storage/delete-file
+ * Deletes an individual file from disk with verification
+ */
+export async function deleteStorageFileHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = deleteStorageFileBodySchema.safeParse(request.body);
+  if (!parseResult.success) {
+    const msg = parseResult.error.errors[0]?.message || 'Tham số xóa tệp không hợp lệ';
+    throw new BadRequestError(msg);
+  }
+  const result = await adminTelemetryService.deleteStorageFile(
+    parseResult.data.folder,
+    parseResult.data.fileName
+  );
+  return reply.send({
+    success: true,
+    message: `Đã xóa tệp ${result.fileName} (Giải phóng ${result.freedMb} MB)`,
     data: result
   });
 }

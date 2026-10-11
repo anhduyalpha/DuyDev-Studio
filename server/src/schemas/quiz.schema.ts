@@ -31,7 +31,8 @@ export const parsePromptSchema = z
   .object({
     prompt: z.string().optional(),
     instruction: z.string().optional(),
-    fileId: z.string().optional()
+    fileId: z.string().optional(),
+    gdriveUrl: z.string().optional()
   })
   .refine((data) => Boolean(data.prompt?.trim() || data.instruction?.trim()), {
     message: 'Vui lòng nhập câu lệnh prompt'

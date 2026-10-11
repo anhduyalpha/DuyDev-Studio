@@ -618,6 +618,47 @@ body {{
   text-align: justify;
 }}
 
+.q-lead-in {{
+  display: inline;
+  text-align: justify;
+}}
+
+.q-statement-list {{
+  margin: 3.5pt 0 4pt 12pt;
+  display: flex;
+  flex-direction: column;
+  gap: 2pt;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}}
+
+.q-statement-item {{
+  display: flex;
+  align-items: flex-start;
+  text-align: justify;
+  line-height: 1.4;
+  break-inside: avoid !important;
+}}
+
+.q-stmt-label {{
+  font-weight: 600;
+  color: {preset.question_num_color};
+  margin-right: 5pt;
+  flex-shrink: 0;
+}}
+
+.q-stmt-text {{
+  flex-grow: 1;
+  text-align: justify;
+}}
+
+.q-conclusion {{
+  margin-top: 3pt;
+  margin-bottom: 2pt;
+  text-align: justify;
+  font-weight: normal;
+}}
+
 .q-rich-element {{
   margin: 6pt 0;
   text-align: center;
@@ -835,6 +876,7 @@ body {{
   padding: 5pt 7pt;
   border-radius: 3pt;
   line-height: 1.45;
+  white-space: pre-line;
 }}
 
 .sol-evidence-header {{

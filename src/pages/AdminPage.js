@@ -16,11 +16,15 @@ import { clearAllModuleStates } from '../utilities/moduleState.js';
 import { renderSvgGauge, drawSparklineCanvas } from '../components/admin/AdminVisualizers.js';
 import { renderAiAgentsCard, attachAiAgentsListeners } from '../components/admin/AdminAiAgentsCard.js';
 import { renderR2TelemetryCard, attachR2TelemetryListeners } from '../components/server/R2TelemetryCard.js';
+import { renderFailedJobsInspector, attachFailedJobsListeners } from '../components/admin/AdminFailedJobsInspector.js';
+import { openStorageInspectorModal } from '../components/admin/AdminStorageInspectorModal.js';
+import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
 
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
 let isPollingPaused = false;
 let latestTelemetryData = null;
+let cachedFailedJobsData = [];
 let trafficHistoryRps = [];
 let lastUserInteractionTime = Date.now();
 let idleAutoLockTimer = null;
@@ -66,7 +70,7 @@ function renderLockedAdminView() {
         <div class="relative mx-auto w-16 h-16 flex items-center justify-center">
           <div class="absolute inset-0 rounded-2xl bg-orange-500/20 blur-xl"></div>
           <img
-            src="src/assets/logo-ds.svg?v=22.15"
+            src="src/assets/logo-ds.svg?v=22.19"
             alt="DuyDev Studio"
             class="w-14 h-14 relative z-10 drop-shadow-md rounded-2xl"
           />
@@ -362,11 +366,22 @@ function renderUnlockedDashboardView() {
               <span>Redis Cache:</span>
               <span id="adminRedisDetails" class="text-zinc-900 dark:text-zinc-200">${redis.status || 'offline'} · ${redis.usedMemory || 'N/A'} · ${redis.keyCount || 0} keys</span>
             </div>
-            <div class="flex justify-between">
-              <span>Storage Breakdown:</span>
-              <span id="adminStorageBreakdown" class="text-zinc-900 dark:text-zinc-200">
-                up: ${storageBreakdown.uploads?.sizeMb || 0}M · proc: ${storageBreakdown.processed?.sizeMb || 0}M · temp: ${storageBreakdown.temp?.sizeMb || 0}M · drive: ${storageBreakdown.drive?.sizeMb || 0}M
-              </span>
+            <div class="flex items-center justify-between pt-1">
+              <span>Storage (Bấm để soi tệp):</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" data-inspect-folder="temp" class="btn-inspect-storage-pill px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-orange-500 hover:text-white dark:bg-zinc-800 dark:hover:bg-orange-500 text-[10px] text-zinc-700 dark:text-zinc-300 transition cursor-pointer" title="Soi tệp tạm (temp)">
+                  temp: <strong id="adminStorageTempMb">${storageBreakdown.temp?.sizeMb || 0}M</strong>
+                </button>
+                <button type="button" data-inspect-folder="uploads" class="btn-inspect-storage-pill px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-orange-500 hover:text-white dark:bg-zinc-800 dark:hover:bg-orange-500 text-[10px] text-zinc-700 dark:text-zinc-300 transition cursor-pointer" title="Soi tệp đầu vào (uploads)">
+                  up: <strong id="adminStorageUploadsMb">${storageBreakdown.uploads?.sizeMb || 0}M</strong>
+                </button>
+                <button type="button" data-inspect-folder="processed" class="btn-inspect-storage-pill px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-orange-500 hover:text-white dark:bg-zinc-800 dark:hover:bg-orange-500 text-[10px] text-zinc-700 dark:text-zinc-300 transition cursor-pointer" title="Soi tệp thành phẩm (processed)">
+                  proc: <strong id="adminStorageProcessedMb">${storageBreakdown.processed?.sizeMb || 0}M</strong>
+                </button>
+                <button type="button" data-inspect-folder="drive" class="btn-inspect-storage-pill px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-orange-500 hover:text-white dark:bg-zinc-800 dark:hover:bg-orange-500 text-[10px] text-zinc-700 dark:text-zinc-300 transition cursor-pointer" title="Soi tệp ổ đĩa (drive)">
+                  drive: <strong id="adminStorageDriveMb">${storageBreakdown.drive?.sizeMb || 0}M</strong>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -502,7 +517,12 @@ function renderUnlockedDashboardView() {
         ${renderR2TelemetryCard()}
       </div>
 
-      <!-- 6. Web System Configuration & Maintenance Dock -->
+      <!-- 6. Failed Jobs Diagnostics & Error Inspector Card -->
+      <div id="adminFailedJobsContainer">
+        ${renderFailedJobsInspector(cachedFailedJobsData)}
+      </div>
+
+      <!-- 7. Web System Configuration & Maintenance Dock -->
       <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -512,7 +532,19 @@ function renderUnlockedDashboardView() {
           <span class="text-xs text-zinc-500 font-mono">Quyền tối cao Chủ sở hữu</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <!-- Action 0: Soi tệp lưu trữ máy chủ -->
+          <button
+            id="btnAdminInspectStorage"
+            class="p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-950/60 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-left text-zinc-800 dark:text-zinc-200 transition-all hover:border-orange-500/30 group cursor-pointer shadow-xs"
+          >
+            <div class="text-xs font-semibold group-hover:text-orange-500 flex items-center justify-between">
+              <span>Soi Tệp Lưu Trữ Máy Chủ</span>
+              <i data-lucide="hard-drive" class="w-4 h-4 text-zinc-400 group-hover:text-orange-500"></i>
+            </div>
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">Kiểm tra chi tiết danh sách tệp đĩa trước khi dọn dẹp</p>
+          </button>
+
           <!-- Action 1: Dọn tệp tạm đĩa -->
           <button
             id="btnAdminCleanTemp"
@@ -715,10 +747,17 @@ function updateAdminTelemetryDom(data) {
     elRedisDetails.textContent = `${redis.status || 'offline'} · ${redis.usedMemory || 'N/A'} · ${redis.keyCount || 0} keys`;
   }
 
-  const elBreakdown = document.getElementById('adminStorageBreakdown');
-  if (elBreakdown) {
-    elBreakdown.textContent = `up: ${storageBreakdown.uploads?.sizeMb || 0}M · proc: ${storageBreakdown.processed?.sizeMb || 0}M · temp: ${storageBreakdown.temp?.sizeMb || 0}M · drive: ${storageBreakdown.drive?.sizeMb || 0}M`;
-  }
+  const elTempMb = document.getElementById('adminStorageTempMb');
+  if (elTempMb) elTempMb.textContent = `${storageBreakdown.temp?.sizeMb || 0}M`;
+
+  const elUploadsMb = document.getElementById('adminStorageUploadsMb');
+  if (elUploadsMb) elUploadsMb.textContent = `${storageBreakdown.uploads?.sizeMb || 0}M`;
+
+  const elProcessedMb = document.getElementById('adminStorageProcessedMb');
+  if (elProcessedMb) elProcessedMb.textContent = `${storageBreakdown.processed?.sizeMb || 0}M`;
+
+  const elDriveMb = document.getElementById('adminStorageDriveMb');
+  if (elDriveMb) elDriveMb.textContent = `${storageBreakdown.drive?.sizeMb || 0}M`;
 
   // 6. BullMQ Queues
   const elQueueTotals = document.getElementById('adminQueueTotals');
@@ -906,99 +945,179 @@ export function attachAdminPageListeners(onRerender) {
     };
   }
 
-  // Quick Action & Maintenance Buttons
+  // Quick Action & Maintenance Buttons with Verification Guard
+  const btnInspectStorage = document.getElementById('btnAdminInspectStorage');
+  if (btnInspectStorage) {
+    btnInspectStorage.onclick = () => {
+      openStorageInspectorModal('temp', () => fetchAdminTelemetry(onRerender));
+    };
+  }
+
+  // Storage breakdown pills click-to-inspect
+  document.querySelectorAll('.btn-inspect-storage-pill').forEach(btn => {
+    btn.onclick = () => {
+      const folder = btn.dataset.inspectFolder || 'temp';
+      openStorageInspectorModal(folder, () => fetchAdminTelemetry(onRerender));
+    };
+  });
+
   const btnCleanTemp = document.getElementById('btnAdminCleanTemp');
   if (btnCleanTemp) {
-    btnCleanTemp.onclick = async () => {
-      try {
-        const resp = await fetch('/api/v1/admin/actions/clean-temp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
-        });
-        const json = await resp.json();
-        showToast(json.message || 'Đã dọn dẹp tệp tạm', json.success ? 'success' : 'error');
-        fetchAdminTelemetry(onRerender);
-      } catch (err) {
-        showToast(`Lỗi: ${err.message}`, 'error');
-      }
+    btnCleanTemp.onclick = () => {
+      const tempInfo = latestTelemetryData?.storage?.breakdown?.temp;
+      const sizeMb = tempInfo ? `${tempInfo.sizeMb} MB` : '';
+      const fileCount = tempInfo ? `${tempInfo.fileCount} tệp` : '';
+      const details = [fileCount, sizeMb].filter(Boolean).join(', ');
+
+      openSlideConfirmModal({
+        title: 'Dọn rác tệp tạm đĩa',
+        description: `Xóa sạch toàn bộ tệp tạm trong thư mục storage/temp${details ? ` (${details})` : ''}.`,
+        warningText: 'Các tệp nháp tạm thời của các tác vụ chuyển đổi và xử lý sẽ bị xóa vĩnh viễn khỏi máy chủ.',
+        actionText: 'Kéo sang phải để dọn rác tệp tạm',
+        confirmingText: 'Đang dọn tệp tạm...',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/api/v1/admin/actions/clean-temp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            const json = await resp.json();
+            showToast(json.message || 'Đã dọn dẹp tệp tạm', json.success ? 'success' : 'error');
+            fetchAdminTelemetry(onRerender);
+          } catch (err) {
+            showToast(`Lỗi: ${err.message}`, 'error');
+          }
+        }
+      });
     };
   }
 
   const btnCleanR2 = document.getElementById('btnAdminCleanR2');
   if (btnCleanR2) {
-    btnCleanR2.onclick = async () => {
-      try {
-        const resp = await fetch('/api/v1/admin/actions/clean-r2', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
-        });
-        const json = await resp.json();
-        showToast(json.message || 'Đã dọn dẹp R2 transit', json.success ? 'success' : 'error');
-        fetchAdminTelemetry(onRerender);
-      } catch (err) {
-        showToast(`Lỗi: ${err.message}`, 'error');
-      }
+    btnCleanR2.onclick = () => {
+      openSlideConfirmModal({
+        title: 'Dọn R2 Transit mồ côi',
+        description: 'Quét và xóa các tệp tải lên dở dang > 1 giờ còn kẹt trên Cloudflare R2 bucket.',
+        warningText: 'Thao tác này giải phóng hạn ngạch lưu trữ Cloudflare R2 và xóa các tệp mồ côi.',
+        actionText: 'Kéo sang phải để dọn R2',
+        confirmingText: 'Đang dọn R2 transit...',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/api/v1/admin/actions/clean-r2', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            const json = await resp.json();
+            showToast(json.message || 'Đã dọn dẹp R2 transit', json.success ? 'success' : 'error');
+            fetchAdminTelemetry(onRerender);
+          } catch (err) {
+            showToast(`Lỗi: ${err.message}`, 'error');
+          }
+        }
+      });
     };
   }
 
   const btnCleanQueues = document.getElementById('btnAdminCleanQueues');
   if (btnCleanQueues) {
-    btnCleanQueues.onclick = async () => {
-      try {
-        const resp = await fetch('/api/v1/admin/actions/clean-queues', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
-        });
-        const json = await resp.json();
-        showToast(json.message || 'Đã dọn dẹp hàng đợi', json.success ? 'success' : 'error');
-        fetchAdminTelemetry(onRerender);
-      } catch (err) {
-        showToast(`Lỗi: ${err.message}`, 'error');
-      }
+    btnCleanQueues.onclick = () => {
+      openSlideConfirmModal({
+        title: 'Dọn sạch hàng đợi BullMQ',
+        description: 'Xóa toàn bộ các tác vụ completed và failed trong Redis BullMQ queues (PDF, Converter, Quiz).',
+        warningText: 'Các bản ghi trạng thái tác vụ cũ trong Redis sẽ bị xóa sạch hoàn toàn.',
+        actionText: 'Kéo sang phải để dọn hàng đợi',
+        confirmingText: 'Đang dọn hàng đợi...',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/api/v1/admin/actions/clean-queues', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            const json = await resp.json();
+            showToast(json.message || 'Đã dọn dẹp hàng đợi', json.success ? 'success' : 'error');
+            fetchAdminTelemetry(onRerender);
+          } catch (err) {
+            showToast(`Lỗi: ${err.message}`, 'error');
+          }
+        }
+      });
     };
   }
 
   const btnOptimizeDb = document.getElementById('btnAdminOptimizeDb');
   if (btnOptimizeDb) {
-    btnOptimizeDb.onclick = async () => {
-      try {
-        const resp = await fetch('/api/v1/admin/actions/optimize-db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
-        });
-        const json = await resp.json();
-        showToast(json.message || 'Đã tối ưu hóa SQLite', json.success ? 'success' : 'error');
-        fetchAdminTelemetry(onRerender);
-      } catch (err) {
-        showToast(`Lỗi: ${err.message}`, 'error');
-      }
+    btnOptimizeDb.onclick = () => {
+      openSlideConfirmModal({
+        title: 'Tối ưu hóa SQLite Database',
+        description: 'Chạy PRAGMA wal_checkpoint(TRUNCATE) và PRAGMA optimize trên cơ sở dữ liệu dev.db.',
+        warningText: 'Cơ sở dữ liệu sẽ đồng bộ dữ liệu WAL vào tệp chính và tối ưu chỉ mục bảng.',
+        actionText: 'Kéo sang phải để tối ưu hóa DB',
+        confirmingText: 'Đang tối ưu SQLite...',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/api/v1/admin/actions/optimize-db', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            const json = await resp.json();
+            showToast(json.message || 'Đã tối ưu hóa SQLite', json.success ? 'success' : 'error');
+            fetchAdminTelemetry(onRerender);
+          } catch (err) {
+            showToast(`Lỗi: ${err.message}`, 'error');
+          }
+        }
+      });
     };
   }
 
   const btnCleanHistory = document.getElementById('btnAdminCleanHistory');
   if (btnCleanHistory) {
-    btnCleanHistory.onclick = async () => {
-      try {
-        const resp = await fetch('/api/v1/admin/actions/clean-history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
-        });
-        const json = await resp.json();
-        showToast(json.message || 'Đã dọn dẹp lịch sử thùng rác', json.success ? 'success' : 'error');
-        fetchAdminTelemetry(onRerender);
-      } catch (err) {
-        showToast(`Lỗi: ${err.message}`, 'error');
-      }
+    btnCleanHistory.onclick = () => {
+      openSlideConfirmModal({
+        title: 'Dọn lịch sử thùng rác',
+        description: 'Xóa vĩnh viễn toàn bộ các bản ghi lịch sử đã đánh dấu xóa khỏi SQLite database.',
+        warningText: 'Hành động này không thể hoàn tác. Các bản ghi thùng rác sẽ bị xóa vĩnh viễn.',
+        actionText: 'Kéo sang phải để dọn thùng rác',
+        confirmingText: 'Đang dọn lịch sử...',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/api/v1/admin/actions/clean-history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            const json = await resp.json();
+            showToast(json.message || 'Đã dọn dẹp lịch sử thùng rác', json.success ? 'success' : 'error');
+            fetchAdminTelemetry(onRerender);
+          } catch (err) {
+            showToast(`Lỗi: ${err.message}`, 'error');
+          }
+        }
+      });
     };
   }
 
   const btnWipeStates = document.getElementById('btnAdminWipeStates');
   if (btnWipeStates) {
     btnWipeStates.onclick = () => {
-      clearAllModuleStates();
-      showToast('Đã xóa toàn bộ bộ nhớ nháp module trên trình duyệt', 'info');
-      setTimeout(() => window.location.reload(), 400);
+      openSlideConfirmModal({
+        title: 'Đặt lại bộ nhớ trình duyệt',
+        description: 'Xóa toàn bộ cache localStorage nháp của các công cụ (PDF, Converter, ViewSplit, v.v.) trên trình duyệt này.',
+        warningText: 'Trang web sẽ tự động làm mới để khởi động lại ở trạng thái mặc định.',
+        actionText: 'Kéo sang phải để đặt lại bộ nhớ',
+        confirmingText: 'Đang đặt lại...',
+        onConfirm: () => {
+          clearAllModuleStates();
+          showToast('Đã xóa toàn bộ bộ nhớ nháp module trên trình duyệt', 'info');
+          setTimeout(() => window.location.reload(), 400);
+        }
+      });
     };
+  }
+
+  // Attach Failed Jobs Inspector listeners
+  const failedJobsContainer = document.getElementById('adminFailedJobsContainer');
+  if (failedJobsContainer) {
+    attachFailedJobsListeners(failedJobsContainer, () => fetchAdminTelemetry(onRerender));
   }
 
   // Attach AI Agents Card listeners
@@ -1075,6 +1194,24 @@ async function fetchAdminTelemetry(onRerender) {
 
       // Update sparkline canvas directly
       updateCanvasSparkline();
+
+      // Also fetch latest failed jobs logs
+      try {
+        const failedResp = await fetch('/api/v1/admin/logs/failed-jobs?limit=50', {
+          headers: { 'Accept': 'application/json', ...getStorageAuthHeaders() }
+        });
+        const failedJson = await failedResp.json();
+        if (failedJson.success && Array.isArray(failedJson.data?.jobs)) {
+          cachedFailedJobsData = failedJson.data.jobs;
+          const failedJobsContainer = document.getElementById('adminFailedJobsContainer');
+          if (failedJobsContainer) {
+            failedJobsContainer.innerHTML = renderFailedJobsInspector(cachedFailedJobsData);
+            attachFailedJobsListeners(failedJobsContainer, onRerender);
+          }
+        }
+      } catch (err) {
+        console.warn('[AdminPage] Failed to fetch failed jobs log:', err);
+      }
 
       // Refresh icons if lucide is present
       if (window.lucide && typeof window.lucide.createIcons === 'function') {

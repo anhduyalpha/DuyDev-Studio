@@ -186,6 +186,17 @@ class AnswerSolver:
                 "('a', 'b', 'c', 'd') to true (Đúng) or false (Sai)."
             )
             .add_rule(
+                "For multi-statement counting questions (where stem contains a, b, c, d or 1, 2, 3, 4 statements): "
+                "The 'evidence' field MUST explicitly examine every individual statement, stating [Đúng] or [Sai] "
+                "with specific chemical/mathematical justification (e.g. 'a) [Đúng] vì... b) [Sai] vì...'), "
+                "and conclude with the exact count of correct statements matching 'selected_answer'."
+            )
+            .add_rule(
+                "For Part II True/False questions: "
+                "The 'evidence' field MUST provide clear, rigorous proof for each sub-statement a), b), c), d) "
+                "justifying why each is Đúng or Sai."
+            )
+            .add_rule(
                 "For Part III Short Answer: populate 'short_answer_value' with the exact numeric or term result."
             )
             .add_rule("Every single question in the input must have an answer item.")

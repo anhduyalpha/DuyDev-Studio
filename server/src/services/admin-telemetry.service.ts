@@ -13,6 +13,42 @@ import { aiMetricsService } from './ai-metrics.service.js';
 import { R2Service } from './r2.service.js';
 import { logger } from '../lib/logger.js';
 import { env, resolvedStoragePaths } from '../config/env.config.js';
+import { StorageManager } from '../storage/storage.manager.js';
+import { BadRequestError, NotFoundError } from '../lib/errors.js';
+
+export interface FailedJobItem {
+  id: string;
+  type: string;
+  status: string;
+  progress: number;
+  errorMessage: string | null;
+  options: any;
+  optionsRaw: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationMs: number | null;
+}
+
+export interface StorageInspectedFile {
+  name: string;
+  sizeBytes: number;
+  sizeFormatted: string;
+  mtime: string;
+  birthtime: string;
+  ageMs: number;
+  originalName: string | null;
+  mimeType: string | null;
+}
+
+export interface StorageInspectionResult {
+  folder: string;
+  folderPath: string;
+  totalFiles: number;
+  totalSizeBytes: number;
+  totalSizeMb: number;
+  files: StorageInspectedFile[];
+}
 
 interface FolderSizeInfo {
   sizeBytes: number;
@@ -315,6 +351,216 @@ export class AdminTelemetryService {
       logger.error({ err }, 'Failed to clean history records');
       return { deletedCount: 0 };
     }
+  }
+
+  /**
+   * Retrieves detailed list of failed processing jobs with error reasons and payloads
+   */
+  public async getFailedJobs(limit = 50, type?: string): Promise<FailedJobItem[]> {
+    try {
+      const jobs = await prisma.job.findMany({
+        where: {
+          status: 'FAILED',
+          ...(type ? { type } : {})
+        },
+        orderBy: { createdAt: 'desc' },
+        take: Math.min(Math.max(1, Number(limit) || 50), 100),
+        select: {
+          id: true,
+          type: true,
+          status: true,
+          progress: true,
+          errorMessage: true,
+          optionsJson: true,
+          createdAt: true,
+          startedAt: true,
+          completedAt: true
+        }
+      });
+
+      return jobs.map(j => {
+        let parsedOptions: any = null;
+        try {
+          parsedOptions = JSON.parse(j.optionsJson);
+        } catch {
+          parsedOptions = j.optionsJson;
+        }
+
+        let durationMs: number | null = null;
+        if (j.startedAt && j.completedAt) {
+          durationMs = j.completedAt.getTime() - j.startedAt.getTime();
+        } else if (j.startedAt) {
+          durationMs = Math.max(0, Date.now() - j.startedAt.getTime());
+        }
+
+        return {
+          id: j.id,
+          type: j.type,
+          status: j.status,
+          progress: j.progress,
+          errorMessage: j.errorMessage || 'Lỗi không xác định',
+          options: parsedOptions,
+          optionsRaw: j.optionsJson,
+          createdAt: j.createdAt.toISOString(),
+          startedAt: j.startedAt ? j.startedAt.toISOString() : null,
+          completedAt: j.completedAt ? j.completedAt.toISOString() : null,
+          durationMs
+        };
+      });
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to retrieve failed jobs log');
+      return [];
+    }
+  }
+
+  /**
+   * Clears failed jobs from both SQLite database and Redis BullMQ queues
+   */
+  public async clearFailedJobs(): Promise<{ deletedCount: number }> {
+    let deletedCount = 0;
+    try {
+      const res = await prisma.job.deleteMany({
+        where: { status: 'FAILED' }
+      });
+      deletedCount = res.count;
+
+      await Promise.all([
+        taskQueue.clean(0, 1000, 'failed').catch(() => []),
+        converterQueue.clean(0, 1000, 'failed').catch(() => []),
+        quizQueue.clean(0, 1000, 'failed').catch(() => [])
+      ]);
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to clear failed jobs');
+    }
+    return { deletedCount };
+  }
+
+  /**
+   * Inspects files physically stored on disk in the specified storage directory
+   */
+  public async inspectStorageFolder(folderKey: 'temp' | 'uploads' | 'processed' | 'drive'): Promise<StorageInspectionResult> {
+    const validFolders = ['temp', 'uploads', 'processed', 'drive'] as const;
+    if (!validFolders.includes(folderKey as any)) {
+      throw new BadRequestError(`Thư mục không hợp lệ: ${folderKey}. Chỉ chấp nhận: temp, uploads, processed, drive`);
+    }
+
+    const targetDir = resolvedStoragePaths[folderKey];
+    if (!fs.existsSync(targetDir)) {
+      return {
+        folder: folderKey,
+        folderPath: targetDir,
+        totalFiles: 0,
+        totalSizeBytes: 0,
+        totalSizeMb: 0,
+        files: []
+      };
+    }
+
+    const entries = await fs.promises.readdir(targetDir, { withFileTypes: true });
+    const fileList: StorageInspectedFile[] = [];
+    let totalBytes = 0;
+
+    const candidateFileEntries = entries.filter(e => e.isFile());
+    const candidateNames = candidateFileEntries.map(e => e.name);
+
+    // Cross-reference with database FileRecords to fetch original file names and MIME types
+    const fileRecords = candidateNames.length > 0 ? await prisma.fileRecord.findMany({
+      where: {
+        OR: candidateNames.map(name => ({ storagePath: { contains: name } }))
+      },
+      select: {
+        storagePath: true,
+        originalName: true,
+        mimeType: true
+      }
+    }).catch(() => []) : [];
+
+    const recordMap = new Map<string, { originalName: string; mimeType: string }>();
+    for (const fr of fileRecords) {
+      const base = path.basename(fr.storagePath);
+      recordMap.set(base, { originalName: fr.originalName, mimeType: fr.mimeType });
+    }
+
+    const now = Date.now();
+    for (const entry of candidateFileEntries) {
+      const fullPath = path.join(targetDir, entry.name);
+      try {
+        const stat = await fs.promises.stat(fullPath);
+        totalBytes += stat.size;
+        const match = recordMap.get(entry.name);
+
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = stat.size === 0 ? 0 : Math.floor(Math.log(stat.size) / Math.log(k));
+        const formatted = `${(stat.size / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'MB'}`;
+
+        fileList.push({
+          name: entry.name,
+          sizeBytes: stat.size,
+          sizeFormatted: formatted,
+          mtime: stat.mtime.toISOString(),
+          birthtime: stat.birthtime.toISOString(),
+          ageMs: Math.max(0, now - stat.mtime.getTime()),
+          originalName: match?.originalName || null,
+          mimeType: match?.mimeType || null
+        });
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    // Sort newest files first
+    fileList.sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime());
+
+    return {
+      folder: folderKey,
+      folderPath: targetDir,
+      totalFiles: fileList.length,
+      totalSizeBytes: totalBytes,
+      totalSizeMb: Math.round((totalBytes / (1024 * 1024)) * 100) / 100,
+      files: fileList
+    };
+  }
+
+  /**
+   * Safely deletes an individual physical file from server storage with path traversal guards
+   */
+  public async deleteStorageFile(
+    folderKey: 'temp' | 'uploads' | 'processed' | 'drive',
+    fileName: string
+  ): Promise<{ success: boolean; fileName: string; freedBytes: number; freedMb: number }> {
+    const validFolders = ['temp', 'uploads', 'processed', 'drive'] as const;
+    if (!validFolders.includes(folderKey as any)) {
+      throw new BadRequestError(`Thư mục không hợp lệ: ${folderKey}`);
+    }
+    if (!fileName || fileName.includes('/') || fileName.includes('\\') || fileName === '..' || fileName === '.') {
+      throw new BadRequestError('Tên tệp không hợp lệ');
+    }
+
+    const targetDir = resolvedStoragePaths[folderKey];
+    const safePath = StorageManager.sanitizeSafePath(targetDir, fileName);
+
+    if (!fs.existsSync(safePath)) {
+      throw new NotFoundError(`Không tìm thấy tệp: ${fileName}`);
+    }
+
+    const stat = await fs.promises.stat(safePath);
+    const freedBytes = stat.size;
+    await fs.promises.unlink(safePath);
+
+    // Remove or mark matching fileRecords
+    try {
+      await prisma.fileRecord.deleteMany({
+        where: { storagePath: { contains: fileName } }
+      });
+    } catch {}
+
+    return {
+      success: true,
+      fileName,
+      freedBytes,
+      freedMb: Math.round((freedBytes / (1024 * 1024)) * 100) / 100
+    };
   }
 }
 

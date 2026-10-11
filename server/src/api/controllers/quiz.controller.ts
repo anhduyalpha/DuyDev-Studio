@@ -1,5 +1,9 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import crypto from 'crypto';
+import { existsSync } from 'fs';
+import { spawnSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { prisma } from '../../lib/prisma.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { createQuizJobSchema, parsePromptSchema } from '../../schemas/quiz.schema.js';
@@ -7,6 +11,35 @@ import { enqueueQuizJob as enqueueQuizTask } from '../../queues/task.queue.js';
 import { isPermanentRetention } from '../../config/limits.config.js';
 import { logger } from '../../lib/logger.js';
 import { aiMetricsService } from '../../services/ai-metrics.service.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function resolvePythonBin(): string {
+  const candidateVenvs = [
+    path.resolve(process.cwd(), '../engines/converter/file_conversor_core/venv/Scripts/python.exe'),
+    path.resolve(process.cwd(), 'engines/converter/file_conversor_core/venv/Scripts/python.exe'),
+    path.resolve(process.cwd(), '../engines/quiz/venv/Scripts/python.exe'),
+    path.resolve(process.cwd(), 'engines/quiz/venv/Scripts/python.exe'),
+    '/home/anhduy/dd-studio/engines/converter/file_conversor_core/venv/bin/python',
+    '/home/anhduy/dd-studio/engines/quiz/venv/bin/python'
+  ];
+  for (const v of candidateVenvs) {
+    if (existsSync(v)) return v;
+  }
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
+function resolveInspectScript(): string {
+  const candidates = [
+    path.resolve(process.cwd(), '../engines/quiz/recognition/inspect_cli.py'),
+    path.resolve(process.cwd(), 'engines/quiz/recognition/inspect_cli.py'),
+    path.resolve(__dirname, '../../../../engines/quiz/recognition/inspect_cli.py'),
+    path.resolve(__dirname, '../../../engines/quiz/recognition/inspect_cli.py'),
+    '/home/anhduy/dd-studio/engines/quiz/recognition/inspect_cli.py'
+  ];
+  return candidates.find((p) => existsSync(p)) || candidates[0];
+}
 
 export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyReply) {
   const body = createQuizJobSchema.parse(request.body);
@@ -93,6 +126,55 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
 export async function parsePromptIntent(request: FastifyRequest, reply: FastifyReply) {
   const body = parsePromptSchema.parse(request.body);
   const text = (body.instruction || body.prompt || '').trim();
+
+  // 0. Ground-Truth Page Inspection if source PDF is available
+  if (body.fileId) {
+    try {
+      const fileRecord = await prisma.fileRecord.findUnique({
+        where: { id: body.fileId }
+      });
+      if (fileRecord && fileRecord.storagePath && existsSync(fileRecord.storagePath)) {
+        const inspectScript = resolveInspectScript();
+        const pythonBin = resolvePythonBin();
+        const inspectRes = spawnSync(pythonBin, [inspectScript, fileRecord.storagePath, '--query', text], {
+          encoding: 'utf-8',
+          timeout: 4000,
+          env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+        });
+
+        if (inspectRes.status === 0 && inspectRes.stdout) {
+          try {
+            const inspected = JSON.parse(inspectRes.stdout.trim());
+            if (inspected && inspected.success) {
+              logger.info({ prompt: text, result: inspected }, 'Quiz prompt parsed via ground-truth inspect CLI');
+              return reply.send({
+                success: true,
+                data: {
+                  pages: inspected.pages || '',
+                  count: inspected.count || 20,
+                  start: inspected.start || 1,
+                  end: inspected.end,
+                  title: inspected.title || 'BÀI TẬP TRẮC NGHIỆM',
+                  prefix: inspected.prefix || '',
+                  confidence: 1.0,
+                  warnings: [],
+                  source: 'inspect',
+                  detected_questions: inspected.detected_questions,
+                  has_part_i: inspected.has_part_i,
+                  has_part_ii: inspected.has_part_ii,
+                  part_ii_start: inspected.part_ii_start
+                }
+              });
+            }
+          } catch (jsonErr) {
+            logger.warn({ jsonErr, stdout: inspectRes.stdout }, 'Failed to parse inspect_cli JSON stdout');
+          }
+        }
+      }
+    } catch (inspectErr) {
+      logger.warn({ inspectErr }, 'Ground-truth inspection failed, falling back to AI/regex parser');
+    }
+  }
 
   // Helper for deterministic regex parsing
   function extractWithRegex(input: string) {

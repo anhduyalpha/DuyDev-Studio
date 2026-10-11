@@ -208,7 +208,10 @@ class QuizManager {
     this.notify('prompt-analyzing');
 
     try {
-      const parsed = await parsePromptApi(promptText);
+      const parsed = await parsePromptApi(promptText, {
+        fileId: this.state.fileId,
+        gdriveUrl: this.state.gdriveUrl
+      });
       if (parsed) {
         if (parsed.pages !== undefined) this.state.pages = String(parsed.pages).trim();
         if (parsed.count !== undefined) this.state.count = Number(parsed.count);

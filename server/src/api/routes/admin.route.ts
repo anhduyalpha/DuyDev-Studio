@@ -13,12 +13,24 @@ import {
   cleanR2OrphansHandler,
   cleanQueuesHandler,
   optimizeDatabaseHandler,
-  cleanHistoryHandler
+  cleanHistoryHandler,
+  getFailedJobsHandler,
+  clearFailedJobsHandler,
+  inspectStorageHandler,
+  deleteStorageFileHandler
 } from '../controllers/admin.controller.js';
 
 export async function adminRoute(app: FastifyInstance) {
   // Telemetry Snapshot
   app.get('/api/v1/admin/telemetry', { preHandler: adminAuthGuard }, getAdminTelemetryHandler);
+
+  // Failed Jobs & Error Logs
+  app.get('/api/v1/admin/logs/failed-jobs', { preHandler: adminAuthGuard }, getFailedJobsHandler);
+  app.post('/api/v1/admin/logs/clear-failed', { preHandler: adminAuthGuard }, clearFailedJobsHandler);
+
+  // Storage Inspection & Item Management
+  app.get('/api/v1/admin/storage/inspect', { preHandler: adminAuthGuard }, inspectStorageHandler);
+  app.post('/api/v1/admin/storage/delete-file', { preHandler: adminAuthGuard }, deleteStorageFileHandler);
 
   // AI Agents Metrics & Keys
   app.get('/api/v1/admin/ai/metrics', { preHandler: adminAuthGuard }, getAiMetricsHandler);

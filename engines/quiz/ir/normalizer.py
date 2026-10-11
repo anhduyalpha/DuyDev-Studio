@@ -151,6 +151,9 @@ def normalize_whitespace_and_punctuation(text: str) -> str:
     return text.strip()
 
 
+from engines.quiz.text_utils import clean_image_markers
+
+
 def normalize_text(text: str) -> str:
     """
     Applies the full semantic-preserving normalization pipeline to a text segment.
@@ -159,9 +162,10 @@ def normalize_text(text: str) -> str:
     if not text:
         return ""
 
+    text = clean_image_markers(text)
     text = normalize_unicode_sub_superscripts(text)
     text = normalize_chemical_reactions(text)
     text = normalize_math_symbols(text)
     text = normalize_units(text)
     text = normalize_whitespace_and_punctuation(text)
-    return text
+    return clean_image_markers(text)

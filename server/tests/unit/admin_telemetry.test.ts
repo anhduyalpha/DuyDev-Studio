@@ -144,5 +144,34 @@ describe('Admin Telemetry & AI Metrics Unit Tests', () => {
       expect(res).toHaveProperty('cleanedJobs');
       expect(res.cleanedJobs).toBeGreaterThanOrEqual(0);
     });
+
+    it('should retrieve failed jobs list without throwing errors', async () => {
+      const service = AdminTelemetryService.getInstance();
+      const jobs = await service.getFailedJobs(10);
+      expect(Array.isArray(jobs)).toBe(true);
+    });
+
+    it('should inspect storage folder and return structured file metrics', async () => {
+      const service = AdminTelemetryService.getInstance();
+      const result = await service.inspectStorageFolder('temp');
+      expect(result).toHaveProperty('folder', 'temp');
+      expect(result).toHaveProperty('folderPath');
+      expect(result).toHaveProperty('totalFiles');
+      expect(result).toHaveProperty('totalSizeBytes');
+      expect(result).toHaveProperty('totalSizeMb');
+      expect(Array.isArray(result.files)).toBe(true);
+    });
+
+    it('should throw BadRequestError on invalid storage folder inspection', async () => {
+      const service = AdminTelemetryService.getInstance();
+      await expect(service.inspectStorageFolder('invalid_folder' as any)).rejects.toThrow();
+    });
+
+    it('should reject path traversal attempts when deleting storage files', async () => {
+      const service = AdminTelemetryService.getInstance();
+      await expect(service.deleteStorageFile('temp', '../../server/dev.db')).rejects.toThrow();
+      await expect(service.deleteStorageFile('temp', '..\\..\\windows\\system32')).rejects.toThrow();
+      await expect(service.deleteStorageFile('temp', '')).rejects.toThrow();
+    });
   });
 });

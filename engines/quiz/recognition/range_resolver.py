@@ -215,7 +215,7 @@ def resolve_smart_range(
                 if rep:
                     valid_cands = [
                         c for c in rep.candidates
-                        if p > start_p or c.candidate_number >= start_q
+                        if p > start_p or c.candidate_number >= start_q or (start_q > 10 and c.candidate_number <= 10)
                     ]
                     total_detected += len(valid_cands)
             resolved_count = max(1, total_detected) if total_detected > 0 else 10
@@ -245,7 +245,7 @@ def resolve_smart_range(
                 # Filter candidates >= start_q if on start_page
                 valid_candidates = [
                     c for c in rep.candidates
-                    if curr_p > start_p or c.candidate_number >= start_q
+                    if curr_p > start_p or c.candidate_number >= start_q or (start_q > 10 and c.candidate_number <= 10)
                 ]
                 accumulated_count += len(valid_candidates)
             else:

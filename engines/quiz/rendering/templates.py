@@ -13,6 +13,8 @@ from typing import Any
 from engines.quiz.ir.models import CanonicalDocumentIR, SectionType, QuestionIR, AnswerKeyIR
 from engines.quiz.rendering.styles import StylePreset, style_registry
 from engines.quiz.rendering.layout import LayoutSolver
+from engines.quiz.reconstruction.statement_formatter import parse_statement_question
+from engines.quiz.text_utils import clean_image_markers
 
 
 def _normalize_img_src(path: str) -> str:
@@ -323,7 +325,7 @@ def _render_single_question(q: QuestionIR, break_before: bool = False, split_opt
                 f"""
       <div class="tf-statement-item">
         <span class="tf-letter">{html.escape(stmt.label)})</span>
-        <span class="tf-text">{stmt.statement}</span>
+        <span class="tf-text">{clean_image_markers(stmt.statement)}</span>
       </div>"""
             )
         options_html = f"""
@@ -349,7 +351,7 @@ def _render_single_question(q: QuestionIR, break_before: bool = False, split_opt
                 src_val = _normalize_img_src(opt.image_path)
                 opt_img_html = f'<img src="{html.escape(src_val)}" class="opt-crop-img" alt="Phương án {html.escape(opt.label)}" />'
 
-            opt_text_content = opt.text or ""
+            opt_text_content = clean_image_markers(opt.text or "")
             separator = " " if (opt_img_html and opt_text_content.strip()) else ""
             opt_items.append(
                 f"""
@@ -363,12 +365,44 @@ def _render_single_question(q: QuestionIR, break_before: bool = False, split_opt
         {"".join(opt_items)}
       </div>"""
 
-    return f"""
-    <article class="question-item{break_class}{split_class}"{break_style}>
+    # Check for multi-statement question structure (Indented List)
+    clean_stem = clean_image_markers(q.stem)
+    parsed_stmts = parse_statement_question(clean_stem)
+
+    if parsed_stmts and parsed_stmts["statements"]:
+        lead_in_text = parsed_stmts["lead_in"] or ""
+        stmt_items: list[str] = []
+        for s in parsed_stmts["statements"]:
+            stmt_items.append(
+                f"""
+        <div class="q-statement-item">
+          <span class="q-stmt-label">{html.escape(s["label"])}</span>
+          <span class="q-stmt-text">{s["text"]}</span>
+        </div>"""
+            )
+        stmt_list_html = f"""
+      <div class="q-statement-list">
+        {"".join(stmt_items)}
+      </div>"""
+        concl_html = f'<div class="q-conclusion">{parsed_stmts["conclusion"]}</div>' if parsed_stmts["conclusion"] else ""
+
+        stem_block_html = f"""
       <div class="q-header">
         <span class="q-num">Câu {q.number}:</span>
-        <span class="q-stem">{q.stem}</span>
+        <span class="q-lead-in">{lead_in_text}</span>
       </div>
+      {stmt_list_html}
+      {concl_html}"""
+    else:
+        stem_block_html = f"""
+      <div class="q-header">
+        <span class="q-num">Câu {q.number}:</span>
+        <span class="q-stem">{clean_stem}</span>
+      </div>"""
+
+    return f"""
+    <article class="question-item{break_class}{split_class}"{break_style}>
+      {stem_block_html}
       {rich_html}
       {options_html}
     </article>"""
@@ -439,7 +473,20 @@ def render_answer_document(
                 )
         crops_html = "".join(crop_html_items)
 
-        evidence_content = ans.evidence.strip() if ans.evidence else "Không có hướng dẫn giải."
+        evidence_content = clean_image_markers(ans.evidence.strip()) if ans.evidence else "Không có hướng dẫn giải."
+
+        # Format stem for solution
+        clean_sol_stem = clean_image_markers(q.stem)
+        parsed_sol = parse_statement_question(clean_sol_stem)
+        if parsed_sol and parsed_sol["statements"]:
+            sol_items = "".join(
+                f'<div class="q-statement-item"><span class="q-stmt-label">{html.escape(s["label"])}</span><span class="q-stmt-text">{s["text"]}</span></div>'
+                for s in parsed_sol["statements"]
+            )
+            sol_concl = f'<div class="q-conclusion">{parsed_sol["conclusion"]}</div>' if parsed_sol["conclusion"] else ""
+            sol_stem_html = f'<div class="q-lead-in">{parsed_sol["lead_in"]}</div><div class="q-statement-list" style="margin-left: 8pt;">{sol_items}</div>{sol_concl}'
+        else:
+            sol_stem_html = clean_sol_stem
 
         solution_items.append(
             f"""
@@ -449,7 +496,7 @@ def render_answer_document(
         <span class="sol-selected">{html.escape(badge_text)}</span>
       </div>
       <div class="sol-stem">
-        <strong>Đề bài:</strong> {q.stem}
+        <strong>Đề bài:</strong> {sol_stem_html}
       </div>
       {crops_html}
       <div class="sol-evidence">

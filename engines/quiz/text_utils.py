@@ -46,4 +46,6 @@ def clean_image_markers(text: str) -> str:
     """Purge internal [IMAGE_REF: ...] markers from human-facing text."""
     if not text:
         return ""
-    return re.sub(r"\[IMAGE_REF:\s*[^\]]+\]", "", str(text)).strip()
+    cleaned = re.sub(r"\[\s*IMAGE_REF\s*:?\s*[^\]]*\]", "", str(text), flags=re.IGNORECASE)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return cleaned.strip()

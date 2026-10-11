@@ -13,18 +13,21 @@ import re
 from typing import Optional, Any
 from .models import ReconstructedQuestion, QuestionOption, QuestionType
 from engines.quiz.common.errors import ErrorCode, DiagnosticLayer, QuizEngineError
+from engines.quiz.text_utils import clean_image_markers
 
 
 def clean_question_stem(stem: str) -> str:
     """Removes redundant leading question headers and cross-page running headers from stems."""
     if not stem:
         return ""
+    # Purge internal image markers first
+    cleaned = clean_image_markers(stem).strip()
+
     # Strip any leading 'Câu \d+[:.]', 'Bài \d+[:.]', 'Question \d+[:.]', or standalone '\d+[:.]'
     pattern = re.compile(
         r"^\s*(?:(?:Câu|Bài|Question|CÂU|BÀI)\s*\d+[\s\.\:\)\-]*|\b\d+[\.\:\)\-]\s*)",
         re.IGNORECASE
     )
-    cleaned = stem.strip()
     while True:
         m = pattern.match(cleaned)
         if not m:
@@ -45,7 +48,7 @@ def clean_question_stem(stem: str) -> str:
             continue
         cleaned_lines.append(line_str)
     cleaned = " ".join(cleaned_lines).strip()
-    return cleaned
+    return clean_image_markers(cleaned)
 
 
 def normalize_stem_for_dedup(stem: str) -> str:
@@ -193,10 +196,11 @@ def post_process_questions(
             if q.source_number in target_question_numbers else 9999
         )
     else:
-        # If start_question is requested, prioritize questions >= start_question
+        # If start_question is requested, prioritize questions >= start_question while preserving PART_II_TF
+        has_part_ii = any(q.type == QuestionType.PART_II_TF for q in cleaned_candidates)
         in_range_questions = [
             q for q in cleaned_candidates
-            if q.source_number >= start_question
+            if q.source_number >= start_question or q.type == QuestionType.PART_II_TF
         ]
         # Fallback to all candidates if none >= start_question (e.g. 1-based questions with custom offset)
         if not in_range_questions:
@@ -207,11 +211,11 @@ def post_process_questions(
             target_end_q = start_question + expected_count - 1
             bounded_questions = [
                 q for q in in_range_questions
-                if q.source_number <= target_end_q
+                if q.type == QuestionType.PART_II_TF or q.source_number <= target_end_q
             ]
             # If bounded questions exist, use them; otherwise truncate in_range_questions
             if bounded_questions:
-                in_range_questions = bounded_questions[:expected_count]
+                in_range_questions = bounded_questions[:expected_count] if not has_part_ii else bounded_questions
             else:
                 in_range_questions = in_range_questions[:expected_count]
 
@@ -219,7 +223,9 @@ def post_process_questions(
     # 4. Canonical Numbering and Targeted Invariant Verification
     processed: list[ReconstructedQuestion] = []
     for idx, q in enumerate(in_range_questions):
-        if q.source_number and q.source_number >= start_question:
+        if q.type == QuestionType.PART_II_TF:
+            canonical_num = q.source_number or (idx + 1)
+        elif q.source_number and q.source_number >= start_question:
             canonical_num = q.source_number
         else:
             canonical_num = start_question + idx
@@ -243,12 +249,24 @@ def post_process_questions(
                     stage="RECONSTRUCTING"
                 )
 
+        # Purge any image markers from options and sub_statements
+        cleaned_options = [
+            opt.model_copy(update={"text": clean_image_markers(opt.text)})
+            for opt in final_options
+        ]
+        cleaned_sub_statements = [
+            sub.model_copy(update={"statement": clean_image_markers(sub.statement)})
+            for sub in q.sub_statements
+        ]
+
         updated_q = q.model_copy(
             update={
                 "id": stable_id,
                 "number": canonical_num,
                 "source_number": q.source_number or canonical_num,
-                "options": final_options
+                "options": cleaned_options,
+                "sub_statements": cleaned_sub_statements,
+                "stem": clean_image_markers(q.stem)
             }
         )
         processed.append(updated_q)

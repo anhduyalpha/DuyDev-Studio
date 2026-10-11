@@ -14,11 +14,15 @@ export async function uploadQuizFile(file, options = {}) {
   });
 }
 
-export async function parsePromptApi(prompt) {
+export async function parsePromptApi(prompt, options = {}) {
+  const payload = { prompt };
+  if (options.fileId) payload.fileId = options.fileId;
+  if (options.gdriveUrl) payload.gdriveUrl = options.gdriveUrl;
+
   const res = await fetch('/api/v1/quiz/parse-prompt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
