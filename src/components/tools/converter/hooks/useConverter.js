@@ -399,12 +399,6 @@ export class ConverterManager {
   async startConversion() {
     if (this.isConverting) return;
 
-    // Guard: Check if any item is currently uploading or queued to upload
-    const uploadingItems = this.items.filter((it) => it.uploadStatus === 'uploading' || (it.uploadStatus === 'idle' && !it.fileId && it.file));
-    if (uploadingItems.length > 0) {
-      return showToast('Đang tải tệp lên máy chủ, vui lòng đợi giây lát...', 'info');
-    }
-
     const pending = this.items.filter(
       (it) => (it.status === 'ready' || it.status === 'idle' || it.status === 'retry') && (it.fileId || it.file)
     );
@@ -444,6 +438,16 @@ export class ConverterManager {
     it.status = 'ready';
     it.error = null;
     it.progress = 0;
+    if (!it.fileId && it.file) {
+      if (canConvertClientSide(it, this.options)) {
+        it.uploadStatus = 'local-ready';
+      } else {
+        it.uploadStatus = 'idle';
+        it.uploadError = null;
+        it.uploadPromise = null;
+        startBackgroundUpload(this, it);
+      }
+    }
     this.notify('item-updated');
     await processSingleItem(this, it);
 

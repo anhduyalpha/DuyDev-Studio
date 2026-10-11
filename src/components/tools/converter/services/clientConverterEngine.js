@@ -427,7 +427,7 @@ async function convertDataOnClient(file, srcExt, tgtExt, options = {}) {
         return { blob: new Blob([htmlStr], { type: 'text/html;charset=utf-8' }), mimeType: 'text/html' };
       }
       if (tgtExt === 'txt') {
-        const txtStr = XLSX.utils.sheet_to_txt(firstSheet);
+        const txtStr = XLSX.utils.sheet_to_csv(firstSheet, { FS: '\t' });
         return { blob: new Blob([txtStr], { type: 'text/plain;charset=utf-8' }), mimeType: 'text/plain' };
       }
     }
@@ -468,6 +468,16 @@ async function convertDataOnClient(file, srcExt, tgtExt, options = {}) {
 
   if (srcExt === 'json' && tgtExt === 'csv') {
     const csvStr = jsonToCsv(textContent);
+    return { blob: new Blob([csvStr], { type: 'text/csv;charset=utf-8' }), mimeType: 'text/csv' };
+  }
+
+  if (srcExt === 'csv' && (tgtExt === 'html' || tgtExt === 'htm')) {
+    const htmlStr = csvToHtml(textContent, file.name);
+    return { blob: new Blob([htmlStr], { type: 'text/html;charset=utf-8' }), mimeType: 'text/html' };
+  }
+
+  if ((srcExt === 'html' || srcExt === 'htm') && tgtExt === 'csv') {
+    const csvStr = htmlTableToCsv(textContent);
     return { blob: new Blob([csvStr], { type: 'text/csv;charset=utf-8' }), mimeType: 'text/csv' };
   }
 
@@ -609,4 +619,43 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function csvToHtml(csvText, title = 'Data') {
+  const lines = csvText.trim().split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return '<!DOCTYPE html><html><body><p>Trống</p></body></html>';
+  const headers = parseCsvRow(lines[0]);
+  let tableHtml = '<table border="1" style="border-collapse:collapse;width:100%;font-family:sans-serif;">\n<thead><tr>';
+  for (const h of headers) {
+    tableHtml += `<th style="padding:8px;background:#f3f4f6;text-align:left;">${escapeHtml(h)}</th>`;
+  }
+  tableHtml += '</tr></thead>\n<tbody>\n';
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCsvRow(lines[i]);
+    tableHtml += '<tr>';
+    for (let j = 0; j < headers.length; j++) {
+      tableHtml += `<td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(vals[j] || '')}</td>`;
+    }
+    tableHtml += '</tr>\n';
+  }
+  tableHtml += '</tbody></table>';
+  return `<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body style="padding:20px;">${tableHtml}</body></html>`;
+}
+
+function htmlTableToCsv(htmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlText, 'text/html');
+  const table = doc.querySelector('table');
+  if (!table) return '';
+  const rows = [];
+  table.querySelectorAll('tr').forEach((tr) => {
+    const cells = [];
+    tr.querySelectorAll('th, td').forEach((cell) => {
+      cells.push(escapeCsvCell(cell.textContent.trim()));
+    });
+    if (cells.length > 0) {
+      rows.push(cells.join(','));
+    }
+  });
+  return rows.join('\n');
 }

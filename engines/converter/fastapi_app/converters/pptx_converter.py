@@ -173,6 +173,11 @@ def _pptx_to_images(input_path: str, output_dir: str, target_format: str, name: 
 
             if target_fmt in ['jpg', 'jpeg']:
                 pix.save(img_path, output="jpeg", jpg_quality=95)
+            elif target_fmt == 'webp':
+                from PIL import Image
+                mode = "RGB" if pix.n < 4 else "RGBA"
+                pil_img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                pil_img.save(img_path, 'WEBP', quality=95)
             else:
                 pix.save(img_path)
 

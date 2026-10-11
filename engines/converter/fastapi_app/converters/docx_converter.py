@@ -303,12 +303,27 @@ def _process_text_doc(input_path: str, output_dir: str, target_format: str) -> d
                 pdf_doc = pymupdf.open()
                 lines = raw_text.splitlines()
                 lines_per_page = 48
+
+                font_candidates = [
+                    r"C:\Windows\Fonts\arial.ttf",
+                    r"C:\Windows\Fonts\segoeui.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
+                ]
+                unicode_font = next((p for p in font_candidates if os.path.exists(p)), None)
+
                 for p_idx in range(0, max(1, len(lines)), lines_per_page):
                     page_chunk = lines[p_idx:p_idx + lines_per_page]
                     page = pdf_doc.new_page(width=595.0, height=842.0)  # A4
                     rect = pymupdf.Rect(45, 50, 550, 792)
                     text_block = "\n".join(page_chunk)
-                    page.insert_textbox(rect, text_block, fontsize=10.5, fontname="helv")
+                    if unicode_font:
+                        page.insert_font(fontname="F0", fontfile=unicode_font)
+                        page.insert_textbox(rect, text_block, fontsize=10.5, fontname="F0")
+                    else:
+                        page.insert_textbox(rect, text_block, fontsize=10.5, fontname="helv")
 
                 pdf_doc.save(output_path)
                 pdf_doc.close()

@@ -286,7 +286,9 @@ export async function processSingleItem(manager, item) {
           const origSize = item.detectedMeta?.size || d.originalSizeBytes || 1024;
           const resSize = d.resultSizeBytes || Math.round(origSize * 0.7);
           const idx = manager.items.indexOf(item);
-          const finalName = computeRenamedName(item.file?.name, item.targetFormat, idx, manager.renamePattern);
+          const serverExt = (d.resultFileName || '').split('.').pop()?.toLowerCase();
+          const effectiveExt = (serverExt === 'zip' || d.isZip) ? 'zip' : item.targetFormat;
+          const finalName = computeRenamedName(item.file?.name, effectiveExt, idx, manager.renamePattern);
 
           item.status = 'completed';
           item.progress = 100;

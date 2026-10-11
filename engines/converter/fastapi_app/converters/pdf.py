@@ -144,7 +144,7 @@ def _pdf_to_html(input_path: str, output_path: str, output_filename: str, name: 
         doc = pymupdf.open(input_path)
         html_pages = []
         for i, page in enumerate(doc):
-            html_pages.append(f"<section class='pdf-page' style='margin-bottom:2.5rem;'><h3>Trang {i + 1}</h3>\n{page.get_text('html')}</div></section>")
+            html_pages.append(f"<section class='pdf-page' style='margin-bottom:2.5rem;'><h3>Trang {i + 1}</h3>\n{page.get_text('html')}</section>")
         doc.close()
 
         full_html = f"""<!DOCTYPE html>
@@ -267,6 +267,11 @@ def _pdf_to_images(input_path: str, output_dir: str, target_format: str, name: s
 
             if target_fmt in ['jpg', 'jpeg']:
                 pix.save(img_path, output="jpeg", jpg_quality=95)
+            elif target_fmt == 'webp':
+                from PIL import Image
+                mode = "RGB" if pix.n < 4 else "RGBA"
+                pil_img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                pil_img.save(img_path, 'WEBP', quality=95)
             else:
                 pix.save(img_path)
 

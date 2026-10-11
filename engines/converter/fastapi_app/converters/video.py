@@ -80,7 +80,7 @@ async def convert_media(
 
         can_stream_copy = (
             is_remux_candidate and not has_transform and
-            v_codec in ['h264', 'avc1'] and target_fmt == 'mp4'
+            ((v_codec in ['h264', 'avc1'] and target_fmt == 'mp4') or (target_fmt == 'mkv'))
         )
 
         cmd = [ffmpeg_cmd, '-y', '-i', input_path]
@@ -89,11 +89,12 @@ async def convert_media(
             if on_progress:
                 on_progress(50, "Đang chuyển đổi tức thì (Smart Stream Copy)...")
             cmd.extend(['-c:v', 'copy'])
-            if a_codec == 'aac':
+            if a_codec == 'aac' or target_fmt == 'mkv':
                 cmd.extend(['-c:a', 'copy'])
             else:
                 cmd.extend(['-c:a', 'aac', '-b:a', '192k'])
-            cmd.extend(['-movflags', '+faststart'])
+            if target_fmt == 'mp4':
+                cmd.extend(['-movflags', '+faststart'])
         else:
             options = _get_format_options(target_fmt, quality, resolution, fps, bitrate)
             cmd.extend(options)
@@ -127,18 +128,28 @@ async def convert_media(
                     except Exception:
                         pass
 
+        async def read_stderr():
+            return await process.stderr.read()
+
         progress_task = asyncio.create_task(read_progress())
-        _, stderr = await asyncio.wait_for(process.communicate(), timeout=900)  # 15 min timeout
-        await progress_task
+        stderr_task = asyncio.create_task(read_stderr())
+
+        try:
+            await asyncio.wait_for(asyncio.gather(progress_task, stderr_task, process.wait()), timeout=900)
+            stderr_bytes = stderr_task.result()
+        except asyncio.TimeoutError:
+            try:
+                process.kill()
+            except Exception:
+                pass
+            return {"success": False, "error": "Quá trình chuyển đổi vượt quá thời gian chờ (15 phút)"}
 
         if process.returncode == 0:
             return {"success": True, "output_path": output_path, "filename": output_filename}
         else:
-            error_msg = stderr.decode('utf-8', errors='ignore')[-300:] if stderr else "Không rõ nguyên nhân"
+            error_msg = stderr_bytes.decode('utf-8', errors='ignore')[-300:] if stderr_bytes else "Không rõ nguyên nhân"
             return {"success": False, "error": f"Lỗi FFmpeg: {error_msg.strip()}"}
 
-    except asyncio.TimeoutError:
-        return {"success": False, "error": "Quá trình chuyển đổi vượt quá thời gian chờ (15 phút)"}
     except Exception as e:
         return {"success": False, "error": f"Lỗi chuyển đổi đa phương tiện: {str(e)}"}
 
