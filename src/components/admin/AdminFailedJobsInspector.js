@@ -815,7 +815,7 @@ export function attachFailedJobsListeners(container, onReload) {
             if (listEl) listEl.innerHTML = renderFailedJobsItemsMarkup([]);
             const badgeEl = container.querySelector('#adminFailedJobsCountBadge');
             if (badgeEl) {
-              badgeEl.textContent = '0 lỗi';
+              badgeEl.textContent = '0 lỗi hệ thống · 0 thao tác người dùng';
               badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
             }
             if (btnClear) btnClear.remove();

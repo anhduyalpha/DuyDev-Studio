@@ -403,7 +403,8 @@ export class AiMetricsService {
       } catch (err: any) {
         const latencyMs = Date.now() - startTime;
         lastError = err;
-        const statusCode = Number(err?.status || err?.statusCode) || 504;
+        const isTimeout = err?.name === 'AbortError' || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNABORTED' || String(err?.message || '').toLowerCase().includes('timeout');
+        const statusCode = Number(err?.status || err?.statusCode || err?.response?.status) || (isTimeout ? 504 : 500);
         const errorDetails = err?.message || 'Upstream did not respond or returned error';
 
         const callLog = this.recordCall({

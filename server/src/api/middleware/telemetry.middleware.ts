@@ -74,7 +74,13 @@ export function isBotScannerNoise(url: string, statusCode: number): boolean {
   if (statusCode !== 404 && statusCode !== 403 && statusCode !== 400) {
     return false;
   }
+  // All 403 Forbidden responses (IP block rules, blocked crawlers) are noise isolation candidates
+  if (statusCode === 403) {
+    return true;
+  }
+
   const clean = (url || '').toLowerCase().split('?')[0];
+
   const scannerPatterns = [
     '.env',
     'wp-login',
@@ -104,15 +110,40 @@ export function isBotScannerNoise(url: string, statusCode: number): boolean {
     'vendor',
     'cgi-bin',
     'autodiscover',
-    'webdav'
+    'webdav',
+    'hnap1',
+    'wlwmanifest',
+    'geoserver',
+    'jenkins',
+    'remote/login'
   ];
   if (scannerPatterns.some(pat => clean.includes(pat))) {
     return true;
   }
-  // All 403 Forbidden responses (IP block rules, blocked crawlers) are noise isolation candidates
-  if (statusCode === 403) {
+
+  // Detect probes targeting server-side script files or database/backup dumps
+  if (/\.(php|asp|aspx|jsp|cgi|pl|sh|action|do|bak|old|sql|zip|tar|gz|rar|7z|ini|conf|yml|yaml)$/i.test(clean)) {
     return true;
   }
+
+  // For 404 on routes completely outside DD Studio's SPA frontend & API routes:
+  // Legitimate routes are under /api/, /src/, /static/, /pdfjs/, /q/, /share-target, or standard root assets.
+  const isAppRoute = clean.startsWith('/api/') ||
+    clean.startsWith('/src/') ||
+    clean.startsWith('/static/') ||
+    clean.startsWith('/pdfjs/') ||
+    clean.startsWith('/q/') ||
+    clean.startsWith('/share-target') ||
+    clean === '/' ||
+    clean === '/index.html' ||
+    clean === '/sw.js' ||
+    clean === '/manifest.webmanifest' ||
+    clean === '/favicon.ico';
+
+  if (!isAppRoute) {
+    return true;
+  }
+
   return false;
 }
 
@@ -489,6 +520,18 @@ export class TelemetryTracker {
       profile: meta,
       logs: recentLogs
     };
+  }
+
+  /**
+   * Resets rolling buckets and counters (for testing and administrative resets)
+   */
+  public resetBuckets() {
+    this.buckets.clear();
+    this.totalRequests = 0;
+    this.totalBytesIn = 0;
+    this.totalBytesOut = 0;
+    this.lanRequests = 0;
+    this.wanRequests = 0;
   }
 
   /**

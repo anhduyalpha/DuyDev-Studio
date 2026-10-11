@@ -133,6 +133,26 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
       expect(recoveredLog?.recoveredByKey).toBe('Google Gemini Backup');
     });
 
+    it('resolves error status code accurately (500 for generic error, 401 for unauthorized)', async () => {
+      const mockFn = vi.fn().mockImplementation(async (key) => {
+        if (key.id === 'agnes-primary') {
+          const err = new Error('Unauthorized API key') as any;
+          err.response = { status: 401 };
+          throw err;
+        }
+        return `Success via ${key.name}`;
+      });
+
+      const { result } = await aiService.executeWithFallback(mockFn, { module: 'test-status-resolution' });
+      expect(result).toBe('Success via Google Gemini Backup');
+
+      const afterMetrics = aiService.getTelemetryData();
+      const recoveredLog = afterMetrics.recentLogs.find(l => l.module === 'test-status-resolution' && l.keyId === 'agnes-primary');
+      expect(recoveredLog?.statusCode).toBe(401);
+      expect(recoveredLog?.isFallbackRecovered).toBe(true);
+      expect(recoveredLog?.status).toBe('FALLBACK_RECOVERED');
+    });
+
     it('increments errorCalls when ALL configured keys fail', async () => {
       const initialMetrics = aiService.getTelemetryData();
       const initialErrorCalls = initialMetrics.cumulative.errorCalls;
@@ -151,6 +171,10 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
   });
 
   describe('R3. Noise Isolation for Bot Scanners', () => {
+    beforeEach(() => {
+      TelemetryTracker.getInstance().resetBuckets();
+    });
+
     it('detects automated bot scanner probes correctly', () => {
       expect(isBotScannerNoise('/.env', 404)).toBe(true);
       expect(isBotScannerNoise('/wp-login.php', 404)).toBe(true);
@@ -159,11 +183,36 @@ describe('Admin False-Positive Elimination & Mission Control Telemetry Tests', (
       expect(isBotScannerNoise('/actuator/health', 404)).toBe(true);
       expect(isBotScannerNoise('/setup.cgi?next_file=netgear.cfg', 400)).toBe(true);
       expect(isBotScannerNoise('/any/blocked/url', 403)).toBe(true);
+      expect(isBotScannerNoise('/hnap1', 404)).toBe(true);
+      expect(isBotScannerNoise('/geoserver/web', 404)).toBe(true);
+      expect(isBotScannerNoise('/backup.sql', 404)).toBe(true);
+      expect(isBotScannerNoise('/random-bot-probe-url', 404)).toBe(true);
 
       // Legitimate requests should NOT be considered scanner noise
       expect(isBotScannerNoise('/api/v1/jobs/non-existent-id', 404)).toBe(false);
       expect(isBotScannerNoise('/api/v1/auth/login', 200)).toBe(false);
       expect(isBotScannerNoise('/api/v1/files/upload', 500)).toBe(false);
+    });
+
+    it('accurately calculates errorRatePercent and degrades systemHealth when genuine 5xx errors occur', () => {
+      const tracker = TelemetryTracker.getInstance();
+
+      // Record 10 legitimate 200 OK requests
+      const okReq = { headers: {}, ip: '127.0.0.1', raw: { url: '/api/v1/health' } } as any;
+      const okReply = { statusCode: 200, getHeader: () => '100' } as any;
+      for (let i = 0; i < 10; i++) {
+        tracker.recordRequest(okReq, okReply, 10);
+      }
+
+      // Record 2 genuine 500 Internal Server Errors
+      const errReq = { headers: {}, ip: '127.0.0.1', raw: { url: '/api/v1/files/upload' } } as any;
+      const errReply500 = { statusCode: 500, getHeader: () => '20' } as any;
+      tracker.recordRequest(errReq, errReply500, 50);
+      tracker.recordRequest(errReq, errReply500, 50);
+
+      const snapshot = tracker.getSnapshot();
+      expect(snapshot.health.errorRatePercent).toBeGreaterThan(0);
+      expect(['DEGRADED', 'UNHEALTHY']).toContain(snapshot.health.systemHealth);
     });
 
     it('isolates bot noise so errorRatePercent remains 0.0% and systemHealth is HEALTHY', () => {

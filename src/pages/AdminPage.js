@@ -327,9 +327,22 @@ function renderUnlockedDashboardView() {
               <span id="adminTrafficTotalRequests" class="text-xs font-mono text-zinc-500 dark:text-zinc-400">
                 Tổng: ${(trafficSummary.totalRequests || 0).toLocaleString()} reqs
               </span>
-              <span id="adminTrafficNoiseBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Đã tự động loại bỏ các yêu cầu quét bot tự động (.env, wp-login, v.v.) khỏi tỷ lệ lỗi hệ thống">
-                ${(codes.c4xxNoise || 0) > 0 ? `Đã lọc ${codes.c4xxNoise} bot scan · 0% Lỗi` : '0.0% Lỗi (Sạch bot scan)'}
-              </span>
+              ${(() => {
+                const errRate = typeof trafficSummary.errorRatePercent === 'number'
+                  ? trafficSummary.errorRatePercent
+                  : (typeof d.traffic?.health?.errorRatePercent === 'number' ? d.traffic.health.errorRatePercent : 0);
+                const noise = codes.c4xxNoise || trafficSummary.scannerNoiseIsolated || 0;
+                const isClean = errRate === 0;
+                const badgeColor = isClean
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : errRate < 5
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+                const text = noise > 0
+                  ? `Đã lọc ${noise} bot scan · ${errRate.toFixed(1)}% Lỗi`
+                  : `${errRate.toFixed(1)}% Lỗi (Sạch bot scan)`;
+                return `<span id="adminTrafficNoiseBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${badgeColor}" title="Đã tự động loại bỏ các yêu cầu quét bot tự động (.env, wp-login, v.v.) khỏi tỷ lệ lỗi hệ thống">${text}</span>`;
+              })()}
             </div>
           </div>
 
@@ -437,7 +450,7 @@ function renderUnlockedDashboardView() {
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
                 <span class="w-2 h-2 rounded-full bg-red-500"></span>
                 <span>PDF Studio Worker</span>
-                <span id="adminPdfBadge" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${(queues.pdf?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.pdf?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
+                <span id="adminPdfBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${(queues.pdf?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.pdf?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
               <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
                 <span>Active: <strong id="adminPdfActive" class="text-emerald-500">${queues.pdf?.active || 0}</strong></span>
@@ -452,7 +465,7 @@ function renderUnlockedDashboardView() {
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
                 <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
                 <span>Universal Converter Worker</span>
-                <span id="adminConvBadge" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${(queues.converter?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.converter?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
+                <span id="adminConvBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${(queues.converter?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.converter?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
               <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
                 <span>Active: <strong id="adminConvActive" class="text-emerald-500">${queues.converter?.active || 0}</strong></span>
@@ -467,7 +480,7 @@ function renderUnlockedDashboardView() {
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
                 <span class="w-2 h-2 rounded-full bg-orange-500"></span>
                 <span>Quiz Generator Worker</span>
-                <span id="adminQuizBadge" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${(queues.quiz?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.quiz?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
+                <span id="adminQuizBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${(queues.quiz?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.quiz?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
               <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
                 <span>Active: <strong id="adminQuizActive" class="text-emerald-500">${queues.quiz?.active || 0}</strong></span>
@@ -764,9 +777,20 @@ function updateAdminTelemetryDom(data) {
 
   const elNoiseBadge = document.getElementById('adminTrafficNoiseBadge');
   if (elNoiseBadge) {
-    elNoiseBadge.textContent = (codes.c4xxNoise || 0) > 0
-      ? `Đã lọc ${codes.c4xxNoise} bot scan · 0% Lỗi`
-      : '0.0% Lỗi (Sạch bot scan)';
+    const errRate = typeof trafficSummary.errorRatePercent === 'number'
+      ? trafficSummary.errorRatePercent
+      : (typeof data.traffic?.health?.errorRatePercent === 'number' ? data.traffic.health.errorRatePercent : 0);
+    const noise = codes.c4xxNoise || trafficSummary.scannerNoiseIsolated || 0;
+    const isClean = errRate === 0;
+    const badgeColor = isClean
+      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+      : errRate < 5
+      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+    elNoiseBadge.textContent = noise > 0
+      ? `Đã lọc ${noise} bot scan · ${errRate.toFixed(1)}% Lỗi`
+      : `${errRate.toFixed(1)}% Lỗi (Sạch bot scan)`;
+    elNoiseBadge.className = `px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${badgeColor}`;
   }
 
   const elCode2 = document.getElementById('adminStatusCode2xx');
@@ -815,7 +839,8 @@ function updateAdminTelemetryDom(data) {
 
   const elRedisDetails = document.getElementById('adminRedisDetails');
   if (elRedisDetails) {
-    elRedisDetails.textContent = `${redis.status || 'offline'} · ${redis.usedMemory || 'N/A'} · ${redis.keyCount || 0} keys`;
+    const redisDisplay = redis.displayStatus || (redis.status === 'connected' ? 'READY' : 'OFFLINE');
+    elRedisDetails.textContent = `${redisDisplay} (${redis.status || 'connected'}) · ${redis.usedMemory || 'N/A'} · ${redis.keyCount || 0} keys`;
   }
 
   const elTempMb = document.getElementById('adminStorageTempMb');
@@ -867,19 +892,19 @@ function updateAdminTelemetryDom(data) {
   if (elPdfBadge) {
     const isBusy = (queues.pdf?.active || 0) > 0;
     elPdfBadge.textContent = isBusy ? 'BUSY' : 'IDLE / READY';
-    elPdfBadge.className = `px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
+    elPdfBadge.className = `px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
   }
   const elConvBadge = document.getElementById('adminConvBadge');
   if (elConvBadge) {
     const isBusy = (queues.converter?.active || 0) > 0;
     elConvBadge.textContent = isBusy ? 'BUSY' : 'IDLE / READY';
-    elConvBadge.className = `px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
+    elConvBadge.className = `px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
   }
   const elQuizBadge = document.getElementById('adminQuizBadge');
   if (elQuizBadge) {
     const isBusy = (queues.quiz?.active || 0) > 0;
     elQuizBadge.textContent = isBusy ? 'BUSY' : 'IDLE / READY';
-    elQuizBadge.className = `px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
+    elQuizBadge.className = `px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isBusy ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`;
   }
 
   // 7. Cloudflare R2

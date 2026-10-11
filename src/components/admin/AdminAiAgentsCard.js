@@ -260,7 +260,7 @@ export function renderAiAgentsCard(aiData) {
                   const timeStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--';
                   let statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">200 OK</span>`;
                   if (log.isFallbackRecovered || log.status === 'FALLBACK_RECOVERED') {
-                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 justify-center" title="Lỗi khóa chính nhưng đã tự động cứu thành công qua khóa dự phòng (${escapeHtml(log.recoveredByKey || '')})"><i data-lucide="check-check" class="w-3 h-3 text-emerald-400"></i> RECOVERED</span>`;
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 justify-center" title="Lỗi khóa chính nhưng đã tự động cứu thành công qua khóa dự phòng (${escapeHtml(log.recoveredByKey || '')})"><i data-lucide="check-check" class="w-3 h-3 text-emerald-400"></i> FALLBACK_RECOVERED</span>`;
                   } else if (log.statusCode === 429) {
                     statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">429 LIMIT</span>`;
                   } else if (log.statusCode === 504) {
@@ -607,7 +607,7 @@ function openAiCallDetailModal(log) {
           <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5">
             <span class="text-[10px] text-zinc-500 block">Mã phản hồi</span>
             <span class="font-bold px-1.5 py-0.5 rounded text-[11px] inline-block mt-0.5 border ${statusColor}">
-              ${isRecovered ? `RECOVERED (${log.statusCode})` : log.statusCode === 200 ? '200 OK' : log.statusCode === 504 ? '504 TIMEOUT' : log.statusCode === 429 ? '429 LIMIT' : `${log.statusCode} ERROR`}
+              ${isRecovered ? `FALLBACK_RECOVERED (${log.statusCode})` : log.statusCode === 200 ? '200 OK' : log.statusCode === 504 ? '504 TIMEOUT' : log.statusCode === 429 ? '429 LIMIT' : `${log.statusCode} ERROR`}
             </span>
           </div>
           <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5">
