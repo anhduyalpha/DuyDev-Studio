@@ -30,6 +30,7 @@ import { closeFileViewer } from './components/common/viewer/FileViewerCore.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
 import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
 import { openShareTargetModal } from './components/common/ShareTargetModal.js';
+import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
 
 class App {
   constructor() {
@@ -63,6 +64,7 @@ class App {
 
     // Initial render
     this.renderShell();
+    checkAndRenderMigrationNotice();
     initGlobalTaskDock();
     this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}

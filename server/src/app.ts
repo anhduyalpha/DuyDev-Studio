@@ -117,6 +117,11 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     const url = req.raw.url || req.url || '';
+    const hostHeader = String(req.headers.host || '').toLowerCase();
+    if (hostHeader.includes('alphadaniel.io.vn')) {
+      reply.header('X-Domain-Migration', 'https://studio.duydev.cloud');
+      reply.header('X-Canonical-Domain', 'studio.duydev.cloud');
+    }
     // Skip health checks, auth verification and static assets to prevent lockout
     const isExcluded = url.startsWith('/health') ||
       url.startsWith('/api/v1/health') ||
