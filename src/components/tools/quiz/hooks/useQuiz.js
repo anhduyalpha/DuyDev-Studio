@@ -376,10 +376,12 @@ class QuizManager {
           questionsSummary = `Từ câu ${parsed.start} (${parsed.count} câu)`;
         }
 
+        const endNum = parsed.end || (this.state.start + this.state.count - 1);
         this.state.parsedSummary = {
           pages: this.state.pages,
           count: this.state.count,
           start: this.state.start,
+          end: endNum,
           partsText,
           questionsSummary,
           parity: parsed.parity_filter,
@@ -388,7 +390,8 @@ class QuizManager {
 
         this.state.step = 3;
         this.notify('prompt-parsed');
-        showToast(`✨ Đã nhận diện: Trang ${this.state.pages || '—'}, ${this.state.count || 20} câu (từ câu ${this.state.start || 1})`, 'success');
+        const rangeText = endNum && endNum !== this.state.start ? ` (từ câu ${this.state.start} đến ${endNum})` : ` (từ câu ${this.state.start})`;
+        showToast(`✨ Đã nhận diện: Trang ${this.state.pages || '—'} • ${this.state.count} câu${rangeText}`, 'success');
       }
     } catch (err) {
       if (err.name === 'AbortError') return;

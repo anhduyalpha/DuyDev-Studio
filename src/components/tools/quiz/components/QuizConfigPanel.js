@@ -216,7 +216,7 @@ export function renderQuizConfigPanel(state) {
               <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5"></i>
               <div class="space-y-1 min-w-0">
                 <div class="font-medium flex items-center gap-1.5 flex-wrap">
-                  <span>Trang ${escapeHtml(state.parsedSummary.pages)}: ${state.parsedSummary.count} câu (từ câu ${state.parsedSummary.start})</span>
+                  <span>Trang ${escapeHtml(state.parsedSummary.pages)} • ${state.parsedSummary.count} câu (từ câu ${state.parsedSummary.start}${state.parsedSummary.end && state.parsedSummary.end !== state.parsedSummary.start ? ` đến ${state.parsedSummary.end}` : ''})</span>
                   ${state.parsedSummary.parity && state.parsedSummary.parity !== 'all' ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-800 dark:text-indigo-200">${state.parsedSummary.parity === 'odd' ? 'Câu lẻ' : 'Câu chẵn'}</span>` : ''}
                 </div>
                 ${state.parsedSummary.partsText ? `<div class="text-[11px] text-indigo-700 dark:text-indigo-300">${escapeHtml(state.parsedSummary.partsText)}</div>` : ''}

@@ -66,15 +66,40 @@ def parse_numeric_instruction(instruction: str) -> Optional[ParsedNumericConstra
     if exam_match:
         exam_code = exam_match.group(1).strip()
 
-    # 2. Parse Page Range or Single Page
-    page_range_match = PAGE_RANGE_PATTERN.search(text)
-    if page_range_match:
-        start_page = int(page_range_match.group(1))
-        end_page = int(page_range_match.group(2))
-    else:
-        single_page_match = SINGLE_PAGE_PATTERN.search(text)
-        if single_page_match:
-            start_page = int(single_page_match.group(1))
+    # 2. Parse Pages: supports single, hyphen ranges, comma ranges, 'và/với/&', 'đến'
+    pages_list: list[int] = []
+    page_match = re.search(
+        r"(?:(?:ở|tại|từ|toàn\s*bộ|cả|trọn\s*vẹn)?\s*\b(?:[Tt]rang|[Pp]age|p\b\.?)(?:\s*số|\s*:)?)\s*([^.;?!]+)",
+        text,
+        re.IGNORECASE
+    )
+    if page_match:
+        raw_p = page_match.group(1).strip()
+        stop_p = re.search(r"\b(?:từ\s*(?:câu|bài|q|\d)|câu|lấy|chọn|bắt\s*đầu|phần|đề|chủ\s*đề|tạo|làm|gồm|nhặt|trích)\b", raw_p, re.IGNORECASE)
+        if stop_p:
+            raw_p = raw_p[:stop_p.start()].strip()
+        raw_p = re.sub(r"\b(?:[Tt]rang|[Pp]age|p\b\.?)(?:\s*số)?\b", "", raw_p, flags=re.IGNORECASE).strip()
+
+        if raw_p:
+            normalized_p = re.sub(r"\s*(?:và|với|&)\s*", ",", raw_p, flags=re.IGNORECASE)
+            parts = [p.strip() for p in normalized_p.split(",") if p.strip()]
+            for part in parts:
+                r_match = re.search(r"^(\d+)\s*(?:đến|tới|[-–—]|->|\.\.)\s*(\d+)$", part, re.IGNORECASE)
+                if r_match:
+                    s, e = int(r_match.group(1)), int(r_match.group(2))
+                    if s <= e:
+                        pages_list.extend(range(s, e + 1))
+                    else:
+                        pages_list.extend(range(e, s + 1))
+                else:
+                    s_match = re.search(r"^(\d+)$", part)
+                    if s_match:
+                        pages_list.append(int(s_match.group(1)))
+
+    if pages_list:
+        pages_list = sorted(list(dict.fromkeys(pages_list)))
+        start_page = pages_list[0]
+        end_page = pages_list[-1] if len(pages_list) > 1 else None
 
     # 3. Parse Question Range (e.g. Câu 1 đến 30)
     q_range_match = QUESTION_RANGE_PATTERN.search(text)
@@ -114,6 +139,8 @@ def parse_numeric_instruction(instruction: str) -> Optional[ParsedNumericConstra
     return ParsedNumericConstraint(
         start_page=start_page,
         end_page=end_page,
+        pages=pages_list,
+        is_page_bounded=bool(pages_list and count is None),
         start_question=start_q,
         end_question=end_q,
         question_count=count,

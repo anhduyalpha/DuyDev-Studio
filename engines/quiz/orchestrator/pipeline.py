@@ -179,12 +179,26 @@ class QuizPipelineOrchestrator:
             )
 
             # Reconcile question bounds from numeric instruction if explicitly provided
+            parsed_instr = parse_numeric_instruction(user_instruction)
+            is_explicit_count_requested = bool(
+                parsed_instr and parsed_instr.question_count is not None
+            )
+
+            is_page_bounded = False
+            if target_q_nums is not None:
+                is_page_bounded = True
+            elif getattr(smart_res, "is_page_bounded", False) and not is_explicit_count_requested:
+                is_page_bounded = True
+            elif parsed_instr and getattr(parsed_instr, "is_page_bounded", False) and not is_explicit_count_requested:
+                is_page_bounded = True
+            elif parsed_instr and parsed_instr.end_page is not None and not is_explicit_count_requested:
+                is_page_bounded = True
+
             if target_q_nums:
                 plan_start_q = target_q_nums[0]
                 plan_end_q = target_q_nums[-1]
                 plan_count = len(target_q_nums)
             else:
-                parsed_instr = parse_numeric_instruction(user_instruction)
                 if parsed_instr and parsed_instr.start_question is not None:
                     plan_start_q = parsed_instr.start_question
                     plan_end_q = parsed_instr.end_question or (plan_start_q + (parsed_instr.question_count or effective_count) - 1)
@@ -242,63 +256,81 @@ class QuizPipelineOrchestrator:
                     )
                     detected_count = len(extraction_plan.target_question_numbers)
 
-            # 2. If extracted count K < N, automatically scan contiguous subsequent pages
-            max_doc_page = max(p.page_number for p in page_representations) if page_representations else end_page
-            curr_page = max(target_range_pages) + 1 if target_range_pages else end_page + 1
+            # 2. If extracted count K < N and NOT page-bounded, automatically scan contiguous subsequent pages
+            if not is_page_bounded:
+                max_doc_page = max(p.page_number for p in page_representations) if page_representations else end_page
+                curr_page = max(target_range_pages) + 1 if target_range_pages else end_page + 1
 
-            while detected_count < plan_count and curr_page <= max_doc_page:
-                curr_rep = next((p for p in page_representations if p.page_number == curr_page), None)
-                if curr_rep:
-                    is_nc, nc_reason = is_non_content_page(curr_rep)
-                    if not is_nc:
-                        target_range_pages.append(curr_page)
-                        neighborhood = index_service.build_multi_page_neighborhood_index(
-                            target_pages=sorted(list(set(target_range_pages))),
-                            doc_reps=page_representations
-                        )
-                        extraction_plan = index_service.build_extraction_plan(
-                            neighborhood=neighborhood,
-                            start_q=plan_start_q,
-                            end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
-                            count=plan_count,
-                            doc_reps=page_representations,
-                            ai_provider=self.provider,
-                            raise_on_mismatch=False,
-                            allow_partial=False,
-                            target_question_numbers=target_q_nums,
-                        )
-                        detected_count = len(extraction_plan.target_question_numbers)
-                        logger.info(
-                            f"Auto-expanded to page {curr_page}: detected questions count now {detected_count}/{plan_count}"
-                        )
-                curr_page += 1
+                while detected_count < plan_count and curr_page <= max_doc_page:
+                    curr_rep = next((p for p in page_representations if p.page_number == curr_page), None)
+                    if curr_rep:
+                        is_nc, nc_reason = is_non_content_page(curr_rep)
+                        if not is_nc:
+                            target_range_pages.append(curr_page)
+                            neighborhood = index_service.build_multi_page_neighborhood_index(
+                                target_pages=sorted(list(set(target_range_pages))),
+                                doc_reps=page_representations
+                            )
+                            extraction_plan = index_service.build_extraction_plan(
+                                neighborhood=neighborhood,
+                                start_q=plan_start_q,
+                                end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
+                                count=plan_count,
+                                doc_reps=page_representations,
+                                ai_provider=self.provider,
+                                raise_on_mismatch=False,
+                                allow_partial=False,
+                                target_question_numbers=target_q_nums,
+                            )
+                            detected_count = len(extraction_plan.target_question_numbers)
+                            logger.info(
+                                f"Auto-expanded to page {curr_page}: detected questions count now {detected_count}/{plan_count}"
+                            )
+                    curr_page += 1
+            else:
+                logger.info(
+                    f"Page-bounded extraction active (target pages: {target_range_pages}). Auto-expansion to subsequent pages disabled."
+                )
 
             # 3. Finalize plan: Exact or Flexible Publishing
             partial_note = None
+            if is_page_bounded and detected_count > 0:
+                if plan_count != detected_count:
+                    logger.info(f"Page-bounded: Clamping plan_count from {plan_count} to detected count {detected_count}")
+                    plan_count = detected_count
+                    if target_q_nums:
+                        plan_end_q = target_q_nums[-1]
+                    elif extraction_plan.target_question_numbers:
+                        plan_end_q = extraction_plan.target_question_numbers[-1]
+
+            effective_target_q_nums = target_q_nums
+            if not effective_target_q_nums and is_page_bounded and extraction_plan.target_question_numbers:
+                effective_target_q_nums = list(extraction_plan.target_question_numbers)
+
             if detected_count >= plan_count:
                 extraction_plan = index_service.build_extraction_plan(
                     neighborhood=neighborhood,
                     start_q=plan_start_q,
-                    end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
+                    end_q=plan_end_q if effective_target_q_nums else (plan_start_q + plan_count - 1),
                     count=plan_count,
                     doc_reps=page_representations,
                     ai_provider=self.provider,
                     raise_on_mismatch=True,
                     allow_partial=False,
-                    target_question_numbers=target_q_nums,
+                    target_question_numbers=effective_target_q_nums,
                 )
             elif detected_count > 0:
                 # Flexible Publishing: Do NOT crash! Publish all K available questions.
                 extraction_plan = index_service.build_extraction_plan(
                     neighborhood=neighborhood,
                     start_q=plan_start_q,
-                    end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
+                    end_q=plan_end_q if effective_target_q_nums else (plan_start_q + plan_count - 1),
                     count=plan_count,
                     doc_reps=page_representations,
                     ai_provider=self.provider,
                     raise_on_mismatch=False,
                     allow_partial=True,
-                    target_question_numbers=target_q_nums,
+                    target_question_numbers=effective_target_q_nums,
                 )
                 actual_k = len(extraction_plan.target_question_numbers)
                 partial_note = f"Đã trích xuất {actual_k}/{plan_count} câu hỏi có sẵn trên tài liệu"
@@ -380,8 +412,7 @@ class QuizPipelineOrchestrator:
                 actual_nums = {q.source_number or q.number for q in cleaned_questions}
                 missing_nums = sorted(list(expected_nums - actual_nums))
                 if missing_nums:
-                    if len(actual_nums) > 0:
-                        partial_note = f"Đã trích xuất {len(actual_nums)}/{len(expected_nums)} câu hỏi có sẵn trên tài liệu"
+                    if partial_note and len(actual_nums) > 0:
                         logger.warning(
                             f"Flexible publishing tolerance: missing {len(missing_nums)} questions from extraction plan ({missing_nums[:5]}), "
                             f"continuing with {len(cleaned_questions)} reconstructed questions ({partial_note})."
@@ -391,7 +422,8 @@ class QuizPipelineOrchestrator:
                         raise QuizEngineError(
                             ErrorCode.RANGE_MISMATCH,
                             DiagnosticLayer.RECONSTRUCTION_FAILURE,
-                            f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu. Tuyệt đối không xuất bản đề thi rỗng.",
+                            f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu {len(missing_nums)} câu: {missing_nums[:5]}). "
+                            f"Tuyệt đối không xuất bản đề thi thiếu câu hỏi.",
                             stage=JobStage.RECONSTRUCTING.value,
                             details={
                                 "expected_count": len(extraction_plan.target_question_numbers),

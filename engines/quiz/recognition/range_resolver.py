@@ -176,20 +176,19 @@ def resolve_smart_range(
             found_p = _find_page_by_question_number(doc_reps, start_q)
             start_p = found_p if found_p is not None else 1
         elif not has_start_q:
-            if target_requested_page is not None and start_p_rep and start_p_rep.candidates:
+            found_p = _find_page_by_question_number(doc_reps, start_q)
+            if found_p is not None and found_p == start_p - 1:
+                # Inward continuation from immediate previous page: align start_page to include question stem
+                logger.info(f"Aligning start_page from {start_p} to {found_p} to include canonical question stem for {start_q}")
+                start_p = found_p
+            elif target_requested_page is not None and start_p_rep and start_p_rep.candidates:
                 first_cand_num = start_p_rep.candidates[0].candidate_number
                 logger.info(f"Target page {start_p} explicitly requested. Adapting start_question from {start_q} to first candidate {first_cand_num} on page {start_p}")
                 start_q = first_cand_num
-            else:
-                found_p = _find_page_by_question_number(doc_reps, start_q)
-                if found_p is not None:
-                    if found_p == start_p - 1:
-                        # Inward continuation from immediate previous page
-                        logger.info(f"Aligning start_page from {start_p} to {found_p} to include canonical question stem for {start_q}")
-                        start_p = found_p
-                    elif not start_p_rep or not start_p_rep.candidates:
-                        logger.info(f"Aligning start_page from {start_p} to {found_p} to match canonical question {start_q}")
-                        start_p = found_p
+            elif found_p is not None:
+                if not start_p_rep or not start_p_rep.candidates:
+                    logger.info(f"Aligning start_page from {start_p} to {found_p} to match canonical question {start_q}")
+                    start_p = found_p
     else:
         if start_p is None:
             start_p = 1
@@ -229,10 +228,19 @@ def resolve_smart_range(
             if rep_end and rep_next and detect_continuation_candidate(rep_end, rep_next):
                 end_p = min(total_pages, end_p + 1)
 
-        # If count was not explicitly specified, count candidate questions across [start_p .. end_p]
+        # If count was not explicitly specified, count candidate questions across target pages
         if requested_count is None:
             total_detected = 0
-            for p in range(start_p, end_p + 1):
+            if parsed.pages and len(parsed.pages) > 1 and not all(parsed.pages[i] == parsed.pages[i-1] + 1 for i in range(1, len(parsed.pages))):
+                scan_pages = []
+                for p_num in parsed.pages:
+                    phys_p = _find_page_by_printed_page_number(doc_reps, p_num) or p_num
+                    if phys_p not in scan_pages:
+                        scan_pages.append(phys_p)
+            else:
+                scan_pages = list(range(start_p, end_p + 1))
+
+            for p in scan_pages:
                 rep = page_map.get(p)
                 if rep:
                     valid_cands = (
@@ -251,6 +259,7 @@ def resolve_smart_range(
             start_question=start_q,
             question_count=resolved_count,
             question_mode="explicit" if parsed.question_count is not None else "auto",
+            is_page_bounded=parsed.is_page_bounded,
             confidence=1.0,
             warnings=warnings
         )

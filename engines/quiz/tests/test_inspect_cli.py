@@ -244,6 +244,67 @@ class TestInspectCliAndStatements(unittest.TestCase):
         self.assertEqual(res["count"], 1)
         self.assertEqual(res["detected_questions"], [47])
 
+    def test_parse_requested_pages_syntax(self):
+        """Test parsing various natural language and explicit page syntax."""
+        from engines.quiz.recognition.inspect_cli import parse_requested_pages
+
+        self.assertEqual(parse_requested_pages("", "trang 15,16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15, 16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15 và 16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15 với 16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15 & 16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15-16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15 đến 16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "từ trang 15 đến trang 16"), [15, 16])
+        self.assertEqual(parse_requested_pages("", "trang 15, 18"), [15, 18])
+        self.assertEqual(parse_requested_pages("", "trang 15,16 lấy 4 câu"), [15, 16])
+        self.assertEqual(parse_requested_pages("15,16", ""), [15, 16])
+        self.assertEqual(parse_requested_pages("15, 18", ""), [15, 18])
+
+    def test_rule_parser_page_bounded_numeric_constraints(self):
+        """Test rule parser properly flags is_page_bounded when no explicit count is requested."""
+        from engines.quiz.recognition.rule_parser import parse_numeric_instruction
+
+        res1 = parse_numeric_instruction("Trang 15,16")
+        self.assertIsNotNone(res1)
+        self.assertTrue(res1.is_page_bounded)
+        self.assertEqual(res1.pages, [15, 16])
+        self.assertIsNone(res1.question_count)
+
+        res2 = parse_numeric_instruction("Trang 15 và 16")
+        self.assertIsNotNone(res2)
+        self.assertTrue(res2.is_page_bounded)
+        self.assertEqual(res2.pages, [15, 16])
+        self.assertIsNone(res2.question_count)
+
+        res3 = parse_numeric_instruction("Trang 15, 18 lấy 4 câu")
+        self.assertIsNotNone(res3)
+        self.assertFalse(res3.is_page_bounded)
+        self.assertEqual(res3.pages, [15, 18])
+        self.assertEqual(res3.question_count, 4)
+
+    def test_inspect_page_bounded_ground_truth(self):
+        """Test ground-truth inspection on fixture returns exact count and is_page_bounded."""
+        fixture_path = os.path.abspath("test_gf11_fixture.pdf")
+        if not os.path.isfile(fixture_path):
+            self.skipTest("test_gf11_fixture.pdf not found")
+
+        res_p1 = inspect_page_ground_truth(fixture_path, query_arg="trang 1")
+        self.assertTrue(res_p1["success"])
+        self.assertEqual(res_p1["pages"], "1")
+        self.assertEqual(res_p1["start"], 31)
+        self.assertEqual(res_p1["end"], 38)
+        self.assertEqual(res_p1["count"], 8)
+        self.assertTrue(res_p1["is_page_bounded"])
+
+        res_p1_2 = inspect_page_ground_truth(fixture_path, query_arg="trang 1,2")
+        self.assertTrue(res_p1_2["success"])
+        self.assertEqual(res_p1_2["pages"], "1-2")
+        self.assertEqual(res_p1_2["start"], 31)
+        self.assertEqual(res_p1_2["end"], 46)
+        self.assertEqual(res_p1_2["count"], 16)
+        self.assertTrue(res_p1_2["is_page_bounded"])
+
 
 if __name__ == "__main__":
     unittest.main()

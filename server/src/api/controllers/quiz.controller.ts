@@ -238,6 +238,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
                 warnings: [],
                 source: 'inspect',
                 detected_questions: inspected.detected_questions,
+                is_page_bounded: inspected.is_page_bounded ?? true,
                 parity_filter: inspected.parity_filter || 'all',
                 section_filter: inspected.section_filter || 'all',
                 has_part_i: inspected.has_part_i,
@@ -263,17 +264,24 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     let count = 20;
     let start = 1;
     let end: number | null = null;
+    let isExplicitCount = false;
 
     let s = input.replace(/\b(?:trang|page)\s+(\d)\s+(\d)\b/gi, 'trang $1$2');
 
     // 1. Regex parsing for pages
-    const pageRangeMatch = s.match(/(?:(?:ở|tại|từ)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)[\s:]*(\d+)\s*(?:đến|tới|[-–—]|->)\s*(\d+)(?!\s*câu)/i);
+    const pageRangeMatch = s.match(/(?:(?:ở|tại|từ|toàn\s*bộ|cả|trọn\s*vẹn)?\s*(?:trang|page|p\b\.?)(?:\s*số|\s*:)?)[\s:]*(\b\d+\b\s*(?:đến|tới|[-–—]|->)\s*\b\d+\b(?!\s*câu))/i);
     if (pageRangeMatch) {
-      pages = `${pageRangeMatch[1]}-${pageRangeMatch[2]}`;
+      pages = `${pageRangeMatch[1]}`;
+      const rMatch = pages.match(/(\d+)\s*(?:đến|tới|[-–—]|->)\s*(\d+)/i);
+      if (rMatch) {
+        pages = `${rMatch[1]}-${rMatch[2]}`;
+      }
     } else {
-      const pageListMatch = s.match(/(?:(?:ở|tại|từ)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)[\s:]*(\d+(?:\s*[-–—]\s*\d+|\s*,\s*\d+(?!\d*\s*câu))*)/i);
+      const pageListMatch = s.match(/(?:(?:ở|tại|từ|toàn\s*bộ|cả|trọn\s*vẹn)?\s*(?:trang|page|p\b\.?)(?:\s*số|\s*:)?)[\s:]*(\b\d+\b(?:\s*(?:[-–—]|,\s*|\s+(?:và|với|&)\s*)\s*\b\d+\b(?!\s*câu))*)/i);
       if (pageListMatch) {
-        pages = pageListMatch[1].replace(/\s+/g, '');
+        let rawPages = pageListMatch[1].trim();
+        rawPages = rawPages.replace(/\s*(?:và|với|&)\s*/gi, ',');
+        pages = rawPages.replace(/\s+/g, '');
       }
     }
 
@@ -288,16 +296,20 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
         end = tmp;
       }
       count = Math.max(1, end - start + 1);
+      isExplicitCount = true;
     } else {
-      const countMatch = s.match(/(?:lấy|làm|tạo|trích)?\s*(\d+)\s*câu/i);
+      const countMatch = s.match(/(?:lấy|làm|tạo|trích|gồm)?\s*(\d+)\s*câu/i);
       if (countMatch) {
         count = parseInt(countMatch[1], 10);
+        isExplicitCount = true;
       }
       const startMatch = s.match(/(?:bắt\s*đầu\s*)?(?:từ\s*)?câu\s*(\d+)/i);
       if (startMatch) {
         start = parseInt(startMatch[1], 10);
       }
     }
+
+    const isPageBounded = Boolean(pages && !isExplicitCount);
 
     // 3. Regex parsing for prefix/topic
     let prefix = '';
@@ -333,7 +345,8 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       prefix: sanitizedPrefix,
       confidence: 1.0,
       warnings: [] as string[],
-      source: 'regex'
+      source: 'regex',
+      is_page_bounded: isPageBounded
     };
   }
 
@@ -366,9 +379,9 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
                 content:
                   'You are an expert Vietnamese exam parameter extractor for a quiz generator tool. Given a user request, extract parameters and respond strictly with JSON having this schema:\n' +
                   '{\n' +
-                  '  "pages": string (e.g. "11", "11-15", "4,5,6" - only the page number(s) or ranges. Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
+                  '  "pages": string (e.g. "11", "11-15", "15, 16" - only the page number(s) or ranges. Never confuse question numbers with page numbers. In "trang 11 câu 1 đến 16", the page is "11", NOT "1"),\n' +
                   '  "start": int (starting question number, default 1, e.g. "câu 18 đến 28" -> 18),\n' +
-                  '  "count": int (total number of questions, default 20. If a range "câu X đến Y" is given, count = Y - X + 1),\n' +
+                  '  "count": int (total number of questions. If a range "câu X đến Y" or explicit "N câu" is given, count = N. If only pages are specified without question count, default 0 or leave empty),\n' +
                   '  "title": string (formal Vietnamese exam uppercase title),\n' +
                   '  "prefix": string (optional short clean topic or file name if explicitly mentioned, otherwise "")\n' +
                   '}'
@@ -430,7 +443,11 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       }
 
       let startRes = Math.max(1, Number(parsed.start) || regexDefaults.start || 1);
-      let countRes = Math.max(1, Number(parsed.count) || regexDefaults.count || 20);
+      const isPageBounded = Boolean(regexDefaults.is_page_bounded);
+      let countRes = Number(parsed.count) || regexDefaults.count || 20;
+      if (isPageBounded && (!parsed.count || Number(parsed.count) === 0)) {
+        countRes = regexDefaults.count;
+      }
       if (regexDefaults.start && regexDefaults.start < startRes) {
         startRes = regexDefaults.start;
         countRes = regexDefaults.count;
@@ -458,7 +475,8 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
           prefix: prefixRes,
           confidence: 0.95,
           warnings: [],
-          source: 'ai'
+          source: 'ai',
+          is_page_bounded: isPageBounded
         }
       });
     }

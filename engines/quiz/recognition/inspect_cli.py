@@ -154,6 +154,53 @@ def _split_candidates_by_section(
     return part_i, part_ii, part_iii
 
 
+def parse_requested_pages(pages_input: str, query: str) -> list[int]:
+    """
+    Parses printed page numbers from explicit pages argument or natural language query.
+    Supports:
+      - comma-separated: '15,16', '15, 16', '15, 16, 17', '15, 18'
+      - hyphen/dash ranges: '15-16', '15–16', '15—16', '15 - 16'
+      - words: '15 đến 16', '15 tới 16', '15 và 16', '15 với 16', '15 & 16'
+      - single: '15', '41'
+    """
+    raw = ""
+    if pages_input:
+        raw = pages_input.strip()
+    elif query:
+        pat = re.search(
+            r"(?:(?:ở|tại|từ|toàn\s*bộ|cả|trọn\s*vẹn)?\s*\b(?:trang|page|p\b\.?)(?:\s*số|\s*:)?)\s*([^.;?!]+)",
+            query,
+            re.IGNORECASE
+        )
+        if pat:
+            raw = pat.group(1).strip()
+            stop_match = re.search(r"\b(?:từ\s*(?:câu|bài|q|\d)|câu|lấy|chọn|bắt\s*đầu|phần|đề|chủ\s*đề|tạo|làm|gồm|nhặt|trích)\b", raw, re.IGNORECASE)
+            if stop_match:
+                raw = raw[:stop_match.start()].strip()
+            raw = re.sub(r"\b(?:trang|page|p\b\.?)(?:\s*số)?\b", "", raw, flags=re.IGNORECASE).strip()
+
+    if not raw:
+        return []
+
+    pages: list[int] = []
+    normalized = re.sub(r"\s*(?:và|với|&)\s*", ",", raw, flags=re.IGNORECASE)
+    parts = [p.strip() for p in normalized.split(",") if p.strip()]
+    for part in parts:
+        range_match = re.search(r"^(\d+)\s*(?:đến|tới|[-–—]|->)\s*(\d+)$", part, re.IGNORECASE)
+        if range_match:
+            s, e = int(range_match.group(1)), int(range_match.group(2))
+            if s <= e:
+                pages.extend(range(s, e + 1))
+            else:
+                pages.extend(range(e, s + 1))
+        else:
+            single = re.search(r"^(\d+)$", part)
+            if single:
+                pages.append(int(single.group(1)))
+
+    return sorted(list(dict.fromkeys(pages)))
+
+
 def inspect_page_ground_truth(
     pdf_path: str,
     pages_arg: str = "",
@@ -173,39 +220,8 @@ def inspect_page_ground_truth(
     pages_input = (pages_arg or "").strip()
 
     # 1. Parse page number(s) from pages_arg or query
-    start_printed_p: int | None = None
-    end_printed_p: int | None = None
-
-    if pages_input:
-        m_range = re.match(r"^(\d+)\s*[-–—]\s*(\d+)$", pages_input)
-        if m_range:
-            start_printed_p = int(m_range.group(1))
-            end_printed_p = int(m_range.group(2))
-        else:
-            m_single = re.match(r"^(\d+)$", pages_input)
-            if m_single:
-                start_printed_p = int(m_single.group(1))
-                end_printed_p = start_printed_p
-
-    if start_printed_p is None and query:
-        # Look for page mentions in query
-        m_query_range = re.search(
-            r"(?:(?:trang|page|p\.?)(?:\s*số|\s*:)?)\s*(\d+)\s*(?:đến|tới|[-–—]|->)\s*(\d+)",
-            query,
-            re.IGNORECASE
-        )
-        if m_query_range:
-            start_printed_p = int(m_query_range.group(1))
-            end_printed_p = int(m_query_range.group(2))
-        else:
-            m_query_single = re.search(
-                r"(?:(?:ở|tại|từ|toàn\s*bộ|cả|trọn\s*vẹn)?\s*(?:trang|page|p\.?)(?:\s*số|\s*:)?)\s*(\d+)",
-                query,
-                re.IGNORECASE
-            )
-            if m_query_single:
-                start_printed_p = int(m_query_single.group(1))
-                end_printed_p = start_printed_p
+    requested_pages = parse_requested_pages(pages_input, query)
+    is_explicit_page_bounded = bool(requested_pages)
 
     doc = fitz.open(pdf_path)
     total_pages = len(doc)
@@ -216,18 +232,18 @@ def inspect_page_ground_truth(
             "error": "Tệp PDF không chứa trang nào."
         }
 
-    if start_printed_p is None:
-        start_printed_p = 1
-        end_printed_p = min(total_pages, 3)
+    if not requested_pages:
+        requested_pages = [1, 2, 3] if total_pages >= 3 else list(range(1, total_pages + 1))
 
-    if end_printed_p is None:
-        end_printed_p = start_printed_p
+    # Resolve physical page indices (preserving sorted unique indices)
+    phys_indices: list[int] = []
+    for p_num in requested_pages:
+        idx = _find_physical_page_index(doc, p_num)
+        if idx not in phys_indices:
+            phys_indices.append(idx)
+    phys_indices.sort()
 
-    # Resolve physical page indices
-    start_phys_idx = _find_physical_page_index(doc, start_printed_p)
-    end_phys_idx = _find_physical_page_index(doc, end_printed_p)
-    if start_phys_idx > end_phys_idx:
-        start_phys_idx, end_phys_idx = end_phys_idx, start_phys_idx
+    start_phys_idx = phys_indices[0] if phys_indices else 0
 
     # Cross-page inheritance: detect section context from preceding page if starting mid-section
     inherited_section = "part_i"
@@ -270,7 +286,7 @@ def inspect_page_ground_truth(
 
     # Extract representations across target page range
     page_reps: list[PageRepresentation] = []
-    for p_idx in range(start_phys_idx, end_phys_idx + 1):
+    for p_idx in phys_indices:
         rep = extract_page_representation(doc, p_idx)
         page_reps.append(rep)
     doc.close()
@@ -420,10 +436,16 @@ def inspect_page_ground_truth(
     count_num = len(unique_numbers) if unique_numbers else 1
 
     # Format pages string
-    if start_printed_p == end_printed_p:
-        pages_str = str(start_printed_p)
+    if not requested_pages:
+        pages_str = "1"
+    elif len(requested_pages) == 1:
+        pages_str = str(requested_pages[0])
     else:
-        pages_str = f"{start_printed_p}-{end_printed_p}"
+        is_continuous = all(requested_pages[i] == requested_pages[i-1] + 1 for i in range(1, len(requested_pages)))
+        if is_continuous:
+            pages_str = f"{requested_pages[0]}-{requested_pages[-1]}"
+        else:
+            pages_str = ", ".join(str(p) for p in requested_pages)
 
     # Extract Exam Code / Prefix and Title
     m_exam = re.search(
@@ -436,7 +458,8 @@ def inspect_page_ground_truth(
         prefix = f"De_So_{clean_code}"
         title = f"ĐỀ SỐ {clean_code} - TRANG {pages_str}"
     else:
-        prefix = f"Trang_{pages_str.replace('-', '_')}"
+        safe_pages = pages_str.replace(", ", "_").replace(",", "_").replace("-", "_")
+        prefix = f"Trang_{safe_pages}"
         title = f"BÀI TẬP TRẮC NGHIỆM TRANG {pages_str}"
 
     return {
@@ -446,6 +469,7 @@ def inspect_page_ground_truth(
         "end": end_num,
         "count": count_num,
         "detected_questions": unique_numbers,
+        "is_page_bounded": is_explicit_page_bounded,
         "parity_filter": parity_filter,
         "section_filter": section_filter,
         "has_part_i": has_part_i,
