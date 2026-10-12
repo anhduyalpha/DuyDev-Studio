@@ -97,17 +97,21 @@ export class StorageService {
   }
 
   /**
-   * Deletes a file or directory
+   * Deletes a file or directory (or multiple items if path is an array)
    */
-  static async deleteItem(path) {
+  static async deleteItem(pathOrPaths) {
     const headers = {
       'Content-Type': 'application/json',
       ...getStorageAuthHeaders()
     };
+    const body = Array.isArray(pathOrPaths)
+      ? JSON.stringify({ paths: pathOrPaths })
+      : JSON.stringify({ path: pathOrPaths });
+
     const res = await fetch('/api/v1/storage/delete', {
       method: 'DELETE',
       headers,
-      body: JSON.stringify({ path })
+      body
     });
 
     if (res.status === 401) throw new Error('UNAUTHORIZED');
@@ -116,6 +120,79 @@ export class StorageService {
       throw new Error(data.message || 'Không thể xóa mục');
     }
     return data.data;
+  }
+
+  /**
+   * Deletes multiple files or directories in a single request
+   */
+  static async deleteItems(paths) {
+    return this.deleteItem(paths);
+  }
+
+  /**
+   * Moves a file or directory (or multiple items if path is an array) to a destination directory
+   */
+  static async moveItem(path, destinationDir) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getStorageAuthHeaders()
+    };
+    const body = Array.isArray(path)
+      ? JSON.stringify({ paths: path, destinationDir })
+      : JSON.stringify({ path, destinationDir });
+
+    const res = await fetch('/api/v1/storage/move', {
+      method: 'POST',
+      headers,
+      body
+    });
+
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Không thể di chuyển mục');
+    }
+    return data.data;
+  }
+
+  /**
+   * Moves multiple files or directories in a single request
+   */
+  static async moveItems(paths, destinationDir) {
+    return this.moveItem(paths, destinationDir);
+  }
+
+  /**
+   * Copies a file or directory (or multiple items if path is an array) to a destination directory
+   */
+  static async copyItem(path, destinationDir) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getStorageAuthHeaders()
+    };
+    const body = Array.isArray(path)
+      ? JSON.stringify({ paths: path, destinationDir })
+      : JSON.stringify({ path, destinationDir });
+
+    const res = await fetch('/api/v1/storage/copy', {
+      method: 'POST',
+      headers,
+      body
+    });
+
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Không thể sao chép mục');
+    }
+    return data.data;
+  }
+
+  /**
+   * Copies multiple files or directories in a single request
+   */
+  static async copyItems(paths, destinationDir) {
+    return this.copyItem(paths, destinationDir);
   }
 
   /**
@@ -147,6 +224,16 @@ export class StorageService {
     const token = getAdminToken();
     let url = `/api/v1/storage/download?path=${encodeURIComponent(path)}`;
     if (inline) url += '&inline=true';
+    if (token) url += `&auth=${encodeURIComponent(token)}`;
+    return url;
+  }
+
+  /**
+   * Builds the batch download ZIP URL for multiple files / folders
+   */
+  static getBatchDownloadUrl(paths) {
+    const token = getAdminToken();
+    let url = `/api/v1/storage/download?paths=${encodeURIComponent(JSON.stringify(paths))}`;
     if (token) url += `&auth=${encodeURIComponent(token)}`;
     return url;
   }

@@ -311,6 +311,7 @@ export async function completeChunkUpload(request: FastifyRequest, reply: Fastif
   const expiresAt = computeExpiresAt();
 
   if (isStorageDrive) {
+    DriveService.invalidateStatsCache();
     logger.info({ finalFileName, targetPath, sizeBytes: totalBytes }, 'Storage drive chunked upload complete');
     return reply.status(201).send({
       success: true,

@@ -76,6 +76,6 @@ describe('Google Drive Pre-flight Probe Service (Ticket #06)', () => {
     const res = await probeGoogleDriveFile('https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/view');
     expect(res.valid).toBe(false);
     expect(res.error).toBe('PROBE_TIMEOUT');
-    expect(res.message).toContain('vượt quá 3 giây');
+    expect(res.message).toContain('vượt quá 6 giây');
   });
 });

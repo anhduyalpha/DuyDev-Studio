@@ -11,7 +11,7 @@ import path from 'path';
 import { prisma } from '../../lib/prisma.js';
 import { StorageManager } from '../../storage/storage.manager.js';
 import { computeExpiresAt, limits } from '../../config/limits.config.js';
-import { env } from '../../config/env.config.js';
+import { env, resolvedStoragePaths } from '../../config/env.config.js';
 import { BadRequestError, FileSizeLimitError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { R2Service } from '../../services/r2.service.js';
@@ -278,8 +278,11 @@ export async function completeTransitUpload(request: FastifyRequest, reply: Fast
     targetFilePath = path.join(targetDiskDir, finalName);
     counter++;
   }
+  StorageManager.sanitizeSafePath(resolvedStoragePaths.drive, path.relative(resolvedStoragePaths.drive, targetFilePath));
   await fsPromises.copyFile(targetPath, targetFilePath);
-  const driveItemPath = targetDir === '/' ? `/${finalName}` : `${DriveService.normalizeRelativePath(targetDir)}/${finalName}`;
+  DriveService.invalidateStatsCache();
+  const normTarget = DriveService.normalizeRelativePath(targetDir);
+  const driveItemPath = normTarget === '/' ? `/${finalName}` : `${normTarget}/${finalName}`;
 
   logger.info(
     { fileId: fileRecord.id, originalName: fileRecord.originalName, sizeBytes: byteCount, purpose, driveItemPath },

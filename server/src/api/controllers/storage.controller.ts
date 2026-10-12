@@ -23,12 +23,31 @@ const mkdirBodySchema = z.object({
 });
 
 const deleteBodySchema = z.object({
-  path: z.string().min(1, 'Path is required')
+  path: z.string().optional(),
+  paths: z.array(z.string()).optional()
+}).refine(data => Boolean(data.path || (data.paths && data.paths.length > 0)), {
+  message: 'Path or paths is required'
 });
 
 const renameBodySchema = z.object({
   path: z.string().min(1, 'Path is required'),
   newName: z.string().min(1, 'New name is required')
+});
+
+const moveBodySchema = z.object({
+  path: z.string().optional(),
+  paths: z.array(z.string()).optional(),
+  destinationDir: z.string().min(1, 'Destination directory is required')
+}).refine(data => Boolean(data.path || (data.paths && data.paths.length > 0)), {
+  message: 'Path or paths is required'
+});
+
+const copyBodySchema = z.object({
+  path: z.string().optional(),
+  paths: z.array(z.string()).optional(),
+  destinationDir: z.string().min(1, 'Destination directory is required')
+}).refine(data => Boolean(data.path || (data.paths && data.paths.length > 0)), {
+  message: 'Path or paths is required'
 });
 
 /**
@@ -124,7 +143,8 @@ export async function uploadStorageHandler(request: FastifyRequest, reply: Fasti
         throw err;
       }
 
-      const itemRelPath = targetRelPath === '/' ? `/${finalName}` : `${DriveService.normalizeRelativePath(targetRelPath)}/${finalName}`;
+      const normTarget = DriveService.normalizeRelativePath(targetRelPath);
+      const itemRelPath = normTarget === '/' ? `/${finalName}` : `${normTarget}/${finalName}`;
       uploadedFiles.push({
         name: finalName,
         sizeBytes: bytesWritten,
@@ -137,6 +157,7 @@ export async function uploadStorageHandler(request: FastifyRequest, reply: Fasti
     throw new BadRequestError('Không tìm thấy tệp nào trong yêu cầu tải lên');
   }
 
+  DriveService.invalidateStatsCache();
   return reply.status(201).send({
     success: true,
     data: {
@@ -147,13 +168,44 @@ export async function uploadStorageHandler(request: FastifyRequest, reply: Fasti
 }
 
 /**
- * Download file or download entire folder as ZIP
+ * Download file, download entire folder as ZIP, or batch download selected items as ZIP
  */
 export async function downloadStorageHandler(request: FastifyRequest, reply: FastifyReply) {
   const query = request.query as Record<string, string>;
   const relPath = query?.path || '';
+  const pathsParam = query?.paths;
   const inline = query?.inline === 'true';
 
+  // 1. Batch download multiple selected items as a single ZIP
+  if (pathsParam) {
+    let pathsList: string[] = [];
+    try {
+      pathsList = pathsParam.startsWith('[') ? JSON.parse(pathsParam) : pathsParam.split(',').filter(Boolean);
+    } catch {
+      pathsList = pathsParam.split(',').filter(Boolean);
+    }
+
+    if (!Array.isArray(pathsList) || pathsList.length === 0) {
+      throw new BadRequestError('Danh sách tệp tải về không hợp lệ');
+    }
+
+    const { zipPath, zipName } = await DriveService.archiveItemsToZip(pathsList);
+    const zipStat = await fsPromises.stat(zipPath);
+
+    reply.header('Content-Type', 'application/zip');
+    const encodedZipName = encodeURIComponent(zipName);
+    const asciiZipName = zipName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+    reply.header('Content-Disposition', `attachment; filename="${asciiZipName}"; filename*=UTF-8''${encodedZipName}`);
+    reply.header('Content-Length', zipStat.size);
+
+    const stream = fs.createReadStream(zipPath);
+    stream.on('close', () => {
+      StorageManager.unlinkSafe(zipPath).catch(() => {});
+    });
+    return reply.send(stream);
+  }
+
+  // 2. Single item or directory download
   if (!relPath) {
     throw new BadRequestError('Thiếu tham số path');
   }
@@ -171,7 +223,9 @@ export async function downloadStorageHandler(request: FastifyRequest, reply: Fas
     const zipStat = await fsPromises.stat(zipPath);
 
     reply.header('Content-Type', 'application/zip');
-    reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(zipName)}"`);
+    const encodedZipName = encodeURIComponent(zipName);
+    const asciiZipName = zipName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+    reply.header('Content-Disposition', `attachment; filename="${asciiZipName}"; filename*=UTF-8''${encodedZipName}`);
     reply.header('Content-Length', zipStat.size);
 
     const stream = fs.createReadStream(zipPath);
@@ -234,11 +288,32 @@ export async function mkdirStorageHandler(request: FastifyRequest, reply: Fastif
 }
 
 /**
- * Delete file or directory
+ * Delete file or directory (supports single path or batch paths array)
  */
 export async function deleteStorageHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { path: targetPath } = deleteBodySchema.parse(request.body || {});
-  await DriveService.deleteItem(targetPath);
+  const { path: targetPath, paths: targetPaths } = deleteBodySchema.parse(request.body || {});
+  if (targetPaths && targetPaths.length > 0) {
+    let deletedCount = 0;
+    for (const p of targetPaths) {
+      try {
+        await DriveService.deleteItem(p);
+        deletedCount++;
+      } catch (err: any) {
+        // If already unlinked or child of already deleted parent, continue without aborting whole batch
+        if (err instanceof NotFoundError || err?.statusCode === 404) {
+          continue;
+        }
+        throw err;
+      }
+    }
+    return reply.send({
+      success: true,
+      message: `Đã xóa thành công ${deletedCount} mục`
+    });
+  }
+  if (targetPath) {
+    await DriveService.deleteItem(targetPath);
+  }
   return reply.send({
     success: true,
     message: 'Đã xóa thành công'
@@ -255,6 +330,56 @@ export async function renameStorageHandler(request: FastifyRequest, reply: Fasti
     success: true,
     data: renamed
   });
+}
+
+/**
+ * Move file or directory (supports single path or batch paths array)
+ */
+export async function moveStorageHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { path: targetPath, paths: targetPaths, destinationDir } = moveBodySchema.parse(request.body || {});
+  if (targetPaths && targetPaths.length > 0) {
+    const results = [];
+    for (const p of targetPaths) {
+      results.push(await DriveService.moveItem(p, destinationDir));
+    }
+    return reply.send({
+      success: true,
+      data: results,
+      message: `Đã di chuyển thành công ${results.length} mục`
+    });
+  }
+  if (targetPath) {
+    const moved = await DriveService.moveItem(targetPath, destinationDir);
+    return reply.send({
+      success: true,
+      data: moved
+    });
+  }
+}
+
+/**
+ * Copy file or directory (supports single path or batch paths array)
+ */
+export async function copyStorageHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { path: targetPath, paths: targetPaths, destinationDir } = copyBodySchema.parse(request.body || {});
+  if (targetPaths && targetPaths.length > 0) {
+    const results = [];
+    for (const p of targetPaths) {
+      results.push(await DriveService.copyItem(p, destinationDir));
+    }
+    return reply.send({
+      success: true,
+      data: results,
+      message: `Đã sao chép thành công ${results.length} mục`
+    });
+  }
+  if (targetPath) {
+    const copied = await DriveService.copyItem(targetPath, destinationDir);
+    return reply.send({
+      success: true,
+      data: copied
+    });
+  }
 }
 
 /**

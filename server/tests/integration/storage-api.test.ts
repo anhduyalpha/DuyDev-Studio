@@ -5,6 +5,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { buildApp } from '../../src/app.js';
 import { StorageManager } from '../../src/storage/storage.manager.js';
+import { DriveService } from '../../src/services/drive.service.js';
 import { closeTaskQueue } from '../../src/queues/task.queue.js';
 import { resolvedStoragePaths } from '../../src/config/env.config.js';
 
@@ -297,17 +298,243 @@ describe('Storage & Auth API Integration Tests', () => {
     await fs.unlink(zipPath).catch(() => {});
   });
 
-  it('Storage: deletes file and directory', async () => {
-    const delFileRes = await app.inject({
+  it('Storage: copies a file to destination folder', async () => {
+    const copyRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/copy',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/test_folder/renamed_doc.txt',
+        destinationDir: '/'
+      }
+    });
+
+    expect(copyRes.statusCode).toBe(200);
+    const body = JSON.parse(copyRes.payload);
+    expect(body.success).toBe(true);
+    expect(body.data.name).toBe('renamed_doc.txt');
+    expect(body.data.path).toBe('/renamed_doc.txt');
+  });
+
+  it('Storage: moves a file to destination folder with conflict resolution', async () => {
+    const moveRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/move',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/renamed_doc.txt',
+        destinationDir: '/test_folder'
+      }
+    });
+
+    expect(moveRes.statusCode).toBe(200);
+    const body = JSON.parse(moveRes.payload);
+    expect(body.success).toBe(true);
+    expect(body.data.name).toBe('renamed_doc (1).txt');
+    expect(body.data.path).toBe('/test_folder/renamed_doc (1).txt');
+  });
+
+  it('Storage: blocks moving folder into itself or its child', async () => {
+    const invalidMoveRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/move',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/test_folder',
+        destinationDir: '/test_folder'
+      }
+    });
+
+    expect(invalidMoveRes.statusCode).toBe(400);
+  });
+
+  it('Storage: blocks copying folder into itself or its child', async () => {
+    const invalidCopyRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/copy',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/test_folder',
+        destinationDir: '/test_folder'
+      }
+    });
+
+    expect(invalidCopyRes.statusCode).toBe(400);
+    const body = JSON.parse(invalidCopyRes.payload);
+    expect(body.error.message).toContain('Không thể sao chép thư mục vào chính nó');
+  });
+
+  it('Storage: blocks archiving a non-directory file with archiveFolderToZip', async () => {
+    await expect(
+      DriveService.archiveFolderToZip('/test_folder/renamed_doc.txt')
+    ).rejects.toThrow('không phải là thư mục');
+  });
+
+  it('Storage: single item archive uses item name for zipName', async () => {
+    const { zipName, zipPath } = await DriveService.archiveItemsToZip(['/test_folder']);
+    expect(zipName).toBe('test_folder.zip');
+    await StorageManager.unlinkSafe(zipPath);
+  });
+
+  it('Storage: blocks moving item into its own current folder', async () => {
+    const invalidMoveRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/move',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/test_folder/renamed_doc.txt',
+        destinationDir: '/test_folder'
+      }
+    });
+
+    expect(invalidMoveRes.statusCode).toBe(400);
+    const body = JSON.parse(invalidMoveRes.payload);
+    expect(body.error.message).toContain('Mục đã nằm trong thư mục đích');
+  });
+
+  it('Storage: renames file casing on Windows NTFS (case-change rename)', async () => {
+    const caseRenameRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/rename',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/test_folder/renamed_doc.txt',
+        newName: 'Renamed_Doc.txt'
+      }
+    });
+
+    expect(caseRenameRes.statusCode).toBe(200);
+    const body = JSON.parse(caseRenameRes.payload);
+    expect(body.data.name).toBe('Renamed_Doc.txt');
+
+    // Rename back to lowercase
+    const revertRenameRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/rename',
+      headers: {
+        'x-storage-auth': authToken
+      },
+      payload: {
+        path: '/test_folder/Renamed_Doc.txt',
+        newName: 'renamed_doc.txt'
+      }
+    });
+
+    expect(revertRenameRes.statusCode).toBe(200);
+    const revertBody = JSON.parse(revertRenameRes.payload);
+    expect(revertBody.data.name).toBe('renamed_doc.txt');
+  });
+
+  it('Storage: batch copies and batch moves multiple files into another folder', async () => {
+    // 1. Create target directories
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/mkdir',
+      headers: { 'x-storage-auth': authToken },
+      payload: { path: '/', name: 'batch_copy_dest' }
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/mkdir',
+      headers: { 'x-storage-auth': authToken },
+      payload: { path: '/', name: 'batch_move_dest' }
+    });
+
+    // 2. Batch copy 2 items to /batch_copy_dest
+    const batchCopyRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/copy',
+      headers: { 'x-storage-auth': authToken },
+      payload: {
+        paths: ['/test_folder/renamed_doc.txt', '/test_folder/targetdir_doc.txt'],
+        destinationDir: '/batch_copy_dest'
+      }
+    });
+
+    expect(batchCopyRes.statusCode).toBe(200);
+    const copyBody = JSON.parse(batchCopyRes.payload);
+    expect(copyBody.success).toBe(true);
+    expect(copyBody.data.length).toBe(2);
+
+    // 3. Batch move the copied items from /batch_copy_dest to /batch_move_dest
+    const batchMoveRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/move',
+      headers: { 'x-storage-auth': authToken },
+      payload: {
+        paths: ['/batch_copy_dest/renamed_doc.txt', '/batch_copy_dest/targetdir_doc.txt'],
+        destinationDir: '/batch_move_dest'
+      }
+    });
+
+    expect(batchMoveRes.statusCode).toBe(200);
+    const moveBody = JSON.parse(batchMoveRes.payload);
+    expect(moveBody.success).toBe(true);
+    expect(moveBody.data.length).toBe(2);
+
+    // 4. Batch delete folder and already included child gracefully
+    const delRes = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/storage/delete',
+      headers: { 'x-storage-auth': authToken },
+      payload: {
+        paths: ['/batch_move_dest', '/batch_move_dest/renamed_doc.txt', '/batch_copy_dest']
+      }
+    });
+
+    expect(delRes.statusCode).toBe(200);
+  });
+
+  it('Storage: batch downloads selected items as ZIP archive', async () => {
+    const batchDlRes = await app.inject({
+      method: 'GET',
+      url: `/api/v1/storage/download?paths=${encodeURIComponent(JSON.stringify(['/test_folder/renamed_doc.txt', '/test_folder/targetdir_doc.txt']))}`,
+      headers: {
+        'x-storage-auth': authToken
+      }
+    });
+
+    expect(batchDlRes.statusCode).toBe(200);
+    expect(batchDlRes.headers['content-type']).toBe('application/zip');
+    expect(batchDlRes.headers['content-disposition']).toContain('attachment');
+  });
+
+  it('Storage: batch deletes multiple files', async () => {
+    const batchDelRes = await app.inject({
       method: 'DELETE',
       url: '/api/v1/storage/delete',
       headers: {
         'x-storage-auth': authToken
       },
-      payload: { path: '/test_folder/renamed_doc.txt' }
+      payload: {
+        paths: [
+          '/test_folder/renamed_doc.txt',
+          '/test_folder/renamed_doc (1).txt',
+          '/test_folder/targetdir_doc.txt'
+        ]
+      }
     });
-    expect(delFileRes.statusCode).toBe(200);
 
+    expect(batchDelRes.statusCode).toBe(200);
+    const body = JSON.parse(batchDelRes.payload);
+    expect(body.success).toBe(true);
+    expect(body.message).toContain('Đã xóa thành công 3 mục');
+  });
+
+  it('Storage: deletes remaining test directory', async () => {
     const delDirRes = await app.inject({
       method: 'DELETE',
       url: '/api/v1/storage/delete',

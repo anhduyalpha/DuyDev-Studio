@@ -7,6 +7,8 @@ import {
   mkdirStorageHandler,
   deleteStorageHandler,
   renameStorageHandler,
+  moveStorageHandler,
+  copyStorageHandler,
   statsStorageHandler
 } from '../controllers/storage.controller.js';
 
@@ -20,5 +22,7 @@ export async function storageRoute(app: FastifyInstance) {
   app.post('/api/v1/storage/mkdir', mkdirStorageHandler);
   app.delete('/api/v1/storage/delete', deleteStorageHandler);
   app.post('/api/v1/storage/rename', renameStorageHandler);
+  app.post('/api/v1/storage/move', moveStorageHandler);
+  app.post('/api/v1/storage/copy', copyStorageHandler);
   app.get('/api/v1/storage/stats', statsStorageHandler);
 }

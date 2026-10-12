@@ -31,4 +31,20 @@ describe('Storage Drive Upload & Download Integrity Tests (v22.47)', () => {
     expect(storagePageSrc).toContain('a.download = isDir ? `${baseName}.zip` : baseName;');
     expect(storagePageSrc).toContain("showToast(err.message || 'Không thể tạo liên kết tải xuống', 'error');");
   });
+
+  it('verifies storageService implements moveItem, copyItem, and getBatchDownloadUrl', () => {
+    const storageServiceSrc = fs.readFileSync(path.join(projectRoot, 'src/services/storageService.js'), 'utf-8');
+    
+    expect(storageServiceSrc).toContain('static async moveItem(path, destinationDir)');
+    expect(storageServiceSrc).toContain('static async copyItem(path, destinationDir)');
+    expect(storageServiceSrc).toContain('static getBatchDownloadUrl(paths)');
+  });
+
+  it('verifies StoragePage exports getStoragePathFromHash and supports batch operations', () => {
+    const storagePageSrc = fs.readFileSync(path.join(projectRoot, 'src/pages/StoragePage.js'), 'utf-8');
+    
+    expect(storagePageSrc).toContain('export function getStoragePathFromHash()');
+    expect(storagePageSrc).toContain('function handleDownloadBatch(paths)');
+    expect(storagePageSrc).toContain('function handleBatchDeleteItem(itemPaths, onComplete)');
+  });
 });
