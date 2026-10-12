@@ -797,16 +797,21 @@ async function handleUploadFiles(files, onComplete) {
  * Handles Item Download
  */
 function handleDownloadItem(itemPath, isDir) {
-  const url = StorageService.getDownloadUrl(itemPath);
-  const a = document.createElement('a');
-  a.href = url;
-  if (isDir) {
-    showToast('Đang đóng gói và tải xuống file nén ZIP...', 'info');
+  try {
+    const url = StorageService.getDownloadUrl(itemPath);
+    const a = document.createElement('a');
+    a.href = url;
+    const baseName = itemPath ? itemPath.split('/').filter(Boolean).pop() || 'download' : 'download';
+    a.download = isDir ? `${baseName}.zip` : baseName;
+    if (isDir) {
+      showToast(`Đang đóng gói "${baseName}" thành file nén ZIP và tải xuống...`, 'info');
+    }
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (err) {
+    showToast(err.message || 'Không thể tạo liên kết tải xuống', 'error');
   }
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
 }
 
 

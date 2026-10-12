@@ -747,6 +747,10 @@ export async function smartUploadFile(file, options = {}) {
       }
 
       const formData = new FormData();
+      formData.append('file', file, file.name);
+      if (options.purpose) {
+        formData.append('purpose', options.purpose);
+      }
       const defaultUploadUrl = options.purpose === 'storage-drive'
         ? `/api/v1/storage/upload?path=${encodeURIComponent(options.targetDir || '/')}`
         : `/api/v1/files/upload?purpose=${encodeURIComponent(options.purpose || 'general')}`;
@@ -754,7 +758,10 @@ export async function smartUploadFile(file, options = {}) {
       xhr.open('POST', url);
 
       if (options.headers) {
-        for (const [k, v] of Object.entries(options.headers)) xhr.setRequestHeader(k, v);
+        for (const [k, v] of Object.entries(options.headers)) {
+          if (k.toLowerCase() === 'content-type') continue;
+          xhr.setRequestHeader(k, v);
+        }
       }
 
       let lastTime = Date.now();

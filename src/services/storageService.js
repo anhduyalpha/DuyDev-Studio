@@ -4,7 +4,7 @@
  * Supports multi-gigabyte uploads (100MB - 10GB+) via ResumableUploader.
  */
 
-import { getStorageAuthHeaders } from '../utilities/adminAuth.js';
+import { getStorageAuthHeaders, getAdminToken } from '../utilities/adminAuth.js';
 import { smartUploadFile, poolAll } from '../utilities/resumableUploader.js';
 
 export class StorageService {
