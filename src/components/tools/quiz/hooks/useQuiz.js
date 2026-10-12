@@ -15,17 +15,17 @@ export function isValidDriveUrl(url) {
   if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
     clean = 'https://' + clean;
   }
-  try {
-    const parsed = new URL(clean);
-    return (
-      parsed.hostname.includes('drive.google.com') ||
-      parsed.hostname.includes('docs.google.com') ||
-      parsed.pathname.includes('/drive/') ||
-      parsed.pathname.includes('/file/d/')
-    );
-  } catch {
-    return false;
-  }
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]{15,})/,
+    /id=([a-zA-Z0-9_-]{15,})/,
+    /\/d\/([a-zA-Z0-9_-]{15,})/,
+    /open\?id=([a-zA-Z0-9_-]{15,})/,
+    /uc\?.*id=([a-zA-Z0-9_-]{15,})/,
+    /\/document\/d\/([a-zA-Z0-9_-]{15,})/,
+    /\/presentation\/d\/([a-zA-Z0-9_-]{15,})/,
+    /\/spreadsheets\/d\/([a-zA-Z0-9_-]{15,})/
+  ];
+  return patterns.some((p) => p.test(clean)) || /^[a-zA-Z0-9_-]{20,50}$/.test(clean);
 }
 
 class QuizManager {
@@ -180,6 +180,8 @@ class QuizManager {
     this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
     this.notify('drive-probe-updated');
 
+    let isCompleted = false;
+
     try {
       const resp = await fetch('/api/v1/files/probe-gdrive', {
         method: 'POST',
@@ -187,10 +189,12 @@ class QuizManager {
         body: JSON.stringify({ url: cleanUrl }),
         signal
       });
+
       if (this.state.gdriveUrl !== cleanUrl) return;
       const json = await resp.json();
       if (this.state.gdriveUrl !== cleanUrl) return;
 
+      isCompleted = true;
       if (json.success && json.data?.valid) {
         this.state.driveProbeStatus = 'valid';
         this.state.driveProbeMessage = 'Tệp hợp lệ và sẵn sàng xử lý';
@@ -202,7 +206,7 @@ class QuizManager {
         this.notify('drive-probe-updated');
       } else {
         this.state.driveProbeStatus = 'invalid';
-        this.state.driveProbeMessage = json.data?.message || 'Tệp chưa được mở quyền xem công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".';
+        this.state.driveProbeMessage = json.data?.message || json.error?.message || 'Tệp chưa được mở quyền xem công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".';
         this.state.driveProbeData = null;
         if (this.state.step < 2) {
           this.state.step = 2;
@@ -210,8 +214,11 @@ class QuizManager {
         this.notify('drive-probe-updated');
       }
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError' && signal.aborted) {
+        return;
+      }
       if (this.state.gdriveUrl !== cleanUrl) return;
+      isCompleted = true;
       this.state.driveProbeStatus = 'invalid';
       this.state.driveProbeMessage = 'Không thể kết nối đến máy chủ để xác thực link Google Drive.';
       this.state.driveProbeData = null;
@@ -219,15 +226,26 @@ class QuizManager {
         this.state.step = 2;
       }
       this.notify('drive-probe-updated');
+    } finally {
+      if (!isCompleted && this.state.gdriveUrl === cleanUrl && !signal.aborted) {
+        this.state.driveProbeStatus = 'invalid';
+        this.state.driveProbeMessage = 'Kiểm tra liên kết vượt quá thời gian chờ. Bạn thử nhấn Dán link để kiểm tra lại nha!';
+        this.notify('drive-probe-updated');
+      }
     }
   }
 
-  setGdriveUrl(url) {
+  setGdriveUrl(url, force = false) {
     let clean = (url || '').trim();
     if (clean && !clean.startsWith('http://') && !clean.startsWith('https://') && (clean.includes('drive.google.com') || clean.includes('docs.google.com'))) {
       clean = 'https://' + clean;
     }
-    const urlChanged = this.state.gdriveUrl !== clean;
+
+    // Guard: If URL has not changed and not forced, keep ongoing probe intact!
+    if (!force && this.state.gdriveUrl === clean) {
+      return;
+    }
+
     this.state.gdriveUrl = clean;
 
     if (this.driveProbeTimer) {
@@ -258,13 +276,11 @@ class QuizManager {
       if (this.state.step < 2) {
         this.state.step = 2;
       }
-      if (urlChanged || this.state.driveProbeStatus === 'idle') {
-        this.state.driveProbeStatus = 'probing';
-        this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
-        this.driveProbeTimer = setTimeout(() => {
-          this.probeDriveUrl(clean);
-        }, 300);
-      }
+      this.state.driveProbeStatus = 'probing';
+      this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
+      this.driveProbeTimer = setTimeout(() => {
+        this.probeDriveUrl(clean);
+      }, 300);
       this.notify('drive-probe-updated');
     } else {
       this.state.driveProbeStatus = 'idle';

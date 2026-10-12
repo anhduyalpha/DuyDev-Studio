@@ -262,8 +262,9 @@ export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDrive
   try {
     const res = await fetch(downloadUrl, {
       method: 'GET',
-      headers: { ...baseHeaders, 'Range': 'bytes=0-1024' },
-      signal: AbortSignal.timeout(3500)
+      headers: baseHeaders,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000)
     });
 
     if (res.status === 404) {
@@ -271,6 +272,14 @@ export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDrive
         valid: false,
         error: 'NOT_FOUND',
         message: 'Tệp không tồn tại hoặc đã bị xóa khỏi Google Drive.'
+      };
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      return {
+        valid: false,
+        error: 'PRIVATE_ACCESS_REQUIRED',
+        message: 'Tệp chưa được mở quyền chia sẻ công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".'
       };
     }
 
@@ -307,7 +316,7 @@ export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDrive
       }
     }
 
-    if (!res.ok && res.status !== 206) {
+    if (!res.ok) {
       return {
         valid: false,
         error: 'HTTP_ERROR',

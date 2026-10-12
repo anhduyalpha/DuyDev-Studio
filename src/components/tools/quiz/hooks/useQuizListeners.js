@@ -394,10 +394,20 @@ export function attachQuizListeners() {
           const val = (pasted || driveInput.value).trim();
           if (val) {
             driveInput.value = val;
-            quizManager.setGdriveUrl(val);
+            quizManager.setGdriveUrl(val, true);
           }
           syncValidationUI();
         }, 20);
+      });
+
+      driveInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const val = driveInput.value.trim();
+          if (val) {
+            quizManager.setGdriveUrl(val, true);
+          }
+        }
       });
     }
 
@@ -417,12 +427,12 @@ export function attachQuizListeners() {
             return;
           }
           driveInput.value = text;
-          quizManager.setGdriveUrl(text);
+          quizManager.setGdriveUrl(text, true);
           syncValidationUI();
           if (isValidDriveUrl(text)) {
-            showToast('☁️ Đã dán link Google Drive và đang kiểm tra quyền xem... ✨', 'info');
+            showToast('☁️ Đang kiểm tra quyền xem link Google Drive... ✨', 'info');
           } else {
-            showToast('Đã dán nội dung, nhưng đây chưa phải là liên kết Google Drive hợp lệ rồi nè 🥺', 'warning');
+            showToast('Đã dán nội dung, nhưng cần đường dẫn tệp Google Drive có mã tệp (file/d/...) nhé!', 'warning');
           }
         } catch (err) {
           console.warn('Clipboard read error:', err);
