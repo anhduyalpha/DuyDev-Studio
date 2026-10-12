@@ -18,6 +18,8 @@ import {
   getFailedJobsHandler,
   clearFailedJobsHandler,
   exportErrorLogsTxtHandler,
+  exportErrorLogsJsonHandler,
+  exportErrorLogsMdHandler,
   inspectStorageHandler,
   deleteStorageFileHandler,
   inspectR2TransitHandler,
@@ -30,6 +32,9 @@ import {
   inspectSqliteDbHandler,
   getIpTrafficClientsHandler,
   getIpTrafficLogsHandler,
+  getVisitorSessionsHandler,
+  getSessionLifecycleEventsHandler,
+  clearSessionLifecycleEventsHandler,
   getEngineTimeoutsHandler,
   updateEngineTimeoutsHandler,
   retryJobHandler,
@@ -59,6 +64,8 @@ export async function adminRoute(app: FastifyInstance) {
   // Failed Jobs & Error Logs
   app.get('/api/v1/admin/logs/failed-jobs', { preHandler: adminAuthGuard }, getFailedJobsHandler);
   app.get('/api/v1/admin/logs/export-txt', { preHandler: adminAuthGuard }, exportErrorLogsTxtHandler);
+  app.get('/api/v1/admin/logs/export-json', { preHandler: adminAuthGuard }, exportErrorLogsJsonHandler);
+  app.get('/api/v1/admin/logs/export-md', { preHandler: adminAuthGuard }, exportErrorLogsMdHandler);
   app.post('/api/v1/admin/logs/clear-failed', { preHandler: adminAuthGuard }, clearFailedJobsHandler);
   app.post('/api/v1/admin/logs/retry-job/:jobId', { preHandler: adminAuthGuard }, retryJobHandler);
   app.post('/api/v1/admin/logs/retry-all-failed', { preHandler: adminAuthGuard }, retryAllFailedJobsHandler);
@@ -102,6 +109,9 @@ export async function adminRoute(app: FastifyInstance) {
   // IP Traffic & Access Control Rules
   app.get('/api/v1/admin/traffic/ips', { preHandler: adminAuthGuard }, getIpTrafficClientsHandler);
   app.get('/api/v1/admin/traffic/ips/:ip/logs', { preHandler: adminAuthGuard }, getIpTrafficLogsHandler);
+  app.get('/api/v1/admin/traffic/sessions', { preHandler: adminAuthGuard }, getVisitorSessionsHandler);
+  app.get('/api/v1/admin/traffic/events', { preHandler: adminAuthGuard }, getSessionLifecycleEventsHandler);
+  app.post('/api/v1/admin/traffic/events/clear', { preHandler: adminAuthGuard }, clearSessionLifecycleEventsHandler);
   app.get('/api/v1/admin/traffic/rules', { preHandler: adminAuthGuard }, getIpRulesHandler);
   app.post('/api/v1/admin/traffic/rules', { preHandler: adminAuthGuard }, upsertIpRuleHandler);
   app.delete('/api/v1/admin/traffic/rules/:ip', { preHandler: adminAuthGuard }, deleteIpRuleHandler);

@@ -109,6 +109,11 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
+  // 3.3. Text/Plain Parser (Supports Beacon and plain text payloads)
+  app.addContentTypeParser('text/plain', { parseAs: 'string' }, (_req, body, done) => {
+    done(null, body || '');
+  });
+
   // 4. Register Request Logging & IP Access Control Hook
   app.addHook('onRequest', async (req, reply) => {
     (req as any)._startTime = Date.now();

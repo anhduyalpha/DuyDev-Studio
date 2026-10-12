@@ -9,7 +9,7 @@ import { aiMetricsService } from '../../services/ai-metrics.service.js';
 import { JanitorService } from '../../services/janitor.service.js';
 import { adminUsersService } from '../../services/admin-users.service.js';
 import { ipAccessService } from '../../services/ip-access.service.js';
-import { telemetryTracker } from '../middleware/telemetry.middleware.js';
+import { telemetryTracker, visitorSessionManager } from '../middleware/telemetry.middleware.js';
 import { BadRequestError } from '../../lib/errors.js';
 
 const updateKeySchema = z.object({
@@ -257,6 +257,42 @@ export async function exportErrorLogsTxtHandler(request: FastifyRequest, reply: 
 }
 
 /**
+ * GET /api/v1/admin/logs/export-json
+ * Exports all system error logs to formatted JSON with deduplication
+ */
+export async function exportErrorLogsJsonHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = exportErrorLogsQuerySchema.safeParse(request.query);
+  const { type, dedupe } = parseResult.success ? parseResult.data : { type: undefined, dedupe: true };
+
+  const result = await adminTelemetryService.exportErrorLogsAsJson({ type, dedupe });
+
+  reply.header('Content-Type', 'application/json; charset=utf-8');
+  reply.header('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  reply.header('X-Total-Errors', String(result.totalErrors));
+  reply.header('X-Unique-Errors', String(result.uniqueErrors));
+
+  return reply.send(result.json);
+}
+
+/**
+ * GET /api/v1/admin/logs/export-md
+ * Exports all system error logs to formatted Markdown report
+ */
+export async function exportErrorLogsMdHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = exportErrorLogsQuerySchema.safeParse(request.query);
+  const { type, dedupe } = parseResult.success ? parseResult.data : { type: undefined, dedupe: true };
+
+  const result = await adminTelemetryService.exportErrorLogsAsMarkdown({ type, dedupe });
+
+  reply.header('Content-Type', 'text/markdown; charset=utf-8');
+  reply.header('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  reply.header('X-Total-Errors', String(result.totalErrors));
+  reply.header('X-Unique-Errors', String(result.uniqueErrors));
+
+  return reply.send(result.markdown);
+}
+
+/**
  * GET /api/v1/admin/storage/inspect
  * Inspects physical files on disk in the specified folder
  */
@@ -450,6 +486,47 @@ export async function getIpTrafficLogsHandler(request: FastifyRequest, reply: Fa
   const result = telemetryTracker.getIpRequestLogs(ipParam);
   return reply.send({
     success: true,
+    data: result
+  });
+}
+
+/**
+ * GET /api/v1/admin/traffic/sessions
+ * Returns real-time active visitor sessions and status metrics ("Vào web ra web cũng log được")
+ */
+export async function getVisitorSessionsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const data = visitorSessionManager.getSessionsData();
+  return reply.send({
+    success: true,
+    data
+  });
+}
+
+/**
+ * GET /api/v1/admin/traffic/events
+ * Returns rolling log of visitor session lifecycle events (enter, route_change, leave, timeout)
+ */
+export async function getSessionLifecycleEventsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const limit = Math.min(250, Math.max(1, parseInt(String((request.query as any)?.limit || '100'), 10) || 100));
+  const events = visitorSessionManager.getEvents(limit);
+  return reply.send({
+    success: true,
+    data: {
+      totalEvents: events.length,
+      events
+    }
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/events/clear
+ * Clears the lifecycle events stream
+ */
+export async function clearSessionLifecycleEventsHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const result = visitorSessionManager.clearEvents();
+  return reply.send({
+    success: true,
+    message: `Đã dọn sạch ${result.clearedCount} sự kiện truy cập`,
     data: result
   });
 }

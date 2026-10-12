@@ -1,0 +1,183 @@
+/**
+ * visitorTracker.js - Full-Lifecycle Client Visitor Tracker ("Vào web ra web cũng log được")
+ * Tracks session entry, route changes, heartbeat liveness, and graceful exit (pagehide/beforeunload/beacon)
+ * Zero external dependencies. Self-hosted telemetry only.
+ */
+
+class VisitorTracker {
+  constructor() {
+    this.sessionId = null;
+    this.visitorId = null;
+    this.sessionStartTime = Date.now();
+    this.currentRoute = '#dashboard';
+    this.heartbeatTimer = null;
+    this.isInitialized = false;
+    this.leaveReported = false;
+    this.heartbeatIntervalMs = 25_000; // 25s heartbeat while active
+  }
+
+  init() {
+    if (this.isInitialized || typeof window === 'undefined') return;
+    this.isInitialized = true;
+
+    // 1. Session ID (per browser tab/window via sessionStorage)
+    try {
+      this.sessionId = sessionStorage.getItem('ds_session_id');
+      if (!this.sessionId) {
+        this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        sessionStorage.setItem('ds_session_id', this.sessionId);
+      }
+    } catch {
+      this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    }
+
+    // 2. Persistent Visitor ID (across tabs/visits via localStorage)
+    try {
+      this.visitorId = localStorage.getItem('ds_visitor_id');
+      if (!this.visitorId) {
+        this.visitorId = `vis_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        localStorage.setItem('ds_visitor_id', this.visitorId);
+      }
+    } catch {
+      this.visitorId = `vis_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    }
+
+    this.currentRoute = window.location.hash || '#dashboard';
+
+    // 3. Send Session Enter Beacon
+    this.reportEnter();
+
+    // 4. Start Periodic Heartbeat
+    this.startHeartbeat();
+
+    // 5. Visibility Change (pause heartbeat when tab hidden, resume & tick when visible)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.leaveReported = false;
+        this.startHeartbeat();
+        this.sendHeartbeat();
+      } else {
+        this.stopHeartbeat();
+      }
+    });
+
+    // 6. Page Exit / Unload Beacon (pagehide is most reliable on mobile Safari & modern browsers)
+    const handleExit = () => {
+      this.reportLeave();
+    };
+
+    window.addEventListener('pagehide', handleExit, { capture: true });
+    window.addEventListener('beforeunload', handleExit, { capture: true });
+
+    // Expose session ID globally for fetch interceptors
+    window.__ds_session_id = this.sessionId;
+  }
+
+  reportEnter() {
+    try {
+      const isPwa = Boolean(
+        window.matchMedia?.('(display-mode: standalone)').matches ||
+        window.navigator?.standalone === true
+      );
+
+      const screenRes = window.screen ? `${window.screen.width}x${window.screen.height}` : 'Unknown';
+
+      const payload = {
+        sessionId: this.sessionId,
+        visitorId: this.visitorId,
+        route: this.currentRoute,
+        referrer: document.referrer || '',
+        screen: screenRes,
+        pwaMode: isPwa
+      };
+
+      fetch('/api/v1/telemetry/session/enter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': this.sessionId
+        },
+        body: JSON.stringify(payload)
+      }).catch(() => {
+        // Silent fail for offline/firewall modes
+      });
+    } catch {}
+  }
+
+  notifyRouteChange(newRoute) {
+    if (!newRoute) return;
+    const cleanRoute = String(newRoute).trim() || '#dashboard';
+    if (cleanRoute === this.currentRoute) return;
+
+    this.currentRoute = cleanRoute;
+    this.sendHeartbeat(cleanRoute);
+  }
+
+  sendHeartbeat(routeOverride = null) {
+    if (!this.sessionId) return;
+    try {
+      const route = routeOverride || this.currentRoute || window.location.hash || '#dashboard';
+      fetch('/api/v1/telemetry/session/heartbeat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': this.sessionId
+        },
+        body: JSON.stringify({
+          sessionId: this.sessionId,
+          route
+        })
+      }).catch(() => {});
+    } catch {}
+  }
+
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        this.sendHeartbeat();
+      }
+    }, this.heartbeatIntervalMs);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  reportLeave() {
+    if (this.leaveReported || !this.sessionId) return;
+    this.leaveReported = true;
+    this.stopHeartbeat();
+
+    try {
+      const durationSec = Math.max(0, Math.floor((Date.now() - this.sessionStartTime) / 1000));
+      const payloadStr = JSON.stringify({
+        sessionId: this.sessionId,
+        durationSec,
+        lastRoute: this.currentRoute || window.location.hash || '#dashboard'
+      });
+
+      // Priority 1: navigator.sendBeacon
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payloadStr], { type: 'text/plain;charset=UTF-8' });
+        const sent = navigator.sendBeacon('/api/v1/telemetry/session/leave', blob);
+        if (sent) return;
+      }
+
+      // Priority 2: keepalive fetch fallback
+      if (typeof fetch === 'function') {
+        fetch('/api/v1/telemetry/session/leave', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payloadStr,
+          keepalive: true
+        }).catch(() => {});
+      }
+    } catch {}
+  }
+}
+
+export const visitorTracker = new VisitorTracker();

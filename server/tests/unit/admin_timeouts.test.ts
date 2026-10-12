@@ -31,13 +31,15 @@ describe('Admin Dynamic Engine Timeouts Configuration (Ticket #07, #10, #11, #12
       aiCallSec: 45,
       chromePdfSec: 60,
       pdfHeavyTaskSec: 300,
-      converterTaskSec: 600
+      converterTaskSec: 600,
+      quizTaskSec: 600
     });
     expect(DEFAULT_ENGINE_TIMEOUTS).toEqual({
       aiCallSec: 45,
       chromePdfSec: 60,
       pdfHeavyTaskSec: 300,
-      converterTaskSec: 600
+      converterTaskSec: 600,
+      quizTaskSec: 600
     });
   });
 
@@ -46,14 +48,16 @@ describe('Admin Dynamic Engine Timeouts Configuration (Ticket #07, #10, #11, #12
       aiCallSec: 90,
       chromePdfSec: 80,
       pdfHeavyTaskSec: 450,
-      converterTaskSec: 900
+      converterTaskSec: 900,
+      quizTaskSec: 1200
     });
 
     expect(updated).toEqual({
       aiCallSec: 90,
       chromePdfSec: 80,
       pdfHeavyTaskSec: 450,
-      converterTaskSec: 900
+      converterTaskSec: 900,
+      quizTaskSec: 1200
     });
 
     // Verify persisted on disk
@@ -63,7 +67,8 @@ describe('Admin Dynamic Engine Timeouts Configuration (Ticket #07, #10, #11, #12
       aiCallSec: 90,
       chromePdfSec: 80,
       pdfHeavyTaskSec: 450,
-      converterTaskSec: 900
+      converterTaskSec: 900,
+      quizTaskSec: 1200
     });
   });
 

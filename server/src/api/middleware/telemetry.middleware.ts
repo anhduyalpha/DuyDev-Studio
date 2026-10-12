@@ -29,6 +29,41 @@ export interface IpRequestLogItem {
   contentLengthOut: number;
 }
 
+export interface VisitorSession {
+  sessionId: string;
+  visitorId?: string;
+  ip: string;
+  isLan: boolean;
+  country: string;
+  userAgent: string;
+  deviceSummary: string;
+  status: 'ONLINE' | 'IDLE' | 'LEFT';
+  enteredAt: string;
+  lastActiveAt: string;
+  leftAt?: string;
+  durationSec: number;
+  entryRoute: string;
+  currentRoute: string;
+  routeHistory: Array<{ route: string; timestamp: string }>;
+  totalHeartbeats: number;
+  pwaMode: boolean;
+  screenResolution?: string;
+}
+
+export interface SessionLifecycleEvent {
+  id: string;
+  timestamp: string;
+  sessionId: string;
+  ip: string;
+  isLan: boolean;
+  country: string;
+  eventType: 'ENTER' | 'ROUTE_CHANGE' | 'HEARTBEAT' | 'LEAVE' | 'TIMEOUT';
+  route: string;
+  durationSec?: number;
+  deviceSummary: string;
+  description: string;
+}
+
 export interface IpClientProfile {
   ip: string;
   isLan: boolean;
@@ -45,6 +80,45 @@ export interface IpClientProfile {
   firstSeenAt: string;
   lastActiveAt: string;
   recentLogs: IpRequestLogItem[];
+}
+
+export function extractClientIp(req: FastifyRequest): { ip: string; isLan: boolean } {
+  const cfIp = req.headers['cf-connecting-ip'] as string;
+  const trueClientIp = req.headers['true-client-ip'] as string;
+  const xRealIp = req.headers['x-real-ip'] as string;
+  const xForwardedFor = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
+  const directIp = req.ip || req.socket?.remoteAddress || '127.0.0.1';
+
+  const rawIp = cfIp || trueClientIp || xRealIp || xForwardedFor || directIp;
+  const ip = (rawIp || '127.0.0.1').replace(/^::ffff:/, '').trim() || '127.0.0.1';
+
+  const isLan =
+    !cfIp &&
+    !trueClientIp &&
+    (
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      ip.startsWith('192.168.') ||
+      ip.startsWith('10.') ||
+      ip.startsWith('172.16.') ||
+      ip.startsWith('172.17.') ||
+      ip.startsWith('172.18.') ||
+      ip.startsWith('172.19.') ||
+      ip.startsWith('172.20.') ||
+      ip.startsWith('172.21.') ||
+      ip.startsWith('172.22.') ||
+      ip.startsWith('172.23.') ||
+      ip.startsWith('172.24.') ||
+      ip.startsWith('172.25.') ||
+      ip.startsWith('172.26.') ||
+      ip.startsWith('172.27.') ||
+      ip.startsWith('172.28.') ||
+      ip.startsWith('172.29.') ||
+      ip.startsWith('172.30.') ||
+      ip.startsWith('172.31.')
+    );
+
+  return { ip, isLan };
 }
 
 export function parseDeviceSummary(ua: string): string {
@@ -198,16 +272,8 @@ export class TelemetryTracker {
     this.totalBytesIn += contentLengthIn;
     this.totalBytesOut += contentLengthOut;
 
-    // Detect LAN vs WAN
-    const cfIp = req.headers['cf-connecting-ip'] as string;
-    const clientIp = req.ip || '';
-    const isLan = !cfIp && (
-      clientIp === '127.0.0.1' ||
-      clientIp === '::1' ||
-      clientIp.startsWith('192.168.') ||
-      clientIp.startsWith('10.') ||
-      clientIp.startsWith('172.16.')
-    );
+    // Detect LAN vs WAN and extract robust client IP
+    const { ip: cleanIp, isLan } = extractClientIp(req);
 
     if (isLan) {
       this.lanRequests++;
@@ -218,6 +284,12 @@ export class TelemetryTracker {
     const statusCode = reply.statusCode;
     const route = req.raw?.url || req.url || '/';
     const isNoise = isBotScannerNoise(route, statusCode);
+
+    // Touch active visitor session if session ID is provided
+    const sessionId = (req.headers['x-session-id'] as string) || (req.headers['x-ds-session-id'] as string);
+    if (sessionId) {
+      visitorSessionManager.touchFromRequest(sessionId, req.headers['x-client-route'] as string);
+    }
 
     let bucket = this.buckets.get(nowSec);
     if (!bucket) {
@@ -255,11 +327,6 @@ export class TelemetryTracker {
     else if (statusCode >= 500) bucket.status5xx++;
 
     // Record per-IP tracking
-    const rawIp = cfIp ||
-      ((req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()) ||
-      clientIp ||
-      '127.0.0.1';
-    const cleanIp = rawIp.replace(/^::ffff:/, '');
     const countryHeader = req.headers['cf-ipcountry'] as string;
     const country = countryHeader || (isLan ? 'LAN' : 'VN');
     const userAgent = (req.headers['user-agent'] as string) || 'Unknown';
@@ -573,4 +640,410 @@ export function clearIpRegistry() {
 
 export function resetClientIp(ip: string) {
   return telemetryTracker.resetClientIp(ip);
+}
+
+/**
+ * Visitor Session Manager - Tracks Full Visitor Lifecycle ("Vào web ra web cũng log được")
+ * Records Session Entry, Active Navigation & Heartbeats, and Session Exits (pagehide/beforeunload)
+ */
+export class VisitorSessionManager {
+  private static instance: VisitorSessionManager;
+  private sessions: Map<string, VisitorSession> = new Map();
+  private lifecycleEvents: SessionLifecycleEvent[] = [];
+  private readonly MAX_SESSIONS = 500;
+  private readonly MAX_EVENTS = 250;
+
+  private constructor() {
+    // Watchdog timer: checks every 15s for idle / timed-out sessions
+    setInterval(() => {
+      this.checkSessionTimeouts();
+    }, 15_000).unref();
+  }
+
+  public static getInstance(): VisitorSessionManager {
+    if (!VisitorSessionManager.instance) {
+      VisitorSessionManager.instance = new VisitorSessionManager();
+    }
+    return VisitorSessionManager.instance;
+  }
+
+  public registerEnter(params: {
+    sessionId: string;
+    visitorId?: string;
+    ip: string;
+    isLan: boolean;
+    country: string;
+    userAgent: string;
+    route?: string;
+    pwaMode?: boolean;
+    screen?: string;
+  }): VisitorSession {
+    const nowIso = new Date().toISOString();
+    const route = params.route || '#dashboard';
+    const deviceSummary = parseDeviceSummary(params.userAgent);
+
+    let session = this.sessions.get(params.sessionId);
+    if (!session) {
+      if (this.sessions.size >= this.MAX_SESSIONS) {
+        // Evict oldest LEFT or inactive session
+        let oldestKey: string | null = null;
+        let oldestTime = Infinity;
+        for (const [key, s] of this.sessions.entries()) {
+          const t = new Date(s.lastActiveAt).getTime();
+          if (s.status === 'LEFT') {
+            oldestKey = key;
+            break;
+          }
+          if (t < oldestTime) {
+            oldestTime = t;
+            oldestKey = key;
+          }
+        }
+        if (oldestKey) this.sessions.delete(oldestKey);
+      }
+
+      session = {
+        sessionId: params.sessionId,
+        visitorId: params.visitorId,
+        ip: params.ip,
+        isLan: params.isLan,
+        country: params.country,
+        userAgent: params.userAgent,
+        deviceSummary,
+        status: 'ONLINE',
+        enteredAt: nowIso,
+        lastActiveAt: nowIso,
+        durationSec: 0,
+        entryRoute: route,
+        currentRoute: route,
+        routeHistory: [{ route, timestamp: nowIso }],
+        totalHeartbeats: 1,
+        pwaMode: Boolean(params.pwaMode),
+        screenResolution: params.screen || 'Unknown'
+      };
+      this.sessions.set(params.sessionId, session);
+    } else {
+      // Re-entered / refreshed tab
+      session.status = 'ONLINE';
+      session.lastActiveAt = nowIso;
+      session.currentRoute = route;
+      if (session.routeHistory.length === 0 || session.routeHistory[session.routeHistory.length - 1].route !== route) {
+        session.routeHistory.push({ route, timestamp: nowIso });
+      }
+      if (params.pwaMode !== undefined) session.pwaMode = Boolean(params.pwaMode);
+      if (params.screen) session.screenResolution = params.screen;
+    }
+
+    this.addEvent({
+      sessionId: params.sessionId,
+      ip: params.ip,
+      isLan: params.isLan,
+      country: params.country,
+      eventType: 'ENTER',
+      route,
+      durationSec: 0,
+      deviceSummary,
+      description: `Truy cập website (${route})`
+    });
+
+    return session;
+  }
+
+  public registerHeartbeat(params: {
+    sessionId: string;
+    route?: string;
+    ip?: string;
+    activeDurationSec?: number;
+  }): VisitorSession | null {
+    const nowIso = new Date().toISOString();
+    const session = this.sessions.get(params.sessionId);
+    if (!session) {
+      return null;
+    }
+
+    const previousRoute = session.currentRoute;
+    const newRoute = params.route || session.currentRoute;
+    const duration = params.activeDurationSec != null
+      ? params.activeDurationSec
+      : Math.max(0, Math.floor((Date.now() - new Date(session.enteredAt).getTime()) / 1000));
+
+    session.lastActiveAt = nowIso;
+    session.durationSec = duration;
+    session.totalHeartbeats++;
+
+    if (session.status !== 'ONLINE') {
+      session.status = 'ONLINE';
+    }
+
+    if (newRoute && newRoute !== previousRoute) {
+      session.currentRoute = newRoute;
+      session.routeHistory.push({ route: newRoute, timestamp: nowIso });
+      if (session.routeHistory.length > 50) {
+        session.routeHistory = session.routeHistory.slice(-50);
+      }
+
+      this.addEvent({
+        sessionId: session.sessionId,
+        ip: session.ip,
+        isLan: session.isLan,
+        country: session.country,
+        eventType: 'ROUTE_CHANGE',
+        route: newRoute,
+        durationSec: duration,
+        deviceSummary: session.deviceSummary,
+        description: `Chuyển sang ${newRoute}`
+      });
+    }
+
+    return session;
+  }
+
+  public registerLeave(params: {
+    sessionId: string;
+    durationSec?: number;
+    lastRoute?: string;
+  }): VisitorSession | null {
+    const nowIso = new Date().toISOString();
+    const session = this.sessions.get(params.sessionId);
+    if (!session) return null;
+
+    const finalDuration = params.durationSec != null
+      ? params.durationSec
+      : Math.max(0, Math.floor((Date.now() - new Date(session.enteredAt).getTime()) / 1000));
+
+    session.status = 'LEFT';
+    session.leftAt = nowIso;
+    session.lastActiveAt = nowIso;
+    session.durationSec = finalDuration;
+    if (params.lastRoute) session.currentRoute = params.lastRoute;
+
+    const m = Math.floor(finalDuration / 60);
+    const s = finalDuration % 60;
+    const durStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+    this.addEvent({
+      sessionId: session.sessionId,
+      ip: session.ip,
+      isLan: session.isLan,
+      country: session.country,
+      eventType: 'LEAVE',
+      route: session.currentRoute,
+      durationSec: finalDuration,
+      deviceSummary: session.deviceSummary,
+      description: `Rời khỏi website (Thời lượng: ${durStr})`
+    });
+
+    return session;
+  }
+
+  public touchFromRequest(sessionId: string, route?: string) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    const nowIso = new Date().toISOString();
+    session.lastActiveAt = nowIso;
+    session.durationSec = Math.max(0, Math.floor((Date.now() - new Date(session.enteredAt).getTime()) / 1000));
+    if (session.status !== 'ONLINE') {
+      session.status = 'ONLINE';
+    }
+    if (route && route.startsWith('#') && route !== session.currentRoute) {
+      session.currentRoute = route;
+      session.routeHistory.push({ route, timestamp: nowIso });
+    }
+  }
+
+  private checkSessionTimeouts() {
+    const now = Date.now();
+    for (const session of this.sessions.values()) {
+      if (session.status === 'LEFT') continue;
+
+      const lastActive = new Date(session.lastActiveAt).getTime();
+      const elapsedSec = Math.floor((now - lastActive) / 1000);
+
+      if (session.status === 'ONLINE' && elapsedSec > 45) {
+        session.status = 'IDLE';
+      }
+
+      if (session.status === 'IDLE' && elapsedSec > 90) {
+        session.status = 'LEFT';
+        session.leftAt = session.lastActiveAt;
+        const finalDur = Math.max(0, Math.floor((lastActive - new Date(session.enteredAt).getTime()) / 1000));
+        session.durationSec = finalDur;
+
+        const m = Math.floor(finalDur / 60);
+        const s = finalDur % 60;
+        const durStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+        this.addEvent({
+          sessionId: session.sessionId,
+          ip: session.ip,
+          isLan: session.isLan,
+          country: session.country,
+          eventType: 'TIMEOUT',
+          route: session.currentRoute,
+          durationSec: finalDur,
+          deviceSummary: session.deviceSummary,
+          description: `Mất tín hiệu / Tự động kết thúc phiên (Thời lượng: ${durStr})`
+        });
+      }
+    }
+  }
+
+  private addEvent(event: Omit<SessionLifecycleEvent, 'id' | 'timestamp'>) {
+    const entry: SessionLifecycleEvent = {
+      id: `evt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      ...event
+    };
+    this.lifecycleEvents.unshift(entry);
+    if (this.lifecycleEvents.length > this.MAX_EVENTS) {
+      this.lifecycleEvents = this.lifecycleEvents.slice(0, this.MAX_EVENTS);
+    }
+  }
+
+  public getSessionsData(): {
+    sessions: VisitorSession[];
+    stats: {
+      totalTracked: number;
+      onlineCount: number;
+      idleCount: number;
+      leftCount: number;
+      avgDurationSec: number;
+    };
+  } {
+    const all = Array.from(this.sessions.values());
+    const online = all.filter(s => s.status === 'ONLINE').length;
+    const idle = all.filter(s => s.status === 'IDLE').length;
+    const left = all.filter(s => s.status === 'LEFT').length;
+
+    const totalDur = all.reduce((sum, s) => sum + s.durationSec, 0);
+    const avgDuration = all.length > 0 ? Math.round(totalDur / all.length) : 0;
+
+    const statusOrder: Record<string, number> = { ONLINE: 0, IDLE: 1, LEFT: 2 };
+    all.sort((a, b) => {
+      const diffStatus = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+      if (diffStatus !== 0) return diffStatus;
+      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+    });
+
+    return {
+      sessions: all,
+      stats: {
+        totalTracked: all.length,
+        onlineCount: online,
+        idleCount: idle,
+        leftCount: left,
+        avgDurationSec: avgDuration
+      }
+    };
+  }
+
+  public getEvents(limit = 100): SessionLifecycleEvent[] {
+    return this.lifecycleEvents.slice(0, limit);
+  }
+
+  public clearEvents(): { clearedCount: number } {
+    const count = this.lifecycleEvents.length;
+    this.lifecycleEvents = [];
+    return { clearedCount: count };
+  }
+
+  public clearAllSessions(): { clearedCount: number } {
+    const count = this.sessions.size;
+    this.sessions.clear();
+    this.lifecycleEvents = [];
+    return { clearedCount: count };
+  }
+
+  // --- Static Convenience Proxies ---
+  public static clearSessions(): { clearedCount: number } {
+    return VisitorSessionManager.getInstance().clearAllSessions();
+  }
+
+  public static clearEvents(): { clearedCount: number } {
+    return VisitorSessionManager.getInstance().clearEvents();
+  }
+
+  public static registerEnter(params: {
+    sessionId: string;
+    visitorId?: string;
+    ip: string;
+    isLan?: boolean;
+    country?: string;
+    userAgent: string;
+    entryRoute?: string;
+    route?: string;
+    pwaMode?: boolean;
+    screenResolution?: string;
+    screen?: string;
+    deviceSummary?: string;
+  }): VisitorSession {
+    const isLan = params.isLan !== undefined
+      ? params.isLan
+      : (params.ip.startsWith('192.168.') || params.ip === '127.0.0.1' || params.ip === '::1');
+    return VisitorSessionManager.getInstance().registerEnter({
+      sessionId: params.sessionId,
+      visitorId: params.visitorId,
+      ip: params.ip,
+      isLan,
+      country: params.country || (isLan ? 'LAN' : 'VN'),
+      userAgent: params.userAgent,
+      route: params.entryRoute || params.route || '#dashboard',
+      pwaMode: params.pwaMode,
+      screen: params.screenResolution || params.screen
+    });
+  }
+
+  public static registerHeartbeat(params: {
+    sessionId: string;
+    currentRoute?: string;
+    route?: string;
+    ip?: string;
+    activeDurationSec?: number;
+  }): VisitorSession | null {
+    return VisitorSessionManager.getInstance().registerHeartbeat({
+      sessionId: params.sessionId,
+      route: params.currentRoute || params.route,
+      ip: params.ip,
+      activeDurationSec: params.activeDurationSec
+    });
+  }
+
+  public static registerLeave(params: {
+    sessionId: string;
+    reason?: string;
+    lastRoute?: string;
+    durationSec?: number;
+  }): VisitorSession | null {
+    return VisitorSessionManager.getInstance().registerLeave({
+      sessionId: params.sessionId,
+      durationSec: params.durationSec,
+      lastRoute: params.lastRoute
+    });
+  }
+
+  public static getAllSessions(): VisitorSession[] {
+    return VisitorSessionManager.getInstance().getSessionsData().sessions;
+  }
+
+  public static getEvents(limit = 100): SessionLifecycleEvent[] {
+    return VisitorSessionManager.getInstance().getEvents(limit);
+  }
+
+  public static getSessionStats() {
+    return VisitorSessionManager.getInstance().getSessionsData().stats;
+  }
+}
+
+export const visitorSessionManager = VisitorSessionManager.getInstance();
+
+export function getVisitorSessionsData() {
+  return visitorSessionManager.getSessionsData();
+}
+
+export function getSessionLifecycleEvents(limit = 100) {
+  return visitorSessionManager.getEvents(limit);
+}
+
+export function clearSessionLifecycleEvents() {
+  return visitorSessionManager.clearEvents();
 }

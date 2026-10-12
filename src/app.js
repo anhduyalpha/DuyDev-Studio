@@ -31,6 +31,7 @@ import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.j
 import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
 import { openShareTargetModal } from './components/common/ShareTargetModal.js';
 import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
+import { visitorTracker } from './utilities/visitorTracker.js';
 
 class App {
   constructor() {
@@ -42,6 +43,7 @@ class App {
     initTheme();
     registerServiceWorker();
     taskCoordinator.init();
+    visitorTracker.init();
 
     // Check URL parameters for fast debug reset (?reset=1 or ?clear=1)
     const urlParams = new URLSearchParams(window.location.search);
@@ -226,6 +228,7 @@ class App {
   handleRoute() {
     try {
       const hash = window.location.hash;
+      visitorTracker.notifyRouteChange(hash || '#dashboard');
       const isPdfView = hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf');
       if (!isPdfView) {
         closeFileViewer();

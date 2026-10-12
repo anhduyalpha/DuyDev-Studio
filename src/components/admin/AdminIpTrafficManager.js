@@ -11,9 +11,14 @@ import { renderUsersManager, attachUsersManagerListeners } from './AdminUsersMan
 
 let cachedClients = [];
 let cachedRules = [];
-let activeSubTab = 'traffic'; // 'traffic' | 'users'
+let cachedSessions = [];
+let cachedSessionStats = { totalTracked: 0, onlineCount: 0, idleCount: 0, leftCount: 0, avgDurationSec: 0 };
+let cachedEvents = [];
+let activeSubTab = 'sessions'; // 'sessions' | 'traffic' | 'users'
 let activeFilter = 'all'; // 'all' | 'lan' | 'wan' | 'blocked' | 'rate_limited' | 'errors'
+let activeSessionFilter = 'all'; // 'all' | 'online' | 'idle' | 'left' | 'lan' | 'wan'
 let currentSearch = '';
+let currentSessionSearch = '';
 let activeInspectedIp = null;
 
 function escapeHtml(str) {
@@ -32,6 +37,25 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'MB'}`;
+}
+
+function formatDuration(sec) {
+  if (sec == null || isNaN(sec)) return '--';
+  const s = Math.max(0, Math.floor(sec));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const remS = s % 60;
+  if (m < 60) return `${m}m ${remS}s`;
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return `${h}h ${remM}m`;
+}
+
+function formatExactClock(isoString) {
+  if (!isoString) return '--';
+  const d = new Date(isoString);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function formatRelativeTime(isoString) {
@@ -57,6 +81,310 @@ function getCountryFlag(countryCode) {
   return '🌐';
 }
 
+function renderSessionCardsMarkup(sessions) {
+  if (!sessions || sessions.length === 0) {
+    return `
+      <div class="py-12 flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200/60 dark:border-white/5 space-y-2">
+        <div class="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+          <i data-lucide="users" class="w-5 h-5"></i>
+        </div>
+        <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Chưa ghi nhận phiên truy cập nào</p>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm">
+          Khi có khách mở trang web trên bất kỳ IP hay thiết bị nào (LAN, WAN, 4G/5G), phiên truy cập và lộ trình duyệt trang sẽ hiển thị ngay tại đây.
+        </p>
+      </div>
+    `;
+  }
+
+  return sessions.map(s => {
+    const isOnline = s.status === 'ONLINE';
+    const isIdle = s.status === 'IDLE';
+
+    let statusBadge = '';
+    if (isOnline) {
+      statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Đang online</span>`;
+    } else if (isIdle) {
+      statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Tạm dừng</span>`;
+    } else {
+      statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span> Đã rời web</span>`;
+    }
+
+    const flag = getCountryFlag(s.country);
+    const duration = formatDuration(s.durationSec);
+    const enteredTime = formatExactClock(s.enteredAt);
+    const enteredRel = formatRelativeTime(s.enteredAt);
+    const leftTime = s.leftAt ? `${formatExactClock(s.leftAt)} (${formatRelativeTime(s.leftAt)})` : (isOnline ? 'Đang duyệt trang...' : (isIdle ? 'Tạm ngưng...' : '--'));
+
+    const pwaBadge = s.pwaMode
+      ? `<span class="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/20 text-[9px] font-bold tracking-tight">PWA</span>`
+      : `<span class="px-1.5 py-0.2 rounded bg-zinc-500/10 text-zinc-400 border border-zinc-500/15 text-[9px] font-medium">WEB</span>`;
+
+    const netBadge = s.isLan
+      ? `<span class="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold">LAN</span>`
+      : `<span class="px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[9px] font-bold">WAN</span>`;
+
+    // Breadcrumbs
+    const routes = Array.isArray(s.routeHistory) && s.routeHistory.length > 0
+      ? s.routeHistory.map(r => r.route || '#dashboard')
+      : [s.currentRoute || '#dashboard'];
+    const uniqueRecentRoutes = routes.slice(-5);
+    const breadcrumbHtml = uniqueRecentRoutes.map((r, i) => {
+      const isCurrent = i === uniqueRecentRoutes.length - 1;
+      return `<span class="px-1.5 py-0.5 rounded-md font-mono text-[10px] ${isCurrent ? 'bg-orange-500/15 text-orange-400 border border-orange-500/25 font-bold' : 'bg-zinc-800 text-zinc-400 border border-white/5'}">${escapeHtml(r)}</span>`;
+    }).join('<span class="text-zinc-600 text-[10px] mx-0.5">➔</span>');
+
+    return `
+      <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border ${isOnline ? 'border-emerald-500/30 shadow-emerald-500/5' : (isIdle ? 'border-amber-500/20' : 'border-zinc-200 dark:border-white/5')} space-y-2.5 transition shadow-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            ${statusBadge}
+            <span class="text-base leading-none">${flag}</span>
+            <span class="font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm tracking-tight">${escapeHtml(s.ip)}</span>
+            ${netBadge}
+            ${pwaBadge}
+            <span class="text-[11px] text-zinc-400 font-sans">· ${escapeHtml(s.deviceSummary)}</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              data-inspect-session-ip="${escapeHtml(s.ip)}"
+              class="px-2.5 py-1 rounded-lg bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
+              title="Xem nhật ký request của IP này"
+            >
+              <i data-lucide="file-text" class="w-3 h-3 text-orange-400"></i>
+              <span>Xem Log IP</span>
+            </button>
+            <button
+              type="button"
+              data-session-toggle-block="${escapeHtml(s.ip)}"
+              class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95 border border-rose-500/20"
+              title="Chặn IP này"
+            >
+              <i data-lucide="ban" class="w-3 h-3"></i>
+              <span>Chặn IP</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Times & Duration Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-zinc-100 dark:border-white/5 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+          <div>
+            <span class="text-[10px] text-zinc-400 block font-sans">Vào web:</span>
+            <strong class="text-zinc-800 dark:text-zinc-200">${enteredTime}</strong> (${enteredRel})
+          </div>
+          <div>
+            <span class="text-[10px] text-zinc-400 block font-sans">Rời web:</span>
+            <strong class="text-zinc-800 dark:text-zinc-200">${leftTime}</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-zinc-400 block font-sans">Thời lượng:</span>
+            <strong class="text-orange-500 font-bold">${duration}</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-zinc-400 block font-sans">Trang hiện tại:</span>
+            <span class="text-indigo-400 font-bold truncate block">${escapeHtml(s.currentRoute || '#dashboard')}</span>
+          </div>
+        </div>
+
+        <!-- Route Journey Breadcrumb -->
+        <div class="flex flex-wrap items-center gap-1 pt-1 text-[11px]">
+          <span class="text-zinc-400 text-[10px] font-medium mr-1 shrink-0">Lộ trình:</span>
+          ${breadcrumbHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSessionEventsMarkup(events) {
+  if (!events || events.length === 0) {
+    return `<div class="py-4 text-center text-zinc-500 text-[11px]">Chưa có sự kiện vào / ra web nào được ghi nhận.</div>`;
+  }
+
+  return events.map(ev => {
+    let icon = 'activity';
+    let iconColor = 'text-emerald-400';
+    let badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+
+    if (ev.eventType === 'ENTER') {
+      icon = 'log-in';
+      iconColor = 'text-emerald-400';
+      badgeClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    } else if (ev.eventType === 'ROUTE_CHANGE') {
+      icon = 'shuffle';
+      iconColor = 'text-indigo-400';
+      badgeClass = 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30';
+    } else if (ev.eventType === 'LEAVE') {
+      icon = 'log-out';
+      iconColor = 'text-zinc-400';
+      badgeClass = 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30';
+    } else if (ev.eventType === 'TIMEOUT') {
+      icon = 'timer-off';
+      iconColor = 'text-amber-400';
+      badgeClass = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    }
+
+    const timeStr = formatExactClock(ev.timestamp);
+    const flag = getCountryFlag(ev.country);
+
+    return `
+      <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition">
+        <div class="flex items-center gap-2 min-w-0">
+          <i data-lucide="${icon}" class="w-3.5 h-3.5 ${iconColor} shrink-0"></i>
+          <span class="text-zinc-400 shrink-0">[${timeStr}]</span>
+          <span class="px-1.5 py-0.2 rounded text-[9px] font-bold border ${badgeClass} shrink-0">${ev.eventType}</span>
+          <span class="shrink-0">${flag}</span>
+          <strong class="text-zinc-200 shrink-0">${escapeHtml(ev.ip)}</strong>
+          <span class="text-zinc-400 truncate">${escapeHtml(ev.description)}</span>
+        </div>
+        <span class="text-[10px] text-zinc-500 shrink-0 hidden sm:inline">${escapeHtml(ev.deviceSummary || '')}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSessionsView() {
+  const onlineCount = cachedSessionStats.onlineCount || 0;
+  const idleCount = cachedSessionStats.idleCount || 0;
+  const leftCount = cachedSessionStats.leftCount || 0;
+  const avgDurStr = formatDuration(cachedSessionStats.avgDurationSec || 0);
+
+  let filtered = cachedSessions;
+  if (activeSessionFilter === 'online') filtered = cachedSessions.filter(s => s.status === 'ONLINE');
+  else if (activeSessionFilter === 'idle') filtered = cachedSessions.filter(s => s.status === 'IDLE');
+  else if (activeSessionFilter === 'left') filtered = cachedSessions.filter(s => s.status === 'LEFT');
+  else if (activeSessionFilter === 'lan') filtered = cachedSessions.filter(s => s.isLan);
+  else if (activeSessionFilter === 'wan') filtered = cachedSessions.filter(s => !s.isLan);
+
+  if (currentSessionSearch) {
+    const q = currentSessionSearch.toLowerCase();
+    filtered = filtered.filter(s =>
+      (s.ip && s.ip.toLowerCase().includes(q)) ||
+      (s.deviceSummary && s.deviceSummary.toLowerCase().includes(q)) ||
+      (s.currentRoute && s.currentRoute.toLowerCase().includes(q)) ||
+      (s.country && s.country.toLowerCase().includes(q))
+    );
+  }
+
+  return `
+    <div id="subViewSessions" class="${activeSubTab === 'sessions' ? 'space-y-6' : 'hidden space-y-6'}">
+      <!-- Live Stats Banner -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-white/5 space-y-1 shadow-xs">
+          <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+            <span>Đang Online</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+          <div id="statSessionsOnline" class="text-2xl font-bold font-mono text-emerald-500">${onlineCount}</div>
+          <div class="text-[11px] text-zinc-400">Khách đang xem trang</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-white/5 space-y-1 shadow-xs">
+          <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+            <span>Tạm Dừng / Chờ</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          </div>
+          <div id="statSessionsIdle" class="text-2xl font-bold font-mono text-amber-500">${idleCount}</div>
+          <div class="text-[11px] text-zinc-400">&gt; 45s chưa thao tác</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-white/5 space-y-1 shadow-xs">
+          <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+            <span>Đã Rời Web</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-400"></span>
+          </div>
+          <div id="statSessionsLeft" class="text-2xl font-bold font-mono text-zinc-500 dark:text-zinc-400">${leftCount}</div>
+          <div class="text-[11px] text-zinc-400">Đã đóng tab / thoát</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-white/5 space-y-1 shadow-xs">
+          <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+            <span>Thời Lượng TB</span>
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
+          </div>
+          <div id="statSessionsAvgDuration" class="text-2xl font-bold font-mono text-indigo-400">${avgDurStr}</div>
+          <div class="text-[11px] text-zinc-400">Thời gian ở lại trang</div>
+        </div>
+      </div>
+
+      <!-- Controls & Filter Toolbar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs font-semibold overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-1">
+          <button type="button" data-session-filter="all" class="btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeSessionFilter === 'all' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}">
+            Tất cả (${cachedSessions.length})
+          </button>
+          <button type="button" data-session-filter="online" class="btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeSessionFilter === 'online' ? 'bg-emerald-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}">
+            🟢 Đang Online (${onlineCount})
+          </button>
+          <button type="button" data-session-filter="idle" class="btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeSessionFilter === 'idle' ? 'bg-amber-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}">
+            🟡 Chờ (${idleCount})
+          </button>
+          <button type="button" data-session-filter="left" class="btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeSessionFilter === 'left' ? 'bg-zinc-600 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}">
+            ⚪ Đã Rời Web (${leftCount})
+          </button>
+          <button type="button" data-session-filter="lan" class="btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeSessionFilter === 'lan' ? 'bg-indigo-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}">
+            🏠 LAN (${cachedSessions.filter(s => s.isLan).length})
+          </button>
+          <button type="button" data-session-filter="wan" class="btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeSessionFilter === 'wan' ? 'bg-sky-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}">
+            🌐 WAN (${cachedSessions.filter(s => !s.isLan).length})
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+            <input
+              type="text"
+              id="inputSearchSessions"
+              value="${escapeHtml(currentSessionSearch)}"
+              placeholder="Tìm IP, thiết bị, route..."
+              class="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-orange-500"
+            />
+          </div>
+          <button
+            type="button"
+            id="btnRefreshSessions"
+            class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs active:scale-95"
+            title="Làm mới danh sách phiên"
+          >
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Làm mới</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Sessions Cards -->
+      <div id="sessionsCardsContainer" class="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+        ${renderSessionCardsMarkup(filtered)}
+      </div>
+
+      <!-- Real-Time Activity Feed -->
+      <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-zinc-950/80 border border-white/5 space-y-3 shadow-lg">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider font-mono">
+              Dòng Sự Kiện Vào / Ra Web Trực Tiếp (Live Activity Stream)
+            </h3>
+            <span id="eventsCountBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-white/5 text-zinc-400 border border-white/10">${cachedEvents.length} sự kiện</span>
+          </div>
+          <button
+            type="button"
+            id="btnClearSessionEvents"
+            class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-rose-500/10 hover:text-rose-400 text-zinc-400 text-[11px] font-mono transition cursor-pointer flex items-center gap-1 active:scale-95"
+            title="Xóa dòng sự kiện"
+          >
+            <i data-lucide="trash-2" class="w-3 h-3"></i>
+            <span>Dọn sạch</span>
+          </button>
+        </div>
+        <div id="sessionEventsLogContainer" class="space-y-1.5 max-h-52 overflow-y-auto font-mono text-[11px] pr-1">
+          ${renderSessionEventsMarkup(cachedEvents)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 /**
  * Renders the User & IP Traffic Manager markup with sub-tabs
  */
@@ -73,17 +401,25 @@ export function renderIpTrafficManager() {
             <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               Quản Trị Người Dùng & Kiểm Soát Truy Cập
               <span id="ipClientsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
-                0 clients
+                ${cachedSessions.filter(s => s.status === 'ONLINE').length} online · 0 clients
               </span>
             </h2>
             <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Phân quyền tài khoản, quy tắc chặn IP, giới hạn tần suất yêu cầu (Rate Limit) và theo dõi lưu lượng
+              Theo dõi khách vào/ra web trực tiếp, phân quyền tài khoản, quy tắc chặn IP và giới hạn tần suất yêu cầu (Rate Limit)
             </p>
           </div>
         </div>
 
         <!-- Sub-Tab Switcher Pills -->
-        <div class="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/5">
+        <div class="w-full sm:w-auto grid grid-cols-3 sm:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/5">
+          <button
+            type="button"
+            id="subTabBtnSessions"
+            class="w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${activeSubTab === 'sessions' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+          >
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span class="truncate">Khách Vào/Ra (Live)</span>
+          </button>
           <button
             type="button"
             id="subTabBtnTraffic"
@@ -102,6 +438,9 @@ export function renderIpTrafficManager() {
           </button>
         </div>
       </div>
+
+      <!-- VIEW 0: Live Visitor Sessions ("Vào web ra web cũng log được") -->
+      ${renderSessionsView()}
 
       <!-- VIEW 1: IP Traffic & Access Rules -->
       <div id="subViewIpTraffic" class="${activeSubTab === 'traffic' ? 'space-y-6' : 'hidden space-y-6'}">
@@ -881,29 +1220,62 @@ async function refreshIpLogsContent(modalEl, ip) {
 export function attachIpTrafficListeners(containerEl) {
   if (!containerEl) return;
 
+  const subTabBtnSessions = containerEl.querySelector('#subTabBtnSessions');
   const subTabBtnTraffic = containerEl.querySelector('#subTabBtnTraffic');
   const subTabBtnUsers = containerEl.querySelector('#subTabBtnUsers');
+  const subViewSessions = containerEl.querySelector('#subViewSessions');
   const subViewTraffic = containerEl.querySelector('#subViewIpTraffic');
   const subViewUsers = containerEl.querySelector('#subViewUserAccounts');
+
+  let sessionsPollTimer = null;
+
+  const stopSessionsPolling = () => {
+    if (sessionsPollTimer) {
+      clearInterval(sessionsPollTimer);
+      sessionsPollTimer = null;
+    }
+  };
+
+  const startSessionsPolling = () => {
+    stopSessionsPolling();
+    sessionsPollTimer = setInterval(() => {
+      if (activeSubTab === 'sessions' && document.contains(containerEl)) {
+        fetchAndRenderSessionsData(true);
+      } else {
+        stopSessionsPolling();
+      }
+    }, 8000);
+  };
+
+  const activeTabClasses = 'w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10';
+  const inactiveTabClasses = 'w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
 
   // Sub-tab toggling
   const switchSubTab = (tab) => {
     activeSubTab = tab;
-    if (tab === 'traffic') {
-      subTabBtnTraffic.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10';
-      subTabBtnUsers.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
-      subViewTraffic.classList.remove('hidden');
-      subViewUsers.classList.add('hidden');
-      fetchAndRenderIpData();
+
+    if (subTabBtnSessions) subTabBtnSessions.className = tab === 'sessions' ? activeTabClasses : inactiveTabClasses;
+    if (subTabBtnTraffic) subTabBtnTraffic.className = tab === 'traffic' ? activeTabClasses : inactiveTabClasses;
+    if (subTabBtnUsers) subTabBtnUsers.className = tab === 'users' ? activeTabClasses : inactiveTabClasses;
+
+    if (subViewSessions) subViewSessions.classList.toggle('hidden', tab !== 'sessions');
+    if (subViewTraffic) subViewTraffic.classList.toggle('hidden', tab !== 'traffic');
+    if (subViewUsers) subViewUsers.classList.toggle('hidden', tab !== 'users');
+
+    if (tab === 'sessions') {
+      fetchAndRenderSessionsData();
+      startSessionsPolling();
     } else {
-      subTabBtnUsers.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10';
-      subTabBtnTraffic.className = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
-      subViewUsers.classList.remove('hidden');
-      subViewTraffic.classList.add('hidden');
-      attachUsersManagerListeners();
+      stopSessionsPolling();
+      if (tab === 'traffic') {
+        fetchAndRenderIpData();
+      } else if (tab === 'users') {
+        attachUsersManagerListeners();
+      }
     }
   };
 
+  if (subTabBtnSessions) subTabBtnSessions.onclick = () => switchSubTab('sessions');
   if (subTabBtnTraffic) subTabBtnTraffic.onclick = () => switchSubTab('traffic');
   if (subTabBtnUsers) subTabBtnUsers.onclick = () => switchSubTab('users');
 
@@ -1105,8 +1477,197 @@ export function attachIpTrafficListeners(containerEl) {
     };
   });
 
+  // ===================== SESSIONS TAB LOGIC =====================
+  const btnRefreshSessions = containerEl.querySelector('#btnRefreshSessions');
+  const inputSearchSessions = containerEl.querySelector('#inputSearchSessions');
+  const sessionFilterButtons = containerEl.querySelectorAll('.btn-session-filter');
+  const btnClearSessionEvents = containerEl.querySelector('#btnClearSessionEvents');
+  const sessionsCardsContainer = containerEl.querySelector('#sessionsCardsContainer');
+
+  const fetchAndRenderSessionsData = async (isSilent = false) => {
+    try {
+      const [respSessions, respEvents] = await Promise.all([
+        fetch('/api/v1/admin/traffic/sessions', { headers: { ...getStorageAuthHeaders(), Accept: 'application/json' } }),
+        fetch('/api/v1/admin/traffic/events', { headers: { ...getStorageAuthHeaders(), Accept: 'application/json' } })
+      ]);
+
+      const jsonSessions = await respSessions.json();
+      const jsonEvents = await respEvents.json();
+
+      if (jsonSessions.success && jsonSessions.data) {
+        cachedSessions = Array.isArray(jsonSessions.data.sessions) ? jsonSessions.data.sessions : [];
+        if (jsonSessions.data.stats) {
+          cachedSessionStats = jsonSessions.data.stats;
+        }
+      }
+      if (jsonEvents.success && Array.isArray(jsonEvents.data)) {
+        cachedEvents = jsonEvents.data;
+      }
+
+      applySessionFiltersAndRender();
+      updateSessionStatsDom();
+    } catch (err) {
+      if (!isSilent) {
+        console.error('[AdminIpTraffic] Failed to fetch session data:', err);
+      }
+    }
+  };
+
+  const updateSessionStatsDom = () => {
+    const elOnline = containerEl.querySelector('#statSessionsOnline');
+    const elIdle = containerEl.querySelector('#statSessionsIdle');
+    const elLeft = containerEl.querySelector('#statSessionsLeft');
+    const elAvg = containerEl.querySelector('#statSessionsAvgDuration');
+    const elBadge = containerEl.querySelector('#ipClientsCountBadge');
+    const elEventsBadge = containerEl.querySelector('#eventsCountBadge');
+
+    const onlineCount = cachedSessionStats.onlineCount || 0;
+    const idleCount = cachedSessionStats.idleCount || 0;
+    const leftCount = cachedSessionStats.leftCount || 0;
+
+    if (elOnline) elOnline.textContent = onlineCount;
+    if (elIdle) elIdle.textContent = idleCount;
+    if (elLeft) elLeft.textContent = leftCount;
+    if (elAvg) elAvg.textContent = formatDuration(cachedSessionStats.avgDurationSec || 0);
+
+    if (elBadge) {
+      elBadge.textContent = `${onlineCount} online · ${cachedClients.length || 0} clients`;
+    }
+    if (elEventsBadge) {
+      elEventsBadge.textContent = `${cachedEvents.length} sự kiện`;
+    }
+
+    sessionFilterButtons.forEach(btn => {
+      const f = btn.dataset.sessionFilter;
+      if (f === 'all') btn.textContent = `Tất cả (${cachedSessions.length})`;
+      else if (f === 'online') btn.textContent = `🟢 Đang Online (${onlineCount})`;
+      else if (f === 'idle') btn.textContent = `🟡 Chờ (${idleCount})`;
+      else if (f === 'left') btn.textContent = `⚪ Đã Rời Web (${leftCount})`;
+      else if (f === 'lan') btn.textContent = `🏠 LAN (${cachedSessions.filter(s => s.isLan).length})`;
+      else if (f === 'wan') btn.textContent = `🌐 WAN (${cachedSessions.filter(s => !s.isLan).length})`;
+    });
+
+    const eventsContainer = containerEl.querySelector('#sessionEventsLogContainer');
+    if (eventsContainer) {
+      eventsContainer.innerHTML = renderSessionEventsMarkup(cachedEvents);
+      if (window.lucide) window.lucide.createIcons();
+    }
+  };
+
+  const applySessionFiltersAndRender = () => {
+    let filtered = cachedSessions;
+    if (activeSessionFilter === 'online') filtered = cachedSessions.filter(s => s.status === 'ONLINE');
+    else if (activeSessionFilter === 'idle') filtered = cachedSessions.filter(s => s.status === 'IDLE');
+    else if (activeSessionFilter === 'left') filtered = cachedSessions.filter(s => s.status === 'LEFT');
+    else if (activeSessionFilter === 'lan') filtered = cachedSessions.filter(s => s.isLan);
+    else if (activeSessionFilter === 'wan') filtered = cachedSessions.filter(s => !s.isLan);
+
+    if (currentSessionSearch && currentSessionSearch.trim()) {
+      const q = currentSessionSearch.toLowerCase().trim();
+      filtered = filtered.filter(s =>
+        (s.ip && s.ip.toLowerCase().includes(q)) ||
+        (s.deviceSummary && s.deviceSummary.toLowerCase().includes(q)) ||
+        (s.currentRoute && s.currentRoute.toLowerCase().includes(q)) ||
+        (s.entryRoute && s.entryRoute.toLowerCase().includes(q)) ||
+        (s.country && s.country.toLowerCase().includes(q))
+      );
+    }
+
+    if (sessionsCardsContainer) {
+      sessionsCardsContainer.innerHTML = renderSessionCardsMarkup(filtered);
+      if (window.lucide) window.lucide.createIcons();
+    }
+  };
+
+  if (btnRefreshSessions) {
+    btnRefreshSessions.onclick = async () => {
+      btnRefreshSessions.disabled = true;
+      btnRefreshSessions.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>';
+      if (window.lucide) window.lucide.createIcons();
+      await fetchAndRenderSessionsData();
+      btnRefreshSessions.disabled = false;
+      btnRefreshSessions.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Làm mới</span>';
+      if (window.lucide) window.lucide.createIcons();
+      showToast('Đã làm mới danh sách phiên khách truy cập', 'info');
+    };
+  }
+
+  if (inputSearchSessions) {
+    inputSearchSessions.oninput = (e) => {
+      currentSessionSearch = e.target.value;
+      applySessionFiltersAndRender();
+    };
+  }
+
+  sessionFilterButtons.forEach(btn => {
+    btn.onclick = () => {
+      activeSessionFilter = btn.dataset.sessionFilter;
+      sessionFilterButtons.forEach(b => {
+        const isCurrent = b.dataset.sessionFilter === activeSessionFilter;
+        let activeBg = 'bg-orange-500';
+        if (activeSessionFilter === 'online') activeBg = 'bg-emerald-500';
+        else if (activeSessionFilter === 'idle') activeBg = 'bg-amber-500';
+        else if (activeSessionFilter === 'left') activeBg = 'bg-zinc-600';
+        else if (activeSessionFilter === 'lan') activeBg = 'bg-indigo-500';
+        else if (activeSessionFilter === 'wan') activeBg = 'bg-sky-500';
+
+        b.className = `btn-session-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${
+          isCurrent ? `${activeBg} text-white shadow-xs` : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+        }`;
+      });
+      applySessionFiltersAndRender();
+    };
+  });
+
+  if (btnClearSessionEvents) {
+    btnClearSessionEvents.onclick = async () => {
+      if (!confirm('Bạn có chắc muốn xóa sạch toàn bộ dòng sự kiện vào / ra web?')) return;
+      try {
+        const res = await fetch('/api/v1/admin/traffic/events/clear', {
+          method: 'POST',
+          headers: { ...getStorageAuthHeaders(), Accept: 'application/json' }
+        });
+        const json = await res.json();
+        showToast(json.message || 'Đã dọn sạch dòng sự kiện', json.success ? 'success' : 'error');
+        fetchAndRenderSessionsData();
+      } catch (err) {
+        showToast(`Lỗi khi dọn dòng sự kiện: ${err.message}`, 'error');
+      }
+    };
+  }
+
+  if (sessionsCardsContainer) {
+    sessionsCardsContainer.onclick = async (e) => {
+      const inspectBtn = e.target.closest('[data-inspect-session-ip]');
+      if (inspectBtn) {
+        openIpRequestLogsDrawer(inspectBtn.dataset.inspectSessionIp);
+        return;
+      }
+
+      const blockBtn = e.target.closest('[data-session-toggle-block]');
+      if (blockBtn) {
+        const ip = blockBtn.dataset.sessionToggleBlock;
+        if (!confirm(`Bạn có chắc muốn chặn hoàn toàn IP '${ip}'?`)) return;
+        try {
+          const res = await fetch(`/api/v1/admin/traffic/ips/${encodeURIComponent(ip)}/toggle-block`, {
+            method: 'POST',
+            headers: { ...getStorageAuthHeaders(), Accept: 'application/json' }
+          });
+          const json = await res.json();
+          showToast(json.message || `Đã cập nhật quy tắc cho ${ip}`, json.success ? 'success' : 'error');
+          fetchAndRenderSessionsData();
+        } catch (err) {
+          showToast(`Lỗi khi chặn IP: ${err.message}`, 'error');
+        }
+      }
+    };
+  }
+
   // Initial load
-  if (activeSubTab === 'traffic') {
+  if (activeSubTab === 'sessions') {
+    fetchAndRenderSessionsData();
+    startSessionsPolling();
+  } else if (activeSubTab === 'traffic') {
     fetchAndRenderIpData();
   } else {
     attachUsersManagerListeners();

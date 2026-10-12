@@ -1302,6 +1302,146 @@ export class AdminTelemetryService {
   }
 
   /**
+   * Exports full error logs with deduplication formatted as clean JSON
+   */
+  public async exportErrorLogsAsJson(options: { type?: string; dedupe?: boolean } = {}): Promise<{
+    json: any;
+    fileName: string;
+    totalErrors: number;
+    uniqueErrors: number;
+  }> {
+    const isDedupe = options.dedupe !== false;
+    const typeFilter = options.type;
+
+    const jobs = await prisma.job.findMany({
+      where: {
+        status: 'FAILED',
+        ...(typeFilter ? { type: typeFilter } : {})
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5000,
+      include: {
+        files: { select: { originalName: true, mimeType: true, sizeBytes: true } }
+      }
+    });
+
+    const now = new Date();
+    const isoString = now.toISOString();
+    const fileTimestamp = isoString.replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `duydev-studio-error-logs-${fileTimestamp}.json`;
+
+    const groupMap = new Map<string, any>();
+    for (const j of jobs) {
+      const semantic = extractSemanticErrorDetails(j.errorMessage, j.type);
+      const signature = isDedupe ? semantic.signature : `job::${j.id}`;
+
+      let parsedOptions: any = null;
+      try { parsedOptions = JSON.parse(j.optionsJson); } catch { parsedOptions = j.optionsJson; }
+
+      const fileNames: string[] = [];
+      if (Array.isArray(j.files)) {
+        for (const f of j.files) if (f.originalName) fileNames.push(f.originalName);
+      }
+      if (parsedOptions && typeof parsedOptions === 'object' && parsedOptions !== null) {
+        const candidate = parsedOptions.fileName || parsedOptions.filename || parsedOptions.name || parsedOptions.file;
+        if (candidate && typeof candidate === 'string') fileNames.push(candidate);
+      }
+
+      if (!groupMap.has(signature)) {
+        groupMap.set(signature, {
+          signature,
+          category: semantic.category,
+          rootCauseTitle: semantic.rootCauseTitle,
+          normalizedSummary: semantic.normalizedSummary,
+          severity: semantic.severity,
+          errorClass: semantic.errorClass,
+          suggestedFix: semantic.suggestedFix,
+          types: [j.type],
+          occurrences: 1,
+          firstSeen: j.createdAt,
+          lastSeen: j.createdAt,
+          sampleJobId: j.id,
+          allJobIds: [j.id],
+          affectedFiles: Array.from(new Set(fileNames)),
+          sampleOptions: parsedOptions,
+          rawErrors: [j.errorMessage || '']
+        });
+      } else {
+        const g = groupMap.get(signature);
+        g.occurrences++;
+        if (!g.types.includes(j.type)) g.types.push(j.type);
+        if (new Date(j.createdAt) < new Date(g.firstSeen)) g.firstSeen = j.createdAt;
+        if (new Date(j.createdAt) > new Date(g.lastSeen)) g.lastSeen = j.createdAt;
+        g.allJobIds.push(j.id);
+        for (const fn of fileNames) if (!g.affectedFiles.includes(fn)) g.affectedFiles.push(fn);
+        if (j.errorMessage && !g.rawErrors.includes(j.errorMessage)) g.rawErrors.push(j.errorMessage);
+      }
+    }
+
+    const groups = Array.from(groupMap.values()).sort((a, b) => b.occurrences - a.occurrences);
+    const metaObj = {
+      exportedAt: isoString,
+      serverHost: os.hostname(),
+      totalErrors: jobs.length,
+      uniqueSignatures: groups.length,
+      deduplicationEnabled: isDedupe
+    };
+    const result = {
+      meta: metaObj,
+      metadata: metaObj,
+      groups,
+      errorGroups: groups,
+      rawJobs: jobs.slice(0, 100).map(j => ({
+        id: j.id,
+        type: j.type,
+        errorMessage: j.errorMessage,
+        normalizedError: normalizeErrorMessageToEnglish(j.errorMessage),
+        createdAt: j.createdAt,
+        options: j.optionsJson
+      }))
+    };
+
+    return {
+      json: result,
+      fileName,
+      totalErrors: jobs.length,
+      uniqueErrors: groups.length
+    };
+  }
+
+  /**
+   * Exports full error logs with deduplication formatted as Markdown (for GitHub issues/triage)
+   */
+  public async exportErrorLogsAsMarkdown(options: { type?: string; dedupe?: boolean } = {}): Promise<{
+    markdown: string;
+    fileName: string;
+    totalErrors: number;
+    uniqueErrors: number;
+  }> {
+    const { text, totalErrors, uniqueErrors, duplicateCount, reductionPercentage } = await this.exportErrorLogsAsText(options);
+    const now = new Date();
+    const fileTimestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `duydev-studio-error-logs-${fileTimestamp}.md`;
+
+    const md = [
+      `# 🛠️ DuyDev Studio - System Error Audit & Diagnostics Report`,
+      ``,
+      `> Generated on **${now.toISOString()}** | Total Failures: **${totalErrors}** | Unique Issues: **${uniqueErrors}** | Duplicates Merged: **${duplicateCount}** (${reductionPercentage}% noise reduction)`,
+      ``,
+      `\`\`\`text`,
+      text,
+      `\`\`\``
+    ].join('\n');
+
+    return {
+      markdown: md,
+      fileName,
+      totalErrors,
+      uniqueErrors
+    };
+  }
+
+  /**
    * Clears failed jobs from both SQLite database and Redis BullMQ queues
    */
   public async clearFailedJobs(): Promise<{ deletedCount: number }> {

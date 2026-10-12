@@ -9,6 +9,7 @@ import { openSlideConfirmModal } from '../common/SlideConfirmModal.js';
 
 let cachedFailedJobs = [];
 let activeTypeFilter = 'all';
+let currentFailedJobsSearch = '';
 
 export function normalizeErrorMessageToEnglish(rawMsg) {
   if (!rawMsg || !String(rawMsg).trim()) {
@@ -461,6 +462,242 @@ function getJobTypeBadge(type) {
 }
 
 /**
+ * Builds a clean, Markdown-formatted technical incident report for 1-click clipboard copying
+ */
+export function buildJobMarkdownReport(job) {
+  if (!job) return '';
+  const semantic = extractSemanticErrorDetailsClient(job.errorMessage, job.type);
+  const cleanError = normalizeErrorMessageToEnglish(job.errorMessage);
+  const duration = formatJobDuration(job.durationMs);
+  const jsonPretty = typeof job.options === 'object' ? JSON.stringify(job.options, null, 2) : String(job.optionsRaw || '{}');
+
+  return [
+    `### ⚠️ DuyDev Studio Diagnostic Incident Report - Job #${job.id}`,
+    `- **Phân hệ**: ${job.type} (${semantic.category})`,
+    `- **Phân loại**: ${semantic.errorClass === 'USER_ACTION' ? 'Thao tác người dùng (USER_ACTION)' : 'Lỗi hệ thống (SYSTEM_ERROR)'}`,
+    `- **Mức độ (Severity)**: ${semantic.severity}`,
+    `- **Thời lượng**: ${duration}`,
+    `- **Thời điểm**: ${job.createdAt}`,
+    `- **Nguyên nhân gốc rễ**: ${semantic.rootCauseTitle}`,
+    `- **Tóm tắt chuẩn hóa**: ${cleanError}`,
+    `- **Gợi ý khắc phục**: ${semantic.suggestedFix || 'Kiểm tra worker trace và đầu vào tài liệu.'}`,
+    '',
+    '#### Tham số đầu vào (optionsJson):',
+    '```json',
+    jsonPretty,
+    '```',
+    '',
+    '#### Thông báo lỗi gốc (Raw Traceback):',
+    '```text',
+    String(job.errorMessage || 'Unknown error'),
+    '```'
+  ].join('\n');
+}
+
+/**
+ * Opens a dedicated deep diagnostic modal with complete traceback, options, and actions
+ */
+export function openJobDiagnosticsModal(job) {
+  if (!job) return;
+  const modalId = `modal_diag_${Date.now()}`;
+  const semantic = extractSemanticErrorDetailsClient(job.errorMessage, job.type);
+  const cleanError = escapeHtml(normalizeErrorMessageToEnglish(job.errorMessage));
+  const rawError = escapeHtml(String(job.errorMessage || 'Unknown error occurred.'));
+  const duration = formatJobDuration(job.durationMs);
+  const jsonPretty = escapeHtml(typeof job.options === 'object' ? JSON.stringify(job.options, null, 2) : String(job.optionsRaw || '{}'));
+  const isUserAction = (job.errorClass === 'USER_ACTION') || (semantic.errorClass === 'USER_ACTION');
+
+  const modalHtml = `
+    <div id="${modalId}" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md">
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+        <!-- Header -->
+        <div class="p-4 sm:p-5 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between gap-3 bg-zinc-50/50 dark:bg-zinc-950/40">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-2xl ${isUserAction ? 'bg-sky-500/10 text-sky-500 border border-sky-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'} flex items-center justify-center shrink-0">
+              <i data-lucide="${isUserAction ? 'user-check' : 'alert-octagon'}" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 font-mono truncate">
+                  Soi Tác Vụ #${escapeHtml(job.id)}
+                </h3>
+                ${getJobTypeBadge(job.type)}
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isUserAction ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'}">
+                  ${isUserAction ? 'THAO TÁC NGƯỜI DÙNG' : 'LỖI HỆ THỐNG'}
+                </span>
+              </div>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                ${escapeHtml(semantic.rootCauseTitle)}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            id="btnCloseDiagModal"
+            class="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer shrink-0"
+            title="Đóng"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- Body Scrollable -->
+        <div class="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs font-mono">
+          <!-- Timings Banner -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-zinc-100/70 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5">
+            <div>
+              <span class="text-[10px] text-zinc-500 block">Thời Lượng Xử Lý</span>
+              <strong class="text-orange-500 text-xs">${duration}</strong>
+            </div>
+            <div>
+              <span class="text-[10px] text-zinc-500 block">Thời Điểm Tạo</span>
+              <span class="text-zinc-300 text-[11px]">${formatExactTime(job.createdAt)}</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-zinc-500 block">Mức Độ (Severity)</span>
+              <span class="font-bold ${semantic.severity === 'CRITICAL' ? 'text-rose-400' : 'text-zinc-300'}">${semantic.severity}</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-zinc-500 block">Chữ Ký (Signature)</span>
+              <span class="text-zinc-400 text-[10px] truncate block" title="${escapeHtml(semantic.signature)}">${escapeHtml(semantic.signature)}</span>
+            </div>
+          </div>
+
+          <!-- Semantic Diagnosis & Suggested Fix -->
+          <div class="p-3.5 rounded-2xl ${isUserAction ? 'bg-sky-500/5 border-sky-500/20 text-sky-300' : 'bg-rose-500/10 border-rose-500/25 text-rose-300'} border space-y-2">
+            <div class="flex items-center gap-2 font-bold text-[13px]">
+              <i data-lucide="sparkles" class="w-4 h-4 text-orange-400"></i>
+              <span>${escapeHtml(semantic.rootCauseTitle)}</span>
+            </div>
+            <p class="text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed">${cleanError}</p>
+            ${semantic.suggestedFix ? `
+              <div class="pt-2 border-t border-white/5 text-[11px] text-zinc-400">
+                <span class="font-bold text-amber-400">💡 Hướng khắc phục:</span> ${escapeHtml(semantic.suggestedFix)}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Raw Traceback Box -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-zinc-400">
+              <span class="font-bold text-[11px]">Thông Báo Lỗi Gốc / Traceback:</span>
+              <button
+                type="button"
+                id="btnCopyRawError"
+                class="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-zinc-300 text-[10px] flex items-center gap-1 transition cursor-pointer"
+              >
+                <i data-lucide="copy" class="w-3 h-3"></i>
+                <span>Sao chép</span>
+              </button>
+            </div>
+            <div class="p-3 rounded-2xl bg-zinc-950 text-rose-300 font-mono text-[11px] overflow-x-auto max-h-40 border border-white/5 select-all leading-relaxed whitespace-pre-wrap">
+              ${rawError}
+            </div>
+          </div>
+
+          <!-- Options Payload Box -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-zinc-400">
+              <span class="font-bold text-[11px]">Tham Số Đầu Vào (optionsJson):</span>
+              <button
+                type="button"
+                id="btnCopyOptionsJson"
+                class="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-zinc-300 text-[10px] flex items-center gap-1 transition cursor-pointer"
+              >
+                <i data-lucide="copy" class="w-3 h-3"></i>
+                <span>Sao chép JSON</span>
+              </button>
+            </div>
+            <div class="p-3 rounded-2xl bg-zinc-950 text-zinc-300 font-mono text-[11px] overflow-x-auto max-h-48 border border-white/5 select-all leading-relaxed">
+              <pre>${jsonPretty}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 bg-zinc-50/50 dark:bg-zinc-950/40">
+          <button
+            type="button"
+            id="btnCopyFullMarkdown"
+            class="px-3 py-2 rounded-xl bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+          >
+            <i data-lucide="copy-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Sao Chép Markdown</span>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              id="btnCloseDiagModalFooter"
+              class="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition cursor-pointer"
+            >
+              Đóng
+            </button>
+            <button
+              type="button"
+              id="btnModalRetryJob"
+              class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
+            >
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Thử Lại Tác Vụ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  if (window.lucide) window.lucide.createIcons();
+
+  const modalEl = document.getElementById(modalId);
+  const close = () => { if (modalEl) modalEl.remove(); };
+
+  modalEl.querySelector('#btnCloseDiagModal').onclick = close;
+  modalEl.querySelector('#btnCloseDiagModalFooter').onclick = close;
+  modalEl.onclick = (e) => { if (e.target === modalEl) close(); };
+
+  modalEl.querySelector('#btnCopyRawError').onclick = () => {
+    navigator.clipboard.writeText(job.errorMessage || '');
+    showToast('Đã sao chép thông báo lỗi gốc', 'info');
+  };
+
+  modalEl.querySelector('#btnCopyOptionsJson').onclick = () => {
+    const text = typeof job.options === 'object' ? JSON.stringify(job.options, null, 2) : String(job.optionsRaw || '{}');
+    navigator.clipboard.writeText(text);
+    showToast('Đã sao chép tham số JSON', 'info');
+  };
+
+  modalEl.querySelector('#btnCopyFullMarkdown').onclick = () => {
+    const md = buildJobMarkdownReport(job);
+    navigator.clipboard.writeText(md);
+    showToast('Đã sao chép báo cáo Markdown', 'success');
+  };
+
+  modalEl.querySelector('#btnModalRetryJob').onclick = async () => {
+    const btn = modalEl.querySelector('#btnModalRetryJob');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> <span>Đang gửi...</span>';
+    if (window.lucide) window.lucide.createIcons();
+
+    try {
+      const resp = await fetch(`/api/v1/admin/logs/retry-job/${encodeURIComponent(job.id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+      });
+      const json = await resp.json();
+      showToast(json.message || `Đã kích hoạt thử lại cho #${job.id}`, json.success ? 'success' : 'error');
+      close();
+    } catch (err) {
+      showToast(`Lỗi khi thử lại: ${err.message}`, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i> <span>Thử Lại Tác Vụ</span>';
+      if (window.lucide) window.lucide.createIcons();
+    }
+  };
+}
+
+/**
  * Renders the HTML markup for the Failed Jobs Inspector card
  */
 export function renderFailedJobsInspector(jobs = []) {
@@ -470,14 +707,40 @@ export function renderFailedJobsInspector(jobs = []) {
     return ec === 'SYSTEM_ERROR';
   }).length;
   const userActionsCount = jobs.length - systemErrorsCount;
+  const timeoutCount = jobs.filter(j => {
+    const msg = (j.errorMessage || '').toLowerCase();
+    return msg.includes('timeout') || msg.includes('timed out') || msg.includes('hết giờ') || msg.includes('zaman aşımı') || (j.durationMs && j.durationMs >= 60000);
+  }).length;
 
   let filteredJobs = jobs;
   if (activeTypeFilter === 'system') {
     filteredJobs = jobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
   } else if (activeTypeFilter === 'user') {
     filteredJobs = jobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
+  } else if (activeTypeFilter === 'timeout') {
+    filteredJobs = jobs.filter(j => {
+      const msg = (j.errorMessage || '').toLowerCase();
+      return msg.includes('timeout') || msg.includes('timed out') || msg.includes('hết giờ') || msg.includes('zaman aşımı') || (j.durationMs && j.durationMs >= 60000);
+    });
   } else if (activeTypeFilter !== 'all') {
     filteredJobs = jobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+  }
+
+  if (currentFailedJobsSearch && currentFailedJobsSearch.trim()) {
+    const q = currentFailedJobsSearch.toLowerCase().trim();
+    filteredJobs = filteredJobs.filter(j => {
+      const semantic = extractSemanticErrorDetailsClient(j.errorMessage, j.type);
+      const optStr = typeof j.options === 'object' ? JSON.stringify(j.options) : String(j.optionsRaw || '');
+      return (
+        (j.id && j.id.toLowerCase().includes(q)) ||
+        (j.type && j.type.toLowerCase().includes(q)) ||
+        (j.errorMessage && j.errorMessage.toLowerCase().includes(q)) ||
+        (optStr && optStr.toLowerCase().includes(q)) ||
+        (semantic.rootCauseTitle && semantic.rootCauseTitle.toLowerCase().includes(q)) ||
+        (semantic.suggestedFix && semantic.suggestedFix.toLowerCase().includes(q)) ||
+        (semantic.normalizedSummary && semantic.normalizedSummary.toLowerCase().includes(q))
+      );
+    });
   }
 
   const badgeHtml = systemErrorsCount === 0
@@ -507,16 +770,36 @@ export function renderFailedJobsInspector(jobs = []) {
 
         <!-- Action Buttons Responsive Grid -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
-          <button
-            type="button"
-            id="btnExportFailedJobsTxt"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-95 border border-orange-400/30 shrink-0"
-            title="Xuất toàn bộ nhật ký lỗi ra file .txt đã gom nhóm & lọc trùng cho lập trình viên fix"
-          >
-            <i data-lucide="file-down" class="w-4 h-4 shrink-0"></i>
-            <span class="font-bold whitespace-nowrap">Xuất Toàn Bộ Lỗi (.txt)</span>
-            <span class="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-mono tracking-tight uppercase whitespace-nowrap">Lọc trùng</span>
-          </button>
+          <!-- Multi-format Export Button Group -->
+          <div class="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-white/5">
+            <button
+              type="button"
+              id="btnExportFailedJobsTxt"
+              class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+              title="Xuất file .txt gom nhóm và lọc trùng"
+            >
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Xuất TXT</span>
+            </button>
+            <button
+              type="button"
+              id="btnExportFailedJobsJson"
+              class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-700/70 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer border border-zinc-200/60 dark:border-white/10 active:scale-95"
+              title="Xuất file .json có cấu trúc"
+            >
+              <i data-lucide="file-code" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>JSON</span>
+            </button>
+            <button
+              type="button"
+              id="btnExportFailedJobsMd"
+              class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-700/70 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer border border-zinc-200/60 dark:border-white/10 active:scale-95"
+              title="Xuất file .md Markdown"
+            >
+              <i data-lucide="file-down" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>MD</span>
+            </button>
+          </div>
 
           <div class="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
             <button
@@ -552,50 +835,80 @@ export function renderFailedJobsInspector(jobs = []) {
         </div>
       </div>
 
-      <!-- Filter Pills (Smooth Horizontal Touch Scroll with Zero Line Breaks) -->
-      <div class="flex items-center gap-1.5 sm:gap-2 border-b border-zinc-100 dark:border-white/5 pb-2.5 overflow-x-auto text-xs font-medium no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
-        <button
-          type="button"
-          data-filter-type="all"
-          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'all' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
-        >
-          Tất cả (${jobs.length})
-        </button>
-        <button
-          type="button"
-          data-filter-type="system"
-          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'system' ? 'bg-rose-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
-        >
-          Lỗi Hệ Thống (${systemErrorsCount})
-        </button>
-        <button
-          type="button"
-          data-filter-type="user"
-          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'user' ? 'bg-sky-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
-        >
-          Thao Tác Người Dùng (${userActionsCount})
-        </button>
-        <button
-          type="button"
-          data-filter-type="pdf"
-          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'pdf' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
-        >
-          PDF Studio (${jobs.filter(j => String(j.type || '').toLowerCase().includes('pdf')).length})
-        </button>
-        <button
-          type="button"
-          data-filter-type="conv"
-          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'conv' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
-        >
-          Converter (${jobs.filter(j => String(j.type || '').toLowerCase().includes('conv') || String(j.type || '').toLowerCase().includes('media')).length})
-        </button>
-        <button
-          type="button"
-          data-filter-type="quiz"
-          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'quiz' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
-        >
-          Quiz (${jobs.filter(j => String(j.type || '').toLowerCase().includes('quiz')).length})
-        </button>
+      <!-- Search & Filters Toolbar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <!-- Search Input with Clear Button -->
+        <div class="relative flex-1 sm:max-w-md">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"></i>
+          <input
+            type="text"
+            id="inputSearchFailedJobs"
+            value="${escapeHtml(currentFailedJobsSearch)}"
+            placeholder="Tìm theo ID, tên file, từ khóa lỗi, options..."
+            class="w-full pl-9 pr-8 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-orange-500 font-mono shadow-xs"
+          />
+          <button
+            type="button"
+            id="btnClearSearchFailedJobs"
+            class="${currentFailedJobsSearch ? '' : 'hidden'} absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-0.5 cursor-pointer"
+            title="Xóa tìm kiếm"
+          >
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="flex items-center gap-1.5 border-b sm:border-b-0 border-zinc-100 dark:border-white/5 pb-2 sm:pb-0 overflow-x-auto text-xs font-medium no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
+          <button
+            type="button"
+            data-filter-type="all"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'all' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            Tất cả (${jobs.length})
+          </button>
+          <button
+            type="button"
+            data-filter-type="system"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'system' ? 'bg-rose-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            Lỗi Hệ Thống (${systemErrorsCount})
+          </button>
+          <button
+            type="button"
+            data-filter-type="user"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'user' ? 'bg-sky-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            Thao Tác Người Dùng (${userActionsCount})
+          </button>
+          <button
+            type="button"
+            data-filter-type="timeout"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'timeout' ? 'bg-amber-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            ⏱️ Hết Giờ (${timeoutCount})
+          </button>
+          <button
+            type="button"
+            data-filter-type="pdf"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'pdf' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            PDF Studio (${jobs.filter(j => String(j.type || '').toLowerCase().includes('pdf')).length})
+          </button>
+          <button
+            type="button"
+            data-filter-type="conv"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'conv' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            Converter (${jobs.filter(j => String(j.type || '').toLowerCase().includes('conv') || String(j.type || '').toLowerCase().includes('media')).length})
+          </button>
+          <button
+            type="button"
+            data-filter-type="quiz"
+            class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'quiz' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          >
+            Quiz (${jobs.filter(j => String(j.type || '').toLowerCase().includes('quiz')).length})
+          </button>
+        </div>
       </div>
 
       <!-- List Container -->
@@ -616,7 +929,7 @@ function renderFailedJobsItemsMarkup(jobs) {
         <div class="max-w-sm">
           <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Không có tác vụ nào bị lỗi</p>
           <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Toàn bộ các tác vụ xử lý tài liệu, chuyển đổi đa phương tiện và trắc nghiệm đang hoạt động hoàn hảo mà không phát sinh lỗi.
+            ${currentFailedJobsSearch ? 'Không tìm thấy tác vụ nào khớp với từ khóa tìm kiếm.' : 'Toàn bộ các tác vụ xử lý tài liệu, chuyển đổi đa phương tiện và trắc nghiệm đang hoạt động hoàn hảo mà không phát sinh lỗi.'}
           </p>
         </div>
       </div>
@@ -673,9 +986,9 @@ function renderFailedJobsItemsMarkup(jobs) {
           </div>
         </div>
 
-        <!-- Meta Bar: Retry button, Duration & Timestamp -->
-        <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-          <div class="flex items-center gap-2 min-w-0">
+        <!-- Meta Bar: Action buttons, Duration & Timestamp -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
             <button
               type="button"
               data-retry-job-id="${escapeHtml(job.id)}"
@@ -685,7 +998,34 @@ function renderFailedJobsItemsMarkup(jobs) {
               <i data-lucide="play" class="w-3 h-3"></i>
               <span>Thử lại</span>
             </button>
-            <span class="truncate">Thời lượng: <strong class="text-zinc-800 dark:text-zinc-200 font-bold">${duration}</strong></span>
+            <button
+              type="button"
+              data-copy-job-id="${escapeHtml(job.id)}"
+              class="btn-copy-job px-2.5 py-1 rounded-lg bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300/40 dark:border-white/5 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+              title="Sao chép báo cáo lỗi vào bộ nhớ tạm"
+            >
+              <i data-lucide="copy" class="w-3 h-3 text-orange-400"></i>
+              <span>Sao chép</span>
+            </button>
+            <button
+              type="button"
+              data-inspect-job-id="${escapeHtml(job.id)}"
+              class="btn-inspect-job px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+              title="Soi chi tiết toàn bộ payload và traceback"
+            >
+              <i data-lucide="scan-search" class="w-3 h-3"></i>
+              <span>Soi chi tiết</span>
+            </button>
+            <button
+              type="button"
+              data-retry-group-sig="${escapeHtml(semantic.signature)}"
+              class="btn-retry-group px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium flex items-center gap-1 transition cursor-pointer shrink-0 whitespace-nowrap hidden sm:flex"
+              title="Thử lại toàn bộ các tác vụ có cùng lỗi này"
+            >
+              <i data-lucide="refresh-cw" class="w-2.5 h-2.5"></i>
+              <span>Thử lại nhóm</span>
+            </button>
+            <span class="truncate hidden md:inline ml-1 text-zinc-400">Thời lượng: <strong class="text-zinc-800 dark:text-zinc-200 font-bold">${duration}</strong></span>
           </div>
           <span class="shrink-0 text-zinc-400 text-[10px] sm:text-[11px]" title="${formatExactTime(job.createdAt)}">${formatRelativeTime(job.createdAt)}</span>
         </div>
@@ -721,7 +1061,68 @@ function renderFailedJobsItemsMarkup(jobs) {
 export function attachFailedJobsListeners(container, onReload) {
   if (!container) return;
 
-  // 1. Refresh button
+  const reRenderList = () => {
+    const listEl = container.querySelector('#adminFailedJobsList');
+    if (!listEl) return;
+    let filtered = cachedFailedJobs;
+    if (activeTypeFilter === 'system') {
+      filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
+    } else if (activeTypeFilter === 'user') {
+      filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
+    } else if (activeTypeFilter === 'timeout') {
+      filtered = cachedFailedJobs.filter(j => {
+        const msg = (j.errorMessage || '').toLowerCase();
+        return msg.includes('timeout') || msg.includes('timed out') || msg.includes('hết giờ') || msg.includes('zaman aşımı') || (j.durationMs && j.durationMs >= 60000);
+      });
+    } else if (activeTypeFilter !== 'all') {
+      filtered = cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
+    }
+
+    if (currentFailedJobsSearch && currentFailedJobsSearch.trim()) {
+      const q = currentFailedJobsSearch.toLowerCase().trim();
+      filtered = filtered.filter(j => {
+        const semantic = extractSemanticErrorDetailsClient(j.errorMessage, j.type);
+        const optStr = typeof j.options === 'object' ? JSON.stringify(j.options) : String(j.optionsRaw || '');
+        return (
+          (j.id && j.id.toLowerCase().includes(q)) ||
+          (j.type && j.type.toLowerCase().includes(q)) ||
+          (j.errorMessage && j.errorMessage.toLowerCase().includes(q)) ||
+          (optStr && optStr.toLowerCase().includes(q)) ||
+          (semantic.rootCauseTitle && semantic.rootCauseTitle.toLowerCase().includes(q)) ||
+          (semantic.suggestedFix && semantic.suggestedFix.toLowerCase().includes(q)) ||
+          (semantic.normalizedSummary && semantic.normalizedSummary.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    listEl.innerHTML = renderFailedJobsItemsMarkup(filtered);
+    if (window.lucide) window.lucide.createIcons();
+  };
+
+  // 1. Search Input & Clear Search
+  const inputSearch = container.querySelector('#inputSearchFailedJobs');
+  const btnClearSearch = container.querySelector('#btnClearSearchFailedJobs');
+
+  if (inputSearch) {
+    inputSearch.oninput = (e) => {
+      currentFailedJobsSearch = e.target.value;
+      if (btnClearSearch) {
+        btnClearSearch.classList.toggle('hidden', !currentFailedJobsSearch);
+      }
+      reRenderList();
+    };
+  }
+
+  if (btnClearSearch) {
+    btnClearSearch.onclick = () => {
+      currentFailedJobsSearch = '';
+      if (inputSearch) inputSearch.value = '';
+      btnClearSearch.classList.add('hidden');
+      reRenderList();
+    };
+  }
+
+  // 2. Refresh button
   const btnRefresh = container.querySelector('#btnRefreshFailedJobs');
   if (btnRefresh) {
     btnRefresh.onclick = async () => {
@@ -736,18 +1137,8 @@ export function attachFailedJobsListeners(container, onReload) {
         const json = await resp.json();
         if (json.success && Array.isArray(json.data?.jobs)) {
           cachedFailedJobs = json.data.jobs;
-          const listEl = container.querySelector('#adminFailedJobsList');
-          if (listEl) {
-            let filtered = cachedFailedJobs;
-            if (activeTypeFilter === 'system') {
-              filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
-            } else if (activeTypeFilter === 'user') {
-              filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
-            } else if (activeTypeFilter !== 'all') {
-              filtered = cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
-            }
-            listEl.innerHTML = renderFailedJobsItemsMarkup(filtered);
-          }
+          reRenderList();
+
           const badgeEl = container.querySelector('#adminFailedJobsCountBadge');
           if (badgeEl) {
             const sysCount = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR').length;
@@ -772,72 +1163,91 @@ export function attachFailedJobsListeners(container, onReload) {
     };
   }
 
-  // 2. Export all failed jobs to TXT with deduplication
-  const btnExport = container.querySelector('#btnExportFailedJobsTxt');
-  if (btnExport) {
-    btnExport.onclick = async () => {
-      btnExport.disabled = true;
-      const originalHtml = btnExport.innerHTML;
-      btnExport.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> <span>Đang xử lý & lọc trùng...</span>';
+  // 3. Multi-format Exports (TXT, JSON, MD) with resilient client-side fallbacks
+  const handleExport = async (format) => {
+    const btnMap = {
+      txt: container.querySelector('#btnExportFailedJobsTxt'),
+      json: container.querySelector('#btnExportFailedJobsJson'),
+      md: container.querySelector('#btnExportFailedJobsMd')
+    };
+    const targetBtn = btnMap[format];
+    const origHtml = targetBtn ? targetBtn.innerHTML : '';
+    if (targetBtn) {
+      targetBtn.disabled = true;
+      targetBtn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>';
       if (window.lucide) window.lucide.createIcons();
+    }
 
+    const mimeMap = {
+      txt: 'text/plain',
+      json: 'application/json',
+      md: 'text/markdown'
+    };
+
+    try {
+      const resp = await fetch(`/api/v1/admin/logs/export-${format}`, {
+        headers: { ...getStorageAuthHeaders(), 'Accept': mimeMap[format] || 'text/plain' }
+      });
+      if (!resp.ok) throw new Error(`Máy chủ phản hồi mã lỗi ${resp.status}`);
+
+      const totalErrors = resp.headers.get('X-Total-Errors') || String(cachedFailedJobs.length);
+      const uniqueErrors = resp.headers.get('X-Unique-Errors') || '0';
+      const contentDisposition = resp.headers.get('Content-Disposition') || '';
+      let fileName = `duydev-studio-error-logs-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.${format}`;
+      const match = contentDisposition.match(/filename="?([^";]+)"?/);
+      if (match && match[1]) fileName = match[1];
+
+      const text = await resp.text();
+      const blob = new Blob([text], { type: `${mimeMap[format]};charset=utf-8` });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast(`Đã tải về ${fileName}: ${totalErrors} lỗi (${uniqueErrors} nhóm lọc trùng)`, 'success');
+    } catch (err) {
+      console.warn(`[AdminFailedJobs] Server ${format} export failed, falling back to client-side generator:`, err);
       try {
-        const resp = await fetch('/api/v1/admin/logs/export-txt', {
-          headers: { ...getStorageAuthHeaders(), 'Accept': 'text/plain' }
-        });
+        let clientExport;
+        if (format === 'json') clientExport = generateClientJsonExport(cachedFailedJobs);
+        else if (format === 'md') clientExport = generateClientMarkdownExport(cachedFailedJobs);
+        else clientExport = generateClientDeduplicatedExport(cachedFailedJobs);
 
-        if (!resp.ok) {
-          throw new Error(`Máy chủ phản hồi mã lỗi ${resp.status}`);
-        }
-
-        const totalErrors = resp.headers.get('X-Total-Errors') || '0';
-        const uniqueErrors = resp.headers.get('X-Unique-Errors') || '0';
-        const contentDisposition = resp.headers.get('Content-Disposition') || '';
-        let fileName = `duydev-studio-error-logs-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.txt`;
-        const match = contentDisposition.match(/filename="?([^";]+)"?/);
-        if (match && match[1]) {
-          fileName = match[1];
-        }
-
-        const text = await resp.text();
-        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const blob = new Blob([clientExport.text], { type: `${mimeMap[format]};charset=utf-8` });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName;
+        a.download = clientExport.fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast(`Đã tải về ${fileName}: ${totalErrors} lỗi (đã lọc trùng còn ${uniqueErrors} lỗi duy nhất)`, 'success');
-      } catch (err) {
-        console.warn('[AdminFailedJobs] Server export failed, falling back to client-side deduplication:', err);
-        try {
-          const clientExport = generateClientDeduplicatedExport(cachedFailedJobs);
-          const blob = new Blob([clientExport.text], { type: 'text/plain;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = clientExport.fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-
-          showToast(`Đã xuất ${cachedFailedJobs.length} lỗi (lọc trùng còn ${clientExport.uniqueCount} lỗi) qua trình duyệt`, 'success');
-        } catch (clientErr) {
-          showToast(`Lỗi khi xuất file: ${err.message}`, 'error');
-        }
-      } finally {
-        btnExport.disabled = false;
-        btnExport.innerHTML = originalHtml;
+        showToast(`Đã xuất ${cachedFailedJobs.length} lỗi (${clientExport.uniqueCount} nhóm) dạng .${format} từ trình duyệt`, 'success');
+      } catch (clientErr) {
+        showToast(`Lỗi khi xuất file .${format}: ${err.message}`, 'error');
+      }
+    } finally {
+      if (targetBtn) {
+        targetBtn.disabled = false;
+        targetBtn.innerHTML = origHtml;
         if (window.lucide) window.lucide.createIcons();
       }
-    };
-  }
+    }
+  };
 
-  // 3. Retry all failed jobs
+  const btnExportTxt = container.querySelector('#btnExportFailedJobsTxt');
+  const btnExportJson = container.querySelector('#btnExportFailedJobsJson');
+  const btnExportMd = container.querySelector('#btnExportFailedJobsMd');
+  if (btnExportTxt) btnExportTxt.onclick = () => handleExport('txt');
+  if (btnExportJson) btnExportJson.onclick = () => handleExport('json');
+  if (btnExportMd) btnExportMd.onclick = () => handleExport('md');
+
+  // 4. Retry all failed jobs
   const btnRetryAll = container.querySelector('#btnRetryAllFailedJobs');
   if (btnRetryAll) {
     btnRetryAll.onclick = async () => {
@@ -863,7 +1273,7 @@ export function attachFailedJobsListeners(container, onReload) {
     };
   }
 
-  // 4. Clear all failed jobs with Slide-To-Confirm verification
+  // 5. Clear all failed jobs with Slide-To-Confirm verification
   const btnClear = container.querySelector('#btnClearFailedJobs');
   if (btnClear) {
     btnClear.onclick = () => {
@@ -882,8 +1292,7 @@ export function attachFailedJobsListeners(container, onReload) {
             const json = await resp.json();
             showToast(json.message || 'Đã dọn sạch nhật ký lỗi', json.success ? 'success' : 'error');
             cachedFailedJobs = [];
-            const listEl = container.querySelector('#adminFailedJobsList');
-            if (listEl) listEl.innerHTML = renderFailedJobsItemsMarkup([]);
+            reRenderList();
             const badgeEl = container.querySelector('#adminFailedJobsCountBadge');
             if (badgeEl) {
               badgeEl.textContent = '0 lỗi hệ thống · 0 thao tác người dùng';
@@ -894,6 +1303,7 @@ export function attachFailedJobsListeners(container, onReload) {
               if (filterType === 'all') b.textContent = 'Tất cả (0)';
               else if (filterType === 'system') b.textContent = 'Lỗi Hệ Thống (0)';
               else if (filterType === 'user') b.textContent = 'Thao Tác Người Dùng (0)';
+              else if (filterType === 'timeout') b.textContent = '⏱️ Hết Giờ (0)';
               else if (filterType === 'pdf') b.textContent = 'PDF Studio (0)';
               else if (filterType === 'conv') b.textContent = 'Converter (0)';
               else if (filterType === 'quiz') b.textContent = 'Quiz (0)';
@@ -908,7 +1318,7 @@ export function attachFailedJobsListeners(container, onReload) {
     };
   }
 
-  // 3. Filter pills
+  // 6. Filter pills
   container.querySelectorAll('.btn-failed-filter').forEach(btn => {
     btn.onclick = () => {
       const type = btn.dataset.filterType;
@@ -918,32 +1328,22 @@ export function attachFailedJobsListeners(container, onReload) {
         let activeClass = 'bg-orange-500 text-white font-bold shadow-xs';
         if (type === 'system') activeClass = 'bg-rose-500 text-white font-bold shadow-xs';
         else if (type === 'user') activeClass = 'bg-sky-500 text-white font-bold shadow-xs';
+        else if (type === 'timeout') activeClass = 'bg-amber-500 text-white font-bold shadow-xs';
 
-        b.className = `btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${
+        b.className = `btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${
           isActive
             ? activeClass
             : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
         }`;
       });
 
-      const listEl = container.querySelector('#adminFailedJobsList');
-      if (listEl) {
-        let filtered = cachedFailedJobs;
-        if (activeTypeFilter === 'system') {
-          filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'SYSTEM_ERROR');
-        } else if (activeTypeFilter === 'user') {
-          filtered = cachedFailedJobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
-        } else if (activeTypeFilter !== 'all') {
-          filtered = cachedFailedJobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
-        }
-        listEl.innerHTML = renderFailedJobsItemsMarkup(filtered);
-        if (window.lucide) window.lucide.createIcons();
-      }
+      reRenderList();
     };
   });
 
-  // 4. Toggle payload container
+  // 7. Delegated Actions: Retry, Copy Error, Inspect Details, Retry Group, Toggle Payload
   container.addEventListener('click', async (e) => {
+    // 7a. Single Retry
     const retryBtn = e.target.closest('[data-retry-job-id]');
     if (retryBtn) {
       const jid = retryBtn.dataset.retryJobId;
@@ -969,6 +1369,67 @@ export function attachFailedJobsListeners(container, onReload) {
       return;
     }
 
+    // 7b. Copy Error Report Markdown
+    const copyBtn = e.target.closest('[data-copy-job-id]');
+    if (copyBtn) {
+      const jid = copyBtn.dataset.copyJobId;
+      const job = cachedFailedJobs.find(j => j.id === jid);
+      if (job) {
+        const report = buildJobMarkdownReport(job);
+        navigator.clipboard.writeText(report);
+        showToast(`Đã sao chép báo cáo lỗi cho #${jid.substring(0, 10)}...`, 'success');
+      }
+      return;
+    }
+
+    // 7c. Inspect Job Diagnostics Modal
+    const inspectBtn = e.target.closest('[data-inspect-job-id]');
+    if (inspectBtn) {
+      const jid = inspectBtn.dataset.inspectJobId;
+      const job = cachedFailedJobs.find(j => j.id === jid);
+      if (job) {
+        openJobDiagnosticsModal(job);
+      }
+      return;
+    }
+
+    // 7d. Retry Job Group
+    const retryGroupBtn = e.target.closest('[data-retry-group-sig]');
+    if (retryGroupBtn) {
+      const sig = retryGroupBtn.dataset.retryGroupSig;
+      const matchingJobs = cachedFailedJobs.filter(j => extractSemanticErrorDetailsClient(j.errorMessage, j.type).signature === sig);
+      if (matchingJobs.length === 0) return;
+      if (!confirm(`Bạn có chắc muốn kích hoạt thử lại toàn bộ ${matchingJobs.length} tác vụ có cùng bản chất lỗi này?`)) return;
+
+      const origHtml = retryGroupBtn.innerHTML;
+      retryGroupBtn.disabled = true;
+      retryGroupBtn.innerHTML = '<i data-lucide="loader" class="w-2.5 h-2.5 animate-spin"></i>';
+      if (window.lucide) window.lucide.createIcons();
+
+      try {
+        let successCount = 0;
+        for (const mj of matchingJobs) {
+          try {
+            await fetch(`/api/v1/admin/logs/retry-job/${encodeURIComponent(mj.id)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getStorageAuthHeaders() }
+            });
+            successCount++;
+          } catch {}
+        }
+        showToast(`Đã kích hoạt thử lại cho ${successCount}/${matchingJobs.length} tác vụ trong nhóm`, 'success');
+        if (onReload) onReload();
+      } catch (err) {
+        showToast(`Lỗi khi thử lại nhóm: ${err.message}`, 'error');
+      } finally {
+        retryGroupBtn.disabled = false;
+        retryGroupBtn.innerHTML = origHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+      return;
+    }
+
+    // 7e. Toggle Payload Container
     const toggleBtn = e.target.closest('[data-toggle-job-payload]');
     if (!toggleBtn) return;
     const jobId = toggleBtn.dataset.toggleJobPayload;
@@ -1161,6 +1622,179 @@ export function generateClientDeduplicatedExport(jobs = []) {
   lines.push(sep100);
   lines.push('END OF DUYDEV STUDIO SYSTEM ERROR AUDIT REPORT');
   lines.push(sep100);
+
+  return {
+    text: lines.join('\n'),
+    fileName,
+    uniqueCount
+  };
+}
+
+/**
+ * Helper to group jobs for client-side exports
+ */
+function extractClientGroups(jobs = []) {
+  const now = new Date();
+  const groupMap = new Map();
+
+  for (const j of jobs) {
+    const semantic = extractSemanticErrorDetailsClient(j.errorMessage, j.type);
+    const sig = semantic.signature;
+
+    let parsedOptions = j.options;
+    if (!parsedOptions && j.optionsRaw) {
+      try { parsedOptions = JSON.parse(j.optionsRaw); } catch { parsedOptions = j.optionsRaw; }
+    }
+
+    const fileNames = [];
+    if (parsedOptions && typeof parsedOptions === 'object') {
+      const candidate = parsedOptions.fileName || parsedOptions.filename || parsedOptions.name || parsedOptions.file;
+      if (candidate) fileNames.push(candidate);
+    }
+
+    const cDate = j.createdAt ? new Date(j.createdAt) : now;
+
+    if (!groupMap.has(sig)) {
+      groupMap.set(sig, {
+        signature: sig,
+        category: semantic.category,
+        errorClass: semantic.errorClass,
+        rootCauseTitle: semantic.rootCauseTitle,
+        normalizedSummary: semantic.normalizedSummary,
+        severity: semantic.severity,
+        suggestedFix: semantic.suggestedFix,
+        types: Array.from(new Set(j.type ? [j.type] : [])),
+        rawErrors: Array.from(new Set(j.errorMessage ? [j.errorMessage] : [])),
+        count: 1,
+        firstSeen: cDate,
+        lastSeen: cDate,
+        jobIds: [j.id],
+        fileNames,
+        sampleOptions: parsedOptions
+      });
+    } else {
+      const g = groupMap.get(sig);
+      g.count++;
+      if (j.type && !g.types.includes(j.type)) g.types.push(j.type);
+      if (cDate < g.firstSeen) g.firstSeen = cDate;
+      if (cDate > g.lastSeen) g.lastSeen = cDate;
+      g.jobIds.push(j.id);
+      if (j.errorMessage && !g.rawErrors.includes(j.errorMessage)) g.rawErrors.push(j.errorMessage);
+      for (const fn of fileNames) {
+        if (!g.fileNames.includes(fn)) g.fileNames.push(fn);
+      }
+      if (!g.sampleOptions && parsedOptions) g.sampleOptions = parsedOptions;
+    }
+  }
+
+  return Array.from(groupMap.values()).sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Generates client-side JSON export of failed jobs
+ */
+export function generateClientJsonExport(jobs = []) {
+  const groups = extractClientGroups(jobs);
+  const now = new Date();
+  const fileTimestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const fileName = `duydev-studio-error-logs-${fileTimestamp}.json`;
+
+  const totalErrors = jobs.length;
+  const uniqueCount = groups.length;
+  const duplicateCount = Math.max(0, totalErrors - uniqueCount);
+  const reductionPercentage = totalErrors > 0 ? Math.round((duplicateCount / totalErrors) * 1000) / 10 : 0;
+  const totalSystemErrors = groups.filter(g => g.errorClass === 'SYSTEM_ERROR').reduce((sum, g) => sum + g.count, 0);
+  const totalUserActions = totalErrors - totalSystemErrors;
+
+  const payload = {
+    metadata: {
+      generatedAt: now.toISOString(),
+      generator: 'DuyDev Studio Client Telemetry Engine v22.52',
+      totalErrors,
+      uniqueErrors: uniqueCount,
+      duplicatesMerged: duplicateCount,
+      reductionPercentage,
+      totalSystemErrors,
+      totalUserActions
+    },
+    groups,
+    rawJobs: jobs.map(j => ({
+      id: j.id,
+      type: j.type,
+      errorMessage: j.errorMessage,
+      normalizedError: normalizeErrorMessageToEnglish(j.errorMessage),
+      options: j.options || j.optionsRaw,
+      createdAt: j.createdAt,
+      durationMs: j.durationMs
+    }))
+  };
+
+  return {
+    text: JSON.stringify(payload, null, 2),
+    fileName,
+    uniqueCount
+  };
+}
+
+/**
+ * Generates client-side Markdown export of failed jobs
+ */
+export function generateClientMarkdownExport(jobs = []) {
+  const groups = extractClientGroups(jobs);
+  const now = new Date();
+  const fileTimestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const fileName = `duydev-studio-error-logs-${fileTimestamp}.md`;
+
+  const totalErrors = jobs.length;
+  const uniqueCount = groups.length;
+  const duplicateCount = Math.max(0, totalErrors - uniqueCount);
+  const reductionPct = totalErrors > 0 ? ((duplicateCount / totalErrors) * 100).toFixed(1) : '0';
+  const totalSystemErrors = groups.filter(g => g.errorClass === 'SYSTEM_ERROR').reduce((sum, g) => sum + g.count, 0);
+  const totalUserActions = totalErrors - totalSystemErrors;
+
+  const lines = [];
+  lines.push('# 🛡️ DuyDev Studio - System Error Audit & Diagnostics');
+  lines.push('> Báo cáo trích xuất lỗi hệ thống có lọc trùng và phân loại gốc rễ.');
+  lines.push('');
+  lines.push(`- **Thời điểm xuất**: \`${now.toISOString()}\``);
+  lines.push(`- **Tổng số lỗi**: \`${totalErrors}\``);
+  lines.push(`- **Nguyên nhân gốc rễ (Unique)**: \`${uniqueCount}\``);
+  lines.push(`- **Đã lọc trùng**: \`${duplicateCount}\` lỗi (${reductionPct}% giảm nhiễu)`);
+  lines.push(`- **Lỗi hệ thống**: \`${totalSystemErrors}\` (Core Engine)`);
+  lines.push(`- **Thao tác người dùng**: \`${totalUserActions}\` (USER_ACTION)`);
+  lines.push('');
+
+  lines.push('## 📊 Bảng Phân Loại Lỗi');
+  lines.push('');
+  lines.push('| # | Phân Hệ | Mức Độ | Số Lần | Nguyên Nhân Gốc Rễ | Gợi Ý Khắc Phục |');
+  lines.push('|---|---------|--------|--------|---------------------|-----------------|');
+  groups.forEach((g, idx) => {
+    lines.push(`| ${idx + 1} | ${g.category} | **${g.severity}** | ${g.count} | ${g.rootCauseTitle} | ${g.suggestedFix || 'N/A'} |`);
+  });
+  lines.push('');
+
+  lines.push('## 🛠️ Chi Tiết Từng Nhóm Lỗi Đã Gom Trùng');
+  groups.forEach((g, idx) => {
+    lines.push(`### Nhóm #${idx + 1}: ${g.rootCauseTitle}`);
+    lines.push(`- **Chữ ký**: \`${g.signature}\``);
+    lines.push(`- **Phân hệ**: ${g.category} (Job types: ${g.types.join(', ')})`);
+    lines.push(`- **Phân loại**: \`${g.errorClass}\``);
+    lines.push(`- **Mức độ**: \`${g.severity}\``);
+    lines.push(`- **Tần suất**: ${g.count} lần`);
+    lines.push(`- **Thời gian**: Từ \`${g.firstSeen.toISOString()}\` đến \`${g.lastSeen.toISOString()}\``);
+    lines.push(`- **Tóm tắt chuẩn**: ${g.normalizedSummary}`);
+    lines.push(`- **Gợi ý khắc phục**: ${g.suggestedFix}`);
+    if (g.fileNames && g.fileNames.length > 0) {
+      lines.push(`- **Tệp bị ảnh hưởng**: ${g.fileNames.join(', ')}`);
+    }
+    lines.push(`- **Job IDs**: ${g.jobIds.slice(0, 8).map(id => `\`#${String(id).slice(0, 12)}\``).join(', ')}${g.jobIds.length > 8 ? ` *(+${g.jobIds.length - 8} jobs)*` : ''}`);
+    if (g.rawErrors && g.rawErrors.length > 0) {
+      lines.push('```text');
+      lines.push(g.rawErrors[0]);
+      lines.push('```');
+    }
+    lines.push('');
+  });
 
   return {
     text: lines.join('\n'),
