@@ -134,27 +134,35 @@ class BatchPlanner:
         target_candidates: list[tuple[int, PageRepresentation]] = []
         if target_question_numbers is not None:
             target_q_set = set(target_question_numbers)
-            seen_cand_nums: set[int] = set()
+            seen_cand_keys: set[tuple[str, int]] = set()
             for p_rep in active_pages:
                 for cand in p_rep.candidates:
-                    if cand.candidate_number in target_q_set and cand.candidate_number not in seen_cand_nums:
+                    sec_type = getattr(cand, "section_type", "part_i_mcq")
+                    key = (sec_type, cand.candidate_number)
+                    if cand.candidate_number in target_q_set and key not in seen_cand_keys:
                         target_candidates.append((cand.candidate_number, p_rep))
-                        seen_cand_nums.add(cand.candidate_number)
+                        seen_cand_keys.add(key)
             # If any target question wasn't directly in candidates, assign it to first active page
             for q_n in target_question_numbers:
-                if q_n not in seen_cand_nums and active_pages:
+                if not any(k[1] == q_n for k in seen_cand_keys) and active_pages:
                     target_candidates.append((q_n, active_pages[0]))
-                    seen_cand_nums.add(q_n)
+                    seen_cand_keys.add(("part_i_mcq", q_n))
             target_candidates.sort(key=lambda item: item[0])
         else:
             target_end_q = (start_question + question_count - 1) if question_count else None
+            seen_cand_keys: set[tuple[str, int]] = set()
             for p_rep in active_pages:
                 for cand in p_rep.candidates:
-                    if cand.candidate_number >= start_question:
-                        if target_end_q is not None and cand.candidate_number > target_end_q:
+                    sec_type = getattr(cand, "section_type", "part_i_mcq")
+                    key = (sec_type, cand.candidate_number)
+                    if key in seen_cand_keys:
+                        continue
+                    if cand.candidate_number >= start_question or sec_type in ("part_ii_tf", "part_iii_short"):
+                        if target_end_q is not None and sec_type == "part_i_mcq" and cand.candidate_number > target_end_q:
                             continue
                         if question_count is None or len(target_candidates) < question_count:
                             target_candidates.append((cand.candidate_number, p_rep))
+                            seen_cand_keys.add(key)
 
 
         # If candidates are empty (e.g. non-standard numbering), partition by page blocks

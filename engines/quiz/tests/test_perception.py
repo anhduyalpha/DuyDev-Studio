@@ -255,6 +255,98 @@ class TestPerceptionLayer(unittest.TestCase):
         self.assertIsInstance(img_bytes, bytes)
         self.assertTrue(img_bytes.startswith(b"\x89PNG\r\n\x1a\n"))
 
+    def test_candidate_dedup_multi_sections_same_page(self):
+        """Verify on 1 page containing Part I (Q1, Q2) and Part II (Q1, Q2), returns all 4 candidates."""
+        b1 = TextBlock(
+            block_index=0,
+            bbox=(0, 0, 100, 100),
+            text="PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn\n"
+                 "Câu 1: Kim loại dẫn điện tốt nhất?\n"
+                 "A. Al. B. Fe. C. Ag. D. Cu.\n"
+                 "Câu 2: Dung dịch làm quỳ tím hóa đỏ?\n"
+                 "A. NaOH. B. HCl. C. NaCl. D. Ba(OH)2."
+        )
+        b2 = TextBlock(
+            block_index=1,
+            bbox=(0, 200, 100, 300),
+            text="PHẦN II. Câu trắc nghiệm đúng sai\n"
+                 "Câu 1: Cho các phát biểu sau về carbohydrate:\n"
+                 "a) Glucose là monosaccharide.\n"
+                 "b) Fructose là disaccharide.\n"
+                 "c) Saccharose có phản ứng tráng bạc.\n"
+                 "d) Cellulose là polysaccharide.\n"
+                 "Câu 2: Cho các phát biểu sau về lipid:\n"
+                 "a) Triolein là chất béo không no.\n"
+                 "b) Tristearin là chất rắn.\n"
+                 "c) Dầu mỡ động thực vật chứa triglyceride.\n"
+                 "d) Xà phòng hóa chất béo tạo glycerol."
+        )
+        cands = detect_candidates_from_page([b1, b2])
+        self.assertEqual(len(cands), 4)
+        cands_summary = [(c.candidate_number, c.section_type) for c in cands]
+        self.assertEqual(
+            cands_summary,
+            [
+                (1, "part_i_mcq"),
+                (2, "part_i_mcq"),
+                (1, "part_ii_tf"),
+                (2, "part_ii_tf")
+            ]
+        )
+
+    def test_statement_counting_remains_part_i_mcq(self):
+        """Statement counting question with sub-statements a, b, c, d in stem and A, B, C, D at end must be part_i_mcq."""
+        b = TextBlock(
+            block_index=0,
+            bbox=(0, 0, 100, 100),
+            text="Câu 49: Cho các phát biểu sau đây:\n"
+                 "a) Các triglyceride đều có phản ứng cộng hydrogen.\n"
+                 "b) Chỉ có các chất béo ở thể lỏng mới có phản ứng cộng hydrogen.\n"
+                 "c) Các triglyceride có gốc acid béo no thường là chất rắn.\n"
+                 "d) Có thể dùng nước để phân biệt ester với alcohol.\n"
+                 "Số phát biểu đúng là\n"
+                 "A. 1.    B. 2.    C. 3.    D. 4."
+        )
+        cands = detect_candidates_from_page([b])
+        self.assertEqual(len(cands), 1)
+        self.assertEqual(cands[0].candidate_number, 49)
+        self.assertEqual(cands[0].section_type, "part_i_mcq")
+        self.assertEqual(cands[0].options_detected, ["A", "B", "C", "D"])
+        self.assertEqual(cands[0].statements_detected, ["a", "b", "c", "d"])
+
+    def test_part_ii_statements_detected(self):
+        """Part II question with sub-statements a-d and NO options A-D must be part_ii_tf."""
+        b = TextBlock(
+            block_index=0,
+            bbox=(0, 0, 100, 100),
+            text="PHẦN II\n"
+                 "Câu 1: Cho các nhận định sau:\n"
+                 "a) Ester có nhiệt độ sôi thấp hơn alcohol cùng số C.\n"
+                 "b) Phản ứng thủy phân ester trong môi trường acid là thuận nghịch.\n"
+                 "c) Xà phòng hóa triolein thu được ethylene glycol.\n"
+                 "d) Mỡ động vật chứa chủ yếu các acid béo chưa no."
+        )
+        cands = detect_candidates_from_page([b])
+        self.assertEqual(len(cands), 1)
+        self.assertEqual(cands[0].candidate_number, 1)
+        self.assertEqual(cands[0].section_type, "part_ii_tf")
+        self.assertEqual(cands[0].options_detected, [])
+        self.assertEqual(cands[0].statements_detected, ["a", "b", "c", "d"])
+
+    def test_part_iii_short_detected(self):
+        """Part III question under PHẦN III banner with neither options nor statements must be part_iii_short."""
+        b = TextBlock(
+            block_index=0,
+            bbox=(0, 0, 100, 100),
+            text="PHẦN III. Câu trắc nghiệm yêu cầu trả lời ngắn\n"
+                 "Câu 1: Đốt cháy hoàn toàn m gam hỗn hợp X cần vừa đủ 0,4 mol O2. Giá trị của m là bao nhiêu?"
+        )
+        cands = detect_candidates_from_page([b])
+        self.assertEqual(len(cands), 1)
+        self.assertEqual(cands[0].candidate_number, 1)
+        self.assertEqual(cands[0].section_type, "part_iii_short")
+        self.assertEqual(cands[0].options_detected, [])
+
 
 if __name__ == "__main__":
     unittest.main()

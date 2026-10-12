@@ -54,54 +54,104 @@ def _find_physical_page_index(doc: fitz.Document, printed_page_num: int) -> int:
     return max(0, min(direct_idx, total_pages - 1))
 
 
-def _split_candidates_by_section(rep: PageRepresentation) -> tuple[list[QuestionCandidate], list[QuestionCandidate]]:
+BANNER_PART_I_PATTERN = re.compile(
+    r"(?:PHẦN|Phần)\s*(?:I|1)\b",
+    re.IGNORECASE
+)
+BANNER_PART_II_PATTERN = re.compile(
+    r"(?:PHẦN|Phần)\s*(?:II|2)\b",
+    re.IGNORECASE
+)
+BANNER_PART_III_PATTERN = re.compile(
+    r"(?:PHẦN|Phần)\s*(?:III|3)\b",
+    re.IGNORECASE
+)
+
+
+def _split_candidates_by_section(
+    rep: PageRepresentation,
+    inherited_section: str = "part_i"
+) -> tuple[list[QuestionCandidate], list[QuestionCandidate], list[QuestionCandidate]]:
     """
-    Separates detected page candidates into Part I (MCQ) and Part II (True/False).
-    Identifies 'PHẦN II' banner y-position or question number reset boundaries.
+    Separates detected page candidates into Part I (MCQ), Part II (True/False), and Part III (Short Answer).
+    Employs 3-Tier Multi-Signal Classification Engine:
+    - Tier 1: Intrinsic Structure (Highest Priority):
+        * If >= 2 options A, B, C, D detected -> MUST be PART_I_MCQ (even for statement-counting questions)
+        * If sub-statements a-d exist and NO options A-D -> PART_II_TF
+        * If neither options A-D nor sub-statements a-d exist -> PART_III_SHORT (or banner/inherited fallback)
+    - Tier 2: Banner Detection & Cross-Page Inheritance:
+        * Banners for PHẦN I, II, III with y-coordinate tracking
+        * Inherited section context from preceding page
+    - Tier 3: Numbering Reset Boundaries:
+        * When q_num <= prev_q_num or q_num == 1, transitions section boundary.
     """
     if not rep.candidates:
-        return [], []
+        return [], [], []
 
-    raw_text = rep.raw_text or ""
-    has_part_ii_text = bool(re.search(
-        r"(?:PHẦN|Phần)\s*(?:II|2)[\s\.\:\-]*(?:Câu\s*trắc\s*nghiệm\s*đúng\s*sai|Đúng\s*sai)?",
-        raw_text,
-        re.IGNORECASE
-    ))
-
-    # Find y-position of PHẦN II if present in blocks
-    phan_ii_y = None
-    if has_part_ii_text and rep.blocks:
-        pat_banner = re.compile(r"(?:PHẦN|Phần)\s*(?:II|2)\b", re.IGNORECASE)
+    banners: list[tuple[float, str]] = []
+    if rep.blocks:
         for b in rep.blocks:
-            if pat_banner.search(b.text):
-                phan_ii_y = b.bbox[1]
+            text = b.text.strip()
+            if BANNER_PART_III_PATTERN.search(text):
+                banners.append((b.bbox[1], "part_iii"))
+            elif BANNER_PART_II_PATTERN.search(text):
+                banners.append((b.bbox[1], "part_ii"))
+            elif BANNER_PART_I_PATTERN.search(text):
+                banners.append((b.bbox[1], "part_i"))
+    banners.sort(key=lambda x: x[0])
+
+    def get_banner_sec_for_cand(cand_y: float) -> str:
+        if not banners:
+            return inherited_section
+        sec = inherited_section
+        for b_y, b_sec in banners:
+            if cand_y >= b_y - 5.0:
+                sec = b_sec
+            else:
                 break
+        return sec
 
     part_i: list[QuestionCandidate] = []
     part_ii: list[QuestionCandidate] = []
+    part_iii: list[QuestionCandidate] = []
 
-    if phan_ii_y is not None:
-        for c in rep.candidates:
-            if c.y_pos < phan_ii_y:
-                part_i.append(c)
-            else:
-                part_ii.append(c)
-    else:
-        # Check if question numbers reset (e.g. [47, 48, 49, 50, 1])
-        reset_idx = -1
-        for i in range(1, len(rep.candidates)):
-            if rep.candidates[i].candidate_number < rep.candidates[i - 1].candidate_number:
-                reset_idx = i
-                break
+    current_sec = inherited_section
+    prev_q_num: Optional[int] = None
 
-        if reset_idx != -1:
-            part_i = rep.candidates[:reset_idx]
-            part_ii = rep.candidates[reset_idx:]
+    for c in rep.candidates:
+        cand_banner_sec = get_banner_sec_for_cand(c.y_pos)
+
+        # Tier 1 (Intrinsic Structure - Highest Priority)
+        if len(c.options_detected) >= 2:
+            # MUST be PART_I_MCQ even if sub-statements a-d exist in stem (statement counting)
+            final_sec = "part_i"
+        elif len(c.options_detected) == 0 and len(c.statements_detected) >= 2:
+            # Sub-statements present without options A-D -> PART_II_TF
+            final_sec = "part_ii"
         else:
-            part_i = list(rep.candidates)
+            # Tier 2: Banner context
+            if banners:
+                final_sec = cand_banner_sec
+            else:
+                # Tier 3: Numbering Reset Boundaries
+                final_sec = current_sec
+                if prev_q_num is not None and (c.candidate_number <= prev_q_num or c.candidate_number == 1):
+                    if current_sec == "part_i":
+                        final_sec = "part_ii"
+                    elif current_sec == "part_ii":
+                        final_sec = "part_iii"
 
-    return part_i, part_ii
+        current_sec = final_sec
+        prev_q_num = c.candidate_number
+
+        if final_sec == "part_i":
+            part_i.append(c)
+        elif final_sec == "part_ii":
+            part_ii.append(c)
+        else:
+            part_iii.append(c)
+
+    return part_i, part_ii, part_iii
 
 
 def inspect_page_ground_truth(
@@ -179,6 +229,45 @@ def inspect_page_ground_truth(
     if start_phys_idx > end_phys_idx:
         start_phys_idx, end_phys_idx = end_phys_idx, start_phys_idx
 
+    # Cross-page inheritance: detect section context from preceding page if starting mid-section
+    inherited_section = "part_i"
+    if start_phys_idx > 0:
+        first_page_has_top_banner = False
+        p0 = doc[start_phys_idx]
+        p0_text = p0.get_text("text")
+        if (
+            BANNER_PART_I_PATTERN.search(p0_text[:400])
+            or BANNER_PART_II_PATTERN.search(p0_text[:400])
+            or BANNER_PART_III_PATTERN.search(p0_text[:400])
+        ):
+            first_page_has_top_banner = True
+
+        if not first_page_has_top_banner:
+            # Scan backward through preceding pages to locate the active section
+            for back_idx in range(start_phys_idx - 1, max(-1, start_phys_idx - 10), -1):
+                prev_p = doc[back_idx]
+                prev_text = prev_p.get_text("text")
+                m_iii = list(BANNER_PART_III_PATTERN.finditer(prev_text))
+                m_ii = list(BANNER_PART_II_PATTERN.finditer(prev_text))
+                m_i = list(BANNER_PART_I_PATTERN.finditer(prev_text))
+
+                found_banner = False
+                last_pos = -1
+                if m_iii and m_iii[-1].start() > last_pos:
+                    last_pos = m_iii[-1].start()
+                    inherited_section = "part_iii"
+                    found_banner = True
+                if m_ii and m_ii[-1].start() > last_pos:
+                    last_pos = m_ii[-1].start()
+                    inherited_section = "part_ii"
+                    found_banner = True
+                if m_i and m_i[-1].start() > last_pos:
+                    last_pos = m_i[-1].start()
+                    inherited_section = "part_i"
+                    found_banner = True
+                if found_banner:
+                    break
+
     # Extract representations across target page range
     page_reps: list[PageRepresentation] = []
     for p_idx in range(start_phys_idx, end_phys_idx + 1):
@@ -189,28 +278,65 @@ def inspect_page_ground_truth(
     # Aggregate candidates and section division
     all_part_i: list[QuestionCandidate] = []
     all_part_ii: list[QuestionCandidate] = []
+    all_part_iii: list[QuestionCandidate] = []
 
+    curr_inherited = inherited_section
     for rep in page_reps:
-        p_i, p_ii = _split_candidates_by_section(rep)
+        p_i, p_ii, p_iii = _split_candidates_by_section(rep, inherited_section=curr_inherited)
         all_part_i.extend(p_i)
         all_part_ii.extend(p_ii)
+        all_part_iii.extend(p_iii)
+        if p_iii:
+            curr_inherited = "part_iii"
+        elif p_ii:
+            curr_inherited = "part_ii"
+        elif p_i:
+            curr_inherited = "part_i"
 
     has_part_i = len(all_part_i) > 0
     has_part_ii = len(all_part_ii) > 0
+    has_part_iii = len(all_part_iii) > 0
+    part_i_count = len(all_part_i)
     part_ii_start = all_part_ii[0].candidate_number if all_part_ii else None
+    part_ii_count = len(all_part_ii)
+    part_iii_start = all_part_iii[0].candidate_number if all_part_iii else None
+    part_iii_count = len(all_part_iii)
 
     # Determine base candidate set according to query section preference
     q_lower = query.lower()
-    is_part_ii_only = bool(re.search(r"(?:chỉ\s*lấy\s*phần\s*đúng\s*sai|phần\s*(?:ii|2)|trắc\s*nghiệm\s*đúng\s*sai)", q_lower))
-    is_part_i_only = bool(re.search(r"(?:chỉ\s*lấy\s*phần\s*trắc\s*nghiệm|phần\s*(?:i|1)|4\s*lựa\s*chọn|nhiều\s*phương\s*án)", q_lower))
+    is_part_iii_only = bool(re.search(
+        r"(?:chỉ\s*lấy\s*phần\s*trả\s*lời\s*ngắn|phần\s*(?:iii|3)|trả\s*lời\s*ngắn|điền\s*đáp\s*số)",
+        q_lower
+    ))
+    is_part_ii_only = bool(re.search(
+        r"(?:chỉ\s*lấy\s*phần\s*đúng\s*sai|phần\s*(?:ii|2)|trắc\s*nghiệm\s*đúng\s*sai)",
+        q_lower
+    ))
+    is_part_i_only = bool(re.search(
+        r"(?:chỉ\s*lấy\s*phần\s*trắc\s*nghiệm|phần\s*(?:i|1)|4\s*lựa\s*chọn|nhiều\s*phương\s*án)",
+        q_lower
+    ))
 
-    if is_part_ii_only and all_part_ii:
+    if is_part_iii_only:
+        section_filter = "part_iii"
+        active_cands = list(all_part_iii)
+    elif is_part_ii_only:
+        section_filter = "part_ii"
         active_cands = list(all_part_ii)
-    elif is_part_i_only and all_part_i:
+    elif is_part_i_only:
+        section_filter = "part_i"
         active_cands = list(all_part_i)
     else:
-        # Default: if Part I exists, prioritize Part I for start and count
-        active_cands = list(all_part_i) if all_part_i else list(all_part_ii)
+        section_filter = "all"
+        is_parity_query = bool(re.search(
+            r"\b(?:các\s*câu\s*lẻ|câu\s*lẻ|lẻ|các\s*câu\s*chẵn|câu\s*chẵn|chẵn)\b",
+            q_lower
+        ))
+        if is_parity_query and all_part_i:
+            active_cands = list(all_part_i)
+        else:
+            # Whole page or all sections: combine all detected parts!
+            active_cands = list(all_part_i) + list(all_part_ii) + list(all_part_iii)
 
     if not active_cands:
         # Fallback to all detected candidates if any
@@ -277,15 +403,21 @@ def inspect_page_ground_truth(
         if num not in unique_numbers:
             unique_numbers.append(num)
 
-    if unique_numbers:
+    if parity_filter != "all":
+        start_num = unique_numbers[0] if unique_numbers else 1
+        end_num = unique_numbers[-1] if unique_numbers else 1
+    elif all_part_i and (section_filter == "all" or section_filter == "part_i"):
+        start_num = all_part_i[0].candidate_number
+        end_num = all_part_i[-1].candidate_number
+    elif unique_numbers:
         start_num = unique_numbers[0]
         end_num = unique_numbers[-1]
-        count_num = len(unique_numbers)
     else:
         # Fallback if no questions detected on page
         start_num = 1
         end_num = 1
-        count_num = 1
+
+    count_num = len(unique_numbers) if unique_numbers else 1
 
     # Format pages string
     if start_printed_p == end_printed_p:
@@ -315,9 +447,15 @@ def inspect_page_ground_truth(
         "count": count_num,
         "detected_questions": unique_numbers,
         "parity_filter": parity_filter,
+        "section_filter": section_filter,
         "has_part_i": has_part_i,
         "has_part_ii": has_part_ii,
+        "has_part_iii": has_part_iii,
+        "part_i_count": part_i_count,
         "part_ii_start": part_ii_start,
+        "part_ii_count": part_ii_count,
+        "part_iii_start": part_iii_start,
+        "part_iii_count": part_iii_count,
         "title": title,
         "prefix": prefix,
         "source": "inspect"

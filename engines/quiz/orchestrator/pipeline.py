@@ -24,6 +24,7 @@ from engines.quiz.recognition.rule_parser import parse_numeric_instruction
 from engines.quiz.recognition.question_index import QuestionIndexService
 from engines.quiz.reconstruction.batch_planner import BatchPlanner
 from engines.quiz.reconstruction.reconstructor import QuestionReconstructor
+from engines.quiz.reconstruction.models import QuestionType
 from engines.quiz.reconstruction.post_processor import post_process_questions
 
 logger = logging.getLogger("engines.quiz.orchestrator.pipeline")
@@ -70,11 +71,33 @@ class QuizPipelineOrchestrator:
         subtitle: str | None = None,
         duration: str | None = None,
         on_progress: Callable[[JobStage, int, str], None] | None = None,
+        detected_questions: list[int] | str | None = None,
+        parity_filter: str | None = None,
+        section_filter: str | None = None,
     ) -> JobState:
         """Execute the end-to-end pipeline with state machine transitions."""
         os.makedirs(output_dir, exist_ok=True)
         active_job_id = job_id or f"job_{uuid.uuid4().hex[:12]}"
         state_file = os.path.join(output_dir, "job_state.json")
+
+        # Resolve target question filters
+        target_q_nums: list[int] | None = None
+        if detected_questions:
+            if isinstance(detected_questions, str):
+                try:
+                    cleaned_dq = str(detected_questions).strip().strip("[]")
+                    if cleaned_dq:
+                        target_q_nums = [int(x.strip()) for x in cleaned_dq.split(",") if x.strip()]
+                except Exception:
+                    target_q_nums = None
+            elif isinstance(detected_questions, list):
+                target_q_nums = [int(x) for x in detected_questions]
+
+        if target_q_nums and parity_filter in ("odd", "even"):
+            if parity_filter == "odd":
+                target_q_nums = [q for q in target_q_nums if q % 2 != 0]
+            elif parity_filter == "even":
+                target_q_nums = [q for q in target_q_nums if q % 2 == 0]
 
         state = JobState(
             job_id=active_job_id,
@@ -156,15 +179,31 @@ class QuizPipelineOrchestrator:
             )
 
             # Reconcile question bounds from numeric instruction if explicitly provided
-            parsed_instr = parse_numeric_instruction(user_instruction)
-            if parsed_instr and parsed_instr.start_question is not None:
-                plan_start_q = parsed_instr.start_question
-                plan_end_q = parsed_instr.end_question or (plan_start_q + (parsed_instr.question_count or effective_count) - 1)
-                plan_count = parsed_instr.question_count or (plan_end_q - plan_start_q + 1)
+            if target_q_nums:
+                plan_start_q = target_q_nums[0]
+                plan_end_q = target_q_nums[-1]
+                plan_count = len(target_q_nums)
             else:
-                plan_start_q = start_num
-                plan_end_q = end_num
-                plan_count = effective_count
+                parsed_instr = parse_numeric_instruction(user_instruction)
+                if parsed_instr and parsed_instr.start_question is not None:
+                    plan_start_q = parsed_instr.start_question
+                    plan_end_q = parsed_instr.end_question or (plan_start_q + (parsed_instr.question_count or effective_count) - 1)
+                    plan_count = parsed_instr.question_count or (plan_end_q - plan_start_q + 1)
+                else:
+                    plan_start_q = start_num
+                    plan_end_q = end_num
+                    plan_count = effective_count
+
+                if parity_filter in ("odd", "even"):
+                    all_range = list(range(plan_start_q, plan_end_q + 1))
+                    if parity_filter == "odd":
+                        target_q_nums = [q for q in all_range if q % 2 != 0]
+                    elif parity_filter == "even":
+                        target_q_nums = [q for q in all_range if q % 2 == 0]
+                    if target_q_nums:
+                        plan_start_q = target_q_nums[0]
+                        plan_end_q = target_q_nums[-1]
+                        plan_count = len(target_q_nums)
 
             # Auto-Expand Page Scanning Algorithm (Ticket #01 & #05)
             # 1. Initial attempt with current target pages
@@ -176,7 +215,8 @@ class QuizPipelineOrchestrator:
                 doc_reps=page_representations,
                 ai_provider=self.provider,
                 raise_on_mismatch=False,
-                allow_partial=False
+                allow_partial=False,
+                target_question_numbers=target_q_nums,
             )
             detected_count = len(extraction_plan.target_question_numbers)
 
@@ -197,12 +237,13 @@ class QuizPipelineOrchestrator:
                         extraction_plan = index_service.build_extraction_plan(
                             neighborhood=neighborhood,
                             start_q=plan_start_q,
-                            end_q=plan_start_q + plan_count - 1,
+                            end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
                             count=plan_count,
                             doc_reps=page_representations,
                             ai_provider=self.provider,
                             raise_on_mismatch=False,
-                            allow_partial=False
+                            allow_partial=False,
+                            target_question_numbers=target_q_nums,
                         )
                         detected_count = len(extraction_plan.target_question_numbers)
                         logger.info(
@@ -216,24 +257,26 @@ class QuizPipelineOrchestrator:
                 extraction_plan = index_service.build_extraction_plan(
                     neighborhood=neighborhood,
                     start_q=plan_start_q,
-                    end_q=plan_start_q + plan_count - 1,
+                    end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
                     count=plan_count,
                     doc_reps=page_representations,
                     ai_provider=self.provider,
                     raise_on_mismatch=True,
-                    allow_partial=False
+                    allow_partial=False,
+                    target_question_numbers=target_q_nums,
                 )
             elif detected_count > 0:
                 # Flexible Publishing: Do NOT crash! Publish all K available questions.
                 extraction_plan = index_service.build_extraction_plan(
                     neighborhood=neighborhood,
                     start_q=plan_start_q,
-                    end_q=plan_start_q + plan_count - 1,
+                    end_q=plan_end_q if target_q_nums else (plan_start_q + plan_count - 1),
                     count=plan_count,
                     doc_reps=page_representations,
                     ai_provider=self.provider,
                     raise_on_mismatch=False,
-                    allow_partial=True
+                    allow_partial=True,
+                    target_question_numbers=target_q_nums,
                 )
                 actual_k = len(extraction_plan.target_question_numbers)
                 partial_note = f"Đã trích xuất {actual_k}/{plan_count} câu hỏi có sẵn trên tài liệu"
@@ -310,7 +353,7 @@ class QuizPipelineOrchestrator:
             )
 
             # PLAN-05 HARD GATE: Verify reconstructed questions against extraction plan
-            if extraction_plan and extraction_plan.target_question_numbers:
+            if extraction_plan and extraction_plan.target_question_numbers and (not section_filter or section_filter == "all"):
                 expected_nums = set(extraction_plan.target_question_numbers)
                 actual_nums = {q.source_number or q.number for q in cleaned_questions}
                 missing_nums = sorted(list(expected_nums - actual_nums))
@@ -333,6 +376,16 @@ class QuizPipelineOrchestrator:
                                 "missing_questions": missing_nums
                             }
                         )
+
+            # Apply section filter if specified
+            if section_filter and section_filter != "all":
+                sec_filter_norm = section_filter.lower().strip()
+                if sec_filter_norm in ("part_i", "part_i_mcq"):
+                    cleaned_questions = [q for q in cleaned_questions if q.type == QuestionType.PART_I_MCQ]
+                elif sec_filter_norm in ("part_ii", "part_ii_tf"):
+                    cleaned_questions = [q for q in cleaned_questions if q.type == QuestionType.PART_II_TF]
+                elif sec_filter_norm in ("part_iii", "part_iii_short"):
+                    cleaned_questions = [q for q in cleaned_questions if q.type == QuestionType.PART_III_SHORT]
 
             # Associate visual assets from Document Object Graph
             attachments_map = doc_graph.associate_assets_to_questions(

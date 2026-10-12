@@ -301,19 +301,28 @@ class QuestionIndexService:
         doc_reps: list[PageRepresentation],
         ai_provider: Optional[IAIProvider] = None,
         raise_on_mismatch: bool = False,
-        allow_partial: bool = False
+        allow_partial: bool = False,
+        target_question_numbers: Optional[list[int]] = None
     ) -> tuple[bool, list[int], list[int], list[QuestionIndexEntry]]:
         """
         Validates detected question range against requested range.
         HARD GATE: If any question is missing, executes Missing Question Recovery.
         If still mismatched, raises QuizEngineError(RANGE_MISMATCH) or returns False (unless allow_partial=True).
         NEVER accepts partial range silently unless explicit flexible publishing is enabled!
+        Supports discrete/non-contiguous question lists via target_question_numbers.
         """
-        expected_numbers = list(range(start_q, end_q + 1))
-        detected_entries = [
-            e for e in neighborhood.question_index
-            if start_q <= e.question_number <= end_q
-        ]
+        if target_question_numbers:
+            expected_numbers = list(target_question_numbers)
+            detected_entries = [
+                e for e in neighborhood.question_index
+                if e.question_number in expected_numbers
+            ]
+        else:
+            expected_numbers = list(range(start_q, end_q + 1))
+            detected_entries = [
+                e for e in neighborhood.question_index
+                if start_q <= e.question_number <= end_q
+            ]
         detected_numbers = [e.question_number for e in detected_entries]
         missing_numbers = [q for q in expected_numbers if q not in detected_numbers]
 
@@ -321,7 +330,7 @@ class QuestionIndexService:
             return True, detected_numbers, [], detected_entries
 
         logger.warning(
-            f"Range mismatch detected! Expected: {len(expected_numbers)} (Q{start_q}..Q{end_q}), "
+            f"Range mismatch detected! Expected: {len(expected_numbers)} ({expected_numbers if target_question_numbers else f'Q{start_q}..Q{end_q}'}), "
             f"Detected: {len(detected_numbers)}. Missing: {missing_numbers}. Engaging Recovery Path."
         )
 
@@ -340,7 +349,7 @@ class QuestionIndexService:
 
             detected_entries = [
                 e for e in neighborhood.question_index
-                if start_q <= e.question_number <= end_q
+                if (e.question_number in expected_numbers if target_question_numbers else start_q <= e.question_number <= end_q)
             ]
             detected_numbers = [e.question_number for e in detected_entries]
             missing_numbers = [q for q in expected_numbers if q not in detected_numbers]
@@ -350,14 +359,20 @@ class QuestionIndexService:
             return True, detected_numbers, [], detected_entries
 
         # Flexible Publishing: If allow_partial is requested and at least some questions were found
+        effective_expected = len(expected_numbers)
         if allow_partial and detected_numbers:
             logger.info(
-                f"Flexible publishing accepted partial range: {len(detected_numbers)}/{count} questions available."
+                f"Flexible publishing accepted partial range: {len(detected_numbers)}/{effective_expected} questions available."
             )
             return True, detected_numbers, missing_numbers, detected_entries
 
         # HARD GATE: Still missing after recovery
         error_msg = (
+            f"RANGE_MISMATCH: Yêu cầu {effective_expected} câu hỏi ({expected_numbers}) "
+            f"nhưng hệ thống chỉ xác định được {len(detected_numbers)} câu ({detected_numbers}). "
+            f"Thiếu các câu: {missing_numbers}. "
+            f"Tuyệt đối không xuất bản đề thi thiếu câu hỏi."
+        ) if target_question_numbers else (
             f"RANGE_MISMATCH: Yêu cầu {count} câu hỏi (từ Câu {start_q} đến Câu {end_q}) "
             f"nhưng hệ thống chỉ xác định được {len(detected_numbers)} câu ({detected_numbers}). "
             f"Thiếu các câu: {missing_numbers}. "
@@ -374,9 +389,10 @@ class QuestionIndexService:
                 details={
                     "start_question": start_q,
                     "end_question": end_q,
-                    "expected_count": count,
+                    "expected_count": effective_expected if target_question_numbers else count,
                     "detected_numbers": detected_numbers,
                     "missing_numbers": missing_numbers,
+                    "target_question_numbers": target_question_numbers,
                 }
             )
 
@@ -395,12 +411,13 @@ class QuestionIndexService:
         doc_reps: list[PageRepresentation],
         ai_provider: Optional[IAIProvider] = None,
         raise_on_mismatch: bool = False,
-        allow_partial: bool = False
+        allow_partial: bool = False,
+        target_question_numbers: Optional[list[int]] = None
     ) -> ExtractionPlan:
         """
         Builds exact extraction plan for PLAN-04.
         Ensures context pages are strictly isolated and target questions are validated.
-        Supports flexible publishing via allow_partial.
+        Supports flexible publishing via allow_partial and discrete question subsets.
         """
         is_valid, detected_nums, missing_nums, entries = self.validate_requested_range(
             neighborhood=neighborhood,
@@ -410,7 +427,8 @@ class QuestionIndexService:
             doc_reps=doc_reps,
             ai_provider=ai_provider,
             raise_on_mismatch=raise_on_mismatch,
-            allow_partial=allow_partial
+            allow_partial=allow_partial,
+            target_question_numbers=target_question_numbers
         )
 
         target_pages: list[int] = [
@@ -437,17 +455,22 @@ class QuestionIndexService:
                 context_pages.append(p)
 
         warnings: list[str] = []
+        effective_count = len(target_question_numbers) if target_question_numbers else count
         if missing_nums and not allow_partial:
             warnings.append(f"RANGE_MISMATCH: Thiếu câu {missing_nums}")
         elif missing_nums and allow_partial:
-            warnings.append(f"PARTIAL_PUBLISHED: Xuất bản {len(detected_nums)}/{count} câu có sẵn")
+            warnings.append(f"PARTIAL_PUBLISHED: Xuất bản {len(detected_nums)}/{effective_count} câu có sẵn")
 
         status = "RANGE_VALID_PARTIAL" if (allow_partial and missing_nums and is_valid) else ("RANGE_VALID" if is_valid else "RANGE_MISMATCH")
 
+        req_start = target_question_numbers[0] if target_question_numbers else start_q
+        req_end = target_question_numbers[-1] if target_question_numbers else (detected_nums[-1] if (allow_partial and detected_nums) else end_q)
+        req_count = len(detected_nums) if (allow_partial and detected_nums) else (len(target_question_numbers) if target_question_numbers else count)
+
         plan = ExtractionPlan(
-            requested_start_question=start_q,
-            requested_end_question=detected_nums[-1] if (allow_partial and detected_nums) else end_q,
-            requested_count=len(detected_nums) if (allow_partial and detected_nums) else count,
+            requested_start_question=req_start,
+            requested_end_question=req_end,
+            requested_count=req_count,
             target_pages=target_pages,
             continuation_pages=sorted(list(set(active_continuation))),
             context_pages=sorted(list(set(context_pages))),

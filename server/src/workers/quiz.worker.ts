@@ -32,6 +32,13 @@ export interface QuizJobPayload {
   duration?: string;
   stylePresetId?: string;
   apiKey?: string;
+  parity_filter?: string;
+  parityFilter?: string;
+  section_filter?: string;
+  sectionFilter?: string;
+  detected_questions?: number[];
+  detectedQuestions?: number[];
+  instruction?: string;
 }
 
 async function downloadGoogleDrivePdf(driveUrl: string, destPath: string): Promise<number> {
@@ -270,7 +277,14 @@ async function safeJobUpsert(
             title: createPayload.title,
             subtitle: createPayload.subtitle,
             prefix: createPayload.prefix,
-            stylePresetId: createPayload.stylePresetId
+            stylePresetId: createPayload.stylePresetId,
+            parity_filter: createPayload.parity_filter || createPayload.parityFilter,
+            parityFilter: createPayload.parity_filter || createPayload.parityFilter,
+            section_filter: createPayload.section_filter || createPayload.sectionFilter,
+            sectionFilter: createPayload.section_filter || createPayload.sectionFilter,
+            detected_questions: createPayload.detected_questions || createPayload.detectedQuestions,
+            detectedQuestions: createPayload.detected_questions || createPayload.detectedQuestions,
+            instruction: createPayload.instruction
           })
         : (updateData.optionsJson || '{}');
 
@@ -298,7 +312,26 @@ async function safeJobUpsert(
 }
 
 export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
-  const { jobId, fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, duration, stylePresetId, apiKey } = payload;
+  const {
+    jobId,
+    fileId,
+    gdriveUrl,
+    pages,
+    count,
+    startNum,
+    title,
+    subtitle,
+    prefix,
+    duration,
+    stylePresetId,
+    apiKey,
+    parity_filter,
+    parityFilter,
+    section_filter,
+    sectionFilter,
+    detected_questions,
+    detectedQuestions
+  } = payload;
   let isFinished = false;
   let tmpOutputDir: string | null = null;
 
@@ -356,6 +389,21 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
 
     if (stylePresetId) {
       pyArgs.push('--style', stylePresetId);
+    }
+
+    const effectiveParity = parity_filter || parityFilter;
+    if (effectiveParity && effectiveParity !== 'all') {
+      pyArgs.push('--parity-filter', effectiveParity);
+    }
+
+    const effectiveSection = section_filter || sectionFilter;
+    if (effectiveSection && effectiveSection !== 'all') {
+      pyArgs.push('--section-filter', effectiveSection);
+    }
+
+    const effectiveDetected = detected_questions || detectedQuestions;
+    if (effectiveDetected && Array.isArray(effectiveDetected) && effectiveDetected.length > 0) {
+      pyArgs.push('--detected-questions', effectiveDetected.join(','));
     }
 
     const effectiveKey = (apiKey || process.env.AGNES_AI_API_KEY || '').trim();

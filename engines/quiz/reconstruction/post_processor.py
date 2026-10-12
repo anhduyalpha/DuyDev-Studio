@@ -128,6 +128,25 @@ def recover_missing_mcq_options(
     return recovered_opts
 
 
+def reclassify_by_intrinsic_signature(q: ReconstructedQuestion) -> ReconstructedQuestion:
+    """
+    Enforces intrinsic structural signature invariant:
+    - PART_I_MCQ: Has options (A, B, C, D) (even if stem has sub-statements).
+    - PART_II_TF: Has sub-statements (a, b, c, d) and NO options A-D.
+    - PART_III_SHORT: Has neither options nor 4 sub-statements (short answer / numeric fill-in).
+    """
+    has_mcq_options = len(q.options) >= 2 or any(
+        opt.label.upper() in ("A", "B", "C", "D") for opt in q.options
+    )
+    if has_mcq_options:
+        if q.type != QuestionType.PART_I_MCQ:
+            return q.model_copy(update={"type": QuestionType.PART_I_MCQ})
+    elif q.sub_statements and len(q.sub_statements) >= 3:
+        if q.type != QuestionType.PART_II_TF:
+            return q.model_copy(update={"type": QuestionType.PART_II_TF})
+    return q
+
+
 def post_process_questions(
     questions: list[ReconstructedQuestion],
     start_question: int = 1,
@@ -147,14 +166,15 @@ def post_process_questions(
     cleaned_candidates: list[ReconstructedQuestion] = []
 
     for q in questions:
-        cleaned_stem = clean_question_stem(q.stem)
+        q_classified = reclassify_by_intrinsic_signature(q)
+        cleaned_stem = clean_question_stem(q_classified.stem)
         canonical = normalize_stem_for_dedup(cleaned_stem)
-        # Deduplication signature: combine source_number and canonical stem
-        if q.source_number and q.source_number > 0:
-            dedup_sig = f"{q.source_number}_{canonical}"
+        # Deduplication signature: combine section type, source_number and canonical stem
+        if q_classified.source_number and q_classified.source_number > 0:
+            dedup_sig = f"{q_classified.type.value}_{q_classified.source_number}_{canonical}"
         else:
-            opts_sig = "".join(f"{o.label}:{normalize_stem_for_dedup(o.text)}" for o in q.options)
-            dedup_sig = f"{canonical}_{opts_sig}"
+            opts_sig = "".join(f"{o.label}:{normalize_stem_for_dedup(o.text)}" for o in q_classified.options)
+            dedup_sig = f"{q_classified.type.value}_{canonical}_{opts_sig}"
 
         stem_hash = hashlib.sha1(dedup_sig.encode("utf-8")).hexdigest()
 
@@ -162,7 +182,7 @@ def post_process_questions(
             continue
 
         seen_hashes.add(stem_hash)
-        q_copy = q.model_copy(update={"stem": cleaned_stem})
+        q_copy = q_classified.model_copy(update={"stem": cleaned_stem})
         cleaned_candidates.append(q_copy)
 
     # 2. Stable Sort: by primary source page and original source_number
@@ -196,11 +216,11 @@ def post_process_questions(
             if q.source_number in target_question_numbers else 9999
         )
     else:
-        # If start_question is requested, prioritize questions >= start_question while preserving PART_II_TF
-        has_part_ii = any(q.type == QuestionType.PART_II_TF for q in cleaned_candidates)
+        # If start_question is requested, prioritize questions >= start_question while preserving PART_II_TF and PART_III_SHORT
+        has_non_mcq = any(q.type in (QuestionType.PART_II_TF, QuestionType.PART_III_SHORT) for q in cleaned_candidates)
         in_range_questions = [
             q for q in cleaned_candidates
-            if q.source_number >= start_question or q.type == QuestionType.PART_II_TF
+            if q.source_number >= start_question or q.type in (QuestionType.PART_II_TF, QuestionType.PART_III_SHORT)
         ]
         # Fallback to all candidates if none >= start_question (e.g. 1-based questions with custom offset)
         if not in_range_questions:
@@ -211,11 +231,11 @@ def post_process_questions(
             target_end_q = start_question + expected_count - 1
             bounded_questions = [
                 q for q in in_range_questions
-                if q.type == QuestionType.PART_II_TF or q.source_number <= target_end_q
+                if q.type in (QuestionType.PART_II_TF, QuestionType.PART_III_SHORT) or q.source_number <= target_end_q
             ]
             # If bounded questions exist, use them; otherwise truncate in_range_questions
             if bounded_questions:
-                in_range_questions = bounded_questions[:expected_count] if not has_part_ii else bounded_questions
+                in_range_questions = bounded_questions[:expected_count] if not has_non_mcq else bounded_questions
             else:
                 in_range_questions = in_range_questions[:expected_count]
 
@@ -223,7 +243,9 @@ def post_process_questions(
     # 4. Canonical Numbering and Targeted Invariant Verification
     processed: list[ReconstructedQuestion] = []
     for idx, q in enumerate(in_range_questions):
-        if q.type == QuestionType.PART_II_TF:
+        if target_question_numbers is not None and q.source_number in target_set:
+            canonical_num = q.source_number
+        elif q.type in (QuestionType.PART_II_TF, QuestionType.PART_III_SHORT):
             canonical_num = q.source_number or (idx + 1)
         elif q.source_number and q.source_number >= start_question:
             canonical_num = q.source_number
@@ -272,3 +294,7 @@ def post_process_questions(
         processed.append(updated_q)
 
     return processed
+
+
+# Backward compatibility and alternative interface name
+post_process_candidates = post_process_questions

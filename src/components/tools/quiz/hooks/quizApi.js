@@ -22,7 +22,8 @@ export async function parsePromptApi(prompt, options = {}) {
   const res = await fetch('/api/v1/quiz/parse-prompt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: options.signal
   });
 
   if (!res.ok) {

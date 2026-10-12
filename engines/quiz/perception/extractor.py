@@ -27,7 +27,8 @@ from .candidates import detect_candidates_from_page
 def extract_page_representation(
     doc: fitz.Document | str,
     page_index: int,
-    images_output_dir: Optional[str] = None
+    images_output_dir: Optional[str] = None,
+    initial_section: str = "part_i_mcq"
 ) -> PageRepresentation:
     """
     Extracts structured page layout, bounding boxes, images, and question candidates
@@ -36,7 +37,7 @@ def extract_page_representation(
     if isinstance(doc, str):
         fitz_doc = fitz.open(doc)
         try:
-            return extract_page_representation(fitz_doc, page_index, images_output_dir)
+            return extract_page_representation(fitz_doc, page_index, images_output_dir, initial_section=initial_section)
         finally:
             fitz_doc.close()
 
@@ -168,7 +169,7 @@ def extract_page_representation(
     )
 
     # 6. Candidate Detection (Fast Code-First Pass)
-    candidates = detect_candidates_from_page(blocks, raw_text)
+    candidates = detect_candidates_from_page(blocks, raw_text, initial_section=initial_section)
 
     return PageRepresentation(
         page_index=page_index,
@@ -206,9 +207,12 @@ def extract_document_representations(
     indices = page_indices if page_indices is not None else list(range(total_pages))
 
     representations: list[PageRepresentation] = []
+    current_section = "part_i_mcq"
     for idx in indices:
         if 0 <= idx < total_pages:
-            rep = extract_page_representation(doc, idx, images_output_dir)
+            rep = extract_page_representation(doc, idx, images_output_dir, initial_section=current_section)
+            if rep.candidates:
+                current_section = rep.candidates[-1].section_type
             representations.append(rep)
 
     return representations

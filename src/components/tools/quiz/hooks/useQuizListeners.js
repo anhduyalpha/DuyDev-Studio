@@ -33,18 +33,21 @@ function escapeHtml(str) {
 
 export function getCuteQuizProgressQuote(pct, rawStage) {
   if (rawStage && rawStage.trim()) {
-    return rawStage.trim();
+    const trimmed = rawStage.trim();
+    if (/[\u{1F300}-\u{1FAFF}]|✨|🌱|💖|📄|📝|💡|🎉|🚀/u.test(trimmed)) {
+      return trimmed;
+    }
   }
 
-  // Fallback status based on percentage
-  if (pct < 15) return 'Đang khởi tạo pipeline và kiểm tra tài liệu nguồn...';
-  if (pct < 30) return 'Đang phân tích cấu trúc trang và trích xuất câu hỏi...';
-  if (pct < 50) return 'Đang bóc tách đề bài, phân loại phương án lựa chọn...';
-  if (pct < 65) return 'Đang phân tích công thức, hình ảnh và sinh lời giải chi tiết...';
-  if (pct < 80) return 'Đang chuẩn hóa LaTeX và kiểm tra đối chiếu dữ liệu...';
-  if (pct < 95) return 'Đang dàn trang A4 chuẩn Paged Media và xuất PDF...';
-  if (pct < 100) return 'Đang hoàn tất đóng gói bộ tài liệu đề bài và lời giải...';
-  return 'Đã hoàn tất biên soạn bộ đề bài và đáp án.';
+  // Fallback status based on percentage with cute vibes
+  if (pct < 15) return '🌱 Đang khởi tạo pipeline và kiểm tra tài liệu nguồn thật kỹ lưỡng... ✨';
+  if (pct < 30) return '🔍 Đang phân tích cấu trúc từng trang và trích xuất câu hỏi cho bạn nè... 📄';
+  if (pct < 50) return '📝 Đang bóc tách đề bài, phân loại từng phương án lựa chọn siêu chuẩn xác... ✨';
+  if (pct < 65) return '🧪 Đang phân tích công thức, hình ảnh và tạo lời giải chi tiết từng li từng tí... 💡';
+  if (pct < 80) return '✨ Đang chuẩn hóa LaTeX, công thức toán hóa và đối chiếu dữ liệu cẩn thận... 💖';
+  if (pct < 95) return '🎨 Đang dàn trang A4 siêu đẹp chuẩn Paged Media và xuất PDF cho bạn... 🖨️';
+  if (pct < 100) return '🎁 Đang hoàn tất đóng gói bộ tài liệu đề bài và lời giải xinh lung linh... 🚀';
+  return '🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖';
 }
 
 export function attachQuizListeners() {
@@ -373,6 +376,9 @@ export function attachQuizListeners() {
     const promptInput = document.getElementById('quizPromptInput');
     const btnParsePrompt = document.getElementById('btnQuizParsePrompt');
     if (btnParsePrompt && promptInput) {
+      promptInput.addEventListener('input', () => {
+        quizManager.state.promptText = promptInput.value;
+      });
       const triggerParse = () => {
         const dInput = document.getElementById('quizDriveInput');
         if (dInput && dInput.value.trim() && !quizManager.state.gdriveUrl) {

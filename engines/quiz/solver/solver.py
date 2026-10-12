@@ -92,13 +92,14 @@ class AnswerSolver:
                 )
             else:
                 # Fallback for missing item in AI response
-                fallback_ans = "A" if q.options else ""
+                fallback_ans = "A" if (q.options and sec_type == SectionType.PART_I_MCQ) else ""
                 batch_answers.append(
                     AnswerKeyIR(
                         question_id=q.id,
                         question_number=q.number,
                         type=sec_type,
                         selected_answer=fallback_ans,
+                        short_answer_value="0" if sec_type == SectionType.PART_III_SHORT else None,
                         sub_answers={"a": True, "b": False, "c": True, "d": False} if sec_type == SectionType.PART_II_TF else None,
                         evidence="Đáp án tạm thời do AI phản hồi thiếu dữ kiện.",
                         confidence=0.5,
@@ -284,7 +285,9 @@ class AnswerSolver:
                             question_id=q.id,
                             question_number=q.number,
                             type=SectionType(q.type.value),
-                            selected_answer="A",
+                            selected_answer="A" if q.type == QuestionType.PART_I_MCQ else "",
+                            short_answer_value="0" if q.type == QuestionType.PART_III_SHORT else None,
+                            sub_answers={"a": True, "b": False, "c": True, "d": False} if q.type == QuestionType.PART_II_TF else None,
                             evidence=f"Lỗi hệ thống: {ex}",
                             confidence=0.0,
                             is_verified=False

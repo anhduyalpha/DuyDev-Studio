@@ -44,6 +44,10 @@ class QuizManager {
       subtitle: '',
       prefix: '',
       duration: '',
+      parity_filter: 'all',
+      section_filter: 'all',
+      detected_questions: null,
+      parsedSummary: null,
       step: 1, // 1: Nguồn tài liệu, 2: Nhận diện thông minh, 3: Thông số chi tiết & Tạo đề
       isAnalyzingPrompt: false,
       isProcessing: false,
@@ -57,6 +61,7 @@ class QuizManager {
     this.listeners = new Set();
     this.disconnectEvents = null;
     this.uploadAbortController = null;
+    this.parsePromptAbortController = null;
     this.driveProbeTimer = null;
     this.driveProbeAbortController = null;
   }
@@ -295,36 +300,72 @@ class QuizManager {
       showToast('Vui lòng nhập câu lệnh nhận diện', 'warning');
       return;
     }
-    if (this.state.isAnalyzingPrompt) return;
+    const cleanPrompt = promptText.trim();
+    this.state.promptText = cleanPrompt;
+
+    if (this.parsePromptAbortController) {
+      this.parsePromptAbortController.abort();
+      this.parsePromptAbortController = null;
+    }
+    this.parsePromptAbortController = new AbortController();
+    const signal = this.parsePromptAbortController.signal;
 
     this.state.isAnalyzingPrompt = true;
     this.notify('prompt-analyzing');
 
     try {
-      const parsed = await parsePromptApi(promptText, {
+      const parsed = await parsePromptApi(cleanPrompt, {
         fileId: this.state.fileId,
         gdriveUrl: this.state.gdriveUrl
-      });
+      }, { signal });
+
       if (parsed) {
         if (parsed.pages !== undefined) this.state.pages = String(parsed.pages).trim();
         if (parsed.count !== undefined) this.state.count = Number(parsed.count);
         if (parsed.start !== undefined) this.state.start = Number(parsed.start);
+        if (parsed.parity_filter !== undefined) this.state.parity_filter = parsed.parity_filter;
+        if (parsed.section_filter !== undefined) this.state.section_filter = parsed.section_filter;
+        if (Array.isArray(parsed.detected_questions)) this.state.detected_questions = parsed.detected_questions;
         // Smart prompt recognition does NOT auto-set file name (user provides manually)
         if (parsed.title) this.state.title = String(parsed.title);
 
         // Client-side safeguard: if prompt explicitly specified "trang 11" but parsed was "1"
-        if (this.state.pages === '1' && /\b(?:trang|page)?\s*11\b/i.test(promptText)) {
+        if (this.state.pages === '1' && /\b(?:trang|page)?\s*11\b/i.test(cleanPrompt)) {
           this.state.pages = '11';
           if (this.state.title.includes('TRANG 1')) {
             this.state.title = this.state.title.replace(/TRANG\s+1\b/i, 'TRANG 11');
           }
         }
 
+        const parts = [];
+        if (parsed.has_part_i) parts.push('Phần I (MCQ)');
+        if (parsed.has_part_ii) parts.push('Phần II (Đúng/Sai)');
+        if (parsed.has_part_iii) parts.push('Phần III (Trả lời ngắn)');
+        const partsText = parts.length > 0 ? parts.join(' • ') : '';
+
+        let questionsSummary = '';
+        if (Array.isArray(parsed.detected_questions) && parsed.detected_questions.length > 0) {
+          questionsSummary = `Câu ${parsed.detected_questions.join(', ')}`;
+        } else if (parsed.start && parsed.count) {
+          questionsSummary = `Từ câu ${parsed.start} (${parsed.count} câu)`;
+        }
+
+        this.state.parsedSummary = {
+          pages: this.state.pages,
+          count: this.state.count,
+          start: this.state.start,
+          partsText,
+          questionsSummary,
+          parity: parsed.parity_filter,
+          section: parsed.section_filter
+        };
+
         this.state.step = 3;
         this.notify('prompt-parsed');
-        showToast(`Đã nhận diện: Trang ${this.state.pages || '—'}, ${this.state.count || 20} câu (từ câu ${this.state.start || 1})`, 'success');
+        showToast(`✨ Đã nhận diện: Trang ${this.state.pages || '—'}, ${this.state.count || 20} câu (từ câu ${this.state.start || 1})`, 'success');
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       showToast(err.message || 'Không thể nhận diện prompt', 'warning');
     } finally {
       this.state.isAnalyzingPrompt = false;
@@ -405,7 +446,10 @@ class QuizManager {
         title: this.state.title || 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12',
         subtitle: this.state.subtitle || '',
         prefix: this.state.prefix.trim(),
-        duration: this.state.duration?.trim() || undefined
+        duration: this.state.duration?.trim() || undefined,
+        parity_filter: this.state.parity_filter || undefined,
+        section_filter: this.state.section_filter || undefined,
+        detected_questions: Array.isArray(this.state.detected_questions) && this.state.detected_questions.length > 0 ? this.state.detected_questions : undefined
       };
 
       if (this.state.fileId) {
@@ -606,6 +650,10 @@ class QuizManager {
       this.uploadAbortController.abort();
       this.uploadAbortController = null;
     }
+    if (this.parsePromptAbortController) {
+      this.parsePromptAbortController.abort();
+      this.parsePromptAbortController = null;
+    }
     this.state.file = null;
     this.state.fileId = null;
     this.state.gdriveUrl = '';
@@ -616,6 +664,11 @@ class QuizManager {
     this.state.title = 'BÀI TẬP TRẮC NGHIỆM HÓA HỌC 12';
     this.state.subtitle = '';
     this.state.duration = '';
+    this.state.parity_filter = 'all';
+    this.state.section_filter = 'all';
+    this.state.detected_questions = null;
+    this.state.parsedSummary = null;
+    this.state.promptText = '';
     this.state.step = 1;
     this.state.isProcessing = false;
     this.state.progress = 0;
@@ -630,6 +683,10 @@ class QuizManager {
     if (this.uploadAbortController) {
       this.uploadAbortController.abort();
       this.uploadAbortController = null;
+    }
+    if (this.parsePromptAbortController) {
+      this.parsePromptAbortController.abort();
+      this.parsePromptAbortController = null;
     }
     this.state.file = null;
     this.state.fileId = null;
@@ -655,6 +712,10 @@ class QuizManager {
     if (this.uploadAbortController) {
       this.uploadAbortController.abort();
       this.uploadAbortController = null;
+    }
+    if (this.parsePromptAbortController) {
+      this.parsePromptAbortController.abort();
+      this.parsePromptAbortController = null;
     }
   }
 }

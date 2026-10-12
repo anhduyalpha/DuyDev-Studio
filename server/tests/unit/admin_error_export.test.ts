@@ -92,6 +92,9 @@ describe('Admin Error Logs Export & Deduplication Unit Tests', () => {
 
     it('should handle zero error records gracefully', async () => {
       vi.spyOn(prisma.job, 'findMany').mockResolvedValue([]);
+      vi.spyOn(aiMetricsService, 'getTelemetryData').mockReturnValue({
+        recentLogs: []
+      } as any);
 
       const result = await telemetryService.exportErrorLogsAsText();
 

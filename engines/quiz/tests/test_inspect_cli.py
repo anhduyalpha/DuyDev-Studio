@@ -20,7 +20,7 @@ class TestInspectCliAndStatements(unittest.TestCase):
         cls.sample_pdf = os.path.abspath(".tmp/sample.pdf")
 
     def test_inspect_page_41_all(self):
-        """Test 'toàn bộ trang 41': starts at 47, count 4, detects both Part I and Part II."""
+        """Test 'toàn bộ trang 41': starts at 47, count 5, detects both Part I and Part II."""
         if not os.path.isfile(self.sample_pdf):
             self.skipTest("Sample PDF not found")
 
@@ -29,11 +29,44 @@ class TestInspectCliAndStatements(unittest.TestCase):
         self.assertEqual(res["pages"], "41")
         self.assertEqual(res["start"], 47)
         self.assertEqual(res["end"], 50)
-        self.assertEqual(res["count"], 4)
-        self.assertEqual(res["detected_questions"], [47, 48, 49, 50])
+        self.assertEqual(res["count"], 5)
+        self.assertEqual(res["detected_questions"], [47, 48, 49, 50, 1])
         self.assertTrue(res["has_part_i"])
         self.assertTrue(res["has_part_ii"])
+        self.assertFalse(res["has_part_iii"])
+        self.assertEqual(res["part_i_count"], 4)
         self.assertEqual(res["part_ii_start"], 1)
+        self.assertEqual(res["part_ii_count"], 1)
+        self.assertEqual(res["section_filter"], "all")
+
+    def test_inspect_page_46_part_ii_and_part_iii(self):
+        """Test inspecting page 46: correctly classifies Part II (19, 20) and Part III (1)."""
+        if not os.path.isfile(self.sample_pdf):
+            self.skipTest("Sample PDF not found")
+
+        res = inspect_page_ground_truth(self.sample_pdf, pages_arg="46")
+        self.assertTrue(res["success"])
+        self.assertFalse(res["has_part_i"])
+        self.assertTrue(res["has_part_ii"])
+        self.assertTrue(res["has_part_iii"])
+        self.assertEqual(res["part_ii_count"], 2)
+        self.assertEqual(res["part_iii_count"], 1)
+        self.assertEqual(res["part_ii_start"], 19)
+        self.assertEqual(res["part_iii_start"], 1)
+        self.assertEqual(res["detected_questions"], [19, 20, 1])
+
+    def test_inspect_page_47_cross_page_part_iii_inheritance(self):
+        """Test inspecting page 47: inherits Part III from page 46."""
+        if not os.path.isfile(self.sample_pdf):
+            self.skipTest("Sample PDF not found")
+
+        res = inspect_page_ground_truth(self.sample_pdf, pages_arg="47")
+        self.assertTrue(res["success"])
+        self.assertFalse(res["has_part_i"])
+        self.assertFalse(res["has_part_ii"])
+        self.assertTrue(res["has_part_iii"])
+        self.assertEqual(res["part_iii_count"], 10)
+        self.assertEqual(res["detected_questions"], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 
     def test_inspect_page_41_odd_questions(self):
         """Test 'các câu lẻ trang 41': returns [47, 49]."""

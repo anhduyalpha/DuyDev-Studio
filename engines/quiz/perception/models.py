@@ -54,6 +54,8 @@ class QuestionCandidate(BaseModel):
     bbox: tuple[float, float, float, float]
     y_pos: float                              # y0 coordinate for vertical reading order
     options_detected: list[str] = Field(default_factory=list) # e.g. ["A", "B", "C", "D"]
+    section_type: str = "part_i_mcq"          # "part_i_mcq" | "part_ii_tf" | "part_iii_short"
+    statements_detected: list[str] = Field(default_factory=list) # e.g. ["a", "b", "c", "d"]
 
 
 class PageRepresentation(BaseModel):

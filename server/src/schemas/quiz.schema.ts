@@ -14,12 +14,25 @@ export const createQuizJobSchema = z
     prefix: z.string().trim().min(1, 'Vui lòng nhập Tên File (Bắt buộc)'),
     duration: z.string().optional(),
     apiKey: z.string().optional(),
-    stylePresetId: z.string().optional().default('blue_black_classic')
+    stylePresetId: z.string().optional().default('blue_black_classic'),
+    parity_filter: z.enum(['all', 'odd', 'even']).optional(),
+    parityFilter: z.enum(['all', 'odd', 'even']).optional(),
+    section_filter: z.enum(['all', 'part_i', 'part_ii', 'part_iii']).optional(),
+    sectionFilter: z.enum(['all', 'part_i', 'part_ii', 'part_iii']).optional(),
+    detected_questions: z.array(z.number().int()).optional(),
+    detectedQuestions: z.array(z.number().int()).optional(),
+    instruction: z.string().optional()
   })
   .transform((data) => ({
     ...data,
     gdriveUrl: data.gdriveUrl || data.driveUrl,
-    startNum: data.startNum || data.start || 1
+    startNum: data.startNum || data.start || 1,
+    parity_filter: data.parity_filter || data.parityFilter || 'all',
+    parityFilter: data.parity_filter || data.parityFilter || 'all',
+    section_filter: data.section_filter || data.sectionFilter || 'all',
+    sectionFilter: data.section_filter || data.sectionFilter || 'all',
+    detected_questions: data.detected_questions || data.detectedQuestions,
+    detectedQuestions: data.detected_questions || data.detectedQuestions
   }))
   .refine((data) => Boolean(data.fileId || data.gdriveUrl), {
     message: 'Cần cung cấp tệp PDF nguồn (fileId) hoặc liên kết Google Drive (gdriveUrl)'

@@ -264,7 +264,7 @@ class CanonicalIRBuilder:
             sections.append(
                 SectionIR(
                     id="sec_part_i",
-                    title="PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn",
+                    title="PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN",
                     instruction=inst,
                     type=SectionType.PART_I_MCQ,
                     question_ids=section_groups[SectionType.PART_I_MCQ]
@@ -276,7 +276,7 @@ class CanonicalIRBuilder:
             sections.append(
                 SectionIR(
                     id="sec_part_ii",
-                    title="PHẦN II. Câu trắc nghiệm đúng sai",
+                    title="PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI",
                     instruction=inst,
                     type=SectionType.PART_II_TF,
                     question_ids=section_groups[SectionType.PART_II_TF]
@@ -288,7 +288,7 @@ class CanonicalIRBuilder:
             sections.append(
                 SectionIR(
                     id="sec_part_iii",
-                    title="PHẦN III. Câu trắc nghiệm trả lời ngắn",
+                    title="PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN",
                     instruction=inst,
                     type=SectionType.PART_III_SHORT,
                     question_ids=section_groups[SectionType.PART_III_SHORT]

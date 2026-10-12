@@ -44,7 +44,24 @@ function resolveInspectScript(): string {
 
 export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyReply) {
   const body = createQuizJobSchema.parse(request.body);
-  const { fileId, gdriveUrl, pages, count, startNum, title, subtitle, prefix, stylePresetId } = body;
+  const {
+    fileId,
+    gdriveUrl,
+    pages,
+    count,
+    startNum,
+    title,
+    subtitle,
+    prefix,
+    stylePresetId,
+    parity_filter,
+    parityFilter,
+    section_filter,
+    sectionFilter,
+    detected_questions,
+    detectedQuestions,
+    instruction
+  } = body;
 
   let originalSizeBytes = 0;
 
@@ -78,7 +95,14 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
         subtitle,
         prefix,
         stylePresetId: stylePresetId || 'blue_black_classic',
-        originalSizeBytes
+        originalSizeBytes,
+        parity_filter,
+        parityFilter,
+        section_filter,
+        sectionFilter,
+        detected_questions,
+        detectedQuestions,
+        instruction
       })
     }
   });
@@ -94,7 +118,14 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
       title,
       subtitle,
       prefix,
-      stylePresetId: stylePresetId || 'blue_black_classic'
+      stylePresetId: stylePresetId || 'blue_black_classic',
+      parity_filter,
+      parityFilter,
+      section_filter,
+      sectionFilter,
+      detected_questions,
+      detectedQuestions,
+      instruction
     });
   } catch (queueErr) {
     logger.warn({ jobId: job.id, queueErr }, 'Queue enqueue failed, job remains QUEUED in database');
@@ -128,7 +159,8 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
   const body = parsePromptSchema.parse(request.body);
   const text = (body.instruction || body.prompt || '').trim();
 
-  // 0. Ground-Truth Page Inspection if source PDF is available
+  // 0. Ground-Truth Page Inspection if source PDF or Google Drive is available
+  let targetPdfPath: string | null = null;
   if (body.fileId && typeof body.fileId === 'string' && body.fileId.trim() !== '') {
     try {
       const fileRecord = await prisma.fileRecord.findUnique({
@@ -147,48 +179,83 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
         }
 
         if (existsSync(absStoragePath)) {
-          const inspectScript = resolveInspectScript();
-          const pythonBin = resolvePythonBin();
-          const inspectRes = spawnSync(pythonBin, [inspectScript, absStoragePath, '--query', text], {
-            encoding: 'utf-8',
-            timeout: 4000,
-            env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
-          });
-
-        if (inspectRes.status === 0 && inspectRes.stdout) {
-          try {
-            const inspected = JSON.parse(inspectRes.stdout.trim());
-            if (inspected && inspected.success) {
-              logger.info({ prompt: text, result: inspected }, 'Quiz prompt parsed via ground-truth inspect CLI');
-              return reply.send({
-                success: true,
-                data: {
-                  pages: inspected.pages || '',
-                  count: inspected.count || 20,
-                  start: inspected.start || 1,
-                  end: inspected.end,
-                  title: inspected.title || 'BÀI TẬP TRẮC NGHIỆM',
-                  prefix: inspected.prefix || '',
-                  confidence: 1.0,
-                  warnings: [],
-                  source: 'inspect',
-                  detected_questions: inspected.detected_questions,
-                  has_part_i: inspected.has_part_i,
-                  has_part_ii: inspected.has_part_ii,
-                  part_ii_start: inspected.part_ii_start
-                }
-              });
-            }
-          } catch (jsonErr) {
-            logger.warn({ jsonErr, stdout: inspectRes.stdout }, 'Failed to parse inspect_cli JSON stdout');
-          }
+          targetPdfPath = absStoragePath;
         }
       }
+    } catch (err) {
+      logger.warn({ err }, 'Error resolving fileId for inspection');
     }
-  } catch (inspectErr) {
-    logger.warn({ inspectErr }, 'Ground-truth inspection failed, falling back to AI/regex parser');
+  } else if (body.gdriveUrl && typeof body.gdriveUrl === 'string' && body.gdriveUrl.trim() !== '') {
+    // Feature 16: Cache Google Drive downloads by hash in data/temp/gdrive_cache
+    try {
+      const gdriveHash = crypto.createHash('sha256').update(body.gdriveUrl.trim()).digest('hex').substring(0, 16);
+      const cacheDir = path.resolve(process.cwd(), 'data/temp/gdrive_cache');
+      const fsSync = await import('fs');
+      if (!fsSync.existsSync(cacheDir)) {
+        fsSync.mkdirSync(cacheDir, { recursive: true });
+      }
+      const cachedPdfPath = path.join(cacheDir, `gdrive_${gdriveHash}.pdf`);
+      if (fsSync.existsSync(cachedPdfPath)) {
+        targetPdfPath = cachedPdfPath;
+      } else {
+        const { downloadGoogleDriveFile } = await import('../../services/drive-download.service.js');
+        const dlResult = await downloadGoogleDriveFile(body.gdriveUrl.trim());
+        if (dlResult && dlResult.buffer && dlResult.buffer.length >= 100) {
+          fsSync.writeFileSync(cachedPdfPath, dlResult.buffer);
+          targetPdfPath = cachedPdfPath;
+        }
+      }
+    } catch (gdriveErr) {
+      logger.warn({ gdriveErr }, 'Failed to cache Google Drive PDF for inspection');
+    }
   }
-}
+
+  if (targetPdfPath && existsSync(targetPdfPath)) {
+    try {
+      const inspectScript = resolveInspectScript();
+      const pythonBin = resolvePythonBin();
+      const inspectRes = spawnSync(pythonBin, [inspectScript, targetPdfPath, '--query', text], {
+        encoding: 'utf-8',
+        timeout: 4000,
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+      });
+
+      if (inspectRes.status === 0 && inspectRes.stdout) {
+        try {
+          const inspected = JSON.parse(inspectRes.stdout.trim());
+          if (inspected && inspected.success) {
+            logger.info({ prompt: text, result: inspected }, 'Quiz prompt parsed via ground-truth inspect CLI');
+            return reply.send({
+              success: true,
+              data: {
+                pages: inspected.pages || '',
+                count: inspected.count || 20,
+                start: inspected.start || 1,
+                end: inspected.end,
+                title: inspected.title || 'BÀI TẬP TRẮC NGHIỆM',
+                prefix: inspected.prefix || '',
+                confidence: 1.0,
+                warnings: [],
+                source: 'inspect',
+                detected_questions: inspected.detected_questions,
+                parity_filter: inspected.parity_filter || 'all',
+                section_filter: inspected.section_filter || 'all',
+                has_part_i: inspected.has_part_i,
+                has_part_ii: inspected.has_part_ii,
+                has_part_iii: inspected.has_part_iii,
+                part_ii_start: inspected.part_ii_start,
+                part_iii_start: inspected.part_iii_start
+              }
+            });
+          }
+        } catch (jsonErr) {
+          logger.warn({ jsonErr, stdout: inspectRes.stdout }, 'Failed to parse inspect_cli JSON stdout');
+        }
+      }
+    } catch (inspectErr) {
+      logger.warn({ inspectErr }, 'Ground-truth inspection failed, falling back to AI/regex parser');
+    }
+  }
 
   // Helper for deterministic regex parsing
   function extractWithRegex(input: string) {

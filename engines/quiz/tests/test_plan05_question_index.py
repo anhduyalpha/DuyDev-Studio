@@ -747,7 +747,36 @@ class TestPlan05QuestionIndex(unittest.TestCase):
         self.assertEqual(len(cleaned), 3)
         self.assertEqual([q.number for q in cleaned], [30, 31, 32])
 
+    def test_extraction_plan_discrete_question_subset(self):
+        """Verifies build_extraction_plan with target_question_numbers=[47, 49] succeeds without RANGE_MISMATCH."""
+        p1 = PageRepresentation(
+            page_index=0, page_number=41, width=595.0, height=842.0, character_count=500,
+            raw_text="Câu 47: A\nA. 1 B. 2 C. 3 D. 4\nCâu 48: B\nA. 1 B. 2 C. 3 D. 4\nCâu 49: C\nA. 1 B. 2 C. 3 D. 4\nCâu 50: D\nA. 1 B. 2 C. 3 D. 4",
+            candidates=[
+                QuestionCandidate(candidate_number=47, marker_text="Câu 47:", bbox=(0, 100, 500, 120), y_pos=100.0, options_detected=["A", "B", "C", "D"]),
+                QuestionCandidate(candidate_number=48, marker_text="Câu 48:", bbox=(0, 200, 500, 220), y_pos=200.0, options_detected=["A", "B", "C", "D"]),
+                QuestionCandidate(candidate_number=49, marker_text="Câu 49:", bbox=(0, 300, 500, 320), y_pos=300.0, options_detected=["A", "B", "C", "D"]),
+                QuestionCandidate(candidate_number=50, marker_text="Câu 50:", bbox=(0, 400, 500, 420), y_pos=400.0, options_detected=["A", "B", "C", "D"]),
+            ]
+        )
+        doc = [p1]
+        nb = self.index_service.build_neighborhood_index(target_physical_page=41, doc_reps=doc)
+        plan = self.index_service.build_extraction_plan(
+            neighborhood=nb,
+            start_q=47,
+            end_q=49,
+            count=2,
+            doc_reps=doc,
+            raise_on_mismatch=True,
+            target_question_numbers=[47, 49]
+        )
+        self.assertTrue(plan.validated)
+        self.assertEqual(plan.status, "RANGE_VALID")
+        self.assertEqual(plan.target_question_numbers, [47, 49])
+        self.assertEqual(plan.requested_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

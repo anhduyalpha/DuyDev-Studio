@@ -130,7 +130,7 @@ export function renderQuizConfigPanel(state) {
               ? `
               <div class="mt-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2 animate-fadeIn">
                 <i data-lucide="loader-2" class="w-4 h-4 animate-spin shrink-0"></i>
-                <span>Đang kiểm tra quyền truy cập Google Drive...</span>
+                <span>☁️ Đang kiểm tra link Google Drive của bạn một tẹo nhé... ✨</span>
               </div>
             `
               : state.driveProbeStatus === 'invalid'
@@ -138,8 +138,8 @@ export function renderQuizConfigPanel(state) {
               <div class="mt-2 p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-fadeIn shadow-xs">
                 <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"></i>
                 <div class="space-y-0.5">
-                  <p class="font-semibold text-amber-900 dark:text-amber-100">⚠️ Tệp chưa được mở quyền xem công khai</p>
-                  <p class="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">${escapeHtml(state.driveProbeMessage || 'Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".')}</p>
+                  <p class="font-semibold text-amber-900 dark:text-amber-100">⚠️ Link Drive chưa được mở công khai rồi nè 🥺</p>
+                  <p class="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">${escapeHtml(state.driveProbeMessage || 'Bạn mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem" giúp mình nha!')}</p>
                 </div>
               </div>
             `
@@ -147,7 +147,7 @@ export function renderQuizConfigPanel(state) {
               ? `
               <div class="mt-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
                 <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-emerald-500"></i>
-                <span>Tệp công khai hợp lệ${state.driveProbeData?.fileName ? `: ${escapeHtml(state.driveProbeData.fileName)}` : ''}</span>
+                <span>☁️ Tệp công khai siêu hợp lệ luôn: ${escapeHtml(state.driveProbeData?.fileName || 'Đã sẵn sàng')} ✨</span>
               </div>
             `
               : ''
@@ -178,7 +178,7 @@ export function renderQuizConfigPanel(state) {
             }
           </div>
           <div class="flex gap-2">
-            <input type="text" id="quizPromptInput" ${state.isAnalyzingPrompt ? 'disabled' : ''} placeholder="Ví dụ: Trang 11, 20 câu, từ câu 1" class="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500 transition disabled:opacity-50" />
+            <input type="text" id="quizPromptInput" value="${escapeHtml(state.promptText || '')}" ${state.isAnalyzingPrompt ? 'disabled' : ''} placeholder="Ví dụ: toàn bộ trang 41, 20 câu đầu trang 37, các câu lẻ trang 41..." class="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-indigo-500 transition disabled:opacity-50" />
             <button type="button" id="btnQuizParsePrompt" ${state.isAnalyzingPrompt ? 'disabled' : ''} class="px-3.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
               ${
                 state.isAnalyzingPrompt
@@ -187,6 +187,23 @@ export function renderQuizConfigPanel(state) {
               }
             </button>
           </div>
+          ${
+            state.parsedSummary
+              ? `
+            <div id="quizPromptSummaryChip" class="mt-2.5 p-2.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-xs text-indigo-900 dark:text-indigo-200 flex items-start gap-2 animate-fadeIn">
+              <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5"></i>
+              <div class="space-y-1 min-w-0">
+                <div class="font-medium flex items-center gap-1.5 flex-wrap">
+                  <span>Trang ${escapeHtml(state.parsedSummary.pages)}: ${state.parsedSummary.count} câu (từ câu ${state.parsedSummary.start})</span>
+                  ${state.parsedSummary.parity && state.parsedSummary.parity !== 'all' ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-800 dark:text-indigo-200">${state.parsedSummary.parity === 'odd' ? 'Câu lẻ' : 'Câu chẵn'}</span>` : ''}
+                </div>
+                ${state.parsedSummary.partsText ? `<div class="text-[11px] text-indigo-700 dark:text-indigo-300">${escapeHtml(state.parsedSummary.partsText)}</div>` : ''}
+                ${state.parsedSummary.questionsSummary ? `<div class="text-[10px] text-indigo-600/90 dark:text-indigo-400/90 font-mono truncate">${escapeHtml(state.parsedSummary.questionsSummary)}</div>` : ''}
+              </div>
+            </div>
+          `
+              : ''
+          }
         </div>
       `
           : ''

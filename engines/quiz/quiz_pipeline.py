@@ -36,6 +36,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Quiz Pipeline v3.0 CLI Gateway")
     parser.add_argument("pdf_path", help="Path to source PDF file")
     parser.add_argument("--instruction", default="", help="Natural language user instruction")
+    parser.add_argument("--detected-questions", default="", help="Discrete detected question numbers (comma-separated, e.g. '47,48,49,50,1')")
+    parser.add_argument("--parity-filter", default="all", choices=["odd", "even", "all"], help="Filter questions by parity: odd, even, or all")
+    parser.add_argument("--section-filter", default="all", choices=["part_i", "part_ii", "part_iii", "all"], help="Filter questions by section: part_i, part_ii, part_iii, or all")
     parser.add_argument("--pages", default="", help="Page range to extract (e.g. 11 or 11-15)")
     parser.add_argument("--count", type=int, default=20, help="Number of questions to extract")
     parser.add_argument("--start-num", "--start", dest="start_num", type=int, default=1, help="Starting question number")
@@ -80,6 +83,16 @@ def main() -> None:
         else:
             instruction = f"Lấy {args.count} câu từ câu {args.start_num}"
 
+    # Parse detected questions list if provided
+    detected_q_list: list[int] | None = None
+    if args.detected_questions:
+        try:
+            cleaned_dq = str(args.detected_questions).strip().strip("[]")
+            if cleaned_dq:
+                detected_q_list = [int(x.strip()) for x in cleaned_dq.split(",") if x.strip()]
+        except Exception:
+            detected_q_list = None
+
     # 3. Setup Orchestrator & Progress Callback
     def on_progress(stage: JobStage, pct: int, msg: str) -> None:
         emit_json_event({
@@ -107,6 +120,9 @@ def main() -> None:
         subtitle=args.subtitle,
         duration=args.duration,
         on_progress=on_progress,
+        detected_questions=detected_q_list,
+        parity_filter=args.parity_filter,
+        section_filter=args.section_filter,
     )
 
     if state.current_stage == JobStage.COMPLETED:
