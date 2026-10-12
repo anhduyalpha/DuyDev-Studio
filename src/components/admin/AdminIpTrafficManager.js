@@ -64,7 +64,7 @@ export function renderIpTrafficManager() {
   return `
     <div id="adminIpTrafficContainer" class="space-y-6">
       <!-- Top Card: Summary & Sub-Tab Switcher -->
-      <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3.5">
           <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-sky-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
             <i data-lucide="shield-alert" class="w-5 h-5"></i>
@@ -83,22 +83,22 @@ export function renderIpTrafficManager() {
         </div>
 
         <!-- Sub-Tab Switcher Pills -->
-        <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/5">
+        <div class="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/5">
           <button
             type="button"
             id="subTabBtnTraffic"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${activeSubTab === 'traffic' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+            class="w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${activeSubTab === 'traffic' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
           >
-            <i data-lucide="network" class="w-3.5 h-3.5 text-orange-500"></i>
-            <span>Lưu Lượng & Quy Tắc IP</span>
+            <i data-lucide="network" class="w-3.5 h-3.5 text-orange-500 shrink-0"></i>
+            <span class="truncate">Lưu Lượng & Quy Tắc IP</span>
           </button>
           <button
             type="button"
             id="subTabBtnUsers"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${activeSubTab === 'users' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+            class="w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${activeSubTab === 'users' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
           >
-            <i data-lucide="users" class="w-3.5 h-3.5 text-orange-500"></i>
-            <span>Tài Khoản Người Dùng</span>
+            <i data-lucide="users" class="w-3.5 h-3.5 text-orange-500 shrink-0"></i>
+            <span class="truncate">Tài Khoản Người Dùng</span>
           </button>
         </div>
       </div>
@@ -108,46 +108,46 @@ export function renderIpTrafficManager() {
         <!-- Filters & Action Bar -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <!-- Filter Pills -->
-          <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs font-semibold overflow-x-auto">
+          <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs font-semibold overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-1">
             <button
               type="button"
               data-ip-filter="all"
-              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer ${activeFilter === 'all' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeFilter === 'all' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
             >
               Tất cả
             </button>
             <button
               type="button"
               data-ip-filter="lan"
-              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer ${activeFilter === 'lan' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeFilter === 'lan' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
             >
               Mạng LAN
             </button>
             <button
               type="button"
               data-ip-filter="wan"
-              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer ${activeFilter === 'wan' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeFilter === 'wan' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
             >
               Internet (WAN)
             </button>
             <button
               type="button"
               data-ip-filter="blocked"
-              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer ${activeFilter === 'blocked' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeFilter === 'blocked' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
             >
               Đang Chặn
             </button>
             <button
               type="button"
               data-ip-filter="rate_limited"
-              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer ${activeFilter === 'rate_limited' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeFilter === 'rate_limited' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
             >
               Đang Giới Hạn (RPM)
             </button>
             <button
               type="button"
               data-ip-filter="errors"
-              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer ${activeFilter === 'errors' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+              class="btn-ip-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeFilter === 'errors' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
             >
               Có Lỗi (4xx/5xx)
             </button>

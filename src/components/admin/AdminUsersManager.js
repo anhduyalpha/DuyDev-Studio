@@ -55,11 +55,11 @@ export function renderUsersManager() {
           </div>
         </div>
 
-        <div class="flex items-center gap-2 self-end sm:self-auto">
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
           <button
             type="button"
             id="btnRefreshUsersList"
-            class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold border border-zinc-200 dark:border-white/5 transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+            class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold border border-zinc-200 dark:border-white/5 transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 shrink-0 whitespace-nowrap"
             title="Làm mới danh sách"
           >
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -69,7 +69,7 @@ export function renderUsersManager() {
           <button
             type="button"
             id="btnOpenCreateUserModal"
-            class="px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-500/20 active:scale-95"
+            class="px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-500/20 active:scale-95 shrink-0 whitespace-nowrap"
           >
             <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
             <span>+ Thêm Người Dùng</span>

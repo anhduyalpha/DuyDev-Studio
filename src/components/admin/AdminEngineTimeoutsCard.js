@@ -22,7 +22,7 @@ export function renderEngineTimeoutsCard(timeouts = null) {
   const { aiCallSec, chromePdfSec, pdfHeavyTaskSec, converterTaskSec } = cachedTimeouts;
 
   return `
-    <div id="adminEngineTimeoutsCard" class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-5">
+    <div id="adminEngineTimeoutsCard" class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-5">
       <!-- Header -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
@@ -47,7 +47,7 @@ export function renderEngineTimeoutsCard(timeouts = null) {
         <button
           type="button"
           id="btnSaveEngineTimeouts"
-          class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-95 border border-orange-400/30"
+          class="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-95 border border-orange-400/30 shrink-0 whitespace-nowrap"
         >
           <i data-lucide="save" class="w-4 h-4"></i>
           <span>Lưu Cấu Hình Timeout</span>

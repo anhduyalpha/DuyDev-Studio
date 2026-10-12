@@ -43,13 +43,13 @@ export function renderAiAgentsCard(aiData) {
   return `
     <div class="rounded-2xl bg-zinc-900/60 border border-white/5 backdrop-blur-md overflow-hidden shadow-xl">
       <!-- Card Header -->
-      <div class="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/40">
+      <div class="px-4 sm:px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/40">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+          <div class="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 shrink-0">
             <i data-lucide="bot" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 class="text-base font-bold text-zinc-100 flex items-center gap-2">
+            <h3 class="text-sm sm:text-base font-bold text-zinc-100 flex items-center gap-2">
               AI Agents & Token Rate Limits
               <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
                 Multi-Key Fallback Pipeline
@@ -59,11 +59,11 @@ export function renderAiAgentsCard(aiData) {
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
           <button
             type="button"
             id="btnOpenAddAiKeyModal"
-            class="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+            class="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
             title="Thêm API Key dự phòng"
           >
             <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
@@ -72,7 +72,7 @@ export function renderAiAgentsCard(aiData) {
           <button
             type="button"
             id="btnRefreshAiMetrics"
-            class="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-300 text-xs font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+            class="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-300 text-xs font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
             title="Làm mới thông số AI"
           >
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -82,7 +82,7 @@ export function renderAiAgentsCard(aiData) {
       </div>
 
       <!-- Content Grid -->
-      <div class="p-6 space-y-6">
+      <div class="p-4 sm:p-6 space-y-5 sm:space-y-6">
         <!-- 1. Live Rate Limit Gauges / Bars -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- RPM Bar -->

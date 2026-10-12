@@ -154,9 +154,9 @@ function renderUnlockedDashboardView() {
   const codes = traffic.statusCodes || {};
 
   return `
-    <div class="max-w-7xl mx-auto space-y-6 pb-16 animate-fadeIn">
+    <div class="max-w-7xl mx-auto space-y-6 pb-28 animate-fadeIn">
       <!-- 1. Top Header & Control Bar -->
-      <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3.5">
           <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/30 flex items-center justify-center shrink-0">
             <img
@@ -183,10 +183,10 @@ function renderUnlockedDashboardView() {
         </div>
 
         <!-- Action Pills -->
-        <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           <button
             id="btnToggleAdminTicker"
-            class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
           >
             <span class="w-2 h-2 rounded-full ${isPollingPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}"></span>
             <span id="adminTickerText">${isPollingPaused ? 'Tiếp tục 3s' : 'Đang trực tiếp 3s'}</span>
@@ -194,7 +194,7 @@ function renderUnlockedDashboardView() {
 
           <button
             id="btnManualRefreshAdmin"
-            class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
             title="Làm mới ngay"
           >
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -203,7 +203,7 @@ function renderUnlockedDashboardView() {
 
           <button
             id="btnAdminChangePwd"
-            class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
           >
             <i data-lucide="key" class="w-3.5 h-3.5"></i>
             <span>Đổi mật khẩu</span>
@@ -211,7 +211,7 @@ function renderUnlockedDashboardView() {
 
           <button
             id="btnAdminLockSession"
-            class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium border border-rose-500/20 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium border border-rose-500/20 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
           >
             <i data-lucide="lock" class="w-3.5 h-3.5"></i>
             <span>Khóa phiên</span>
@@ -220,22 +220,22 @@ function renderUnlockedDashboardView() {
       </div>
 
       <!-- Top Navigation Tabs (Overview vs User & IP Traffic) -->
-      <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl w-fit">
+      <div class="w-full sm:w-fit grid grid-cols-2 sm:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl">
         <button
           type="button"
           id="adminTabOverview"
-          class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${currentAdminTab === 'overview' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+          class="w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${currentAdminTab === 'overview' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
         >
-          <i data-lucide="layout-dashboard" class="w-4 h-4 text-orange-500"></i>
-          <span>Tổng Quan & Telemetry</span>
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-orange-500 shrink-0"></i>
+          <span class="truncate">Tổng Quan & Telemetry</span>
         </button>
         <button
           type="button"
           id="adminTabIpManager"
-          class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${currentAdminTab === 'ip-manager' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+          class="w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${currentAdminTab === 'ip-manager' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
         >
-          <i data-lucide="users" class="w-4 h-4 text-orange-500"></i>
-          <span>Quản Lý Người Dùng & IP Traffic</span>
+          <i data-lucide="users" class="w-4 h-4 text-orange-500 shrink-0"></i>
+          <span class="truncate">Quản Lý Người Dùng & IP</span>
         </button>
       </div>
 
@@ -317,7 +317,7 @@ function renderUnlockedDashboardView() {
       <!-- 3. Detail Grid: 4 Core Hardware, Traffic & Queue Panels -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Panel 1: Live Network Traffic Sparkline & HTTP Codes -->
-        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
+        <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               <i data-lucide="radio" class="w-4 h-4 text-orange-500"></i>
@@ -390,7 +390,7 @@ function renderUnlockedDashboardView() {
         </div>
 
         <!-- Panel 2: Memory & Hardware Gauges -->
-        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
+        <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               <i data-lucide="gauge" class="w-4 h-4 text-emerald-500"></i>
@@ -441,7 +441,7 @@ function renderUnlockedDashboardView() {
         </div>
 
         <!-- Panel 3: BullMQ Workers & Processing Engines -->
-        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
+        <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               <i data-lucide="layers" class="w-4 h-4 text-cyan-500"></i>
@@ -455,13 +455,13 @@ function renderUnlockedDashboardView() {
           <!-- Queues Matrix -->
           <div class="space-y-2 text-xs font-mono">
             <!-- PDF Queue -->
-            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex items-center justify-between">
+            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
-                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
                 <span>PDF Studio Worker</span>
-                <span id="adminPdfBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${(queues.pdf?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.pdf?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
+                <span id="adminPdfBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${(queues.pdf?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.pdf?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
-              <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
+              <div class="flex items-center justify-between sm:justify-end gap-3 text-zinc-500 dark:text-zinc-400 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-zinc-200/50 dark:border-white/5">
                 <span>Active: <strong id="adminPdfActive" class="text-emerald-500">${queues.pdf?.active || 0}</strong></span>
                 <span>Wait: <strong id="adminPdfWait" class="text-amber-500">${queues.pdf?.waiting || 0}</strong></span>
                 <span>Done: <strong id="adminPdfDone" class="text-zinc-900 dark:text-zinc-200">${queues.pdf?.completed || 0}</strong></span>
@@ -470,13 +470,13 @@ function renderUnlockedDashboardView() {
             </div>
 
             <!-- Converter Queue -->
-            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex items-center justify-between">
+            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
-                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
                 <span>Universal Converter Worker</span>
-                <span id="adminConvBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${(queues.converter?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.converter?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
+                <span id="adminConvBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${(queues.converter?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.converter?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
-              <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
+              <div class="flex items-center justify-between sm:justify-end gap-3 text-zinc-500 dark:text-zinc-400 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-zinc-200/50 dark:border-white/5">
                 <span>Active: <strong id="adminConvActive" class="text-emerald-500">${queues.converter?.active || 0}</strong></span>
                 <span>Wait: <strong id="adminConvWait" class="text-amber-500">${queues.converter?.waiting || 0}</strong></span>
                 <span>Done: <strong id="adminConvDone" class="text-zinc-900 dark:text-zinc-200">${queues.converter?.completed || 0}</strong></span>
@@ -485,13 +485,13 @@ function renderUnlockedDashboardView() {
             </div>
 
             <!-- Quiz Queue -->
-            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex items-center justify-between">
+            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="flex items-center gap-2 font-sans font-medium text-zinc-800 dark:text-zinc-200">
-                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                <span class="w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>
                 <span>Quiz Generator Worker</span>
-                <span id="adminQuizBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${(queues.quiz?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.quiz?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
+                <span id="adminQuizBadge" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${(queues.quiz?.active || 0) > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}">${(queues.quiz?.active || 0) > 0 ? 'BUSY' : 'IDLE / READY'}</span>
               </div>
-              <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
+              <div class="flex items-center justify-between sm:justify-end gap-3 text-zinc-500 dark:text-zinc-400 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-zinc-200/50 dark:border-white/5">
                 <span>Active: <strong id="adminQuizActive" class="text-emerald-500">${queues.quiz?.active || 0}</strong></span>
                 <span>Wait: <strong id="adminQuizWait" class="text-amber-500">${queues.quiz?.waiting || 0}</strong></span>
                 <span>Done: <strong id="adminQuizDone" class="text-zinc-900 dark:text-zinc-200">${queues.quiz?.completed || 0}</strong></span>
@@ -522,7 +522,7 @@ function renderUnlockedDashboardView() {
         </div>
 
         <!-- Panel 4: Cloudflare & Infrastructure -->
-        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
+        <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               <i data-lucide="cloud" class="w-4 h-4 text-orange-500"></i>
@@ -585,7 +585,7 @@ function renderUnlockedDashboardView() {
       </div>
 
       <!-- 8. Web System Configuration & Maintenance Dock -->
-      <div class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
+      <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             <i data-lucide="wrench" class="w-4 h-4 text-orange-500"></i>

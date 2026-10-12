@@ -84,11 +84,11 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
         </div>
 
         <!-- Tab Selector Bar -->
-        <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs font-semibold overflow-x-auto shrink-0">
+        <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs font-semibold overflow-x-auto no-scrollbar shrink-0 -mx-1 px-1 sm:mx-0 sm:px-1">
           <button
             type="button"
             data-box-tab="r2"
-            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'r2' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${activeBoxTab === 'r2' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
           >
             <i data-lucide="cloud-off" class="w-3.5 h-3.5"></i>
             <span>R2 Transit Mồ Côi</span>
@@ -96,7 +96,7 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
           <button
             type="button"
             data-box-tab="queues"
-            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'queues' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${activeBoxTab === 'queues' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
           >
             <i data-lucide="layers" class="w-3.5 h-3.5"></i>
             <span>Hàng Đợi BullMQ</span>
@@ -104,7 +104,7 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
           <button
             type="button"
             data-box-tab="trash"
-            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'trash' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${activeBoxTab === 'trash' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
           >
             <i data-lucide="archive" class="w-3.5 h-3.5"></i>
             <span>Lịch Sử Thùng Rác</span>
@@ -112,7 +112,7 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
           <button
             type="button"
             data-box-tab="db"
-            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'db' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${activeBoxTab === 'db' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
           >
             <i data-lucide="database" class="w-3.5 h-3.5"></i>
             <span>SQLite Database</span>
@@ -120,7 +120,7 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
           <button
             type="button"
             data-box-tab="cache"
-            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'cache' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${activeBoxTab === 'cache' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
           >
             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
             <span>Bộ Nhớ Trình Duyệt</span>
@@ -128,7 +128,7 @@ export function openOperationsInspectorModal(initialTab = 'r2', onReload = null)
           <button
             type="button"
             data-box-tab="timeouts"
-            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeBoxTab === 'timeouts' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
+            class="btn-ops-tab px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${activeBoxTab === 'timeouts' ? 'bg-orange-500 text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}"
           >
             <i data-lucide="timer" class="w-3.5 h-3.5"></i>
             <span>Thời Hạn Engine</span>

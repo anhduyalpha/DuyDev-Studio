@@ -433,6 +433,19 @@ function formatExactTime(isoString) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
+function formatJobDuration(ms) {
+  if (ms == null || isNaN(ms)) return '--';
+  const sec = Number(ms) / 1000;
+  if (sec < 1) return `${Math.round(ms)}ms`;
+  if (sec < 60) return `${sec.toFixed(1)}s`;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  if (sec < 3600) return `${m}m ${s}s`;
+  const h = Math.floor(sec / 3600);
+  const remM = Math.floor((sec % 3600) / 60);
+  return `${h}h ${remM}m`;
+}
+
 function getJobTypeBadge(type) {
   const t = String(type || '').toLowerCase();
   if (t.includes('pdf')) {
@@ -472,118 +485,121 @@ export function renderFailedJobsInspector(jobs = []) {
     : `<span id="adminFailedJobsCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">${systemErrorsCount} lỗi hệ thống · ${userActionsCount} thao tác người dùng</span>`;
 
   return `
-    <div id="adminFailedJobsCard" class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-5">
+    <div id="adminFailedJobsCard" class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4 sm:space-y-5">
       <!-- Header -->
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl ${systemErrorsCount === 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'} border flex items-center justify-center shrink-0 shadow-inner">
             <i data-lucide="${systemErrorsCount === 0 ? 'shield-check' : 'alert-octagon'}" class="w-5 h-5"></i>
           </div>
-          <div>
-            <div class="flex items-center gap-2">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
               <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                Nhật Ký Lỗi & Tác Vụ Thất Bại (Failed Jobs Diagnostics)
+                Nhật Ký Lỗi & Tác Vụ Thất Bại
               </h3>
               ${badgeHtml}
             </div>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
               Phân tách rạch ròi giữa lỗi hệ thống (core engine) và thao tác người dùng (hủy, tệp rỗng, link riêng tư)
             </p>
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            id="btnRefreshFailedJobs"
-            class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
-            title="Làm mới danh sách lỗi"
-          >
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            <span>Làm Mới</span>
-          </button>
+        <!-- Action Buttons Responsive Grid -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
           <button
             type="button"
             id="btnExportFailedJobsTxt"
-            class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-medium text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-95 border border-orange-400/30"
+            class="w-full sm:w-auto px-4 py-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 transition-all cursor-pointer active:scale-95 border border-orange-400/30 shrink-0"
             title="Xuất toàn bộ nhật ký lỗi ra file .txt đã gom nhóm & lọc trùng cho lập trình viên fix"
           >
             <i data-lucide="file-down" class="w-4 h-4 shrink-0"></i>
-            <span class="font-bold">Xuất Toàn Bộ Lỗi (.txt)</span>
-            <span class="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-mono tracking-tight uppercase">Lọc trùng</span>
+            <span class="font-bold whitespace-nowrap">Xuất Toàn Bộ Lỗi (.txt)</span>
+            <span class="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-mono tracking-tight uppercase whitespace-nowrap">Lọc trùng</span>
           </button>
-          ${jobs.length > 0 ? `
+
+          <div class="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
             <button
               type="button"
-              id="btnRetryAllFailedJobs"
-              class="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
-              title="Thử lại toàn bộ các tác vụ lỗi"
+              id="btnRefreshFailedJobs"
+              class="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
+              title="Làm mới danh sách lỗi"
             >
-              <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
-              <span>Thử Lại Tất Cả</span>
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 shrink-0"></i>
+              <span>Làm Mới</span>
             </button>
-            <button
-              type="button"
-              id="btnClearFailedJobs"
-              class="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
-              title="Dọn sạch toàn bộ nhật ký lỗi"
-            >
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-              <span>Dọn Sạch Lỗi</span>
-            </button>
-          ` : ''}
+            ${jobs.length > 0 ? `
+              <button
+                type="button"
+                id="btnRetryAllFailedJobs"
+                class="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
+                title="Thử lại toàn bộ các tác vụ lỗi"
+              >
+                <i data-lucide="play-circle" class="w-3.5 h-3.5 shrink-0"></i>
+                <span>Thử Lại Hết</span>
+              </button>
+              <button
+                type="button"
+                id="btnClearFailedJobs"
+                class="px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
+                title="Dọn sạch toàn bộ nhật ký lỗi"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5 shrink-0"></i>
+                <span>Dọn Sạch</span>
+              </button>
+            ` : ''}
+          </div>
         </div>
       </div>
 
-      <!-- Filter Pills -->
-      <div class="flex items-center gap-2 border-b border-zinc-100 dark:border-white/5 pb-3 overflow-x-auto text-xs font-medium">
+      <!-- Filter Pills (Smooth Horizontal Touch Scroll with Zero Line Breaks) -->
+      <div class="flex items-center gap-1.5 sm:gap-2 border-b border-zinc-100 dark:border-white/5 pb-2.5 overflow-x-auto text-xs font-medium no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
         <button
           type="button"
           data-filter-type="all"
-          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'all' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'all' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
           Tất cả (${jobs.length})
         </button>
         <button
           type="button"
           data-filter-type="system"
-          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'system' ? 'bg-rose-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'system' ? 'bg-rose-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
           Lỗi Hệ Thống (${systemErrorsCount})
         </button>
         <button
           type="button"
           data-filter-type="user"
-          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'user' ? 'bg-sky-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'user' ? 'bg-sky-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
           Thao Tác Người Dùng (${userActionsCount})
         </button>
         <button
           type="button"
           data-filter-type="pdf"
-          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'pdf' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'pdf' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
           PDF Studio (${jobs.filter(j => String(j.type || '').toLowerCase().includes('pdf')).length})
         </button>
         <button
           type="button"
           data-filter-type="conv"
-          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'conv' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'conv' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
           Converter (${jobs.filter(j => String(j.type || '').toLowerCase().includes('conv') || String(j.type || '').toLowerCase().includes('media')).length})
         </button>
         <button
           type="button"
           data-filter-type="quiz"
-          class="btn-failed-filter px-3 py-1 rounded-lg transition cursor-pointer ${activeTypeFilter === 'quiz' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
+          class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'quiz' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
         >
           Quiz (${jobs.filter(j => String(j.type || '').toLowerCase().includes('quiz')).length})
         </button>
       </div>
 
       <!-- List Container -->
-      <div id="adminFailedJobsList" class="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+      <div id="adminFailedJobsList" class="space-y-3 max-h-[560px] overflow-y-auto pr-1">
         ${renderFailedJobsItemsMarkup(filteredJobs)}
       </div>
     </div>
@@ -608,19 +624,19 @@ function renderFailedJobsItemsMarkup(jobs) {
   }
 
   return jobs.map(job => {
-    const duration = job.durationMs != null ? `${(job.durationMs / 1000).toFixed(2)}s` : '--';
+    const duration = formatJobDuration(job.durationMs);
     const cleanError = escapeHtml(normalizeErrorMessageToEnglish(job.errorMessage));
     const jsonPretty = escapeHtml(typeof job.options === 'object' ? JSON.stringify(job.options, null, 2) : String(job.optionsRaw || '{}'));
     const semantic = extractSemanticErrorDetailsClient(job.errorMessage, job.type);
     const isUserAction = (job.errorClass === 'USER_ACTION') || (semantic.errorClass === 'USER_ACTION');
 
     const classificationBadge = isUserAction
-      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center gap-1"><i data-lucide="user-check" class="w-3 h-3 inline"></i> THAO TÁC NGƯỜI DÙNG</span>`
-      : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25 flex items-center gap-1"><i data-lucide="alert-octagon" class="w-3 h-3 inline"></i> LỖI HỆ THỐNG</span>`;
+      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center gap-1 shrink-0 whitespace-nowrap"><i data-lucide="user-check" class="w-3 h-3 inline"></i> THAO TÁC NGƯỜI DÙNG</span>`
+      : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25 flex items-center gap-1 shrink-0 whitespace-nowrap"><i data-lucide="alert-octagon" class="w-3 h-3 inline"></i> LỖI HỆ THỐNG</span>`;
 
     const statusBadge = isUserAction
-      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">USER_ACTION</span>`
-      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">CRITICAL</span>`;
+      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 shrink-0 whitespace-nowrap">USER_ACTION</span>`
+      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0 whitespace-nowrap">CRITICAL</span>`;
 
     const fixText = job.suggestedFix || semantic.suggestedFix;
     const calloutBox = isUserAction
@@ -644,33 +660,34 @@ function renderFailedJobsItemsMarkup(jobs) {
       `;
 
     return `
-      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 space-y-3 ${isUserAction ? 'hover:border-sky-500/30' : 'hover:border-rose-500/30'} transition shadow-xs">
-        <!-- Top Row -->
-        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div class="flex items-center gap-2">
+      <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5 space-y-2.5 sm:space-y-3 ${isUserAction ? 'hover:border-sky-500/30' : 'hover:border-rose-500/30'} transition shadow-xs">
+        <!-- Top Row: Badges & ID -->
+        <div class="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
             ${getJobTypeBadge(job.type)}
             ${classificationBadge}
-            <span class="font-mono text-zinc-500 dark:text-zinc-400 text-[11px]" title="${escapeHtml(job.id)}">
+            <span class="font-mono text-zinc-500 dark:text-zinc-400 text-[11px] shrink-0" title="${escapeHtml(job.id)}">
               #${escapeHtml(job.id.substring(0, 10))}...
             </span>
             ${statusBadge}
           </div>
+        </div>
 
-          <div class="flex items-center gap-2">
+        <!-- Meta Bar: Retry button, Duration & Timestamp -->
+        <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+          <div class="flex items-center gap-2 min-w-0">
             <button
               type="button"
               data-retry-job-id="${escapeHtml(job.id)}"
-              class="btn-retry-job px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
+              class="btn-retry-job px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
               title="Thử lại tác vụ này"
             >
               <i data-lucide="play" class="w-3 h-3"></i>
               <span>Thử lại</span>
             </button>
-            <div class="flex items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-              <span>Thời lượng: <strong class="text-zinc-800 dark:text-zinc-200">${duration}</strong></span>
-              <span>${formatRelativeTime(job.createdAt)} (${formatExactTime(job.createdAt)})</span>
-            </div>
+            <span class="truncate">Thời lượng: <strong class="text-zinc-800 dark:text-zinc-200 font-bold">${duration}</strong></span>
           </div>
+          <span class="shrink-0 text-zinc-400 text-[10px] sm:text-[11px]" title="${formatExactTime(job.createdAt)}">${formatRelativeTime(job.createdAt)}</span>
         </div>
 
         <!-- Error Reason Callout -->
