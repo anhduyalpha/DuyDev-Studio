@@ -126,7 +126,7 @@ PYTHONPATH=. /home/anhduy/dd-studio/engines/document/venv/bin/python3 -c "import
    ssh anhduy@192.168.2.171 'cd /home/anhduy/dd-studio && PYTHONPATH=. /home/anhduy/dd-studio/engines/document/venv/bin/python3 -c "import engines.quiz.rendering.templates; print(\"OK\")"'
    ```
 3. **Kiểm tra End-to-End Tạo Bài Tập**:
-   Truy cập giao diện web PWA `https://duydevstudio.alphadaniel.io.vn`, upload tài liệu hoặc dán link Google Drive, bấm "Tạo bài tập". Đảm bảo không còn popup thông báo lỗi đỏ và thanh tiến trình chạy mượt mà đến 100%.
+   Truy cập giao diện web PWA `https://studio.duydev.cloud`, upload tài liệu hoặc dán link Google Drive, bấm "Tạo bài tập". Đảm bảo không còn popup thông báo lỗi đỏ và thanh tiến trình chạy mượt mà đến 100%.
 
 ---
 

@@ -1,7 +1,8 @@
 {
   "name": "duydev-studio-server",
   "version": "1.0.0",
-  "description": "DuyDev Studio - Personal Self-Hosted Utility Hub Backend Engine",
+  "description": "Backend engine for DuyDev Studio PWA utility hub.",
+  "homepage": "https://studio.duydev.cloud",
   "type": "module",
   "main": "dist/app.js",
   "scripts": {

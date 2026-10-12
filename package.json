@@ -1,7 +1,8 @@
 {
   "name": "duydev-studio-pwa",
   "version": "2.0.0",
-  "description": "DuyDev Studio - Personal Self-Hosted Progressive Web App Utility Hub",
+  "description": "Personal self-hosted PWA utility hub & native file processing suite.",
+  "homepage": "https://studio.duydev.cloud",
   "type": "module",
   "scripts": {
     "dev": "npm --prefix server run dev",
