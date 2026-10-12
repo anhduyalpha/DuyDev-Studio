@@ -15,7 +15,8 @@ export function renderQuizConfigPanel(state) {
   const isFileReady = state.file?.status === 'ready';
   const hasDriveUrl = Boolean(state.gdriveUrl?.trim());
   const isDriveValid = isValidDriveUrl(state.gdriveUrl);
-  const isSourceReady = isFileReady || isDriveValid;
+  const isDriveReady = isDriveValid && state.driveProbeStatus === 'valid';
+  const isSourceReady = isFileReady || isDriveReady;
   const step = state.step || (isSourceReady ? 2 : 1);
   const shouldHideSourceBox = isFileReady;
   const showPrompt = step >= 2 && isSourceReady;
@@ -24,8 +25,7 @@ export function renderQuizConfigPanel(state) {
   const hasValidPrefix = Boolean(state.prefix?.trim());
   const hasValidPages = Boolean(state.pages?.trim());
 
-  const isDriveReady = isDriveValid && state.driveProbeStatus === 'valid';
-  const isReadyToGenerate = (isFileReady || isDriveReady) && hasValidPages && hasValidPrefix && !state.isProcessing;
+  const isReadyToGenerate = isSourceReady && hasValidPages && hasValidPrefix && !state.isProcessing;
 
   return `
     <div class="bg-white dark:bg-[#111114] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 space-y-5 shadow-xs dark:shadow-sm">

@@ -264,7 +264,7 @@ export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDrive
       method: 'GET',
       headers: baseHeaders,
       redirect: 'follow',
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(6000)
     });
 
     if (res.status === 404) {
@@ -316,6 +316,11 @@ export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDrive
       }
     }
 
+    // Safely cancel unneeded body stream for non-HTML responses
+    try {
+      res.body?.cancel();
+    } catch (_) {}
+
     if (!res.ok) {
       return {
         valid: false,
@@ -336,7 +341,7 @@ export async function probeGoogleDriveFile(driveUrl: string): Promise<ProbeDrive
       return {
         valid: false,
         error: 'PROBE_TIMEOUT',
-        message: 'Kết nối thăm dò Google Drive vượt quá 3 giây. Vui lòng kiểm tra lại liên kết.'
+        message: 'Kết nối thăm dò Google Drive vượt quá 6 giây. Vui lòng kiểm tra lại liên kết.'
       };
     }
     return {

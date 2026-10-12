@@ -127,6 +127,7 @@ class QuizManager {
     };
     this.state.fileId = null;
     this.state.error = null;
+    this.state.step = 1;
     this.notify('file-selected');
 
     this.uploadAbortController = new AbortController();
@@ -149,12 +150,13 @@ class QuizManager {
 
       this.state.fileId = upRes.fileId;
       this.state.file.status = 'ready';
-      this.state.step = Math.max(this.state.step, 2);
+      this.state.step = 2;
       this.notify('file-uploaded');
       showToast('🌱 Đã nhận tệp PDF của bạn rồi nè! Siêu xịn sò luôn ✨', 'success');
     } catch (err) {
       if (err.name === 'AbortError') return;
       this.state.file.status = 'error';
+      this.state.step = 1;
       this.state.error = err.message;
       this.notify('file-upload-error');
       showToast(err.message || 'Lỗi tải tệp PDF lên rồi 🥺', 'error');
@@ -166,6 +168,7 @@ class QuizManager {
       this.state.driveProbeStatus = 'idle';
       this.state.driveProbeMessage = '';
       this.state.driveProbeData = null;
+      this.state.step = 1;
       this.notify('drive-probe-updated');
       return;
     }
@@ -178,9 +181,17 @@ class QuizManager {
 
     this.state.driveProbeStatus = 'probing';
     this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
+    this.state.step = 1;
     this.notify('drive-probe-updated');
 
     let isCompleted = false;
+
+    // 7s client-side timeout safeguard
+    const timeoutId = setTimeout(() => {
+      if (!isCompleted && this.driveProbeAbortController) {
+        this.driveProbeAbortController.abort();
+      }
+    }, 7000);
 
     try {
       const resp = await fetch('/api/v1/files/probe-gdrive', {
@@ -199,37 +210,35 @@ class QuizManager {
         this.state.driveProbeStatus = 'valid';
         this.state.driveProbeMessage = 'Tệp hợp lệ và sẵn sàng xử lý';
         this.state.driveProbeData = json.data;
-        if (this.state.step < 2) {
-          this.state.step = 2;
-        }
+        this.state.step = 2;
         showToast('☁️ Đã xác thực link Google Drive thành công! ✨', 'success');
         this.notify('drive-probe-updated');
       } else {
         this.state.driveProbeStatus = 'invalid';
         this.state.driveProbeMessage = json.data?.message || json.error?.message || 'Tệp chưa được mở quyền xem công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".';
         this.state.driveProbeData = null;
-        if (this.state.step < 2) {
-          this.state.step = 2;
-        }
+        this.state.step = 1;
         this.notify('drive-probe-updated');
       }
     } catch (err) {
-      if (err.name === 'AbortError' && signal.aborted) {
+      if (err.name === 'AbortError' && signal.aborted && this.state.gdriveUrl !== cleanUrl) {
         return;
       }
       if (this.state.gdriveUrl !== cleanUrl) return;
       isCompleted = true;
       this.state.driveProbeStatus = 'invalid';
-      this.state.driveProbeMessage = 'Không thể kết nối đến máy chủ để xác thực link Google Drive.';
+      this.state.driveProbeMessage = signal.aborted
+        ? 'Kiểm tra liên kết vượt quá thời gian chờ (7s). Vui lòng kiểm tra lại liên kết hoặc nhấn Dán link để thử lại nha!'
+        : 'Không thể kết nối đến máy chủ để xác thực link Google Drive.';
       this.state.driveProbeData = null;
-      if (this.state.step < 2) {
-        this.state.step = 2;
-      }
+      this.state.step = 1;
       this.notify('drive-probe-updated');
     } finally {
+      clearTimeout(timeoutId);
       if (!isCompleted && this.state.gdriveUrl === cleanUrl && !signal.aborted) {
         this.state.driveProbeStatus = 'invalid';
         this.state.driveProbeMessage = 'Kiểm tra liên kết vượt quá thời gian chờ. Bạn thử nhấn Dán link để kiểm tra lại nha!';
+        this.state.step = 1;
         this.notify('drive-probe-updated');
       }
     }
@@ -273,9 +282,7 @@ class QuizManager {
     const isDriveValid = isValidDriveUrl(clean);
 
     if (isDriveValid) {
-      if (this.state.step < 2) {
-        this.state.step = 2;
-      }
+      this.state.step = 1;
       this.state.driveProbeStatus = 'probing';
       this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
       this.driveProbeTimer = setTimeout(() => {
