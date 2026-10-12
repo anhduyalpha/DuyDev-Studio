@@ -15,17 +15,17 @@ export function renderQuizConfigPanel(state) {
   const isFileReady = state.file?.status === 'ready';
   const hasDriveUrl = Boolean(state.gdriveUrl?.trim());
   const isDriveValid = isValidDriveUrl(state.gdriveUrl);
-  const isDriveConfirmed = isDriveValid && state.driveProbeStatus === 'valid';
-  const isSourceReady = isFileReady || isDriveConfirmed;
+  const isSourceReady = isFileReady || isDriveValid;
   const step = state.step || (isSourceReady ? 2 : 1);
-  const shouldHideSourceBox = isFileReady || isDriveConfirmed;
+  const shouldHideSourceBox = isFileReady;
   const showPrompt = step >= 2 && isSourceReady;
   const showParams = step >= 3 && isSourceReady;
 
   const hasValidPrefix = Boolean(state.prefix?.trim());
   const hasValidPages = Boolean(state.pages?.trim());
 
-  const isReadyToGenerate = isSourceReady && hasValidPages && hasValidPrefix && !state.isProcessing && state.driveProbeStatus !== 'invalid' && state.driveProbeStatus !== 'probing';
+  const isDriveReady = isDriveValid && state.driveProbeStatus === 'valid';
+  const isReadyToGenerate = (isFileReady || isDriveReady) && hasValidPages && hasValidPrefix && !state.isProcessing;
 
   return `
     <div class="bg-white dark:bg-[#111114] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 space-y-5 shadow-xs dark:shadow-sm">
@@ -60,11 +60,19 @@ export function renderQuizConfigPanel(state) {
               <span>Nguồn tài liệu</span>
               <span class="text-rose-500 font-bold">*</span>
               <span id="quizSourceStatus">
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>
+                ${
+                  isFileReady || isDriveReady
+                    ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>'
+                    : isDriveValid && state.driveProbeStatus === 'probing'
+                    ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1"><i data-lucide="loader-2" class="w-2.5 h-2.5 animate-spin"></i> Đang kiểm tra</span>'
+                    : isDriveValid && state.driveProbeStatus === 'invalid'
+                    ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> Chưa công khai</span>'
+                    : '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>'
+                }
               </span>
             </label>
             <div id="quizSourceDetail">
-              <span class="text-[11px] text-zinc-500 font-mono">Tệp PDF hoặc Drive</span>
+              <span class="text-[11px] text-zinc-500 font-mono">${isDriveValid ? 'Google Drive' : 'Tệp PDF hoặc Drive'}</span>
             </div>
           </div>
 
@@ -121,37 +129,51 @@ export function renderQuizConfigPanel(state) {
             <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800/80"></div>
           </div>
 
-          <!-- 2. Google Drive Link Input (Tự động nhận diện) -->
-          <div class="relative">
-            <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="Dán liên kết Google Drive (chế độ công khai)" class="w-full bg-white dark:bg-zinc-950 border-2 border-dashed ${state.driveProbeStatus === 'valid' ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10' : state.driveProbeStatus === 'invalid' ? 'border-amber-500/60 bg-amber-50/30 dark:bg-amber-950/10' : 'border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-50/30 dark:bg-rose-950/5'} rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden transition" />
-          </div>
-          ${
-            state.driveProbeStatus === 'probing'
-              ? `
-              <div class="mt-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2 animate-fadeIn">
-                <i data-lucide="loader-2" class="w-4 h-4 animate-spin shrink-0"></i>
-                <span>☁️ Đang kiểm tra link Google Drive của bạn một tẹo nhé... ✨</span>
-              </div>
-            `
-              : state.driveProbeStatus === 'invalid'
-              ? `
-              <div class="mt-2 p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-fadeIn shadow-xs">
-                <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"></i>
-                <div class="space-y-0.5">
-                  <p class="font-semibold text-amber-900 dark:text-amber-100">⚠️ Link Drive chưa được mở công khai rồi nè 🥺</p>
-                  <p class="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">${escapeHtml(state.driveProbeMessage || 'Bạn mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem" giúp mình nha!')}</p>
+          <!-- 2. Google Drive Link Input + Nút Dán Link -->
+          <div class="space-y-2">
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                  <i data-lucide="link" class="w-4 h-4"></i>
+                </div>
+                <input type="url" id="quizDriveInput" value="${escapeHtml(state.gdriveUrl)}" placeholder="Dán liên kết Google Drive (chế độ công khai)..." class="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-950 border-2 border-dashed ${isDriveValid ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10' : state.driveProbeStatus === 'invalid' ? 'border-amber-500/60 bg-amber-50/30 dark:bg-amber-950/10' : 'border-rose-500/40 hover:border-rose-500/60 focus:border-rose-500 bg-rose-50/30 dark:bg-rose-950/5'} rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden transition" />
+                <div id="quizDriveSpinner" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none ${state.driveProbeStatus === 'probing' ? '' : 'hidden'}">
+                  <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-500"></i>
                 </div>
               </div>
-            `
-              : state.driveProbeStatus === 'valid'
-              ? `
-              <div class="mt-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
-                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-emerald-500"></i>
-                <span>☁️ Tệp công khai siêu hợp lệ luôn: ${escapeHtml(state.driveProbeData?.fileName || 'Đã sẵn sàng')} ✨</span>
-              </div>
-            `
-              : ''
-          }
+              <button type="button" id="btnQuizPasteDrive" class="px-3.5 sm:px-4 py-2.5 rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán liên kết từ bộ nhớ tạm">
+                <i data-lucide="clipboard" class="w-4 h-4 text-zinc-500 dark:text-zinc-400"></i>
+                <span>Dán link</span>
+              </button>
+            </div>
+            ${
+              state.driveProbeStatus === 'probing'
+                ? `
+                <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2 animate-fadeIn">
+                  <i data-lucide="loader-2" class="w-4 h-4 animate-spin shrink-0"></i>
+                  <span>☁️ Đang kiểm tra link Google Drive của bạn một tẹo nhé... ✨</span>
+                </div>
+              `
+                : state.driveProbeStatus === 'invalid'
+                ? `
+                <div class="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-fadeIn shadow-xs">
+                  <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"></i>
+                  <div class="space-y-0.5">
+                    <p class="font-semibold text-amber-900 dark:text-amber-100">⚠️ Link Drive chưa được mở công khai rồi nè 🥺</p>
+                    <p class="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">${escapeHtml(state.driveProbeMessage || 'Bạn mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem" giúp mình nha!')}</p>
+                  </div>
+                </div>
+              `
+                : state.driveProbeStatus === 'valid'
+                ? `
+                <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-emerald-500"></i>
+                  <span>☁️ Tệp công khai siêu hợp lệ luôn: ${escapeHtml(state.driveProbeData?.fileName || 'Đã sẵn sàng')} ✨</span>
+                </div>
+              `
+                : ''
+            }
+          </div>
         </div>
       `
       }

@@ -199,13 +199,13 @@ class QuizManager {
           this.state.step = 2;
         }
         showToast('☁️ Đã xác thực link Google Drive thành công! ✨', 'success');
-        this.notify('source-ready');
+        this.notify('drive-probe-updated');
       } else {
         this.state.driveProbeStatus = 'invalid';
         this.state.driveProbeMessage = json.data?.message || 'Tệp chưa được mở quyền xem công khai. Vui lòng mở Google Drive -> Chia sẻ -> "Bất kỳ ai có đường liên kết đều có thể xem".';
         this.state.driveProbeData = null;
-        if (this.state.step !== 1) {
-          this.state.step = 1;
+        if (this.state.step < 2) {
+          this.state.step = 2;
         }
         this.notify('drive-probe-updated');
       }
@@ -215,8 +215,8 @@ class QuizManager {
       this.state.driveProbeStatus = 'invalid';
       this.state.driveProbeMessage = 'Không thể kết nối đến máy chủ để xác thực link Google Drive.';
       this.state.driveProbeData = null;
-      if (this.state.step !== 1) {
-        this.state.step = 1;
+      if (this.state.step < 2) {
+        this.state.step = 2;
       }
       this.notify('drive-probe-updated');
     }
@@ -255,6 +255,9 @@ class QuizManager {
     const isDriveValid = isValidDriveUrl(clean);
 
     if (isDriveValid) {
+      if (this.state.step < 2) {
+        this.state.step = 2;
+      }
       if (urlChanged || this.state.driveProbeStatus === 'idle') {
         this.state.driveProbeStatus = 'probing';
         this.state.driveProbeMessage = 'Đang kiểm tra quyền xem công khai...';
@@ -262,6 +265,7 @@ class QuizManager {
           this.probeDriveUrl(clean);
         }, 300);
       }
+      this.notify('drive-probe-updated');
     } else {
       this.state.driveProbeStatus = 'idle';
       this.state.driveProbeMessage = '';
@@ -271,10 +275,9 @@ class QuizManager {
           this.state.step = 1;
         }
       }
+      const stepChanged = this.state.step !== prevStep;
+      this.notify(stepChanged ? 'step-changed' : 'gdrive-changed');
     }
-
-    const stepChanged = this.state.step !== prevStep;
-    this.notify(stepChanged ? 'step-changed' : 'gdrive-changed');
   }
 
   setParams(params = {}) {
@@ -688,9 +691,20 @@ class QuizManager {
       this.parsePromptAbortController.abort();
       this.parsePromptAbortController = null;
     }
+    if (this.driveProbeTimer) {
+      clearTimeout(this.driveProbeTimer);
+      this.driveProbeTimer = null;
+    }
+    if (this.driveProbeAbortController) {
+      this.driveProbeAbortController.abort();
+      this.driveProbeAbortController = null;
+    }
     this.state.file = null;
     this.state.fileId = null;
     this.state.gdriveUrl = '';
+    this.state.driveProbeStatus = 'idle';
+    this.state.driveProbeMessage = '';
+    this.state.driveProbeData = null;
     this.state.step = 1;
     this.notify('file-cleared');
   }

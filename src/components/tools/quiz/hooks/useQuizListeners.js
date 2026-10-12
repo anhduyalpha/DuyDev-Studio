@@ -147,9 +147,23 @@ export function attachQuizListeners() {
       // 1. Source validation & badge
       const srcStatus = document.getElementById('quizSourceStatus');
       const dropzone = document.getElementById('quizDropzone');
+      const spinner = document.getElementById('quizDriveSpinner');
+      if (spinner) {
+        spinner.classList.toggle('hidden', state.driveProbeStatus !== 'probing');
+      }
+
       if (srcStatus) {
-        if (isSourceReady) {
+        if (isFileReady || isDriveConfirmed) {
           srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i> Hợp lệ</span>';
+        } else if (isDriveValid && state.driveProbeStatus === 'probing') {
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1"><i data-lucide="loader-2" class="w-2.5 h-2.5 animate-spin"></i> Đang kiểm tra</span>';
+        } else if (isDriveValid && state.driveProbeStatus === 'invalid') {
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> Chưa công khai</span>';
+        } else {
+          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>';
+        }
+
+        if (isSourceReady) {
           if (dropzone && !state.file) {
             dropzone.classList.remove('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-50/50', 'dark:bg-rose-950/5');
             dropzone.classList.add('border-zinc-300', 'dark:border-zinc-800', 'hover:border-zinc-400', 'dark:hover:border-zinc-600', 'bg-zinc-50/50', 'dark:bg-zinc-950/40');
@@ -164,7 +178,6 @@ export function attachQuizListeners() {
             }
           }
         } else {
-          srcStatus.innerHTML = '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">Bắt buộc</span>';
           if (dropzone && !state.file) {
             dropzone.classList.remove('border-zinc-300', 'dark:border-zinc-800', 'hover:border-zinc-400', 'dark:hover:border-zinc-600', 'bg-zinc-50/50', 'dark:bg-zinc-950/40');
             dropzone.classList.add('border-rose-500/30', 'hover:border-rose-500/50', 'bg-rose-50/50', 'dark:bg-rose-950/5');
@@ -253,6 +266,7 @@ export function attachQuizListeners() {
       'file-upload-error',
       'source-ready',
       'step-changed',
+      'drive-probe-updated',
       'prompt-analyzing',
       'prompt-parsed',
       'prompt-analysis-finished',
@@ -360,15 +374,61 @@ export function attachQuizListeners() {
       };
     }
 
-    // Google Drive Input
+    // Google Drive Input & Paste Button
     const driveInput = document.getElementById('quizDriveInput');
+    const btnPasteDrive = document.getElementById('btnQuizPasteDrive');
+
     if (driveInput) {
       const handleDrive = () => {
         quizManager.setGdriveUrl(driveInput.value);
         syncValidationUI();
       };
-      ['input', 'change', 'paste', 'keyup', 'blur'].forEach((evt) => {
+      ['input', 'change', 'keyup', 'blur'].forEach((evt) => {
         driveInput.addEventListener(evt, handleDrive);
+      });
+
+      // Special handling for paste event to capture clipboard text with race-condition protection
+      driveInput.addEventListener('paste', (e) => {
+        const pasted = e.clipboardData?.getData('text') || '';
+        setTimeout(() => {
+          const val = (pasted || driveInput.value).trim();
+          if (val) {
+            driveInput.value = val;
+            quizManager.setGdriveUrl(val);
+          }
+          syncValidationUI();
+        }, 20);
+      });
+    }
+
+    if (btnPasteDrive && driveInput) {
+      btnPasteDrive.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          let text = '';
+          if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+            text = await navigator.clipboard.readText();
+          }
+          text = (text || '').trim();
+          if (!text) {
+            driveInput.focus();
+            showToast('Vui lòng cấp quyền truy cập bộ nhớ tạm hoặc nhấn giữ ô nhập để dán nhé 📋', 'info');
+            return;
+          }
+          driveInput.value = text;
+          quizManager.setGdriveUrl(text);
+          syncValidationUI();
+          if (isValidDriveUrl(text)) {
+            showToast('☁️ Đã dán link Google Drive và đang kiểm tra quyền xem... ✨', 'info');
+          } else {
+            showToast('Đã dán nội dung, nhưng đây chưa phải là liên kết Google Drive hợp lệ rồi nè 🥺', 'warning');
+          }
+        } catch (err) {
+          console.warn('Clipboard read error:', err);
+          driveInput.focus();
+          showToast('Không thể đọc bộ nhớ tạm tự động. Bạn dán trực tiếp (Ctrl+V) vào ô giúp mình nha!', 'info');
+        }
       });
     }
 
