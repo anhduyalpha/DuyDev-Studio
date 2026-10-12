@@ -103,13 +103,15 @@ export interface EngineTimeoutsConfig {
   chromePdfSec: number;
   pdfHeavyTaskSec: number;
   converterTaskSec: number;
+  quizTaskSec: number;
 }
 
 export const DEFAULT_ENGINE_TIMEOUTS: EngineTimeoutsConfig = {
   aiCallSec: 45,
   chromePdfSec: 60,
   pdfHeavyTaskSec: 300,
-  converterTaskSec: 600
+  converterTaskSec: 600,
+  quizTaskSec: 600
 };
 
 function getSystemConfigPath(): string {
@@ -1456,7 +1458,8 @@ export class AdminTelemetryService {
             aiCallSec: Number(parsed.engineTimeouts.aiCallSec) || DEFAULT_ENGINE_TIMEOUTS.aiCallSec,
             chromePdfSec: Number(parsed.engineTimeouts.chromePdfSec) || DEFAULT_ENGINE_TIMEOUTS.chromePdfSec,
             pdfHeavyTaskSec: Number(parsed.engineTimeouts.pdfHeavyTaskSec) || DEFAULT_ENGINE_TIMEOUTS.pdfHeavyTaskSec,
-            converterTaskSec: Number(parsed.engineTimeouts.converterTaskSec) || DEFAULT_ENGINE_TIMEOUTS.converterTaskSec
+            converterTaskSec: Number(parsed.engineTimeouts.converterTaskSec) || DEFAULT_ENGINE_TIMEOUTS.converterTaskSec,
+            quizTaskSec: Number(parsed.engineTimeouts.quizTaskSec) || DEFAULT_ENGINE_TIMEOUTS.quizTaskSec
           };
         }
       }
@@ -1475,7 +1478,8 @@ export class AdminTelemetryService {
       aiCallSec: config.aiCallSec ? Math.max(10, Math.min(600, Number(config.aiCallSec))) : current.aiCallSec,
       chromePdfSec: config.chromePdfSec ? Math.max(10, Math.min(300, Number(config.chromePdfSec))) : current.chromePdfSec,
       pdfHeavyTaskSec: config.pdfHeavyTaskSec ? Math.max(30, Math.min(1800, Number(config.pdfHeavyTaskSec))) : current.pdfHeavyTaskSec,
-      converterTaskSec: config.converterTaskSec ? Math.max(30, Math.min(3600, Number(config.converterTaskSec))) : current.converterTaskSec
+      converterTaskSec: config.converterTaskSec ? Math.max(30, Math.min(3600, Number(config.converterTaskSec))) : current.converterTaskSec,
+      quizTaskSec: config.quizTaskSec ? Math.max(60, Math.min(3600, Number(config.quizTaskSec))) : (current.quizTaskSec || DEFAULT_ENGINE_TIMEOUTS.quizTaskSec)
     };
 
     try {

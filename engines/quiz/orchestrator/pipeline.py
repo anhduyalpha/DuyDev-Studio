@@ -220,6 +220,28 @@ class QuizPipelineOrchestrator:
             )
             detected_count = len(extraction_plan.target_question_numbers)
 
+            # Defensive adaptation: if 0 questions detected with requested plan_start_q,
+            # but neighborhood has indexed questions on target pages (and not an explicit list of questions),
+            # adapt plan_start_q to the first available question number!
+            if detected_count == 0 and not target_q_nums and neighborhood.question_index:
+                avail_nums = [e.question_number for e in neighborhood.question_index if e.question_number is not None]
+                if avail_nums:
+                    plan_start_q = min(avail_nums)
+                    plan_end_q = plan_start_q + plan_count - 1
+                    logger.info(f"Adapted plan_start_q to first available question {plan_start_q} in neighborhood (range {plan_start_q}..{plan_end_q})")
+                    extraction_plan = index_service.build_extraction_plan(
+                        neighborhood=neighborhood,
+                        start_q=plan_start_q,
+                        end_q=plan_end_q,
+                        count=plan_count,
+                        doc_reps=page_representations,
+                        ai_provider=self.provider,
+                        raise_on_mismatch=False,
+                        allow_partial=False,
+                        target_question_numbers=target_q_nums,
+                    )
+                    detected_count = len(extraction_plan.target_question_numbers)
+
             # 2. If extracted count K < N, automatically scan contiguous subsequent pages
             max_doc_page = max(p.page_number for p in page_representations) if page_representations else end_page
             curr_page = max(target_range_pages) + 1 if target_range_pages else end_page + 1
@@ -358,17 +380,18 @@ class QuizPipelineOrchestrator:
                 actual_nums = {q.source_number or q.number for q in cleaned_questions}
                 missing_nums = sorted(list(expected_nums - actual_nums))
                 if missing_nums:
-                    if partial_note and len(actual_nums) > 0:
+                    if len(actual_nums) > 0:
+                        partial_note = f"Đã trích xuất {len(actual_nums)}/{len(expected_nums)} câu hỏi có sẵn trên tài liệu"
                         logger.warning(
-                            f"Flexible publishing tolerance: missing {len(missing_nums)} questions from extraction plan, "
-                            f"continuing with {len(cleaned_questions)} reconstructed questions."
+                            f"Flexible publishing tolerance: missing {len(missing_nums)} questions from extraction plan ({missing_nums[:5]}), "
+                            f"continuing with {len(cleaned_questions)} reconstructed questions ({partial_note})."
                         )
+                        emit(JobStage.RECONSTRUCTING, 48, f"📋 {partial_note} - đang tiếp tục... ✨")
                     else:
                         raise QuizEngineError(
                             ErrorCode.RANGE_MISMATCH,
                             DiagnosticLayer.RECONSTRUCTION_FAILURE,
-                            f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu (thiếu {len(missing_nums)} câu: {missing_nums[:5]}). "
-                            f"Tuyệt đối không xuất bản đề thi thiếu câu hỏi.",
+                            f"Không tìm thấy đủ câu hỏi yêu cầu trong tài liệu. Tuyệt đối không xuất bản đề thi rỗng.",
                             stage=JobStage.RECONSTRUCTING.value,
                             details={
                                 "expected_count": len(extraction_plan.target_question_numbers),

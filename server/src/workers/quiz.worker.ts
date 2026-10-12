@@ -421,12 +421,13 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       aiCallSec: 45,
       chromePdfSec: 60,
       pdfHeavyTaskSec: 300,
-      converterTaskSec: 600
+      converterTaskSec: 600,
+      quizTaskSec: 600
     }));
 
     pyArgs.push('--chrome-timeout', String(engineTimeouts.chromePdfSec));
     pyArgs.push('--ai-timeout', String(engineTimeouts.aiCallSec));
-    const maxWatchdogMs = (engineTimeouts.aiCallSec * 2 + engineTimeouts.chromePdfSec * 2 + 60) * 1000;
+    const maxWatchdogMs = (engineTimeouts.quizTaskSec || 600) * 1000;
 
     await emitProgress(5, '🌱 Gieo mầm kiến thức, chuẩn bị những câu hỏi thật xịn sò... 🌸');
     let resultMeta: PythonProgressEvent;

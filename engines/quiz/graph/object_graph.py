@@ -181,8 +181,8 @@ class DocumentObjectGraph:
             # Calculate overlap with each anchor interval on page ap
             anchor_scores = []
             for anc in anchors_on_p:
-                ys = anc["y_start"]
-                ye = anc["y_end"]
+                ys = anc.get("y_start", 0.0)
+                ye = anc.get("y_end", p_height)
                 overlap = max(0.0, min(ay1, ye) - max(ay0, ys))
                 overlap_ratio = overlap / a_h
                 is_mid_in = (ys <= a_ymid < ye)
@@ -200,8 +200,8 @@ class DocumentObjectGraph:
 
             if not positive_anchors:
                 def dist_to_anchor(s):
-                    ys = s["anchor"]["y_start"]
-                    ye = s["anchor"]["y_end"]
+                    ys = s["anchor"].get("y_start", 0.0)
+                    ye = s["anchor"].get("y_end", p_height)
                     if a_ymid < ys:
                         return ys - a_ymid
                     elif a_ymid > ye:
@@ -221,7 +221,7 @@ class DocumentObjectGraph:
                 role = AssociationRole.UNASSOCIATED if is_sec else self._determine_role(best_anc["stem"], asset.type)
                 conf = 0.95 if is_sec else self._calculate_confidence(
                     best_anc["stem"],
-                    (best_anc["y_start"], best_anc["y_end"]),
+                    (best_anc.get("y_start", 0.0), best_anc.get("y_end", p_height)),
                     (ay0, ay1)
                 )
 
@@ -373,6 +373,7 @@ class DocumentObjectGraph:
 
         for rep in sorted_reps:
             pno = rep.page_number
+            p_height = page_heights.get(pno, 842.0)
             anchors: list[dict[str, Any]] = []
             seen_q_nums: set[int] = set()
 
@@ -399,6 +400,7 @@ class DocumentObjectGraph:
                         "anchor_id": f"anchor_{q.id}",
                         "page": pno,
                         "y_start": y_start,
+                        "y_end": p_height,
                         "question_id": q.id,
                         "question_number": q.source_number,
                         "question_obj": q,
@@ -416,6 +418,7 @@ class DocumentObjectGraph:
                         "anchor_id": f"ext_cand_p{pno}_q{c.candidate_number}",
                         "page": pno,
                         "y_start": float(c.y_pos),
+                        "y_end": p_height,
                         "question_id": f"ext_cand_p{pno}_q{c.candidate_number}",
                         "question_number": c.candidate_number,
                         "question_obj": None,
@@ -437,6 +440,7 @@ class DocumentObjectGraph:
                             "anchor_id": f"ext_block_p{pno}_q{num}",
                             "page": pno,
                             "y_start": float(b.bbox[1]),
+                            "y_end": p_height,
                             "question_id": f"ext_block_p{pno}_q{num}",
                             "question_number": num,
                             "question_obj": None,
@@ -457,6 +461,7 @@ class DocumentObjectGraph:
                             "anchor_id": f"sec_p{pno}_b{b.block_index}",
                             "page": pno,
                             "y_start": by0,
+                            "y_end": p_height,
                             "question_id": f"sec_p{pno}_b{b.block_index}",
                             "question_number": None,
                             "question_obj": None,
@@ -520,10 +525,12 @@ class DocumentObjectGraph:
                         continues = True
 
                 if continues:
+                    p_height_pno = page_heights.get(pno, 842.0)
                     cont_anchor = {
                         "anchor_id": f"cont_{last_prev['anchor_id']}_p{pno}",
                         "page": pno,
                         "y_start": 0.0,
+                        "y_end": p_height_pno,
                         "question_id": last_prev["question_id"],
                         "question_number": last_prev.get("question_number"),
                         "question_obj": last_prev.get("question_obj"),
@@ -563,9 +570,10 @@ class DocumentObjectGraph:
         for q in questions:
             q_spans = []
             for pno, anchors in page_anchors.items():
+                p_h = next((float(r.height) for r in self.doc_reps if r.page_number == pno), 842.0)
                 for anc in anchors:
                     if anc.get("question_id") == q.id:
-                        q_spans.append((pno, anc["y_start"], anc["y_end"]))
+                        q_spans.append((pno, anc.get("y_start", 0.0), anc.get("y_end", p_h)))
             if q_spans:
                 p_start = q_spans[0][0]
                 p_end = q_spans[-1][0]

@@ -61,15 +61,22 @@ def _docx_to_pdf(input_path: str, output_path: str, output_filename: str) -> dic
         libreoffice_paths = [
             r"C:\Program Files\LibreOffice\program\soffice.exe",
             r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-            "soffice",
             "/usr/bin/soffice",
+            "/usr/bin/libreoffice",
+            "/usr/local/bin/soffice",
+            "soffice",
+            "libreoffice",
             "/Applications/LibreOffice.app/Contents/MacOS/soffice"
         ]
 
         soffice_path = None
-        for path in libreoffice_paths:
-            if os.path.exists(path) or shutil.which(path):
-                soffice_path = path
+        for p in libreoffice_paths:
+            if os.path.exists(p):
+                soffice_path = p
+                break
+            resolved = shutil.which(p)
+            if resolved and os.path.exists(resolved):
+                soffice_path = resolved
                 break
 
         if soffice_path:
