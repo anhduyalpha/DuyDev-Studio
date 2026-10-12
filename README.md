@@ -4,6 +4,8 @@
 
 **Personal Progressive Web App (PWA) & self-hosted file processing suite.**
 
+English · [Tiếng Việt](README.vi.md)
+
 [![Production](https://img.shields.io/badge/Production-studio.duydev.cloud-6366f1?style=flat-square&logo=cloudflare&logoColor=white)](https://studio.duydev.cloud)
 [![PWA](https://img.shields.io/badge/PWA-Offline--First-10b981?style=flat-square&logo=pwa&logoColor=white)](https://studio.duydev.cloud)
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -13,82 +15,83 @@
 [![License](https://img.shields.io/badge/License-MIT-f59e0b?style=flat-square)](LICENSE)
 
 <p align="center">
-  🌐 <b>Truy cập trực tiếp:</b> <a href="https://studio.duydev.cloud">https://studio.duydev.cloud</a>
+  🌐 <b>Live Instance:</b> <a href="https://studio.duydev.cloud">https://studio.duydev.cloud</a>
 </p>
 
 </div>
 
 ---
 
-## Giới thiệu
+## Overview
 
-**DuyDev Studio** là ứng dụng web tự lưu trữ (self-hosted PWA) tổng hợp các công cụ xử lý tệp tin và tiện ích cá nhân. Dự án được thiết kế để vận hành độc lập, bảo mật dữ liệu, tối ưu hóa tốc độ và hỗ trợ hoạt động ngoại tuyến.
+**DuyDev Studio** is a personal self-hosted Progressive Web App (PWA) that aggregates specialized document, media, and file processing utilities into a single high-performance workspace. Designed for homeserver operation with zero artificial file size throttles, full data privacy, and offline capabilities.
 
-- **Frontend**: Zero-build Native ES Modules, Tailwind CSS, Service Worker (PWA offline-first), Lucide Icons.
-- **Backend Gateway**: Node.js Fastify (TypeScript), xử lý stream tệp trực tiếp vào đĩa với buffer lớn và tính mã băm SHA-256 inline.
-- **Hàng đợi & Tác vụ nền**: BullMQ trên Redis 7, xử lý bất đồng bộ các tác vụ nặng (chuyển đổi video, render PDF, trích xuất đề thi).
-- **Cơ sở dữ liệu**: SQLite ở chế độ WAL (Prisma ORM).
-- **Động cơ xử lý**: PyMuPDF (fitz), FFmpeg CLI, LibreOffice headless, Pillow, pdf2docx, Chromium CDP.
+- **Frontend**: Zero-build native ES Modules, Tailwind CSS, Service Worker (offline-first PWA), and Lucide Icons.
+- **Backend Gateway**: Fastify v4 (TypeScript strict mode), streaming files directly to disk in 4MB chunks with inline SHA-256 calculation.
+- **Background Queue**: BullMQ over Redis 7, asynchronously handling compute-heavy tasks (video transcoding, PDF compilation, quiz extraction).
+- **Database**: SQLite WAL mode managed through Prisma ORM.
+- **Processing Engines**: PyMuPDF (`fitz`), FFmpeg CLI, LibreOffice headless, Pillow, `pdf2docx`, and Chromium CDP.
 
 ---
 
-## Tính năng chính
+## Core Modules
 
 ### 1. PDF Studio
-- **Ghép & Tách**: Ghép nhiều tệp PDF với cơ chế đổi thứ tự kéo-thả; tách dải trang tùy chọn hoặc theo trang chẵn/lẻ qua lưới thumbnail trực quan.
-- **Xoay trang**: Xoay góc 90°, 180°, 270° từng trang riêng lẻ hoặc toàn bộ tài liệu.
-- **Nén & Tối ưu**: Giảm dung lượng tài liệu theo các mức chất lượng, tự động giữ nguyên tệp gốc nếu kích thước không giảm.
-- **Chuyển đổi**: Tạo PDF từ nhiều hình ảnh (tự động căn lề A4), trích xuất toàn bộ ảnh nhúng trong PDF thành tệp ZIP.
-- **Đóng dấu & Bảo mật**: Đóng dấu văn bản (watermark), đánh số trang tự động; đặt mật khẩu bảo vệ và gỡ khóa PDF.
+- **Merge & Split**: Combine multiple PDF documents with visual drag-and-drop reordering; split by custom page ranges or odd/even pages via interactive thumbnail grid.
+- **Page Rotation**: Rotate individual pages or whole documents by 90°, 180°, or 270°.
+- **Compression**: Multi-tier optimization with automatic original file preservation if compressed size does not decrease.
+- **Conversion**: Batch image-to-PDF conversion with A4 auto-fit; extract all embedded images from PDFs directly into a ZIP archive.
+- **Watermarking & Security**: Add custom text watermarks, automated page numbering, AES password encryption, and permission unlocking.
 
-### 2. Tạo Bài Tập Trắc Nghiệm (Quiz Generator)
-- **Bóc tách nội dung**: Trích xuất câu hỏi từ tệp PDF tải lên hoặc liên kết Google Drive, hỗ trợ bố cục 2 cột và tự động đính kèm hình vẽ thí nghiệm/biểu đồ vào câu hỏi.
-- **Đa định dạng câu hỏi**: Hỗ trợ trắc nghiệm 4 lựa chọn (A, B, C, D), nhóm Đúng/Sai 4 ý (a, b, c, d chuẩn GDPT) và câu trả lời ngắn.
-- **Công thức khoa học**: Render công thức toán, lý, hóa học bằng KaTeX vector sắc nét.
-- **Xuất bản chuẩn in ấn A4**: Tự động sinh đồng thời tệp Đề bài (`DeBai.pdf`) và bảng Ma trận Đáp án kèm lời giải chi tiết (`DapAn.pdf`).
+### 2. Quiz Generator
+- **Document Ingestion**: Extract exercise questions from uploaded PDFs or Google Drive links, with two-column layout parsing and automated diagram/table extraction.
+- **Supported Question Formats**: 4-choice multiple choice (A, B, C, D), 4-statement True/False questions (a, b, c, d), and short-answer questions.
+- **Scientific Rendering**: KaTeX vector rendering for mathematics, physics, and chemical formulas.
+- **Print-Ready Output**: Concurrently generates clean A4 portrait worksheets (`DeBai.pdf`) and detailed answer matrices with step-by-step explanations (`DapAn.pdf`).
 
-### 3. Chuyển Đổi Tệp Đa Định Dạng (File Converter)
-- **Hỗ trợ 65+ định dạng**:
-  - *Hình ảnh*: WebP, PNG, JPG, ICO, BMP, TIFF, SVG.
-  - *Video & Âm thanh*: MP4, WebM, GIF, MP3, WAV, AAC, FLAC, OGG, M4A.
-  - *Văn bản & Bảng tính*: PDF, DOCX, Markdown, TXT, HTML, CSV, XLSX.
-  - *Nén*: ZIP, TAR, 7Z, GZ.
-- **Kiến trúc lai (Hybrid Fast-Path)**: Chuyển đổi trực tiếp phía client đối với hình ảnh và dữ liệu nhẹ để nhận kết quả ngay; tự động chuyển sang worker backend đa luồng (FFmpeg, PyMuPDF, LibreOffice) đối với video, âm thanh hoặc tài liệu phức tạp.
+### 3. Universal File Converter
+- **65+ Supported Formats**:
+  - *Images*: WebP, PNG, JPG, ICO, BMP, TIFF, SVG.
+  - *Video & Audio*: MP4, WebM, GIF, MP3, WAV, AAC, FLAC, OGG, M4A.
+  - *Documents & Spreadsheets*: PDF, DOCX, Markdown, TXT, HTML, CSV, XLSX.
+  - *Archives*: ZIP, TAR, 7Z, GZ.
+- **Hybrid Fast-Path Architecture**: In-browser client conversion for lightweight images and data; automatic handoff to multi-threaded backend workers (FFmpeg, PyMuPDF, LibreOffice) for heavy media or complex document formats.
 
-### 4. So Sánh Hình Ảnh (ViewSplit)
-- **Đa khung nhìn**: Bố cục linh hoạt từ 1, 2, 3 đến 4 khung hình song song.
-- **Chế độ so sánh nâng cao**: Thanh trượt Before/After đè lớp (Slider Wipe) và bản đồ sai lệch điểm ảnh (Difference map).
-- **Pixel Inspector**: Kính lúp phóng to 9×9 điểm ảnh với tâm ngắm, đọc giá trị màu RGB, mã HEX và tọa độ ảnh thực tế.
-- **Đồng bộ điều hướng**: Tùy chọn đồng bộ thao tác thu phóng (zoom), kéo cuộn (pan) và con trỏ chuột giữa tất cả các khung nhìn.
+### 4. ViewSplit Image Comparator
+- **Multi-Pane Layouts**: Compare 1, 2, 3, or 4 images side-by-side simultaneously.
+- **Inspection Modes**: Side-by-side comparison, draggable Before/After slider wipe, and pixel difference mapping.
+- **Pixel Inspector**: 9×9 pixel magnification loupe with reticle crosshairs, real-time RGB/HEX color readout, and exact pixel coordinates.
+- **Synchronized Navigation**: Optional cross-pane synchronization for zooming, panning, and cursor tracking.
 
-### 5. Soi & Nén Tệp (Archive Inspector)
-- **Soi tệp nén không cần giải nén**: Đọc trực tiếp Central Directory của tệp `.zip`, `.rar`, `.7z` để duyệt cây thư mục và trích xuất tệp đơn lẻ mà không cần bung toàn bộ dung lượng ra ổ đĩa.
-- **Nén ZIP**: Đóng gói nhanh tệp và thư mục thành định dạng ZIP tiêu chuẩn.
+### 5. Archive Inspector
+- **Zero-Extraction Inspection**: Read the Central Directory headers of `.zip`, `.rar`, and `.7z` archives directly to inspect directory trees and download individual files without decompressing the entire archive to disk.
+- **Standard ZIP Archiving**: Package files and folders into UTF-8 standardized ZIP archives.
 
 ### 6. Dynamic QR Studio & VietQR
-- **VietQR EMVCo**: Tạo mã QR thanh toán liên ngân hàng Napas 24/7 với thuật toán kiểm tra CRC16-CCITT chuẩn xác.
-- **QR Động & Rút gọn link**: Chuyển hướng liên kết qua đường dẫn `/q/:slug`, ghi nhận số lượt quét.
-- **Đa nội dung**: Tạo mã QR Wi-Fi, URL, văn bản, danh bạ vCard 3.0 (chuẩn hóa UTF-8).
-- **Quét & Giải mã**: Đọc mã QR trực tiếp từ ảnh tải lên, chụp màn hình hoặc dán từ clipboard.
+- **VietQR EMVCo**: Generate interbank 24/7 Napas payment QR codes with CRC16-CCITT checksum validation.
+- **Dynamic QR & URL Redirection**: Route short links via `/q/:slug` with scan counting and access logs.
+- **Content Types**: Wi-Fi network credentials, URLs, plaintext, and standardized UTF-8 vCard 3.0 contacts.
+- **Scanner & Decoder**: Decode QR codes from file uploads, screen grabs, or direct clipboard pastes.
 
-### 7. Bộ Nhớ Lưu Trữ (Storage Drive)
-- **Quản lý tệp cá nhân**: Duyệt thư mục, tạo folder, đổi tên, tải lên tệp lớn qua luồng stream và tải thư mục về dưới dạng ZIP.
-- **Bảo mật phiên**: Yêu cầu xác thực quản trị để bảo vệ dữ liệu tệp lưu trữ trên máy chủ.
+### 7. Storage Drive
+- **Personal File Manager**: Hierarchical folder navigation, directory creation, safe renaming, chunked streaming uploads, and folder-to-ZIP exports.
+- **Session Security**: Admin authentication barrier safeguarding stored server files.
+- **Traversal Sandboxing**: Strict path sanitization (`sanitizeSafePath`) blocking directory traversal attacks.
 
-### 8. Tiện Ích Bổ Trợ & Trình Xem Đa Năng
-- **Kiểm tra mã băm**: Tính nhanh MD5, SHA-256 của tệp hoặc chuỗi ký tự; mã hóa và giải mã Base64.
-- **Studocu Downloader**: Hỗ trợ chuyển đổi tài liệu học tập sang PDF.
-- **Universal File Viewer**: Xem trước trực tiếp tài liệu Word (`.docx`), bảng tính Excel (`.xlsx`, `.csv`), tệp PDF, video, âm thanh, mã nguồn cú pháp màu và trình soi nhị phân Hex Dump.
+### 8. Utilities & Universal Previewer
+- **Hash Verification**: Compute MD5 and SHA-256 hashes for files or strings; Base64 encoder/decoder.
+- **Studocu Downloader**: Educational document conversion to PDF.
+- **Universal File Viewer**: Live in-browser preview for Word (`.docx`), Excel (`.xlsx`, `.csv`), PDF documents, media streams, syntax-highlighted source code, and binary Hex Dump.
 
 ---
 
-## Kiến trúc Hệ thống
+## System Architecture
 
 ```mermaid
 flowchart TD
     Client["Client PWA (Vanilla ES Modules / Offline Service Worker)"]
 
-    subgraph Server ["Fastify Gateway"]
+    subgraph Server ["Fastify Gateway (:3000)"]
         Router["HTTP Router & SSE Streamer"]
         Storage["Storage Manager (Stream to Disk & SHA-256)"]
         Prisma["Prisma ORM (SQLite WAL: dev.db)"]
@@ -129,89 +132,87 @@ flowchart TD
 
 ---
 
-## Công nghệ sử dụng
+## Technology Stack
 
-| Tầng | Thành phần |
+| Layer | Technologies |
 | :--- | :--- |
-| **Giao diện (Frontend)** | Vanilla ES Modules, Tailwind CSS, Lucide Icons, PDF.js, SheetJS, docx-preview, qr-code-styling |
-| **Máy chủ (Backend)** | Node.js v20+, Fastify v4, TypeScript, Zod |
-| **Hàng đợi & CSDL** | Redis 7 (BullMQ), SQLite WAL (Prisma ORM) |
-| **Xử lý tài liệu** | Python 3.11, PyMuPDF (fitz), LibreOffice headless, pdf2docx, python-docx |
-| **Xử lý đa phương tiện**| FFmpeg, Pillow, Sharp |
-| **Kiểm thử** | Vitest, TypeScript compiler (`tsc --noEmit`) |
+| **Frontend** | Vanilla ES Modules, Tailwind CSS, Lucide Icons, PDF.js, SheetJS, `docx-preview`, `qr-code-styling` |
+| **Backend** | Node.js v20+, Fastify v4, TypeScript, Zod |
+| **Queue & Database** | Redis 7 (BullMQ), SQLite WAL (Prisma ORM) |
+| **Document Processing** | Python 3.11, PyMuPDF (`fitz`), LibreOffice headless, `pdf2docx`, `python-docx` |
+| **Media Processing** | FFmpeg, Pillow, Sharp |
+| **Testing** | Vitest, TypeScript Compiler (`tsc --noEmit`) |
 
 ---
 
-## Hướng dẫn Cài đặt & Chạy Cục Bộ
+## Local Setup & Development
 
-### 1. Yêu cầu môi trường
-- **Node.js**: v20.x trở lên
-- **Python**: 3.10 trở lên (khuyến nghị 3.11)
-- **Redis Server**: Đang chạy tại `127.0.0.1:6379`
-- **Công cụ phụ trợ** (tùy chọn theo tính năng): `ffmpeg`, `libreoffice`
+### 1. Prerequisites
+- **Node.js**: v20.x or higher
+- **Python**: 3.10+ (3.11 recommended)
+- **Redis Server**: Running at `127.0.0.1:6379`
+- **System Binaries** (optional, for media/office tasks): `ffmpeg`, `libreoffice`
 
-### 2. Cài đặt
+### 2. Installation
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/anhduyalpha/DuyDev-Studio.git
 cd DuyDev-Studio
 
-# 1. Cài đặt Backend Fastify
+# 1. Install Backend Dependencies & Initialize SQLite DB
 cd server
 npm install
 cp .env.example .env
-
-# Khởi tạo cơ sở dữ liệu SQLite
 npx prisma generate
 npx prisma db push
 cd ..
 
-# 2. Cài đặt thư viện Python cho các Engine
+# 2. Install Python Engine Dependencies
 pip install -r engines/converter/fastapi_app/requirements.txt
 pip install PyMuPDF pdf2docx python-docx Pillow
 ```
 
-### 3. Khởi động môi trường phát triển
+### 3. Start Development Server
 
 ```bash
-# Khởi động máy chủ Fastify (phục vụ đồng bộ cả API và PWA giao diện)
+# Run Fastify gateway (serves both API and frontend PWA)
 npm run dev
 
-# hoặc chạy trực tiếp từ thư mục server:
+# Or directly from the server directory:
 cd server && npm run dev
 ```
 
-Mở trình duyệt tại: **`http://localhost:3000`** *(hoặc cổng được cấu hình trong `server/.env`)*.
+Access the application at: **`http://localhost:3000`** *(or configured port in `server/.env`)*.
 
 ---
 
-## Kiểm thử
+## Testing & Quality Assurance
 
 ```bash
 cd server
 
-# 1. Kiểm tra tính toàn vẹn kiểu dữ liệu TypeScript
-npm run build      # npx tsc --noEmit
+# 1. TypeScript Static Typecheck
+npm run build      # npx tsc --noEmit (Must pass with 0 errors)
 
-# 2. Chạy bộ kiểm thử tự động
+# 2. Run Test Suite
 npm test           # npx vitest run
 ```
 
 ---
 
-## Triển khai
+## Deployment
 
-Dự án có thể triển khai trên máy chủ Linux cá nhân hoặc VPS qua dịch vụ Systemd và reverse proxy (Nginx, Caddy hoặc Cloudflare Zero Trust Tunnel):
+The application runs seamlessly on personal Linux homeservers or VPS instances managed via Systemd behind Cloudflare Zero Trust Tunnel:
 
 ```bash
-# Quản lý dịch vụ qua Systemd
+# Systemd service management
 sudo systemctl status dd-studio.service
 sudo systemctl restart dd-studio.service
 ```
 
 ---
 
-## Giấy phép
+## License
 
-Dự án được phân phối dưới giấy phép [MIT License](LICENSE).
+Distributed under the [MIT License](LICENSE).
