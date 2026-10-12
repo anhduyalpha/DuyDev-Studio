@@ -5,7 +5,8 @@ export const uploadPurposeSchema = z.enum([
   'archive-inspect',
   'archive-compress',
   'media-transcode',
-  'universal-converter'
+  'universal-converter',
+  'storage-drive'
 ]);
 export type UploadPurpose = z.infer<typeof uploadPurposeSchema>;
 

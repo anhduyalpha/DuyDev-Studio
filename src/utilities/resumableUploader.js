@@ -747,10 +747,10 @@ export async function smartUploadFile(file, options = {}) {
       }
 
       const formData = new FormData();
-      formData.append('file', file);
-      if (options.purpose) formData.append('purpose', options.purpose);
-
-      const url = options.uploadUrl || `/api/v1/files/upload?purpose=${encodeURIComponent(options.purpose || 'general')}`;
+      const defaultUploadUrl = options.purpose === 'storage-drive'
+        ? `/api/v1/storage/upload?path=${encodeURIComponent(options.targetDir || '/')}`
+        : `/api/v1/files/upload?purpose=${encodeURIComponent(options.purpose || 'general')}`;
+      const url = resolveApiUrl(options.uploadUrl || defaultUploadUrl);
       xhr.open('POST', url);
 
       if (options.headers) {

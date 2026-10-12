@@ -36,6 +36,8 @@ export class StorageService {
   static async uploadFiles(files, targetPath = '/', onProgress = null, options = {}) {
     const fileList = Array.from(files);
     const totalFiles = fileList.length;
+    const cleanPath = targetPath || '/';
+    const storageUploadUrl = `/api/v1/storage/upload?path=${encodeURIComponent(cleanPath)}`;
 
     return poolAll(fileList, async (currentFile, i) => {
       if (typeof options.onStage === 'function') {
@@ -44,7 +46,8 @@ export class StorageService {
 
       return await smartUploadFile(currentFile, {
         purpose: 'storage-drive',
-        targetDir: targetPath,
+        targetDir: cleanPath,
+        uploadUrl: options.uploadUrl || storageUploadUrl,
         headers: getStorageAuthHeaders(),
         signal: options.signal,
         onStage: (stage) => {

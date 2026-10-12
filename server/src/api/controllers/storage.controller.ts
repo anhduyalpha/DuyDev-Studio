@@ -73,7 +73,8 @@ export async function listStorageHandler(request: FastifyRequest, reply: Fastify
  * Upload one or multiple files into destination directory
  */
 export async function uploadStorageHandler(request: FastifyRequest, reply: FastifyReply) {
-  const targetRelPath = (request.query as Record<string, string>)?.path || '/';
+  const query = (request.query as Record<string, string>) || {};
+  const targetRelPath = query.path || query.targetDir || '/';
   const targetDiskDir = DriveService.getDiskPath(targetRelPath);
 
   if (!fs.existsSync(targetDiskDir)) {

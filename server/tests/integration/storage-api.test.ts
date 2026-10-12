@@ -150,6 +150,53 @@ describe('Storage & Auth API Integration Tests', () => {
     expect(body.data.uploaded[0].name).toBe('sample_doc.txt');
   });
 
+  it('Storage: verifies uploaded file is present in folder listing', async () => {
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/api/v1/storage/list?path=/test_folder',
+      headers: {
+        'x-storage-auth': authToken
+      }
+    });
+    expect(listRes.statusCode).toBe(200);
+    const listBody = JSON.parse(listRes.payload);
+    expect(listBody.success).toBe(true);
+    const found = listBody.data.items.find((item: any) => item.name === 'sample_doc.txt');
+    expect(found).toBeDefined();
+    expect(found.isDirectory).toBe(false);
+  });
+
+  it('Storage: uploads a file using targetDir query parameter', async () => {
+    const boundary = '----WebKitFormBoundaryStorageTest2';
+    const content = 'Test file content via targetDir param';
+
+    const multipartPayload = [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="file"; filename="targetdir_doc.txt"',
+      'Content-Type: text/plain',
+      '',
+      content,
+      `--${boundary}--`,
+      ''
+    ].join('\r\n');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/storage/upload?targetDir=/test_folder',
+      headers: {
+        'x-storage-auth': authToken,
+        'content-type': `multipart/form-data; boundary=${boundary}`
+      },
+      payload: Buffer.from(multipartPayload)
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.payload);
+    expect(body.success).toBe(true);
+    expect(body.data.uploaded.length).toBe(1);
+    expect(body.data.uploaded[0].name).toBe('targetdir_doc.txt');
+  });
+
   it('Storage: downloads the uploaded file', async () => {
     const res = await app.inject({
       method: 'GET',

@@ -83,9 +83,15 @@ export class StorageManager {
    */
   static sanitizeSafePath(destinationDir: string, userPath: string): string {
     const dest = path.resolve(destinationDir);
-    const resolved = path.resolve(dest, userPath);
+    // Strip leading slashes to prevent path.resolve from treating relative paths as root on POSIX
+    const cleanRel = (userPath || '').replace(/^[/\\]+/, '');
+    const resolved = path.resolve(dest, cleanRel);
 
-    if (!resolved.startsWith(dest + path.sep) && resolved !== dest) {
+    const isWindows = process.platform === 'win32';
+    const normDest = isWindows ? dest.toLowerCase() : dest;
+    const normResolved = isWindows ? resolved.toLowerCase() : resolved;
+
+    if (!normResolved.startsWith(normDest + path.sep) && normResolved !== normDest) {
       throw new SecurityException(`Path traversal violation: ${userPath}`);
     }
 

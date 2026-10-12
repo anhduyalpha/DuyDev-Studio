@@ -20,4 +20,29 @@ describe('StorageManager Sanitization & Path Tests', () => {
       StorageManager.sanitizeSafePath(sandboxDir, '../../../../windows/system32/cmd.exe');
     }).toThrow(SecurityException);
   });
+
+  it('should safely handle paths with or without leading slashes within sandbox', () => {
+    const sandboxDir = path.resolve('data/storage/drive');
+
+    const path1 = StorageManager.sanitizeSafePath(sandboxDir, 'documents/notes.txt');
+    const path2 = StorageManager.sanitizeSafePath(sandboxDir, '/documents/notes.txt');
+    const path3 = StorageManager.sanitizeSafePath(sandboxDir, '\\documents\\notes.txt');
+
+    expect(path1).toBe(path2);
+    expect(path1).toBe(path3);
+    expect(path1.startsWith(sandboxDir)).toBe(true);
+
+    const rootPath = StorageManager.sanitizeSafePath(sandboxDir, '/');
+    expect(rootPath).toBe(sandboxDir);
+  });
+
+  it('should generate safe drive paths', () => {
+    const drivePath = StorageManager.getDrivePath('/my_folder/file.pdf');
+    expect(drivePath).toContain('my_folder');
+    expect(drivePath).toContain('file.pdf');
+
+    const rootDrive = StorageManager.getDrivePath('/');
+    expect(rootDrive).toBeDefined();
+  });
 });
+
