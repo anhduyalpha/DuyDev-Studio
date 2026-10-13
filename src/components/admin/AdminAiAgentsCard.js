@@ -28,7 +28,17 @@ export function renderAiAgentsCard(aiData) {
     `;
   }
 
-  const { keys = [], rateLimits = {}, cumulative = {}, recentLogs = [] } = aiData;
+  const { keys = [], rateLimits = {}, cumulative = {}, recentLogs = [], classifier } = aiData;
+  const clsData = classifier || {
+    daemonStatus: 'idle',
+    daemonPort: 3005,
+    modelName: 'multilingual-e5-small (ONNX INT8)',
+    modelSizeMb: 112.8,
+    ttlSeconds: 45,
+    totalInferences: 0,
+    avgLatencyMs: 0,
+    recentInferences: []
+  };
   const rpmPct = rateLimits.rpmPercent || 0;
   const tpmPct = rateLimits.tpmPercent || 0;
   const dailyPct = rateLimits.dailyPercent || 0;
@@ -226,6 +236,151 @@ export function renderAiAgentsCard(aiData) {
                 </div>
               `;
             }).join('')}
+          </div>
+        </div>
+
+        <!-- 2.5. Local AI Classifier Daemon Widget -->
+        <div class="rounded-xl border border-white/5 bg-zinc-950/50 p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="text-xs sm:text-sm font-bold text-zinc-100 flex items-center gap-2">
+                    Bộ Phân Loại Cục Bộ (Local E5 Classifier Daemon)
+                  </h4>
+                  ${clsData.daemonStatus === 'running' ? `
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Đang chạy (&lt;50ms)
+                    </span>
+                  ` : `
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-white/5 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+                      Ngủ / Đã giải phóng RAM (~550MB)
+                    </span>
+                  `}
+                </div>
+                <p class="text-[11px] text-zinc-400 mt-0.5">
+                  Mô hình INT8 cục bộ tự động bật khi có yêu cầu nhận diện tiếng Việt và tự thu hồi RAM sau 45s không tải
+                </p>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                id="btnPingClassifier"
+                class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/30 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                title="Khởi động hoặc kiểm tra độ trễ của daemon phân loại"
+              >
+                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                <span>Thử Nghiệm (Ping)</span>
+              </button>
+              <button
+                type="button"
+                id="btnShutdownClassifier"
+                class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                title="Chủ động giải phóng bộ nhớ RAM ngay lập tức"
+              >
+                <i data-lucide="power-off" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span>Giải Phóng RAM</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Stats Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+            <div class="p-2.5 rounded-lg bg-zinc-900/60 border border-white/5">
+              <span class="text-[10px] text-zinc-500 block font-sans">Mô hình</span>
+              <span class="text-zinc-200 font-bold text-[11px] block mt-0.5 truncate" title="${escapeHtml(clsData.modelName)}">
+                ${escapeHtml(clsData.modelName)}
+              </span>
+              <span class="text-[10px] text-zinc-500 block font-sans">ONNX ~${clsData.modelSizeMb}MB</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-zinc-900/60 border border-white/5">
+              <span class="text-[10px] text-zinc-500 block font-sans">Cổng Daemon & TTL</span>
+              <span class="text-zinc-200 font-bold text-[11px] block mt-0.5">Port ${clsData.daemonPort}</span>
+              <span class="text-[10px] text-zinc-500 block font-sans">Auto-exit sau ${clsData.ttlSeconds}s</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-zinc-900/60 border border-white/5">
+              <span class="text-[10px] text-zinc-500 block font-sans">Tổng lượt suy luận</span>
+              <span class="text-emerald-400 font-bold text-[13px] block mt-0.5">${clsData.totalInferences || 0}</span>
+              <span class="text-[10px] text-zinc-500 block font-sans">Lượt nhận diện</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-zinc-900/60 border border-white/5">
+              <span class="text-[10px] text-zinc-500 block font-sans">Độ trễ trung bình</span>
+              <span class="text-amber-400 font-bold text-[13px] block mt-0.5">${clsData.avgLatencyMs || 0}ms</span>
+              <span class="text-[10px] text-zinc-500 block font-sans">Thời gian xử lý</span>
+            </div>
+          </div>
+
+          <!-- Recent Inferences Mini Table -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-[11px] text-zinc-400">
+              <span class="font-semibold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                <i data-lucide="list" class="w-3 h-3 text-emerald-400"></i>
+                Lịch Sử Nhận Diện Gần Nhất (${(clsData.recentInferences || []).length})
+              </span>
+              <span class="text-zinc-500 font-mono text-[10px]">Tự lưu 50 lượt gần nhất</span>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-white/5 bg-zinc-900/40">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-zinc-900/80 text-zinc-400 font-mono text-[10px] border-b border-white/5">
+                  <tr>
+                    <th class="px-3 py-2">Thời gian</th>
+                    <th class="px-3 py-2">Câu lệnh (Prompt)</th>
+                    <th class="px-3 py-2 text-center">Ý định & Độ tin cậy</th>
+                    <th class="px-3 py-2">Tham số đã bóc tách</th>
+                    <th class="px-3 py-2 text-right">Độ trễ</th>
+                    <th class="px-3 py-2 text-center">Nguồn</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 text-zinc-300 font-mono text-[11px]">
+                  ${clsData.recentInferences && clsData.recentInferences.length > 0 ? clsData.recentInferences.map(item => {
+                    const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '--:--:--';
+                    const confPct = Math.round((item.confidence || 0) * 100);
+                    const slotParts = [];
+                    if (item.pages) slotParts.push(`Trang: ${item.pages}`);
+                    if (item.count) slotParts.push(`Số câu: ${item.count}`);
+                    if (item.start) slotParts.push(`Từ: Câu ${item.start}`);
+                    if (item.prefix) slotParts.push(`Tiền tố: ${item.prefix}`);
+                    if (item.parity && item.parity !== 'all') slotParts.push(item.parity === 'odd' ? 'Lẻ' : 'Chẵn');
+                    if (item.section && item.section !== 'all') slotParts.push(`Phần: ${item.section}`);
+
+                    return `
+                      <tr class="hover:bg-white/[0.03] transition-colors">
+                        <td class="px-3 py-2 text-zinc-400 whitespace-nowrap text-[10px]">${timeStr}</td>
+                        <td class="px-3 py-2 font-sans text-zinc-200 max-w-[220px] truncate" title="${escapeHtml(item.prompt)}">
+                          ${escapeHtml(item.prompt)}
+                        </td>
+                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ${escapeHtml(item.intent)} (${confPct}%)
+                          </span>
+                        </td>
+                        <td class="px-3 py-2 font-sans text-[11px] text-zinc-300 max-w-[250px] truncate" title="${escapeHtml(slotParts.join(', '))}">
+                          ${escapeHtml(slotParts.join(', ') || 'Mặc định')}
+                        </td>
+                        <td class="px-3 py-2 text-right text-amber-400 font-bold whitespace-nowrap text-[10px]">${item.latencyMs}ms</td>
+                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                          <span class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">${escapeHtml(item.source)}</span>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('') : `
+                    <tr>
+                      <td colspan="6" class="px-4 py-5 text-center text-zinc-500 font-sans text-xs">
+                        Chưa có lượt phân loại cục bộ nào được ghi nhận.
+                      </td>
+                    </tr>
+                  `}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -649,8 +804,8 @@ function openAiCallDetailModal(log) {
 
         ${log.errorDetails || log.errorMsg ? `
           <!-- Error Details Callout -->
-          <div class="p-3 rounded-xl ${isRecovered ? 'bg-amber-500/10 border border-amber-500/25 text-amber-200' : 'bg-rose-500/10 border border-rose-500/25 text-rose-300'} text-xs font-mono space-y-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider ${isRecovered ? 'text-amber-400' : 'text-rose-400'}">${isRecovered ? 'Lý Do Chuyển Tiếp Khóa Dự Phòng (Upstream Error):' : 'Nguyên Nhân Thất Bại (Error Details):'}</div>
+          <div class="p-3 rounded-xl ${isRecovered ? 'bg-amber-500/10 border border-amber-500/25 text-amber-200' : isErr ? 'bg-rose-500/10 border border-rose-500/25 text-rose-300' : 'bg-zinc-900 border border-white/5 text-zinc-300'} text-xs font-mono space-y-1">
+            <div class="text-[10px] font-bold uppercase tracking-wider ${isRecovered ? 'text-amber-400' : isErr ? 'text-rose-400' : 'text-zinc-400'}">${isRecovered ? 'Lý Do Chuyển Tiếp Khóa Dự Phòng (Upstream Error):' : isErr ? 'Nguyên Nhân Thất Bại (Error Details):' : 'Thông Tin Bổ Sung (Metadata / Intent):'}</div>
             <div class="whitespace-pre-wrap break-all leading-relaxed">${escapeHtml(log.errorDetails || log.errorMsg)}</div>
           </div>
         ` : ''}
@@ -804,4 +959,73 @@ export function attachAiAgentsListeners(containerEl, onRefresh) {
       }
     });
   });
+
+  // 7. Local Classifier Daemon Actions (Ping & Shutdown)
+  const btnPingCls = containerEl.querySelector('#btnPingClassifier');
+  if (btnPingCls) {
+    btnPingCls.addEventListener('click', async () => {
+      const originalHtml = btnPingCls.innerHTML;
+      btnPingCls.disabled = true;
+      btnPingCls.innerHTML = `<span class="inline-block animate-spin mr-1">⟳</span> Đang ping...`;
+
+      try {
+        const resp = await fetch('/api/v1/admin/ai/classifier/action', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getStorageAuthHeaders()
+          },
+          body: JSON.stringify({ action: 'ping', prompt: 'Toàn bộ trang 41 làm 20 câu' })
+        });
+
+        const json = await resp.json();
+        if (json.success) {
+          showToast(json.message || 'Ping daemon phân loại thành công', 'success');
+        } else {
+          showToast(`Thất bại: ${json.message || 'Lỗi kết nối daemon'}`, 'error');
+        }
+
+        if (onRefresh) onRefresh();
+      } catch (err) {
+        showToast(`Không thể kết nối máy chủ: ${err.message}`, 'error');
+      } finally {
+        btnPingCls.disabled = false;
+        btnPingCls.innerHTML = originalHtml;
+      }
+    });
+  }
+
+  const btnShutdownCls = containerEl.querySelector('#btnShutdownClassifier');
+  if (btnShutdownCls) {
+    btnShutdownCls.addEventListener('click', async () => {
+      const originalHtml = btnShutdownCls.innerHTML;
+      btnShutdownCls.disabled = true;
+      btnShutdownCls.innerHTML = `<span class="inline-block animate-spin mr-1">⟳</span> Đang giải phóng...`;
+
+      try {
+        const resp = await fetch('/api/v1/admin/ai/classifier/action', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getStorageAuthHeaders()
+          },
+          body: JSON.stringify({ action: 'shutdown' })
+        });
+
+        const json = await resp.json();
+        if (json.success) {
+          showToast(json.message || 'Đã giải phóng RAM bộ phân loại thành công', 'success');
+        } else {
+          showToast(`Thất bại: ${json.message || 'Lỗi khi giải phóng'}`, 'error');
+        }
+
+        if (onRefresh) onRefresh();
+      } catch (err) {
+        showToast(`Không thể kết nối máy chủ: ${err.message}`, 'error');
+      } finally {
+        btnShutdownCls.disabled = false;
+        btnShutdownCls.innerHTML = originalHtml;
+      }
+    });
+  }
 }
