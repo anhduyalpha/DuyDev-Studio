@@ -51,6 +51,22 @@
       }
     })();
   </script>
+  <!-- Frame-0 Domain Migration Instant Detection & Startup Loader Suppression -->
+  <script>
+    (function() {
+      var host = (window.location.hostname || '').toLowerCase();
+      var s = window.location.search || '';
+      var h = window.location.hash || '';
+      var isDeprecated = host.includes('alphadaniel.io.vn') ||
+                         host === 'duydevstudio.alphadaniel.io.vn' ||
+                         s.includes('migration') ||
+                         h.includes('migration-notice');
+      if (isDeprecated) {
+        document.documentElement.classList.add('is-domain-migrated');
+        window.__IS_DEPRECATED_DOMAIN = true;
+      }
+    })();
+  </script>
   <style>
     /* Instant suppression: Never show startup loader when opening via Share Sheet */
     .is-share-target #appStartupLoader {
@@ -61,6 +77,18 @@
       display: none;
     }
     .is-share-target #fastPathSharePlaceholder {
+      display: flex !important;
+    }
+
+    /* Suppress default loader & regular app shell when on deprecated domain */
+    .is-domain-migrated #app,
+    .is-domain-migrated #appStartupLoader {
+      display: none !important;
+    }
+    #domainMigrationRoot {
+      display: none;
+    }
+    .is-domain-migrated #domainMigrationRoot {
       display: flex !important;
     }
   </style>
@@ -196,6 +224,142 @@
   </script>
 </head>
 <body class="bg-[#F4F4F6] dark:bg-[#09090B] text-zinc-900 dark:text-[#FAFAFA] font-sans min-h-screen transition-colors duration-200 overflow-x-hidden w-full max-w-full">
+  
+  <!-- Frame-0 Instant Domain Migration Screen (<1ms display, zero JS module dependencies) -->
+  <div id="domainMigrationRoot" style="position:fixed;inset:0;z-index:100000;background:#09090b;align-items:center;justify-content:center;padding:1.25rem;box-sizing:border-box;overflow-y:auto;display:none;">
+    <!-- Background Radial Aura -->
+    <div style="position:absolute;top:10%;left:50%;transform:translateX(-50%);width:32rem;height:32rem;background:radial-gradient(circle, rgba(14, 165, 233, 0.2) 0%, rgba(99, 102, 241, 0.12) 40%, transparent 70%);border-radius:50%;filter:blur(60px);pointer-events:none;"></div>
+
+    <div style="position:relative;width:100%;max-width:30rem;box-sizing:border-box;background:rgba(24, 24, 27, 0.88);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255, 255, 255, 0.14);border-radius:1.75rem;padding:2rem 1.75rem;box-shadow:0 30px 60px -12px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06);text-align:center;color:#f4f4f5;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;">
+      
+      <!-- Beacon Header Icon -->
+      <div style="display:flex;justify-content:center;margin-bottom:1.25rem;">
+        <div style="width:3.5rem;height:3.5rem;border-radius:1rem;background:linear-gradient(135deg, #0284c7 0%, #0071e3 100%);box-shadow:0 8px 24px rgba(2, 132, 199, 0.45), inset 0 1px 1px rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;color:#ffffff;">
+          <svg style="width:1.875rem;height:1.875rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+            <path d="M2 12h20" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Badge & Titles -->
+      <div style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.25rem 0.75rem;border-radius:980px;background:rgba(14, 165, 233, 0.12);border:1px solid rgba(14, 165, 233, 0.28);color:#38bdf8;font-size:0.6875rem;font-weight:700;font-family:ui-monospace, monospace;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:0.75rem;">
+        <span style="width:0.375rem;height:0.375rem;border-radius:50%;background:#38bdf8;box-shadow:0 0 8px #38bdf8;"></span>
+        <span>Thông báo di dời tên miền</span>
+      </div>
+
+      <h1 style="font-size:1.375rem;font-weight:700;color:#ffffff;margin:0 0 0.5rem 0;letter-spacing:-0.02em;line-height:1.3;">
+        DuyDev Studio đã chuyển sang địa chỉ mới
+      </h1>
+
+      <p style="font-size:0.8125rem;color:#a1a1aa;margin:0 0 1.25rem 0;line-height:1.5;">
+        Tên miền cũ <code style="font-family:ui-monospace, monospace;color:#f87171;background:rgba(248, 113, 113, 0.1);padding:0.125rem 0.375rem;border-radius:0.375rem;">duydevstudio.alphadaniel.io.vn</code> đã ngừng hoạt động. Hệ thống hiện được vận hành chính thức tại địa chỉ mới bên dưới.
+      </p>
+
+      <!-- Domain Transition Box -->
+      <div style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);border-radius:1rem;padding:0.875rem;margin-bottom:1.25rem;display:flex;flex-direction:column;gap:0.625rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.625rem 0.875rem;border-radius:0.75rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);text-align:left;">
+          <div>
+            <div style="font-size:0.625rem;font-weight:600;text-transform:uppercase;color:#71717a;letter-spacing:0.04em;font-family:ui-monospace, monospace;">Tên miền cũ (Đã ngừng)</div>
+            <div style="font-size:0.8125rem;font-family:ui-monospace, monospace;color:#71717a;text-decoration:line-through;margin-top:0.125rem;">duydevstudio.alphadaniel.io.vn</div>
+          </div>
+          <span style="font-size:0.6875rem;font-weight:600;padding:0.125rem 0.5rem;border-radius:980px;background:rgba(239, 68, 68, 0.12);color:#f87171;border:1px solid rgba(239, 68, 68, 0.2);">Đã tắt</span>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;color:#38bdf8;">
+          <svg style="width:1.25rem;height:1.25rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0.875rem;border-radius:0.75rem;background:rgba(14, 165, 233, 0.12);border:1px solid rgba(14, 165, 233, 0.38);text-align:left;box-shadow:0 0 20px rgba(14, 165, 233, 0.15);">
+          <div>
+            <div style="font-size:0.625rem;font-weight:700;text-transform:uppercase;color:#38bdf8;letter-spacing:0.04em;font-family:ui-monospace, monospace;">Tên miền mới (Chính thức)</div>
+            <div style="font-size:0.9375rem;font-family:ui-monospace, monospace;font-weight:700;color:#ffffff;margin-top:0.125rem;letter-spacing:-0.01em;">studio.duydev.cloud</div>
+          </div>
+          <span style="font-size:0.6875rem;font-weight:600;padding:0.125rem 0.5rem;border-radius:980px;background:rgba(16, 185, 129, 0.2);color:#34d399;border:1px solid rgba(16, 185, 129, 0.3);">Hoạt động</span>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <a id="btnDomainMigrationRedirect" href="https://studio.duydev.cloud" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;box-sizing:border-box;padding:0.875rem 1.25rem;border-radius:980px;background:#0071e3;color:#ffffff;font-size:0.9375rem;font-weight:600;text-decoration:none;box-shadow:0 4px 16px rgba(0, 113, 227, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.2);transition:all 0.15s ease;cursor:pointer;">
+        <span>Chuyển sang studio.duydev.cloud ngay</span>
+        <svg style="width:1.125rem;height:1.125rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+
+      <!-- Countdown Ticker & Advice -->
+      <div style="margin-top:1rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;font-size:0.75rem;color:#71717a;font-family:ui-monospace, monospace;">
+        <span>Tự động chuyển tiếp sau <strong id="migrationCountdownSec" style="color:#38bdf8;">5</strong>s...</span>
+        <button type="button" id="btnPauseMigrationCountdown" style="background:none;border:none;color:#a1a1aa;text-decoration:underline;cursor:pointer;font-size:0.75rem;padding:0;">[Tạm dừng]</button>
+      </div>
+
+      <div style="margin-top:1rem;padding-top:0.875rem;border-top:1px solid rgba(255,255,255,0.06);font-size:0.6875rem;color:#71717a;line-height:1.4;">
+        💡 <em>Mẹo: Hãy cập nhật lại dấu trang (Bookmark) hoặc cài đặt lại PWA từ địa chỉ mới để nhận đầy đủ cập nhật.</em>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var isMigrated = document.documentElement.classList.contains('is-domain-migrated');
+      if (!isMigrated) return;
+
+      var targetDomain = 'https://studio.duydev.cloud';
+      var path = window.location.pathname || '/';
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
+      var targetUrl = targetDomain + path + search + hash;
+
+      var redirectBtn = document.getElementById('btnDomainMigrationRedirect');
+      if (redirectBtn) {
+        redirectBtn.href = targetUrl;
+      }
+
+      // 1. Unregister obsolete Service Worker on deprecated domain
+      try {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              regs[i].unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(keys) {
+            for (var i = 0; i < keys.length; i++) {
+              caches.delete(keys[i]);
+            }
+          });
+        }
+      } catch (_) {}
+
+      // 2. Countdown auto-redirect
+      var sec = 5;
+      var paused = false;
+      var secEl = document.getElementById('migrationCountdownSec');
+      var pauseBtn = document.getElementById('btnPauseMigrationCountdown');
+
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', function() {
+          paused = !paused;
+          pauseBtn.textContent = paused ? '[Tiếp tục]' : '[Tạm dừng]';
+        });
+      }
+
+      var timer = setInterval(function() {
+        if (paused) return;
+        sec--;
+        if (secEl) secEl.textContent = String(sec);
+        if (sec <= 0) {
+          clearInterval(timer);
+          window.location.replace(targetUrl);
+        }
+      }, 1000);
+    })();
+  </script>
   
   <!-- Fast-Path Instant Share Target Shell (<10ms display) -->
   <div id="fastPathSharePlaceholder" class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4" style="position:fixed;inset:0;z-index:9999;align-items:flex-end;justify-content:center;">
