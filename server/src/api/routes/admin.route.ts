@@ -50,7 +50,8 @@ import {
   toggleIpBlockHandler,
   setIpRateLimitHandler,
   resetIpTrafficHandler,
-  resetTrafficHandler
+  resetTrafficHandler,
+  controlQuizClassifierHandler
 } from '../controllers/admin.controller.js';
 
 export async function adminRoute(app: FastifyInstance) {
@@ -80,6 +81,7 @@ export async function adminRoute(app: FastifyInstance) {
   app.delete('/api/v1/admin/ai/keys/:id', { preHandler: adminAuthGuard }, deleteAiKeyHandler);
   app.post('/api/v1/admin/ai/keys/delete', { preHandler: adminAuthGuard }, deleteAiKeyHandler);
   app.post('/api/v1/admin/ai/test-key', { preHandler: adminAuthGuard }, testAiKeyHandler);
+  app.post('/api/v1/admin/ai/classifier/action', { preHandler: adminAuthGuard }, controlQuizClassifierHandler);
 
   // Box Inspectors & Fine-Grained Actions
   app.get('/api/v1/admin/actions/inspect-r2', { preHandler: adminAuthGuard }, inspectR2TransitHandler);

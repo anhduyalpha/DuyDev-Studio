@@ -6,6 +6,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { adminTelemetryService } from '../../services/admin-telemetry.service.js';
 import { aiMetricsService } from '../../services/ai-metrics.service.js';
+import { quizClassifierService } from '../../services/quiz-classifier.service.js';
 import { JanitorService } from '../../services/janitor.service.js';
 import { adminUsersService } from '../../services/admin-users.service.js';
 import { ipAccessService } from '../../services/ip-access.service.js';
@@ -851,6 +852,40 @@ export async function resetTrafficHandler(_request: FastifyRequest, reply: Fasti
   return reply.send({
     success: true,
     message: 'Đã đặt lại bộ đếm lưu lượng mạng và tỷ lệ lỗi thời gian thực'
+  });
+}
+
+const classifierActionSchema = z.object({
+  action: z.enum(['ping', 'shutdown']),
+  prompt: z.string().optional()
+});
+
+/**
+ * POST /api/v1/admin/ai/classifier/action
+ * Controls the local quiz classifier daemon (ping or shutdown)
+ */
+export async function controlQuizClassifierHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = classifierActionSchema.safeParse(request.body);
+  if (!parseResult.success) {
+    throw new BadRequestError('Hành động không hợp lệ. Chỉ chấp nhận ping hoặc shutdown.');
+  }
+
+  const { action, prompt } = parseResult.data;
+  if (action === 'shutdown') {
+    await quizClassifierService.releaseMemory();
+    return reply.send({
+      success: true,
+      message: 'Đã giải phóng bộ nhớ RAM của bộ phân loại AI thành công'
+    });
+  }
+
+  const pingRes = await quizClassifierService.testPing(prompt || 'Toàn bộ trang 41 làm 20 câu');
+  return reply.send({
+    success: true,
+    message: pingRes.success
+      ? `Ping daemon thành công: ${pingRes.latencyMs}ms`
+      : 'Không thể kết nối đến daemon phân loại AI',
+    data: pingRes
   });
 }
 

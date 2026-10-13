@@ -169,6 +169,7 @@ export class AiMetricsService {
     model?: string;
     promptTokens?: number;
     completionTokens?: number;
+    totalTokens?: number;
     latencyMs: number;
     statusCode: number;
     errorMsg?: string;

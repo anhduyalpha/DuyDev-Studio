@@ -10,6 +10,7 @@ import { prisma } from '../lib/prisma.js';
 import { redisConnection, taskQueue, converterQueue, quizQueue, enqueueJob, enqueueConverterJob, enqueueQuizJob } from '../queues/task.queue.js';
 import { telemetryTracker } from '../api/middleware/telemetry.middleware.js';
 import { aiMetricsService } from './ai-metrics.service.js';
+import { quizClassifierService } from './quiz-classifier.service.js';
 import { R2Service } from './r2.service.js';
 import { logger } from '../lib/logger.js';
 import { env, resolvedStoragePaths } from '../config/env.config.js';
@@ -749,6 +750,9 @@ export class AdminTelemetryService {
 
     // 7. AI Metrics
     const aiData = aiMetricsService.getTelemetryData();
+    try {
+      (aiData as any).classifier = await quizClassifierService.getClassifierTelemetry();
+    } catch {}
 
     // 8. Network Traffic Snapshot
     const trafficSnapshot = telemetryTracker.getSnapshot();

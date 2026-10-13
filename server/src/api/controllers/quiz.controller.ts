@@ -231,17 +231,42 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
         inspectArgs.push('--semantic-json', JSON.stringify(semanticResult));
       }
 
+      const t0 = Date.now();
       const inspectRes = spawnSync(pythonBin, inspectArgs, {
         encoding: 'utf-8',
         timeout: 4000,
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
       });
+      const latencyMs = Date.now() - t0;
 
       if (inspectRes.status === 0 && inspectRes.stdout) {
         try {
           const inspected = JSON.parse(inspectRes.stdout.trim());
           if (inspected && inspected.success) {
             logger.info({ prompt: text, result: inspected }, 'Quiz prompt parsed via ground-truth inspect CLI');
+
+            try {
+              aiMetricsService.recordCall({
+                module: 'Quiz Nhận diện Trang Thật',
+                provider: 'Local CLI',
+                model: 'PyMuPDF Inspection',
+                keyName: 'Inspect CLI (Ground-truth)',
+                statusCode: 200,
+                latencyMs,
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                promptSnippet: text,
+                errorDetails: JSON.stringify({
+                  pages: inspected.pages,
+                  count: inspected.count,
+                  start: inspected.start,
+                  detected_questions: inspected.detected_questions
+                }),
+                status: 'SUCCESS'
+              });
+            } catch {}
+
             return reply.send({
               success: true,
               data: {
