@@ -11,6 +11,7 @@ import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import { existsSync } from 'fs';
 import { logger } from '../lib/logger.js';
+import { aiMetricsService } from './ai-metrics.service.js';
 
 export interface QuizClassificationResult {
   intent: string;
@@ -32,12 +33,44 @@ export interface QuizClassificationResult {
   source: string;
 }
 
+export interface QuizClassifierLogEntry {
+  id: string;
+  timestamp: string;
+  prompt: string;
+  intent: string;
+  confidence: number;
+  pages: string;
+  count: number;
+  start: number;
+  end: number | null;
+  prefix: string;
+  parity: string;
+  section: string;
+  latencyMs: number;
+  source: string;
+  status: 'SUCCESS' | 'FALLBACK' | 'ERROR';
+}
+
+export interface QuizClassifierTelemetry {
+  daemonStatus: 'running' | 'idle';
+  daemonPort: number;
+  modelName: string;
+  modelSizeMb: number;
+  ttlSeconds: number;
+  totalInferences: number;
+  avgLatencyMs: number;
+  recentInferences: QuizClassifierLogEntry[];
+}
+
 export class QuizClassifierService {
   private static instance: QuizClassifierService | null = null;
   private daemonProcess: ChildProcess | null = null;
   private readonly port: number;
   private readonly daemonUrl: string;
   private isStarting = false;
+  private recentLogs: QuizClassifierLogEntry[] = [];
+  private totalInferences = 0;
+  private totalLatencyMs = 0;
 
   public static getInstance(): QuizClassifierService {
     if (!QuizClassifierService.instance) {
@@ -185,6 +218,7 @@ export class QuizClassifierService {
       return null;
     }
 
+    const t0 = Date.now();
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
@@ -204,13 +238,87 @@ export class QuizClassifierService {
 
       const json = await res.json() as any;
       if (json && json.success && json.data) {
-        return json.data as QuizClassificationResult;
+        const data = json.data as QuizClassificationResult;
+        const latency = data.latency_ms || (Date.now() - t0);
+        this.totalInferences++;
+        this.totalLatencyMs += latency;
+
+        const logItem: QuizClassifierLogEntry = {
+          id: `cls_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          timestamp: new Date().toISOString(),
+          prompt: text,
+          intent: data.intent || 'UNKNOWN',
+          confidence: data.confidence || 0,
+          pages: data.pages || '',
+          count: data.count || 20,
+          start: data.start || 1,
+          end: data.end ?? null,
+          prefix: data.prefix || '',
+          parity: data.parity_filter || 'all',
+          section: data.section_filter || 'all',
+          latencyMs: latency,
+          source: data.source || 'e5_classifier',
+          status: 'SUCCESS'
+        };
+
+        this.recentLogs.unshift(logItem);
+        if (this.recentLogs.length > 50) {
+          this.recentLogs.pop();
+        }
+
+        try {
+          aiMetricsService.recordCall({
+            module: 'Quiz Nhận diện AI',
+            provider: 'Local ONNX',
+            model: 'multilingual-e5-small',
+            keyName: 'Local Daemon (Port 3005)',
+            statusCode: 200,
+            latencyMs: latency,
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            promptSnippet: text,
+            errorDetails: JSON.stringify({
+              intent: data.intent,
+              confidence: data.confidence,
+              slots: { pages: data.pages, count: data.count, start: data.start, prefix: data.prefix }
+            }),
+            status: 'SUCCESS'
+          });
+        } catch {}
+
+        return data;
       }
       return null;
     } catch (err: any) {
       logger.warn({ err: err?.message }, 'Failed to call classifier daemon /classify');
       return null;
     }
+  }
+
+  public async getClassifierTelemetry(): Promise<QuizClassifierTelemetry> {
+    const isUp = await this.isDaemonHealthy();
+    return {
+      daemonStatus: isUp ? 'running' : 'idle',
+      daemonPort: this.port,
+      modelName: 'multilingual-e5-small (ONNX INT8)',
+      modelSizeMb: 112.8,
+      ttlSeconds: 45,
+      totalInferences: this.totalInferences,
+      avgLatencyMs: this.totalInferences > 0 ? Math.round(this.totalLatencyMs / this.totalInferences) : 0,
+      recentInferences: this.recentLogs
+    };
+  }
+
+  public async testPing(sampleText = 'Toàn bộ trang 41 làm 20 câu'): Promise<{ success: boolean; latencyMs: number; result: QuizClassificationResult | null }> {
+    const t0 = Date.now();
+    const result = await this.classifyPrompt(sampleText);
+    const latencyMs = Date.now() - t0;
+    return {
+      success: Boolean(result),
+      latencyMs,
+      result
+    };
   }
 
   public async releaseMemory(): Promise<void> {
