@@ -60,6 +60,7 @@ export class QuizClassifierService {
       path.resolve(process.cwd(), '.venv/Scripts/python.exe'),
       path.resolve(process.cwd(), 'venv/bin/python'),
       path.resolve(process.cwd(), 'venv/Scripts/python.exe'),
+      '/home/anhduy/dd-studio/engines/document/venv/bin/python',
       '/home/anhduy/dd-studio/.benchmark_classifier/venv/bin/python',
       '/home/anhduy/dd-studio/engines/quiz/venv/bin/python',
       '/usr/bin/python3',
