@@ -36,6 +36,7 @@ import { quizRoute } from './api/routes/quiz.route.js';
 import { getQuizWorker, closeQuizWorker } from './workers/quiz.worker.js';
 import { systemRoute } from './api/routes/system.route.js';
 import { adminRoute } from './api/routes/admin.route.js';
+import { tiktokRoute } from './api/routes/tiktok.route.js';
 import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
 import { ipAccessService } from './services/ip-access.service.js';
 
@@ -192,6 +193,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(quizRoute);
   await app.register(systemRoute);
   await app.register(adminRoute);
+  await app.register(tiktokRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)

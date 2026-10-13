@@ -146,6 +146,18 @@ const DEFAULT_TOOLS = [
     tags: ['studocu', 'tài liệu', 'tiện ích', 'download', 'pdf', 'slide', 'bài giảng']
   },
   {
+    id: 'tiktok-downloader',
+    title: 'TikTok Downloader',
+    description: 'Tải video TikTok không logo chất lượng cao, âm thanh MP3 và lưu trực tiếp vào Drive.',
+    category: 'system',
+    icon: 'video',
+    featured: true,
+    specs: ['Không Logo', 'Video HD & MP3', 'Lưu Drive'],
+    color: '#EE1D52',
+    route: '#tool/tiktok-downloader',
+    tags: ['tiktok', 'tik tok', 'tải video', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin']
+  },
+  {
     id: 'storage',
     title: 'Bộ Nhớ Lưu Trữ',
     description: 'Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.',

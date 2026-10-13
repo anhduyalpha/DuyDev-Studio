@@ -11,6 +11,7 @@ import { formatBytes } from '../../utilities/formatters.js';
 let cleanupFn = null;
 
 const TYPE_LABELS = {
+  [SharePayloadType.TIKTOK_URL]: 'Video TikTok',
   [SharePayloadType.STUDOCU_URL]: 'Tài liệu Studocu',
   [SharePayloadType.IMAGE_URL]: 'Liên kết Hình ảnh / QR',
   [SharePayloadType.GENERIC_URL]: 'Liên kết Web',
@@ -22,6 +23,7 @@ const TYPE_LABELS = {
 };
 
 const TYPE_ICONS = {
+  [SharePayloadType.TIKTOK_URL]: 'video',
   [SharePayloadType.STUDOCU_URL]: 'book-open',
   [SharePayloadType.IMAGE_URL]: 'image',
   [SharePayloadType.GENERIC_URL]: 'link',
@@ -375,6 +377,15 @@ async function dispatchSharedPayloadToTool(action, payload) {
 
   try {
     switch (action.route) {
+      case '#tool/tiktok-downloader': {
+        const { tiktokManager } = await import('../tools/tiktok/hooks/useTiktok.js');
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          tiktokManager.setUrl(targetUrl);
+          tiktokManager.resolve(targetUrl);
+        }
+        break;
+      }
       case '#tool/studocu-dl': {
         const { studocuManager } = await import('../tools/studocu/hooks/useStudocu.js');
         const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';

@@ -6,6 +6,7 @@
 
 /** @enum {string} Payload classification types */
 export const SharePayloadType = {
+  TIKTOK_URL: 'TIKTOK_URL',
   STUDOCU_URL: 'STUDOCU_URL',
   IMAGE_URL: 'IMAGE_URL',
   GENERIC_URL: 'GENERIC_URL',
@@ -28,6 +29,12 @@ const ARCHIVE_MIMES = [
   'application/x-bzip2'
 ];
 const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff|svg|avif|ico)(\?.*)?$/i;
+
+function isTikTokHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'tiktok.com' || host.endsWith('.tiktok.com') || host === 'douyin.com' || host.endsWith('.douyin.com');
+}
 
 function isStudocuHost(hostname) {
   if (!hostname) return false;
@@ -461,6 +468,16 @@ export function classifySharedPayload(payload) {
   if (effectiveUrl) {
     try {
       const parsed = new URL(effectiveUrl);
+      if (isTikTokHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.TIKTOK_URL,
+          recommendations: [
+            { label: 'Tải Video TikTok Không Logo', route: '#tool/tiktok-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+          ],
+        };
+      }
+
       if (isStudocuHost(parsed.hostname)) {
         return {
           type: SharePayloadType.STUDOCU_URL,
