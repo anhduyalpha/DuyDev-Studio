@@ -12,6 +12,7 @@ import { isPermanentRetention } from '../../config/limits.config.js';
 import { logger } from '../../lib/logger.js';
 import { aiMetricsService } from '../../services/ai-metrics.service.js';
 import { adminTelemetryService } from '../../services/admin-telemetry.service.js';
+import { quizClassifierService, QuizClassificationResult } from '../../services/quiz-classifier.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +109,9 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
   });
 
   try {
+    // Proactively release classifier daemon RAM (~550MB) before starting heavy PDF engine & Chromium
+    quizClassifierService.releaseMemory().catch(() => {});
+
     await enqueueQuizTask({
       jobId: job.id,
       fileId,
@@ -210,11 +214,24 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     }
   }
 
+  // 1. Local Semantic Intent & Slot Classification via multilingual-e5-small ONNX (<45ms)
+  let semanticResult: QuizClassificationResult | null = null;
+  try {
+    semanticResult = await quizClassifierService.classifyPrompt(text);
+  } catch (classErr) {
+    logger.debug({ classErr }, 'Quiz classifier call skipped');
+  }
+
   if (targetPdfPath && existsSync(targetPdfPath)) {
     try {
       const inspectScript = resolveInspectScript();
       const pythonBin = resolvePythonBin();
-      const inspectRes = spawnSync(pythonBin, [inspectScript, targetPdfPath, '--query', text], {
+      const inspectArgs = [inspectScript, targetPdfPath, '--query', text];
+      if (semanticResult) {
+        inspectArgs.push('--semantic-json', JSON.stringify(semanticResult));
+      }
+
+      const inspectRes = spawnSync(pythonBin, inspectArgs, {
         encoding: 'utf-8',
         timeout: 4000,
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
@@ -228,19 +245,19 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
             return reply.send({
               success: true,
               data: {
-                pages: inspected.pages || '',
-                count: inspected.count || 20,
-                start: inspected.start || 1,
-                end: inspected.end,
-                title: inspected.title || 'BÀI TẬP TRẮC NGHIỆM',
-                prefix: inspected.prefix || '',
+                pages: inspected.pages || (semanticResult?.pages || ''),
+                count: inspected.count || (semanticResult?.count || 20),
+                start: inspected.start || (semanticResult?.start || 1),
+                end: inspected.end ?? semanticResult?.end,
+                title: inspected.title || (semanticResult?.title || 'BÀI TẬP TRẮC NGHIỆM'),
+                prefix: inspected.prefix || (semanticResult?.prefix || ''),
                 confidence: 1.0,
                 warnings: [],
-                source: 'inspect',
+                source: semanticResult ? 'inspect_e5' : 'inspect',
                 detected_questions: inspected.detected_questions,
                 is_page_bounded: inspected.is_page_bounded ?? true,
-                parity_filter: inspected.parity_filter || 'all',
-                section_filter: inspected.section_filter || 'all',
+                parity_filter: inspected.parity_filter || (semanticResult?.parity_filter || 'all'),
+                section_filter: inspected.section_filter || (semanticResult?.section_filter || 'all'),
                 has_part_i: inspected.has_part_i,
                 has_part_ii: inspected.has_part_ii,
                 has_part_iii: inspected.has_part_iii,
@@ -256,6 +273,29 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
     } catch (inspectErr) {
       logger.warn({ inspectErr }, 'Ground-truth inspection failed, falling back to AI/regex parser');
     }
+  }
+
+  // 2. Direct semantic classifier result when no PDF is attached or inspection not applicable
+  if (semanticResult && semanticResult.confidence >= 0.70) {
+    logger.info({ prompt: text, result: semanticResult }, 'Quiz prompt parsed via local E5 semantic classifier');
+    return reply.send({
+      success: true,
+      data: {
+        pages: semanticResult.pages || '',
+        count: semanticResult.count || 20,
+        start: semanticResult.start || 1,
+        end: semanticResult.end,
+        title: semanticResult.title || 'BÀI TẬP TRẮC NGHIỆM',
+        prefix: semanticResult.prefix || '',
+        confidence: semanticResult.confidence,
+        warnings: [],
+        source: 'ai',
+        detected_questions: undefined,
+        is_page_bounded: semanticResult.is_page_bounded,
+        parity_filter: semanticResult.parity_filter || 'all',
+        section_filter: semanticResult.section_filter || 'all'
+      }
+    });
   }
 
   // Helper for deterministic regex parsing

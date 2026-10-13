@@ -11,7 +11,9 @@ import {
   registerServiceWorker,
   checkForAppUpdate,
   getCurrentVersion,
-  showUpdateCapsule
+  showUpdateCapsule,
+  showUpdateNotificationCenter,
+  executeTripleLockPurge
 } from '../../../src/utilities/pwa.js';
 
 describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
@@ -578,6 +580,61 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
 
       showUpdateCapsule(null);
       expect(fakeDoc.body.appendChild).toHaveBeenCalledTimes(1);
+    });
+
+    it('showUpdateNotificationCenter renders centered dialog with highlights and backdrop blur', () => {
+      showUpdateNotificationCenter(null);
+
+      const capsule = elementsById['ds-update-capsule'];
+      expect(capsule).toBeDefined();
+      expect(capsule.style.backdropFilter).toContain('blur');
+      expect(capsule.innerHTML).toContain('ds-update-modal-card');
+      expect(capsule.innerHTML).toContain('Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ');
+      expect(capsule.innerHTML).toContain('Để sau');
+    });
+
+    it('clicking [Vẫn cập nhật] when tasks are active overrides warning and executes purge', () => {
+      mockWin.__ds_taskCoordinator = {
+        getActiveTasks: () => [{ id: 'active-1' }]
+      };
+
+      const mockWorker = { postMessage: vi.fn() };
+      showUpdateNotificationCenter(mockWorker as any);
+
+      const reloadBtn = elementsById['ds-update-reload-btn'];
+      reloadBtn.trigger('click');
+
+      // First click blocked: warning container shown
+      expect(getUserRequestedReload()).toBe(false);
+      const warningContainer = elementsById['ds-update-warning-container'];
+      expect(warningContainer).toBeDefined();
+
+      // User confirms with [Vẫn cập nhật]
+      const forceBtn = elementsById['ds-update-force-reload-btn'];
+      expect(forceBtn).toBeDefined();
+      forceBtn.trigger('click');
+
+      expect(getUserRequestedReload()).toBe(true);
+      expect(mockWorker.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      expect(removeCalls).toContain('ds-update-capsule');
+    });
+
+    it('executeTripleLockPurge deletes caches, signals worker, and sets ds_hard_purged', async () => {
+      const deleteMock = vi.fn().mockResolvedValue(true);
+      (globalThis as any).caches = {
+        keys: vi.fn().mockResolvedValue(['cache-1', 'cache-2']),
+        delete: deleteMock
+      };
+
+      const mockWorker = { postMessage: vi.fn() };
+      await executeTripleLockPurge(mockWorker as any);
+
+      expect(getUserRequestedReload()).toBe(true);
+      expect(deleteMock).toHaveBeenCalledWith('cache-1');
+      expect(deleteMock).toHaveBeenCalledWith('cache-2');
+      expect(mockWorker.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      expect(mockWorker.postMessage).toHaveBeenCalledWith({ type: 'PURGE_AND_UPDATE' });
+      expect(mockSessionStore['ds_hard_purged']).toBe('true');
     });
   });
 });

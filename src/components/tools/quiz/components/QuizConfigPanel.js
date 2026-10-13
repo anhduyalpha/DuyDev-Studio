@@ -209,6 +209,24 @@ export function renderQuizConfigPanel(state) {
               }
             </button>
           </div>
+          <!-- Gợi ý nhanh (Quick prompt chips) -->
+          <div class="flex items-center gap-1.5 flex-wrap pt-0.5" id="quizQuickPromptChips">
+            <button type="button" data-prompt="toàn bộ trang này" class="btn-quiz-quick-chip text-[11px] px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-indigo-50 dark:bg-zinc-900 dark:hover:bg-indigo-950/50 text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300 border border-zinc-200/80 dark:border-zinc-800 transition cursor-pointer">
+              📄 Toàn bộ trang này
+            </button>
+            <button type="button" data-prompt="5 câu đầu" class="btn-quiz-quick-chip text-[11px] px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-indigo-50 dark:bg-zinc-900 dark:hover:bg-indigo-950/50 text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300 border border-zinc-200/80 dark:border-zinc-800 transition cursor-pointer">
+              🔝 5 câu đầu
+            </button>
+            <button type="button" data-prompt="5 câu cuối" class="btn-quiz-quick-chip text-[11px] px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-indigo-50 dark:bg-zinc-900 dark:hover:bg-indigo-950/50 text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300 border border-zinc-200/80 dark:border-zinc-800 transition cursor-pointer">
+              🔚 5 câu cuối
+            </button>
+            <button type="button" data-prompt="phần II đúng sai" class="btn-quiz-quick-chip text-[11px] px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-indigo-50 dark:bg-zinc-900 dark:hover:bg-indigo-950/50 text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300 border border-zinc-200/80 dark:border-zinc-800 transition cursor-pointer">
+              ⚖️ Phần II Đúng/Sai
+            </button>
+            <button type="button" data-prompt="các câu lẻ" class="btn-quiz-quick-chip text-[11px] px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-indigo-50 dark:bg-zinc-900 dark:hover:bg-indigo-950/50 text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300 border border-zinc-200/80 dark:border-zinc-800 transition cursor-pointer">
+              🔢 Các câu lẻ
+            </button>
+          </div>
           ${
             state.parsedSummary
               ? `
@@ -216,8 +234,12 @@ export function renderQuizConfigPanel(state) {
               <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5"></i>
               <div class="space-y-1 min-w-0">
                 <div class="font-medium flex items-center gap-1.5 flex-wrap">
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="zap" class="w-2.5 h-2.5"></i> AI Phân loại
+                  </span>
                   <span>Trang ${escapeHtml(state.parsedSummary.pages)} • ${state.parsedSummary.count} câu (từ câu ${state.parsedSummary.start}${state.parsedSummary.end && state.parsedSummary.end !== state.parsedSummary.start ? ` đến ${state.parsedSummary.end}` : ''})</span>
                   ${state.parsedSummary.parity && state.parsedSummary.parity !== 'all' ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-800 dark:text-indigo-200">${state.parsedSummary.parity === 'odd' ? 'Câu lẻ' : 'Câu chẵn'}</span>` : ''}
+                  ${state.parsedSummary.section ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-purple-200/60 dark:bg-purple-800/60 text-purple-800 dark:text-purple-200">${escapeHtml(state.parsedSummary.section)}</span>` : ''}
                 </div>
                 ${state.parsedSummary.partsText ? `<div class="text-[11px] text-indigo-700 dark:text-indigo-300">${escapeHtml(state.parsedSummary.partsText)}</div>` : ''}
                 ${state.parsedSummary.questionsSummary ? `<div class="text-[10px] text-indigo-600/90 dark:text-indigo-400/90 font-mono truncate">${escapeHtml(state.parsedSummary.questionsSummary)}</div>` : ''}

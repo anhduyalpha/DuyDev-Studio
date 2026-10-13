@@ -465,6 +465,23 @@ export function attachQuizListeners() {
       };
     }
 
+    // Quick Prompt Chips
+    document.querySelectorAll('.btn-quiz-quick-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        const promptText = chip.getAttribute('data-prompt') || chip.textContent.trim();
+        if (promptInput) {
+          promptInput.value = promptText;
+          quizManager.state.promptText = promptText;
+        }
+        const dInput = document.getElementById('quizDriveInput');
+        if (dInput && dInput.value.trim() && !quizManager.state.gdriveUrl) {
+          quizManager.setGdriveUrl(dInput.value);
+        }
+        quizManager.parsePrompt(promptText);
+      });
+    });
+
     const btnSkipPrompt = document.getElementById('btnQuizSkipPrompt');
     if (btnSkipPrompt) {
       btnSkipPrompt.onclick = () => quizManager.skipToManualParams();

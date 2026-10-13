@@ -93,6 +93,8 @@ Thumbs.db
 .gemini/
 .antigravity/
 
-# Quiz Engine Assets
+# Quiz Engine Assets & Models
 !engines/quiz/assets/**
 engines/quiz/assets/**/__pycache__/
+engines/quiz/models/
+*.onnx

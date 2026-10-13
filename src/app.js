@@ -32,6 +32,7 @@ import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
 import { openShareTargetModal } from './components/common/ShareTargetModal.js';
 import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
 import { visitorTracker } from './utilities/visitorTracker.js';
+import { showToast } from './utilities/toast.js';
 
 class App {
   constructor() {
@@ -44,6 +45,26 @@ class App {
     registerServiceWorker();
     taskCoordinator.init();
     visitorTracker.init();
+
+    // Clean up cache-busting parameter from URL if present (_ds_fresh)
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('_ds_fresh')) {
+        url.searchParams.delete('_ds_fresh');
+        const cleanUrl = url.pathname + (url.search ? url.search : '') + url.hash;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    } catch {}
+
+    // Check if we just completed a Triple-Lock Hard Purge update
+    try {
+      if (sessionStorage.getItem('ds_hard_purged') === 'true') {
+        sessionStorage.removeItem('ds_hard_purged');
+        setTimeout(() => {
+          showToast('Đã cập nhật lên phiên bản mới thành công', 'success');
+        }, 500);
+      }
+    } catch {}
 
     // Check URL parameters for fast debug reset (?reset=1 or ?clear=1)
     const urlParams = new URLSearchParams(window.location.search);

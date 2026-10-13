@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v22.52';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v22.53';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -124,11 +124,67 @@ export function performSafeReload(reason = 'App update', isUserConfirmed = false
 }
 
 /**
- * Renders a discreet, non-intrusive floating Update Capsule in the corner
- * adhering to Apple Sequoia aesthetic (dark frosted glass pill, glowing dot, dismissable).
+ * Executes the Triple-Lock Hard Purge to guarantee that stale caches,
+ * in-memory ES module cache, and Service Worker caches are completely wiped
+ * and a 100% fresh app shell is loaded, matching the manual Ctrl+F5 effect.
+ * @param {ServiceWorker | null} [waitingWorker]
+ */
+export async function executeTripleLockPurge(waitingWorker) {
+  setUserRequestedReload(true);
+  console.log('[PWA] Triple-Lock Hard Purge executing: wiping caches, signaling SW, and cache-busting navigation...');
+
+  // 1. Wipe all CacheStorage from client if supported
+  try {
+    const cacheStorage = typeof caches !== 'undefined' ? caches : (typeof window !== 'undefined' ? window.caches : null);
+    if (cacheStorage && typeof cacheStorage.keys === 'function' && typeof cacheStorage.delete === 'function') {
+      const keys = await cacheStorage.keys();
+      await Promise.all(keys.map(k => cacheStorage.delete(k)));
+      console.log(`[PWA] Successfully purged ${keys.length} cache bucket(s).`);
+    }
+  } catch (err) {
+    console.warn('[PWA] Cache purge warning:', err);
+  }
+
+  // 2. Dispatch SKIP_WAITING and PURGE_AND_UPDATE to pending and active workers
+  try {
+    if (waitingWorker) {
+      try { waitingWorker.postMessage({ type: 'SKIP_WAITING' }); } catch {}
+      try { waitingWorker.postMessage({ type: 'PURGE_AND_UPDATE' }); } catch {}
+    }
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+      try { navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' }); } catch {}
+      try { navigator.serviceWorker.controller.postMessage({ type: 'PURGE_AND_UPDATE' }); } catch {}
+    }
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker?.getRegistration) {
+      const reg = swRegistration || (await navigator.serviceWorker.getRegistration());
+      if (reg) {
+        reg.update().catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.warn('[PWA] SW message warning:', err);
+  }
+
+  // 3. Mark session flag and hard-reload with cache-busting timestamp
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('ds_hard_purged', 'true');
+      sessionStorage.setItem('ds_sw_just_reloaded', String(Date.now()));
+    }
+  } catch {}
+
+  const delayMs = 150;
+  setTimeout(() => {
+    performSafeReload('Triple-Lock Hard Purge complete', true);
+  }, delayMs);
+}
+
+/**
+ * Renders a prominent, centered Update Notification Center with blurred backdrop
+ * (Dark Obsidian Glass aesthetic, version badge, 3 key highlights, in-flight task safety warning).
  * @param {ServiceWorker | null} waitingWorker
  */
-export function showUpdateCapsule(waitingWorker) {
+export function showUpdateNotificationCenter(waitingWorker) {
   if (typeof document === 'undefined' || !document.body || typeof document.createElement !== 'function') {
     return;
   }
@@ -148,74 +204,180 @@ export function showUpdateCapsule(waitingWorker) {
   capsule.setAttribute('role', 'alert');
   capsule.style.cssText = [
     'position: fixed',
-    'bottom: 1.25rem',
-    'right: 1.25rem',
-    'z-index: 9999',
+    'inset: 0',
+    'z-index: 99999',
     'display: flex',
     'align-items: center',
-    'gap: 0.75rem',
-    'padding: 0.5rem 0.875rem',
-    'max-width: calc(100vw - 2.5rem)',
+    'justify-content: center',
+    'padding: 1rem',
     'box-sizing: border-box',
-    'background: rgba(24, 24, 27, 0.88)',
-    'backdrop-filter: blur(16px)',
-    '-webkit-backdrop-filter: blur(16px)',
-    'border: 1px solid rgba(255, 255, 255, 0.12)',
-    'border-radius: 9999px',
-    'box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
-    'color: #e4e4e7',
-    'font-size: 0.75rem',
-    'user-select: none'
+    'background: rgba(0, 0, 0, 0.65)',
+    'backdrop-filter: blur(12px)',
+    '-webkit-backdrop-filter: blur(12px)',
+    'transition: opacity 0.2s ease-out'
   ].join(';');
 
-  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.9';
+  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.53';
 
   capsule.innerHTML = `
-    <span style="width: 8px; height: 8px; border-radius: 9999px; background: #10b981; box-shadow: 0 0 8px #10b981; flex-shrink: 0; display: inline-block;"></span>
-    <span style="font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Đã có bản cập nhật mới (${displayVer})</span>
-    <button type="button" id="ds-update-reload-btn" style="
-      padding: 0.25rem 0.625rem;
-      border-radius: 9999px;
-      background: #4f46e5;
-      color: #ffffff;
-      font-weight: 600;
-      font-size: 0.75rem;
-      border: none;
-      cursor: pointer;
-      line-height: 1.2;
-      flex-shrink: 0;
-    ">Làm mới</button>
-    <button type="button" id="ds-update-dismiss-btn" style="
-      background: transparent;
-      border: none;
-      color: #a1a1aa;
-      font-size: 0.875rem;
-      cursor: pointer;
-      padding: 0.125rem 0.25rem;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    " title="Bỏ qua">✕</button>
+    <div id="ds-update-modal-card" style="
+      width: 100%;
+      max-width: 28rem;
+      box-sizing: border-box;
+      background: rgba(18, 18, 23, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 1.25rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      padding: 1.5rem;
+      color: #e4e4e7;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    ">
+      <!-- Header Bar -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 0.875rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #818cf8;
+            flex-shrink: 0;
+            box-shadow: 0 0 18px rgba(99, 102, 241, 0.25);
+          ">
+            <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <h3 style="font-weight: 700; font-size: 1.0625rem; color: #f4f4f5; margin: 0; letter-spacing: -0.01em;">Đã có bản cập nhật mới</h3>
+              <span style="font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;">${displayVer}</span>
+            </div>
+            <p style="font-size: 0.8125rem; color: #a1a1aa; margin: 0.25rem 0 0 0; line-height: 1.35;">Phiên bản mới đã sẵn sàng. Vui lòng làm mới để nạp code mới nhất.</p>
+          </div>
+        </div>
+        <button type="button" id="ds-update-dismiss-btn" title="Bỏ qua" style="
+          background: transparent;
+          border: none;
+          color: #71717a;
+          font-size: 1.125rem;
+          cursor: pointer;
+          padding: 0.25rem;
+          line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 0.375rem;
+          transition: color 0.15s ease;
+          flex-shrink: 0;
+        ">✕</button>
+      </div>
+
+      <!-- Feature Highlights -->
+      <div id="ds-update-highlights" style="margin-top: 1.125rem; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 0.875rem; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.8125rem; color: #d4d4d8;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: #818cf8; font-size: 0.875rem;">⚡</span>
+          <span>Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: #34d399; font-size: 0.875rem;">🎨</span>
+          <span>Tinh chỉnh giao diện mượt mà & loại bỏ độ trễ</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: #fbbf24; font-size: 0.875rem;">🛡️</span>
+          <span>Vá lỗi hệ thống & đồng bộ bộ nhớ đệm an toàn</span>
+        </div>
+      </div>
+
+      <!-- In-flight Task Warning (Initially hidden) -->
+      <div id="ds-update-warning-container" style="display: none; margin-top: 1.125rem; padding: 0.75rem 0.875rem; border-radius: 0.75rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.8125rem; color: #fde68a;">
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+          <span style="color: #f59e0b; font-size: 1rem; line-height: 1.2;">⚠️</span>
+          <div>
+            <strong style="color: #fbbf24; display: block; margin-bottom: 0.25rem;">Đang có tác vụ xử lý dở dang</strong>
+            <span>Hệ thống phát hiện đang có tiến trình tệp chạy ngầm. Cập nhật ngay sẽ làm mới trang và hủy tác vụ này.</span>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
+          <button type="button" id="ds-update-cancel-warning-btn" style="
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d4d4d8;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+          ">Chờ xử lý xong</button>
+          <button type="button" id="ds-update-force-reload-btn" style="
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.5rem;
+            background: #d97706;
+            border: 1px solid #f59e0b;
+            color: #ffffff;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+          ">Vẫn cập nhật</button>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div id="ds-update-footer-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 0.625rem; margin-top: 1.25rem;">
+        <button type="button" id="ds-update-later-btn" style="
+          padding: 0.5rem 1rem;
+          border-radius: 0.625rem;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #a1a1aa;
+          font-weight: 500;
+          font-size: 0.8125rem;
+          cursor: pointer;
+          transition: background 0.15s, color 0.15s;
+        ">Để sau</button>
+        <button type="button" id="ds-update-reload-btn" style="
+          padding: 0.5rem 1.125rem;
+          border-radius: 0.625rem;
+          background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+          color: #ffffff;
+          font-weight: 600;
+          font-size: 0.8125rem;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          transition: transform 0.1s ease, filter 0.15s ease;
+        ">Làm mới</button>
+      </div>
+    </div>
   `;
 
   document.body.appendChild(capsule);
 
   const reloadBtn = (capsule.querySelector && capsule.querySelector('#ds-update-reload-btn')) || document.getElementById('ds-update-reload-btn');
   const dismissBtn = (capsule.querySelector && capsule.querySelector('#ds-update-dismiss-btn')) || document.getElementById('ds-update-dismiss-btn');
+  const laterBtn = (capsule.querySelector && capsule.querySelector('#ds-update-later-btn')) || document.getElementById('ds-update-later-btn');
+  const warningContainer = (capsule.querySelector && capsule.querySelector('#ds-update-warning-container')) || document.getElementById('ds-update-warning-container');
+  const highlightsContainer = (capsule.querySelector && capsule.querySelector('#ds-update-highlights')) || document.getElementById('ds-update-highlights');
+  const forceReloadBtn = (capsule.querySelector && capsule.querySelector('#ds-update-force-reload-btn')) || document.getElementById('ds-update-force-reload-btn');
+  const cancelWarningBtn = (capsule.querySelector && capsule.querySelector('#ds-update-cancel-warning-btn')) || document.getElementById('ds-update-cancel-warning-btn');
 
-  reloadBtn?.addEventListener('click', () => {
-    // 1. Verify no in-flight background tasks or active jobs
-    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
-      console.log('[PWA] Tasks are active in background. Skipping reload.');
-      return;
-    }
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('ds_studocu_active_job')) {
-      console.log('[PWA] Studocu job active. Skipping reload.');
-      return;
-    }
+  const dismissModal = () => {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('ds_update_capsule_dismissed', 'true');
+      }
+    } catch {}
+    capsule.remove();
+  };
 
+  const handleExecuteUpdate = () => {
     userRequestedReload = true;
     capsule.remove();
 
@@ -223,25 +385,58 @@ export function showUpdateCapsule(waitingWorker) {
       try {
         waitingWorker.postMessage({ type: 'SKIP_WAITING' });
       } catch {}
-      // In controllerchange, safe reload will execute when worker takes control.
-      // Fallback timer ensures reload executes if controllerchange doesn't fire (e.g. worker was already controlling)
-      setTimeout(() => {
-        performSafeReload('User confirmed update (controllerchange fallback)', true);
-      }, 1000);
-    } else {
-      performSafeReload('User clicked update capsule', true);
+    }
+
+    executeTripleLockPurge(waitingWorker);
+  };
+
+  reloadBtn?.addEventListener('click', () => {
+    // 1. Verify no in-flight background tasks or active jobs
+    if (typeof window !== 'undefined' && window.__ds_taskCoordinator?.getActiveTasks()?.length > 0) {
+      console.log('[PWA] Tasks are active in background. Skipping reload.');
+      if (warningContainer && highlightsContainer) {
+        highlightsContainer.style.display = 'none';
+        warningContainer.style.display = 'block';
+      }
+      return;
+    }
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('ds_studocu_active_job')) {
+      console.log('[PWA] Studocu job active. Skipping reload.');
+      if (warningContainer && highlightsContainer) {
+        highlightsContainer.style.display = 'none';
+        warningContainer.style.display = 'block';
+      }
+      return;
+    }
+
+    handleExecuteUpdate();
+  });
+
+  forceReloadBtn?.addEventListener('click', () => {
+    handleExecuteUpdate();
+  });
+
+  cancelWarningBtn?.addEventListener('click', () => {
+    if (warningContainer && highlightsContainer) {
+      warningContainer.style.display = 'none';
+      highlightsContainer.style.display = 'block';
     }
   });
 
-  dismissBtn?.addEventListener('click', () => {
-    try {
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('ds_update_capsule_dismissed', 'true');
-      }
-    } catch {}
-    capsule.remove();
+  dismissBtn?.addEventListener('click', dismissModal);
+  laterBtn?.addEventListener('click', dismissModal);
+
+  capsule.addEventListener('click', (e) => {
+    if (e.target === capsule) {
+      dismissModal();
+    }
   });
 }
+
+/**
+ * Backward compatibility alias for showUpdateNotificationCenter.
+ */
+export const showUpdateCapsule = showUpdateNotificationCenter;
 
 /**
  * Activates pending worker immediately when commanded.

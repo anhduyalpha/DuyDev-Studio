@@ -204,7 +204,8 @@ def parse_requested_pages(pages_input: str, query: str) -> list[int]:
 def inspect_page_ground_truth(
     pdf_path: str,
     pages_arg: str = "",
-    query_arg: str = ""
+    query_arg: str = "",
+    semantic_meta: dict | None = None
 ) -> dict:
     """
     Core inspection function. Inspects real questions on the specified page(s)
@@ -318,17 +319,21 @@ def inspect_page_ground_truth(
     part_iii_start = all_part_iii[0].candidate_number if all_part_iii else None
     part_iii_count = len(all_part_iii)
 
-    # Determine base candidate set according to query section preference
+    # Determine base candidate set according to query section preference or semantic classification
     q_lower = query.lower()
-    is_part_iii_only = bool(re.search(
+    sem_sec = semantic_meta.get("section_filter") if semantic_meta else None
+    sem_parity = semantic_meta.get("parity_filter") if semantic_meta else None
+    sem_rel = semantic_meta.get("relative") if semantic_meta else None
+
+    is_part_iii_only = sem_sec == "part_iii" or bool(re.search(
         r"(?:chỉ\s*lấy\s*phần\s*trả\s*lời\s*ngắn|phần\s*(?:iii|3)|trả\s*lời\s*ngắn|điền\s*đáp\s*số)",
         q_lower
     ))
-    is_part_ii_only = bool(re.search(
-        r"(?:chỉ\s*lấy\s*phần\s*đúng\s*sai|phần\s*(?:ii|2)|trắc\s*nghiệm\s*đúng\s*sai)",
+    is_part_ii_only = sem_sec == "part_ii" or bool(re.search(
+        r"(?:chỉ\s*lấy\s*phần\s*đúng\s*sai|phần\s*(?:ii|2)|trắc\s*nghiệm\s*đúng\s*sai|đúng[\s/]*sai)",
         q_lower
     ))
-    is_part_i_only = bool(re.search(
+    is_part_i_only = sem_sec == "part_i" or bool(re.search(
         r"(?:chỉ\s*lấy\s*phần\s*trắc\s*nghiệm|phần\s*(?:i|1)|4\s*lựa\s*chọn|nhiều\s*phương\s*án)",
         q_lower
     ))
@@ -344,7 +349,7 @@ def inspect_page_ground_truth(
         active_cands = list(all_part_i)
     else:
         section_filter = "all"
-        is_parity_query = bool(re.search(
+        is_parity_query = (sem_parity in ["odd", "even"]) or bool(re.search(
             r"\b(?:các\s*câu\s*lẻ|câu\s*lẻ|lẻ|các\s*câu\s*chẵn|câu\s*chẵn|chẵn)\b",
             q_lower
         ))
@@ -361,10 +366,10 @@ def inspect_page_ground_truth(
 
     # Apply Parity Filter (câu lẻ / câu chẵn)
     parity_filter = "all"
-    if re.search(r"\b(?:các\s*câu\s*lẻ|câu\s*lẻ|lẻ)\b", q_lower):
+    if sem_parity == "odd" or re.search(r"\b(?:các\s*câu\s*lẻ|câu\s*lẻ|lẻ)\b", q_lower):
         active_cands = [c for c in active_cands if c.candidate_number % 2 != 0]
         parity_filter = "odd"
-    elif re.search(r"\b(?:các\s*câu\s*chẵn|câu\s*chẵn|chẵn)\b", q_lower):
+    elif sem_parity == "even" or re.search(r"\b(?:các\s*câu\s*chẵn|câu\s*chẵn|chẵn)\b", q_lower):
         active_cands = [c for c in active_cands if c.candidate_number % 2 == 0]
         parity_filter = "even"
 
@@ -491,13 +496,22 @@ def main():
     parser.add_argument("pdf_path", help="Path to input PDF file")
     parser.add_argument("--pages", "-p", default="", help="Page range (e.g. 41, 37-39)")
     parser.add_argument("--query", "-q", default="", help="Natural language prompt/instruction")
+    parser.add_argument("--semantic-json", default="", help="Pre-parsed semantic JSON from classifier")
 
     args = parser.parse_args()
+
+    sem_meta = None
+    if args.semantic_json:
+        try:
+            sem_meta = json.loads(args.semantic_json)
+        except Exception:
+            sem_meta = None
 
     result = inspect_page_ground_truth(
         pdf_path=args.pdf_path,
         pages_arg=args.pages,
-        query_arg=args.query
+        query_arg=args.query,
+        semantic_meta=sem_meta
     )
 
     sys.stdout.reconfigure(encoding="utf-8")

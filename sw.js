@@ -3,22 +3,22 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v22.52';
+const CACHE_NAME = 'duydev-studio-v22.53';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=22.52',
-  './src/styles/studocu.css?v=22.52',
-  './src/styles/highlight-theme.css?v=22.52',
+  './src/styles/stitch-tokens.css?v=22.53',
+  './src/styles/studocu.css?v=22.53',
+  './src/styles/highlight-theme.css?v=22.53',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=22.52',
+  './src/app.js?v=22.53',
   './src/hooks/useToolRegistry.js',
   './src/pages/DashboardPage.js',
   './src/components/dashboard/ToolCard.js',
@@ -240,8 +240,8 @@ self.addEventListener('message', (event) => {
       type: 'VERSION_INFO',
       version: CACHE_NAME
     });
-  } else if (event.data?.type === 'SKIP_WAITING' || event.data === 'SKIP_WAITING') {
-    console.log('[SW] SKIP_WAITING received from client. Activating now...');
+  } else if (event.data?.type === 'SKIP_WAITING' || event.data === 'SKIP_WAITING' || event.data?.type === 'PURGE_AND_UPDATE') {
+    console.log('[SW] SKIP_WAITING / PURGE_AND_UPDATE received from client. Activating now...');
     self.skipWaiting();
   }
 });
