@@ -18,8 +18,8 @@ export function renderDocumentItemsHtml(items, isTrash) {
     return items.map(doc => renderDocumentItem(doc, isTrash)).join('');
   }
   return `
-    <div class="p-8 text-center space-y-2 text-zinc-500">
-      <i data-lucide="${isTrash ? 'trash' : 'file-search'}" class="w-8 h-8 mx-auto text-zinc-600 opacity-60"></i>
+    <div class="p-8 text-center space-y-2 text-zinc-500 dark:text-zinc-400">
+      <i data-lucide="${isTrash ? 'trash' : 'file-search'}" class="w-8 h-8 mx-auto text-zinc-400 dark:text-zinc-500 opacity-60"></i>
       <p class="text-xs font-mono">
         ${isTrash ? 'Thùng rác trống.' : 'Chưa có tài liệu.'}
       </p>

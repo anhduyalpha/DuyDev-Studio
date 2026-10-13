@@ -62,7 +62,7 @@ export function renderHeroPasteCard(state) {
           <button
             type="button"
             id="studocuToggleCookieBtn"
-            class="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition flex items-center justify-center gap-1.5 mx-auto py-1 cursor-pointer"
+            class="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition flex items-center justify-center gap-1.5 mx-auto py-1 cursor-pointer"
           >
             <i data-lucide="chevron-down" id="studocuCookieChevron" class="w-3 h-3 transition-transform duration-200"></i>
             <span>Tùy chọn Cookie</span>
