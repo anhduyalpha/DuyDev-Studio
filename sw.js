@@ -18,7 +18,7 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=22.56',
+  './src/app.js?v=22.57',
   './src/hooks/useToolRegistry.js',
   './src/pages/DashboardPage.js',
   './src/components/dashboard/ToolCard.js',

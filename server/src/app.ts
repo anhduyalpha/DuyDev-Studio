@@ -126,6 +126,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     if (hostHeader.includes('alphadaniel.io.vn')) {
       reply.header('X-Domain-Migration', 'https://studio.duydev.cloud');
       reply.header('X-Canonical-Domain', 'studio.duydev.cloud');
+      const acceptHeader = String(req.headers.accept || '').toLowerCase();
+      if (req.method === 'GET' && (acceptHeader.includes('text/html') || url === '/' || !url.startsWith('/api/'))) {
+        return reply.redirect(`https://studio.duydev.cloud${url}`, 302);
+      }
     }
     // Skip health checks, auth verification and static assets to prevent lockout
     const isExcluded = url.startsWith('/health') ||

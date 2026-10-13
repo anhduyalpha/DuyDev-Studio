@@ -643,4 +643,28 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(mockSessionStore['ds_hard_purged']).toBe('true');
     });
   });
+
+  describe('4. Frame-0 Domain Migration Protection', () => {
+    it('index.html must detect alphadaniel.io.vn and migration queries in frame-0 script', () => {
+      expect(indexContent).toContain("host.includes('alphadaniel.io.vn')");
+      expect(indexContent).toContain("document.documentElement.classList.add('is-domain-migrated')");
+      expect(indexContent).toContain('window.__IS_DEPRECATED_DOMAIN = true');
+    });
+
+    it('index.html must contain static #domainMigrationRoot with apple styling and unregister logic', () => {
+      expect(indexContent).toContain('id="domainMigrationRoot"');
+      expect(indexContent).toContain('duydevstudio.alphadaniel.io.vn');
+      expect(indexContent).toContain('studio.duydev.cloud');
+      expect(indexContent).toContain('btnDomainMigrationRedirect');
+      expect(indexContent).toContain('migrationCountdownSec');
+      expect(indexContent).toContain('regs[i].unregister()');
+    });
+
+    it('src/app.js must check window.__IS_DEPRECATED_DOMAIN and halt init early', () => {
+      const appJsContent = fs.readFileSync(path.join(rootDir, 'src/app.js'), 'utf-8');
+      expect(appJsContent).toContain('if (typeof window !== \'undefined\' && window.__IS_DEPRECATED_DOMAIN)');
+      expect(appJsContent).toContain('return;');
+    });
+  });
 });
+

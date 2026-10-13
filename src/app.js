@@ -41,6 +41,11 @@ class App {
   }
 
   init() {
+    if (typeof window !== 'undefined' && window.__IS_DEPRECATED_DOMAIN) {
+      console.warn('[DS] Deprecated domain detected. App execution halted in favor of migration screen.');
+      return;
+    }
+
     initTheme();
     registerServiceWorker();
     taskCoordinator.init();

@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v22.56';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v22.57';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -217,7 +217,7 @@ export function showUpdateNotificationCenter(waitingWorker) {
     'transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
   ].join(';');
 
-  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.56';
+  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.57';
 
   capsule.innerHTML = `
     <style>
