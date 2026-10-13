@@ -440,15 +440,21 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
           appendChild: vi.fn((el) => {
             if (el.id) elementsById[el.id] = el;
             if (el.innerHTML) {
-              if (el.innerHTML.includes('id="ds-update-reload-btn"')) {
-                const reloadBtn = createEl('button');
-                reloadBtn.id = 'ds-update-reload-btn';
-                elementsById['ds-update-reload-btn'] = reloadBtn;
-              }
-              if (el.innerHTML.includes('id="ds-update-dismiss-btn"')) {
-                const dismissBtn = createEl('button');
-                dismissBtn.id = 'ds-update-dismiss-btn';
-                elementsById['ds-update-dismiss-btn'] = dismissBtn;
+              const ids = [
+                'ds-update-reload-btn',
+                'ds-update-dismiss-btn',
+                'ds-update-later-btn',
+                'ds-update-warning-container',
+                'ds-update-highlights',
+                'ds-update-force-reload-btn',
+                'ds-update-cancel-warning-btn'
+              ];
+              for (const id of ids) {
+                if (el.innerHTML.includes(`id="${id}"`)) {
+                  const subEl = createEl(id.includes('btn') ? 'button' : 'div');
+                  subEl.id = id;
+                  elementsById[id] = subEl;
+                }
               }
             }
           })
@@ -587,7 +593,7 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
 
       const capsule = elementsById['ds-update-capsule'];
       expect(capsule).toBeDefined();
-      expect(capsule.style.backdropFilter).toContain('blur');
+      expect(capsule.style.cssText).toContain('blur');
       expect(capsule.innerHTML).toContain('ds-update-modal-card');
       expect(capsule.innerHTML).toContain('Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ');
       expect(capsule.innerHTML).toContain('Để sau');
