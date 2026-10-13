@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v22.57';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v22.58';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -202,6 +202,10 @@ export function showUpdateNotificationCenter(waitingWorker) {
   const capsule = document.createElement('div');
   capsule.id = 'ds-update-capsule';
   capsule.setAttribute('role', 'alert');
+  if (typeof document !== 'undefined' && document.documentElement?.classList?.contains('dark')) {
+    capsule.classList.add('dark');
+  }
+
   capsule.style.cssText = [
     'position: fixed',
     'inset: 0',
@@ -211,13 +215,13 @@ export function showUpdateNotificationCenter(waitingWorker) {
     'justify-content: center',
     'padding: 1.25rem',
     'box-sizing: border-box',
-    'background: rgba(0, 0, 0, 0.42)',
+    'background: var(--ds-up-backdrop, rgba(0, 0, 0, 0.35))',
     'backdrop-filter: blur(28px) saturate(180%)',
     '-webkit-backdrop-filter: blur(28px) saturate(180%)',
     'transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
   ].join(';');
 
-  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.57';
+  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.58';
 
   capsule.innerHTML = `
     <style>
@@ -225,17 +229,120 @@ export function showUpdateNotificationCenter(waitingWorker) {
         0% { opacity: 0; transform: scale(0.96) translateY(4px); }
         100% { opacity: 1; transform: scale(1) translateY(0); }
       }
+
+      /* Light Theme (Default) */
+      #ds-update-capsule {
+        --ds-up-backdrop: rgba(0, 0, 0, 0.28);
+        --ds-up-card-bg: rgba(255, 255, 255, 0.88);
+        --ds-up-card-border: 0.5px solid rgba(0, 0, 0, 0.12);
+        --ds-up-card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+        --ds-up-text-primary: #1d1d1f;
+        --ds-up-text-secondary: #6e6e73;
+        --ds-up-badge-bg: rgba(0, 0, 0, 0.06);
+        --ds-up-badge-border: 0.5px solid rgba(0, 0, 0, 0.1);
+        --ds-up-badge-color: #1d1d1f;
+        --ds-up-dismiss-bg: rgba(0, 0, 0, 0.05);
+        --ds-up-dismiss-border: 0.5px solid rgba(0, 0, 0, 0.08);
+        --ds-up-dismiss-color: #6e6e73;
+        --ds-up-dismiss-hover-bg: rgba(0, 0, 0, 0.1);
+        --ds-up-dismiss-hover-color: #1d1d1f;
+        --ds-up-hl-bg: rgba(0, 0, 0, 0.035);
+        --ds-up-hl-border: 0.5px solid rgba(0, 0, 0, 0.08);
+        --ds-up-hl-text: #1d1d1f;
+        --ds-up-hl-icon-perf-bg: rgba(0, 122, 255, 0.12);
+        --ds-up-hl-icon-perf-border: 0.5px solid rgba(0, 122, 255, 0.24);
+        --ds-up-hl-icon-perf-color: #0071e3;
+        --ds-up-hl-icon-ui-bg: rgba(175, 82, 222, 0.12);
+        --ds-up-hl-icon-ui-border: 0.5px solid rgba(175, 82, 222, 0.24);
+        --ds-up-hl-icon-ui-color: #af52de;
+        --ds-up-hl-icon-bug-bg: rgba(52, 199, 89, 0.14);
+        --ds-up-hl-icon-bug-border: 0.5px solid rgba(52, 199, 89, 0.28);
+        --ds-up-hl-icon-bug-color: #28a745;
+        --ds-up-later-bg: rgba(0, 0, 0, 0.05);
+        --ds-up-later-border: 0.5px solid rgba(0, 0, 0, 0.12);
+        --ds-up-later-color: #1d1d1f;
+        --ds-up-later-hover-bg: rgba(0, 0, 0, 0.09);
+        --ds-up-later-hover-color: #000000;
+        --ds-up-warn-bg: rgba(255, 149, 0, 0.1);
+        --ds-up-warn-border: 0.5px solid rgba(255, 149, 0, 0.28);
+        --ds-up-warn-color: #b35900;
+        --ds-up-warn-desc: #7a4100;
+        --ds-up-warn-cancel-bg: rgba(0, 0, 0, 0.06);
+        --ds-up-warn-cancel-border: 0.5px solid rgba(0, 0, 0, 0.1);
+        --ds-up-warn-cancel-color: #1d1d1f;
+        --ds-up-warn-force-bg: #ff9500;
+        --ds-up-warn-force-color: #ffffff;
+      }
+
+      /* Dark Theme */
+      .dark #ds-update-capsule,
+      #ds-update-capsule.dark {
+        --ds-up-backdrop: rgba(0, 0, 0, 0.52);
+        --ds-up-card-bg: rgba(30, 30, 36, 0.84);
+        --ds-up-card-border: 0.5px solid rgba(255, 255, 255, 0.16);
+        --ds-up-card-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+        --ds-up-text-primary: #ffffff;
+        --ds-up-text-secondary: rgba(235, 235, 245, 0.62);
+        --ds-up-badge-bg: rgba(255, 255, 255, 0.1);
+        --ds-up-badge-border: 0.5px solid rgba(255, 255, 255, 0.16);
+        --ds-up-badge-color: rgba(255, 255, 255, 0.92);
+        --ds-up-dismiss-bg: rgba(255, 255, 255, 0.08);
+        --ds-up-dismiss-border: 0.5px solid rgba(255, 255, 255, 0.1);
+        --ds-up-dismiss-color: rgba(255, 255, 255, 0.6);
+        --ds-up-dismiss-hover-bg: rgba(255, 255, 255, 0.16);
+        --ds-up-dismiss-hover-color: #ffffff;
+        --ds-up-hl-bg: rgba(0, 0, 0, 0.28);
+        --ds-up-hl-border: 0.5px solid rgba(255, 255, 255, 0.08);
+        --ds-up-hl-text: #f5f5f7;
+        --ds-up-hl-icon-perf-bg: rgba(10, 132, 255, 0.16);
+        --ds-up-hl-icon-perf-border: 0.5px solid rgba(10, 132, 255, 0.28);
+        --ds-up-hl-icon-perf-color: #2997ff;
+        --ds-up-hl-icon-ui-bg: rgba(191, 90, 242, 0.16);
+        --ds-up-hl-icon-ui-border: 0.5px solid rgba(191, 90, 242, 0.28);
+        --ds-up-hl-icon-ui-color: #bf5af2;
+        --ds-up-hl-icon-bug-bg: rgba(48, 209, 88, 0.16);
+        --ds-up-hl-icon-bug-border: 0.5px solid rgba(48, 209, 88, 0.28);
+        --ds-up-hl-icon-bug-color: #30d158;
+        --ds-up-later-bg: rgba(255, 255, 255, 0.08);
+        --ds-up-later-border: 0.5px solid rgba(255, 255, 255, 0.12);
+        --ds-up-later-color: rgba(255, 255, 255, 0.85);
+        --ds-up-later-hover-bg: rgba(255, 255, 255, 0.14);
+        --ds-up-later-hover-color: #ffffff;
+        --ds-up-warn-bg: rgba(255, 159, 10, 0.12);
+        --ds-up-warn-border: 0.5px solid rgba(255, 159, 10, 0.28);
+        --ds-up-warn-color: #ffd60a;
+        --ds-up-warn-desc: rgba(255, 235, 204, 0.88);
+        --ds-up-warn-cancel-bg: rgba(255, 255, 255, 0.08);
+        --ds-up-warn-cancel-border: 0.5px solid rgba(255, 255, 255, 0.12);
+        --ds-up-warn-cancel-color: #f5f5f7;
+        --ds-up-warn-force-bg: #ff9f0a;
+        --ds-up-warn-force-color: #000000;
+      }
+
+      #ds-update-capsule {
+        background: var(--ds-up-backdrop) !important;
+        backdrop-filter: blur(28px) saturate(180%);
+        -webkit-backdrop-filter: blur(28px) saturate(180%);
+      }
+
       #ds-update-modal-card {
         animation: appleModalEntrance 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+        background: var(--ds-up-card-bg);
+        border: var(--ds-up-card-border);
+        box-shadow: var(--ds-up-card-shadow);
+        color: var(--ds-up-text-primary);
       }
+
       #ds-update-dismiss-btn:hover {
-        background: rgba(255, 255, 255, 0.16) !important;
-        color: #ffffff !important;
+        background: var(--ds-up-dismiss-hover-bg) !important;
+        color: var(--ds-up-dismiss-hover-color) !important;
       }
+
       #ds-update-later-btn:hover {
-        background: rgba(255, 255, 255, 0.12) !important;
-        color: #ffffff !important;
+        background: var(--ds-up-later-hover-bg) !important;
+        color: var(--ds-up-later-hover-color) !important;
       }
+
       #ds-update-reload-btn:hover {
         background: #0077ed !important;
         filter: brightness(1.05) !important;
@@ -248,14 +355,14 @@ export function showUpdateNotificationCenter(waitingWorker) {
       width: 100%;
       max-width: 26rem;
       box-sizing: border-box;
-      background: rgba(30, 30, 36, 0.82);
+      background: var(--ds-up-card-bg);
       backdrop-filter: blur(48px) saturate(210%);
       -webkit-backdrop-filter: blur(48px) saturate(210%);
-      border: 0.5px solid rgba(255, 255, 255, 0.18);
+      border: var(--ds-up-card-border);
       border-radius: 1.5rem;
-      box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+      box-shadow: var(--ds-up-card-shadow);
       padding: 1.375rem 1.375rem 1.25rem 1.375rem;
-      color: #f5f5f7;
+      color: var(--ds-up-text-primary);
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     ">
       <!-- Header Bar -->
@@ -281,10 +388,10 @@ export function showUpdateNotificationCenter(waitingWorker) {
           </div>
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <h3 style="font-weight: 600; font-size: 1.0625rem; color: #ffffff; margin: 0; letter-spacing: -0.015em; line-height: 1.25;">Đã có bản cập nhật mới</h3>
-              <span style="font-size: 0.6875rem; font-weight: 500; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; padding: 0.125rem 0.5rem; border-radius: 980px; background: rgba(255, 255, 255, 0.1); border: 0.5px solid rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.92);">${displayVer}</span>
+              <h3 style="font-weight: 600; font-size: 1.0625rem; color: var(--ds-up-text-primary); margin: 0; letter-spacing: -0.015em; line-height: 1.25;">Đã có bản cập nhật mới</h3>
+              <span style="font-size: 0.6875rem; font-weight: 500; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; padding: 0.125rem 0.5rem; border-radius: 980px; background: var(--ds-up-badge-bg); border: var(--ds-up-badge-border); color: var(--ds-up-badge-color);">${displayVer}</span>
             </div>
-            <p style="font-size: 0.8125rem; color: rgba(235, 235, 245, 0.62); margin: 0.25rem 0 0 0; line-height: 1.38; letter-spacing: -0.005em;">DuyDev Studio phiên bản mới đã sẵn sàng cài đặt.</p>
+            <p style="font-size: 0.8125rem; color: var(--ds-up-text-secondary); margin: 0.25rem 0 0 0; line-height: 1.38; letter-spacing: -0.005em;">DuyDev Studio phiên bản mới đã sẵn sàng cài đặt.</p>
           </div>
         </div>
         <!-- Circular Close Button -->
@@ -292,9 +399,9 @@ export function showUpdateNotificationCenter(waitingWorker) {
           width: 1.625rem;
           height: 1.625rem;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.08);
-          border: 0.5px solid rgba(255, 255, 255, 0.1);
-          color: rgba(255, 255, 255, 0.6);
+          background: var(--ds-up-dismiss-bg);
+          border: var(--ds-up-dismiss-border);
+          color: var(--ds-up-dismiss-color);
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -309,53 +416,53 @@ export function showUpdateNotificationCenter(waitingWorker) {
       </div>
 
       <!-- Release Notes Highlights -->
-      <div id="ds-update-highlights" style="margin-top: 1.125rem; display: flex; flex-direction: column; gap: 0.625rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: rgba(0, 0, 0, 0.25); border: 0.5px solid rgba(255, 255, 255, 0.08); font-size: 0.8125rem;">
+      <div id="ds-update-highlights" style="margin-top: 1.125rem; display: flex; flex-direction: column; gap: 0.625rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: var(--ds-up-hl-bg); border: var(--ds-up-hl-border); font-size: 0.8125rem;">
         <div style="display: flex; align-items: center; gap: 0.625rem;">
-          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: rgba(10, 132, 255, 0.16); border: 0.5px solid rgba(10, 132, 255, 0.28); display: flex; align-items: center; justify-content: center; color: #2997ff; flex-shrink: 0;">
+          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: var(--ds-up-hl-icon-perf-bg); border: var(--ds-up-hl-icon-perf-border); display: flex; align-items: center; justify-content: center; color: var(--ds-up-hl-icon-perf-color); flex-shrink: 0;">
             <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
           </div>
-          <span style="color: #f5f5f7; font-weight: 450; letter-spacing: -0.01em;">Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ</span>
+          <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.01em;">Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ</span>
         </div>
         <div style="display: flex; align-items: center; gap: 0.625rem;">
-          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: rgba(191, 90, 242, 0.16); border: 0.5px solid rgba(191, 90, 242, 0.28); display: flex; align-items: center; justify-content: center; color: #bf5af2; flex-shrink: 0;">
+          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: var(--ds-up-hl-icon-ui-bg); border: var(--ds-up-hl-icon-ui-border); display: flex; align-items: center; justify-content: center; color: var(--ds-up-hl-icon-ui-color); flex-shrink: 0;">
             <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
               <path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 16.6l-6.3 4.4 2.3-7.2-6-4.4h7.6z" />
             </svg>
           </div>
-          <span style="color: #f5f5f7; font-weight: 450; letter-spacing: -0.01em;">Tinh chỉnh giao diện mượt mà & loại bỏ độ trễ</span>
+          <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.01em;">Tinh chỉnh giao diện mượt mà & loại bỏ độ trễ</span>
         </div>
         <div style="display: flex; align-items: center; gap: 0.625rem;">
-          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: rgba(48, 209, 88, 0.16); border: 0.5px solid rgba(48, 209, 88, 0.28); display: flex; align-items: center; justify-content: center; color: #30d158; flex-shrink: 0;">
+          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: var(--ds-up-hl-icon-bug-bg); border: var(--ds-up-hl-icon-bug-border); display: flex; align-items: center; justify-content: center; color: var(--ds-up-hl-icon-bug-color); flex-shrink: 0;">
             <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
-          <span style="color: #f5f5f7; font-weight: 450; letter-spacing: -0.01em;">Vá lỗi hệ thống & đồng bộ bộ nhớ đệm an toàn</span>
+          <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.01em;">Vá lỗi hệ thống & đồng bộ bộ nhớ đệm an toàn</span>
         </div>
       </div>
 
       <!-- In-flight Task Warning (Initially hidden) -->
-      <div id="ds-update-warning-container" style="display: none; margin-top: 1.125rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: rgba(255, 159, 10, 0.12); border: 0.5px solid rgba(255, 159, 10, 0.28); font-size: 0.8125rem; color: #ffd60a;">
+      <div id="ds-update-warning-container" style="display: none; margin-top: 1.125rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: var(--ds-up-warn-bg); border: var(--ds-up-warn-border); font-size: 0.8125rem; color: var(--ds-up-warn-color);">
         <div style="display: flex; align-items: flex-start; gap: 0.625rem;">
-          <svg style="width: 1.125rem; height: 1.125rem; color: #ff9f0a; flex-shrink: 0; margin-top: 0.0625rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <svg style="width: 1.125rem; height: 1.125rem; color: var(--ds-up-warn-color); flex-shrink: 0; margin-top: 0.0625rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           <div>
-            <strong style="color: #ff9f0a; display: block; margin-bottom: 0.25rem; font-weight: 600;">Đang có tác vụ xử lý dở dang</strong>
-            <span style="color: rgba(255, 235, 204, 0.88); line-height: 1.35;">Hệ thống phát hiện đang có tiến trình tệp chạy ngầm. Cập nhật ngay sẽ làm mới trang và hủy tác vụ này.</span>
+            <strong style="color: var(--ds-up-warn-color); display: block; margin-bottom: 0.25rem; font-weight: 600;">Đang có tác vụ xử lý dở dang</strong>
+            <span style="color: var(--ds-up-warn-desc); line-height: 1.35;">Hệ thống phát hiện đang có tiến trình tệp chạy ngầm. Cập nhật ngay sẽ làm mới trang và hủy tác vụ này.</span>
           </div>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
           <button type="button" id="ds-update-cancel-warning-btn" style="
             padding: 0.375rem 0.875rem;
             border-radius: 980px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 0.5px solid rgba(255, 255, 255, 0.12);
-            color: #f5f5f7;
+            background: var(--ds-up-warn-cancel-bg);
+            border: var(--ds-up-warn-cancel-border);
+            color: var(--ds-up-warn-cancel-color);
             font-size: 0.75rem;
             font-weight: 500;
             cursor: pointer;
@@ -363,13 +470,13 @@ export function showUpdateNotificationCenter(waitingWorker) {
           <button type="button" id="ds-update-force-reload-btn" style="
             padding: 0.375rem 0.875rem;
             border-radius: 980px;
-            background: #ff9f0a;
+            background: var(--ds-up-warn-force-bg);
             border: none;
-            color: #000000;
+            color: var(--ds-up-warn-force-color);
             font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(255, 159, 10, 0.3);
+            box-shadow: 0 1px 3px rgba(255, 149, 0, 0.3);
           ">Vẫn cập nhật</button>
         </div>
       </div>
@@ -379,9 +486,9 @@ export function showUpdateNotificationCenter(waitingWorker) {
         <button type="button" id="ds-update-later-btn" style="
           padding: 0.4375rem 1rem;
           border-radius: 980px;
-          background: rgba(255, 255, 255, 0.08);
-          border: 0.5px solid rgba(255, 255, 255, 0.12);
-          color: rgba(255, 255, 255, 0.85);
+          background: var(--ds-up-later-bg);
+          border: var(--ds-up-later-border);
+          color: var(--ds-up-later-color);
           font-weight: 500;
           font-size: 0.8125rem;
           letter-spacing: -0.01em;
@@ -396,7 +503,7 @@ export function showUpdateNotificationCenter(waitingWorker) {
           font-weight: 500;
           font-size: 0.8125rem;
           letter-spacing: -0.01em;
-          border: 0.5px solid rgba(255, 255, 255, 0.2);
+          border: 0.5px solid rgba(255, 255, 255, 0.25);
           box-shadow: 0 1px 3px rgba(0, 113, 227, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
           cursor: pointer;
           display: flex;
@@ -412,6 +519,18 @@ export function showUpdateNotificationCenter(waitingWorker) {
 
   document.body.appendChild(capsule);
 
+  // Sync theme changes in real-time if toggled while modal is open
+  const handleThemeChange = (e) => {
+    const isDark = e?.detail?.isDark ?? (typeof document !== 'undefined' && document.documentElement?.classList?.contains('dark'));
+    capsule.classList.toggle('dark', Boolean(isDark));
+  };
+  if (typeof window !== 'undefined') {
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('ds-theme-change', handleThemeChange);
+    }
+    window.__ds_showUpdateModal = showUpdateNotificationCenter;
+  }
+
   const reloadBtn = (capsule.querySelector && capsule.querySelector('#ds-update-reload-btn')) || document.getElementById('ds-update-reload-btn');
   const dismissBtn = (capsule.querySelector && capsule.querySelector('#ds-update-dismiss-btn')) || document.getElementById('ds-update-dismiss-btn');
   const laterBtn = (capsule.querySelector && capsule.querySelector('#ds-update-later-btn')) || document.getElementById('ds-update-later-btn');
@@ -421,6 +540,9 @@ export function showUpdateNotificationCenter(waitingWorker) {
   const cancelWarningBtn = (capsule.querySelector && capsule.querySelector('#ds-update-cancel-warning-btn')) || document.getElementById('ds-update-cancel-warning-btn');
 
   const dismissModal = () => {
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+      window.removeEventListener('ds-theme-change', handleThemeChange);
+    }
     try {
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem('ds_update_capsule_dismissed', 'true');
@@ -430,6 +552,9 @@ export function showUpdateNotificationCenter(waitingWorker) {
   };
 
   const handleExecuteUpdate = () => {
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+      window.removeEventListener('ds-theme-change', handleThemeChange);
+    }
     userRequestedReload = true;
     capsule.remove();
 

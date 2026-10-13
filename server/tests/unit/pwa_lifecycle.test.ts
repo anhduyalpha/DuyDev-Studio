@@ -588,7 +588,7 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(fakeDoc.body.appendChild).toHaveBeenCalledTimes(1);
     });
 
-    it('showUpdateNotificationCenter renders centered dialog with highlights and backdrop blur', () => {
+    it('showUpdateNotificationCenter renders centered dialog with highlights and dual light/dark theme support', () => {
       showUpdateNotificationCenter(null);
 
       const capsule = elementsById['ds-update-capsule'];
@@ -597,6 +597,9 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(capsule.innerHTML).toContain('ds-update-modal-card');
       expect(capsule.innerHTML).toContain('Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ');
       expect(capsule.innerHTML).toContain('Để sau');
+      expect(capsule.innerHTML).toContain('--ds-up-card-bg');
+      expect(capsule.innerHTML).toContain('.dark #ds-update-capsule');
+      expect(capsule.innerHTML).toContain('--ds-up-text-primary');
     });
 
     it('clicking [Vẫn cập nhật] when tasks are active overrides warning and executes purge', () => {
