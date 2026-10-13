@@ -18,7 +18,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v22.55';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v22.56';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -209,119 +209,167 @@ export function showUpdateNotificationCenter(waitingWorker) {
     'display: flex',
     'align-items: center',
     'justify-content: center',
-    'padding: 1rem',
+    'padding: 1.25rem',
     'box-sizing: border-box',
-    'background: rgba(0, 0, 0, 0.65)',
-    'backdrop-filter: blur(12px)',
-    '-webkit-backdrop-filter: blur(12px)',
-    'transition: opacity 0.2s ease-out'
+    'background: rgba(0, 0, 0, 0.42)',
+    'backdrop-filter: blur(28px) saturate(180%)',
+    '-webkit-backdrop-filter: blur(28px) saturate(180%)',
+    'transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
   ].join(';');
 
-  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.53';
+  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.56';
 
   capsule.innerHTML = `
+    <style>
+      @keyframes appleModalEntrance {
+        0% { opacity: 0; transform: scale(0.96) translateY(4px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      #ds-update-modal-card {
+        animation: appleModalEntrance 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      #ds-update-dismiss-btn:hover {
+        background: rgba(255, 255, 255, 0.16) !important;
+        color: #ffffff !important;
+      }
+      #ds-update-later-btn:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: #ffffff !important;
+      }
+      #ds-update-reload-btn:hover {
+        background: #0077ed !important;
+        filter: brightness(1.05) !important;
+      }
+      #ds-update-reload-btn:active {
+        transform: scale(0.98) !important;
+      }
+    </style>
     <div id="ds-update-modal-card" style="
       width: 100%;
-      max-width: 28rem;
+      max-width: 26rem;
       box-sizing: border-box;
-      background: rgba(18, 18, 23, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 1.25rem;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
-      padding: 1.5rem;
-      color: #e4e4e7;
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: rgba(30, 30, 36, 0.82);
+      backdrop-filter: blur(48px) saturate(210%);
+      -webkit-backdrop-filter: blur(48px) saturate(210%);
+      border: 0.5px solid rgba(255, 255, 255, 0.18);
+      border-radius: 1.5rem;
+      box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+      padding: 1.375rem 1.375rem 1.25rem 1.375rem;
+      color: #f5f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     ">
       <!-- Header Bar -->
       <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.875rem;">
+          <!-- Apple Software Update Squircle Icon -->
           <div style="
             width: 2.75rem;
             height: 2.75rem;
-            border-radius: 0.875rem;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
-            border: 1px solid rgba(99, 102, 241, 0.35);
+            border-radius: 0.75rem;
+            background: linear-gradient(180deg, #2c7bf6 0%, #0056d6 100%);
+            border: 0.5px solid rgba(255, 255, 255, 0.35);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #818cf8;
+            color: #ffffff;
             flex-shrink: 0;
-            box-shadow: 0 0 18px rgba(99, 102, 241, 0.25);
+            box-shadow: 0 4px 14px rgba(0, 102, 230, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.45);
           ">
-            <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg style="width: 1.375rem; height: 1.375rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <h3 style="font-weight: 700; font-size: 1.0625rem; color: #f4f4f5; margin: 0; letter-spacing: -0.01em;">Đã có bản cập nhật mới</h3>
-              <span style="font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;">${displayVer}</span>
+              <h3 style="font-weight: 600; font-size: 1.0625rem; color: #ffffff; margin: 0; letter-spacing: -0.015em; line-height: 1.25;">Đã có bản cập nhật mới</h3>
+              <span style="font-size: 0.6875rem; font-weight: 500; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; padding: 0.125rem 0.5rem; border-radius: 980px; background: rgba(255, 255, 255, 0.1); border: 0.5px solid rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.92);">${displayVer}</span>
             </div>
-            <p style="font-size: 0.8125rem; color: #a1a1aa; margin: 0.25rem 0 0 0; line-height: 1.35;">Phiên bản mới đã sẵn sàng. Vui lòng làm mới để nạp code mới nhất.</p>
+            <p style="font-size: 0.8125rem; color: rgba(235, 235, 245, 0.62); margin: 0.25rem 0 0 0; line-height: 1.38; letter-spacing: -0.005em;">DuyDev Studio phiên bản mới đã sẵn sàng cài đặt.</p>
           </div>
         </div>
+        <!-- Circular Close Button -->
         <button type="button" id="ds-update-dismiss-btn" title="Bỏ qua" style="
-          background: transparent;
-          border: none;
-          color: #71717a;
-          font-size: 1.125rem;
+          width: 1.625rem;
+          height: 1.625rem;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.08);
+          border: 0.5px solid rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.6);
           cursor: pointer;
-          padding: 0.25rem;
-          line-height: 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 0.375rem;
-          transition: color 0.15s ease;
+          padding: 0;
+          font-size: 0.8125rem;
+          line-height: 1;
+          font-weight: 500;
+          transition: background 0.15s ease, color 0.15s ease;
           flex-shrink: 0;
         ">✕</button>
       </div>
 
-      <!-- Feature Highlights -->
-      <div id="ds-update-highlights" style="margin-top: 1.125rem; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 0.875rem; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.8125rem; color: #d4d4d8;">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="color: #818cf8; font-size: 0.875rem;">⚡</span>
-          <span>Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ</span>
+      <!-- Release Notes Highlights -->
+      <div id="ds-update-highlights" style="margin-top: 1.125rem; display: flex; flex-direction: column; gap: 0.625rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: rgba(0, 0, 0, 0.25); border: 0.5px solid rgba(255, 255, 255, 0.08); font-size: 0.8125rem;">
+        <div style="display: flex; align-items: center; gap: 0.625rem;">
+          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: rgba(10, 132, 255, 0.16); border: 0.5px solid rgba(10, 132, 255, 0.28); display: flex; align-items: center; justify-content: center; color: #2997ff; flex-shrink: 0;">
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+          <span style="color: #f5f5f7; font-weight: 450; letter-spacing: -0.01em;">Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="color: #34d399; font-size: 0.875rem;">🎨</span>
-          <span>Tinh chỉnh giao diện mượt mà & loại bỏ độ trễ</span>
+        <div style="display: flex; align-items: center; gap: 0.625rem;">
+          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: rgba(191, 90, 242, 0.16); border: 0.5px solid rgba(191, 90, 242, 0.28); display: flex; align-items: center; justify-content: center; color: #bf5af2; flex-shrink: 0;">
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 16.6l-6.3 4.4 2.3-7.2-6-4.4h7.6z" />
+            </svg>
+          </div>
+          <span style="color: #f5f5f7; font-weight: 450; letter-spacing: -0.01em;">Tinh chỉnh giao diện mượt mà & loại bỏ độ trễ</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="color: #fbbf24; font-size: 0.875rem;">🛡️</span>
-          <span>Vá lỗi hệ thống & đồng bộ bộ nhớ đệm an toàn</span>
+        <div style="display: flex; align-items: center; gap: 0.625rem;">
+          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: rgba(48, 209, 88, 0.16); border: 0.5px solid rgba(48, 209, 88, 0.28); display: flex; align-items: center; justify-content: center; color: #30d158; flex-shrink: 0;">
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <span style="color: #f5f5f7; font-weight: 450; letter-spacing: -0.01em;">Vá lỗi hệ thống & đồng bộ bộ nhớ đệm an toàn</span>
         </div>
       </div>
 
       <!-- In-flight Task Warning (Initially hidden) -->
-      <div id="ds-update-warning-container" style="display: none; margin-top: 1.125rem; padding: 0.75rem 0.875rem; border-radius: 0.75rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.8125rem; color: #fde68a;">
-        <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
-          <span style="color: #f59e0b; font-size: 1rem; line-height: 1.2;">⚠️</span>
+      <div id="ds-update-warning-container" style="display: none; margin-top: 1.125rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: rgba(255, 159, 10, 0.12); border: 0.5px solid rgba(255, 159, 10, 0.28); font-size: 0.8125rem; color: #ffd60a;">
+        <div style="display: flex; align-items: flex-start; gap: 0.625rem;">
+          <svg style="width: 1.125rem; height: 1.125rem; color: #ff9f0a; flex-shrink: 0; margin-top: 0.0625rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
           <div>
-            <strong style="color: #fbbf24; display: block; margin-bottom: 0.25rem;">Đang có tác vụ xử lý dở dang</strong>
-            <span>Hệ thống phát hiện đang có tiến trình tệp chạy ngầm. Cập nhật ngay sẽ làm mới trang và hủy tác vụ này.</span>
+            <strong style="color: #ff9f0a; display: block; margin-bottom: 0.25rem; font-weight: 600;">Đang có tác vụ xử lý dở dang</strong>
+            <span style="color: rgba(255, 235, 204, 0.88); line-height: 1.35;">Hệ thống phát hiện đang có tiến trình tệp chạy ngầm. Cập nhật ngay sẽ làm mới trang và hủy tác vụ này.</span>
           </div>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
           <button type="button" id="ds-update-cancel-warning-btn" style="
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.5rem;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #d4d4d8;
+            padding: 0.375rem 0.875rem;
+            border-radius: 980px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 0.5px solid rgba(255, 255, 255, 0.12);
+            color: #f5f5f7;
             font-size: 0.75rem;
             font-weight: 500;
             cursor: pointer;
           ">Chờ xử lý xong</button>
           <button type="button" id="ds-update-force-reload-btn" style="
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.5rem;
-            background: #d97706;
-            border: 1px solid #f59e0b;
-            color: #ffffff;
+            padding: 0.375rem 0.875rem;
+            border-radius: 980px;
+            background: #ff9f0a;
+            border: none;
+            color: #000000;
             font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
+            box-shadow: 0 1px 3px rgba(255, 159, 10, 0.3);
           ">Vẫn cập nhật</button>
         </div>
       </div>
@@ -329,31 +377,35 @@ export function showUpdateNotificationCenter(waitingWorker) {
       <!-- Footer Buttons -->
       <div id="ds-update-footer-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 0.625rem; margin-top: 1.25rem;">
         <button type="button" id="ds-update-later-btn" style="
-          padding: 0.5rem 1rem;
-          border-radius: 0.625rem;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: #a1a1aa;
+          padding: 0.4375rem 1rem;
+          border-radius: 980px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 0.5px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.85);
           font-weight: 500;
           font-size: 0.8125rem;
+          letter-spacing: -0.01em;
           cursor: pointer;
-          transition: background 0.15s, color 0.15s;
+          transition: background 0.15s ease, color 0.15s ease;
         ">Để sau</button>
         <button type="button" id="ds-update-reload-btn" style="
-          padding: 0.5rem 1.125rem;
-          border-radius: 0.625rem;
-          background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+          padding: 0.4375rem 1.1875rem;
+          border-radius: 980px;
+          background: #0071e3;
           color: #ffffff;
-          font-weight: 600;
+          font-weight: 500;
           font-size: 0.8125rem;
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          letter-spacing: -0.01em;
+          border: 0.5px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 1px 3px rgba(0, 113, 227, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
           display: flex;
           align-items: center;
           gap: 0.375rem;
-          transition: transform 0.1s ease, filter 0.15s ease;
-        ">Làm mới</button>
+          transition: background 0.15s ease, transform 0.1s ease;
+        ">
+          <span>Làm mới</span>
+        </button>
       </div>
     </div>
   `;
