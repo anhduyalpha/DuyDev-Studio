@@ -11,7 +11,9 @@ import { taskCoordinator } from '../../utilities/taskCoordinator.js';
 let isMinimized = false;
 
 /**
- * Renders the HTML structure for an individual task item.
+ * Renders the HTML structure for an individual task item in the Glassmorphic Micro-Dock.
+ * Inline layout: Micro-badge, truncated description, percentage and sub-pixel progress thread.
+ * Secondary verbose stage details collapse by default and slide-expand on hover/click.
  * @param {import('../../utilities/taskCoordinator.js').ActiveTask} task
  * @returns {string}
  */
@@ -20,50 +22,51 @@ export function renderTaskRow(task) {
 
   return `
     <div 
-      class="group relative flex flex-col gap-1.5 p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border border-zinc-200/80 dark:border-white/[0.06] transition-all cursor-pointer"
+      class="group/item relative flex flex-col gap-1 py-1 px-1.5 rounded-lg hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-all cursor-pointer"
       data-task-route="${task.route || ''}"
       data-task-id="${task.id}"
       title="Nhấn để mở ${task.moduleTitle}"
     >
+      <!-- Single Horizontal Row: Badge + Description + Percentage -->
       <div class="flex items-center justify-between gap-2 min-w-0">
-        <div class="flex items-center gap-1.5 min-w-0">
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 shrink-0">
+        <div class="flex items-center gap-1.5 min-w-0 flex-1">
+          <span class="px-1.5 py-0.5 rounded-[4px] text-[9.5px] font-bold uppercase tracking-wider bg-black/[0.05] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.06] shrink-0">
             ${task.moduleTitle}
           </span>
-          <span class="dock-task-title text-xs font-medium text-zinc-900 dark:text-zinc-100 truncate">
+          <span class="dock-task-title text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
             ${task.title || 'Tác vụ'}
           </span>
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
-          <span class="dock-pct-text text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+          <span class="dock-pct-text text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
             ${pct}%
           </span>
           ${
             task.cancel
               ? `<button 
-                  class="btn-cancel-dock-task opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-500/10 hover:text-red-500 text-zinc-400 transition cursor-pointer"
+                  class="btn-cancel-dock-task opacity-0 group-hover/item:opacity-100 p-0.5 rounded hover:bg-red-500/10 hover:text-red-500 text-zinc-400 transition cursor-pointer"
                   data-cancel-id="${task.id}"
                   title="Hủy tác vụ"
                 >
-                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                  <i data-lucide="x" class="w-3 h-3"></i>
                 </button>`
               : ''
           }
         </div>
       </div>
 
-      <!-- Thin Progress Bar -->
-      <div class="w-full bg-zinc-200/70 dark:bg-white/10 rounded-full h-1 overflow-hidden">
-        <div 
-          class="dock-progress-bar bg-indigo-600 dark:bg-indigo-400 h-1 rounded-full transition-all duration-300 ease-out" 
-          style="width: ${pct}%"
-        ></div>
+      <!-- Collapsible Secondary Stage Details (Expands on hover) -->
+      <div class="dock-stage-row max-h-0 opacity-0 group-hover/item:max-h-6 group-hover/item:opacity-100 overflow-hidden transition-all duration-200 ease-out text-[11px] text-zinc-500 dark:text-zinc-400 font-sans truncate">
+        <span class="dock-stage-text truncate">${task.stage || 'Đang xử lý...'}</span>
       </div>
 
-      <!-- Stage label -->
-      <div class="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 font-sans truncate">
-        <span class="dock-stage-text truncate">${task.stage || 'Đang xử lý...'}</span>
+      <!-- Sub-pixel Micro-gradient Progress Thread -->
+      <div class="w-full bg-zinc-200/50 dark:bg-white/[0.08] h-[2px] rounded-full overflow-hidden">
+        <div 
+          class="dock-progress-bar dock-progress-thread h-[2px] rounded-full transition-all duration-300 ease-out" 
+          style="width: ${pct}%"
+        ></div>
       </div>
     </div>
   `;
@@ -82,31 +85,34 @@ export function renderGlobalTaskDock(tasks = []) {
   const count = tasks.length;
 
   return `
-    <div id="globalTaskDockCapsule" class="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2 max-w-sm w-[calc(100vw-2rem)] sm:w-88 select-none pointer-events-none">
-      <div class="pointer-events-auto w-full bg-white/95 dark:bg-[#121215]/95 border border-zinc-200/90 dark:border-white/[0.1] shadow-2xl rounded-2xl p-3 backdrop-blur-md transition-all duration-200">
+    <div id="globalTaskDockCapsule" class="fixed bottom-20 right-4 sm:bottom-5 sm:right-5 z-50 flex flex-col items-end gap-1.5 w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px] select-none pointer-events-none">
+      <div class="task-micro-dock pointer-events-auto w-full rounded-2xl p-2.5 transition-all duration-300">
         
-        <!-- Dock Header -->
-        <div class="flex items-center justify-between pb-2 mb-2 border-b border-zinc-100 dark:border-white/[0.06]">
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-500 shrink-0 shadow-xs"></span>
-            <span id="dockTaskCountText" class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              ${count} tác vụ đang chạy
+        <!-- Dock Micro-Header -->
+        <div class="flex items-center justify-between pb-1.5 mb-1 border-b border-black/[0.05] dark:border-white/[0.06] px-1">
+          <div class="flex items-center gap-1.5">
+            <span class="relative flex h-1.5 w-1.5 shrink-0">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
+            <span id="dockTaskCountText" class="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 tracking-tight">
+              ${count} ${count === 1 ? 'tác vụ đang chạy' : 'tác vụ đang chạy'}
             </span>
           </div>
 
           <div class="flex items-center gap-1">
             <button 
               id="btnToggleDockMinimize" 
-              class="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer"
+              class="p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition cursor-pointer"
               title="${isMinimized ? 'Mở rộng' : 'Thu nhỏ'}"
             >
-              <i data-lucide="${isMinimized ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5"></i>
+              <i data-lucide="${isMinimized ? 'chevron-up' : 'chevron-down'}" class="w-3 h-3"></i>
             </button>
           </div>
         </div>
 
         <!-- Task List Items -->
-        <div id="dockTasksContainer" class="space-y-2 max-h-60 overflow-y-auto ${isMinimized ? 'hidden' : ''}">
+        <div id="dockTasksContainer" class="space-y-1 max-h-60 overflow-y-auto ${isMinimized ? 'hidden' : ''}">
           ${tasks.map(renderTaskRow).join('')}
         </div>
 
@@ -130,7 +136,7 @@ function attachDockListeners(container) {
         tasksEl.classList.toggle('hidden', isMinimized);
       }
       btnToggle.title = isMinimized ? 'Mở rộng' : 'Thu nhỏ';
-      btnToggle.innerHTML = `<i data-lucide="${isMinimized ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5"></i>`;
+      btnToggle.innerHTML = `<i data-lucide="${isMinimized ? 'chevron-up' : 'chevron-down'}" class="w-3 h-3"></i>`;
       if (window.lucide) window.lucide.createIcons({ root: btnToggle });
     };
   }

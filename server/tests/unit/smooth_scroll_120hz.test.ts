@@ -89,24 +89,29 @@ describe('120Hz Native Compositor Optimization & Zero-JS Scroll Hijacking Suite'
     expect(tiktokContent).toContain('decoding="async"');
   });
 
-  it('8. Service Worker precache list has purged deleted scroll files under v22.75', () => {
+  it('8. Service Worker precache list has purged deleted scroll files under v22.75+', () => {
     const swPath = path.join(rootDir, 'sw.js');
     const content = fs.readFileSync(swPath, 'utf-8');
 
-    expect(content).toContain("const CACHE_NAME = 'duydev-studio-v22.75';");
+    expect(content).toMatch(/const CACHE_NAME = 'duydev-studio-v22\.(7[5-9]|[89]\d)/);
     expect(content).not.toContain('lenis-smooth.js');
     expect(content).not.toContain('smoothScroll.js');
     expect(content).not.toContain('scrollOptimizer.js');
   });
 
-  it('9. index.html and pwa.js synchronize v22.75 version query tags', () => {
+  it('9. index.html and pwa.js synchronize version query tags with sw.js', () => {
+    const swPath = path.join(rootDir, 'sw.js');
+    const swContent = fs.readFileSync(swPath, 'utf-8');
+    const swMatch = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v([^'"]+)['"]/);
+    const ver = swMatch ? swMatch[1] : '22.76';
+
     const indexPath = path.join(rootDir, 'index.html');
     const indexContent = fs.readFileSync(indexPath, 'utf-8');
-    expect(indexContent).toContain('src/app.js?v=22.75');
-    expect(indexContent).toContain('stitch-tokens.css?v=22.75');
+    expect(indexContent).toContain(`src/app.js?v=${ver}`);
+    expect(indexContent).toContain(`stitch-tokens.css?v=${ver}`);
 
     const pwaPath = path.join(rootDir, 'src/utilities/pwa.js');
     const pwaContent = fs.readFileSync(pwaPath, 'utf-8');
-    expect(pwaContent).toContain("CURRENT_PWA_VERSION = 'duydev-studio-v22.75'");
+    expect(pwaContent).toContain(`CURRENT_PWA_VERSION = 'duydev-studio-v${ver}'`);
   });
 });
