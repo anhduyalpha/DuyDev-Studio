@@ -35,7 +35,7 @@ import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
 import { isAdminAuthenticated } from './utilities/adminAuth.js';
-import { initSmoothScroll, scrollToTarget } from './utilities/smoothScroll.js';
+import { initSmoothScroll, scrollToTarget } from './utilities/smoothScroll.js?v=22.74';
 import { initScrollOptimizer } from './utilities/scrollOptimizer.js';
 
 /**
@@ -142,8 +142,14 @@ class App {
     this.renderShell();
     checkAndRenderMigrationNotice();
     initGlobalTaskDock();
-    initSmoothScroll();
-    initScrollOptimizer();
+    try {
+      initSmoothScroll();
+    } catch (err) {
+      console.warn('[DS] Smooth scroll fallback to native:', err);
+    }
+    try {
+      initScrollOptimizer();
+    } catch (_) {}
     this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
 

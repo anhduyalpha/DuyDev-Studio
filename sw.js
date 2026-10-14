@@ -3,23 +3,23 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v22.73';
+const CACHE_NAME = 'duydev-studio-v22.74';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=22.73',
-  './src/styles/studocu.css?v=22.73',
-  './src/styles/highlight-theme.css?v=22.73',
+  './src/styles/stitch-tokens.css?v=22.74',
+  './src/styles/studocu.css?v=22.74',
+  './src/styles/highlight-theme.css?v=22.74',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/vendor/lenis.min.js?v=22.73',
-  './src/app.js?v=22.73',
+  './src/vendor/lenis-smooth.js?v=22.74',
+  './src/app.js?v=22.74',
   './src/hooks/useToolRegistry.js',
   './src/pages/DashboardPage.js',
   './src/components/dashboard/ToolCard.js',
@@ -38,7 +38,7 @@ const ASSETS_TO_PRECACHE = [
   './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/utilities/visitorTracker.js',
-  './src/utilities/smoothScroll.js',
+  './src/utilities/smoothScroll.js?v=22.74',
   './src/utilities/scrollOptimizer.js',
   './src/components/common/ShareTargetModal.js',
   './src/pages/TermsPage.js',
