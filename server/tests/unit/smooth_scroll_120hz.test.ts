@@ -55,12 +55,16 @@ describe('120Hz Native Compositor Optimization & Zero-JS Scroll Hijacking Suite'
     expect(content).not.toMatch(/\.tool-accent-box\s*\{[^}]*backdrop-filter/);
   });
 
-  it('5. stitch-tokens.css guards hover elevations with pointer:fine and enforces native momentum', () => {
+  it('5. stitch-tokens.css guards hover elevations with pointer:fine and enforces native window scrolling without scroll trapping', () => {
     const cssPath = path.join(rootDir, 'src/styles/stitch-tokens.css');
     const content = fs.readFileSync(cssPath, 'utf-8');
 
     expect(content).toContain('@media (hover: hover) and (pointer: fine)');
-    expect(content).toContain('overscroll-behavior-y: none');
+    expect(content).toContain('overscroll-behavior-y: auto');
+    expect(content).not.toContain('overscroll-behavior-y: none');
+    expect(content).toContain('overflow-y: auto');
+    expect(content).toContain('overflow-y: visible');
+    expect(content).toContain('overflow-x: clip');
     expect(content).toContain('-webkit-overflow-scrolling: touch');
     expect(content).toContain('scroll-behavior: auto');
   });

@@ -121,11 +121,14 @@ html {
   letter-spacing: -0.011em;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  height: auto;
+  min-height: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
   width: 100%;
   max-width: 100vw;
   scroll-behavior: auto;
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -136,20 +139,28 @@ body {
   font-weight: 450;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  height: auto;
+  min-height: 100%;
   width: 100%;
   max-width: 100vw;
   margin: 0;
   padding: 0;
-  overscroll-behavior-y: none;
+  overflow-x: clip;
+  overflow-y: visible;
+  overscroll-behavior-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 #app {
-  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   width: 100%;
   max-width: 100vw;
   min-height: 100vh;
+}
+
+.overflow-x-clip {
+  overflow-x: clip !important;
 }
 
 html.dark body {
