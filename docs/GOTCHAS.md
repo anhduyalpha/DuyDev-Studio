@@ -201,6 +201,11 @@ These file groups must be changed together:
 - In unified mode (current), both API and frontend are on the same port.
 - The actual port depends on `server/.env` which is gitignored.
 
+### [CONFIRMED] Immutable Vendor Caching & Class Prototype in Strict Mode
+- **Location**: `src/vendor/lenis.min.js`, `server/src/app.ts`, `sw.js`
+- **What**: Files in `src/vendor/` are served with `Cache-Control: public, max-age=31536000, immutable`. If a vendor file is edited, browsers and Service Worker cache will NOT fetch the updated version unless an explicit query string (e.g. `?v=...`) is appended to the import and the Service Worker cache version is bumped. Furthermore, in ES Modules (strict mode), ES6 class constructors have non-writable `prototype`, so assigning `Class.prototype = ...` throws `TypeError: Cannot assign to read only property 'prototype'`.
+- **Action**: Always append query params when importing vendor libraries (`../vendor/lib.js?v=...`) and bump `CACHE_NAME` in `sw.js`.
+
 ### [UNKNOWN] Vendored library versions
 - Files in `src/vendor/` are minified with no version comments.
 - No mechanism to track or update versions.
