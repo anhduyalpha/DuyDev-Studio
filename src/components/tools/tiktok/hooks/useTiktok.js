@@ -224,6 +224,7 @@ export class TiktokManager {
         duration: data.duration,
         url: cleanUrl,
         driveRelPath,
+        isSlideshow: Boolean(data.isSlideshow),
         timestamp: Date.now()
       });
       showToast('Đã lấy video TikTok thành công', 'success');
@@ -247,7 +248,7 @@ export class TiktokManager {
     this.notify({ type: 'saving-drive' });
 
     try {
-      const targetUrl = this.state.videoData.videoHdUrl || this.state.videoData.videoUrl;
+      const targetUrl = this.state.videoData.videoHdUrl || this.state.videoData.videoUrl || '';
       const result = await tiktokApi.saveToDrive({
         url: targetUrl,
         title: this.state.videoData.title,
@@ -256,7 +257,10 @@ export class TiktokManager {
         cover: this.state.videoData.cover,
         author: this.state.videoData.author,
         duration: this.state.videoData.duration,
-        overwrite: forceOverwrite
+        overwrite: forceOverwrite,
+        isSlideshow: Boolean(this.state.videoData.isSlideshow),
+        images: this.state.videoData.images || [],
+        audioUrl: this.state.videoData.audioUrl || ''
       });
       this.state.isSavingDrive = false;
       this.state.savedDriveResult = result;
@@ -340,7 +344,7 @@ export class TiktokManager {
           this.state.batchQueue.skipCount++;
         } else {
           // Step 3: Save directly to Drive
-          const streamUrl = data.videoHdUrl || data.videoUrl;
+          const streamUrl = data.videoHdUrl || data.videoUrl || '';
           const saveRes = await tiktokApi.saveToDrive({
             url: streamUrl,
             title: data.title,
@@ -349,7 +353,10 @@ export class TiktokManager {
             cover: data.cover,
             author: data.author,
             duration: data.duration,
-            overwrite: false
+            overwrite: false,
+            isSlideshow: Boolean(data.isSlideshow),
+            images: data.images || [],
+            audioUrl: data.audioUrl || ''
           });
           driveRelPath = saveRes.relPath;
           this.state.batchQueue.successCount++;
@@ -364,6 +371,7 @@ export class TiktokManager {
           duration: data.duration,
           url: targetUrl,
           driveRelPath,
+          isSlideshow: Boolean(data.isSlideshow),
           timestamp: Date.now()
         });
       } catch (err) {
@@ -421,10 +429,12 @@ export class TiktokManager {
         id: 'tiktok-single-save-drive',
         moduleId: this.moduleId,
         moduleTitle: this.moduleTitle,
-        title: this.state.videoData?.title ? `Lưu Drive: ${this.state.videoData.title}` : 'Đang lưu vào Studio Drive',
+        title: this.state.videoData?.title
+          ? `Lưu Drive: ${this.state.videoData.title}`
+          : (this.state.videoData?.isSlideshow ? 'Đang lưu Album ảnh vào Drive' : 'Đang lưu vào Studio Drive'),
         status: 'running',
         progress: 70,
-        stage: 'Đang ghi video vào /tiktok...',
+        stage: this.state.videoData?.isSlideshow ? 'Đang đóng gói ZIP và ghi vào /tiktok...' : 'Đang ghi video vào /tiktok...',
         route: this.route
       });
     } else if (this.state.isLoading) {

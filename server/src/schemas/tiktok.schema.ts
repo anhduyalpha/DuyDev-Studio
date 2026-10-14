@@ -11,9 +11,10 @@ export const tiktokStreamQuerySchema = z.object({
 });
 
 export const tiktokSaveDriveBodySchema = z.object({
-  url: z.string().min(1, 'Target media URL is required'),
+  url: z.string().optional().default(''),
   title: z.string().optional().default('tiktok_video'),
   id: z.string().optional().default(''),
+  tiktokVideoId: z.string().optional(),
   originalUrl: z.string().optional(),
   cover: z.string().optional(),
   author: z.union([
@@ -25,7 +26,10 @@ export const tiktokSaveDriveBodySchema = z.object({
     })
   ]).optional(),
   duration: z.number().optional(),
-  overwrite: z.boolean().optional().default(false)
+  overwrite: z.boolean().optional().default(false),
+  isSlideshow: z.boolean().optional().default(false),
+  images: z.array(z.string()).optional(),
+  audioUrl: z.string().optional()
 });
 
 export const tiktokCheckDuplicateSchema = z.object({
@@ -55,9 +59,11 @@ export interface TikTokVideoData {
   };
   cover: string;
   duration: number;
-  videoUrl: string; // standard no watermark CDN link
+  videoUrl: string; // standard no watermark CDN link (or first image URL for slideshow)
   videoHdUrl?: string; // HD no watermark link if available
   audioUrl?: string; // MP3 sound link
+  isSlideshow?: boolean;
+  images?: string[];
   stats: {
     views: number;
     likes: number;

@@ -169,11 +169,32 @@ export class TikTokService {
       }
     }
 
-    if (!itemStruct || !itemStruct.video?.playAddr) {
+    let isSlideshow = false;
+    let images: string[] = [];
+
+    if (itemStruct?.imagePost?.images && Array.isArray(itemStruct.imagePost.images) && itemStruct.imagePost.images.length > 0) {
+      isSlideshow = true;
+      images = itemStruct.imagePost.images.map((img: any) => {
+        return (
+          img?.imageURL?.urlList?.[0] ||
+          img?.displayImage?.urlList?.[0] ||
+          img?.thumbnail?.urlList?.[0] ||
+          ''
+        );
+      }).filter(Boolean);
+    } else if (Array.isArray(itemStruct?.images) && itemStruct.images.length > 0) {
+      isSlideshow = true;
+      images = itemStruct.images.map((img: any) => {
+        if (typeof img === 'string') return img;
+        return img?.urlList?.[0] || img?.imageURL?.urlList?.[0] || '';
+      }).filter(Boolean);
+    }
+
+    if (!itemStruct || (!itemStruct.video?.playAddr && !isSlideshow)) {
       return null;
     }
 
-    const videoUrl = itemStruct.video.playAddr;
+    const videoUrl = itemStruct.video?.playAddr || (images.length > 0 ? images[0] : '');
     const id = itemStruct.id || fallbackId;
     const title = itemStruct.desc || `TikTok Video ${id}`;
     const author = {
@@ -181,7 +202,7 @@ export class TikTokService {
       nickname: itemStruct.author?.nickname || itemStruct.author?.uniqueId || 'Người dùng TikTok',
       avatar: itemStruct.author?.avatarThumb || itemStruct.author?.avatarMedium || ''
     };
-    const cover = itemStruct.video?.cover || itemStruct.video?.originCover || '';
+    const cover = itemStruct.video?.cover || itemStruct.video?.originCover || (images.length > 0 ? images[0] : '');
     const duration = Number(itemStruct.video?.duration || 0);
     const audioUrl = itemStruct.music?.playUrl || '';
     const stats = {
@@ -198,7 +219,9 @@ export class TikTokService {
       cover,
       duration,
       videoUrl,
-      audioUrl,
+      audioUrl: audioUrl || undefined,
+      isSlideshow: isSlideshow || undefined,
+      images: images.length > 0 ? images : undefined,
       stats,
       extractor: 'ssr'
     };
@@ -229,7 +252,6 @@ export class TikTokService {
       nickname: d.author?.nickname || d.author?.unique_id || 'Người dùng TikTok',
       avatar: d.author?.avatar || ''
     };
-    const cover = d.cover || d.origin_cover || '';
     const duration = Number(d.duration || 0);
 
     // Make sure play URLs are absolute
@@ -239,9 +261,13 @@ export class TikTokService {
       return `https://www.tikwm.com${u}`;
     };
 
-    const videoUrl = ensureAbsolute(d.play);
+    const isSlideshow = Array.isArray(d.images) && d.images.length > 0;
+    const images = isSlideshow ? d.images.map((img: string) => ensureAbsolute(img)).filter(Boolean) : undefined;
+
+    const videoUrl = ensureAbsolute(d.play) || (images && images.length > 0 ? images[0] : '');
     const videoHdUrl = ensureAbsolute(d.hdplay);
-    const audioUrl = ensureAbsolute(d.music);
+    const audioUrl = ensureAbsolute(d.music || d.music_info?.play);
+    const cover = d.cover || d.origin_cover || (images && images.length > 0 ? images[0] : '');
 
     const stats = {
       views: Number(d.play_count || 0),
@@ -259,6 +285,8 @@ export class TikTokService {
       videoUrl,
       videoHdUrl: videoHdUrl && videoHdUrl !== videoUrl ? videoHdUrl : undefined,
       audioUrl: audioUrl || undefined,
+      isSlideshow: isSlideshow || undefined,
+      images: images && images.length > 0 ? images : undefined,
       stats,
       extractor: 'resolver'
     };
@@ -285,11 +313,22 @@ export class TikTokService {
       nickname: info.channel || info.uploader || 'Người dùng TikTok',
       avatar: ''
     };
-    const cover = info.thumbnail || '';
     const duration = Number(info.duration || 0);
 
-    // Pick best direct format
-    const videoUrl = info.url || (info.formats && info.formats[info.formats.length - 1]?.url) || '';
+    let isSlideshow = false;
+    let images: string[] = [];
+    if (Array.isArray(info.entries) && info.entries.length > 0) {
+      images = info.entries.map((e: any) => e?.url || e?.thumbnail || '').filter(Boolean);
+      if (images.length > 0) isSlideshow = true;
+    } else if (Array.isArray(info.thumbnails) && info.formats && info.formats.length === 0) {
+      images = info.thumbnails.map((t: any) => t?.url).filter(Boolean);
+      if (images.length > 0) isSlideshow = true;
+    }
+
+    const videoUrl = info.url || (info.formats && info.formats[info.formats.length - 1]?.url) || (images.length > 0 ? images[0] : '');
+    const audioUrl = info.audio_channels ? (info.url || '') : undefined;
+    const cover = info.thumbnail || (images.length > 0 ? images[0] : '');
+
     const stats = {
       views: Number(info.view_count || 0),
       likes: Number(info.like_count || 0),
@@ -304,6 +343,9 @@ export class TikTokService {
       cover,
       duration,
       videoUrl,
+      audioUrl: audioUrl || undefined,
+      isSlideshow: isSlideshow || undefined,
+      images: images.length > 0 ? images : undefined,
       stats,
       extractor: 'ytdlp'
     };
@@ -402,7 +444,7 @@ export class TikTokService {
 
       for (const file of files) {
         if (file.isDirectory()) continue;
-        if (!file.name.endsWith('.mp4') && !file.name.endsWith('.webm') && !file.name.endsWith('.mkv')) continue;
+        if (!file.name.endsWith('.mp4') && !file.name.endsWith('.webm') && !file.name.endsWith('.mkv') && !file.name.endsWith('.zip')) continue;
 
         const videoDiskPath = path.join(tiktokDir, file.name);
         // CRUCIAL: Physical File Verification
@@ -474,14 +516,17 @@ export class TikTokService {
    * Saves TikTok video stream directly into DD Studio Drive (`/data/storage/drive/tiktok/`)
    */
   static async saveToDrive(
-    mediaUrl: string,
+    mediaUrl = '',
     title = 'tiktok_video',
     id = '',
     originalUrl = '',
     cover = '',
     author?: any,
     duration?: number,
-    overwrite = false
+    overwrite = false,
+    isSlideshow = false,
+    images?: string[],
+    audioUrl?: string
   ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
     // 1. Target directory
     const tiktokDir = path.join(resolvedStoragePaths.drive, 'tiktok');
@@ -489,7 +534,182 @@ export class TikTokService {
       await fsPromises.mkdir(tiktokDir, { recursive: true });
     }
 
-    // 2. Clean and build safe filename
+    // 2. Handle Slideshow / Carousel Posts
+    if ((isSlideshow || (!mediaUrl && images && images.length > 0)) && images && images.length > 0) {
+      const sanitizedTitle = (title || 'album')
+        .replace(/[\\/:*?"<>|#@$%^&*]/g, '_')
+        .replace(/\s+/g, '_')
+        .slice(0, 60)
+        .trim()
+        .replace(/^_+|_+$/g, '');
+
+      const cleanId = (id || Date.now().toString(36)).slice(-10);
+      const fileName = `[TikTok]_${sanitizedTitle || 'album'}_${cleanId}.zip`;
+      const targetFilePath = path.join(tiktokDir, fileName);
+
+      if (overwrite) {
+        try {
+          if (fs.existsSync(targetFilePath)) {
+            await StorageManager.unlinkSafe(targetFilePath);
+            await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.meta.json'));
+            await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg'));
+          }
+        } catch {}
+      }
+
+      logger.info({ fileName, targetFilePath, slideCount: images.length }, '[TikTok] Saving slideshow bundle to Studio Drive...');
+
+      const tempFolder = path.join(resolvedStoragePaths.temp, `tt_slides_${cleanId}_${Date.now()}`);
+      await fsPromises.mkdir(tempFolder, { recursive: true });
+
+      let byteCount = 0;
+      const hash = crypto.createHash('sha256');
+
+      try {
+        // Download each slide image into temp folder
+        for (let i = 0; i < images.length; i++) {
+          const imgUrl = images[i];
+          try {
+            const res = await fetch(imgUrl, {
+              headers: { 'User-Agent': DEFAULT_UA, 'Referer': 'https://www.tiktok.com/' },
+              signal: AbortSignal.timeout(30000)
+            });
+            if (res.ok) {
+              const buf = Buffer.from(await res.arrayBuffer());
+              const slideName = `slide_${String(i + 1).padStart(2, '0')}.jpg`;
+              await fsPromises.writeFile(path.join(tempFolder, slideName), buf);
+            }
+          } catch (imgErr: any) {
+            logger.warn({ err: imgErr?.message, index: i }, '[TikTok] Failed to fetch slide image for zip bundle');
+          }
+        }
+
+        // Download background audio if available
+        if (audioUrl) {
+          try {
+            const audioRes = await fetch(audioUrl, {
+              headers: { 'User-Agent': DEFAULT_UA, 'Referer': 'https://www.tiktok.com/' },
+              signal: AbortSignal.timeout(30000)
+            });
+            if (audioRes.ok) {
+              const audioBuf = Buffer.from(await audioRes.arrayBuffer());
+              await fsPromises.writeFile(path.join(tempFolder, 'audio.mp3'), audioBuf);
+            }
+          } catch (aErr: any) {
+            logger.warn({ err: aErr?.message }, '[TikTok] Failed to fetch audio for slideshow zip bundle');
+          }
+        }
+
+        // Package into ZIP using Python standard library zipfile
+        const pyScript = `
+import zipfile, os, sys
+src, out = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
+    for f in sorted(os.listdir(src)):
+        p = os.path.join(src, f)
+        if os.path.isfile(p):
+            zf.write(p, f)
+`;
+        try {
+          await execFileAsync('python3', ['-c', pyScript, tempFolder, targetFilePath]);
+        } catch {
+          await execFileAsync('python', ['-c', pyScript, tempFolder, targetFilePath]);
+        }
+
+        const stat = await fsPromises.stat(targetFilePath);
+        byteCount = stat.size;
+
+        const zipBuf = await fsPromises.readFile(targetFilePath);
+        hash.update(zipBuf);
+      } catch (zipErr: any) {
+        await StorageManager.unlinkSafe(targetFilePath);
+        throw new BadRequestError(`Lỗi đóng gói album ảnh TikTok: ${zipErr?.message}`);
+      } finally {
+        await fsPromises.rm(tempFolder, { recursive: true, force: true }).catch(() => {});
+      }
+
+      // Cache thumbnail locally (first slide or cover)
+      let thumbnailDataUri = '';
+      const coverUrl = cover || images[0];
+      if (coverUrl && coverUrl.startsWith('http')) {
+        try {
+          const coverRes = await fetch(coverUrl, {
+            headers: { 'User-Agent': DEFAULT_UA, 'Referer': 'https://www.tiktok.com/' },
+            signal: AbortSignal.timeout(10000)
+          });
+          if (coverRes.ok) {
+            const coverBuffer = Buffer.from(await coverRes.arrayBuffer());
+            const contentType = coverRes.headers.get('content-type') || 'image/jpeg';
+            thumbnailDataUri = `data:${contentType};base64,${coverBuffer.toString('base64')}`;
+            const thumbPath = targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg');
+            await fsPromises.writeFile(thumbPath, coverBuffer).catch(() => {});
+          }
+        } catch {}
+      }
+
+      const authorHandle = typeof author === 'string' ? author : (author?.uniqueId || author?.nickname || 'tiktok_user');
+      const authorNickname = typeof author === 'object' ? author?.nickname : authorHandle;
+      const authorAvatar = typeof author === 'object' ? author?.avatar : '';
+
+      const metadata = {
+        tiktokVideoId: id || cleanId,
+        originalUrl: originalUrl || '',
+        title: title || 'TikTok Slideshow',
+        author: authorHandle,
+        authorNickname,
+        authorAvatar,
+        thumbnail: thumbnailDataUri || coverUrl || '',
+        duration: duration || 0,
+        isSlideshow: true,
+        slideCount: images.length,
+        savedAt: new Date().toISOString()
+      };
+
+      const metaFilePath = targetFilePath.replace(/\.[^.]+$/, '.meta.json');
+      try {
+        await fsPromises.writeFile(metaFilePath, JSON.stringify(metadata, null, 2), 'utf8');
+      } catch (metaErr: any) {
+        logger.warn({ err: metaErr?.message }, '[TikTok] Failed to write sidecar metadata file for slideshow');
+      }
+
+      const hashSha256 = hash.digest('hex');
+      const fileId = `fil_tt_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
+
+      try {
+        await prisma.fileRecord.create({
+          data: {
+            id: fileId,
+            purpose: 'PROCESSED',
+            originalName: fileName,
+            storagePath: targetFilePath,
+            mimeType: 'application/zip',
+            sizeBytes: BigInt(byteCount),
+            hashSha256,
+            isPurged: false,
+            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+          }
+        });
+      } catch (dbErr: any) {
+        logger.warn({ err: dbErr?.message }, '[TikTok] Could not create prisma fileRecord; disk file is preserved');
+      }
+
+      DriveService.invalidateStatsCache();
+
+      return {
+        success: true,
+        fileName,
+        relPath: `tiktok/${fileName}`,
+        sizeBytes: byteCount,
+        fileId,
+        metadata
+      };
+    }
+
+    // 3. Handle Standard Video Stream
+    if (!mediaUrl) {
+      throw new BadRequestError('Không tìm thấy đường dẫn video để lưu');
+    }
+
     const sanitizedTitle = (title || 'video')
       .replace(/[\\/:*?"<>|#@$%^&*]/g, '_')
       .replace(/\s+/g, '_')

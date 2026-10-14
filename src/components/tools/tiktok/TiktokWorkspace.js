@@ -172,29 +172,121 @@ export function renderTiktokWorkspace() {
 
 function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriveParam, isForceResave = false) {
   const existingInDrive = existingInDriveParam || video.existingInDrive;
+  const isSlideshow = Boolean(video.isSlideshow && video.images && video.images.length > 0);
+  const images = isSlideshow ? video.images : [];
+
   const streamUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${video.id}.mp4`);
   const streamHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${video.id}_HD.mp4`) : '';
   const downloadUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${video.id}.mp4`, true);
   const downloadHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${video.id}_HD.mp4`, true) : '';
   const audioDownloadUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${video.id}_audio.mp3`, true) : '';
+  const audioStreamUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${video.id}_audio.mp3`) : '';
+
+  const firstSlideStream = images.length > 0 ? tiktokApi.getStreamUrl(images[0], `slide_01.jpg`) : '';
+  const firstSlideDownload = images.length > 0 ? tiktokApi.getStreamUrl(images[0], `slide_01.jpg`, true) : '';
 
   return `
     <div id="tiktokResultCard" class="p-4 sm:p-6 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl space-y-6 animate-fadeIn">
       <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        <!-- Column 1: Video Player (5 cols) -->
-        <div class="md:col-span-5 flex flex-col items-center">
-          <div class="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-lg border border-zinc-200/60 dark:border-zinc-800/80">
-            <video
-              id="tiktokPlayer"
-              src="${streamUrl}"
-              poster="${video.cover}"
-              controls
-              playsinline
-              loop
-              preload="metadata"
-              class="w-full h-full object-contain"
-            ></video>
-          </div>
+        <!-- Column 1: Media Preview (5 cols) -->
+        <div class="md:col-span-5 flex flex-col items-center w-full">
+          ${isSlideshow ? `
+            <div class="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-lg border border-zinc-200/60 dark:border-zinc-800/80 group select-none flex items-center justify-center">
+              <img
+                id="tiktokSlideImage"
+                src="${firstSlideStream}"
+                alt="TikTok Slide"
+                data-current-index="0"
+                class="w-full h-full object-contain transition-opacity duration-200"
+              />
+
+              <!-- Top badges -->
+              <span id="tiktokSlideCounterBadge" class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-mono font-semibold border border-white/10 z-10">
+                1 / ${images.length}
+              </span>
+
+              <span class="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-rose-600/90 backdrop-blur-md text-white text-[10px] font-semibold flex items-center gap-1 z-10 shadow-xs">
+                <i data-lucide="images" class="w-3 h-3"></i> Album
+              </span>
+
+              <!-- Navigation arrows -->
+              ${images.length > 1 ? `
+                <button
+                  id="btnPrevTiktokSlide"
+                  type="button"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition opacity-80 hover:opacity-100 cursor-pointer z-10"
+                  title="Ảnh trước"
+                >
+                  <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <button
+                  id="btnNextTiktokSlide"
+                  type="button"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition opacity-80 hover:opacity-100 cursor-pointer z-10"
+                  title="Ảnh tiếp"
+                >
+                  <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+              ` : ''}
+
+              <!-- Thumbnails strip overlay at bottom -->
+              ${images.length > 1 ? `
+                <div id="tiktokThumbStrip" class="absolute bottom-2 inset-x-2 flex items-center justify-start gap-1.5 overflow-x-auto py-1 px-1 bg-black/70 backdrop-blur-md rounded-xl z-10 scrollbar-none">
+                  ${images.map((img, idx) => `
+                    <button
+                      type="button"
+                      data-slide-index="${idx}"
+                      class="tiktok-thumb-btn w-6 h-9 rounded-md overflow-hidden border ${idx === 0 ? 'border-rose-500 ring-1 ring-rose-500 scale-105' : 'border-white/30 opacity-60 hover:opacity-100'} transition shrink-0 cursor-pointer"
+                    >
+                      <img src="${tiktokApi.getStreamUrl(img, `slide_${idx + 1}.jpg`)}" class="w-full h-full object-cover" loading="lazy" />
+                    </button>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Background Music Player for Slideshow -->
+            ${video.audioUrl ? `
+              <div class="w-full max-w-[280px] sm:max-w-[320px] mt-3 p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-between gap-2.5">
+                <div class="flex items-center gap-2 min-w-0">
+                  <button
+                    id="btnToggleTiktokAudio"
+                    type="button"
+                    class="w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-xs active:scale-95"
+                    title="Phát / Dừng nhạc nền"
+                  >
+                    <i id="tiktokAudioIcon" data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>
+                  </button>
+                  <div class="min-w-0">
+                    <p class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate">Nhạc nền TikTok</p>
+                    <p id="tiktokAudioTimeText" class="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">0:00 / ${formatDuration(video.duration)}</p>
+                  </div>
+                </div>
+                <audio id="tiktokAudioPlayer" src="${audioStreamUrl}" preload="none" class="hidden"></audio>
+                <a
+                  href="${audioDownloadUrl}"
+                  download
+                  class="p-1.5 rounded-lg text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition cursor-pointer shrink-0"
+                  title="Tải audio (mp3)"
+                >
+                  <i data-lucide="download" class="w-4 h-4"></i>
+                </a>
+              </div>
+            ` : ''}
+          ` : `
+            <div class="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-lg border border-zinc-200/60 dark:border-zinc-800/80">
+              <video
+                id="tiktokPlayer"
+                src="${streamUrl}"
+                poster="${video.cover}"
+                controls
+                playsinline
+                loop
+                preload="metadata"
+                class="w-full h-full object-contain"
+              ></video>
+            </div>
+          `}
         </div>
 
         <!-- Column 2: Metadata & Download Actions (7 cols) -->
@@ -213,7 +305,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
               <p class="text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate">@${escapeHtml(video.author?.uniqueId || 'tiktok_user')}</p>
             </div>
             <div class="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 shrink-0">
-              ${formatDuration(video.duration)}
+              ${isSlideshow ? `${images.length} Ảnh` : formatDuration(video.duration)}
             </div>
           </div>
 
@@ -244,29 +336,52 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
 
           <!-- Action Buttons Group -->
           <div class="space-y-2 pt-2">
-            <!-- 1. Download Standard Video -->
-            <a
-              id="btnDownloadStandard"
-              href="${downloadUrl}"
-              download
-              class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
-            >
-              <i data-lucide="download" class="w-4 h-4"></i>
-              <span>Tải Video (Gốc)</span>
-            </a>
-
-            <!-- 2. Download HD Video (if available) -->
-            ${video.videoHdUrl ? `
-              <a
-                id="btnDownloadHd"
-                href="${downloadHdUrl}"
-                download
-                class="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+            ${isSlideshow ? `
+              <!-- 1. Download Full Album ZIP -->
+              <button
+                id="btnDownloadSlideshowZip"
+                type="button"
+                class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs disabled:opacity-75 disabled:cursor-wait"
               >
-                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
-                <span>Tải Video (Chất Lượng Cao HD)</span>
+                <i data-lucide="archive" class="w-4 h-4"></i>
+                <span class="zip-progress-text">Tải Album Ảnh + Nhạc (.ZIP)</span>
+              </button>
+
+              <!-- 2. Download Current Slide Image -->
+              <a
+                id="btnDownloadSingleSlide"
+                href="${firstSlideDownload}"
+                download="tiktok_slide_01.jpg"
+                class="w-full py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <i data-lucide="image" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span class="slide-dl-text">Tải Ảnh Này (slide 1)</span>
               </a>
-            ` : ''}
+            ` : `
+              <!-- 1. Download Standard Video -->
+              <a
+                id="btnDownloadStandard"
+                href="${downloadUrl}"
+                download
+                class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+              >
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Tải Video (Gốc)</span>
+              </a>
+
+              <!-- 2. Download HD Video (if available) -->
+              ${video.videoHdUrl ? `
+                <a
+                  id="btnDownloadHd"
+                  href="${downloadHdUrl}"
+                  download
+                  class="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                  <span>Tải Video (Chất Lượng Cao HD)</span>
+                </a>
+              ` : ''}
+            `}
 
             <!-- 3. Download Audio MP3 -->
             ${video.audioUrl ? `
@@ -286,7 +401,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
               <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-400 flex items-center justify-between gap-3 animate-fadeIn">
                 <div class="flex items-center gap-2 min-w-0">
                   <i data-lucide="check-circle" class="w-4 h-4 text-amber-500 shrink-0"></i>
-                  <span class="truncate">Video này đã có trong Studio Drive (${escapeHtml(existingInDrive.fileName || '')})</span>
+                  <span class="truncate">${isSlideshow ? 'Album ảnh này' : 'Video này'} đã có trong Studio Drive (${escapeHtml(existingInDrive.fileName || '')})</span>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
                   <a href="#storage?path=/tiktok" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-semibold transition">
@@ -318,7 +433,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
               >
                 ${isSavingDrive ? `
                   <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Đang ghi đè vào Drive...</span>
+                  <span>${isSlideshow ? 'Đang ghi đè album vào Drive...' : 'Đang ghi đè vào Drive...'}</span>
                 ` : `
                   <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                   <span>Ghi Đè & Lưu Lại Vào Studio Drive</span>
@@ -333,7 +448,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
               >
                 ${isSavingDrive ? `
                   <div class="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin"></div>
-                  <span>Đang lưu vào Drive...</span>
+                  <span>${isSlideshow ? 'Đang đóng gói và lưu vào Drive...' : 'Đang lưu vào Drive...'}</span>
                 ` : `
                   <i data-lucide="hard-drive" class="w-4 h-4"></i>
                   <span>Lưu Trực Tiếp Vào Studio Drive</span>
@@ -350,13 +465,13 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                 class="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
               >
                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                <span>Sao chép link tải</span>
+                <span>Sao chép link stream</span>
               </button>
 
               <button
                 id="btnCopyCaption"
                 type="button"
-                data-caption="${escapeHtml(video.title)}"
+                data-caption="${escapeHtml(video.title || '')}"
                 class="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
               >
                 <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
@@ -407,6 +522,7 @@ function renderRecentHistoryCard(history) {
         ${history.map((it) => {
           const hasDrive = Boolean(it.driveRelPath);
           const driveDownloadUrl = hasDrive ? StorageService.getDownloadUrl(it.driveRelPath, false) : '';
+          const isSlide = Boolean(it.isSlideshow);
 
           return `
             <div class="py-2.5 flex items-center justify-between gap-3 group">
@@ -415,19 +531,24 @@ function renderRecentHistoryCard(history) {
                   <img src="${it.cover}" alt="cover" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0" onerror="this.style.display='none'"/>
                 ` : `
                   <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="video" class="w-4 h-4"></i>
+                    <i data-lucide="${isSlide ? 'images' : 'video'}" class="w-4 h-4"></i>
                   </div>
                 `}
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1.5 min-w-0">
-                    <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">${escapeHtml(it.title || 'TikTok Video')}</p>
+                    <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">${escapeHtml(it.title || (isSlide ? 'TikTok Album' : 'TikTok Video'))}</p>
+                    ${isSlide ? `
+                      <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
+                        <i data-lucide="images" class="w-2.5 h-2.5"></i> Album
+                      </span>
+                    ` : ''}
                     ${hasDrive ? `
                       <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
                         <i data-lucide="check" class="w-2.5 h-2.5"></i> Đã lưu Drive
                       </span>
                     ` : ''}
                   </div>
-                  <p class="text-[11px] text-zinc-400 truncate mt-0.5">@${escapeHtml(it.author || 'tiktok')} • ${formatDuration(it.duration)}</p>
+                  <p class="text-[11px] text-zinc-400 truncate mt-0.5">@${escapeHtml(it.author || 'tiktok')} • ${isSlide ? `${it.slideCount || 'Album'} Ảnh` : formatDuration(it.duration)}</p>
                 </div>
               </div>
 
@@ -436,11 +557,11 @@ function renderRecentHistoryCard(history) {
                   <button
                     type="button"
                     data-preview-drive-path="${escapeHtml(it.driveRelPath)}"
-                    data-item-title="${escapeHtml(it.title || 'video.mp4')}"
+                    data-item-title="${escapeHtml(it.title || (isSlide ? 'album.zip' : 'video.mp4'))}"
                     class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer"
-                    title="Xem trước video"
+                    title="${isSlide ? 'Xem tệp trong Drive' : 'Xem trước video'}"
                   >
-                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="${isSlide ? 'archive' : 'eye'}" class="w-3.5 h-3.5"></i>
                   </button>
                   <a
                     href="${driveDownloadUrl}"
@@ -476,6 +597,110 @@ function renderRecentHistoryCard(history) {
   `.trim();
 }
 
+/**
+ * Lazily ensure JSZip library is available in the window context
+ */
+async function ensureJSZip() {
+  if (window.JSZip) return window.JSZip;
+
+  await new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[src*="jszip"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () => reject(new Error('Không thể nạp thư viện JSZip')));
+      // In case it already finished loading
+      if (window.JSZip) return resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'src/vendor/jszip.min.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Không thể nạp thư viện JSZip'));
+    document.head.appendChild(script);
+  });
+
+  if (window.JSZip) return window.JSZip;
+  throw new Error('JSZip không khởi tạo được trên trình duyệt');
+}
+
+/**
+ * Bundle all slideshow images + background MP3 audio into a single client-side .ZIP
+ */
+async function downloadSlideshowZip(video) {
+  const btn = document.getElementById('btnDownloadSlideshowZip');
+  const textSpan = btn?.querySelector('.zip-progress-text');
+  const originalHtml = btn?.innerHTML || '';
+
+  try {
+    if (btn) btn.disabled = true;
+    if (textSpan) textSpan.textContent = 'Đang khởi tạo thư viện nén...';
+
+    const JSZipLib = await ensureJSZip();
+    const zip = new JSZipLib();
+    const images = Array.isArray(video.images) ? video.images : [];
+
+    if (images.length === 0) {
+      throw new Error('Không tìm thấy danh sách ảnh trong album');
+    }
+
+    // 1. Fetch each slide image via proxy to avoid CORS blocks
+    for (let i = 0; i < images.length; i++) {
+      const pad = String(i + 1).padStart(2, '0');
+      if (textSpan) textSpan.textContent = `Đang tải ảnh ${i + 1}/${images.length}...`;
+      const proxiedUrl = tiktokApi.getStreamUrl(images[i], `slide_${pad}.jpg`);
+      const res = await fetch(proxiedUrl);
+      if (!res.ok) throw new Error(`Lỗi tải ảnh slide ${i + 1} (${res.status})`);
+      const blob = await res.blob();
+      zip.file(`slide_${pad}.jpg`, blob);
+    }
+
+    // 2. Fetch background audio if present
+    if (video.audioUrl) {
+      if (textSpan) textSpan.textContent = 'Đang tải nhạc nền...';
+      try {
+        const audioProxiedUrl = tiktokApi.getStreamUrl(video.audioUrl, 'audio.mp3');
+        const audioRes = await fetch(audioProxiedUrl);
+        if (audioRes.ok) {
+          const audioBlob = await audioRes.blob();
+          zip.file('audio.mp3', audioBlob);
+        }
+      } catch (audioErr) {
+        console.warn('[TikTok] Background audio fetch failed:', audioErr);
+      }
+    }
+
+    // 3. Compress into .ZIP file
+    if (textSpan) textSpan.textContent = 'Đang đóng gói file .ZIP...';
+    const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+      if (textSpan && typeof metadata.percent === 'number') {
+        textSpan.textContent = `Đang nén ${Math.round(metadata.percent)}%...`;
+      }
+    });
+
+    // 4. Trigger browser download
+    const cleanTitle = (video.title || 'tiktok_album').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40).trim();
+    const zipFileName = `[TikTok]_${cleanTitle || 'album'}_${video.id || Date.now()}.zip`;
+    const blobUrl = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = zipFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+
+    showToast('Tải album ảnh + nhạc thành công!', 'success');
+  } catch (err) {
+    console.error('[TikTok] ZIP download error:', err);
+    showToast(err.message || 'Lỗi khi đóng gói album ZIP', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  }
+}
+
 export function attachTiktokWorkspaceListeners() {
   if (window.lucide?.createIcons) window.lucide.createIcons();
 
@@ -496,6 +721,8 @@ export function attachTiktokWorkspaceListeners() {
   }
 
   function attachResultCardListeners() {
+    const state = tiktokManager.getState();
+    const video = state.videoData;
     const btnSaveDrive = document.getElementById('btnSaveTiktokDrive');
     const btnForceResave = document.getElementById('btnForceResaveTiktok');
     const btnCopyDirect = document.getElementById('btnCopyTiktokDirectLink');
@@ -540,6 +767,115 @@ export function attachTiktokWorkspaceListeners() {
           }
         }
       };
+    }
+
+    // Slideshow Gallery Controls (if photo mode)
+    if (video?.isSlideshow && Array.isArray(video.images) && video.images.length > 0) {
+      let currentSlideIndex = 0;
+      const totalSlides = video.images.length;
+
+      function goToSlide(idx) {
+        if (idx < 0) idx = totalSlides - 1;
+        if (idx >= totalSlides) idx = 0;
+        currentSlideIndex = idx;
+
+        const slideImg = document.getElementById('tiktokSlideImage');
+        const counterBadge = document.getElementById('tiktokSlideCounterBadge');
+        const btnSingleDl = document.getElementById('btnDownloadSingleSlide');
+
+        const pad = String(idx + 1).padStart(2, '0');
+        const targetImgUrl = video.images[idx];
+        const proxiedStreamUrl = tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`);
+
+        if (slideImg) {
+          slideImg.src = proxiedStreamUrl;
+        }
+        if (counterBadge) {
+          counterBadge.textContent = `${idx + 1} / ${totalSlides}`;
+        }
+        if (btnSingleDl) {
+          btnSingleDl.href = proxiedStreamUrl;
+          btnSingleDl.download = `tiktok_slide_${pad}.jpg`;
+          const textEl = btnSingleDl.querySelector('.slide-dl-text');
+          if (textEl) {
+            textEl.textContent = `Tải Ảnh Này (slide ${idx + 1})`;
+          }
+        }
+
+        // Highlight active thumbnail in strip
+        const thumbBtns = document.querySelectorAll('.tiktok-thumb-btn');
+        thumbBtns.forEach((tb) => {
+          const tbIdx = parseInt(tb.getAttribute('data-slide-index') || '0', 10);
+          if (tbIdx === currentSlideIndex) {
+            tb.className = 'tiktok-thumb-btn w-6 h-9 rounded-md overflow-hidden border border-rose-500 ring-1 ring-rose-500 scale-105 transition shrink-0 cursor-pointer';
+            tb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          } else {
+            tb.className = 'tiktok-thumb-btn w-6 h-9 rounded-md overflow-hidden border border-white/30 opacity-60 hover:opacity-100 transition shrink-0 cursor-pointer';
+          }
+        });
+      }
+
+      const btnPrevSlide = document.getElementById('btnPrevTiktokSlide');
+      const btnNextSlide = document.getElementById('btnNextTiktokSlide');
+      if (btnPrevSlide) {
+        btnPrevSlide.onclick = () => goToSlide(currentSlideIndex - 1);
+      }
+      if (btnNextSlide) {
+        btnNextSlide.onclick = () => goToSlide(currentSlideIndex + 1);
+      }
+
+      document.querySelectorAll('.tiktok-thumb-btn').forEach((btn) => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.getAttribute('data-slide-index') || '0', 10);
+          goToSlide(idx);
+        };
+      });
+
+      // Background audio toggle & time update
+      const audioPlayer = document.getElementById('tiktokAudioPlayer');
+      const btnToggleAudio = document.getElementById('btnToggleTiktokAudio');
+      const audioIcon = document.getElementById('tiktokAudioIcon');
+      const audioTimeText = document.getElementById('tiktokAudioTimeText');
+
+      if (audioPlayer && btnToggleAudio) {
+        btnToggleAudio.onclick = () => {
+          if (audioPlayer.paused) {
+            audioPlayer.play().catch((err) => {
+              console.warn('[TikTok] Audio play error:', err);
+            });
+          } else {
+            audioPlayer.pause();
+          }
+        };
+
+        audioPlayer.onplay = () => {
+          if (audioIcon) {
+            audioIcon.setAttribute('data-lucide', 'pause');
+            if (window.lucide?.createIcons) window.lucide.createIcons();
+          }
+        };
+
+        audioPlayer.onpause = () => {
+          if (audioIcon) {
+            audioIcon.setAttribute('data-lucide', 'play');
+            if (window.lucide?.createIcons) window.lucide.createIcons();
+          }
+        };
+
+        audioPlayer.ontimeupdate = () => {
+          if (audioTimeText && audioPlayer.duration) {
+            audioTimeText.textContent = `${formatDuration(audioPlayer.currentTime)} / ${formatDuration(audioPlayer.duration)}`;
+          }
+        };
+      }
+
+      // Download Slideshow ZIP button
+      const btnDlZip = document.getElementById('btnDownloadSlideshowZip');
+      if (btnDlZip) {
+        btnDlZip.onclick = async () => {
+          await downloadSlideshowZip(video);
+        };
+      }
     }
 
     if (window.lucide?.createIcons) window.lucide.createIcons();

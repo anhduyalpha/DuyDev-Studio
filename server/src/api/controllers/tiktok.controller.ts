@@ -46,8 +46,21 @@ export async function streamTikTokHandler(request: FastifyRequest, reply: Fastif
 }
 
 export async function saveToDriveTikTokHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, title, id, originalUrl, cover, author, duration, overwrite } = tiktokSaveDriveBodySchema.parse(request.body || {});
-  const result = await TikTokService.saveToDrive(url, title, id, originalUrl, cover, author, duration, overwrite);
+  const { url, title, id, originalUrl, cover, author, duration, overwrite, isSlideshow, images, audioUrl } =
+    tiktokSaveDriveBodySchema.parse(request.body || {});
+  const result = await TikTokService.saveToDrive(
+    url,
+    title,
+    id,
+    originalUrl,
+    cover,
+    author,
+    duration,
+    overwrite,
+    isSlideshow,
+    images,
+    audioUrl
+  );
   return reply.send({
     success: true,
     data: result
