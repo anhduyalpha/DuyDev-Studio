@@ -158,6 +158,18 @@ const DEFAULT_TOOLS = [
     tags: ['tiktok', 'tik tok', 'tải video', 'album ảnh', 'slideshow', 'photo mode', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin']
   },
   {
+    id: 'scribd-archiver',
+    title: 'Scribd Downloader',
+    description: 'Trích xuất và kết xuất tài liệu Scribd sang định dạng PDF vector.',
+    category: 'system',
+    icon: 'file-text',
+    featured: true,
+    specs: ['PDF Vector', 'Lưu Drive'],
+    color: '#1A7BBA',
+    route: '#tool/scribd',
+    tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']
+  },
+  {
     id: 'storage',
     title: 'Bộ Nhớ Lưu Trữ',
     description: 'Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.',
@@ -217,6 +229,9 @@ class ToolRegistry {
     }
     if (id === 'image-converter' || id === 'video-audio' || id === 'converter') {
       return this.tools.find(t => t.id === 'universal-converter') || this.tools[0];
+    }
+    if (id === 'scribd' || id === 'scribd-archiver') {
+      return this.tools.find(t => t.id === 'scribd-archiver') || this.tools[0];
     }
     return this.tools.find(t => t.id === id) || this.tools[0];
   }

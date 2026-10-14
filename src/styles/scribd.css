@@ -1,0 +1,44 @@
+/* ==========================================================================
+   Scribd Document Archiver - Scoped Styles for DD Studio
+   High Density Minimalist Typography, Obsidian Palette & Border Beam
+   ========================================================================== */
+
+#scribdWorkspaceRoot {
+  font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-primary, #09090b);
+}
+
+html.dark #scribdWorkspaceRoot,
+.dark #scribdWorkspaceRoot {
+  color: #f4f4f5;
+}
+
+.scribd-hero-card {
+  position: relative;
+  border-radius: 16px;
+  background: var(--surface-base, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  padding: 22px 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+html.dark .scribd-hero-card,
+.dark .scribd-hero-card {
+  background: #111114 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.scribd-terminal-box {
+  background: #0d0e12;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.scribd-file-item:hover {
+  border-color: rgba(79, 70, 229, 0.4);
+}

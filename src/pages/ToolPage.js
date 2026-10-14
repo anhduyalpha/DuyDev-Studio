@@ -22,6 +22,7 @@ import { renderArchivePage, attachArchivePageListeners } from './ArchivePage.js'
 import { renderArchiveCompressWorkspace, attachArchiveCompressListeners } from '../components/tools/archive/ArchiveCompressWorkspace.js';
 import { renderConverterWorkspace, attachConverterListeners } from '../components/tools/converter/ConverterWorkspace.js';
 import { renderStudocuWorkspace, attachStudocuListeners } from '../components/tools/studocu/StudocuWorkspace.js';
+import { renderScribdWorkspace, attachScribdListeners } from '../components/tools/scribd/ScribdWorkspace.js';
 import { renderStoragePage, attachStoragePageListeners } from './StoragePage.js';
 import { renderQuizWorkspace, attachQuizListeners } from '../components/tools/quiz/QuizWorkspace.js';
 import { renderViewSplitWorkspace, attachViewSplitWorkspaceListeners } from '../components/tools/viewsplit/ViewSplitWorkspace.js?v=22.11';
@@ -62,6 +63,10 @@ export function renderToolPage(toolId = 'pdf-convert', subTab = null) {
 
     case 'studocu-dl':
       return renderStudocuWorkspace();
+
+    case 'scribd':
+    case 'scribd-archiver':
+      return renderScribdWorkspace();
 
     case 'storage':
       return renderStoragePage();
@@ -126,6 +131,10 @@ export function attachToolPageListeners(onReRender) {
 
     case 'studocu-dl':
       return attachStudocuListeners();
+
+    case 'scribd':
+    case 'scribd-archiver':
+      return attachScribdListeners();
 
     case 'storage':
       return attachStoragePageListeners(onReRender);

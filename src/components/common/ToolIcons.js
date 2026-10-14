@@ -478,7 +478,36 @@ export const TOOL_ICONS = {
       <line x1="9" y1="10.6" x2="9" y2="13.4" class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]" stroke-width="1.6" stroke-linecap="round" />
       <line x1="15" y1="10.6" x2="15" y2="13.4" class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]" stroke-width="1.6" stroke-linecap="round" />
     </svg>
-  `
+  `,
+
+  // 13. Scribd Document Archiver (Vector book binder, bookmark ribbon & optical scan line)
+  'scribd-archiver': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-scribd-base" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1A7BBA" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#0284C7" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-scribd-sheet" x1="5" y1="4" x2="19" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96" />
+          <stop offset="100%" stop-color="#F0F9FF" stop-opacity="0.85" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Document Spine Glow -->
+      <rect x="3.5" y="3" width="17" height="18" rx="3" fill="url(#ds-scribd-base)" class="stroke-sky-500/40 dark:stroke-sky-400/30 transition-colors duration-200" stroke-width="1.2" />
+      <!-- Layer 2: Main Document Frame -->
+      <path d="M5.5 4.5h9l4 4v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"
+            fill="url(#ds-scribd-sheet)"
+            class="dark:fill-zinc-900/90 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" stroke-linejoin="round" />
+      <!-- Layer 3: Bookmark Ribbon -->
+      <path d="M9 4.5v6l2-1.5 2 1.5v-6" fill="#1A7BBA" class="dark:fill-sky-400" />
+      <!-- Layer 4: Text Content Lines -->
+      <line x1="8" y1="14" x2="16" y2="14" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      <line x1="8" y1="17" x2="13" y2="17" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+    </svg>
+  `,
+  'scribd': (className = 'w-6 h-6') => TOOL_ICONS['scribd-archiver'](className)
 };
 
 /**

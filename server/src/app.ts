@@ -25,11 +25,13 @@ import { dynamicQrRoute } from './api/routes/dynamic-qr.route.js';
 import { converterRoute } from './api/routes/converter.route.js';
 import { historyRoute } from './api/routes/history.route.js';
 import { studocuRoute } from './api/routes/studocu.route.js';
+import { scribdRoute } from './api/routes/scribd.route.js';
 import { authRoute } from './api/routes/auth.route.js';
 import { storageRoute } from './api/routes/storage.route.js';
 import { viewerRoute } from './api/routes/viewer.route.js';
 import { JanitorService } from './services/janitor.service.js';
 import { StudocuDaemonService } from './services/studocu-daemon.service.js';
+import { ScribdDaemonService } from './services/scribd-daemon.service.js';
 import { getPdfWorker, closePdfWorker } from './workers/pdf.worker.js';
 import { getConverterWorker, closeConverterWorker } from './workers/converter.worker.js';
 import { quizRoute } from './api/routes/quiz.route.js';
@@ -188,6 +190,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(converterRoute);
   await app.register(historyRoute);
   await app.register(studocuRoute);
+  await app.register(scribdRoute);
   await app.register(authRoute);
   await app.register(storageRoute);
   await app.register(viewerRoute);
@@ -359,6 +362,9 @@ async function startServer(): Promise<void> {
     StudocuDaemonService.ensureDaemonRunning().catch((err) => {
       logger.warn({ err }, 'Background Studocu daemon startup warning');
     });
+    ScribdDaemonService.ensureDaemonRunning().catch((err) => {
+      logger.warn({ err }, 'Background Scribd daemon startup warning');
+    });
 
     // E. Build and listen
     const server = await buildApp();
@@ -403,7 +409,8 @@ async function startServer(): Promise<void> {
           closePdfWorker(),
           closeConverterWorker(),
           closeQuizWorker(),
-          StudocuDaemonService.stopDaemon()
+          StudocuDaemonService.stopDaemon(),
+          ScribdDaemonService.stopDaemon()
         ]);
         await server.close();
         await prisma.$disconnect();
