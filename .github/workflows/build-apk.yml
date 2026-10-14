@@ -70,13 +70,13 @@ jobs:
             ## DuyDev Studio Native Android Wrapper (${{ github.ref_name }})
 
             ### Điểm nổi bật phiên bản ${{ github.ref_name }}:
-            - **Tối ưu hóa thời lượng Pin đột phá**: Triệt tiêu 5 nguồn hao pin phần cứng (Radio Tail State modem wakelock, GPU shader thrashing, concurrent polling).
-            - **Cắt giảm tải GPU & Màn hình**: Tắt hiệu ứng xoay vô tận khi hoàn tất bài tập, cách ly GPU compositing layer cho background, bảo vệ vòng lặp canvas tự ngủ khi tab ẩn.
-            - **Tối ưu hóa WebView Lifecycle**: Bổ sung `onStop()`, phát sự kiện `ds:native-app-paused` ngắt kết nối nền, kích hoạt đầy đủ HTTP Disk Cache 304 Not Modified.
-            - **Tên miền Đám mây Mới**: Tích hợp trực tiếp highway domain `https://studio.duydev.cloud`.
-            - **Khởi động siêu tốc (<80ms)**: Shell Native Kotlin (~3MB) loại bỏ hoàn toàn Splash Screen 2–3s của Chromium WebAPK.
-            - **Chia sẻ tức thì (0ms Splash)**: Giao diện `ShareReceiverActivity` trong suốt hiển thị Bottom Sheet trực tiếp trên ứng dụng nguồn.
-            - **Cầu nối Native Bridge**: Truyền tải dữ liệu và tệp tin qua RAM với `@JavascriptInterface`.
+            - **Tích hợp Tải TikTok & Audio MP3 Siêu Tốc**: Tải video TikTok gốc không watermark và trích xuất file âm thanh MP3 nhanh chóng.
+            - **Hỗ trợ Chia Sẻ Link TikTok Trực Tiếp (Android Share Sheet)**: Chia sẻ trực tiếp từ ứng dụng TikTok hoặc trình duyệt sang DuyDev Studio để tự động chuyển đến trang tải.
+            - **Thư Mục Drive TikTok Chuyên Biệt**: Tự động đồng bộ và quản lý toàn bộ tệp TikTok đã tải ngay trong tab `/tiktok` của DuyDev Studio Drive.
+            - **Triệt tiêu đơ giật khi dán liên kết**: Tối ưu cơ chế clipboard non-blocking, ngăn chặn tình trạng treo trình duyệt Chrome / WebView trên thiết bị Android.
+            - **Chuẩn hóa Giao diện Tối giản & Typography**: Cải tiến typography theo phong cách Apple, đồng bộ chế độ sáng / tối hoàn hảo và loại bỏ toàn bộ từ ngữ AI rườm rà.
+            - **Tối ưu hóa Pin & Bộ Nhớ**: Triệt tiêu hao pin radio wakelock, cách ly GPU compositing layer, bảo vệ vòng lặp render tự ngủ khi ẩn ứng dụng.
+            - **Khởi động siêu tốc (<80ms)**: Shell Native Kotlin siêu nhẹ (~3MB) loại bỏ hoàn toàn Splash Screen chờ đợi của Chromium WebAPK.
 
             ### Cài đặt:
             Tải tệp **`duydev-studio.apk`** đính kèm bên dưới và cài đặt trên thiết bị Android của bạn.
