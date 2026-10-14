@@ -36,7 +36,7 @@ import { showToast } from '../../../utilities/toast.js';
 let activeCleanups = [];
 let savedScrollY = 0;
 
-export function closeFileViewer() {
+export function cleanupCurrentView() {
   // 1. Quét và giải phóng cưỡng chế toàn bộ thẻ audio và video trong DOM
   const mediaElements = document.querySelectorAll('audio, video');
   mediaElements.forEach((el) => {
@@ -59,6 +59,10 @@ export function closeFileViewer() {
     const fn = activeCleanups.pop();
     try { fn(); } catch {}
   }
+}
+
+export function closeFileViewer() {
+  cleanupCurrentView();
 
   // 4. Xóa modal khỏi DOM
   const modal = document.getElementById('fileViewerCoreModal');
@@ -80,6 +84,64 @@ if (typeof window !== 'undefined') {
 }
 
 export function openFileViewer(state) {
+  const existingModal = document.getElementById('fileViewerCoreModal');
+  if (existingModal && state.direction) {
+    cleanupCurrentView();
+
+    const ext = state.name && state.name.includes('.')
+      ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
+      : (state.mimeType ? state.mimeType.split('/')[1]?.toUpperCase() : (state.category?.toUpperCase() || 'FILE'));
+    const registerCleanup = (fn) => activeCleanups.push(fn);
+
+    if (state.isBlob && state.viewUrl) {
+      registerCleanup(() => URL.revokeObjectURL(state.viewUrl));
+    }
+
+    // Update Header elements
+    const extBadge = document.getElementById('viewerFileExtBadge');
+    if (extBadge) extBadge.textContent = ext;
+    const nameEl = document.getElementById('viewerFileName');
+    if (nameEl) nameEl.textContent = state.name;
+    const sizeEl = document.getElementById('viewerFileSize');
+    if (sizeEl) sizeEl.textContent = state.size > 0 ? `(${formatBytes(state.size)})` : '';
+    const downloadBtn = document.getElementById('btnDownloadViewerFile');
+    if (downloadBtn) {
+      downloadBtn.href = state.downloadUrl;
+      downloadBtn.download = state.name;
+    }
+
+    // Render body with direction animation
+    let bodyHtml = '';
+    switch (state.category) {
+      case FILE_CATEGORIES.VIDEO: bodyHtml = renderVideoViewer(state); break;
+      case FILE_CATEGORIES.IMAGE: bodyHtml = renderImageViewer(state); break;
+      case FILE_CATEGORIES.AUDIO: bodyHtml = renderAudioViewer(state); break;
+      default: bodyHtml = renderFallbackViewer(state); break;
+    }
+
+    const viewerBody = document.getElementById('fileViewerBody');
+    if (viewerBody) {
+      viewerBody.innerHTML = bodyHtml;
+      const animClass = state.direction === 'prev' ? 'animate-slideDown' : 'animate-slideUp';
+      viewerBody.classList.remove('animate-slideUp', 'animate-slideDown');
+      void viewerBody.offsetWidth; // trigger reflow
+      viewerBody.classList.add(animClass);
+    }
+
+    if (window.lucide) window.lucide.createIcons({ root: existingModal });
+
+    // Re-attach specific renderer listeners
+    if (state.category === FILE_CATEGORIES.VIDEO) {
+      attachVideoListeners(state, registerCleanup);
+    } else if (state.category === FILE_CATEGORIES.IMAGE) {
+      attachImageListeners(state, registerCleanup);
+    } else if (state.category === FILE_CATEGORIES.AUDIO) {
+      attachAudioListeners(state, registerCleanup);
+    }
+
+    return;
+  }
+
   const currentScroll = window.scrollY;
   closeFileViewer();
   savedScrollY = currentScroll;
@@ -135,11 +197,11 @@ export function openFileViewer(state) {
         <!-- Header Bar -->
         <div class="px-4 sm:px-5 py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-3 bg-zinc-50/80 dark:bg-[#16161a] shrink-0">
           <div class="flex items-center gap-2.5 min-w-0">
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <span id="viewerFileExtBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               ${ext}
             </span>
-            <span class="font-medium text-sm text-zinc-900 dark:text-white truncate font-mono">${state.name}</span>
-            ${state.size > 0 ? `<span class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden sm:inline">(${formatBytes(state.size)})</span>` : ''}
+            <span id="viewerFileName" class="font-medium text-sm text-zinc-900 dark:text-white truncate font-mono">${state.name}</span>
+            <span id="viewerFileSize" class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden sm:inline">${state.size > 0 ? `(${formatBytes(state.size)})` : ''}</span>
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
@@ -151,7 +213,7 @@ export function openFileViewer(state) {
                 <i data-lucide="external-link" class="w-4 h-4"></i>
               </a>
             ` : ''}
-            <a href="${state.downloadUrl}" download="${state.name}" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Tải về">
+            <a id="btnDownloadViewerFile" href="${state.downloadUrl}" download="${state.name}" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Tải về">
               <i data-lucide="download" class="w-4 h-4"></i>
             </a>
             <div class="w-px h-4 bg-zinc-200 dark:bg-white/10 mx-1"></div>

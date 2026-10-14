@@ -6,8 +6,8 @@ status: verified
 domain: mobile
 tags: [android, webview, native-bridge, download-manager, push-notifications, pwa, file-provider]
 created_at: 2026-10-02
-updated_at: 2026-10-02
-version: 1.0.0
+updated_at: 2026-10-14
+version: 1.1.0
 owner: "@anhduy"
 trigger_conditions: "Khi người dùng sử dụng ứng dụng Android (WebView / TWA Wrapper) bấm tải file PDF hoặc APK nhưng trình duyệt WebView không phản hồi, tải ngầm bị hủy khi thoát app, hoặc thanh thông báo không hiện tiến độ tải"
 search_queries:
@@ -153,6 +153,35 @@ export function triggerFileDownload(downloadUrl, fileName, mimeType = 'applicati
 }
 ```
 
+### 2.4. Phân luồng Thư mục Chuyên biệt & Quét MediaScanner Tức thì vào Thư viện Ảnh/Video
+Nhằm hỗ trợ tải video TikTok, nhạc MP3 và ảnh vào đúng thư mục hệ thống để xuất hiện ngay trong app Thư viện (Gallery / Photos / Music) mà không cần khởi động lại máy:
+```kotlin
+private fun getDestinationDirectory(mimeType: String, fileName: String): File {
+    val isVideo = mimeType.startsWith("video/", ignoreCase = true) || fileName.endsWith(".mp4", ignoreCase = true)
+    val isAudio = mimeType.startsWith("audio/", ignoreCase = true) || fileName.endsWith(".mp3", ignoreCase = true)
+
+    if (isVideo) {
+        val moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+        val appMovies = File(moviesDir, "DuyDevStudio")
+        if (appMovies.exists() || appMovies.mkdirs()) return appMovies
+        return moviesDir
+    } else if (isAudio) {
+        val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+        val appMusic = File(musicDir, "DuyDevStudio")
+        if (appMusic.exists() || appMusic.mkdirs()) return appMusic
+        return musicDir
+    }
+    return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+}
+
+// Gọi MediaScannerConnection.scanFile với finalMime chính xác:
+MediaScannerConnection.scanFile(
+    context,
+    arrayOf(destinationFile.absolutePath),
+    arrayOf(finalMime)
+) { _, _ -> }
+```
+
 ---
 
 ## 3. Gotchas & Edge Cases
@@ -160,20 +189,23 @@ export function triggerFileDownload(downloadUrl, fileName, mimeType = 'applicati
 > [!WARNING]
 > 1. **Android 13+ (API 33) Notification Permission**: Từ Android 13 trở lên, phải xin quyền `android.permission.POST_NOTIFICATIONS` ở runtime. Nếu người dùng chưa cấp, `DownloadNotificationManager` phải try-catch `SecurityException` để tránh crash app.
 > 2. **FileProvider và quyền mở file ngoài**: Khi người dùng nhấn vào notification để mở file PDF, Intent mở file bắt buộc dùng `FileProvider.getUriForFile(...)` kèm cờ `FLAG_GRANT_READ_URI_PERMISSION`. Cấm truyền thẳng `Uri.fromFile(destFile)` vì sẽ ném ngoại lệ `FileUriExposedException`.
-> 3. **Tên file tải về (APK / PDF)**: Luôn chuẩn hóa đuôi mở rộng `.pdf` hoặc `.apk`. Tránh để server trả về header `Content-Disposition` không có extension khiến Android lưu thành file không định dạng.
+> 3. **Tên file tải về (APK / PDF / MP4)**: Luôn chuẩn hóa đuôi mở rộng `.pdf`, `.mp4` hoặc `.apk`. Tránh để server trả về header `Content-Disposition` không có extension khiến Android lưu thành file không định dạng.
+> 4. **MIME Type cho MediaScanner**: MediaScanner trên Android yêu cầu MIME type chuẩn xác (`video/mp4`, `audio/mpeg`). Nếu truyền `application/octet-stream`, Android MediaProvider sẽ bỏ qua việc lập chỉ mục cho Thư viện Ảnh/Video (Gallery).
 
 ---
 
 ## 4. Verification
 
 1. **Kiểm tra trên Android Thiết bị thật / Emulator**:
-   - Mở app DuyDev Studio -> Bấm tải đề thi PDF.
+   - Mở app DuyDev Studio -> Bấm tải đề thi PDF hoặc video TikTok.
    - Kéo thanh Notification xuống: Thấy thanh tiến độ tăng dần từ 0% -> 100% kèm icon logo DuyDev Studio.
-   - Nhấn vào thông báo khi tải xong: Mở trực tiếp file PDF bằng Google Drive PDF Viewer hoặc app đọc PDF mặc định.
+   - Nhấn vào thông báo khi tải xong: Mở trực tiếp file PDF hoặc Video.
+   - Mở app Bộ sưu tập / Google Photos: Video TikTok vừa tải xuất hiện tức thì trong album `DuyDevStudio`.
 2. **Kiểm tra trên Chrome Desktop**:
    - Bấm nút tải -> Thẻ `<a>` tự động kích hoạt tải về thư mục `Downloads` thông thường.
 
 ---
 
 ## 5. Changelog
+- **2026-10-14 (v1.1.0)**: Thêm phân luồng thư mục `DIRECTORY_MOVIES/DuyDevStudio` cho video và `DIRECTORY_MUSIC/DuyDevStudio` cho audio, chuẩn hóa MIME `video/mp4` và kích hoạt `MediaScannerConnection.scanFile` giúp video/audio hiển thị ngay trong Thư viện Gallery.
 - **2026-10-02 (v1.0.0)**: Khởi tạo KI-FIX-018 dựa trên commit `213f698` và `88137cd`.

@@ -1281,6 +1281,28 @@ export function attachStoragePageListeners(onSoftReRender) {
         return;
       }
 
+      const previewStorageItem = (item) => {
+        if (!item) return;
+        const isTiktokFolder = state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/');
+        if (isTiktokFolder) {
+          const videoExts = ['mp4', 'webm', 'mov', 'mkv'];
+          const videoPlaylist = (state.items || []).filter((it) => {
+            if (it.isDir) return false;
+            const ext = (it.name || '').split('.').pop()?.toLowerCase();
+            return videoExts.includes(ext);
+          });
+          const playlistIndex = videoPlaylist.findIndex((it) => it.path === item.path);
+          if (playlistIndex !== -1) {
+            ViewerConnector.preview(item, {
+              playlist: videoPlaylist,
+              playlistIndex
+            });
+            return;
+          }
+        }
+        ViewerConnector.preview(item);
+      };
+
       // 1. Actions Buttons
       const actionBtn = e.target.closest('[data-action]');
       if (actionBtn) {
@@ -1294,7 +1316,7 @@ export function attachStoragePageListeners(onSoftReRender) {
           handleDownloadItem(itemPath, isDir);
         } else if (action === 'preview') {
           const item = state.items.find((i) => i.path === itemPath);
-          if (item) ViewerConnector.preview(item);
+          if (item) previewStorageItem(item);
         } else if (action === 'move') {
           handleMoveCopyModal([itemPath], false, loadDirectory);
         } else if (action === 'copy') {
@@ -1316,7 +1338,7 @@ export function attachStoragePageListeners(onSoftReRender) {
           navigateToPath(itemPath);
         } else {
           const item = state.items.find((i) => i.path === itemPath);
-          if (item) ViewerConnector.preview(item);
+          if (item) previewStorageItem(item);
         }
       }
     };

@@ -222,12 +222,26 @@ export function resolveViewerUrls(item) {
   return { viewUrl, downloadUrl, fileId };
 }
 
+export function openPlaylistItem(playlist, index, direction = 'next') {
+  if (!Array.isArray(playlist) || playlist.length === 0) return;
+  let targetIndex = index;
+  if (targetIndex < 0) targetIndex = playlist.length - 1;
+  if (targetIndex >= playlist.length) targetIndex = 0;
+  const targetItem = playlist[targetIndex];
+  if (!targetItem) return;
+  ViewerConnector.preview(targetItem, {
+    playlist,
+    playlistIndex: targetIndex,
+    direction
+  });
+}
+
 export const ViewerConnector = {
   /**
    * Universal Preview Entry Point
    * Accepts any record schema from any DD Studio module
    */
-  preview(item) {
+  preview(item, options = {}) {
     if (!item) return;
     const rawFile = item.rawFile || item.file || null;
     let { viewUrl, downloadUrl, fileId } = resolveViewerUrls(item);
@@ -250,6 +264,11 @@ export const ViewerConnector = {
 
     const category = item.category || detectFileCategory(name, mimeType, viewUrl);
 
+    const playlist = options.playlist || item.playlist || null;
+    const playlistIndex = typeof options.playlistIndex === 'number' ? options.playlistIndex : (typeof item.playlistIndex === 'number' ? item.playlistIndex : -1);
+    const direction = options.direction || item.direction || null;
+    const metadata = item.metadata || options.metadata || null;
+
     openFileViewer({
       name,
       category,
@@ -261,7 +280,16 @@ export const ViewerConnector = {
       size,
       mimeType,
       isBlob,
-      sourceModule: item.tool || item.toolTitle || item.sourceModule || ''
+      sourceModule: item.tool || item.toolTitle || item.sourceModule || '',
+      metadata,
+      playlist,
+      playlistIndex,
+      direction,
+      onSwitchItem: (targetIdx, dir) => {
+        if (Array.isArray(playlist) && playlist.length > 0) {
+          openPlaylistItem(playlist, targetIdx, dir);
+        }
+      }
     });
   },
 

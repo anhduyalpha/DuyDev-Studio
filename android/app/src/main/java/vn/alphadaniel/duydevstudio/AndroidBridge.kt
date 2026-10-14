@@ -492,7 +492,15 @@ class AndroidBridge(
      */
     @JavascriptInterface
     fun downloadFile(url: String, fileName: String) {
-        val mime = if (fileName.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "application/octet-stream"
+        val mime = when {
+            fileName.endsWith(".mp4", ignoreCase = true) -> "video/mp4"
+            fileName.endsWith(".webm", ignoreCase = true) -> "video/webm"
+            fileName.endsWith(".mp3", ignoreCase = true) -> "audio/mpeg"
+            fileName.endsWith(".m4a", ignoreCase = true) -> "audio/mp4"
+            fileName.endsWith(".pdf", ignoreCase = true) -> "application/pdf"
+            fileName.endsWith(".zip", ignoreCase = true) -> "application/zip"
+            else -> "application/octet-stream"
+        }
         downloadFile(url, fileName, mime)
     }
 
@@ -505,12 +513,20 @@ class AndroidBridge(
             val path = if (url.startsWith('/')) url else "/$url"
             "$base$path"
         }
+        val normalizedMime = when {
+            fileName.endsWith(".mp4", ignoreCase = true) -> "video/mp4"
+            fileName.endsWith(".webm", ignoreCase = true) -> "video/webm"
+            fileName.endsWith(".mp3", ignoreCase = true) -> "audio/mpeg"
+            fileName.endsWith(".m4a", ignoreCase = true) -> "audio/mp4"
+            mimeType.isNotBlank() && mimeType != "application/octet-stream" -> mimeType
+            else -> "application/octet-stream"
+        }
         activity.runOnUiThread {
             vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
                 activity,
                 fullUrl,
                 fileName,
-                mimeType,
+                normalizedMime,
                 "DuyDevStudioNative/${getAppVersion()}"
             )
         }

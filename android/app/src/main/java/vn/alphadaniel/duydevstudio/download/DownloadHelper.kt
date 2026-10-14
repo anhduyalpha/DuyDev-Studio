@@ -29,17 +29,14 @@ object DownloadHelper {
     ) {
         val notificationId = (System.currentTimeMillis() % 100000).toInt()
         val cleanName = sanitizeFileName(suggestedFileName, mimeType)
+        val finalMime = normalizeMimeType(cleanName, mimeType)
 
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if (!downloadsDir.exists()) {
-                    downloadsDir.mkdirs()
-                }
-
-                val destinationFile = resolveUniqueFile(downloadsDir, cleanName)
+                val targetDir = getDestinationDirectory(finalMime, cleanName)
+                val destinationFile = resolveUniqueFile(targetDir, cleanName)
                 val rawBase64 = if (base64Data.contains(",")) {
                     base64Data.substringAfter(",")
                 } else {
@@ -49,11 +46,11 @@ object DownloadHelper {
                 val bytes = android.util.Base64.decode(rawBase64.trim(), android.util.Base64.DEFAULT)
                 FileOutputStream(destinationFile).use { it.write(bytes) }
 
-                // Scan file so it appears in the Downloads app immediately
+                // Scan file so it appears in the Android system Gallery / Photos app immediately
                 MediaScannerConnection.scanFile(
                     context,
                     arrayOf(destinationFile.absolutePath),
-                    arrayOf(mimeType.ifBlank { null })
+                    arrayOf(finalMime)
                 ) { _, _ -> }
 
                 // Post completed push notification with app icon
@@ -62,7 +59,7 @@ object DownloadHelper {
                     notificationId,
                     destinationFile.name,
                     destinationFile,
-                    mimeType
+                    finalMime
                 )
             } catch (_: Exception) {
                 DownloadNotificationManager.cancelNotification(context, notificationId)
@@ -115,12 +112,9 @@ object DownloadHelper {
                     }
                 }
 
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if (!downloadsDir.exists()) {
-                    downloadsDir.mkdirs()
-                }
-
-                val destinationFile = resolveUniqueFile(downloadsDir, cleanName)
+                val finalMime = normalizeMimeType(cleanName, serverMime)
+                val targetDir = getDestinationDirectory(finalMime, cleanName)
+                val destinationFile = resolveUniqueFile(targetDir, cleanName)
                 val totalBytes = body.contentLength()
                 var downloadedBytes = 0L
 
@@ -148,11 +142,11 @@ object DownloadHelper {
                     }
                 }
 
-                // Scan file so it appears in the Downloads app immediately
+                // Scan file so it appears in the Android system Gallery / Photos app immediately
                 MediaScannerConnection.scanFile(
                     context,
                     arrayOf(destinationFile.absolutePath),
-                    arrayOf(serverMime.ifBlank { null })
+                    arrayOf(finalMime)
                 ) { _, _ -> }
 
                 // Post completed push notification with app icon
@@ -161,7 +155,7 @@ object DownloadHelper {
                     notificationId,
                     destinationFile.name,
                     destinationFile,
-                    serverMime
+                    finalMime
                 )
             } catch (_: Exception) {
                 DownloadNotificationManager.cancelNotification(context, notificationId)
@@ -213,5 +207,60 @@ object DownloadHelper {
             counter++
         }
         return file
+    }
+
+    private fun getDestinationDirectory(mimeType: String, fileName: String): File {
+        try {
+            val isVideo = mimeType.startsWith("video/", ignoreCase = true) ||
+                          fileName.endsWith(".mp4", ignoreCase = true) ||
+                          fileName.endsWith(".webm", ignoreCase = true) ||
+                          fileName.endsWith(".mov", ignoreCase = true) ||
+                          fileName.endsWith(".mkv", ignoreCase = true)
+
+            val isAudio = mimeType.startsWith("audio/", ignoreCase = true) ||
+                          fileName.endsWith(".mp3", ignoreCase = true) ||
+                          fileName.endsWith(".m4a", ignoreCase = true) ||
+                          fileName.endsWith(".wav", ignoreCase = true) ||
+                          fileName.endsWith(".aac", ignoreCase = true)
+
+            if (isVideo) {
+                val moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+                val appMovies = File(moviesDir, "DuyDevStudio")
+                if (appMovies.exists() || appMovies.mkdirs()) {
+                    return appMovies
+                }
+                if (moviesDir.exists() || moviesDir.mkdirs()) {
+                    return moviesDir
+                }
+            } else if (isAudio) {
+                val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+                val appMusic = File(musicDir, "DuyDevStudio")
+                if (appMusic.exists() || appMusic.mkdirs()) {
+                    return appMusic
+                }
+                if (musicDir.exists() || musicDir.mkdirs()) {
+                    return musicDir
+                }
+            }
+        } catch (_: Exception) {}
+
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) {
+            downloadsDir.mkdirs()
+        }
+        return downloadsDir
+    }
+
+    private fun normalizeMimeType(fileName: String, rawMime: String?): String {
+        val mime = (rawMime ?: "").substringBefore(';').trim()
+        if (fileName.endsWith(".mp4", ignoreCase = true)) return "video/mp4"
+        if (fileName.endsWith(".webm", ignoreCase = true)) return "video/webm"
+        if (fileName.endsWith(".mp3", ignoreCase = true)) return "audio/mpeg"
+        if (fileName.endsWith(".m4a", ignoreCase = true)) return "audio/mp4"
+        if (fileName.endsWith(".pdf", ignoreCase = true)) return "application/pdf"
+        if (fileName.endsWith(".zip", ignoreCase = true)) return "application/zip"
+        if (fileName.endsWith(".jpg", ignoreCase = true) || fileName.endsWith(".jpeg", ignoreCase = true)) return "image/jpeg"
+        if (fileName.endsWith(".png", ignoreCase = true)) return "image/png"
+        return if (mime.isNotBlank() && mime != "application/octet-stream") mime else "application/octet-stream"
     }
 }
