@@ -5,7 +5,9 @@
 node_modules/
 server/node_modules/
 package-lock.json.bak
-src/vendor/
+src/vendor/*
+!src/vendor/*.js
+!src/vendor/*.min.js
 pdfjs/
 **/pdfjs/
 
