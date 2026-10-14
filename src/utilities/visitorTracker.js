@@ -5,7 +5,7 @@
  */
 
 import { getDeviceId } from './deviceId.js';
-import { isAdminAuthenticated } from './AdminAuth.js';
+import { isAdminAuthenticated } from './adminAuth.js';
 
 class VisitorTracker {
   constructor() {

@@ -1,0 +1,21 @@
+# Token-Miser & Anti-Noise Context Ignore Rules
+# Prevents indexer, search, and context bloat
+
+node_modules/
+server/node_modules/
+pdfjs/
+src/vendor/
+data/
+dist/
+android/build/
+android/.gradle/
+.codegraph/
+server/dev.db*
+package-lock.json
+server/package-lock.json
+*.min.js
+*.min.css
+*.map
+.git/
+.tmp/
+*.log

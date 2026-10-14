@@ -34,7 +34,7 @@ import { checkAndRenderMigrationNotice } from './components/common/MigrationNoti
 import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
-import { isAdminAuthenticated } from './utilities/AdminAuth.js';
+import { isAdminAuthenticated } from './utilities/adminAuth.js';
 
 /**
  * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id and role headers
