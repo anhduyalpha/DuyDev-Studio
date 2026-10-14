@@ -152,14 +152,22 @@ class ScribdArchiver:
         self._log(f"🚀 Mở tài liệu Scribd Embed ID {self.doc_id}: {self.embed_url}")
 
         with sync_playwright() as p:
-            self._browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-blink-features=AutomationControlled",
-                ],
-            )
+            launch_args = [
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-blink-features=AutomationControlled",
+            ]
+            launch_kwargs = {
+                "headless": True,
+                "args": launch_args,
+            }
+            if sys.platform != "win32":
+                for chrome_path in ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"]:
+                    if os.path.exists(chrome_path):
+                        launch_kwargs["executable_path"] = chrome_path
+                        break
+
+            self._browser = p.chromium.launch(**launch_kwargs)
             context = self._browser.new_context(
                 viewport={"width": 1280, "height": 900},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",

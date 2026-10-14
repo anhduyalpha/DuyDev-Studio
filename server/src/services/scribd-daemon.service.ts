@@ -48,6 +48,23 @@ export class ScribdDaemonService {
     }
   }
 
+  private static resolvePythonBin(): string {
+    const candidates = [
+      path.resolve(process.cwd(), 'engines/scribd/venv/bin/python'),
+      path.resolve(process.cwd(), '../engines/scribd/venv/bin/python'),
+      path.resolve(process.cwd(), 'engines/scribd/venv/Scripts/python.exe'),
+      path.resolve(process.cwd(), '../engines/scribd/venv/Scripts/python.exe'),
+      '/home/anhduy/dd-studio/engines/scribd/venv/bin/python',
+      '/home/anhduy/dd-studio/engines/document/venv/bin/python3',
+      '/usr/bin/python3',
+      '/usr/bin/python'
+    ];
+    for (const bin of candidates) {
+      if (existsSync(bin)) return bin;
+    }
+    return process.platform === 'win32' ? 'python' : 'python3';
+  }
+
   static async ensureDaemonRunning(): Promise<boolean> {
     if (await this.isPortOpen()) {
       logger.info(`⚡ Scribd Archiver Engine already active on port ${this.port}`);
@@ -60,9 +77,10 @@ export class ScribdDaemonService {
       return false;
     }
 
-    logger.info(`🚀 Starting Scribd Archiver Engine daemon on port ${this.port}...`);
+    const pythonBin = this.resolvePythonBin();
+    logger.info(`🚀 Starting Scribd Archiver Engine daemon on port ${this.port} using ${pythonBin}...`);
     try {
-      this.process = spawn('python', ['-m', 'scribd_dl.server', '--host', '0.0.0.0', '--port', String(this.port)], {
+      this.process = spawn(pythonBin, ['-m', 'scribd_dl.server', '--host', '0.0.0.0', '--port', String(this.port)], {
         cwd: engineDir,
         stdio: 'ignore',
         detached: process.platform !== 'win32'
