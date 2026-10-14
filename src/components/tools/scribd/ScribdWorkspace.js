@@ -10,6 +10,66 @@ import { renderDocumentItem } from './components/DocumentItem.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
 
+export function renderHeroCard(state) {
+  const isDownloading = state.isDownloading;
+  return `
+    <div class="scribd-hero-card">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <i data-lucide="file-down" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">Kết Xuất Tài Liệu Scribd</h2>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400">Trích xuất văn bản vector, bảng biểu và hình ảnh gốc sang định dạng PDF chất lượng cao.</p>
+          </div>
+        </div>
+      </div>
+
+      <form id="scribdDownloadForm" class="space-y-3" onsubmit="return false;">
+        <div class="relative flex items-center">
+          <input
+            type="text"
+            id="scribdUrlInput"
+            class="w-full pl-3.5 pr-24 py-2.5 rounded-xl text-xs sm:text-sm bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] focus:border-indigo-500 dark:focus:border-indigo-500 focus:outline-none transition text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
+            placeholder="Dán liên kết Scribd hoặc nhập mã ID (ví dụ: 693471767)..."
+            autocomplete="off"
+            ${isDownloading ? 'disabled' : ''}
+          />
+          <div class="absolute right-1.5 flex items-center gap-1">
+            <button
+              type="button"
+              id="btnScribdPaste"
+              class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/[0.08] transition shadow-xs flex items-center gap-1 cursor-pointer min-h-[32px]"
+              title="Dán nhanh từ Clipboard"
+            >
+              <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+              <span class="hidden xs:inline">Dán</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <label class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
+            <input type="checkbox" id="chkScribdForceReload" class="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500" />
+            <span>Tải lại từ đầu</span>
+          </label>
+
+          <button
+            type="submit"
+            id="btnScribdStart"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm flex items-center gap-2 cursor-pointer min-h-[40px]"
+            ${isDownloading ? 'disabled' : ''}
+          >
+            <i data-lucide="${isDownloading ? 'loader' : 'download-cloud'}" class="w-4 h-4 ${isDownloading ? 'animate-spin' : ''}"></i>
+            <span>${isDownloading ? 'Đang kết xuất...' : 'Bắt đầu kết xuất'}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
 export function renderScribdWorkspace() {
   const state = scribdManager.getState();
   const isDownloading = state.isDownloading;
@@ -27,60 +87,9 @@ export function renderScribdWorkspace() {
         </div>
       </div>
 
-      <!-- Hero Input Card -->
-      <div class="scribd-hero-card">
-        <div class="flex items-center justify-between gap-3 mb-4">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <i data-lucide="file-down" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">Kết Xuất Tài Liệu Scribd</h2>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Trích xuất văn bản vector, bảng biểu và hình ảnh gốc sang định dạng PDF chất lượng cao.</p>
-            </div>
-          </div>
-        </div>
-
-        <form id="scribdDownloadForm" class="space-y-3" onsubmit="return false;">
-          <div class="relative flex items-center">
-            <input
-              type="text"
-              id="scribdUrlInput"
-              class="w-full pl-3.5 pr-24 py-2.5 rounded-xl text-xs sm:text-sm bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] focus:border-indigo-500 dark:focus:border-indigo-500 focus:outline-none transition text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
-              placeholder="Dán liên kết Scribd hoặc nhập mã ID (ví dụ: 693471767)..."
-              autocomplete="off"
-              ${isDownloading ? 'disabled' : ''}
-            />
-            <div class="absolute right-1.5 flex items-center gap-1">
-              <button
-                type="button"
-                id="btnScribdPaste"
-                class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/[0.08] transition shadow-xs flex items-center gap-1 cursor-pointer min-h-[32px]"
-                title="Dán nhanh từ Clipboard"
-              >
-                <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
-                <span class="hidden xs:inline">Dán</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <label class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 select-none cursor-pointer">
-              <input type="checkbox" id="chkScribdForceReload" class="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500" />
-              <span>Kết xuất mới (Bỏ qua bộ nhớ đệm Cache)</span>
-            </label>
-
-            <button
-              type="submit"
-              id="btnScribdStart"
-              class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm flex items-center gap-2 cursor-pointer min-h-[40px]"
-              ${isDownloading ? 'disabled' : ''}
-            >
-              <i data-lucide="${isDownloading ? 'loader' : 'download-cloud'}" class="w-4 h-4 ${isDownloading ? 'animate-spin' : ''}"></i>
-              <span>${isDownloading ? 'Đang kết xuất...' : 'Bắt đầu kết xuất'}</span>
-            </button>
-          </div>
-        </form>
+      <!-- Hero Input Card Container -->
+      <div id="scribdHeroContainer">
+        ${renderHeroCard(state)}
       </div>
 
       <!-- Live Terminal / Progress Card -->
@@ -377,9 +386,17 @@ export function attachScribdListeners() {
 
   // Subscribe state changes
   const unsubscribe = scribdManager.subscribe((state) => {
-    const heroCard = document.getElementById('scribdDownloadForm');
+    const heroEl = document.getElementById('scribdHeroContainer');
     const termCard = document.getElementById('scribdTerminalCard');
     const itemsContainer = document.getElementById('scribdItemsContainer');
+
+    // Hero Card re-render on download state change
+    if (heroEl && state.isDownloading !== prevDownloading) {
+      prevDownloading = state.isDownloading;
+      heroEl.innerHTML = renderHeroCard(state);
+      attachHeroHandlers();
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: heroEl });
+    }
 
     // Terminal updates
     if (termCard) {

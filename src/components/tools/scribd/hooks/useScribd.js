@@ -141,15 +141,16 @@ class ScribdManager {
   }
 
   async startDownload(rawInput, forceReload = false) {
-    if (this.isDownloading) {
-      showToast('Đang có tiến trình kết xuất đang chạy', 'warning');
-      return;
-    }
-
     const candidate = extractScribdUrlOrId(rawInput);
     if (!candidate) {
       showToast('Không tìm thấy URL hoặc mã Scribd hợp lệ trong nội dung đã nhập', 'error');
       return;
+    }
+
+    if (this.isDownloading) {
+      this.closeConnections();
+      this.isDownloading = false;
+      saveActiveJob(null);
     }
 
     this.isDownloading = true;
@@ -205,9 +206,8 @@ class ScribdManager {
       };
 
       this.eventSource.onerror = () => {
-        // Fallback to polling if SSE is disconnected
         if (this.eventSource) {
-          this.eventSource.close();
+          try { this.eventSource.close(); } catch (_) {}
           this.eventSource = null;
         }
         this.startPolling(jobId);
@@ -220,11 +220,23 @@ class ScribdManager {
   startPolling(jobId) {
     this.closeConnections();
 
+    let failCount = 0;
     const poll = async () => {
       try {
         const data = await safeFetchJson(`/api/v1/scribd/status/${jobId}`);
+        failCount = 0;
         this.handleJobUpdate(data);
-      } catch (_) {}
+      } catch (err) {
+        failCount++;
+        if (failCount >= 2) {
+          this.closeConnections();
+          this.isDownloading = false;
+          this.currentJobId = null;
+          saveActiveJob(null);
+          this.stepLabel = 'Tác vụ đã kết thúc hoặc máy chủ khởi động lại.';
+          this.notify();
+        }
+      }
     };
 
     poll();
@@ -274,32 +286,49 @@ class ScribdManager {
   }
 
   async resumeJob(jobId, url) {
-    this.isDownloading = true;
-    this.currentJobId = jobId;
-    this.currentDocTitle = 'Tài liệu ' + (url || jobId);
-    this.progress = 20;
-    this.stepLabel = 'Đang tiếp tục theo dõi tiến trình...';
-    this.logs = ['🔄 Khôi phục theo dõi tiến trình nền: ' + jobId];
-    this.notify();
-    this.connectSse(jobId);
+    try {
+      const data = await safeFetchJson(`/api/v1/scribd/status/${jobId}`);
+      if (!data || data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
+        saveActiveJob(null);
+        this.isDownloading = false;
+        if (data?.status === 'completed') {
+          this.refreshFiles();
+        }
+        this.notify();
+        return;
+      }
+
+      this.isDownloading = true;
+      this.currentJobId = jobId;
+      this.currentDocTitle = 'Tài liệu ' + (url || jobId);
+      this.progress = typeof data.progress === 'number' ? data.progress : 20;
+      this.stepLabel = data.step_label || 'Đang tiếp tục theo dõi tiến trình...';
+      this.logs = ['🔄 Khôi phục theo dõi tiến trình: ' + jobId];
+      this.notify();
+      this.connectSse(jobId);
+    } catch (_) {
+      saveActiveJob(null);
+      this.isDownloading = false;
+      this.currentJobId = null;
+      this.closeConnections();
+      this.notify();
+    }
   }
 
   async cancelJob() {
-    if (!this.currentJobId) {
-      this.isDownloading = false;
-      this.notify();
-      return;
-    }
     const jid = this.currentJobId;
     this.closeConnections();
     this.isDownloading = false;
-    this.stepLabel = 'Đang hủy...';
-    this.logs.push('🛑 Gửi lệnh hủy tiến trình...');
+    this.currentJobId = null;
+    this.stepLabel = 'Đã hủy tác vụ';
+    this.logs.push('🛑 Tiến trình đã được hủy.');
     saveActiveJob(null);
     this.notify();
 
-    await cancelJobApi(jid);
-    showToast('Đã gửi yêu cầu hủy kết xuất', 'info');
+    if (jid) {
+      await cancelJobApi(jid).catch(() => null);
+    }
+    showToast('Đã dừng tiến trình kết xuất', 'info');
     this.refreshFiles();
   }
 

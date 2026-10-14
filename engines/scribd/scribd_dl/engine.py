@@ -68,7 +68,7 @@ class ScribdArchiver:
         output_dir: Optional[Path] = None,
         progress_callback: Optional[Callable[[int, str], None]] = None,
         log_callback: Optional[Callable[[str], None]] = None,
-        timeout_seconds: int = 180,
+        timeout_seconds: int = 360,
     ):
         self.doc_id = extract_scribd_doc_id(url_or_id)
         if not self.doc_id:
@@ -177,9 +177,10 @@ class ScribdArchiver:
 
             try:
                 # 2. Mở giao diện đọc nhúng
-                self._progress(10, "Đang tải giao diện đọc nhúng Scribd...")
+                self._progress(8, f"Đang kết nối tài liệu Scribd {self.doc_id}...")
                 page.goto(self.embed_url, wait_until="domcontentloaded", timeout=45000)
-                page.wait_for_timeout(2000)
+                self._progress(12, "Đang phân tích cấu trúc trang tài liệu...")
+                page.wait_for_timeout(1500)
 
                 if self.is_cancelled:
                     raise RuntimeError("Tiến trình bị hủy bởi người dùng")
@@ -212,6 +213,7 @@ class ScribdArchiver:
                 self._progress(15, f"Bắt đầu nạp {total_pages} trang tài liệu...")
 
                 # 4. Cuộn tuần tự qua từng trang để kích hoạt lazy-load
+                wait_ms = 120 if total_pages > 40 else 250
                 for idx in range(1, total_pages + 1):
                     if self.is_cancelled:
                         raise RuntimeError("Tiến trình bị hủy bởi người dùng")
@@ -237,7 +239,7 @@ class ScribdArchiver:
                     }}""", idx)
 
                     # Độ trễ ngắn cho các thành phần DOM và network nạp
-                    page.wait_for_timeout(300)
+                    page.wait_for_timeout(wait_ms)
 
                 # 5. Quét bảo đảm lần cuối toàn bộ ảnh
                 self._progress(82, "Đang đồng bộ hóa toàn bộ hình ảnh và phông chữ...")
