@@ -84,14 +84,17 @@ export function renderScribdWorkspace() {
       </div>
 
       <!-- Live Terminal / Progress Card -->
+      ${(() => {
+        const isError = !isDownloading && (Boolean(state.stepLabel) && (state.stepLabel.toLowerCase().includes('lỗi') || state.stepLabel.toLowerCase().includes('thất bại')));
+        return `
       <div id="scribdTerminalCard" class="scribd-hero-card ${isDownloading || (state.logs && state.logs.length > 0) ? '' : 'hidden'}">
         <div class="flex items-center justify-between gap-3 mb-3">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full ${isDownloading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}"></span>
-            <span id="scribdProgressStep" class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100">${state.stepLabel || 'Sẵn sàng'}</span>
+            <span class="w-2.5 h-2.5 rounded-full ${isDownloading ? 'bg-amber-500 animate-pulse' : (isError ? 'bg-rose-500' : 'bg-emerald-500')}"></span>
+            <span id="scribdProgressStep" class="text-xs sm:text-sm font-semibold ${isError ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-900 dark:text-zinc-100'}">${state.stepLabel || 'Sẵn sàng'}</span>
           </div>
           <div class="flex items-center gap-2">
-            <span id="scribdProgressPct" class="text-xs sm:text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400">${state.progress || 0}%</span>
+            <span id="scribdProgressPct" class="text-xs sm:text-sm font-mono font-bold ${isError ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'}">${state.progress || 0}%</span>
             ${isDownloading ? `
               <button
                 type="button"
@@ -106,8 +109,10 @@ export function renderScribdWorkspace() {
 
         <!-- Progress Bar Thread -->
         <div class="w-full bg-zinc-200 dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden mb-3">
-          <div id="scribdProgressBar" class="h-1.5 bg-indigo-600 rounded-full transition-all duration-300" style="width: ${state.progress || 0}%"></div>
+          <div id="scribdProgressBar" class="h-1.5 ${isError ? 'bg-rose-500' : 'bg-indigo-600'} rounded-full transition-all duration-300" style="width: ${state.progress || 0}%"></div>
         </div>
+        `;
+      })()}
 
         <!-- Terminal Logs -->
         <div id="scribdTerminalScreen" class="scribd-terminal-box p-3 rounded-xl max-h-48 overflow-y-auto space-y-1">
