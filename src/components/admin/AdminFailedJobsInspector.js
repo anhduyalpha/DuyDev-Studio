@@ -373,7 +373,7 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
       signature: 'quiz::empty_option_text',
       severity: 'USER_ACTION',
       errorClass: 'USER_ACTION',
-      suggestedFix: "Cải thiện regex bóc tách phương án lựa chọn trong quiz_pipeline.py đối với câu hỏi có bảng biểu."
+      suggestedFix: "Cải thiện regex trích xuất phương án lựa chọn trong quiz_pipeline.py đối với câu hỏi có bảng biểu."
     };
   }
 

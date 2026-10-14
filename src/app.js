@@ -373,8 +373,20 @@ class App {
     if (!hash || hash === '#' || hash === '#dashboard' || hash === '#share-target' || hash.startsWith('#share-target?') || hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
     } else if (hash.startsWith('#tool/')) {
-      const parts = hash.replace('#tool/', '').split('/');
+      const cleanHash = hash.replace('#tool/', '');
+      const [pathPart, queryPart] = cleanHash.split('?');
+      const parts = pathPart.split('/');
       dispatchTool(parts[0], parts[1] || null);
+      if (parts[0] === 'tiktok-downloader' || parts[0] === 'tiktok') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          import('./components/tools/tiktok/hooks/useTiktok.js').then(({ tiktokManager }) => {
+            tiktokManager.setUrl(targetUrl, false);
+            tiktokManager.resolve(targetUrl);
+          });
+        }
+      }
     } else if (hash === '#qr' || hash.startsWith('#qr/')) {
       dispatchTool('qr-multi', hash.startsWith('#qr/') ? hash.replace('#qr/', '') : null);
     } else if (hash === '#scan' || hash === '#qr-scan') {
@@ -389,8 +401,17 @@ class App {
       dispatchTool('universal-converter');
     } else if (hash === '#studocu' || hash === '#studocu-dl') {
       dispatchTool('studocu-dl');
-    } else if (hash === '#tiktok' || hash === '#tiktok-downloader') {
+    } else if (hash === '#tiktok' || hash === '#tiktok-downloader' || hash.startsWith('#tiktok?') || hash.startsWith('#tiktok-downloader?')) {
       dispatchTool('tiktok-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        import('./components/tools/tiktok/hooks/useTiktok.js').then(({ tiktokManager }) => {
+          tiktokManager.setUrl(targetUrl, false);
+          tiktokManager.resolve(targetUrl);
+        });
+      }
     } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {
       dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);
     } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {

@@ -75,7 +75,25 @@ class ShareReceiverActivity : AppCompatActivity() {
             return
         }
 
+        // Fast-path: When sharing TikTok link, auto-launch TikTok Downloader directly
+        if (collectedUris.isEmpty() && isTikTokContent(url, text)) {
+            val tikTokUrl = extractTikTokUrl(url, text)
+            forwardToMainActivity(ShareAction("Tải Video TikTok", "#tool/tiktok-downloader"), tikTokUrl)
+            return
+        }
+
         showNativeShareDialog(collectedUris, text, url)
+    }
+
+    private fun isTikTokContent(url: String, text: String): Boolean {
+        val combined = "$url $text".lowercase(Locale.ROOT)
+        return combined.contains("tiktok.com") || combined.contains("douyin.com")
+    }
+
+    private fun extractTikTokUrl(url: String, text: String): String {
+        val combined = if (url.isNotBlank()) url else text
+        val match = Regex("""https?://(?:(?:vt|vm|m|www|v)\.)?(?:tiktok\.com|douyin\.com)/[^\s"']+""").find(combined)
+        return match?.value ?: (if (url.isNotBlank()) url else text)
     }
 
     private fun showNativeShareDialog(sharedUris: List<Uri>, text: String, url: String) {
@@ -142,7 +160,10 @@ class ShareReceiverActivity : AppCompatActivity() {
             tvFileName.text = if (isLink) url else text
             tvFileMeta.text = if (isLink) "LIÊN KẾT WEB" else "VĂN BẢN THUẦN"
 
-            if (url.contains("studocu.com") || url.contains("studocu.vn")) {
+            if (isTikTokContent(url, text)) {
+                actions.add(ShareAction("Tải Video TikTok Không Logo", "#tool/tiktok-downloader"))
+                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
+            } else if (url.contains("studocu.com") || url.contains("studocu.vn")) {
                 actions.add(ShareAction("Tải tài liệu Studocu", "#tool/studocu-dl"))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
             } else if (isImageExtension(url)) {
@@ -174,12 +195,16 @@ class ShareReceiverActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun forwardToMainActivity(action: ShareAction) {
+    private fun forwardToMainActivity(action: ShareAction, explicitUrl: String? = null) {
         val targetIntent = Intent(this, MainActivity::class.java).apply {
             this.action = intent.action
             this.type = intent.type
             this.data = intent.data
             intent.extras?.let { putExtras(it) }
+
+            if (!explicitUrl.isNullOrBlank()) {
+                putExtra(Intent.EXTRA_TEXT, explicitUrl)
+            }
 
             // Ensure all collected URIs are in ClipData so FLAG_GRANT_READ_URI_PERMISSION applies
             if (collectedUris.isNotEmpty()) {

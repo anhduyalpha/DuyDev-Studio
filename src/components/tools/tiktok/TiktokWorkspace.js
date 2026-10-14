@@ -106,10 +106,10 @@ export function renderTiktokWorkspace() {
           >
             ${isLoading ? `
               <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              <span>Đang bóc tách...</span>
+              <span>Đang xử lý...</span>
             ` : `
               <i data-lucide="sparkles" class="w-4 h-4"></i>
-              <span>Bóc tách Video</span>
+              <span>Tải Video</span>
             `}
           </button>
         </div>
@@ -234,7 +234,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult) {
                 class="w-full py-2.5 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 active:scale-[0.99] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition cursor-pointer border border-zinc-200 dark:border-zinc-700"
               >
                 <i data-lucide="music" class="w-4 h-4"></i>
-                <span>Tải Nhạc Nền (MP3)</span>
+                <span>Tải Audio (mp3)</span>
               </a>
             ` : ''}
 
@@ -305,7 +305,7 @@ function renderRecentHistoryCard(history) {
       <div class="flex items-center justify-between">
         <h4 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
           <i data-lucide="clock" class="w-3.5 h-3.5 text-zinc-400"></i>
-          Lịch Sử Bóc Tách Gần Đây
+          Lịch Sử Tải Xuống
         </h4>
         <button
           id="btnClearTiktokHistory"
@@ -440,11 +440,15 @@ export function attachTiktokWorkspaceListeners() {
     if (btnResolve) {
       btnResolve.disabled = state.isLoading;
       btnResolve.innerHTML = state.isLoading
-        ? '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Đang bóc tách...</span>'
-        : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Bóc tách Video</span>';
+        ? '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Đang xử lý...</span>'
+        : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Tải Video</span>';
     }
     if (input) {
       input.disabled = state.isLoading;
+      if (state.url && input.value !== state.url) {
+        input.value = state.url;
+        syncInputButtons(state.url);
+      }
     }
 
     // 2. Error banner

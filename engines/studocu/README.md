@@ -58,7 +58,7 @@ Truy cập Web UI tại: `http://<IP_MAY_CHU>:8090`
 
 ## 🚀 Hướng dẫn nhanh: Standalone CLI Tool (Chỉ cần dán link)
 
-Công cụ CLI hoạt động độc lập, tự động vượt rào cản Cloudflare / Bot Verification trong nền, bóc tách hoàn toàn lớp mờ và paywall, sau đó xuất trực tiếp sang PDF A4 Vector nguyên bản và Markdown.
+Công cụ CLI hoạt động độc lập, tự động vượt rào cản Cloudflare / Bot Verification trong nền, xử lý hoàn toàn lớp mờ và paywall, sau đó xuất trực tiếp sang PDF A4 Vector nguyên bản và Markdown.
 
 ### Cấu trúc Module (`studocu_dl/`):
 - `studocu_dl/utils.py`: Chuẩn hóa URL, sanitize tên file và dò tìm cổng mạng khả dụng.

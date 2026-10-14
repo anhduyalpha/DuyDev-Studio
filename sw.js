@@ -3,30 +3,30 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v22.62';
+const CACHE_NAME = 'duydev-studio-v22.63';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=22.62',
-  './src/styles/studocu.css?v=22.62',
-  './src/styles/highlight-theme.css?v=22.62',
+  './src/styles/stitch-tokens.css?v=22.63',
+  './src/styles/studocu.css?v=22.63',
+  './src/styles/highlight-theme.css?v=22.63',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=22.62',
+  './src/app.js?v=22.63',
   './src/hooks/useToolRegistry.js',
   './src/pages/DashboardPage.js',
   './src/components/dashboard/ToolCard.js',
   './src/components/common/ToolIcons.js',
   './src/components/common/MigrationNoticeModal.js',
-  './src/components/tools/tiktok/TiktokWorkspace.js?v=22.62',
-  './src/components/tools/tiktok/hooks/useTiktok.js?v=22.62',
-  './src/components/tools/tiktok/services/tiktokApi.js?v=22.62',
+  './src/components/tools/tiktok/TiktokWorkspace.js?v=22.63',
+  './src/components/tools/tiktok/hooks/useTiktok.js?v=22.63',
+  './src/components/tools/tiktok/services/tiktokApi.js?v=22.63',
   './src/components/tools/viewsplit/ViewSplitWorkspace.js?v=22.30',
   './src/components/tools/viewsplit/hooks/useViewSplit.js?v=22.30',
   './src/components/tools/viewsplit/hooks/useViewSplitDom.js?v=22.30',

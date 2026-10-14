@@ -21,7 +21,8 @@ export class StorageManager {
       resolvedStoragePaths.uploads,
       resolvedStoragePaths.processed,
       resolvedStoragePaths.temp,
-      resolvedStoragePaths.drive
+      resolvedStoragePaths.drive,
+      path.join(resolvedStoragePaths.drive, 'tiktok')
     ];
 
     for (const dir of dirs) {

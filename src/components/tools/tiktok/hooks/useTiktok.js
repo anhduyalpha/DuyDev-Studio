@@ -108,7 +108,7 @@ class TiktokManager {
         url: rawUrl,
         timestamp: Date.now()
       });
-      showToast('Đã bóc tách video TikTok thành công', 'success');
+      showToast('Đã lấy video TikTok thành công', 'success');
       this.notify({ type: 'resolved', data });
     } catch (err) {
       this.state.isLoading = false;

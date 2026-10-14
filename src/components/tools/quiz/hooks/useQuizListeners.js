@@ -42,7 +42,7 @@ export function getCuteQuizProgressQuote(pct, rawStage) {
   // Fallback status based on percentage with cute vibes
   if (pct < 15) return '🌱 Đang khởi tạo pipeline và kiểm tra tài liệu nguồn thật kỹ lưỡng... ✨';
   if (pct < 30) return '🔍 Đang phân tích cấu trúc từng trang và trích xuất câu hỏi cho bạn nè... 📄';
-  if (pct < 50) return '📝 Đang bóc tách đề bài, phân loại từng phương án lựa chọn siêu chuẩn xác... ✨';
+  if (pct < 50) return '📝 Đang phân tích đề bài, nhận diện từng phương án lựa chọn siêu chuẩn xác... ✨';
   if (pct < 65) return '🧪 Đang phân tích công thức, hình ảnh và tạo lời giải chi tiết từng li từng tí... 💡';
   if (pct < 80) return '✨ Đang chuẩn hóa LaTeX, công thức toán hóa và đối chiếu dữ liệu cẩn thận... 💖';
   if (pct < 95) return '🎨 Đang dàn trang A4 siêu đẹp chuẩn Paged Media và xuất PDF cho bạn... 🖨️';

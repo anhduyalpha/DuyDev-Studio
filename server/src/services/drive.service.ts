@@ -99,7 +99,7 @@ export class DriveService {
     const diskPath = this.getDiskPath(normalizedRel);
 
     if (!existsSync(diskPath)) {
-      if (normalizedRel === '/') {
+      if (normalizedRel === '/' || normalizedRel === '/tiktok') {
         await fs.mkdir(diskPath, { recursive: true });
       } else {
         throw new NotFoundError(`Thư mục '${normalizedRel}' không tồn tại`);

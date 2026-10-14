@@ -251,6 +251,9 @@ export function renderStoragePage() {
         </div>
 
       </div>
+      
+      <!-- Quick Folder Tabs Bar -->
+      ${renderFolderTabs(state.currentPath)}
 
       <!-- Batch Operations Toolbar (Visible when items selected) -->
       <div id="storageBatchToolbar" class="${state.selectedPaths.size > 0 ? '' : 'hidden'} p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 flex flex-wrap items-center justify-between gap-3 shadow-xs animate-fadeIn">
@@ -372,6 +375,37 @@ function renderBreadcrumbs(currentPath) {
 }
 
 /**
+ * Renders Quick Folder / Category Tabs
+ */
+function renderFolderTabs(currentPath) {
+  const isTikTok = currentPath === '/tiktok' || currentPath.startsWith('/tiktok/');
+  const isRoot = !isTikTok;
+
+  return `
+    <div id="storageFolderTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <button 
+        type="button" 
+        data-storage-tab="/" 
+        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${isRoot ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10'}"
+      >
+        <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+        <span>Thư mục gốc</span>
+      </button>
+
+      <button 
+        type="button" 
+        data-storage-tab="/tiktok" 
+        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${isTikTok ? 'bg-rose-600 text-white border-rose-600 shadow-xs' : 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10'}"
+      >
+        <i data-lucide="video" class="w-3.5 h-3.5 ${isTikTok ? 'text-white' : 'text-rose-500'}"></i>
+        <span>TikTok Downloader</span>
+        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${isTikTok ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">/tiktok</span>
+      </button>
+    </div>
+  `;
+}
+
+/**
  * Renders the main file explorer area (Grid or List)
  */
 function renderExplorerContent() {
@@ -387,6 +421,28 @@ function renderExplorerContent() {
   const items = getProcessedItems();
 
   if (items.length === 0) {
+    if (!state.searchQuery && (state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/'))) {
+      return `
+        <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center animate-fadeIn">
+          <div class="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shadow-xs">
+            <i data-lucide="video" class="w-7 h-7"></i>
+          </div>
+          <div class="max-w-md">
+            <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-200">
+              Chưa có video TikTok nào trong Drive
+            </h4>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Khi tải video TikTok, bạn có thể bấm "Lưu Trực Tiếp Vào Studio Drive" để tự động lưu video vào thư mục này.
+            </p>
+            <a href="#tool/tiktok-downloader" class="inline-flex items-center gap-1.5 mt-3.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer">
+              <i data-lucide="video" class="w-3.5 h-3.5"></i>
+              <span>Mở TikTok Downloader</span>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center">
         <div class="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/[0.04] text-zinc-400 flex items-center justify-center">
@@ -746,6 +802,8 @@ export function attachStoragePageListeners(onSoftReRender) {
       const breadcrumbEl = document.getElementById('storageBreadcrumbContainer');
       rerenderContentOnly();
       if (breadcrumbEl) breadcrumbEl.innerHTML = renderBreadcrumbs(state.currentPath);
+      const tabsEl = document.getElementById('storageFolderTabsContainer');
+      if (tabsEl) tabsEl.outerHTML = renderFolderTabs(state.currentPath);
       if (window.lucide) window.lucide.createIcons();
     }
   };
@@ -1126,7 +1184,17 @@ export function attachStoragePageListeners(onSoftReRender) {
     };
   }
 
+  // Storage Folder Tabs Delegator
+  const onFolderTabsClick = (e) => {
+    const btn = e.target.closest('.storage-folder-tab');
+    if (btn && btn.dataset.storageTab) {
+      navigateToPath(btn.dataset.storageTab);
+    }
+  };
+  document.addEventListener('click', onFolderTabsClick);
+
   return () => {
+    document.removeEventListener('click', onFolderTabsClick);
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('popstate', onPopState);
     if (dropZone) {

@@ -141,7 +141,7 @@ class QuizPipelineOrchestrator:
                 raise QuizEngineError(
                     ErrorCode.PDF_INVALID,
                     DiagnosticLayer.PDF_PARSING_FAILURE,
-                    "Không thể bóc tách nội dung từ tệp PDF nguồn.",
+                    "Không thể trích xuất nội dung từ tệp PDF nguồn.",
                     stage=JobStage.INSPECTING.value
                 )
 

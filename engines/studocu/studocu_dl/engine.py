@@ -3,7 +3,7 @@
 studocu_dl.engine
 =================
 Engine chính điều phối toàn bộ quy trình:
-Bypass Cloudflare -> Khởi tạo CDP -> Bóc tách Virtual DOM -> Ráp layout A4 -> Xuất PDF/Markdown.
+Bypass Cloudflare -> Khởi tạo CDP -> Giải mã Virtual DOM -> Ráp layout A4 -> Xuất PDF/Markdown.
 """
 
 import asyncio

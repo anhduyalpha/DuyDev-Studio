@@ -106,4 +106,40 @@ describe('TikTok Downloader Suite', () => {
       await app.close();
     }, 20000);
   });
+
+  describe('UI Typography & Purging "bóc tách"', () => {
+    it('TiktokWorkspace.js must contain clean labels and zero instances of "bóc tách"', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const workspaceFile = path.resolve(__dirname, '../../../src/components/tools/tiktok/TiktokWorkspace.js');
+      const content = fs.readFileSync(workspaceFile, 'utf-8');
+
+      // Must NOT contain "bóc tách"
+      expect(content).not.toContain('bóc tách');
+      expect(content).not.toContain('Bóc tách');
+
+      // Must contain requested labels
+      expect(content).toContain('Lịch Sử Tải Xuống');
+      expect(content).toContain('Tải Video');
+      expect(content).toContain('Tải Audio (mp3)');
+    });
+
+    it('useTiktok.js must NOT contain "bóc tách"', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const hookFile = path.resolve(__dirname, '../../../src/components/tools/tiktok/hooks/useTiktok.js');
+      const content = fs.readFileSync(hookFile, 'utf-8');
+      expect(content).not.toContain('bóc tách');
+    });
+  });
+
+  describe('Drive /tiktok Directory Integration', () => {
+    it('DriveService.listFiles("/tiktok") must succeed and auto-create folder if missing', async () => {
+      const { DriveService } = await import('../../src/services/drive.service.js');
+      const res = await DriveService.listFiles('/tiktok');
+      expect(res).toBeDefined();
+      expect(res.currentPath).toBe('/tiktok');
+      expect(Array.isArray(res.items)).toBe(true);
+    });
+  });
 });

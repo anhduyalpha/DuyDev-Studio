@@ -334,7 +334,7 @@ export function renderAiAgentsCard(aiData) {
                     <th class="px-3 py-2">Thời gian</th>
                     <th class="px-3 py-2">Câu lệnh (Prompt)</th>
                     <th class="px-3 py-2 text-center">Ý định & Độ tin cậy</th>
-                    <th class="px-3 py-2">Tham số đã bóc tách</th>
+                    <th class="px-3 py-2">Tham số đã trích xuất</th>
                     <th class="px-3 py-2 text-right">Độ trễ</th>
                     <th class="px-3 py-2 text-center">Nguồn</th>
                   </tr>
