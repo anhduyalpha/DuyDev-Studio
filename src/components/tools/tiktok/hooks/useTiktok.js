@@ -1,5 +1,6 @@
 /**
  * useTiktok Hook & State Store
+ * High-performance state coordinator with surgical DOM notifications.
  */
 
 import { tiktokApi } from '../services/tiktokApi.js';
@@ -30,9 +31,9 @@ class TiktokManager {
     return () => this.listeners.delete(listener);
   }
 
-  notify() {
+  notify(event = {}) {
     this.listeners.forEach((fn) => {
-      try { fn(this.state); } catch (e) { console.error('[TikTokManager] Listener error:', e); }
+      try { fn(this.state, event); } catch (e) { console.error('[TikTokManager] Listener error:', e); }
     });
   }
 
@@ -60,14 +61,16 @@ class TiktokManager {
     try {
       localStorage.removeItem(STORAGE_KEY);
       this.state.recentHistory = [];
-      this.notify();
+      this.notify({ type: 'history' });
     } catch {}
   }
 
-  setUrl(url) {
+  setUrl(url, shouldNotify = false) {
     this.state.url = url;
     this.state.error = null;
-    this.notify();
+    if (shouldNotify) {
+      this.notify({ type: 'url' });
+    }
   }
 
   clear() {
@@ -75,14 +78,14 @@ class TiktokManager {
     this.state.error = null;
     this.state.videoData = null;
     this.state.savedDriveResult = null;
-    this.notify();
+    this.notify({ type: 'clear' });
   }
 
   async resolve(candidateUrl = this.state.url) {
     const rawUrl = (candidateUrl || '').trim();
     if (!rawUrl) {
       this.state.error = 'Vui lòng nhập hoặc dán liên kết video TikTok';
-      this.notify();
+      this.notify({ type: 'error' });
       return;
     }
 
@@ -90,7 +93,7 @@ class TiktokManager {
     this.state.isLoading = true;
     this.state.error = null;
     this.state.savedDriveResult = null;
-    this.notify();
+    this.notify({ type: 'loading' });
 
     try {
       const data = await tiktokApi.resolveVideo(rawUrl);
@@ -106,12 +109,12 @@ class TiktokManager {
         timestamp: Date.now()
       });
       showToast('Đã bóc tách video TikTok thành công', 'success');
-      this.notify();
+      this.notify({ type: 'resolved', data });
     } catch (err) {
       this.state.isLoading = false;
       this.state.error = err?.message || 'Không thể trích xuất video TikTok này';
       showToast(this.state.error, 'error');
-      this.notify();
+      this.notify({ type: 'error' });
     }
   }
 
@@ -119,7 +122,7 @@ class TiktokManager {
     if (!this.state.videoData?.videoUrl) return;
 
     this.state.isSavingDrive = true;
-    this.notify();
+    this.notify({ type: 'saving-drive' });
 
     try {
       const targetUrl = this.state.videoData.videoHdUrl || this.state.videoData.videoUrl;
@@ -131,11 +134,11 @@ class TiktokManager {
       this.state.isSavingDrive = false;
       this.state.savedDriveResult = result;
       showToast(`Đã lưu "${result.fileName}" vào thư mục /tiktok của Drive`, 'success');
-      this.notify();
+      this.notify({ type: 'drive-saved', result });
     } catch (err) {
       this.state.isSavingDrive = false;
       showToast(`Lỗi lưu Drive: ${err?.message || 'Thất bại'}`, 'error');
-      this.notify();
+      this.notify({ type: 'drive-error' });
     }
   }
 }

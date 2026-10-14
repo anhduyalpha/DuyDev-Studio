@@ -1,6 +1,7 @@
 /**
  * TikTok Workspace Component
  * Native high-performance TikTok Downloader & Drive Saver for DD Studio.
+ * Zero-flicker selective DOM updates eliminating input focus loss and mobile clipboard freeze.
  */
 
 import { tiktokManager } from './hooks/useTiktok.js';
@@ -33,6 +34,7 @@ function escapeHtml(str = '') {
 export function renderTiktokWorkspace() {
   const state = tiktokManager.getState();
   const { url, isLoading, error, videoData, isSavingDrive, savedDriveResult, recentHistory } = state;
+  const hasUrl = Boolean(url && url.length > 0);
 
   return `
     <div id="tiktokWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-4xl mx-auto pb-12">
@@ -56,8 +58,8 @@ export function renderTiktokWorkspace() {
         </div>
       </div>
 
-      <!-- Hero Input Card -->
-      <div class="relative p-4 sm:p-6 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl">
+      <!-- Hero Input Card (Permanent DOM Node - Never fully destroyed) -->
+      <div id="tiktokHeroCard" class="relative p-4 sm:p-6 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl">
         <div class="flex flex-col sm:flex-row items-center gap-3">
           <div class="relative flex-1 w-full">
             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -68,19 +70,31 @@ export function renderTiktokWorkspace() {
               type="url"
               placeholder="Dán liên kết TikTok (vd: https://vt.tiktok.com/... hoặc tiktok.com/@user/video/...)"
               value="${escapeHtml(url)}"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
               class="w-full pl-10 pr-20 py-3 rounded-xl text-sm bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500 transition"
               ${isLoading ? 'disabled' : ''}
             />
             <div class="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
-              ${url ? `
-                <button id="btnClearTiktokUrl" type="button" class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition" title="Xóa">
-                  <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-              ` : `
-                <button id="btnPasteTiktokClipboard" type="button" class="px-2.5 py-1.5 rounded-lg bg-zinc-200/60 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-medium flex items-center gap-1 transition" title="Dán từ Clipboard">
-                  <i data-lucide="clipboard" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Dán</span>
-                </button>
-              `}
+              <button
+                id="btnClearTiktokUrl"
+                type="button"
+                class="${hasUrl ? '' : 'hidden'} p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition cursor-pointer"
+                title="Xóa"
+              >
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+
+              <button
+                id="btnPasteTiktokClipboard"
+                type="button"
+                class="${hasUrl ? 'hidden' : ''} px-2.5 py-1.5 rounded-lg bg-zinc-200/60 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-medium flex items-center gap-1 transition cursor-pointer active:scale-95"
+                title="Dán từ Clipboard"
+              >
+                <i data-lucide="clipboard" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Dán</span>
+              </button>
             </div>
           </div>
 
@@ -100,19 +114,22 @@ export function renderTiktokWorkspace() {
           </button>
         </div>
 
-        ${error ? `
-          <div class="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
-            <span>${escapeHtml(error)}</span>
-          </div>
-        ` : ''}
+        <!-- Inline Error Banner -->
+        <div id="tiktokErrorBanner" class="${error ? '' : 'hidden'} mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span class="err-msg">${escapeHtml(error || '')}</span>
+        </div>
       </div>
 
-      <!-- Result Card -->
-      ${videoData ? renderResultCard(videoData, isSavingDrive, savedDriveResult) : ''}
+      <!-- Result Container (Surgically Updated) -->
+      <div id="tiktokResultContainer">
+        ${videoData ? renderResultCard(videoData, isSavingDrive, savedDriveResult) : ''}
+      </div>
 
-      <!-- Recent History Card -->
-      ${recentHistory && recentHistory.length > 0 ? renderRecentHistoryCard(recentHistory) : ''}
+      <!-- Recent History Container (Surgically Updated) -->
+      <div id="tiktokHistoryContainer">
+        ${recentHistory && recentHistory.length > 0 ? renderRecentHistoryCard(recentHistory) : ''}
+      </div>
     </div>
   `.trim();
 }
@@ -125,7 +142,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult) {
   const audioDownloadUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${video.id}_audio.mp3`, true) : '';
 
   return `
-    <div id="tiktokResultCard" class="p-4 sm:p-6 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl space-y-6">
+    <div id="tiktokResultCard" class="p-4 sm:p-6 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl space-y-6 animate-fadeIn">
       <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         <!-- Column 1: Video Player (5 cols) -->
         <div class="md:col-span-5 flex flex-col items-center">
@@ -262,7 +279,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult) {
 
             <!-- Saved Drive Feedback Banner -->
             ${savedDriveResult ? `
-              <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
+              <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 animate-fadeIn">
                 <div class="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
                   <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
                   <span class="truncate">Đã lưu: <strong>${escapeHtml(savedDriveResult.fileName)}</strong></span>
@@ -284,7 +301,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult) {
 
 function renderRecentHistoryCard(history) {
   return `
-    <div class="p-4 sm:p-5 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl space-y-3">
+    <div class="p-4 sm:p-5 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl space-y-3 animate-fadeIn">
       <div class="flex items-center justify-between">
         <h4 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
           <i data-lucide="clock" class="w-3.5 h-3.5 text-zinc-400"></i>
@@ -330,33 +347,151 @@ function renderRecentHistoryCard(history) {
   `.trim();
 }
 
-export function attachTiktokWorkspaceListeners(onReRender) {
+export function attachTiktokWorkspaceListeners() {
   if (window.lucide?.createIcons) window.lucide.createIcons();
-
-  const unsubscribe = tiktokManager.subscribe(() => {
-    if (typeof onReRender === 'function') {
-      onReRender();
-    }
-  });
 
   const input = document.getElementById('tiktokUrlInput');
   const btnResolve = document.getElementById('btnResolveTiktok');
   const btnPaste = document.getElementById('btnPasteTiktokClipboard');
   const btnClear = document.getElementById('btnClearTiktokUrl');
-  const btnSaveDrive = document.getElementById('btnSaveTiktokDrive');
-  const btnCopyDirect = document.getElementById('btnCopyTiktokDirectLink');
-  const btnCopyCaption = document.getElementById('btnCopyCaption');
-  const btnClearHistory = document.getElementById('btnClearTiktokHistory');
+  const errBanner = document.getElementById('tiktokErrorBanner');
+  const resultContainer = document.getElementById('tiktokResultContainer');
+  const historyContainer = document.getElementById('tiktokHistoryContainer');
 
-  // Input changes
+  function syncInputButtons(val) {
+    const hasValue = Boolean(val && val.length > 0);
+    if (btnClear) btnClear.classList.toggle('hidden', !hasValue);
+    if (btnPaste) btnPaste.classList.toggle('hidden', hasValue);
+  }
+
+  function attachResultCardListeners() {
+    const btnSaveDrive = document.getElementById('btnSaveTiktokDrive');
+    const btnCopyDirect = document.getElementById('btnCopyTiktokDirectLink');
+    const btnCopyCaption = document.getElementById('btnCopyCaption');
+
+    if (btnSaveDrive) {
+      btnSaveDrive.onclick = () => {
+        tiktokManager.saveCurrentToDrive();
+      };
+    }
+
+    if (btnCopyDirect) {
+      btnCopyDirect.onclick = async () => {
+        const url = btnCopyDirect.getAttribute('data-stream-url');
+        if (url) {
+          const fullUrl = window.location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            showToast('Đã sao chép link stream video', 'success');
+          } catch {
+            showToast('Không thể sao chép link', 'error');
+          }
+        }
+      };
+    }
+
+    if (btnCopyCaption) {
+      btnCopyCaption.onclick = async () => {
+        const caption = btnCopyCaption.getAttribute('data-caption');
+        if (caption) {
+          try {
+            await navigator.clipboard.writeText(caption);
+            showToast('Đã sao chép caption', 'success');
+          } catch {
+            showToast('Không thể sao chép caption', 'error');
+          }
+        }
+      };
+    }
+
+    if (window.lucide?.createIcons) window.lucide.createIcons();
+  }
+
+  function attachHistoryListeners() {
+    document.querySelectorAll('[data-re-resolve-url]').forEach((btn) => {
+      btn.onclick = () => {
+        const targetUrl = btn.getAttribute('data-re-resolve-url');
+        if (targetUrl) {
+          if (input) {
+            input.value = targetUrl;
+            syncInputButtons(targetUrl);
+          }
+          tiktokManager.setUrl(targetUrl, false);
+          tiktokManager.resolve(targetUrl);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      };
+    });
+
+    const btnClearHistory = document.getElementById('btnClearTiktokHistory');
+    if (btnClearHistory) {
+      btnClearHistory.onclick = () => {
+        tiktokManager.clearHistory();
+        showToast('Đã xóa lịch sử gần đây', 'info');
+      };
+    }
+
+    if (window.lucide?.createIcons) window.lucide.createIcons();
+  }
+
+  // Subscribe to state changes for SURGICAL in-place updates (Zero full-DOM destruction)
+  const unsubscribe = tiktokManager.subscribe((state, event) => {
+    // 1. Loading state on button and input
+    if (btnResolve) {
+      btnResolve.disabled = state.isLoading;
+      btnResolve.innerHTML = state.isLoading
+        ? '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Đang bóc tách...</span>'
+        : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Bóc tách Video</span>';
+    }
+    if (input) {
+      input.disabled = state.isLoading;
+    }
+
+    // 2. Error banner
+    if (errBanner) {
+      if (state.error) {
+        errBanner.classList.remove('hidden');
+        const msgEl = errBanner.querySelector('.err-msg');
+        if (msgEl) msgEl.textContent = state.error;
+      } else {
+        errBanner.classList.add('hidden');
+      }
+    }
+
+    // 3. Result Container
+    if (resultContainer) {
+      if (state.videoData) {
+        resultContainer.innerHTML = renderResultCard(state.videoData, state.isSavingDrive, state.savedDriveResult);
+        attachResultCardListeners();
+      } else {
+        resultContainer.innerHTML = '';
+      }
+    }
+
+    // 4. History Container
+    if (historyContainer) {
+      historyContainer.innerHTML = state.recentHistory?.length > 0 ? renderRecentHistoryCard(state.recentHistory) : '';
+      attachHistoryListeners();
+    }
+
+    if (window.lucide?.createIcons) window.lucide.createIcons();
+  });
+
+  // Attach listeners to current results and history
+  attachResultCardListeners();
+  attachHistoryListeners();
+
+  // Input typing (NEVER re-renders the input!)
   if (input) {
     input.oninput = (e) => {
-      tiktokManager.setUrl(e.target.value);
+      const val = e.target.value;
+      syncInputButtons(val);
+      tiktokManager.setUrl(val, false);
     };
     input.onkeydown = (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        tiktokManager.resolve();
+        tiktokManager.resolve(input.value);
       }
     };
   }
@@ -364,92 +499,59 @@ export function attachTiktokWorkspaceListeners(onReRender) {
   // Resolve click
   if (btnResolve) {
     btnResolve.onclick = () => {
-      tiktokManager.resolve();
+      const val = input?.value || tiktokManager.getState().url;
+      tiktokManager.resolve(val);
     };
   }
 
   // Clear button
   if (btnClear) {
     btnClear.onclick = () => {
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+      syncInputButtons('');
       tiktokManager.clear();
-      input?.focus();
     };
   }
 
-  // Paste clipboard
+  // Non-blocking Mobile Clipboard Paste with Timeout & Focus Fallback
   if (btnPaste) {
     btnPaste.onclick = async () => {
-      try {
-        if (navigator.clipboard?.readText) {
-          const text = await navigator.clipboard.readText();
-          if (text?.trim()) {
-            tiktokManager.setUrl(text.trim());
-            tiktokManager.resolve(text.trim());
-            return;
-          }
-        }
-        showToast('Clipboard trống hoặc chưa cấp quyền', 'info');
-      } catch (err) {
-        showToast('Không thể đọc Clipboard', 'error');
-      }
-    };
-  }
+      if (tiktokManager.getState().isLoading) return;
 
-  // Save to Drive
-  if (btnSaveDrive) {
-    btnSaveDrive.onclick = () => {
-      tiktokManager.saveCurrentToDrive();
-    };
-  }
-
-  // Copy stream URL
-  if (btnCopyDirect) {
-    btnCopyDirect.onclick = async () => {
-      const url = btnCopyDirect.getAttribute('data-stream-url');
-      if (url) {
-        const fullUrl = window.location.origin + url;
+      let pastedText = '';
+      if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
         try {
-          await navigator.clipboard.writeText(fullUrl);
-          showToast('Đã sao chép link stream video', 'success');
-        } catch {
-          showToast('Không thể sao chép link', 'error');
+          const clipPromise = navigator.clipboard.readText();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('CLIPBOARD_TIMEOUT')), 1200)
+          );
+          pastedText = await Promise.race([clipPromise, timeoutPromise]);
+        } catch (err) {
+          // Gracefully caught: Permission denied, dialog dismiss, or timeout on Android
+          console.warn('[TikTok] Clipboard access failed or timed out:', err);
         }
       }
-    };
-  }
 
-  // Copy caption
-  if (btnCopyCaption) {
-    btnCopyCaption.onclick = async () => {
-      const caption = btnCopyCaption.getAttribute('data-caption');
-      if (caption) {
-        try {
-          await navigator.clipboard.writeText(caption);
-          showToast('Đã sao chép caption', 'success');
-        } catch {
-          showToast('Không thể sao chép caption', 'error');
+      if (pastedText && typeof pastedText === 'string' && pastedText.trim()) {
+        const clean = pastedText.trim();
+        if (input) {
+          input.value = clean;
+          syncInputButtons(clean);
         }
+        tiktokManager.setUrl(clean, false);
+        tiktokManager.resolve(clean);
+        return;
       }
-    };
-  }
 
-  // Re-resolve from history
-  document.querySelectorAll('[data-re-resolve-url]').forEach((btn) => {
-    btn.onclick = () => {
-      const targetUrl = btn.getAttribute('data-re-resolve-url');
-      if (targetUrl) {
-        tiktokManager.setUrl(targetUrl);
-        tiktokManager.resolve(targetUrl);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      // If clipboard was empty or blocked, focus input for native long-press paste
+      if (input) {
+        input.focus();
+        input.select();
       }
-    };
-  });
-
-  // Clear history
-  if (btnClearHistory) {
-    btnClearHistory.onclick = () => {
-      tiktokManager.clearHistory();
-      showToast('Đã xóa lịch sử gần đây', 'info');
+      showToast('Nhấn giữ ô nhập để dán liên kết', 'info');
     };
   }
 
