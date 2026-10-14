@@ -11,7 +11,7 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-export function renderDocumentItem(doc, isTrash = false) {
+export function renderDocumentItem(doc, isTrash = false, options = {}) {
   const isPdf = Boolean(doc.is_pdf ?? (doc.format === 'pdf' || (doc.name && doc.name.toLowerCase().endsWith('.pdf'))));
   const hasHexId = Boolean(doc.id && /^[0-9a-f]{16}$/i.test(doc.id));
   const docId = hasHexId ? doc.id : (doc.name || 'document');
@@ -24,8 +24,14 @@ export function renderDocumentItem(doc, isTrash = false) {
     : `/api/v1/studocu/stream?file=${encodeURIComponent(docName)}`;
   const downloadUrl = `/api/v1/studocu/download/${encodeURIComponent(docName)}`;
 
+  const isDownloaded = Boolean(!isTrash && (doc.isDownloaded || options.isDownloaded));
+  const isJustDownloaded = Boolean(!isTrash && (doc.isJustDownloaded || options.isJustDownloaded));
+  const itemClasses = ['file-item'];
+  if (isDownloaded) itemClasses.push('file-item-downloaded');
+  if (isJustDownloaded) itemClasses.push('file-item-just-downloaded');
+
   return `
-    <div class="file-item">
+    <div class="${itemClasses.join(' ')}" data-doc-name="${escapeHtml(docName)}">
       <!-- Left: File Badge & Info -->
       <div class="file-item-left">
         <div class="file-type-badge ${isPdf ? 'badge-type-pdf' : 'badge-type-md'}">
@@ -47,6 +53,12 @@ export function renderDocumentItem(doc, isTrash = false) {
               <i data-lucide="user" class="w-3 h-3"></i>
               <span>${escapeHtml(uploader)}</span>
             </span>
+            ${isDownloaded ? `
+              <span class="meta-pill meta-downloaded text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10 font-medium inline-flex items-center gap-1" title="Tệp đã tải về">
+                <i data-lucide="${isJustDownloaded ? 'sparkles' : 'check'}" class="w-3 h-3 text-emerald-500"></i>
+                <span>${isJustDownloaded ? 'Vừa tải xong' : 'Đã tải'}</span>
+              </span>
+            ` : ''}
             ${isTrash ? '<span class="meta-pill text-rose-500 dark:text-rose-400 border-rose-500/25">Thùng rác</span>' : ''}
           </div>
         </div>
@@ -70,6 +82,7 @@ export function renderDocumentItem(doc, isTrash = false) {
             download="${escapeHtml(docName)}"
             class="btn-action btn-dl"
             title="Tải về"
+            data-doc-name="${escapeHtml(docName)}"
           >
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>Tải</span>

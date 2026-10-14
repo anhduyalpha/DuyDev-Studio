@@ -133,6 +133,7 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         setupWebView()
+        unlockHighRefreshRate()
         setupBackHandler()
         pruneRedundantCache()
         requestNotificationPermission()
@@ -204,6 +205,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        unlockHighRefreshRate()
         if (::webView.isInitialized) {
             webView.resumeTimers()
             webView.onResume()
@@ -303,6 +305,8 @@ class MainActivity : AppCompatActivity() {
 
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         webView.isHorizontalScrollBarEnabled = false
+        webView.isVerticalScrollBarEnabled = false
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
@@ -562,6 +566,29 @@ class MainActivity : AppCompatActivity() {
                     showOffline(true)
                 }
             }
+        }
+    }
+
+    /**
+     * Unlocks high refresh rate (90Hz / 120Hz / 144Hz) for the WebView window on devices with adaptive display.
+     */
+    private fun unlockHighRefreshRate() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            try {
+                val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    display
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay
+                }
+                val modes = display?.supportedModes
+                val maxMode = modes?.maxByOrNull { it.refreshRate }
+                if (maxMode != null && maxMode.refreshRate > 60f) {
+                    val params = window.attributes
+                    params.preferredDisplayModeId = maxMode.modeId
+                    window.attributes = params
+                }
+            } catch (_: Exception) {}
         }
     }
 

@@ -488,9 +488,92 @@ html.dark .btn-action.btn-view:hover,
 .btn-action.btn-tab:hover { color: #4f46e5; border-color: rgba(79, 70, 229, 0.35); }
 html.dark .btn-action.btn-tab:hover,
 .dark .btn-action.btn-tab:hover { color: #818cf8; border-color: rgba(129, 140, 248, 0.35); }
-.btn-action.btn-dl:hover { color: #059669; border-color: rgba(5, 150, 105, 0.35); }
+
+/* Prominent Download Button (High visibility, light/dark contrast) */
+.btn-action.btn-dl {
+  background-color: #ecfdf5;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #047857;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.12);
+}
+.btn-action.btn-dl:hover {
+  background-color: #10b981;
+  border-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.28);
+  transform: translateY(-1px);
+}
+.btn-action.btn-dl:active {
+  transform: translateY(0);
+}
+html.dark .btn-action.btn-dl,
+.dark .btn-action.btn-dl {
+  background-color: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  color: #34d399;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
 html.dark .btn-action.btn-dl:hover,
-.dark .btn-action.btn-dl:hover { color: #34d399; border-color: rgba(52, 211, 153, 0.35); }
+.dark .btn-action.btn-dl:hover {
+  background-color: #059669;
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+html.dark .btn-action.btn-dl:active,
+.dark .btn-action.btn-dl:active {
+  transform: translateY(0);
+}
+
+/* Highlighted Border for Downloaded Files */
+.file-item.file-item-downloaded {
+  border: 1.5px solid #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.035) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18), 0 2px 8px rgba(16, 185, 129, 0.08) !important;
+  position: relative;
+}
+
+.file-item.file-item-downloaded:hover {
+  border-color: #059669 !important;
+  background-color: rgba(16, 185, 129, 0.06) !important;
+  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(16, 185, 129, 0.12) !important;
+}
+
+html.dark .file-item.file-item-downloaded,
+.dark .file-item.file-item-downloaded {
+  border: 1.5px solid rgba(52, 211, 153, 0.65) !important;
+  background-color: rgba(16, 185, 129, 0.06) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25), 0 2px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.dark .file-item.file-item-downloaded:hover,
+.dark .file-item.file-item-downloaded:hover {
+  border-color: #34d399 !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.35), 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+}
+
+.file-item.file-item-just-downloaded {
+  animation: file-download-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes file-download-pulse {
+  0% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.5), 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+    transform: scale(1.008);
+  }
+  50% {
+    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.3), 0 2px 10px rgba(16, 185, 129, 0.2) !important;
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18), 0 2px 8px rgba(16, 185, 129, 0.08) !important;
+    transform: scale(1);
+  }
+}
+
 .btn-action.btn-restore { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.25); color: #059669; }
 html.dark .btn-action.btn-restore,
 .dark .btn-action.btn-restore { color: #6ee7b7; }

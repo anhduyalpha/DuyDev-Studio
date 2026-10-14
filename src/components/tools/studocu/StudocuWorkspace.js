@@ -150,6 +150,18 @@ export function attachStudocuListeners() {
     container.querySelectorAll('.btn-trash-doc').forEach(b => { b.onclick = (e) => { e.stopPropagation(); studocuManager.moveToTrash(b.getAttribute('data-doc-name')); }; });
     container.querySelectorAll('.btn-restore-doc').forEach(b => { b.onclick = (e) => { e.stopPropagation(); studocuManager.restoreFromTrash(b.getAttribute('data-doc-name')); }; });
     container.querySelectorAll('.btn-delete-perm-doc').forEach(b => { b.onclick = (e) => { e.stopPropagation(); studocuManager.deletePermanent(b.getAttribute('data-doc-name')); }; });
+    container.querySelectorAll('.btn-dl').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const docName = btn.getAttribute('data-doc-name') || btn.getAttribute('download');
+        if (docName) {
+          studocuManager.markAsDownloaded(docName, true);
+        }
+        const fileItem = btn.closest('.file-item');
+        if (fileItem) {
+          fileItem.classList.add('file-item-downloaded', 'file-item-just-downloaded');
+        }
+      });
+    });
   }
 
   function attachListHandlers() {
@@ -211,7 +223,7 @@ export function attachStudocuListeners() {
 
     const itemsEl = document.getElementById('studocuItemsContainer');
     const topItemId = state.filteredItems?.[0]?.name || state.filteredItems?.[0]?.id || '';
-    const structureKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}:${topItemId}`;
+    const structureKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}:${topItemId}:${state.justDownloadedDocName || ''}:${(state.downloadedDocNames?.size || 0)}`;
 
     if (listEl && structureKey !== prevStructureKey) {
       prevStructureKey = structureKey;
@@ -222,7 +234,19 @@ export function attachStudocuListeners() {
     } else if (itemsEl && state.searchQuery !== prevSearchQuery) {
       prevSearchQuery = state.searchQuery;
       const isTrash = state.currentTab === 'trash';
-      itemsEl.innerHTML = renderDocumentItemsHtml(state.filteredItems || [], isTrash);
+      const downloadedSet = state.downloadedDocNames || new Set();
+      const justDownloadedName = state.justDownloadedDocName || null;
+      const itemOptions = {
+        isDocDownloaded: (name) => {
+          const norm = (s) => (s || '').normalize('NFC').trim();
+          return downloadedSet.has(norm(name));
+        },
+        isDocJustDownloaded: (name) => {
+          const norm = (s) => (s || '').normalize('NFC').trim();
+          return Boolean(justDownloadedName && norm(name) === justDownloadedName);
+        }
+      };
+      itemsEl.innerHTML = renderDocumentItemsHtml(state.filteredItems || [], isTrash, itemOptions);
       if (window.lucide?.createIcons) window.lucide.createIcons({ root: itemsEl });
       attachItemRowHandlers(itemsEl);
       const clearBtn = document.getElementById('btnClearStudocuSearch');

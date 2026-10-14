@@ -13,9 +13,14 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-export function renderDocumentItemsHtml(items, isTrash) {
+export function renderDocumentItemsHtml(items, isTrash, options = {}) {
   if (items.length > 0) {
-    return items.map(doc => renderDocumentItem(doc, isTrash)).join('');
+    return items.map(doc => {
+      const docName = doc.name || doc.title || '';
+      const isDownloaded = doc.isDownloaded || (typeof options.isDocDownloaded === 'function' && options.isDocDownloaded(docName));
+      const isJustDownloaded = doc.isJustDownloaded || (typeof options.isDocJustDownloaded === 'function' && options.isDocJustDownloaded(docName));
+      return renderDocumentItem(doc, isTrash, { isDownloaded, isJustDownloaded });
+    }).join('');
   }
   return `
     <div class="p-8 text-center space-y-2 text-zinc-500 dark:text-zinc-400">
@@ -32,6 +37,19 @@ export function renderDocumentListCard(state) {
   const isTrash = currentTab === 'trash';
   const items = state.filteredItems || [];
   const counts = state.counts || { pdf: 0, trash: 0 };
+  const downloadedSet = state.downloadedDocNames || new Set();
+  const justDownloadedName = state.justDownloadedDocName || null;
+
+  const itemOptions = {
+    isDocDownloaded: (name) => {
+      const norm = (s) => (s || '').normalize('NFC').trim();
+      return downloadedSet.has(norm(name));
+    },
+    isDocJustDownloaded: (name) => {
+      const norm = (s) => (s || '').normalize('NFC').trim();
+      return Boolean(justDownloadedName && norm(name) === justDownloadedName);
+    }
+  };
 
   return `
     <div class="rounded-xl border border-zinc-200/80 dark:border-zinc-800/90 bg-white dark:bg-[#111114] p-4 sm:p-5 space-y-3.5 shadow-xs dark:shadow-xl">
@@ -115,7 +133,7 @@ export function renderDocumentListCard(state) {
 
       <!-- Items List -->
       <div id="studocuItemsContainer" class="pt-1 space-y-1.5">
-        ${renderDocumentItemsHtml(items, isTrash)}
+        ${renderDocumentItemsHtml(items, isTrash, itemOptions)}
       </div>
     </div>
   `.trim();

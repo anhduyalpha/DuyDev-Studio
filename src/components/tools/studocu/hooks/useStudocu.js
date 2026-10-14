@@ -41,6 +41,54 @@ class StudocuManager {
     this.pollInterval = null;
     this.timerInterval = null;
     this.orbInstance = null;
+    this.downloadedDocNames = this.loadDownloadedDocs();
+    this.justDownloadedDocName = null;
+    this.prevDownloadSnapshot = null;
+  }
+
+  loadDownloadedDocs() {
+    try {
+      const raw = sessionStorage.getItem('ds_studocu_downloaded_docs');
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch (_) {
+      return new Set();
+    }
+  }
+
+  saveDownloadedDocs() {
+    try {
+      sessionStorage.setItem('ds_studocu_downloaded_docs', JSON.stringify([...this.downloadedDocNames]));
+    } catch (_) {}
+  }
+
+  markAsDownloaded(docName, isJust = false) {
+    if (!docName) return;
+    const norm = (s) => (s || '').normalize('NFC').trim();
+    const key = norm(docName);
+    this.downloadedDocNames.add(key);
+    this.saveDownloadedDocs();
+    if (isJust) {
+      this.justDownloadedDocName = key;
+      setTimeout(() => {
+        if (this.justDownloadedDocName === key) {
+          this.justDownloadedDocName = null;
+          this.notify();
+        }
+      }, 7000);
+    }
+    this.notify();
+  }
+
+  isDocDownloaded(docName) {
+    if (!docName) return false;
+    const norm = (s) => (s || '').normalize('NFC').trim();
+    return this.downloadedDocNames.has(norm(docName));
+  }
+
+  isDocJustDownloaded(docName) {
+    if (!docName) return false;
+    const norm = (s) => (s || '').normalize('NFC').trim();
+    return this.justDownloadedDocName === norm(docName);
   }
 
   subscribe(fn) {
@@ -66,7 +114,9 @@ class StudocuManager {
       searchQuery: this.searchQuery,
       sortOption: this.sortOption,
       filteredItems: this.getFilteredItems(),
-      counts: { pdf: this.files.length, trash: this.trash.length }
+      counts: { pdf: this.files.length, trash: this.trash.length },
+      downloadedDocNames: this.downloadedDocNames,
+      justDownloadedDocName: this.justDownloadedDocName
     };
   }
 
@@ -129,6 +179,7 @@ class StudocuManager {
 
   async startDownload(url, cookie = null) {
     if (this.isDownloading) return;
+    this.prevDownloadSnapshot = new Set(this.files.map(f => (f.name || f.title || '').normalize('NFC').trim()));
     this.isDownloading = true;
     this.hasError = false;
     this.progress = 6;
@@ -244,7 +295,8 @@ class StudocuManager {
         if (job.status === 'completed' || job.status === 'success') {
           this.progress = 100;
           this.stopPolling();
-          this.finishJob(true, 'Tải hoàn tất');
+          const downloadedName = job?.result?.pdf?.name || job?.result?.name || null;
+          this.finishJob(true, 'Tải hoàn tất', downloadedName);
           return;
         } else if (job.status === 'error' || job.status === 'failed') {
           this.stopPolling();
@@ -269,7 +321,7 @@ class StudocuManager {
     this.pollTimeout = setTimeout(pollTick, 800);
   }
 
-  finishJob(isSuccess, message) {
+  finishJob(isSuccess, message, downloadedName = null) {
     if (!this.isDownloading && !this.currentJobId) return;
     this.isDownloading = false;
     this.currentJobId = null;
@@ -285,7 +337,16 @@ class StudocuManager {
     if (isSuccess) {
       showToast(message || 'Tải hoàn tất', 'success');
       playCompleteSound();
-      this.fetchFiles();
+      this.fetchFiles().then(() => {
+        let targetName = downloadedName;
+        if (!targetName && this.files.length > 0) {
+          const newlyAdded = this.files.find(f => !this.prevDownloadSnapshot?.has((f.name || f.title || '').normalize('NFC').trim()));
+          targetName = newlyAdded ? (newlyAdded.name || newlyAdded.title) : (this.files[0]?.name || this.files[0]?.title);
+        }
+        if (targetName) {
+          this.markAsDownloaded(targetName, true);
+        }
+      });
     } else {
       showToast(message || 'Thao tác thất bại');
       this.logs.push(`❌ ${message}`);
