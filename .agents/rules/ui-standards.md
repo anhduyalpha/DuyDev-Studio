@@ -1,31 +1,20 @@
-# UI Production Minimalism & Anti-Filler Rules
+---
+globs:
+  - "src/**/*.js"
+  - "src/styles/**/*.css"
+  - "index.html"
+description: UI Production Minimalism & Anti-Filler Standards
+---
 
-## 1. Core Mandate
-All user interfaces in DuyDev Studio must adhere to **production-grade minimalism** (Linear, Vercel, Raycast aesthetic).
+# UI Production Minimalism Standards
 
-## 2. Strict Prohibitions (Anti-Patterns)
-1. **Never add marketing or tutorial filler text**:
-   - FORBIDDEN: `"Sẵn sàng in ấn, chia sẻ qua Zalo, Messenger, AirDrop"`
-   - FORBIDDEN: `"Giải mã tức thì trực tiếp trên thiết bị của bạn"`
-   - FORBIDDEN: `"PNG • Độ nét cao"`
-2. **Never add parenthetical explanations in options or radio buttons**:
-   - FORBIDDEN: `"PNG (Ảnh số)"` -> REQUIRED: `"PNG"`
-   - FORBIDDEN: `"SVG (Vector in ấn)"` -> REQUIRED: `"SVG"`
-   - FORBIDDEN: `"WPA / WPA2 / WPA3 (Phổ biến)"` -> REQUIRED: `"WPA / WPA2 / WPA3"`
-   - FORBIDDEN: `"Không mật khẩu (Open)"` -> REQUIRED: `"Không mật khẩu"`
-3. **Keep dropzone titles concise**:
-   - Use `"Kéo thả hoặc tải tệp lên"`, accompanied by accepted file formats (`PNG, JPG, WEBP, PDF`).
-4. **Never show fake placeholder feedback**:
-   - Show real decoded output or real server status directly.
+## 1. Prohibitions
+- Banned filler: *"Sẵn sàng in ấn..."*, *"Giải mã tức thì..."*, *"PNG • Độ nét cao"*.
+- Banned parentheticals: Use `"PNG"` (not `"PNG (Ảnh số)"`), `"SVG"` (not `"SVG (Vector in ấn)"`), `"WPA / WPA2"` (not `"(Phổ biến)"`).
+- Dropzones: Clean `"Kéo thả hoặc tải tệp lên"` with format list (`PNG, JPG, WEBP, PDF`).
+- Feedback: Real output / actual server status only (no fake telemetries).
 
-## 3. Dual-Platform Mandate (Desktop & Mobile Parity)
-1. **Never design for desktop-only or mobile-only**: Every UI feature, card, navigation element, and atmospheric background MUST be designed, tested, and verified for both Desktop (hover states, wide viewports) and Mobile (touch targets >=44px, compact widths 375px–430px, OLED dark contrast, safe-areas, and sticky header bounds).
-2. **Never hide primary information on mobile**: Adapt layout gracefully via responsive breakpoints (`sm:`, `md:`, `lg:`) instead of arbitrarily removing key capabilities.
-3. **Ambient background & lighting must be tuned for mobile**: Sizing and opacity of spotlights/gradients must account for mobile screen aspect ratios and OLED contrast so they remain clear and purposeful on phones.
-
-## 4. Single Source of Truth
-This rule operates in tandem with the automated Impeccable Design System pipeline:
-- Rule Specification: [impeccable-auto.md](impeccable-auto.md)
-- Design Tokens: [src/styles/stitch-tokens.css](../../src/styles/stitch-tokens.css)
-- Knowledge Item: [KI-CON-001-ui-production-minimalism.md](../../docs/knowledge-base/KI-CON-001-ui-production-minimalism.md)
-- Icon Philosophy: [KI-CON-007-tool-icon-design-philosophy.md](../../docs/knowledge-base/KI-CON-007-tool-icon-design-philosophy.md) and [KI-CON-008-apple-grade-tool-icon-system.md](../../docs/knowledge-base/KI-CON-008-apple-grade-tool-icon-system.md)
+## 2. Desktop & Mobile Parity
+- Mobile touch targets $\ge 44\text{px}$; compact viewports $375\text{px}–430\text{px}$; safe-areas; OLED contrast.
+- Never hide primary actions on mobile; use responsive breakpoints (`sm:`, `md:`, `lg:`).
+- Tune spotlights/gradients to mobile ratios without washing out dark mode.

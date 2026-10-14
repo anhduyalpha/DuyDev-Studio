@@ -1225,6 +1225,36 @@ export function attachStoragePageListeners(onSoftReRender) {
   };
   window.addEventListener('keydown', onKeyDown);
 
+  // Hover video preview for TikTok grid cards on desktop
+  const onMouseOver = (e) => {
+    const card = e.target.closest('.tiktok-grid-card');
+    if (!card || card.contains(e.relatedTarget)) return;
+    const video = card.querySelector('video.tiktok-card-video');
+    if (video) {
+      const img = card.querySelector('img.tiktok-card-thumb');
+      if (img && img.style.display !== 'none') {
+        img.style.opacity = '0';
+        video.classList.remove('hidden');
+      }
+      video.play().catch(() => {});
+    }
+  };
+
+  const onMouseOut = (e) => {
+    const card = e.target.closest('.tiktok-grid-card');
+    if (!card || card.contains(e.relatedTarget)) return;
+    const video = card.querySelector('video.tiktok-card-video');
+    if (video) {
+      video.pause();
+      try { video.currentTime = 0.1; } catch (_) {}
+      const img = card.querySelector('img.tiktok-card-thumb');
+      if (img && img.style.display !== 'none') {
+        img.style.opacity = '1';
+        video.classList.add('hidden');
+      }
+    }
+  };
+
   // Global Click Delegator for Item Navigation, Sort, & Actions
   const contentArea = document.getElementById('storageContentArea');
   if (contentArea) {
@@ -1339,36 +1369,6 @@ export function attachStoragePageListeners(onSoftReRender) {
         } else {
           const item = state.items.find((i) => i.path === itemPath);
           if (item) previewStorageItem(item);
-        }
-      }
-    };
-
-    // Hover video preview for TikTok grid cards on desktop
-    const onMouseOver = (e) => {
-      const card = e.target.closest('.tiktok-grid-card');
-      if (!card || card.contains(e.relatedTarget)) return;
-      const video = card.querySelector('video.tiktok-card-video');
-      if (video) {
-        const img = card.querySelector('img.tiktok-card-thumb');
-        if (img && img.style.display !== 'none') {
-          img.style.opacity = '0';
-          video.classList.remove('hidden');
-        }
-        video.play().catch(() => {});
-      }
-    };
-
-    const onMouseOut = (e) => {
-      const card = e.target.closest('.tiktok-grid-card');
-      if (!card || card.contains(e.relatedTarget)) return;
-      const video = card.querySelector('video.tiktok-card-video');
-      if (video) {
-        video.pause();
-        try { video.currentTime = 0.1; } catch (_) {}
-        const img = card.querySelector('img.tiktok-card-thumb');
-        if (img && img.style.display !== 'none') {
-          img.style.opacity = '1';
-          video.classList.add('hidden');
         }
       }
     };
