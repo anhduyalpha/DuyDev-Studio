@@ -141,9 +141,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=22.60">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=22.60">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=22.60">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=22.61">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=22.61">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=22.61">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -546,7 +546,29 @@
   <script src="src/vendor/qr-code-styling.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js';"></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=22.60"></script>
+  <script type="module" src="src/app.js?v=22.61"></script>
+
+  <!-- Startup Fallback Watchdog (Guarantees user is never trapped in startup loader) -->
+  <script>
+    setTimeout(function() {
+      var loader = document.getElementById('appStartupLoader');
+      if (loader && !window.__dsAppReady) {
+        var hint = document.getElementById('appStartupTimeoutHint');
+        if (!hint) {
+          var container = loader.querySelector('.flex.flex-col') || loader;
+          var box = document.createElement('div');
+          box.id = 'appStartupTimeoutHint';
+          box.className = 'mt-4 flex flex-col items-center gap-2.5 text-center animate-fadeIn';
+          box.innerHTML = '<span class="text-xs text-amber-500 font-medium">Khởi động lâu hơn bình thường...</span>' +
+            '<div class="flex items-center gap-2">' +
+            '<button onclick="window.location.reload(true)" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 border border-zinc-700 cursor-pointer transition">Tải lại</button>' +
+            '<button onclick="caches.keys().then(function(keys){return Promise.all(keys.map(function(k){return caches.delete(k);}));}).then(function(){localStorage.clear();sessionStorage.clear();window.location.reload(true);});" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs text-white cursor-pointer transition">Làm mới toàn bộ cache</button>' +
+            '</div>';
+          container.appendChild(box);
+        }
+      }
+    }, 4000);
+  </script>
 </body>
 </html>
 

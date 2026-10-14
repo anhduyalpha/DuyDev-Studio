@@ -3,7 +3,7 @@
  */
 
 import { tiktokApi } from '../services/tiktokApi.js';
-import { showToast } from '../../../../src/utilities/toast.js';
+import { showToast } from '../../../../utilities/toast.js';
 
 const STORAGE_KEY = 'ds_tiktok_history_v1';
 

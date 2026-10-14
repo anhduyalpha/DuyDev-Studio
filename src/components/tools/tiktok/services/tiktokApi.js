@@ -6,7 +6,7 @@ export const tiktokApi = {
   /**
    * Resolves a TikTok URL to metadata and direct stream URLs
    * @param {string} url 
-   * @returns {Promise<{ success: boolean, data: import('../../../../server/src/schemas/tiktok.schema.js').TikTokVideoData }>}
+   * @returns {Promise<any>}
    */
   async resolveVideo(url) {
     const res = await fetch('/api/v1/tiktok/resolve', {
