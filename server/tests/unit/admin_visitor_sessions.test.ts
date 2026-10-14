@@ -144,6 +144,74 @@ describe('VisitorSessionManager & Telemetry', () => {
     expect(stats.onlineCount).toBe(1);
     expect(stats.leftCount).toBe(1);
   });
+
+  it('should aggregate visitor sessions into unified device cards with owner attribution and route deduplication', () => {
+    // 1. First session for device dev_duy_pc
+    const s1 = VisitorSessionManager.registerEnter({
+      sessionId: 'sess_pc_1',
+      deviceId: 'dev_duy_pc',
+      ip: '192.168.2.171',
+      userAgent: 'Mozilla/5.0 Windows Chrome',
+      entryRoute: '#dashboard',
+      country: 'LAN',
+      deviceSummary: 'Windows · Chrome'
+    });
+
+    // Consecutive heartbeats with identical route should be deduplicated
+    VisitorSessionManager.registerHeartbeat({
+      sessionId: 'sess_pc_1',
+      currentRoute: '#dashboard',
+      activeDurationSec: 10
+    });
+    VisitorSessionManager.registerHeartbeat({
+      sessionId: 'sess_pc_1',
+      currentRoute: '#dashboard',
+      activeDurationSec: 20
+    });
+    VisitorSessionManager.registerHeartbeat({
+      sessionId: 'sess_pc_1',
+      currentRoute: '#tool/view-split',
+      activeDurationSec: 35
+    });
+
+    // 2. User leaves web
+    VisitorSessionManager.registerLeave({
+      sessionId: 'sess_pc_1',
+      reason: 'tab_closed',
+      lastRoute: '#tool/view-split'
+    });
+
+    // 3. User returns within 5 minutes (resume window)
+    const s2 = VisitorSessionManager.registerEnter({
+      sessionId: 'sess_pc_2',
+      deviceId: 'dev_duy_pc',
+      ip: '192.168.2.171',
+      userAgent: 'Mozilla/5.0 Windows Chrome',
+      entryRoute: '#tool/view-split',
+      country: 'LAN',
+      deviceSummary: 'Windows · Chrome'
+    });
+
+    // S2 should resume S1
+    expect(s2.sessionId).toBe(s1.sessionId);
+    expect(s2.status).toBe('ONLINE');
+
+    // 4. Query aggregated devices
+    const result = VisitorSessionManager.getAggregatedDevices();
+    const dev = result.devices.find(d => d.deviceId === 'dev_duy_pc');
+    expect(dev).toBeDefined();
+    expect(dev?.deviceId).toBe('dev_duy_pc');
+    expect(dev?.isOwner).toBe(true); // LAN IP 192.168.2.171 auto-attributed as owner
+    expect(dev?.status).toBe('ONLINE');
+    expect(dev?.ip).toBe('192.168.2.171');
+    expect(dev?.isLan).toBe(true);
+
+    // Route history should not have consecutive duplicates
+    const routes = dev!.latestSessionRouteHistory.map(r => r.route);
+    for (let i = 1; i < routes.length; i++) {
+      expect(routes[i]).not.toBe(routes[i - 1]);
+    }
+  });
 });
 
 describe('AdminTelemetryService Multi-Format Export', () => {

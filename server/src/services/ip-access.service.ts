@@ -7,6 +7,7 @@
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { telemetryTracker } from '../api/middleware/telemetry.middleware.js';
+import { deviceRegistryService } from './device-registry.service.js';
 
 export interface IpRuleDto {
   id: string;
@@ -76,10 +77,19 @@ export class IpAccessService {
   }
 
   /**
-   * Evaluates if an IP address is allowed to proceed
+   * Evaluates if an IP address or device is allowed to proceed
    * Returns status code and reason if blocked or rate limited
    */
-  public checkAccess(ip: string): { allowed: boolean; status: number; reason?: string } {
+  public checkAccess(ip: string, deviceId?: string): { allowed: boolean; status: number; reason?: string } {
+    // 0. Check Device ID block
+    if (deviceId && deviceRegistryService.isBlocked(deviceId)) {
+      return {
+        allowed: false,
+        status: 403,
+        reason: 'Thiết bị này đã bị Quản trị viên chặn truy cập toàn hệ thống.'
+      };
+    }
+
     const cleanIp = (ip || '').replace(/^::ffff:/, '').trim();
     if (!cleanIp) return { allowed: true, status: 200 };
 

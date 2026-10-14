@@ -11,6 +11,7 @@ import { JanitorService } from '../../services/janitor.service.js';
 import { adminUsersService } from '../../services/admin-users.service.js';
 import { ipAccessService } from '../../services/ip-access.service.js';
 import { telemetryTracker, visitorSessionManager } from '../middleware/telemetry.middleware.js';
+import { deviceRegistryService } from '../../services/device-registry.service.js';
 import { BadRequestError } from '../../lib/errors.js';
 
 const updateKeySchema = z.object({
@@ -500,6 +501,75 @@ export async function getVisitorSessionsHandler(_request: FastifyRequest, reply:
   return reply.send({
     success: true,
     data
+  });
+}
+
+/**
+ * GET /api/v1/admin/traffic/devices
+ * Returns consolidated device-centric visitor sessions with history drawers
+ */
+export async function getVisitorDevicesHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const data = visitorSessionManager.getAggregatedDevices();
+  return reply.send({
+    success: true,
+    data
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/:deviceId/alias
+ * Updates a device's custom alias / nickname
+ */
+export async function updateDeviceAliasHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { deviceId } = (request.params as any) || {};
+  const { alias } = (request.body as any) || {};
+  if (!deviceId) throw new BadRequestError('Missing deviceId parameter');
+
+  const dev = deviceRegistryService.setAlias(deviceId, alias || '');
+  if (!dev) throw new BadRequestError(`Device ${deviceId} not found`);
+
+  return reply.send({
+    success: true,
+    message: `Đã cập nhật tên thiết bị: ${dev.alias || 'Mặc định'}`,
+    data: dev
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/:deviceId/toggle-block
+ * Toggles blocking for a device ID
+ */
+export async function toggleDeviceBlockHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { deviceId } = (request.params as any) || {};
+  const { blocked } = (request.body as any) || {};
+  if (!deviceId) throw new BadRequestError('Missing deviceId parameter');
+
+  const dev = deviceRegistryService.toggleBlock(deviceId, typeof blocked === 'boolean' ? blocked : undefined);
+  if (!dev) throw new BadRequestError(`Device ${deviceId} not found`);
+
+  return reply.send({
+    success: true,
+    message: dev.isBlocked ? `Đã chặn thiết bị ${deviceId}` : `Đã bỏ chặn thiết bị ${deviceId}`,
+    data: dev
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/:deviceId/set-owner
+ * Toggles owner role for a device
+ */
+export async function setDeviceOwnerHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { deviceId } = (request.params as any) || {};
+  const { isOwner } = (request.body as any) || {};
+  if (!deviceId) throw new BadRequestError('Missing deviceId parameter');
+
+  const dev = deviceRegistryService.setOwner(deviceId, isOwner !== undefined ? Boolean(isOwner) : true);
+  if (!dev) throw new BadRequestError(`Device ${deviceId} not found`);
+
+  return reply.send({
+    success: true,
+    message: `Đã cập nhật vai trò Chủ nhà cho thiết bị ${deviceId}`,
+    data: dev
   });
 }
 

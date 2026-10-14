@@ -33,6 +33,51 @@ import { openShareTargetModal } from './components/common/ShareTargetModal.js';
 import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
 import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
+import { getDeviceId } from './utilities/deviceId.js';
+import { isAdminAuthenticated } from './utilities/AdminAuth.js';
+
+/**
+ * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id and role headers
+ */
+function setupGlobalApiFetchInterceptor() {
+  if (typeof window === 'undefined' || !window.fetch) return;
+  const originalFetch = window.fetch;
+  window.fetch = async function (input, init = {}) {
+    try {
+      const urlStr = typeof input === 'string' ? input : (input?.url || '');
+      if (urlStr.includes('/api/v1/') || urlStr.startsWith('/api/') || urlStr.startsWith('api/')) {
+        const deviceId = getDeviceId();
+        const isAdmin = isAdminAuthenticated();
+
+        let headers = init.headers;
+        if (!headers) {
+          headers = {};
+        }
+
+        if (headers instanceof Headers) {
+          if (!headers.has('X-Device-Id')) headers.set('X-Device-Id', deviceId);
+          if (isAdmin && !headers.has('X-Is-Admin')) headers.set('X-Is-Admin', 'true');
+        } else if (Array.isArray(headers)) {
+          if (!headers.some(([k]) => k.toLowerCase() === 'x-device-id')) {
+            headers.push(['X-Device-Id', deviceId]);
+          }
+          if (isAdmin && !headers.some(([k]) => k.toLowerCase() === 'x-is-admin')) {
+            headers.push(['X-Is-Admin', 'true']);
+          }
+        } else if (typeof headers === 'object') {
+          if (!headers['X-Device-Id'] && !headers['x-device-id']) {
+            headers['X-Device-Id'] = deviceId;
+          }
+          if (isAdmin && !headers['X-Is-Admin'] && !headers['x-is-admin']) {
+            headers['X-Is-Admin'] = 'true';
+          }
+        }
+        init.headers = headers;
+      }
+    } catch {}
+    return originalFetch.call(this, input, init);
+  };
+}
 
 class App {
   constructor() {
@@ -46,6 +91,7 @@ class App {
       return;
     }
 
+    setupGlobalApiFetchInterceptor();
     initTheme();
     registerServiceWorker();
     taskCoordinator.init();

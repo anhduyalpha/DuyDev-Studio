@@ -4,6 +4,7 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { deviceRegistryService } from '../../services/device-registry.service.js';
 
 interface SecondBucket {
   timestamp: number; // Unix seconds
@@ -32,6 +33,9 @@ export interface IpRequestLogItem {
 export interface VisitorSession {
   sessionId: string;
   visitorId?: string;
+  deviceId?: string;
+  alias?: string;
+  isOwner?: boolean;
   ip: string;
   isLan: boolean;
   country: string;
@@ -48,6 +52,41 @@ export interface VisitorSession {
   totalHeartbeats: number;
   pwaMode: boolean;
   screenResolution?: string;
+}
+
+export interface AggregatedDeviceSession {
+  deviceId: string;
+  alias?: string;
+  isOwner: boolean;
+  isBlocked: boolean;
+  status: 'ONLINE' | 'IDLE' | 'LEFT';
+  ip: string;
+  lastIp: string;
+  ipHistory: string[];
+  isLan: boolean;
+  country: string;
+  userAgent: string;
+  deviceSummary: string;
+  pwaMode: boolean;
+  screenResolution?: string;
+  currentRoute: string;
+  latestSessionEnteredAt: string;
+  latestSessionLeftAt?: string;
+  latestSessionLastActiveAt: string;
+  latestSessionDurationSec: number;
+  latestSessionRouteHistory: Array<{ route: string; timestamp: string }>;
+  totalSessionsCount: number;
+  totalAccumulatedDurationSec: number;
+  pastSessions: Array<{
+    sessionId: string;
+    enteredAt: string;
+    leftAt?: string;
+    durationSec: number;
+    entryRoute: string;
+    currentRoute: string;
+    ip: string;
+    isLan: boolean;
+  }>;
 }
 
 export interface SessionLifecycleEvent {
@@ -670,6 +709,8 @@ export class VisitorSessionManager {
   public registerEnter(params: {
     sessionId: string;
     visitorId?: string;
+    deviceId?: string;
+    isAdmin?: boolean;
     ip: string;
     isLan: boolean;
     country: string;
@@ -681,8 +722,40 @@ export class VisitorSessionManager {
     const nowIso = new Date().toISOString();
     const route = params.route || '#dashboard';
     const deviceSummary = parseDeviceSummary(params.userAgent);
+    const deviceId = params.deviceId || params.visitorId || `dev_ip_${params.ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
+    // Update / register device in persistent DeviceRegistryService
+    const storedDevice = deviceRegistryService.upsertDevice({
+      deviceId,
+      ip: params.ip,
+      userAgent: params.userAgent,
+      deviceSummary,
+      country: params.country,
+      isLan: params.isLan,
+      isAdmin: params.isAdmin
+    });
+
+    const isOwner = Boolean(storedDevice.isOwner || params.isLan || params.isAdmin);
+    const alias = storedDevice.alias;
+
+    // 5-Minute (300 seconds) Session Resume Window:
+    // If the same deviceId reconnects within 5 minutes of leaving (or tab refresh/switch),
+    // merge the activity into the existing session instead of creating fragmented rows.
+    const RESUME_WINDOW_MS = 5 * 60 * 1000;
     let session = this.sessions.get(params.sessionId);
+
+    if (!session && deviceId) {
+      for (const s of this.sessions.values()) {
+        if (s.deviceId === deviceId) {
+          const lastActiveMs = new Date(s.lastActiveAt).getTime();
+          if (Date.now() - lastActiveMs < RESUME_WINDOW_MS) {
+            session = s;
+            break;
+          }
+        }
+      }
+    }
+
     if (!session) {
       if (this.sessions.size >= this.MAX_SESSIONS) {
         // Evict oldest LEFT or inactive session
@@ -705,6 +778,9 @@ export class VisitorSessionManager {
       session = {
         sessionId: params.sessionId,
         visitorId: params.visitorId,
+        deviceId,
+        alias,
+        isOwner,
         ip: params.ip,
         isLan: params.isLan,
         country: params.country,
@@ -721,30 +797,54 @@ export class VisitorSessionManager {
         pwaMode: Boolean(params.pwaMode),
         screenResolution: params.screen || 'Unknown'
       };
-      this.sessions.set(params.sessionId, session);
+      this.sessions.set(session.sessionId, session);
+
+      this.addEvent({
+        sessionId: session.sessionId,
+        ip: params.ip,
+        isLan: params.isLan,
+        country: params.country,
+        eventType: 'ENTER',
+        route,
+        durationSec: 0,
+        deviceSummary,
+        description: `Truy cập website (${route})`
+      });
     } else {
-      // Re-entered / refreshed tab
+      // Re-entered / resumed session within 5-minute window!
       session.status = 'ONLINE';
       session.lastActiveAt = nowIso;
+      session.leftAt = undefined;
       session.currentRoute = route;
-      if (session.routeHistory.length === 0 || session.routeHistory[session.routeHistory.length - 1].route !== route) {
-        session.routeHistory.push({ route, timestamp: nowIso });
-      }
+      session.ip = params.ip;
+      session.isLan = params.isLan;
+      session.isOwner = isOwner;
+      session.deviceId = deviceId;
+      if (alias) session.alias = alias;
       if (params.pwaMode !== undefined) session.pwaMode = Boolean(params.pwaMode);
       if (params.screen) session.screenResolution = params.screen;
-    }
 
-    this.addEvent({
-      sessionId: params.sessionId,
-      ip: params.ip,
-      isLan: params.isLan,
-      country: params.country,
-      eventType: 'ENTER',
-      route,
-      durationSec: 0,
-      deviceSummary,
-      description: `Truy cập website (${route})`
-    });
+      // Consecutive Route Deduplication:
+      const lastRouteItem = session.routeHistory[session.routeHistory.length - 1];
+      if (!lastRouteItem || lastRouteItem.route !== route) {
+        session.routeHistory.push({ route, timestamp: nowIso });
+        if (session.routeHistory.length > 50) {
+          session.routeHistory = session.routeHistory.slice(-50);
+        }
+      }
+
+      this.addEvent({
+        sessionId: session.sessionId,
+        ip: params.ip,
+        isLan: params.isLan,
+        country: params.country,
+        eventType: 'ENTER',
+        route,
+        durationSec: session.durationSec,
+        deviceSummary,
+        description: `Tiếp tục phiên làm việc (${route})`
+      });
+    }
 
     return session;
   }
@@ -753,10 +853,23 @@ export class VisitorSessionManager {
     sessionId: string;
     route?: string;
     ip?: string;
+    deviceId?: string;
+    isAdmin?: boolean;
     activeDurationSec?: number;
   }): VisitorSession | null {
     const nowIso = new Date().toISOString();
-    const session = this.sessions.get(params.sessionId);
+    let session = this.sessions.get(params.sessionId);
+
+    // Fallback: look up by deviceId if session not found by sessionId
+    if (!session && params.deviceId) {
+      for (const s of this.sessions.values()) {
+        if (s.deviceId === params.deviceId) {
+          session = s;
+          break;
+        }
+      }
+    }
+
     if (!session) {
       return null;
     }
@@ -775,11 +888,20 @@ export class VisitorSessionManager {
       session.status = 'ONLINE';
     }
 
+    if (session.deviceId) {
+      const dev = deviceRegistryService.getDevice(session.deviceId);
+      if (dev?.alias) session.alias = dev.alias;
+      if (dev?.isOwner) session.isOwner = true;
+    }
+
     if (newRoute && newRoute !== previousRoute) {
       session.currentRoute = newRoute;
-      session.routeHistory.push({ route: newRoute, timestamp: nowIso });
-      if (session.routeHistory.length > 50) {
-        session.routeHistory = session.routeHistory.slice(-50);
+      const lastRouteItem = session.routeHistory[session.routeHistory.length - 1];
+      if (!lastRouteItem || lastRouteItem.route !== newRoute) {
+        session.routeHistory.push({ route: newRoute, timestamp: nowIso });
+        if (session.routeHistory.length > 50) {
+          session.routeHistory = session.routeHistory.slice(-50);
+        }
       }
 
       this.addEvent({
@@ -910,7 +1032,14 @@ export class VisitorSessionManager {
       avgDurationSec: number;
     };
   } {
-    const all = Array.from(this.sessions.values());
+    const all = Array.from(this.sessions.values()).map(s => {
+      if (s.deviceId) {
+        const dev = deviceRegistryService.getDevice(s.deviceId);
+        if (dev?.alias) s.alias = dev.alias;
+        if (dev?.isOwner) s.isOwner = true;
+      }
+      return s;
+    });
     const online = all.filter(s => s.status === 'ONLINE').length;
     const idle = all.filter(s => s.status === 'IDLE').length;
     const left = all.filter(s => s.status === 'LEFT').length;
@@ -932,6 +1061,123 @@ export class VisitorSessionManager {
         onlineCount: online,
         idleCount: idle,
         leftCount: left,
+        avgDurationSec: avgDuration
+      }
+    };
+  }
+
+  public getAggregatedDevices(): {
+    devices: AggregatedDeviceSession[];
+    stats: {
+      totalDevices: number;
+      onlineDevices: number;
+      ownerDevices: number;
+      lanDevices: number;
+      wanDevices: number;
+      avgDurationSec: number;
+    };
+  } {
+    // 1. Group sessions by deviceId
+    const map = new Map<string, VisitorSession[]>();
+    for (const s of this.sessions.values()) {
+      const devKey = s.deviceId || s.visitorId || `ip_${s.ip}`;
+      if (!map.has(devKey)) map.set(devKey, []);
+      map.get(devKey)!.push(s);
+    }
+
+    // Also include any devices from persistent deviceRegistryService that may not have active sessions in this run
+    for (const dev of deviceRegistryService.listDevices()) {
+      if (!map.has(dev.deviceId)) {
+        map.set(dev.deviceId, []);
+      }
+    }
+
+    const aggregatedList: AggregatedDeviceSession[] = [];
+    let totalDurSum = 0;
+    let totalDurCount = 0;
+
+    for (const [deviceId, devSessions] of map.entries()) {
+      const devMeta = deviceRegistryService.getDevice(deviceId);
+
+      // Sort sessions by lastActiveAt descending
+      devSessions.sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime());
+      const latestSession = devSessions[0];
+
+      // Determine aggregated status: ONLINE if any session is ONLINE, IDLE if any is IDLE, else LEFT
+      let overallStatus: 'ONLINE' | 'IDLE' | 'LEFT' = 'LEFT';
+      if (devSessions.some(s => s.status === 'ONLINE')) overallStatus = 'ONLINE';
+      else if (devSessions.some(s => s.status === 'IDLE')) overallStatus = 'IDLE';
+
+      const totalAccumulatedDuration = devSessions.reduce((acc, s) => acc + (s.durationSec || 0), 0);
+      if (totalAccumulatedDuration > 0) {
+        totalDurSum += totalAccumulatedDuration;
+        totalDurCount++;
+      }
+
+      const ip = latestSession?.ip || devMeta?.lastIp || '127.0.0.1';
+      const isLan = latestSession ? latestSession.isLan : (ip.startsWith('192.168.') || ip === '127.0.0.1' || ip === '::1');
+      const isOwner = Boolean(devMeta?.isOwner || isLan);
+
+      const pastSessions = devSessions.slice(1).map(s => ({
+        sessionId: s.sessionId,
+        enteredAt: s.enteredAt,
+        leftAt: s.leftAt,
+        durationSec: s.durationSec,
+        entryRoute: s.entryRoute,
+        currentRoute: s.currentRoute,
+        ip: s.ip,
+        isLan: s.isLan
+      }));
+
+      aggregatedList.push({
+        deviceId,
+        alias: devMeta?.alias,
+        isOwner,
+        isBlocked: Boolean(devMeta?.isBlocked),
+        status: overallStatus,
+        ip,
+        lastIp: devMeta?.lastIp || ip,
+        ipHistory: devMeta?.ipHistory && devMeta.ipHistory.length > 0 ? devMeta.ipHistory : [ip],
+        isLan,
+        country: latestSession?.country || devMeta?.country || (isLan ? 'LAN' : 'VN'),
+        userAgent: latestSession?.userAgent || devMeta?.userAgent || 'Unknown',
+        deviceSummary: latestSession?.deviceSummary || devMeta?.deviceSummary || 'Unknown Device',
+        pwaMode: Boolean(latestSession?.pwaMode),
+        screenResolution: latestSession?.screenResolution || 'Unknown',
+        currentRoute: latestSession?.currentRoute || '#dashboard',
+        latestSessionEnteredAt: latestSession?.enteredAt || devMeta?.firstSeenAt || new Date().toISOString(),
+        latestSessionLeftAt: latestSession?.leftAt,
+        latestSessionLastActiveAt: latestSession?.lastActiveAt || devMeta?.lastSeenAt || new Date().toISOString(),
+        latestSessionDurationSec: latestSession?.durationSec || 0,
+        latestSessionRouteHistory: latestSession?.routeHistory || [{ route: '#dashboard', timestamp: new Date().toISOString() }],
+        totalSessionsCount: devSessions.length,
+        totalAccumulatedDurationSec: totalAccumulatedDuration,
+        pastSessions
+      });
+    }
+
+    // Sort: ONLINE first, then IDLE, then LEFT; tie-break by latestSessionLastActiveAt desc
+    const statusWeight = { ONLINE: 0, IDLE: 1, LEFT: 2 };
+    aggregatedList.sort((a, b) => {
+      const diff = statusWeight[a.status] - statusWeight[b.status];
+      if (diff !== 0) return diff;
+      return new Date(b.latestSessionLastActiveAt).getTime() - new Date(a.latestSessionLastActiveAt).getTime();
+    });
+
+    const onlineDevices = aggregatedList.filter(d => d.status === 'ONLINE').length;
+    const ownerDevices = aggregatedList.filter(d => d.isOwner).length;
+    const lanDevices = aggregatedList.filter(d => d.isLan).length;
+    const wanDevices = aggregatedList.filter(d => !d.isLan).length;
+    const avgDuration = totalDurCount > 0 ? Math.round(totalDurSum / totalDurCount) : 0;
+
+    return {
+      devices: aggregatedList,
+      stats: {
+        totalDevices: aggregatedList.length,
+        onlineDevices,
+        ownerDevices,
+        lanDevices,
+        wanDevices,
         avgDurationSec: avgDuration
       }
     };
@@ -966,6 +1212,8 @@ export class VisitorSessionManager {
   public static registerEnter(params: {
     sessionId: string;
     visitorId?: string;
+    deviceId?: string;
+    isAdmin?: boolean;
     ip: string;
     isLan?: boolean;
     country?: string;
@@ -983,6 +1231,8 @@ export class VisitorSessionManager {
     return VisitorSessionManager.getInstance().registerEnter({
       sessionId: params.sessionId,
       visitorId: params.visitorId,
+      deviceId: params.deviceId,
+      isAdmin: params.isAdmin,
       ip: params.ip,
       isLan,
       country: params.country || (isLan ? 'LAN' : 'VN'),
@@ -995,6 +1245,8 @@ export class VisitorSessionManager {
 
   public static registerHeartbeat(params: {
     sessionId: string;
+    deviceId?: string;
+    isAdmin?: boolean;
     currentRoute?: string;
     route?: string;
     ip?: string;
@@ -1002,6 +1254,8 @@ export class VisitorSessionManager {
   }): VisitorSession | null {
     return VisitorSessionManager.getInstance().registerHeartbeat({
       sessionId: params.sessionId,
+      deviceId: params.deviceId,
+      isAdmin: params.isAdmin,
       route: params.currentRoute || params.route,
       ip: params.ip,
       activeDurationSec: params.activeDurationSec
@@ -1025,6 +1279,10 @@ export class VisitorSessionManager {
     return VisitorSessionManager.getInstance().getSessionsData().sessions;
   }
 
+  public static getAggregatedDevices() {
+    return VisitorSessionManager.getInstance().getAggregatedDevices();
+  }
+
   public static getEvents(limit = 100): SessionLifecycleEvent[] {
     return VisitorSessionManager.getInstance().getEvents(limit);
   }
@@ -1038,6 +1296,10 @@ export const visitorSessionManager = VisitorSessionManager.getInstance();
 
 export function getVisitorSessionsData() {
   return visitorSessionManager.getSessionsData();
+}
+
+export function getAggregatedDevicesData() {
+  return visitorSessionManager.getAggregatedDevices();
 }
 
 export function getSessionLifecycleEvents(limit = 100) {

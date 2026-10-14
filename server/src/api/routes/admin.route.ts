@@ -33,6 +33,10 @@ import {
   getIpTrafficClientsHandler,
   getIpTrafficLogsHandler,
   getVisitorSessionsHandler,
+  getVisitorDevicesHandler,
+  updateDeviceAliasHandler,
+  toggleDeviceBlockHandler,
+  setDeviceOwnerHandler,
   getSessionLifecycleEventsHandler,
   clearSessionLifecycleEventsHandler,
   getEngineTimeoutsHandler,
@@ -112,6 +116,10 @@ export async function adminRoute(app: FastifyInstance) {
   app.get('/api/v1/admin/traffic/ips', { preHandler: adminAuthGuard }, getIpTrafficClientsHandler);
   app.get('/api/v1/admin/traffic/ips/:ip/logs', { preHandler: adminAuthGuard }, getIpTrafficLogsHandler);
   app.get('/api/v1/admin/traffic/sessions', { preHandler: adminAuthGuard }, getVisitorSessionsHandler);
+  app.get('/api/v1/admin/traffic/devices', { preHandler: adminAuthGuard }, getVisitorDevicesHandler);
+  app.post('/api/v1/admin/traffic/devices/:deviceId/alias', { preHandler: adminAuthGuard }, updateDeviceAliasHandler);
+  app.post('/api/v1/admin/traffic/devices/:deviceId/toggle-block', { preHandler: adminAuthGuard }, toggleDeviceBlockHandler);
+  app.post('/api/v1/admin/traffic/devices/:deviceId/set-owner', { preHandler: adminAuthGuard }, setDeviceOwnerHandler);
   app.get('/api/v1/admin/traffic/events', { preHandler: adminAuthGuard }, getSessionLifecycleEventsHandler);
   app.post('/api/v1/admin/traffic/events/clear', { preHandler: adminAuthGuard }, clearSessionLifecycleEventsHandler);
   app.get('/api/v1/admin/traffic/rules', { preHandler: adminAuthGuard }, getIpRulesHandler);

@@ -12,6 +12,7 @@
 3. **Impeccable UI/UX** ([.agents/rules/impeccable-auto.md](.agents/rules/impeccable-auto.md)): Strict design tokens from [src/styles/stitch-tokens.css](src/styles/stitch-tokens.css). Light/Dark parity. Ban marketing filler & parentheticals (`KI-CON-001`). Touch targets $\ge 44\text{px}$, responsive $\ge 360\text{px}$, `window.lucide?.createIcons()`.
 4. **Superpowers Discipline** ([.agents/rules/superpowers-protocol.md](.agents/rules/superpowers-protocol.md)): `using-superpowers` bootstrap; 4-phase `systematic-debugging` (no fixes without root cause); `verification-before-completion` (CLI evidence required).
 5. **Token-Miser & RTK Protocol** ([.agents/rules/token-miser.md](.agents/rules/token-miser.md)): Always prefix CLI commands with `rtk` (`rtk git`, `rtk err`, `rtk vitest`) to compress terminal noise by 60–90%; no full reads >120 lines; no redundant re-reads; batch tool calls; zero chatter; no code echoes.
+6. **Karpathy Coding & Premortem Thinking** ([.agents/rules/deep-coder.md](.agents/rules/deep-coder.md)): 3-point premortem (edge cases, lifecycle/orphans, backward compatibility); simplicity first (minimum code, anti-bloat); surgical precision; surface assumptions early.
 
 ### Mandatory 1-Line Micro-Receipt
 Every response modifying or checking code MUST end with:

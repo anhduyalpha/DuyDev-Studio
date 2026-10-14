@@ -142,7 +142,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       const cfIp = req.headers['cf-connecting-ip'] as string;
       const cleanIp = (cfIp || ((req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()) || req.ip || '127.0.0.1').replace(/^::ffff:/, '');
 
-      const check = ipAccessService.checkAccess(cleanIp);
+      const deviceId = req.headers['x-device-id'] as string;
+      const check = ipAccessService.checkAccess(cleanIp, deviceId);
       if (!check.allowed) {
         if (check.status === 429) {
           reply.header('Retry-After', '60');

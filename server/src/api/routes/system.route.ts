@@ -60,10 +60,16 @@ export async function systemRoute(app: FastifyInstance) {
       const countryHeader = req.headers['cf-ipcountry'] as string;
       const country = countryHeader || (isLan ? 'LAN' : 'VN');
 
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || body.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : undefined;
+      const isAdmin = req.headers['x-is-admin'] === 'true' || Boolean(body.isAdmin);
+
       const sessionId = String(body.sessionId || '').trim() || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const session = visitorSessionManager.registerEnter({
         sessionId,
         visitorId: body.visitorId ? String(body.visitorId) : undefined,
+        deviceId,
+        isAdmin,
         ip,
         isLan,
         country,
@@ -87,8 +93,14 @@ export async function systemRoute(app: FastifyInstance) {
         return reply.status(200).send({ success: false, message: 'Missing sessionId' });
       }
 
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || body.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : undefined;
+      const isAdmin = req.headers['x-is-admin'] === 'true' || Boolean(body.isAdmin);
+
       const session = visitorSessionManager.registerHeartbeat({
         sessionId,
+        deviceId,
+        isAdmin,
         route: body.route ? String(body.route) : undefined
       });
 

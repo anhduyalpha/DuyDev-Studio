@@ -4,10 +4,14 @@
  * Zero external dependencies. Self-hosted telemetry only.
  */
 
+import { getDeviceId } from './deviceId.js';
+import { isAdminAuthenticated } from './AdminAuth.js';
+
 class VisitorTracker {
   constructor() {
     this.sessionId = null;
     this.visitorId = null;
+    this.deviceId = null;
     this.sessionStartTime = Date.now();
     this.currentRoute = '#dashboard';
     this.heartbeatTimer = null;
@@ -19,6 +23,9 @@ class VisitorTracker {
   init() {
     if (this.isInitialized || typeof window === 'undefined') return;
     this.isInitialized = true;
+
+    // 0. Persistent Device ID (stable across sessions & browser cookies)
+    this.deviceId = getDeviceId();
 
     // 1. Session ID (per browser tab/window via sessionStorage)
     try {
@@ -82,9 +89,12 @@ class VisitorTracker {
 
       const screenRes = window.screen ? `${window.screen.width}x${window.screen.height}` : 'Unknown';
 
+      const isAdmin = Boolean(isAdminAuthenticated());
       const payload = {
         sessionId: this.sessionId,
         visitorId: this.visitorId,
+        deviceId: this.deviceId,
+        isAdmin,
         route: this.currentRoute,
         referrer: document.referrer || '',
         screen: screenRes,
@@ -95,7 +105,9 @@ class VisitorTracker {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Session-Id': this.sessionId
+          'X-Session-Id': this.sessionId,
+          'X-Device-Id': this.deviceId,
+          ...(isAdmin ? { 'X-Is-Admin': 'true' } : {})
         },
         body: JSON.stringify(payload)
       }).catch(() => {
@@ -117,14 +129,19 @@ class VisitorTracker {
     if (!this.sessionId) return;
     try {
       const route = routeOverride || this.currentRoute || window.location.hash || '#dashboard';
+      const isAdmin = Boolean(isAdminAuthenticated());
       fetch('/api/v1/telemetry/session/heartbeat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Session-Id': this.sessionId
+          'X-Session-Id': this.sessionId,
+          'X-Device-Id': this.deviceId,
+          ...(isAdmin ? { 'X-Is-Admin': 'true' } : {})
         },
         body: JSON.stringify({
           sessionId: this.sessionId,
+          deviceId: this.deviceId,
+          isAdmin,
           route
         })
       }).catch(() => {});
@@ -156,6 +173,7 @@ class VisitorTracker {
       const durationSec = Math.max(0, Math.floor((Date.now() - this.sessionStartTime) / 1000));
       const payloadStr = JSON.stringify({
         sessionId: this.sessionId,
+        deviceId: this.deviceId,
         durationSec,
         lastRoute: this.currentRoute || window.location.hash || '#dashboard'
       });
@@ -171,7 +189,10 @@ class VisitorTracker {
       if (typeof fetch === 'function') {
         fetch('/api/v1/telemetry/session/leave', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-Id': this.deviceId
+          },
           body: payloadStr,
           keepalive: true
         }).catch(() => {});

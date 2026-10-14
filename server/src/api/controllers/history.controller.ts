@@ -12,8 +12,16 @@ import {
 } from '../../schemas/history.schema.js';
 import { StorageManager } from '../../storage/storage.manager.js';
 
+function extractDeviceAndAdmin(req: FastifyRequest): { deviceId: string | null; isAdmin: boolean } {
+  const deviceIdHeader = (req.headers['x-device-id'] as string) || (req.query as any)?.deviceId;
+  const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : null;
+  const isAdmin = req.headers['x-is-admin'] === 'true' || Boolean(req.headers['x-admin-token']);
+  return { deviceId, isAdmin };
+}
+
 function formatHistoryRecord(r: {
   id: string;
+  deviceId?: string | null;
   toolId: string;
   toolTitle: string;
   fileName: string;
@@ -36,14 +44,28 @@ function formatHistoryRecord(r: {
 
 export async function getHistory(req: FastifyRequest, reply: FastifyReply) {
   const query = historyQuerySchema.parse(req.query || {});
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+
+  // Scoped query: regular guests only see their own records matching their deviceId
+  const whereClause: any = { isDeleted: false };
+  if (!isAdmin) {
+    if (deviceId) {
+      whereClause.deviceId = deviceId;
+    } else {
+      whereClause.deviceId = '__unidentified_guest__';
+    }
+  } else if (query.deviceId) {
+    whereClause.deviceId = query.deviceId;
+  }
+
   const [items, total] = await Promise.all([
     prisma.historyRecord.findMany({
-      where: { isDeleted: false },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: query.limit,
       skip: query.offset
     }),
-    prisma.historyRecord.count({ where: { isDeleted: false } })
+    prisma.historyRecord.count({ where: whereClause })
   ]);
 
   return reply.send({
@@ -57,10 +79,13 @@ export async function getHistory(req: FastifyRequest, reply: FastifyReply) {
 
 export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply) {
   const body = createHistorySchema.parse(req.body);
+  const { deviceId } = extractDeviceAndAdmin(req);
+  const targetDeviceId = deviceId || body.deviceId || null;
 
   if (body.resultFileId || body.downloadUrl) {
     const existing = await prisma.historyRecord.findFirst({
       where: {
+        ...(targetDeviceId ? { deviceId: targetDeviceId } : {}),
         OR: [
           ...(body.resultFileId ? [{ resultFileId: body.resultFileId }] : []),
           ...(body.downloadUrl ? [{ downloadUrl: body.downloadUrl }] : [])
@@ -77,6 +102,7 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
 
   const created = await prisma.historyRecord.create({
     data: {
+      deviceId: targetDeviceId,
       toolId: body.toolId,
       toolTitle: body.toolTitle,
       fileName: body.fileName,
@@ -113,8 +139,14 @@ async function findHistoryRecordByIdOrUrl(id: string) {
 
 export async function softDeleteHistoryItem(req: FastifyRequest, reply: FastifyReply) {
   const { id } = historyIdParamSchema.parse(req.params);
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
   const existing = await findHistoryRecordByIdOrUrl(id);
   if (!existing) throw new NotFoundError(`History item ${id} not found`);
+
+  // Guard: if guest and record has a deviceId, ensure it matches
+  if (!isAdmin && existing.deviceId && deviceId && existing.deviceId !== deviceId) {
+    throw new NotFoundError(`History item ${id} not found`);
+  }
 
   const updated = await prisma.historyRecord.update({
     where: { id: existing.id },
@@ -127,9 +159,15 @@ export async function softDeleteHistoryItem(req: FastifyRequest, reply: FastifyR
   });
 }
 
-export async function clearHistoryToTrash(_req: FastifyRequest, reply: FastifyReply) {
+export async function clearHistoryToTrash(req: FastifyRequest, reply: FastifyReply) {
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const whereClause: any = { isDeleted: false };
+  if (!isAdmin) {
+    whereClause.deviceId = deviceId || '__unidentified_guest__';
+  }
+
   const res = await prisma.historyRecord.updateMany({
-    where: { isDeleted: false },
+    where: whereClause,
     data: { isDeleted: true, deletedAt: new Date() }
   });
 
@@ -141,14 +179,27 @@ export async function clearHistoryToTrash(_req: FastifyRequest, reply: FastifyRe
 
 export async function getTrashItems(req: FastifyRequest, reply: FastifyReply) {
   const query = historyQuerySchema.parse(req.query || {});
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+
+  const whereClause: any = { isDeleted: true };
+  if (!isAdmin) {
+    if (deviceId) {
+      whereClause.deviceId = deviceId;
+    } else {
+      whereClause.deviceId = '__unidentified_guest__';
+    }
+  } else if (query.deviceId) {
+    whereClause.deviceId = query.deviceId;
+  }
+
   const [items, total] = await Promise.all([
     prisma.historyRecord.findMany({
-      where: { isDeleted: true },
+      where: whereClause,
       orderBy: { deletedAt: 'desc' },
       take: query.limit,
       skip: query.offset
     }),
-    prisma.historyRecord.count({ where: { isDeleted: true } })
+    prisma.historyRecord.count({ where: whereClause })
   ]);
 
   return reply.send({
@@ -162,8 +213,13 @@ export async function getTrashItems(req: FastifyRequest, reply: FastifyReply) {
 
 export async function restoreTrashItem(req: FastifyRequest, reply: FastifyReply) {
   const { id } = historyIdParamSchema.parse(req.params);
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
   const existing = await findHistoryRecordByIdOrUrl(id);
   if (!existing) throw new NotFoundError(`Trash item ${id} not found`);
+
+  if (!isAdmin && existing.deviceId && deviceId && existing.deviceId !== deviceId) {
+    throw new NotFoundError(`Trash item ${id} not found`);
+  }
 
   const restored = await prisma.historyRecord.update({
     where: { id: existing.id },
@@ -176,9 +232,15 @@ export async function restoreTrashItem(req: FastifyRequest, reply: FastifyReply)
   });
 }
 
-export async function restoreAllTrash(_req: FastifyRequest, reply: FastifyReply) {
+export async function restoreAllTrash(req: FastifyRequest, reply: FastifyReply) {
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const whereClause: any = { isDeleted: true };
+  if (!isAdmin) {
+    whereClause.deviceId = deviceId || '__unidentified_guest__';
+  }
+
   const res = await prisma.historyRecord.updateMany({
-    where: { isDeleted: true },
+    where: whereClause,
     data: { isDeleted: false, deletedAt: null }
   });
 
@@ -190,8 +252,13 @@ export async function restoreAllTrash(_req: FastifyRequest, reply: FastifyReply)
 
 export async function permanentlyDeleteTrashItem(req: FastifyRequest, reply: FastifyReply) {
   const { id } = historyIdParamSchema.parse(req.params);
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
   const existing = await findHistoryRecordByIdOrUrl(id);
   if (!existing) throw new NotFoundError(`Item ${id} not found`);
+
+  if (!isAdmin && existing.deviceId && deviceId && existing.deviceId !== deviceId) {
+    throw new NotFoundError(`Item ${id} not found`);
+  }
 
   const fileId = existing.resultFileId || existing.downloadUrl?.match(/fil_[a-zA-Z0-9_]+/)?.[0];
   if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
@@ -204,9 +271,15 @@ export async function permanentlyDeleteTrashItem(req: FastifyRequest, reply: Fas
   return reply.send({ success: true, message: 'Item permanently deleted' });
 }
 
-export async function emptyTrash(_req: FastifyRequest, reply: FastifyReply) {
+export async function emptyTrash(req: FastifyRequest, reply: FastifyReply) {
+  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const whereClause: any = { isDeleted: true };
+  if (!isAdmin) {
+    whereClause.deviceId = deviceId || '__unidentified_guest__';
+  }
+
   const trashedItems = await prisma.historyRecord.findMany({
-    where: { isDeleted: true },
+    where: whereClause,
     select: { resultFileId: true, downloadUrl: true }
   });
 
@@ -234,6 +307,6 @@ export async function emptyTrash(_req: FastifyRequest, reply: FastifyReply) {
     }).catch(() => {});
   }
 
-  const res = await prisma.historyRecord.deleteMany({ where: { isDeleted: true } });
+  const res = await prisma.historyRecord.deleteMany({ where: whereClause });
   return reply.send({ success: true, count: res.count });
 }
