@@ -1,13 +1,21 @@
-# Dependencies
+# CodeGraph
+.codegraph/
+
+# Dependencies & Third-party
 node_modules/
 server/node_modules/
 package-lock.json.bak
+src/vendor/
+pdfjs/
+**/pdfjs/
 
 # Build Artifacts
 dist/
 server/dist/
 build/
-!pdfjs/build/
+android/build/
+android/app/build/
+android/.gradle/
 
 # Database (SQLite - all locations)
 *.db
@@ -16,6 +24,7 @@ build/
 *.db-shm
 *.sqlite
 *.sqlite3
+server/dev.db*
 
 # Environment Variables & Secrets (CRITICAL)
 .env
@@ -28,6 +37,8 @@ certs/
 *.pem
 *.key
 *.crt
+.agents/mcp_config.json
+.agents/teamwork/
 
 # Ephemeral File Storage & Uploads
 data/

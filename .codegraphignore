@@ -1,0 +1,28 @@
+# CodeGraph Ignore Rules for DuyDev-Studio
+# Prevents index pollution from vendored, minified, binary, and build artifacts
+
+.codegraph/
+pdfjs/
+**/pdfjs/
+src/vendor/
+server/dev.db*
+data/
+server/data/
+dist/
+server/dist/
+build/
+node_modules/
+server/node_modules/
+android/build/
+android/app/build/
+android/.gradle/
+*.properties
+downloads/
+scratch/
+.tmp/
+.tmp*
+formula_crops/
+quiz_output/
+*.onnx
+*.min.js
+*.min.css

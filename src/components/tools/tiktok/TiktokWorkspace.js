@@ -2,11 +2,14 @@
  * TikTok Workspace Component
  * Native high-performance TikTok Downloader & Drive Saver for DD Studio.
  * Zero-flicker selective DOM updates eliminating input focus loss and mobile clipboard freeze.
+ * Features dirty-text URL extraction, Drive-linked history, and batch queue with taskCoordinator.
  */
 
-import { tiktokManager } from './hooks/useTiktok.js';
+import { tiktokManager, extractTiktokUrls } from './hooks/useTiktok.js';
 import { tiktokApi } from './services/tiktokApi.js';
 import { showToast } from '../../../utilities/toast.js';
+import { StorageService } from '../../../services/storageService.js';
+import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 
 function formatCompactNumber(num) {
   if (!num || isNaN(num)) return '0';
@@ -33,7 +36,7 @@ function escapeHtml(str = '') {
 
 export function renderTiktokWorkspace() {
   const state = tiktokManager.getState();
-  const { url, isLoading, error, videoData, isSavingDrive, savedDriveResult, recentHistory, existingInDrive, isForceResave, duplicatePreCheck } = state;
+  const { url, isLoading, error, videoData, isSavingDrive, savedDriveResult, recentHistory, existingInDrive, isForceResave, duplicatePreCheck, batchQueue } = state;
   const hasUrl = Boolean(url && url.length > 0);
 
   return `
@@ -67,8 +70,8 @@ export function renderTiktokWorkspace() {
             </div>
             <input
               id="tiktokUrlInput"
-              type="url"
-              placeholder="Dán liên kết TikTok (vd: https://vt.tiktok.com/... hoặc tiktok.com/@user/video/...)"
+              type="text"
+              placeholder="Dán liên kết TikTok hoặc đoạn văn bản chia sẻ..."
               value="${escapeHtml(url)}"
               autocomplete="off"
               autocorrect="off"
@@ -111,6 +114,28 @@ export function renderTiktokWorkspace() {
               <i data-lucide="sparkles" class="w-4 h-4"></i>
               <span>Tải Video</span>
             `}
+          </button>
+        </div>
+
+        <!-- Batch Progress Banner -->
+        <div id="tiktokBatchProgressBanner" class="${batchQueue && batchQueue.isActive ? '' : 'hidden'} mt-3 p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between gap-3 animate-fadeIn">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping shrink-0"></div>
+            <div class="min-w-0">
+              <p class="font-semibold truncate">
+                Đang lưu hàng loạt vào Drive: <span id="tiktokBatchCountText">${batchQueue?.current || 0}/${batchQueue?.total || 0}</span>
+              </p>
+              <p id="tiktokBatchStageText" class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                ${escapeHtml(batchQueue?.currentTitle || 'Đang xử lý...')}
+              </p>
+            </div>
+          </div>
+          <button
+            id="btnCancelTiktokBatch"
+            type="button"
+            class="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:hover:bg-red-500/30 text-red-600 dark:text-red-400 font-medium text-[11px] transition cursor-pointer shrink-0"
+          >
+            Dừng
           </button>
         </div>
 
@@ -198,95 +223,90 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
           </div>
 
           <!-- Metrics Row -->
-          <div class="grid grid-cols-4 gap-2 text-center">
-            <div class="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800/60">
-              <span class="block text-[10px] text-zinc-400 uppercase">Lượt xem</span>
-              <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 font-mono">${formatCompactNumber(video.stats?.views)}</span>
+          <div class="grid grid-cols-4 gap-2 text-center py-2 px-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-100 dark:border-zinc-800/60">
+            <div>
+              <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Lượt xem</p>
+              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.playCount)}</p>
             </div>
-            <div class="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800/60">
-              <span class="block text-[10px] text-zinc-400 uppercase">Thích</span>
-              <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 font-mono">${formatCompactNumber(video.stats?.likes)}</span>
+            <div>
+              <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Thích</p>
+              <p class="text-xs font-semibold text-rose-500 mt-0.5">${formatCompactNumber(video.stats?.diggCount)}</p>
             </div>
-            <div class="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800/60">
-              <span class="block text-[10px] text-zinc-400 uppercase">Bình luận</span>
-              <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 font-mono">${formatCompactNumber(video.stats?.comments)}</span>
+            <div>
+              <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Bình luận</p>
+              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.commentCount)}</p>
             </div>
-            <div class="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800/60">
-              <span class="block text-[10px] text-zinc-400 uppercase">Chia sẻ</span>
-              <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 font-mono">${formatCompactNumber(video.stats?.shares)}</span>
+            <div>
+              <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Chia sẻ</p>
+              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.shareCount)}</p>
             </div>
           </div>
 
-          <!-- Duplicate in Storage Alert -->
-          ${existingInDrive ? `
-            <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
-              <div class="flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-400 min-w-0">
-                <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-amber-500"></i>
-                <span class="truncate">Video này đã có trong Studio Drive (<strong>${escapeHtml(existingInDrive.fileName)}</strong>)</span>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <a
-                  href="#storage?path=/tiktok"
-                  class="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
-                  <span>Mở trong Drive</span>
-                </a>
-                <button
-                  id="btnForceResaveTiktok"
-                  type="button"
-                  class="px-2.5 py-1.5 rounded-lg ${isForceResave ? 'bg-rose-600 text-white' : 'bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300'} text-xs font-medium transition cursor-pointer flex items-center gap-1.5"
-                  title="Cho phép ghi đè và lưu lại vào Drive"
-                >
-                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                  <span>${isForceResave ? 'Đang bật ghi đè' : 'Tải lại'}</span>
-                </button>
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- Action Buttons Grid -->
+          <!-- Action Buttons Group -->
           <div class="space-y-2 pt-2">
-            <!-- 1. Primary Download Video -->
+            <!-- 1. Download Standard Video -->
             <a
+              id="btnDownloadStandard"
               href="${downloadUrl}"
-              class="w-full py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+              download
+              class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
             >
               <i data-lucide="download" class="w-4 h-4"></i>
-              <span>Tải Video MP4 (Không Logo)</span>
+              <span>Tải Video (Gốc)</span>
             </a>
 
-            <!-- 2. HD Download (If available) -->
-            ${downloadHdUrl ? `
+            <!-- 2. Download HD Video (if available) -->
+            ${video.videoHdUrl ? `
               <a
+                id="btnDownloadHd"
                 href="${downloadHdUrl}"
-                class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+                download
+                class="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                <i data-lucide="sparkles" class="w-4 h-4"></i>
-                <span>Tải Bản Độ Phân Giải Cao (HD)</span>
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                <span>Tải Video (Chất Lượng Cao HD)</span>
               </a>
             ` : ''}
 
-            <!-- 3. MP3 Audio Download -->
-            ${audioDownloadUrl ? `
+            <!-- 3. Download Audio MP3 -->
+            ${video.audioUrl ? `
               <a
+                id="btnDownloadAudio"
                 href="${audioDownloadUrl}"
-                class="w-full py-2.5 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 active:scale-[0.99] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                download
+                class="w-full py-2 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-zinc-700 dark:text-zinc-200 text-xs font-medium flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                <i data-lucide="music" class="w-4 h-4"></i>
+                <i data-lucide="music" class="w-3.5 h-3.5 text-emerald-500"></i>
                 <span>Tải Audio (mp3)</span>
               </a>
             ` : ''}
 
-            <!-- 4. Save to Studio Drive -->
+            <!-- Duplicate Warning Alert Box (when exists in Drive) -->
+            ${existingInDrive ? `
+              <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-400 flex items-center justify-between gap-3 animate-fadeIn">
+                <div class="flex items-center gap-2 min-w-0">
+                  <i data-lucide="check-circle" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                  <span class="truncate">Video này đã có trong Studio Drive (${escapeHtml(existingInDrive.fileName || '')})</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <a href="#storage?path=/tiktok" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-semibold transition">
+                    Mở trong Drive
+                  </a>
+                  <button id="btnForceResaveTiktok" type="button" class="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 text-[11px] font-medium transition cursor-pointer">
+                    Tải lại
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- 4. Save Directly to Studio Drive Button -->
             ${existingInDrive && !isForceResave ? `
               <button
-                id="btnSaveTiktokDrive"
                 type="button"
                 disabled
-                class="w-full py-2.5 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 cursor-not-allowed"
+                class="w-full py-2.5 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 cursor-not-allowed border border-zinc-200/50 dark:border-zinc-800/50"
               >
-                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                <i data-lucide="check-check" class="w-4 h-4 text-emerald-500"></i>
                 <span>Đã lưu trong Drive</span>
               </button>
             ` : isForceResave ? `
@@ -384,31 +404,73 @@ function renderRecentHistoryCard(history) {
       </div>
 
       <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-        ${history.map((it) => `
-          <div class="py-2.5 flex items-center justify-between gap-3 group">
-            <div class="flex items-center gap-3 min-w-0 flex-1">
-              ${it.cover ? `
-                <img src="${it.cover}" alt="cover" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0" onerror="this.style.display='none'"/>
-              ` : `
-                <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                  <i data-lucide="video" class="w-4 h-4"></i>
+        ${history.map((it) => {
+          const hasDrive = Boolean(it.driveRelPath);
+          const driveDownloadUrl = hasDrive ? StorageService.getDownloadUrl(it.driveRelPath, false) : '';
+
+          return `
+            <div class="py-2.5 flex items-center justify-between gap-3 group">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                ${it.cover ? `
+                  <img src="${it.cover}" alt="cover" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0" onerror="this.style.display='none'"/>
+                ` : `
+                  <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                  </div>
+                `}
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">${escapeHtml(it.title || 'TikTok Video')}</p>
+                    ${hasDrive ? `
+                      <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
+                        <i data-lucide="check" class="w-2.5 h-2.5"></i> Đã lưu Drive
+                      </span>
+                    ` : ''}
+                  </div>
+                  <p class="text-[11px] text-zinc-400 truncate mt-0.5">@${escapeHtml(it.author || 'tiktok')} • ${formatDuration(it.duration)}</p>
                 </div>
-              `}
-              <div class="min-w-0 flex-1">
-                <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">${escapeHtml(it.title || 'TikTok Video')}</p>
-                <p class="text-[11px] text-zinc-400 truncate">@${escapeHtml(it.author || 'tiktok')} • ${formatDuration(it.duration)}</p>
+              </div>
+
+              <div class="flex items-center gap-1 shrink-0">
+                ${hasDrive ? `
+                  <button
+                    type="button"
+                    data-preview-drive-path="${escapeHtml(it.driveRelPath)}"
+                    data-item-title="${escapeHtml(it.title || 'video.mp4')}"
+                    class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer"
+                    title="Xem trước video"
+                  >
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <a
+                    href="${driveDownloadUrl}"
+                    download
+                    class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer flex items-center justify-center"
+                    title="Tải từ Studio Drive (Không bao giờ hết hạn)"
+                  >
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                  </a>
+                  <a
+                    href="#storage?path=/tiktok"
+                    class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer flex items-center justify-center"
+                    title="Mở trong Studio Drive"
+                  >
+                    <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+                  </a>
+                ` : ''}
+
+                <button
+                  type="button"
+                  data-re-resolve-url="${escapeHtml(it.url)}"
+                  class="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs font-medium transition cursor-pointer shrink-0"
+                  title="Lấy lại link TikTok"
+                >
+                  Mở lại
+                </button>
               </div>
             </div>
-
-            <button
-              type="button"
-              data-re-resolve-url="${escapeHtml(it.url)}"
-              class="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs font-medium transition cursor-pointer shrink-0"
-            >
-              Mở lại
-            </button>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
   `.trim();
@@ -424,6 +486,8 @@ export function attachTiktokWorkspaceListeners() {
   const errBanner = document.getElementById('tiktokErrorBanner');
   const resultContainer = document.getElementById('tiktokResultContainer');
   const historyContainer = document.getElementById('tiktokHistoryContainer');
+  const batchBanner = document.getElementById('tiktokBatchProgressBanner');
+  const btnCancelBatch = document.getElementById('btnCancelTiktokBatch');
 
   function syncInputButtons(val) {
     const hasValue = Boolean(val && val.length > 0);
@@ -497,6 +561,16 @@ export function attachTiktokWorkspaceListeners() {
       };
     });
 
+    document.querySelectorAll('[data-preview-drive-path]').forEach((btn) => {
+      btn.onclick = () => {
+        const path = btn.getAttribute('data-preview-drive-path');
+        const title = btn.getAttribute('data-item-title') || 'video.mp4';
+        if (path) {
+          ViewerConnector.preview({ path, name: title });
+        }
+      };
+    });
+
     const btnClearHistory = document.getElementById('btnClearTiktokHistory');
     if (btnClearHistory) {
       btnClearHistory.onclick = () => {
@@ -519,7 +593,7 @@ export function attachTiktokWorkspaceListeners() {
     }
     if (input) {
       input.disabled = state.isLoading;
-      if (state.url && input.value !== state.url) {
+      if (state.url && input.value !== state.url && !state.batchQueue?.isActive) {
         input.value = state.url;
         syncInputButtons(state.url);
       }
@@ -548,6 +622,20 @@ export function attachTiktokWorkspaceListeners() {
       }
     }
 
+    // 2.2 Batch Progress Banner
+    const currentBatchBanner = document.getElementById('tiktokBatchProgressBanner');
+    const batchCount = document.getElementById('tiktokBatchCountText');
+    const batchStage = document.getElementById('tiktokBatchStageText');
+    if (currentBatchBanner) {
+      currentBatchBanner.classList.toggle('hidden', !state.batchQueue?.isActive);
+    }
+    if (batchCount && state.batchQueue?.isActive) {
+      batchCount.textContent = `${state.batchQueue.current}/${state.batchQueue.total}`;
+    }
+    if (batchStage && state.batchQueue?.isActive) {
+      batchStage.textContent = state.batchQueue.currentTitle || 'Đang xử lý...';
+    }
+
     // 3. Result Container
     if (resultContainer) {
       if (state.videoData) {
@@ -571,6 +659,34 @@ export function attachTiktokWorkspaceListeners() {
   attachResultCardListeners();
   attachHistoryListeners();
 
+  // Cancel Batch Button
+  if (btnCancelBatch) {
+    btnCancelBatch.onclick = () => {
+      tiktokManager.cancelBatch();
+    };
+  }
+
+  // Unified trigger handler for button click or Enter key
+  const handleResolveTrigger = () => {
+    const val = input ? input.value.trim() : '';
+    if (!val) {
+      showToast('Vui lòng nhập hoặc dán liên kết video TikTok', 'error');
+      return;
+    }
+    const extracted = extractTiktokUrls(val);
+    if (extracted.length >= 2) {
+      tiktokManager.startBatchSave(extracted);
+    } else if (extracted.length === 1) {
+      if (input && input.value !== extracted[0]) {
+        input.value = extracted[0];
+        syncInputButtons(extracted[0]);
+      }
+      tiktokManager.resolve(extracted[0]);
+    } else {
+      tiktokManager.resolve(val);
+    }
+  };
+
   // Input typing (NEVER re-renders the input!)
   let preCheckTimer = null;
   if (input) {
@@ -588,11 +704,31 @@ export function attachTiktokWorkspaceListeners() {
         if (preCheckBanner) preCheckBanner.classList.add('hidden');
       }
     };
+
+    // Native Paste Interceptor: Auto-cleans dirty text & detects batch URLs
+    input.addEventListener('paste', (e) => {
+      const pastedText = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      if (!pastedText) return;
+      const extracted = extractTiktokUrls(pastedText);
+      if (extracted.length >= 2) {
+        e.preventDefault();
+        input.value = extracted.join('\n');
+        syncInputButtons(input.value);
+        tiktokManager.startBatchSave(extracted);
+      } else if (extracted.length === 1 && pastedText.trim() !== extracted[0]) {
+        e.preventDefault();
+        input.value = extracted[0];
+        syncInputButtons(extracted[0]);
+        tiktokManager.setUrl(extracted[0], false);
+        tiktokManager.resolve(extracted[0]);
+      }
+    });
+
     input.onkeydown = (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         clearTimeout(preCheckTimer);
-        tiktokManager.resolve(input.value);
+        handleResolveTrigger();
       }
     };
   }
@@ -600,8 +736,7 @@ export function attachTiktokWorkspaceListeners() {
   // Resolve click
   if (btnResolve) {
     btnResolve.onclick = () => {
-      const val = input?.value || tiktokManager.getState().url;
-      tiktokManager.resolve(val);
+      handleResolveTrigger();
     };
   }
 
@@ -617,7 +752,7 @@ export function attachTiktokWorkspaceListeners() {
     };
   }
 
-  // Non-blocking Mobile Clipboard Paste with Timeout & Focus Fallback
+  // Non-blocking Mobile Clipboard Paste with Timeout & Dirty-Text Extractor
   if (btnPaste) {
     btnPaste.onclick = async () => {
       if (tiktokManager.getState().isLoading) return;
@@ -631,20 +766,38 @@ export function attachTiktokWorkspaceListeners() {
           );
           pastedText = await Promise.race([clipPromise, timeoutPromise]);
         } catch (err) {
-          // Gracefully caught: Permission denied, dialog dismiss, or timeout on Android
           console.warn('[TikTok] Clipboard access failed or timed out:', err);
         }
       }
 
       if (pastedText && typeof pastedText === 'string' && pastedText.trim()) {
-        const clean = pastedText.trim();
-        if (input) {
-          input.value = clean;
-          syncInputButtons(clean);
+        const extracted = extractTiktokUrls(pastedText);
+        if (extracted.length === 1) {
+          const cleanUrl = extracted[0];
+          if (input) {
+            input.value = cleanUrl;
+            syncInputButtons(cleanUrl);
+          }
+          tiktokManager.setUrl(cleanUrl, false);
+          tiktokManager.resolve(cleanUrl);
+          return;
+        } else if (extracted.length >= 2) {
+          if (input) {
+            input.value = extracted.join('\n');
+            syncInputButtons(input.value);
+          }
+          tiktokManager.startBatchSave(extracted);
+          return;
+        } else {
+          const clean = pastedText.trim();
+          if (input) {
+            input.value = clean;
+            syncInputButtons(clean);
+          }
+          tiktokManager.setUrl(clean, false);
+          tiktokManager.resolve(clean);
+          return;
         }
-        tiktokManager.setUrl(clean, false);
-        tiktokManager.resolve(clean);
-        return;
       }
 
       // If clipboard was empty or blocked, focus input for native long-press paste

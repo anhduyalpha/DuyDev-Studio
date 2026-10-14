@@ -1,12 +1,12 @@
 ---
-id: KI-CON-002-tool-icon-design-philosophy
+id: KI-CON-008-apple-grade-tool-icon-system
 title: "Apple-Grade Proprietary Tool Icon System & Dual-Mode Vector Design Philosophy"
 type: concept
 status: verified
 domain: frontend
 tags: [frontend, ui-design, icons, apple-design, macos-sequoia, ios-18, visionos, svg, light-dark-mode, design-system]
 created_at: 2026-10-10
-updated_at: 2026-10-10
+updated_at: 2026-10-14
 version: 2.0.0
 owner: "@anhduy"
 trigger_conditions: "When designing, refactoring, or authoring tool icons or card visual assets across DuyDev Studio"
@@ -18,9 +18,10 @@ search_queries:
   - "Hệ thống icon tool card"
 related_kis:
   - KI-CON-001-ui-production-minimalism
+  - KI-CON-007-tool-icon-design-philosophy
 ---
 
-# [KI-CON-002] Triết Lý Thiết Kế Bộ Icon Độc Quyền Chuẩn Apple (macOS Sequoia / iOS 18 / visionOS)
+# [KI-CON-008] Triết Lý Thiết Kế Bộ Icon Độc Quyền Chuẩn Apple (macOS Sequoia / iOS 18 / visionOS)
 
 ## 1. Bối Cảnh & Mục Tiêu (Context & Purpose)
 

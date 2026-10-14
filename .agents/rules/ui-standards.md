@@ -23,4 +23,9 @@ All user interfaces in DuyDev Studio must adhere to **production-grade minimalis
 2. **Never hide primary information on mobile**: Adapt layout gracefully via responsive breakpoints (`sm:`, `md:`, `lg:`) instead of arbitrarily removing key capabilities.
 3. **Ambient background & lighting must be tuned for mobile**: Sizing and opacity of spotlights/gradients must account for mobile screen aspect ratios and OLED contrast so they remain clear and purposeful on phones.
 
-Refer to Knowledge Item: [`docs/knowledge-base/KI-CON-001-ui-production-minimalism.md`](../docs/knowledge-base/KI-CON-001-ui-production-minimalism.md)
+## 4. Single Source of Truth
+This rule operates in tandem with the automated Impeccable Design System pipeline:
+- Rule Specification: [impeccable-auto.md](impeccable-auto.md)
+- Design Tokens: [src/styles/stitch-tokens.css](../../src/styles/stitch-tokens.css)
+- Knowledge Item: [KI-CON-001-ui-production-minimalism.md](../../docs/knowledge-base/KI-CON-001-ui-production-minimalism.md)
+- Icon Philosophy: [KI-CON-007-tool-icon-design-philosophy.md](../../docs/knowledge-base/KI-CON-007-tool-icon-design-philosophy.md) and [KI-CON-008-apple-grade-tool-icon-system.md](../../docs/knowledge-base/KI-CON-008-apple-grade-tool-icon-system.md)

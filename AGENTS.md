@@ -5,6 +5,47 @@
 
 ---
 
+## ⚡ Mandatory CodeGraph-First Protocol (Step 0)
+
+> **RULE:** Before reading multiple files or using text searches, execute **Step 0: `codegraph_explore` First**.  
+> Full protocol specification: [.agents/rules/codegraph-protocol.md](.agents/rules/codegraph-protocol.md)
+
+1. **Step 0 is ALWAYS `codegraph_explore`**: Call MCP `codegraph_explore` (or CLI `codegraph explore -p "C:\Users\AnhDuy\Code\Project\DD Studio" "<query>"`) to retrieve exact source code, symbol locations, and call hierarchies in a single shot.
+2. **Polyglot Coverage**: CodeGraph indexes all 4 tiers: Frontend SPA (`src/`), Fastify Gateway (`server/src/`), Python Engines (`engines/`), and Android Kotlin (`android/app/src/main/java/`).
+3. **Blast-Radius Verification**: Run `codegraph callers` or `codegraph impact` before editing shared modules (`DriveService`, `StorageManager`, `TiktokManager`, `useTheme`, `useToolRegistry`).
+4. **Smart Testing**: Run `git diff --name-only | codegraph affected -p "C:\Users\AnhDuy\Code\Project\DD Studio" --stdin -q` to execute only affected tests. Never re-run all test suites blindly.
+
+---
+
+## 📌 Autonomous Knowledge Item (KI) Lifecycle
+
+> **RULE:** No code modification task is complete until the Post-Flight KI check and `[KI Lifecycle]` receipt are executed.  
+> Full protocol specification: [.agents/rules/ki-lifecycle.md](.agents/rules/ki-lifecycle.md)
+
+1. **Pre-Flight Consultation**: Consult [docs/knowledge-base/README.md](docs/knowledge-base/README.md) and [docs/GOTCHAS.md](docs/GOTCHAS.md) for matching KIs right after `codegraph_explore`. Never reintroduce past bugs.
+2. **Post-Flight Autonomous Maintenance**: Automatically update or create a KI when:
+   - **Trigger A (Bug Fix / Workaround)**: Resolved tricky bug, race condition, or quirk -> `KI-FIX-XXX`.
+   - **Trigger B (Architecture / Pattern Change)**: New architectural pattern, API, or state flow -> `KI-CON-XXX`.
+   - **Trigger C (Operations / Tooling Setup)**: Deploy, Docker, build scripts, or dev tooling -> `KI-HOWTO-XXX`.
+   - **Trigger D (Stale Reference Drift)**: Code, path, or API changes affecting existing KIs -> Update existing KI.
+3. **Mandatory Completion Receipt**: Every response MUST end with:
+   `📌 [KI Lifecycle]: Consulted: [KI-IDs or None] | Action: [Updated KI-XXX / Created KI-YYY / No KI change needed (reason)]`
+
+---
+
+## 🎨 Autonomous Impeccable UI/UX Protocol
+
+> **RULE:** Any modification to `src/**` (including Vanilla JS template literals in `src/pages/` or `src/components/`) or `index.html` is a UI/UX task and MUST strictly execute the Impeccable Design pipeline.  
+> Full protocol specification: [.agents/rules/impeccable-auto.md](.agents/rules/impeccable-auto.md) · Design Tokens: [src/styles/stitch-tokens.css](src/styles/stitch-tokens.css) · Minimalism: [.agents/rules/ui-standards.md](.agents/rules/ui-standards.md)
+
+1. **Tokens & Light-First Parity**: Strictly consume tokens from `src/styles/stitch-tokens.css`. Never invent arbitrary hex colors or neon gradients. Verify contrast for both Light Mode (`#F4F4F6`) and Dark Mode (`#09090B`).
+2. **Anti-AI-Slop & Utilitarian Microcopy**: Ban marketing fluff, tutorial filler, and robotic AI Vietnamese translations. Use direct action verbs (*"Tải Video"*, *"Tải Audio"*, *"Lưu vào Drive"*).
+3. **Autonomous Critique & Polish Pass**: Ensure touch targets $\ge 44\text{px}$, responsive ergonomics down to $360\text{px}$, complete states (empty, loading, error, success), and vanilla DOM hygiene (`window.lucide?.createIcons()`).
+4. **Mandatory UI Receipt**: When editing frontend code, end response with:
+   `🎨 [Impeccable UI]: Tokens: [Verified stitch-tokens/Light+Dark] | Copy: [Natural VI] | Polish: [Passed mobile/hierarchy check]`
+
+---
+
 ## Project
 
 - **What it is**: Personal Self-Hosted Progressive Web App (PWA) Utility Hub & File Processing Suite.
