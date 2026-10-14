@@ -182,14 +182,14 @@ export class TiktokManager {
   async resolve(candidateUrl = this.state.url) {
     const rawInput = (candidateUrl || '').trim();
     if (!rawInput) {
-      this.state.error = 'Vui lòng nhập hoặc dán liên kết video TikTok';
+      this.state.error = 'Vui lòng nhập hoặc dán liên kết video hoặc album ảnh TikTok';
       this.notify({ type: 'error' });
       return;
     }
 
     const extracted = extractTiktokUrls(rawInput);
     if (extracted.length === 0) {
-      this.state.error = 'Không tìm thấy liên kết video TikTok hợp lệ';
+      this.state.error = 'Không tìm thấy liên kết TikTok hợp lệ';
       this.notify({ type: 'error' });
       return;
     }
@@ -225,13 +225,15 @@ export class TiktokManager {
         url: cleanUrl,
         driveRelPath,
         isSlideshow: Boolean(data.isSlideshow),
+        slideCount: data.images?.length || 0,
         timestamp: Date.now()
       });
-      showToast('Đã lấy video TikTok thành công', 'success');
+      const successMsg = data.isSlideshow ? `Đã lấy album ảnh TikTok thành công (${data.images?.length || 0} ảnh)` : 'Đã lấy video TikTok thành công';
+      showToast(successMsg, 'success');
       this.notify({ type: 'resolved', data });
     } catch (err) {
       this.state.isLoading = false;
-      this.state.error = err?.message || 'Không thể trích xuất video TikTok này';
+      this.state.error = err?.message || 'Không thể trích xuất liên kết TikTok này';
       showToast(this.state.error, 'error');
       this.notify({ type: 'error' });
     }
@@ -242,7 +244,7 @@ export class TiktokManager {
    * @param {boolean} forceOverwrite
    */
   async saveCurrentToDrive(forceOverwrite = this.state.isForceResave) {
-    if (!this.state.videoData?.videoUrl) return;
+    if (!this.state.videoData?.videoUrl && (!this.state.videoData?.images || this.state.videoData.images.length === 0)) return;
 
     this.state.isSavingDrive = true;
     this.notify({ type: 'saving-drive' });

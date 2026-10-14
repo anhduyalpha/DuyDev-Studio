@@ -87,4 +87,28 @@ describe('TikTok Photo Mode & Slideshow Suite', () => {
       expect(zipFiles[0]).toContain('.zip');
     });
   });
+
+  describe('Photo Mode URL Pattern and ID Extraction', () => {
+    it('should extract canonical numeric ID from /photo/ URLs', () => {
+      const photoUrl = 'https://www.tiktok.com/@chi_bi_cute2/photo/7440725873658973460?q=anh%20yeu%20em&t=1791983131969';
+      const match = photoUrl.match(/\/(?:video|photo|item)\/(\d+)/i);
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toBe('7440725873658973460');
+    });
+
+    it('should extract canonical numeric ID from standard /video/ URLs', () => {
+      const videoUrl = 'https://www.tiktok.com/@user/video/7412345678901234567';
+      const match = videoUrl.match(/\/(?:video|photo|item)\/(\d+)/i);
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toBe('7412345678901234567');
+    });
+
+    it('should extract clean URLs containing /photo/ via extractTiktokUrls logic', () => {
+      const rawText = 'Xem bộ ảnh này nè: https://www.tiktok.com/@chi_bi_cute2/photo/7440725873658973460?is_copy_url=1 cực xinh!';
+      const regex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?tiktok\.com\/[^\s"<>'`]+/gi;
+      const matches = rawText.match(regex) || [];
+      expect(matches).toHaveLength(1);
+      expect(matches[0]).toContain('/photo/7440725873658973460');
+    });
+  });
 });

@@ -148,14 +148,14 @@ const DEFAULT_TOOLS = [
   {
     id: 'tiktok-downloader',
     title: 'TikTok Downloader',
-    description: 'Tải video TikTok không logo chất lượng cao, âm thanh MP3 và lưu trực tiếp vào Drive.',
+    description: 'Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive.',
     category: 'system',
     icon: 'video',
     featured: true,
-    specs: ['Không Logo', 'Video HD & MP3', 'Lưu Drive'],
+    specs: ['Không Logo', 'Video & Album Ảnh', 'Lưu Drive'],
     color: '#EE1D52',
     route: '#tool/tiktok-downloader',
-    tags: ['tiktok', 'tik tok', 'tải video', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin']
+    tags: ['tiktok', 'tik tok', 'tải video', 'album ảnh', 'slideshow', 'photo mode', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin']
   },
   {
     id: 'storage',

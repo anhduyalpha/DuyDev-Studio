@@ -469,10 +469,11 @@ export function classifySharedPayload(payload) {
     try {
       const parsed = new URL(effectiveUrl);
       if (isTikTokHost(parsed.hostname)) {
+        const isPhoto = parsed.pathname.includes('/photo/');
         return {
           type: SharePayloadType.TIKTOK_URL,
           recommendations: [
-            { label: 'Tải Video TikTok Không Logo', route: '#tool/tiktok-downloader', isPrimary: true },
+            { label: isPhoto ? 'Tải Album Ảnh TikTok' : 'Tải Video / Album Ảnh TikTok Không Logo', route: '#tool/tiktok-downloader', isPrimary: true },
             { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
           ],
         };

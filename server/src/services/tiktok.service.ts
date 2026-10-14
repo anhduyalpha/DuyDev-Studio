@@ -70,8 +70,8 @@ export class TikTokService {
     const targetUrl = await this.expandUrl(rawInput);
     logger.info({ targetUrl }, '[TikTok] Resolving video...');
 
-    // Extract ID from URL if present
-    const idMatch = targetUrl.match(/\/video\/(\d+)/i) || targetUrl.match(/item\/(\d+)/i);
+    // Extract ID from URL if present (video, photo, item)
+    const idMatch = targetUrl.match(/\/(?:video|photo|item)\/(\d+)/i);
     const videoIdFallback = idMatch ? idMatch[1] : `tt_${Date.now()}`;
 
     let resolvedData: TikTokVideoData | null = null;
@@ -384,7 +384,15 @@ export class TikTokService {
     reply.status(upstreamRes.status);
 
     // Forward streaming headers
-    const contentType = upstreamRes.headers.get('content-type') || (filename.endsWith('.mp3') ? 'audio/mpeg' : 'video/mp4');
+    const ext = (filename || '').toLowerCase();
+    let defaultMime = 'video/mp4';
+    if (ext.endsWith('.mp3')) defaultMime = 'audio/mpeg';
+    else if (ext.endsWith('.jpg') || ext.endsWith('.jpeg')) defaultMime = 'image/jpeg';
+    else if (ext.endsWith('.png')) defaultMime = 'image/png';
+    else if (ext.endsWith('.webp')) defaultMime = 'image/webp';
+    else if (ext.endsWith('.zip')) defaultMime = 'application/zip';
+
+    const contentType = upstreamRes.headers.get('content-type') || defaultMime;
     reply.header('Content-Type', contentType);
     reply.header('Accept-Ranges', 'bytes');
 
@@ -528,6 +536,29 @@ export class TikTokService {
     images?: string[],
     audioUrl?: string
   ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
+    // 0. Auto-resolve if raw TikTok URL was passed directly as mediaUrl or originalUrl without streams
+    const candidateUrl = (mediaUrl || originalUrl || '').trim();
+    const isDirectTikTokPage = candidateUrl.includes('tiktok.com') || candidateUrl.includes('douyin.com');
+    const isCdnStream = candidateUrl.includes('tiktokcdn') || candidateUrl.includes('tikwm') || candidateUrl.includes('byteoversea');
+
+    if (isDirectTikTokPage && !isCdnStream && (!images || images.length === 0)) {
+      logger.info({ candidateUrl }, '[TikTok] Raw TikTok page URL passed to saveToDrive; auto-resolving metadata...');
+      const resolved = await this.resolveVideo(candidateUrl);
+      return this.saveToDrive(
+        resolved.videoHdUrl || resolved.videoUrl || '',
+        resolved.title,
+        resolved.id,
+        candidateUrl,
+        resolved.cover,
+        resolved.author,
+        resolved.duration,
+        overwrite,
+        Boolean(resolved.isSlideshow),
+        resolved.images,
+        resolved.audioUrl
+      );
+    }
+
     // 1. Target directory
     const tiktokDir = path.join(resolvedStoragePaths.drive, 'tiktok');
     if (!fs.existsSync(tiktokDir)) {

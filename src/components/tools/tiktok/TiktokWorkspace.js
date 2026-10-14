@@ -56,7 +56,7 @@ export function renderTiktokWorkspace() {
 
         <div class="flex items-center gap-2">
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-            <i data-lucide="check" class="w-3 h-3"></i> Không Logo
+            <i data-lucide="check" class="w-3 h-3"></i> Video & Album Ảnh Không Logo
           </span>
         </div>
       </div>
@@ -71,7 +71,7 @@ export function renderTiktokWorkspace() {
             <input
               id="tiktokUrlInput"
               type="text"
-              placeholder="Dán liên kết TikTok hoặc đoạn văn bản chia sẻ..."
+              placeholder="Dán liên kết TikTok (Video hoặc Album ảnh)..."
               value="${escapeHtml(url)}"
               autocomplete="off"
               autocorrect="off"
@@ -112,7 +112,7 @@ export function renderTiktokWorkspace() {
               <span>Đang xử lý...</span>
             ` : `
               <i data-lucide="sparkles" class="w-4 h-4"></i>
-              <span>Tải Video</span>
+              <span id="btnResolveText">${url && url.includes('/photo/') ? 'Tải Album Ảnh' : 'Tải Video / Album Ảnh'}</span>
             `}
           </button>
         </div>
@@ -228,6 +228,18 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                   <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </button>
               ` : ''}
+
+              <!-- View Full Slide / Open in New Tab -->
+              <a
+                id="btnViewFullSlide"
+                href="${firstSlideStream}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="absolute bottom-12 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md transition opacity-80 hover:opacity-100 cursor-pointer z-10"
+                title="Mở ảnh kích thước gốc"
+              >
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+              </a>
 
               <!-- Thumbnails strip overlay at bottom -->
               ${images.length > 1 ? `
@@ -345,7 +357,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                 class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs disabled:opacity-75 disabled:cursor-wait"
               >
                 <i data-lucide="archive" class="w-4 h-4"></i>
-                <span class="zip-progress-text">Tải Album Ảnh + Nhạc (.ZIP)</span>
+                <span class="zip-progress-text">Tải Toàn Bộ Album (${images.length} Ảnh) + Nhạc (.ZIP)</span>
               </button>
 
               <!-- 2. Download Current Slide Image -->
@@ -356,7 +368,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                 class="w-full py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <i data-lucide="image" class="w-3.5 h-3.5 text-amber-400"></i>
-                <span class="slide-dl-text">Tải Ảnh Này (slide 1)</span>
+                <span class="slide-dl-text">Tải Ảnh Này (slide 1/${images.length})</span>
               </a>
             ` : `
               <!-- 1. Download Standard Video -->
@@ -602,26 +614,25 @@ function renderRecentHistoryCard(history) {
  * Lazily ensure JSZip library is available in the window context
  */
 async function ensureJSZip() {
-  if (window.JSZip) return window.JSZip;
+  if (typeof window !== 'undefined' && window.JSZip) return window.JSZip;
 
-  await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const existing = document.querySelector('script[src*="jszip"]');
     if (existing) {
-      existing.addEventListener('load', () => resolve());
+      if (window.JSZip) return resolve(window.JSZip);
+      existing.addEventListener('load', () => resolve(window.JSZip));
       existing.addEventListener('error', () => reject(new Error('Không thể nạp thư viện JSZip')));
-      // In case it already finished loading
-      if (window.JSZip) return resolve();
       return;
     }
     const script = document.createElement('script');
-    script.src = 'src/vendor/jszip.min.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Không thể nạp thư viện JSZip'));
+    script.src = '/src/vendor/jszip.min.js';
+    script.onload = () => {
+      if (window.JSZip) resolve(window.JSZip);
+      else reject(new Error('JSZip không khởi tạo được trên trình duyệt'));
+    };
+    script.onerror = () => reject(new Error('Không thể nạp thư viện JSZip từ máy chủ'));
     document.head.appendChild(script);
   });
-
-  if (window.JSZip) return window.JSZip;
-  throw new Error('JSZip không khởi tạo được trên trình duyệt');
 }
 
 /**
@@ -731,6 +742,15 @@ export function attachTiktokWorkspaceListeners() {
     const hasValue = Boolean(val && val.length > 0);
     if (btnClear) btnClear.classList.toggle('hidden', !hasValue);
     if (btnPaste) btnPaste.classList.toggle('hidden', hasValue);
+
+    const btnText = document.getElementById('btnResolveText');
+    if (btnText) {
+      if (val && val.includes('/photo/')) {
+        btnText.textContent = 'Tải Album Ảnh';
+      } else {
+        btnText.textContent = 'Tải Video / Album Ảnh';
+      }
+    }
   }
 
   function attachResultCardListeners() {
@@ -795,24 +815,35 @@ export function attachTiktokWorkspaceListeners() {
         const slideImg = document.getElementById('tiktokSlideImage');
         const counterBadge = document.getElementById('tiktokSlideCounterBadge');
         const btnSingleDl = document.getElementById('btnDownloadSingleSlide');
+        const btnViewFull = document.getElementById('btnViewFullSlide');
 
         const pad = String(idx + 1).padStart(2, '0');
         const targetImgUrl = video.images[idx];
         const proxiedStreamUrl = tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`);
+        const proxiedDownloadUrl = tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`, true);
 
         if (slideImg) {
           slideImg.src = proxiedStreamUrl;
+          slideImg.setAttribute('data-current-index', String(idx));
         }
         if (counterBadge) {
           counterBadge.textContent = `${idx + 1} / ${totalSlides}`;
         }
+        if (btnViewFull) {
+          btnViewFull.href = proxiedStreamUrl;
+        }
         if (btnSingleDl) {
-          btnSingleDl.href = proxiedStreamUrl;
+          btnSingleDl.href = proxiedDownloadUrl;
           btnSingleDl.download = `tiktok_slide_${pad}.jpg`;
           const textEl = btnSingleDl.querySelector('.slide-dl-text');
           if (textEl) {
-            textEl.textContent = `Tải Ảnh Này (slide ${idx + 1})`;
+            textEl.textContent = `Tải Ảnh Này (slide ${idx + 1}/${totalSlides})`;
           }
+        }
+        if (btnCopyDirect) {
+          btnCopyDirect.setAttribute('data-stream-url', proxiedStreamUrl);
+          const copyText = btnCopyDirect.querySelector('span');
+          if (copyText) copyText.textContent = `Sao chép link ảnh ${idx + 1}`;
         }
 
         // Highlight active thumbnail in strip
@@ -843,6 +874,40 @@ export function attachTiktokWorkspaceListeners() {
           goToSlide(idx);
         };
       });
+
+      // Mobile touch swipe gestures (left/right) on slide gallery
+      const slideImgEl = document.getElementById('tiktokSlideImage');
+      const slideContainer = slideImgEl?.parentElement;
+      if (slideContainer) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+
+        slideContainer.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+          }
+        }, { passive: true });
+
+        slideContainer.addEventListener('touchend', (e) => {
+          if (e.changedTouches.length === 1) {
+            const deltaX = e.changedTouches[0].clientX - touchStartX;
+            const deltaY = e.changedTouches[0].clientY - touchStartY;
+            const deltaTime = Date.now() - touchStartTime;
+
+            // Horizontal swipe with minimum distance and velocity, ignoring vertical scroll
+            if (Math.abs(deltaX) > 40 && Math.abs(deltaY) < 70 && deltaTime < 600) {
+              if (deltaX < 0) {
+                goToSlide(currentSlideIndex + 1);
+              } else {
+                goToSlide(currentSlideIndex - 1);
+              }
+            }
+          }
+        }, { passive: true });
+      }
 
       // Background audio toggle & time update
       const audioPlayer = document.getElementById('tiktokAudioPlayer');
@@ -994,9 +1059,11 @@ export function attachTiktokWorkspaceListeners() {
     // 1. Loading state on button and input
     if (btnResolve) {
       btnResolve.disabled = state.isLoading;
+      const isPhoto = Boolean(state.url?.includes('/photo/') || input?.value?.includes('/photo/'));
+      const defaultText = isPhoto ? 'Tải Album Ảnh' : 'Tải Video / Album Ảnh';
       btnResolve.innerHTML = state.isLoading
         ? '<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div><span>Đang xử lý...</span>'
-        : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Tải Video</span>';
+        : `<i data-lucide="sparkles" class="w-4 h-4"></i><span id="btnResolveText">${defaultText}</span>`;
     }
     if (input) {
       input.disabled = state.isLoading;
