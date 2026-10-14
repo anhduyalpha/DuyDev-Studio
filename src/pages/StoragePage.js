@@ -553,7 +553,7 @@ function renderTikTokGridItem(item) {
           />
         </div>
 
-        <div class="absolute top-2 right-2 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md rounded-lg p-1 border border-white/10 shadow-xs">
+        <div class="absolute top-2 right-2 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 rounded-lg p-1 border border-white/10 shadow-xs">
           <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="true" title="Tải ZIP thư mục" class="p-1 rounded text-zinc-300 hover:text-white transition cursor-pointer">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
           </button>
@@ -597,6 +597,7 @@ function renderTikTokGridItem(item) {
           alt="${escapeHtml(item.name)}" 
           class="tiktok-card-thumb absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
           loading="lazy" 
+          decoding="async"
           onerror="this.style.display='none'; const v = this.parentElement.querySelector('.tiktok-card-video'); if (v) v.classList.remove('hidden');" 
         />
       ` : (isImage ? `
@@ -605,6 +606,7 @@ function renderTikTokGridItem(item) {
           alt="${escapeHtml(item.name)}" 
           class="tiktok-card-thumb absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
           loading="lazy" 
+          decoding="async"
         />
       ` : '')}
 
@@ -635,7 +637,7 @@ function renderTikTokGridItem(item) {
       </div>
 
       <!-- Top-Right Action Buttons -->
-      <div class="absolute top-2 right-2 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 backdrop-blur-md rounded-lg p-1 border border-white/10 shadow-xs">
+      <div class="absolute top-2 right-2 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 rounded-lg p-1 border border-white/10 shadow-xs">
         <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1 rounded text-zinc-300 hover:text-white transition cursor-pointer">
           <i data-lucide="eye" class="w-3.5 h-3.5"></i>
         </button>

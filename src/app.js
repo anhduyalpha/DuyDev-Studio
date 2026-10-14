@@ -35,8 +35,6 @@ import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
 import { isAdminAuthenticated } from './utilities/adminAuth.js';
-import { initSmoothScroll, scrollToTarget } from './utilities/smoothScroll.js?v=22.74';
-import { initScrollOptimizer } from './utilities/scrollOptimizer.js';
 
 /**
  * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id and role headers
@@ -142,14 +140,6 @@ class App {
     this.renderShell();
     checkAndRenderMigrationNotice();
     initGlobalTaskDock();
-    try {
-      initSmoothScroll();
-    } catch (err) {
-      console.warn('[DS] Smooth scroll fallback to native:', err);
-    }
-    try {
-      initScrollOptimizer();
-    } catch (_) {}
     this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
 
@@ -370,7 +360,7 @@ class App {
 
       this.renderCurrentView();
       updateThemeUI(getStoredTheme());
-      scrollToTarget(0, { immediate: true });
+      window.scrollTo(0, 0);
       if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       console.error('[Router] Error rendering route:', err);

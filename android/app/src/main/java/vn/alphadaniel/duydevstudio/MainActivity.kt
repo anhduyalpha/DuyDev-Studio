@@ -305,8 +305,8 @@ class MainActivity : AppCompatActivity() {
 
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         webView.isHorizontalScrollBarEnabled = false
-        webView.isVerticalScrollBarEnabled = false
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // Default LAYER_TYPE_NONE enables Chromium multi-threaded tiled GPU compositor without offscreen FBO thrashing
+        webView.setLayerType(View.LAYER_TYPE_NONE, null)
 
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)

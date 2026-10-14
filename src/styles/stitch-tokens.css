@@ -124,6 +124,9 @@ html {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  scroll-behavior: auto;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -138,6 +141,8 @@ body {
   max-width: 100vw;
   margin: 0;
   padding: 0;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 #app {
@@ -167,8 +172,6 @@ html.dark .tool-accent-text {
               inset 0 -1px 1px 0 rgba(0, 0, 0, 0.05),
               0 4px 12px -2px color-mix(in srgb, var(--accent) 26%, transparent),
               0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 html.dark .tool-accent-box {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, 0.08)), color-mix(in srgb, var(--accent) 8%, rgba(0, 0, 0, 0.5)));
@@ -178,18 +181,19 @@ html.dark .tool-accent-box {
               inset 0 -1px 1px 0 rgba(0, 0, 0, 0.5),
               0 6px 18px -3px rgba(0, 0, 0, 0.65),
               0 0 14px -2px color-mix(in srgb, var(--accent) 32%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
-/* Glassmorphism & Depth Layers (Apple Sequoia Pure Frost Glass) */
+/* Glassmorphism & Depth Layers (120Hz Dedicated GPU Compositor Layers) */
 .glass-dock {
   background: var(--glass-dock);
-  backdrop-filter: blur(28px) saturate(200%) brightness(104%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: var(--dock-shadow),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
   transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
@@ -202,12 +206,15 @@ html:not(.dark) .glass-dock {
 
 .glass-panel {
   background: var(--glass-panel);
-  backdrop-filter: blur(28px) saturate(200%) brightness(104%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25),
               inset 0 -1px 0 0 rgba(255, 255, 255, 0.06),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
   transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -218,10 +225,16 @@ html:not(.dark) .glass-panel {
               inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
 }
 
+/* Persistent Global Task Dock GPU Layer */
+#globalTaskDockCapsule,
+.global-task-dock-layer {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
 .glass-panel-contained {
-  background: var(--glass-card, rgba(255, 255, 255, 0.78));
-  backdrop-filter: blur(28px) saturate(200%) brightness(104%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(104%);
+  background: var(--glass-card, rgba(255, 255, 255, 0.96));
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
@@ -229,99 +242,87 @@ html:not(.dark) .glass-panel {
 }
 
 html.dark .glass-panel-contained {
-  background: linear-gradient(165deg, rgba(20, 23, 33, 0.90) 0%, rgba(13, 15, 22, 0.94) 100%);
-  backdrop-filter: blur(24px) saturate(190%) brightness(102%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(102%);
+  background: linear-gradient(165deg, rgba(20, 23, 33, 0.96) 0%, rgba(13, 15, 22, 0.98) 100%);
   border: 1px solid rgba(255, 255, 255, 0.11);
   box-shadow: 0 10px 32px -4px rgba(0, 0, 0, 0.55),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
 }
 
 .glass-pill {
-  background: var(--glass-card, rgba(255, 255, 255, 0.78));
-  backdrop-filter: blur(20px) saturate(190%);
-  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  background: var(--glass-card, rgba(255, 255, 255, 0.95));
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.18s ease;
 }
 
 html.dark .glass-pill {
-  background: linear-gradient(165deg, rgba(26, 29, 41, 0.85) 0%, rgba(17, 19, 28, 0.90) 100%);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: linear-gradient(165deg, rgba(26, 29, 41, 0.95) 0%, rgba(17, 19, 28, 0.98) 100%);
   border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
 }
 
-.glass-pill:hover {
-  background: rgba(255, 255, 255, 0.90);
-  border-color: rgba(0, 0, 0, 0.15);
-}
-
-html.dark .glass-pill:hover {
-  background: linear-gradient(165deg, rgba(34, 38, 54, 0.92) 0%, rgba(23, 26, 38, 0.95) 100%);
-  border-color: rgba(255, 255, 255, 0.20);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.40),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
-}
-
 /* Dedicated Grounded Surface for Recent Activity Cards */
 .recent-activity-card {
-  transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.18s ease;
 }
 
 html.dark .recent-activity-card {
-  background: linear-gradient(165deg, rgba(27, 31, 44, 0.90) 0%, rgba(18, 21, 30, 0.94) 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: linear-gradient(165deg, #181b28 0%, #12141c 100%);
   border: 1px solid rgba(255, 255, 255, 0.11);
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.40),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
 }
 
-html.dark .recent-activity-card:hover {
-  background: linear-gradient(165deg, rgba(35, 40, 58, 0.94) 0%, rgba(24, 28, 40, 0.97) 100%);
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 8px 24px -3px rgba(0, 0, 0, 0.55),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
-}
-
-/* Apple Sequoia Frosted Search Capsule */
+/* Apple Sequoia Search Capsule (Solid Native Compositor Surface) */
 .glass-search {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.72) 100%);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.09);
   box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.18s ease;
 }
 
 html.dark .glass-search {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(20, 23, 35, 0.65) 100%);
-  backdrop-filter: blur(28px) saturate(210%) brightness(106%);
-  -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(106%);
+  background: #151821;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.20),
-              inset 0 -1px 0 0 rgba(255, 255, 255, 0.04);
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
 }
 
-.glass-search:hover {
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(0, 0, 0, 0.16);
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.08),
-              inset 0 1px 0 0 rgba(255, 255, 255, 1);
-}
+@media (hover: hover) and (pointer: fine) {
+  .glass-pill:hover {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(0, 0, 0, 0.15);
+  }
 
-html.dark .glass-search:hover {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(24, 28, 44, 0.75) 100%);
-  border-color: rgba(255, 255, 255, 0.24);
-  box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.45),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.30);
+  html.dark .glass-pill:hover {
+    background: linear-gradient(165deg, rgba(34, 38, 54, 0.98) 0%, rgba(23, 26, 38, 1) 100%);
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.40),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  }
+
+  html.dark .recent-activity-card:hover {
+    background: linear-gradient(165deg, #1f2334 0%, #161823 100%);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 24px -3px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
+  }
+
+  .glass-search:hover {
+    background: #FFFFFF;
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  }
+
+  html.dark .glass-search:hover {
+    background: #181c28;
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+  }
 }
 
 .glass-search:focus {
@@ -487,55 +488,42 @@ html.dark body::before {
    ============================================================================== */
 .linear-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(250, 250, 252, 0.88) 100%);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.09);
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.24s ease,
-              background 0.24s ease;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.18s ease,
+              background-color 0.15s ease,
+              border-color 0.15s ease,
+              box-shadow 0.18s ease;
 }
 
 html.dark .linear-card {
-  /* Apple Sequoia Grounded Frost: Solid opaque core (92-97%) preventing background bleed */
-  background: linear-gradient(
-    165deg,
-    rgba(23, 26, 37, 0.93) 0%,
-    rgba(17, 19, 27, 0.96) 45%,
-    rgba(12, 14, 20, 0.98) 100%
-  );
-  backdrop-filter: blur(24px) saturate(190%) brightness(102%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(102%);
+  background: #151821;
   border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: 0 6px 24px -4px rgba(0, 0, 0, 0.55),
               0 2px 8px -2px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-              inset 0 -1px 0 0 rgba(255, 255, 255, 0.02);
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
 }
 
-.linear-card:hover {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: color-mix(in srgb, var(--accent) 45%, rgba(0, 0, 0, 0.15));
-  box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.10),
-              inset 0 1px 0 0 rgba(255, 255, 255, 1);
-  transform: translateY(-3px);
-}
+@media (hover: hover) and (pointer: fine) {
+  .linear-card:hover {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: color-mix(in srgb, var(--accent) 45%, rgba(0, 0, 0, 0.15));
+    box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.10),
+                inset 0 1px 0 0 rgba(255, 255, 255, 1);
+    transform: translateY(-3px);
+  }
 
-html.dark .linear-card:hover {
-  background: linear-gradient(
-    165deg,
-    rgba(27, 31, 45, 0.95) 0%,
-    rgba(20, 23, 33, 0.97) 45%,
-    rgba(14, 16, 24, 0.98) 100%
-  );
-  border-color: color-mix(in srgb, var(--accent) 38%, rgba(255, 255, 255, 0.18));
-  box-shadow: 0 14px 34px -6px rgba(0, 0, 0, 0.68),
-              0 2px 10px -2px rgba(0, 0, 0, 0.40),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.20);
-  transform: translateY(-2px);
+  html.dark .linear-card:hover {
+    background: #181c28;
+    border-color: color-mix(in srgb, var(--accent) 38%, rgba(255, 255, 255, 0.18));
+    box-shadow: 0 14px 34px -6px rgba(0, 0, 0, 0.68),
+                0 2px 10px -2px rgba(0, 0, 0, 0.40),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.20);
+    transform: translateY(-2px);
+  }
 }
 
 /* Themed Browser Text Selection */
@@ -575,46 +563,6 @@ html.dark .linear-card:hover {
   animation: slideDownIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ==============================================================================
-   120Hz/144Hz High-Fidelity Inertial Smooth Scroll & GPU Compositor Relief
-   ============================================================================== */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
-.lenis.lenis-scrolling iframe {
-  pointer-events: none;
-}
-
-/* High-Speed Scroll GPU Shader Relief:
-   Temporarily relaxes heavy Gaussian blur passes during fast motion so GPU locks at 120 FPS */
-html.is-scrolling .linear-card,
-html.is-scrolling .recent-activity-card,
-html.is-scrolling .glass-search {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  pointer-events: none !important;
-}
-
-/* Off-Screen Layout & Paint Virtualization */
-.tool-card-item,
-.recent-activity-card {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 160px;
-}
 
 
 

@@ -197,6 +197,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                 src="${firstSlideStream}"
                 alt="TikTok Slide"
                 data-current-index="0"
+                decoding="async"
                 class="w-full h-full object-contain transition-opacity duration-200"
               />
 
@@ -250,7 +251,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                       data-slide-index="${idx}"
                       class="tiktok-thumb-btn w-6 h-9 rounded-md overflow-hidden border ${idx === 0 ? 'border-rose-500 ring-1 ring-rose-500 scale-105' : 'border-white/30 opacity-60 hover:opacity-100'} transition shrink-0 cursor-pointer"
                     >
-                      <img src="${tiktokApi.getStreamUrl(img, `slide_${idx + 1}.jpg`)}" class="w-full h-full object-cover" loading="lazy" />
+                      <img src="${tiktokApi.getStreamUrl(img, `slide_${idx + 1}.jpg`)}" class="w-full h-full object-cover" loading="lazy" decoding="async" />
                     </button>
                   `).join('')}
                 </div>
@@ -307,7 +308,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
           <!-- Author Header -->
           <div class="flex items-center gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800/80">
             ${video.author?.avatar ? `
-              <img src="${video.author.avatar}" alt="${escapeHtml(video.author.nickname)}" class="w-11 h-11 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 shrink-0" onerror="this.style.display='none'"/>
+              <img src="${video.author.avatar}" alt="${escapeHtml(video.author.nickname)}" class="w-11 h-11 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 shrink-0" loading="lazy" decoding="async" onerror="this.style.display='none'"/>
             ` : `
               <div class="w-11 h-11 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center font-bold text-sm shrink-0">
                 ${(video.author?.nickname || 'TT').slice(0, 2).toUpperCase()}
@@ -541,7 +542,7 @@ function renderRecentHistoryCard(history) {
             <div class="py-2.5 flex items-center justify-between gap-3 group">
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 ${it.cover ? `
-                  <img src="${it.cover}" alt="cover" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0" onerror="this.style.display='none'"/>
+                  <img src="${it.cover}" alt="cover" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0" loading="lazy" decoding="async" onerror="this.style.display='none'"/>
                 ` : `
                   <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
                     <i data-lucide="${isSlide ? 'images' : 'video'}" class="w-4 h-4"></i>

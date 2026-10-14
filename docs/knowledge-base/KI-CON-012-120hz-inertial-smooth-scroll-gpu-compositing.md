@@ -1,88 +1,94 @@
-# KI-CON-012: Kiến Trúc Cuộn Quán Tính Siêu Mượt 120Hz/144Hz (Linear / Apple Inertial Scroll), Tối Ưu Hóa GPU Compositor & Mở Khóa Tần Số Quét Cao Cho Android WebView
+# KI-CON-012: Chuẩn Hóa Kiến Trúc Cuộn Native 120Hz/144Hz Trên Compositor Thread & Xóa Bỏ Hoàn Toàn JS Scroll Hijacking (Lenis, Root Class Thrashing)
 
 ---
 
 ## 1. Metadata
 - **ID:** `KI-CON-012`
-- **Tiêu đề:** Kiến Trúc Cuộn Quán Tính Siêu Mượt 120Hz/144Hz (Linear / Apple Inertial Scroll), Tối Ưu Hóa GPU Compositor & Mở Khóa Tần Số Quét Cao Cho Android WebView
+- **Tiêu đề:** Chuẩn Hóa Kiến Trúc Cuộn Native 120Hz/144Hz Trên Compositor Thread & Xóa Bỏ Hoàn Toàn JS Scroll Hijacking (Lenis, Root Class Thrashing)
 - **Loại:** `concept`
 - **Lĩnh vực:** `fullstack`
 - **Tình trạng:** `verified`
-- **Tags:** `smooth-scroll`, `lenis`, `120hz`, `gpu-compositing`, `backdrop-filter`, `android-webview`, `content-visibility`, `pwa`
-- **Ngày ghi nhận:** 2026-10-14
+- **Tags:** `native-compositor`, `120hz`, `gpu-layers`, `no-scroll-hijacking`, `touch-ergonomics`, `android-webview`, `pwa`
+- **Ngày cập nhật:** 2026-10-14
 - **Tác giả:** DuyDev Studio Engineering
 
 ---
 
-## 2. Bối Cảnh & Vấn Đề (Problem Statement)
-Trên các màn hình có tần số quét cao (120Hz trên điện thoại Xiaomi 15T Pro, Samsung, iPhone ProMotion và màn hình 144Hz/240Hz trên Desktop), người dùng cảm nhận web bị **"cứng, giật, như 60Hz"** khi cuộn trang.
-Nguyên nhân gốc rễ bao gồm 3 điểm nghẽn chính:
-1. **Desktop Stepped Scroll:** Trình duyệt mặc định cuộn con lăn chuột theo từng nấc nhảy cóc cứng nhắc (~100px/nấc), thiếu quán tính giảm tốc mượt mà.
-2. **GPU Shader Bottleneck (Backdrop-Filter Thrashing):** Hàng chục thẻ Linear Card và Header cùng lúc áp dụng `backdrop-filter: blur(24px) saturate(190%)`. Render 120 FPS chỉ cho phép tối đa 8.33ms/frame, trong khi nhiều lớp blur Gaussian chồng chéo ngốn 14–18ms, gây drop frame nghiêm trọng khi cuộn.
-3. **Android WebView 60Hz Lock:** Hệ điều hành Android (đặc biệt HyperOS, MIUI, OneUI) tự động bóp WebView về 60Hz để tiết kiệm pin nếu Activity không chủ động yêu cầu Display Mode tần số quét cao.
+## 2. Bối Cảnh & Phân Tích Nguyên Nhân Gốc Rễ (Root-Cause Postmortem)
+Trong phiên bản thử nghiệm `v22.74`, nỗ lực can thiệp làm mượt cuộn bằng thư viện JS (`Lenis`) và script tối ưu (`scrollOptimizer.js`) đã vô tình tạo ra 4 nút thắt nghiêm trọng gây tụt FPS và lag cuộn:
+
+1. **Root Class Thrashing (`scrollOptimizer.js` & `html.is-scrolling`):**
+   Việc liên tục gắn và gỡ class `.is-scrolling` trên thẻ gốc `<html>` khi bắt đầu và dừng cuộn để tắt `backdrop-filter` đã ép trình duyệt thực hiện Full-Document Style Recalculation, Paint Invalidation và kích hoạt hàng loạt CSS transitions ngay lúc cuộn nhạy cảm nhất.
+2. **Main-Thread Scroll Hijacking (`lenis.js` & `smoothScroll.js`):**
+   Can thiệp sự kiện lăn chuột (`wheel`) trên JS Main Thread thông qua vòng lặp `requestAnimationFrame` + `MutationObserver` làm tê liệt Compositor Thread độc lập của trình duyệt. Bất cứ khi nào Main Thread bận xử lý DOM hay JSON, khung hình cuộn lập tức bị khựng (stutter).
+3. **Android WebView Texture Bottleneck (`MainActivity.kt`):**
+   Việc đặt `View.LAYER_TYPE_HARDWARE` trực tiếp lên `WebView` ép hệ thống Android phải rasterize toàn bộ WebView thành một texture FBO ngoại màn hình khổng lồ trên mỗi frame cuộn, phá vỡ kiến trúc multi-threaded tiled compositor siêu mượt vốn có của Chromium.
+4. **Layout Shift từ `content-visibility: auto` không cố định chiều cao:**
+   Việc áp dụng `content-visibility: auto` lên danh sách card động mà không cố định kích thước nội tại chính xác gây giật layout (layout thrashing) khi cuộn nhanh.
 
 ---
 
-## 3. Kiến Trúc Giải Pháp Đa Tầng (Multi-Tier Architecture)
+## 3. Kiến Trúc Chuẩn 120Hz Native Compositor (True 120Hz Architecture)
 
 ```mermaid
 graph TD
-    UserScroll[Hành vi Cuộn Trang] --> CheckDevice{Phân Loại Thiết Bị}
+    ScrollAction[Thao tác Cuộn: Chuột / Touch / Trackpad] --> CompositorThread[Chromium / WebKit Compositor Thread Độc Lập]
+    CompositorThread --> NativePhysics[100% Native Momentum & Inertial Physics - Không JS Hijacking]
     
-    CheckDevice -->|Desktop: Chuột & Trackpad| LenisEngine[Lenis v1.1.x Smooth Scroll]
-    LenisEngine --> EasingCurve[Apple/Linear Exponential Curve: duration 1.0s]
-    EasingCurve --> RAFSync[Đồng bộ requestAnimationFrame 120Hz/144Hz]
+    subgraph GPU Compositor Layers
+        HeaderBar[Sticky Header: transform translateZ 0 + blur 12px]
+        BottomNav[Fixed BottomNav: transform translateZ 0 + blur 12px]
+        TaskDock[Fixed GlobalTaskDock: transform translateZ 0]
+    end
     
-    CheckDevice -->|Mobile: Màn hình Cảm ứng| NativeTouch[100% Native Touch Physics]
-    NativeTouch --> AndroidDisplay[unlockHighRefreshRate: preferredDisplayModeId 120Hz]
-    AndroidDisplay --> HardwareLayer[webView.setLayerType LAYER_TYPE_HARDWARE]
+    subgraph Repeating Scrollable Content
+        SolidCards[Linear Cards & Storage Items: Nền Solid / Alpha Tinh Tế - 0px Blur]
+        NoTransitions[Không transition all - Chỉ transform opacity nền viền]
+        TouchGuardedHovers[Hover elevations bọc trong pointer: fine - Touch 0 repaints]
+    end
     
-    UserScroll --> GPUReliever[Bộ Tối Ưu Hóa GPU Khi Cuộn - scrollOptimizer.js]
-    GPUReliever --> ClassToggle[Gắn class is-scrolling khi cuộn tốc độ cao]
-    ClassToggle --> RelaxShaders[Tắt tạm thời backdrop-filter & hover events]
-    ClassToggle --> ContentVisibility[content-visibility: auto trên danh sách Card]
+    subgraph Android Native WebView
+        DisplayModeUnlock[unlockHighRefreshRate: preferredDisplayModeId 120Hz/144Hz]
+        DefaultLayerNone[LAYER_TYPE_NONE: Chromium Tiled GPU Rendering Trực Tiếp]
+    end
 ```
 
-### 3.1. Động cơ cuộn quán tính Lenis v1.1 (Desktop)
-- Tích hợp cục bộ tại `src/vendor/lenis.min.js` (~3.5KB), không phụ thuộc bên ngoài.
-- Bộ điều khiển `src/utilities/smoothScroll.js`:
-  - `easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))` (Đường cong Exponential Damping kiểu Linear / Apple).
-  - `smoothWheel: true` (làm mượt chuột/trackpad máy tính).
-  - `syncTouch: false` (bảo toàn 100% độ nhạy vuốt tay native của điện thoại, không can thiệp virtual scroll vào ngón tay).
-  - Tự động tạm dừng khi mở Modal hoặc Universal Viewer để chống cuộn xuyên nền.
-
-### 3.2. Bộ giảm tải GPU Compositor khi cuộn (`scrollOptimizer.js`)
-- Lắng nghe sự kiện `scroll` với `{ passive: true }` để đảm bảo zero-blocking main thread.
-- Khi cuộn tốc độ cao, gắn nhãn `html.is-scrolling`:
+### 3.1. Cô Lập Thanh Điều Hướng Cố Định Lên GPU Layer Riêng Biệt
+- Chỉ áp dụng `backdrop-filter: blur(12px)` trên các thanh chrome cố định duy nhất của ứng dụng: Header (`.glass-panel`) và thanh điều hướng đáy (`.glass-dock`).
+- Thúc đẩy thanh điều hướng thành dedicated GPU layer:
   ```css
-  html.is-scrolling .linear-card,
-  html.is-scrolling .recent-activity-card,
-  html.is-scrolling .glass-search {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    pointer-events: none !important;
-  }
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
   ```
-- Tự động gỡ bỏ sau 120ms khi dừng cuộn hoàn toàn để hiệu ứng kính mờ sương (Apple Sequoia Frost) khôi phục 100% độ sắc nét.
-- Ảo hóa render ngoài màn hình bằng `content-visibility: auto; contain-intrinsic-size: 0 160px;`.
+- Tuyệt đối không vượt quá bán kính `12px` blur để đảm bảo render budget $< 8.33$ms trên màn hình 120Hz.
 
-### 3.3. Mở khóa 120Hz Native Android APK (`MainActivity.kt`)
-- Trong `onCreate()` và `onResume()`:
-  ```kotlin
-  val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
-  val maxMode = display?.supportedModes?.maxByOrNull { it.refreshRate }
-  if (maxMode != null && maxMode.refreshRate > 60f) {
-      val params = window.attributes
-      params.preferredDisplayModeId = maxMode.modeId
-      window.attributes = params
-  }
+### 3.2. Triệt Tiêu Hoàn Toàn `backdrop-filter` Trên Các Thẻ Lặp Lại Khi Cuộn
+- Loại bỏ toàn bộ `backdrop-filter` trên các thẻ nội dung xuất hiện lặp lại khi cuộn: `.linear-card`, `.recent-activity-card`, `.tool-accent-box`, các nút action trên thumbnail `StoragePage`.
+- Thay thế bằng các surface token màu nền solid/alpha tinh tế (Light: `#FFFFFF`, Dark: `#151821`), giữ nguyên độ tương phản và sang trọng mà không tốn dù chỉ 1 pass Gaussian blur shader của GPU.
+
+### 3.3. Cấm `transition: all` & Bảo Vệ Trạng Thái Hover Cho Màn Hình Cảm Ứng
+- Thay thế toàn bộ `transition: all` bằng danh sách thuộc tính an toàn cho compositor:
+  ```css
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.18s ease,
+              background-color 0.15s ease,
+              border-color 0.15s ease,
+              box-shadow 0.18s ease;
   ```
-- Cấu hình phần cứng: `webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)` và `webView.overScrollMode = View.OVER_SCROLL_NEVER`.
+- Đưa toàn bộ hiệu ứng `:hover` (nâng thẻ, đổi viền, đổ bóng) vào trong block `@media (hover: hover) and (pointer: fine)`. Khi người dùng vuốt cuộn trên điện thoại Android/iOS, thao tác chạm sẽ **không bao giờ** kích hoạt style recalculation hay repaint hover.
+
+### 3.4. Giữ Mở Khóa Tần Số Quét Cao & Khôi Phục `LAYER_TYPE_NONE` Trên Android
+- Giữ vững hàm `unlockHighRefreshRate()` trong `MainActivity.kt` (`params.preferredDisplayModeId = maxMode.modeId`) để màn hình 120Hz/144Hz không bị hệ điều hành bóp về 60Hz.
+- Khôi phục `webView.setLayerType(View.LAYER_TYPE_NONE, null)` để Chromium tự do phân bổ bộ nhớ GPU dạng tiled compositor thay vì ép vào một texture FBO duy nhất.
+
+### 3.5. Giải Mã Ảnh Bất Đồng Bộ (`decoding="async"`)
+- Tất cả các thẻ `<img>` trong danh sách nặng (`StoragePage.js`, `TiktokWorkspace.js`) đều có cả `loading="lazy"` và `decoding="async"` để việc giải mã ảnh JPEG/PNG/WebP diễn ra hoàn toàn ngoài Main Thread.
 
 ---
 
-## 4. Bằng Chứng Xác Minh (Verification & Evidence)
-- **Unit test suite:** `server/tests/unit/smooth_scroll_120hz.test.ts` $\rightarrow$ **8/8 PASSED**.
-- **Regression test suite:** `pwa_lifecycle.test.ts`, `battery_optimization.test.ts` $\rightarrow$ **65/65 PASSED**.
-- **Cú pháp JS:** `node --check` toàn bộ file mới và sửa đổi $\rightarrow$ **0 lỗi**.
-- **Typecheck backend:** `npx tsc --noEmit` $\rightarrow$ **0 lỗi**.
+## 4. Các Quy Tắc Cấm Kỵ Tuyệt Đối (Anti-Patterns)
+1. **CẤM** import bất kỳ thư viện JS smooth-scroll hay wheel interceptor nào (`Lenis`, `Locomotive`, `SmoothScroll.js`).
+2. **CẤM** gắn/gỡ class trên thẻ `<html>` hoặc `<body>` trong sự kiện `scroll` (`is-scrolling`).
+3. **CẤM** đặt `backdrop-filter` trên các thẻ lặp lại trong danh sách cuộn.
+4. **CẤM** dùng `View.LAYER_TYPE_HARDWARE` trên `WebView` của Android.

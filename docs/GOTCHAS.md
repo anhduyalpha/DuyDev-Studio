@@ -209,3 +209,9 @@ These file groups must be changed together:
 ### [UNKNOWN] Vendored library versions
 - Files in `src/vendor/` are minified with no version comments.
 - No mechanism to track or update versions.
+
+### [CONFIRMED] Banned Anti-Patterns: JS Scroll Hijacking (Lenis), Root Class Toggling & WebView LAYER_TYPE_HARDWARE (`KI-CON-012`)
+- **Location**: `src/app.js`, `src/styles/stitch-tokens.css`, `MainActivity.kt`
+- **What**: Using JavaScript smooth scroll interceptors (`Lenis`), toggling root classes on scroll (`html.is-scrolling`), or setting `View.LAYER_TYPE_HARDWARE` on Android `WebView` causes severe rendering bottlenecks: main-thread lockups, full-page style recalculation/repaint thrashing, and offscreen FBO texture copying on every frame.
+- **Action**: Always rely on the browser's dedicated 120Hz/144Hz compositor thread with native momentum. Isolate sticky/fixed chrome bars (`Header`, `BottomNav`) onto dedicated GPU layers with `transform: translateZ(0); will-change: transform; backface-visibility: hidden;` and blur $\le 12$px. Eliminate `backdrop-filter` on repeating scrollable cards in favor of solid/alpha surface tokens, guard hover elevations with `@media (hover: hover) and (pointer: fine)`, and restore `View.LAYER_TYPE_NONE` on Android WebView while preserving display mode refresh rate unlocking.
+
