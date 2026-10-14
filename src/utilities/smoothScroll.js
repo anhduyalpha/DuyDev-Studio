@@ -6,7 +6,7 @@
  * while preserving 100% native touch physics on mobile touchscreens.
  */
 
-import { Lenis } from '../vendor/lenis.min.js';
+import { Lenis } from '../vendor/lenis.min.js?v=22.73';
 
 /** @type {Lenis | null} */
 let lenisInstance = null;

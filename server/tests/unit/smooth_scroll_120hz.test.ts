@@ -71,23 +71,23 @@ describe('120Hz/144Hz Inertial Smooth Scroll & GPU Compositor Optimization Suite
     expect(content).toContain('View.LAYER_TYPE_HARDWARE');
   });
 
-  it('7. Service Worker precaches Lenis and scroll utilities under v22.72 cache version', () => {
+  it('7. Service Worker precaches Lenis and scroll utilities under v22.73 cache version', () => {
     const swPath = path.join(rootDir, 'sw.js');
     const content = fs.readFileSync(swPath, 'utf-8');
-    expect(content).toContain("const CACHE_NAME = 'duydev-studio-v22.72';");
-    expect(content).toContain("'./src/vendor/lenis.min.js'");
+    expect(content).toContain("const CACHE_NAME = 'duydev-studio-v22.73';");
+    expect(content).toContain("'./src/vendor/lenis.min.js?v=22.73'");
     expect(content).toContain("'./src/utilities/smoothScroll.js'");
     expect(content).toContain("'./src/utilities/scrollOptimizer.js'");
   });
 
-  it('8. index.html and pwa.js synchronize v22.72 version query tags', () => {
+  it('8. index.html and pwa.js synchronize v22.73 version query tags', () => {
     const indexPath = path.join(rootDir, 'index.html');
     const indexContent = fs.readFileSync(indexPath, 'utf-8');
-    expect(indexContent).toContain('src/app.js?v=22.72');
-    expect(indexContent).toContain('stitch-tokens.css?v=22.72');
+    expect(indexContent).toContain('src/app.js?v=22.73');
+    expect(indexContent).toContain('stitch-tokens.css?v=22.73');
 
     const pwaPath = path.join(rootDir, 'src/utilities/pwa.js');
     const pwaContent = fs.readFileSync(pwaPath, 'utf-8');
-    expect(pwaContent).toContain("CURRENT_PWA_VERSION = 'duydev-studio-v22.72'");
+    expect(pwaContent).toContain("CURRENT_PWA_VERSION = 'duydev-studio-v22.73'");
   });
 });
