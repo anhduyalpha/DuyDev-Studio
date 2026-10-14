@@ -12,7 +12,7 @@ import { Readable, Transform } from 'stream';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { FastifyReply } from 'fastify';
-import { TikTokVideoData } from '../schemas/tiktok.schema.js';
+import { TikTokVideoData, ExistingDriveItem } from '../schemas/tiktok.schema.js';
 import { StorageManager } from '../storage/storage.manager.js';
 import { resolvedStoragePaths } from '../config/env.config.js';
 import { DriveService } from './drive.service.js';
@@ -74,40 +74,53 @@ export class TikTokService {
     const idMatch = targetUrl.match(/\/video\/(\d+)/i) || targetUrl.match(/item\/(\d+)/i);
     const videoIdFallback = idMatch ? idMatch[1] : `tt_${Date.now()}`;
 
+    let resolvedData: TikTokVideoData | null = null;
+
     // --- Tier 1: SSR Extraction (Native n8n Scrape) ---
     try {
       const ssrResult = await this.trySsrExtraction(targetUrl, videoIdFallback);
       if (ssrResult) {
         logger.info({ id: ssrResult.id }, '[TikTok] Successfully resolved via Tier 1 SSR parser');
-        return ssrResult;
+        resolvedData = ssrResult;
       }
     } catch (ssrErr: any) {
       logger.debug({ err: ssrErr?.message }, '[TikTok] Tier 1 SSR parser bypassed/failed');
     }
 
     // --- Tier 2: Direct High-Speed Resolver (TikWM) ---
-    try {
-      const resolverResult = await this.tryTikwmResolver(targetUrl, videoIdFallback);
-      if (resolverResult) {
-        logger.info({ id: resolverResult.id }, '[TikTok] Successfully resolved via Tier 2 Resolver API');
-        return resolverResult;
+    if (!resolvedData) {
+      try {
+        const resolverResult = await this.tryTikwmResolver(targetUrl, videoIdFallback);
+        if (resolverResult) {
+          logger.info({ id: resolverResult.id }, '[TikTok] Successfully resolved via Tier 2 Resolver API');
+          resolvedData = resolverResult;
+        }
+      } catch (resErr: any) {
+        logger.warn({ err: resErr?.message }, '[TikTok] Tier 2 Resolver API failed, falling back to Tier 3');
       }
-    } catch (resErr: any) {
-      logger.warn({ err: resErr?.message }, '[TikTok] Tier 2 Resolver API failed, falling back to Tier 3');
     }
 
     // --- Tier 3: yt-dlp CLI ---
-    try {
-      const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, videoIdFallback);
-      if (ytdlpResult) {
-        logger.info({ id: ytdlpResult.id }, '[TikTok] Successfully resolved via Tier 3 yt-dlp');
-        return ytdlpResult;
+    if (!resolvedData) {
+      try {
+        const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, videoIdFallback);
+        if (ytdlpResult) {
+          logger.info({ id: ytdlpResult.id }, '[TikTok] Successfully resolved via Tier 3 yt-dlp');
+          resolvedData = ytdlpResult;
+        }
+      } catch (ytErr: any) {
+        logger.error({ err: ytErr?.message }, '[TikTok] Tier 3 yt-dlp extraction failed');
       }
-    } catch (ytErr: any) {
-      logger.error({ err: ytErr?.message }, '[TikTok] Tier 3 yt-dlp extraction failed');
     }
 
-    throw new BadRequestError('Không thể trích xuất video TikTok này. Video có thể đang ở chế độ riêng tư, bị xóa hoặc bị giới hạn khu vực.');
+    if (!resolvedData) {
+      throw new BadRequestError('Không thể trích xuất video TikTok này. Video có thể đang ở chế độ riêng tư, bị xóa hoặc bị giới hạn khu vực.');
+    }
+
+    // Check if video already exists in Drive (Post-metadata Video ID & physical file check)
+    const existing = await this.checkExistingInDrive(resolvedData.id, targetUrl);
+    resolvedData.existingInDrive = existing.exists ? existing.item : null;
+    return resolvedData;
   }
 
   /**
@@ -361,13 +374,115 @@ export class TikTokService {
   }
 
   /**
+   * Checks if a TikTok video already exists in Studio Drive (`/data/storage/drive/tiktok/`)
+   * Verifies both metadata / ID and physical file existence on disk.
+   */
+  static async checkExistingInDrive(
+    videoId?: string,
+    originalUrl?: string
+  ): Promise<{ exists: boolean; item?: ExistingDriveItem }> {
+    const tiktokDir = path.join(resolvedStoragePaths.drive, 'tiktok');
+    if (!fs.existsSync(tiktokDir)) {
+      return { exists: false };
+    }
+
+    const cleanId = (videoId || '').trim();
+    const normInputUrl = (originalUrl || '')
+      .split('?')[0]
+      .replace(/\/$/, '')
+      .toLowerCase();
+
+    // If neither ID nor URL is provided, cannot check
+    if (!cleanId && !normInputUrl) {
+      return { exists: false };
+    }
+
+    try {
+      const files = await fsPromises.readdir(tiktokDir, { withFileTypes: true });
+
+      for (const file of files) {
+        if (file.isDirectory()) continue;
+        if (!file.name.endsWith('.mp4') && !file.name.endsWith('.webm') && !file.name.endsWith('.mkv')) continue;
+
+        const videoDiskPath = path.join(tiktokDir, file.name);
+        // CRUCIAL: Physical File Verification
+        if (!fs.existsSync(videoDiskPath)) continue;
+
+        let isMatch = false;
+        let meta: any = null;
+
+        const baseName = file.name.replace(/\.[^.]+$/, '');
+        const metaPath = path.join(tiktokDir, `${baseName}.meta.json`);
+
+        if (fs.existsSync(metaPath)) {
+          try {
+            const raw = await fsPromises.readFile(metaPath, 'utf8');
+            meta = JSON.parse(raw);
+          } catch {}
+        }
+
+        // 1. Check by Video ID
+        if (cleanId) {
+          if (meta?.tiktokVideoId && String(meta.tiktokVideoId) === cleanId) {
+            isMatch = true;
+          } else if (file.name.includes(cleanId.slice(-10))) {
+            isMatch = true;
+          }
+        }
+
+        // 2. Check by Normalized URL
+        if (!isMatch && normInputUrl) {
+          if (meta?.originalUrl) {
+            const normMetaUrl = meta.originalUrl.split('?')[0].replace(/\/$/, '').toLowerCase();
+            if (normMetaUrl === normInputUrl) {
+              isMatch = true;
+            }
+          }
+          // Also check if URL contains video ID that matches filename
+          const urlIdMatch = normInputUrl.match(/\/video\/(\d+)/i) || normInputUrl.match(/item\/(\d+)/i);
+          if (urlIdMatch && file.name.includes(urlIdMatch[1].slice(-10))) {
+            isMatch = true;
+          }
+        }
+
+        if (isMatch) {
+          const stat = await fsPromises.stat(videoDiskPath);
+          return {
+            exists: true,
+            item: {
+              fileName: file.name,
+              relPath: `/tiktok/${file.name}`,
+              sizeBytes: stat.size,
+              title: meta?.title || file.name,
+              thumbnail: meta?.thumbnail,
+              tiktokVideoId: meta?.tiktokVideoId || cleanId,
+              author: meta?.author,
+              duration: meta?.duration,
+              updatedAt: stat.mtime.toISOString()
+            }
+          };
+        }
+      }
+    } catch (err: any) {
+      logger.warn({ err: err?.message }, '[TikTok] Error checking existing file in Drive');
+    }
+
+    return { exists: false };
+  }
+
+  /**
    * Saves TikTok video stream directly into DD Studio Drive (`/data/storage/drive/tiktok/`)
    */
   static async saveToDrive(
     mediaUrl: string,
     title = 'tiktok_video',
-    id = ''
-  ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string }> {
+    id = '',
+    originalUrl = '',
+    cover = '',
+    author?: any,
+    duration?: number,
+    overwrite = false
+  ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
     // 1. Target directory
     const tiktokDir = path.join(resolvedStoragePaths.drive, 'tiktok');
     if (!fs.existsSync(tiktokDir)) {
@@ -385,6 +500,17 @@ export class TikTokService {
     const cleanId = (id || Date.now().toString(36)).slice(-10);
     const fileName = `[TikTok]_${sanitizedTitle || 'clip'}_${cleanId}.mp4`;
     const targetFilePath = path.join(tiktokDir, fileName);
+
+    // If overwrite is requested, purge any existing matching files
+    if (overwrite) {
+      try {
+        if (fs.existsSync(targetFilePath)) {
+          await StorageManager.unlinkSafe(targetFilePath);
+          await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.meta.json'));
+          await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg'));
+        }
+      } catch {}
+    }
 
     logger.info({ fileName, targetFilePath }, '[TikTok] Saving video directly to Studio Drive...');
 
@@ -427,10 +553,57 @@ export class TikTokService {
       throw new BadRequestError('Video tải về có dung lượng 0 byte');
     }
 
+    // 4. Cache thumbnail locally so it never expires with TikTok CDN tokens
+    let thumbnailDataUri = '';
+    if (cover && cover.startsWith('http')) {
+      try {
+        const coverRes = await fetch(cover, {
+          headers: {
+            'User-Agent': DEFAULT_UA,
+            'Referer': 'https://www.tiktok.com/'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+        if (coverRes.ok) {
+          const coverBuffer = Buffer.from(await coverRes.arrayBuffer());
+          const contentType = coverRes.headers.get('content-type') || 'image/jpeg';
+          thumbnailDataUri = `data:${contentType};base64,${coverBuffer.toString('base64')}`;
+          const thumbPath = targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg');
+          await fsPromises.writeFile(thumbPath, coverBuffer).catch(() => {});
+        }
+      } catch (coverErr: any) {
+        logger.debug({ err: coverErr?.message }, '[TikTok] Could not cache cover image locally; keeping remote URL');
+      }
+    }
+
+    // 5. Persist enriched metadata sidecar (.meta.json)
+    const authorHandle = typeof author === 'string' ? author : (author?.uniqueId || author?.nickname || 'tiktok_user');
+    const authorNickname = typeof author === 'object' ? author?.nickname : authorHandle;
+    const authorAvatar = typeof author === 'object' ? author?.avatar : '';
+
+    const metadata = {
+      tiktokVideoId: id || cleanId,
+      originalUrl: originalUrl || '',
+      title: title || 'TikTok Video',
+      author: authorHandle,
+      authorNickname,
+      authorAvatar,
+      thumbnail: thumbnailDataUri || cover || '',
+      duration: duration || 0,
+      savedAt: new Date().toISOString()
+    };
+
+    const metaFilePath = targetFilePath.replace(/\.[^.]+$/, '.meta.json');
+    try {
+      await fsPromises.writeFile(metaFilePath, JSON.stringify(metadata, null, 2), 'utf8');
+    } catch (metaErr: any) {
+      logger.warn({ err: metaErr?.message }, '[TikTok] Failed to write sidecar metadata file');
+    }
+
     const hashSha256 = hash.digest('hex');
     const fileId = `fil_tt_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
 
-    // 4. Index in Prisma FileRecord
+    // 6. Index in Prisma FileRecord
     try {
       await prisma.fileRecord.create({
         data: {
@@ -449,7 +622,7 @@ export class TikTokService {
       logger.warn({ err: dbErr?.message }, '[TikTok] Could not create prisma fileRecord; disk file is preserved');
     }
 
-    // 5. Invalidate Drive telemetry cache
+    // 7. Invalidate Drive telemetry cache
     DriveService.invalidateStatsCache();
 
     return {
@@ -457,7 +630,8 @@ export class TikTokService {
       fileName,
       relPath: `tiktok/${fileName}`,
       sizeBytes: byteCount,
-      fileId
+      fileId,
+      metadata
     };
   }
 }

@@ -33,7 +33,7 @@ function escapeHtml(str = '') {
 
 export function renderTiktokWorkspace() {
   const state = tiktokManager.getState();
-  const { url, isLoading, error, videoData, isSavingDrive, savedDriveResult, recentHistory } = state;
+  const { url, isLoading, error, videoData, isSavingDrive, savedDriveResult, recentHistory, existingInDrive, isForceResave, duplicatePreCheck } = state;
   const hasUrl = Boolean(url && url.length > 0);
 
   return `
@@ -114,6 +114,17 @@ export function renderTiktokWorkspace() {
           </button>
         </div>
 
+        <!-- Duplicate Pre-Check Banner -->
+        <div id="tiktokDuplicatePreCheckBanner" class="${duplicatePreCheck && !videoData ? '' : 'hidden'} mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center justify-between gap-2 animate-fadeIn">
+          <div class="flex items-center gap-2 min-w-0">
+            <i data-lucide="info" class="w-4 h-4 shrink-0 text-amber-500"></i>
+            <span class="truncate">Video này đã có trong Studio Drive: <strong class="dup-name">${escapeHtml(duplicatePreCheck?.fileName || '')}</strong></span>
+          </div>
+          <a href="#storage?path=/tiktok" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-semibold shrink-0 transition">
+            Mở trong Drive
+          </a>
+        </div>
+
         <!-- Inline Error Banner -->
         <div id="tiktokErrorBanner" class="${error ? '' : 'hidden'} mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
           <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
@@ -123,7 +134,7 @@ export function renderTiktokWorkspace() {
 
       <!-- Result Container (Surgically Updated) -->
       <div id="tiktokResultContainer">
-        ${videoData ? renderResultCard(videoData, isSavingDrive, savedDriveResult) : ''}
+        ${videoData ? renderResultCard(videoData, isSavingDrive, savedDriveResult, existingInDrive, isForceResave) : ''}
       </div>
 
       <!-- Recent History Container (Surgically Updated) -->
@@ -134,7 +145,8 @@ export function renderTiktokWorkspace() {
   `.trim();
 }
 
-function renderResultCard(video, isSavingDrive, savedDriveResult) {
+function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriveParam, isForceResave = false) {
+  const existingInDrive = existingInDriveParam || video.existingInDrive;
   const streamUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${video.id}.mp4`);
   const streamHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${video.id}_HD.mp4`) : '';
   const downloadUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${video.id}.mp4`, true);
@@ -205,6 +217,34 @@ function renderResultCard(video, isSavingDrive, savedDriveResult) {
             </div>
           </div>
 
+          <!-- Duplicate in Storage Alert -->
+          ${existingInDrive ? `
+            <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+              <div class="flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-400 min-w-0">
+                <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-amber-500"></i>
+                <span class="truncate">Video này đã có trong Studio Drive (<strong>${escapeHtml(existingInDrive.fileName)}</strong>)</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <a
+                  href="#storage?path=/tiktok"
+                  class="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+                  <span>Mở trong Drive</span>
+                </a>
+                <button
+                  id="btnForceResaveTiktok"
+                  type="button"
+                  class="px-2.5 py-1.5 rounded-lg ${isForceResave ? 'bg-rose-600 text-white' : 'bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300'} text-xs font-medium transition cursor-pointer flex items-center gap-1.5"
+                  title="Cho phép ghi đè và lưu lại vào Drive"
+                >
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  <span>${isForceResave ? 'Đang bật ghi đè' : 'Tải lại'}</span>
+                </button>
+              </div>
+            </div>
+          ` : ''}
+
           <!-- Action Buttons Grid -->
           <div class="space-y-2 pt-2">
             <!-- 1. Primary Download Video -->
@@ -239,20 +279,47 @@ function renderResultCard(video, isSavingDrive, savedDriveResult) {
             ` : ''}
 
             <!-- 4. Save to Studio Drive -->
-            <button
-              id="btnSaveTiktokDrive"
-              type="button"
-              class="w-full py-2.5 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-[0.99] border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              ${isSavingDrive ? 'disabled' : ''}
-            >
-              ${isSavingDrive ? `
-                <div class="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin"></div>
-                <span>Đang lưu vào Drive...</span>
-              ` : `
-                <i data-lucide="hard-drive" class="w-4 h-4"></i>
-                <span>Lưu Trực Tiếp Vào Studio Drive</span>
-              `}
-            </button>
+            ${existingInDrive && !isForceResave ? `
+              <button
+                id="btnSaveTiktokDrive"
+                type="button"
+                disabled
+                class="w-full py-2.5 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 cursor-not-allowed"
+              >
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                <span>Đã lưu trong Drive</span>
+              </button>
+            ` : isForceResave ? `
+              <button
+                id="btnSaveTiktokDrive"
+                type="button"
+                class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+                ${isSavingDrive ? 'disabled' : ''}
+              >
+                ${isSavingDrive ? `
+                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Đang ghi đè vào Drive...</span>
+                ` : `
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  <span>Ghi Đè & Lưu Lại Vào Studio Drive</span>
+                `}
+              </button>
+            ` : `
+              <button
+                id="btnSaveTiktokDrive"
+                type="button"
+                class="w-full py-2.5 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-[0.99] border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                ${isSavingDrive ? 'disabled' : ''}
+              >
+                ${isSavingDrive ? `
+                  <div class="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin"></div>
+                  <span>Đang lưu vào Drive...</span>
+                ` : `
+                  <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                  <span>Lưu Trực Tiếp Vào Studio Drive</span>
+                `}
+              </button>
+            `}
 
             <!-- 5. Secondary Quick Links Row -->
             <div class="flex items-center justify-between gap-2 pt-2">
@@ -366,12 +433,19 @@ export function attachTiktokWorkspaceListeners() {
 
   function attachResultCardListeners() {
     const btnSaveDrive = document.getElementById('btnSaveTiktokDrive');
+    const btnForceResave = document.getElementById('btnForceResaveTiktok');
     const btnCopyDirect = document.getElementById('btnCopyTiktokDirectLink');
     const btnCopyCaption = document.getElementById('btnCopyCaption');
 
     if (btnSaveDrive) {
       btnSaveDrive.onclick = () => {
         tiktokManager.saveCurrentToDrive();
+      };
+    }
+
+    if (btnForceResave) {
+      btnForceResave.onclick = () => {
+        tiktokManager.setForceResave(true);
       };
     }
 
@@ -462,10 +536,22 @@ export function attachTiktokWorkspaceListeners() {
       }
     }
 
+    // 2.1 Duplicate pre-check banner
+    const preCheckBanner = document.getElementById('tiktokDuplicatePreCheckBanner');
+    if (preCheckBanner) {
+      if (state.duplicatePreCheck && !state.videoData) {
+        preCheckBanner.classList.remove('hidden');
+        const nameEl = preCheckBanner.querySelector('.dup-name');
+        if (nameEl) nameEl.textContent = state.duplicatePreCheck.fileName;
+      } else {
+        preCheckBanner.classList.add('hidden');
+      }
+    }
+
     // 3. Result Container
     if (resultContainer) {
       if (state.videoData) {
-        resultContainer.innerHTML = renderResultCard(state.videoData, state.isSavingDrive, state.savedDriveResult);
+        resultContainer.innerHTML = renderResultCard(state.videoData, state.isSavingDrive, state.savedDriveResult, state.existingInDrive, state.isForceResave);
         attachResultCardListeners();
       } else {
         resultContainer.innerHTML = '';
@@ -486,15 +572,26 @@ export function attachTiktokWorkspaceListeners() {
   attachHistoryListeners();
 
   // Input typing (NEVER re-renders the input!)
+  let preCheckTimer = null;
   if (input) {
     input.oninput = (e) => {
       const val = e.target.value;
       syncInputButtons(val);
       tiktokManager.setUrl(val, false);
+      clearTimeout(preCheckTimer);
+      if (val && val.length > 12) {
+        preCheckTimer = setTimeout(() => {
+          tiktokManager.checkDuplicateUrl(val);
+        }, 400);
+      } else {
+        const preCheckBanner = document.getElementById('tiktokDuplicatePreCheckBanner');
+        if (preCheckBanner) preCheckBanner.classList.add('hidden');
+      }
     };
     input.onkeydown = (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        clearTimeout(preCheckTimer);
         tiktokManager.resolve(input.value);
       }
     };

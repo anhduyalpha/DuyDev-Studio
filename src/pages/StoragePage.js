@@ -506,10 +506,159 @@ function renderExplorerContent() {
     `;
   }
 
+  // TikTok Grid View for /tiktok directory
+  const isTikTokFolder = state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/');
+  if (isTikTokFolder) {
+    return renderTikTokGrid(items);
+  }
+
   // Default: Grid View
   return `
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
       ${items.map((item) => renderGridItem(item)).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Renders vertical 9:16 aspect ratio TikTok video cards grid
+ */
+function renderTikTokGrid(items) {
+  return `
+    <div class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+      ${items.map((item) => renderTikTokGridItem(item)).join('')}
+    </div>
+  `;
+}
+
+/**
+ * TikTok Video Card Component (9:16 Aspect Ratio)
+ */
+function renderTikTokGridItem(item) {
+  const isSelected = state.selectedPaths.has(item.path);
+
+  if (item.isDirectory) {
+    return `
+      <div 
+        class="tiktok-grid-card group relative aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-100 dark:bg-[#18181b] border ${isSelected ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-zinc-200/80 dark:border-white/10 hover:border-zinc-400 dark:hover:border-white/20'} shadow-xs hover:shadow-lg transition-all duration-200 cursor-pointer select-none flex flex-col justify-between p-3"
+        data-item-path="${escapeHtml(item.path)}"
+        data-is-dir="true"
+      >
+        <div data-checkbox-wrapper class="absolute top-2 left-2 z-20 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity p-1 cursor-pointer">
+          <input 
+            type="checkbox" 
+            data-select-path="${escapeHtml(item.path)}" 
+            class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-0 cursor-pointer pointer-events-none drop-shadow" 
+            ${isSelected ? 'checked' : ''} 
+          />
+        </div>
+
+        <div class="absolute top-2 right-2 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md rounded-lg p-1 border border-white/10 shadow-xs">
+          <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="true" title="Tải ZIP thư mục" class="p-1 rounded text-zinc-300 hover:text-white transition cursor-pointer">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          </button>
+          <button data-action="delete" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Xóa" class="p-1 rounded text-zinc-300 hover:text-red-400 transition cursor-pointer">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="my-auto flex flex-col items-center justify-center text-center p-2">
+          <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center mb-2 shadow-xs group-hover:scale-105 transition-transform">
+            <i data-lucide="folder" class="w-7 h-7 fill-amber-500/20"></i>
+          </div>
+          <p class="font-semibold text-xs text-zinc-900 dark:text-zinc-100 truncate max-w-full px-1" title="${escapeHtml(item.name)}">
+            ${escapeHtml(item.name)}
+          </p>
+          <span class="text-[10px] text-zinc-400 font-mono mt-0.5">Thư mục</span>
+        </div>
+      </div>
+    `;
+  }
+
+  const streamUrl = StorageService.getDownloadUrl(item.path, true);
+  const thumb = item.metadata?.thumbnail;
+  const author = item.metadata?.author ? '@' + item.metadata.author.replace(/^@/, '') : '';
+  const caption = item.metadata?.title || item.name;
+  const duration = item.metadata?.duration ? `${item.metadata.duration}s` : 'Video';
+  const ext = (item.extension || '').toLowerCase();
+  const isVideo = ['mp4', 'webm', 'mov', 'mkv'].includes(ext);
+  const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext);
+
+  return `
+    <div 
+      class="tiktok-grid-card group relative aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden bg-black border ${isSelected ? 'ring-2 ring-rose-500 border-rose-500' : 'border-zinc-200/50 dark:border-white/10 hover:border-rose-500/50'} shadow-xs hover:shadow-xl transition-all duration-200 cursor-pointer select-none"
+      data-item-path="${escapeHtml(item.path)}"
+      data-is-dir="false"
+    >
+      <!-- Media Preview (Thumbnail Image or Direct Video Stream) -->
+      ${thumb ? `
+        <img 
+          src="${thumb}" 
+          alt="${escapeHtml(item.name)}" 
+          class="tiktok-card-thumb absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+          loading="lazy" 
+          onerror="this.style.display='none'; const v = this.parentElement.querySelector('.tiktok-card-video'); if (v) v.classList.remove('hidden');" 
+        />
+      ` : (isImage ? `
+        <img 
+          src="${streamUrl}" 
+          alt="${escapeHtml(item.name)}" 
+          class="tiktok-card-thumb absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+          loading="lazy" 
+        />
+      ` : '')}
+
+      ${isVideo ? `
+        <video 
+          src="${streamUrl}#t=0.1" 
+          preload="metadata" 
+          muted 
+          playsinline 
+          loop 
+          class="tiktok-card-video absolute inset-0 w-full h-full object-cover ${thumb ? 'hidden' : ''}"
+        ></video>
+      ` : (!isImage && !thumb ? `
+        <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-zinc-900">
+          <i data-lucide="${getFileVisualInfo(item).icon}" class="w-10 h-10 ${getFileVisualInfo(item).color} mb-2"></i>
+          <p class="text-xs text-zinc-300 font-semibold truncate max-w-full">${escapeHtml(item.name)}</p>
+        </div>
+      ` : '')}
+
+      <!-- Top-Left Multi-Select Checkbox -->
+      <div data-checkbox-wrapper class="absolute top-2 left-2 z-20 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity p-1 cursor-pointer">
+        <input 
+          type="checkbox" 
+          data-select-path="${escapeHtml(item.path)}" 
+          class="w-4 h-4 rounded border-white/50 text-rose-600 focus:ring-0 cursor-pointer pointer-events-none drop-shadow" 
+          ${isSelected ? 'checked' : ''} 
+        />
+      </div>
+
+      <!-- Top-Right Action Buttons -->
+      <div class="absolute top-2 right-2 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 backdrop-blur-md rounded-lg p-1 border border-white/10 shadow-xs">
+        <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1 rounded text-zinc-300 hover:text-white transition cursor-pointer">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+        </button>
+        <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="false" title="Tải về máy" class="p-1 rounded text-zinc-300 hover:text-white transition cursor-pointer">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        </button>
+        <button data-action="delete" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Xóa khỏi Drive" class="p-1 rounded text-zinc-300 hover:text-red-400 transition cursor-pointer">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <!-- Bottom Gradient & Metadata Overlay -->
+      <div class="absolute inset-x-0 bottom-0 pt-16 pb-2.5 px-2.5 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end pointer-events-none z-10">
+        ${author ? `<p class="text-[11px] font-bold text-white truncate drop-shadow leading-tight">${escapeHtml(author)}</p>` : ''}
+        <p class="text-[10px] text-zinc-200 line-clamp-2 leading-tight drop-shadow mt-0.5 font-medium">${escapeHtml(caption)}</p>
+        <div class="flex items-center justify-between mt-1.5 text-[10px] text-zinc-300 font-mono">
+          <span class="flex items-center gap-1 font-semibold text-white/95">
+            <i data-lucide="${isVideo ? 'play' : 'file'}" class="w-2.5 h-2.5 fill-white text-white"></i>
+            <span>${isVideo ? duration : formatBytes(item.sizeBytes)}</span>
+          </span>
+          <span class="text-zinc-400">${isVideo ? formatBytes(item.sizeBytes) : ''}</span>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1171,6 +1320,39 @@ export function attachStoragePageListeners(onSoftReRender) {
         }
       }
     };
+
+    // Hover video preview for TikTok grid cards on desktop
+    const onMouseOver = (e) => {
+      const card = e.target.closest('.tiktok-grid-card');
+      if (!card || card.contains(e.relatedTarget)) return;
+      const video = card.querySelector('video.tiktok-card-video');
+      if (video) {
+        const img = card.querySelector('img.tiktok-card-thumb');
+        if (img && img.style.display !== 'none') {
+          img.style.opacity = '0';
+          video.classList.remove('hidden');
+        }
+        video.play().catch(() => {});
+      }
+    };
+
+    const onMouseOut = (e) => {
+      const card = e.target.closest('.tiktok-grid-card');
+      if (!card || card.contains(e.relatedTarget)) return;
+      const video = card.querySelector('video.tiktok-card-video');
+      if (video) {
+        video.pause();
+        try { video.currentTime = 0.1; } catch (_) {}
+        const img = card.querySelector('img.tiktok-card-thumb');
+        if (img && img.style.display !== 'none') {
+          img.style.opacity = '1';
+          video.classList.add('hidden');
+        }
+      }
+    };
+
+    contentArea.addEventListener('mouseover', onMouseOver);
+    contentArea.addEventListener('mouseout', onMouseOut);
   }
 
   // Breadcrumb Click Delegator
@@ -1197,6 +1379,10 @@ export function attachStoragePageListeners(onSoftReRender) {
     document.removeEventListener('click', onFolderTabsClick);
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('popstate', onPopState);
+    if (contentArea) {
+      contentArea.removeEventListener('mouseover', onMouseOver);
+      contentArea.removeEventListener('mouseout', onMouseOut);
+    }
     if (dropZone) {
       dropZone.removeEventListener('dragenter', onDragEnter);
       dropZone.removeEventListener('dragover', onDragOver);

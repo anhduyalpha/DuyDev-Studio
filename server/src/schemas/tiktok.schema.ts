@@ -13,8 +13,37 @@ export const tiktokStreamQuerySchema = z.object({
 export const tiktokSaveDriveBodySchema = z.object({
   url: z.string().min(1, 'Target media URL is required'),
   title: z.string().optional().default('tiktok_video'),
-  id: z.string().optional().default('')
+  id: z.string().optional().default(''),
+  originalUrl: z.string().optional(),
+  cover: z.string().optional(),
+  author: z.union([
+    z.string(),
+    z.object({
+      uniqueId: z.string().optional(),
+      nickname: z.string().optional(),
+      avatar: z.string().optional()
+    })
+  ]).optional(),
+  duration: z.number().optional(),
+  overwrite: z.boolean().optional().default(false)
 });
+
+export const tiktokCheckDuplicateSchema = z.object({
+  url: z.string().optional(),
+  id: z.string().optional()
+});
+
+export interface ExistingDriveItem {
+  fileName: string;
+  relPath: string;
+  sizeBytes: number;
+  title?: string;
+  thumbnail?: string;
+  tiktokVideoId?: string;
+  author?: string;
+  duration?: number;
+  updatedAt?: string;
+}
 
 export interface TikTokVideoData {
   id: string;
@@ -36,4 +65,5 @@ export interface TikTokVideoData {
     shares: number;
   };
   extractor: 'ssr' | 'resolver' | 'ytdlp';
+  existingInDrive?: ExistingDriveItem | null;
 }

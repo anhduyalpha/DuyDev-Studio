@@ -22,6 +22,7 @@ export interface DriveItem {
   updatedAt: string;
   mimeType: string;
   extension: string;
+  metadata?: Record<string, any>;
 }
 
 export interface DriveListResult {
@@ -115,7 +116,15 @@ export class DriveService {
     const items: DriveItem[] = [];
 
     for (const entry of entries) {
-      if (entry.name.includes('.tmp_') || entry.name.endsWith('.tmp')) continue;
+      if (
+        entry.name.includes('.tmp_') ||
+        entry.name.endsWith('.tmp') ||
+        entry.name.endsWith('.meta.json') ||
+        entry.name.endsWith('.thumb.jpg') ||
+        (entry.name.startsWith('.') && entry.name !== '.' && entry.name !== '..')
+      ) {
+        continue;
+      }
 
       const entryDiskPath = path.join(diskPath, entry.name);
       const itemRelPath = normalizedRel === '/' ? `/${entry.name}` : `${normalizedRel}/${entry.name}`;
@@ -125,6 +134,19 @@ export class DriveService {
         const ext = isDir ? '' : path.extname(entry.name).toLowerCase().replace(/^\./, '');
         const mimeType = isDir ? 'inode/directory' : getMimeTypeForExt(ext);
 
+        let metadata: Record<string, any> | undefined = undefined;
+        if (!isDir) {
+          const metaPath = path.join(diskPath, `${entry.name.replace(/\.[^.]+$/, '')}.meta.json`);
+          if (existsSync(metaPath)) {
+            try {
+              const rawMeta = await fs.readFile(metaPath, 'utf8');
+              metadata = JSON.parse(rawMeta);
+            } catch {
+              // ignore parse errors
+            }
+          }
+        }
+
         items.push({
           name: entry.name,
           path: itemRelPath,
@@ -132,7 +154,8 @@ export class DriveService {
           sizeBytes: isDir ? 0 : itemStat.size,
           updatedAt: itemStat.mtime.toISOString(),
           mimeType,
-          extension: ext
+          extension: ext,
+          ...(metadata ? { metadata } : {})
         });
       } catch (err) {
         logger.debug({ entryDiskPath, err }, 'Failed to stat drive entry');
@@ -223,6 +246,11 @@ export class DriveService {
       await fs.rm(diskPath, { recursive: true, force: true });
     } else {
       await fs.unlink(diskPath);
+      const baseName = diskPath.replace(/\.[^.]+$/, '');
+      const metaPath = `${baseName}.meta.json`;
+      if (existsSync(metaPath)) await fs.unlink(metaPath).catch(() => {});
+      const thumbPath = `${baseName}.thumb.jpg`;
+      if (existsSync(thumbPath)) await fs.unlink(thumbPath).catch(() => {});
     }
     DriveService.invalidateStatsCache();
     return true;
@@ -279,6 +307,16 @@ export class DriveService {
     } else {
       await fs.rename(oldDiskPath, newDiskPath);
     }
+
+    const oldBase = oldDiskPath.replace(/\.[^.]+$/, '');
+    const newBase = newDiskPath.replace(/\.[^.]+$/, '');
+    const oldMeta = `${oldBase}.meta.json`;
+    const newMeta = `${newBase}.meta.json`;
+    if (existsSync(oldMeta)) await fs.rename(oldMeta, newMeta).catch(() => {});
+    const oldThumb = `${oldBase}.thumb.jpg`;
+    const newThumb = `${newBase}.thumb.jpg`;
+    if (existsSync(oldThumb)) await fs.rename(oldThumb, newThumb).catch(() => {});
+
     DriveService.invalidateStatsCache();
 
     const stat = await fs.stat(newDiskPath);
@@ -353,6 +391,16 @@ export class DriveService {
     StorageManager.sanitizeSafePath(resolvedStoragePaths.drive, path.relative(resolvedStoragePaths.drive, targetDiskPath));
 
     await fs.rename(sourceDiskPath, targetDiskPath);
+
+    const sourceBase = sourceDiskPath.replace(/\.[^.]+$/, '');
+    const targetBase = targetDiskPath.replace(/\.[^.]+$/, '');
+    const srcMeta = `${sourceBase}.meta.json`;
+    const dstMeta = `${targetBase}.meta.json`;
+    if (existsSync(srcMeta)) await fs.rename(srcMeta, dstMeta).catch(() => {});
+    const srcThumb = `${sourceBase}.thumb.jpg`;
+    const dstThumb = `${targetBase}.thumb.jpg`;
+    if (existsSync(srcThumb)) await fs.rename(srcThumb, dstThumb).catch(() => {});
+
     DriveService.invalidateStatsCache();
     const stat = await fs.stat(targetDiskPath);
     const isDir = stat.isDirectory();
@@ -417,9 +465,17 @@ export class DriveService {
       }
     }
 
-    StorageManager.sanitizeSafePath(resolvedStoragePaths.drive, path.relative(resolvedStoragePaths.drive, targetDiskPath));
-
     await fs.cp(sourceDiskPath, targetDiskPath, { recursive: true });
+
+    const sourceBase = sourceDiskPath.replace(/\.[^.]+$/, '');
+    const targetBase = targetDiskPath.replace(/\.[^.]+$/, '');
+    const srcMeta = `${sourceBase}.meta.json`;
+    const dstMeta = `${targetBase}.meta.json`;
+    if (existsSync(srcMeta)) await fs.copyFile(srcMeta, dstMeta).catch(() => {});
+    const srcThumb = `${sourceBase}.thumb.jpg`;
+    const dstThumb = `${targetBase}.thumb.jpg`;
+    if (existsSync(srcThumb)) await fs.copyFile(srcThumb, dstThumb).catch(() => {});
+
     DriveService.invalidateStatsCache();
     const stat = await fs.stat(targetDiskPath);
     const isDir = stat.isDirectory();

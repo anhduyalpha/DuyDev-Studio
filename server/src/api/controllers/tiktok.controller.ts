@@ -3,7 +3,8 @@ import { TikTokService } from '../../services/tiktok.service.js';
 import {
   tiktokResolveBodySchema,
   tiktokStreamQuerySchema,
-  tiktokSaveDriveBodySchema
+  tiktokSaveDriveBodySchema,
+  tiktokCheckDuplicateSchema
 } from '../../schemas/tiktok.schema.js';
 
 export async function resolveTikTokHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -12,6 +13,21 @@ export async function resolveTikTokHandler(request: FastifyRequest, reply: Fasti
   return reply.send({
     success: true,
     data
+  });
+}
+
+export async function checkDuplicateTikTokHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { url, id } = tiktokCheckDuplicateSchema.parse(request.body || {});
+  let expandedUrl = url;
+  if (url && (url.includes('vt.tiktok.com') || url.includes('vm.tiktok.com'))) {
+    try {
+      expandedUrl = await TikTokService.expandUrl(url);
+    } catch {}
+  }
+  const result = await TikTokService.checkExistingInDrive(id, expandedUrl);
+  return reply.send({
+    success: true,
+    data: result
   });
 }
 
@@ -30,8 +46,8 @@ export async function streamTikTokHandler(request: FastifyRequest, reply: Fastif
 }
 
 export async function saveToDriveTikTokHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, title, id } = tiktokSaveDriveBodySchema.parse(request.body || {});
-  const result = await TikTokService.saveToDrive(url, title, id);
+  const { url, title, id, originalUrl, cover, author, duration, overwrite } = tiktokSaveDriveBodySchema.parse(request.body || {});
+  const result = await TikTokService.saveToDrive(url, title, id, originalUrl, cover, author, duration, overwrite);
   return reply.send({
     success: true,
     data: result

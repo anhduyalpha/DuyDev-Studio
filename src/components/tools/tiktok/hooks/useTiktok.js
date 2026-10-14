@@ -18,6 +18,9 @@ class TiktokManager {
       videoData: null,
       isSavingDrive: false,
       savedDriveResult: null,
+      existingInDrive: null,
+      isForceResave: false,
+      duplicatePreCheck: null,
       recentHistory: this.loadHistory()
     };
   }
@@ -78,7 +81,32 @@ class TiktokManager {
     this.state.error = null;
     this.state.videoData = null;
     this.state.savedDriveResult = null;
+    this.state.existingInDrive = null;
+    this.state.duplicatePreCheck = null;
+    this.state.isForceResave = false;
     this.notify({ type: 'clear' });
+  }
+
+  setForceResave(val = true) {
+    this.state.isForceResave = val;
+    this.notify({ type: 'force-resave' });
+  }
+
+  async checkDuplicateUrl(candidateUrl = this.state.url) {
+    const raw = (candidateUrl || '').trim();
+    if (!raw) {
+      this.state.duplicatePreCheck = null;
+      return null;
+    }
+    const clean = raw.split('?')[0].replace(/\/$/, '');
+    const res = await tiktokApi.checkDuplicate({ url: clean });
+    if (res?.exists) {
+      this.state.duplicatePreCheck = res.item;
+    } else {
+      this.state.duplicatePreCheck = null;
+    }
+    this.notify({ type: 'pre-check-duplicate', item: this.state.duplicatePreCheck });
+    return this.state.duplicatePreCheck;
   }
 
   async resolve(candidateUrl = this.state.url) {
@@ -93,11 +121,14 @@ class TiktokManager {
     this.state.isLoading = true;
     this.state.error = null;
     this.state.savedDriveResult = null;
+    this.state.existingInDrive = null;
+    this.state.isForceResave = false;
     this.notify({ type: 'loading' });
 
     try {
       const data = await tiktokApi.resolveVideo(rawUrl);
       this.state.videoData = data;
+      this.state.existingInDrive = data.existingInDrive || null;
       this.state.isLoading = false;
       this.saveHistory({
         id: data.id,
@@ -118,7 +149,7 @@ class TiktokManager {
     }
   }
 
-  async saveCurrentToDrive() {
+  async saveCurrentToDrive(forceOverwrite = this.state.isForceResave) {
     if (!this.state.videoData?.videoUrl) return;
 
     this.state.isSavingDrive = true;
@@ -129,10 +160,24 @@ class TiktokManager {
       const result = await tiktokApi.saveToDrive({
         url: targetUrl,
         title: this.state.videoData.title,
-        id: this.state.videoData.id
+        id: this.state.videoData.id,
+        originalUrl: this.state.url,
+        cover: this.state.videoData.cover,
+        author: this.state.videoData.author,
+        duration: this.state.videoData.duration,
+        overwrite: forceOverwrite
       });
       this.state.isSavingDrive = false;
       this.state.savedDriveResult = result;
+      this.state.existingInDrive = {
+        fileName: result.fileName,
+        relPath: result.relPath,
+        sizeBytes: result.sizeBytes,
+        title: this.state.videoData.title,
+        thumbnail: result.metadata?.thumbnail || this.state.videoData.cover,
+        tiktokVideoId: this.state.videoData.id
+      };
+      this.state.isForceResave = false;
       showToast(`Đã lưu "${result.fileName}" vào thư mục /tiktok của Drive`, 'success');
       this.notify({ type: 'drive-saved', result });
     } catch (err) {
