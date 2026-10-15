@@ -278,8 +278,8 @@ class ScribdManager {
     this.jobStartTime = Date.now();
     this.elapsedSeconds = 0;
     this.progress = 5;
-    this.stepLabel = 'Đang kết nối máy chủ kết xuất...';
-    this.logs = [`🚀 Tiếp nhận yêu cầu: ${candidate}`];
+    this.stepLabel = 'Đang chuẩn bị tải tài liệu...';
+    this.logs = [`🚀 Đang xử lý liên kết: ${candidate}`];
     this.currentDocTitle = 'Tài liệu Scribd ' + candidate;
     this.startTimer();
     this.startThinkingOrbs();
@@ -290,7 +290,7 @@ class ScribdManager {
 
       if (data.from_cache && data.status === 'completed') {
         this.progress = 100;
-        this.stepLabel = 'Tài liệu có sẵn trong bộ nhớ đệm';
+        this.stepLabel = 'Tài liệu đã có sẵn trên máy chủ';
         this.logs.push('⚡ Tài liệu đã có sẵn trong kho lưu trữ.');
         if (data.result?.name) {
           this.logs.push(`✅ Sẵn sàng: ${data.result.name}`);
@@ -318,7 +318,7 @@ class ScribdManager {
       this.stopTimer();
       this.stopThinkingOrbs();
       saveActiveJob(null);
-      showToast(err.message || 'Lỗi khi khởi động kết xuất', 'error');
+      showToast(err.message || 'Lỗi khi bắt đầu tải', 'error');
       this.notify();
     }
   }
@@ -411,12 +411,12 @@ class ScribdManager {
       this.stopTimer();
       this.stopThinkingOrbs();
       saveActiveJob(null);
-      showToast('Kết xuất PDF tài liệu Scribd thành công!', 'success');
+      showToast('Đã tải xong file PDF!', 'success');
       this.refreshFiles();
     } else if (msg.status === 'failed' || msg.status === 'cancelled') {
       this.isDownloading = false;
       this.hasError = msg.status === 'failed';
-      this.stepLabel = msg.status === 'cancelled' ? 'Đã hủy tác vụ' : (msg.error || 'Kết xuất thất bại');
+      this.stepLabel = msg.status === 'cancelled' ? 'Đã hủy tác vụ' : (msg.error || 'Không thể tải tài liệu');
       this.closeConnections();
       this.stopTimer();
       this.stopThinkingOrbs();
@@ -478,7 +478,7 @@ class ScribdManager {
     if (jid) {
       await cancelJobApi(jid).catch(() => null);
     }
-    showToast('Đã dừng tiến trình kết xuất', 'info');
+    showToast('Đã dừng quá trình tải', 'info');
     this.refreshFiles();
   }
 

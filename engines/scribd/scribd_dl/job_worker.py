@@ -28,7 +28,7 @@ def create_job(url: str, user_name: Optional[str] = None) -> str:
         "status": "pending",
         "progress": 0,
         "step_label": "Đang khởi tạo...",
-        "logs": [f"🚀 Tiếp nhận yêu cầu tải: {url}"],
+        "logs": [f"🚀 Đang xử lý liên kết: {url}"],
         "user_name": user_name or "Máy khách",
         "start_time": time.time(),
         "archiver": None,
@@ -48,7 +48,7 @@ def run_archive_job(job_id: str, url: str, force_reload: bool = False, user_name
     def _worker():
         job["status"] = "running"
         job["progress"] = 5
-        job["step_label"] = "Đang khởi động tiến trình kết xuất..."
+        job["step_label"] = "Đang chuẩn bị tải tài liệu..."
 
         def on_progress(pct: int, label: str):
             job["progress"] = pct

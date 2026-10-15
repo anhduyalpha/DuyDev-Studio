@@ -136,7 +136,7 @@ const DEFAULT_TOOLS = [
   {
     id: 'studocu-dl',
     title: 'Studocu Downloader',
-    description: 'Trích xuất tài liệu Studocu sang PDF.',
+    description: 'Tải tài liệu Studocu sang file PDF rõ nét.',
     category: 'system',
     icon: 'file-down',
     featured: false,
@@ -160,11 +160,11 @@ const DEFAULT_TOOLS = [
   {
     id: 'scribd-archiver',
     title: 'Scribd Downloader',
-    description: 'Trích xuất và kết xuất tài liệu Scribd sang định dạng PDF vector.',
+    description: 'Tải tài liệu Scribd sang file PDF rõ nét.',
     category: 'system',
     icon: 'file-text',
     featured: true,
-    specs: ['PDF Vector', 'Lưu Drive'],
+    specs: ['PDF', 'Lưu Drive'],
     color: '#1A7BBA',
     route: '#tool/scribd',
     tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']

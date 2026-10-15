@@ -360,7 +360,7 @@ class StudocuDownloader:
                 try:
                     has_blur = await page_client.eval("!!window.__NEXT_DATA__?.props?.pageProps?.documentAccess?.hasBlurredPages")
                     if has_blur:
-                        self._log("     ℹ️ Nhận diện tài liệu có trang giới hạn xem trước. Bộ lọc tự động gỡ mờ & trích xuất CDN sẽ được kích hoạt.")
+                        self._log("     ℹ️ Nhận diện tài liệu có trang giới hạn xem trước. Tự động gỡ mờ và tải trang từ CDN.")
                 except Exception:
                     pass
                 return last_title
@@ -413,7 +413,7 @@ class StudocuDownloader:
             if len(parts) >= 2 and parts[-1] == "html" and len(parts[-2]) == 32:
                 object_key = parts[-2]
 
-        # Giai đoạn 1 (0% - 25%): Bảo mật & Trích xuất khóa tài liệu
+        # Giai đoạn 1 (0% - 25%): Chuẩn bị tài liệu
         self._log(
             f"  📄 Nhận diện tài liệu: '{doc_title}' | Tổng số: {total_pages} trang",
             progress={
@@ -421,7 +421,7 @@ class StudocuDownloader:
                 "current_page": 0,
                 "total_pages": total_pages,
                 "percent": 15,
-                "message": f"Bảo mật & Trích xuất khóa tài liệu: {doc_title} ({total_pages} trang)",
+                "message": f"Đang chuẩn bị: {doc_title} ({total_pages} trang)",
             },
         )
 
@@ -848,7 +848,7 @@ class StudocuDownloader:
             """) or 0
             total_captured_count += block_captured
 
-            # Giai đoạn 2: Trích xuất Markdown nếu cần
+            # Giai đoạn 2: Lấy nội dung Markdown nếu cần
             if self.fmt in ("md", "both"):
                 md_items = await page_client.eval(get_chunk_extract_markdown_js(b_start, b_end)) or []
                 all_md_items.extend(md_items)
@@ -856,13 +856,13 @@ class StudocuDownloader:
             # Giai đoạn 3: Xuất PDF Vector cho khối này
             if self.fmt in ("pdf", "both"):
                 self._log(
-                    f"     🖨️  Đang xuất & gộp PDF: Trang {b_start + 1} - {b_end}/{total_pages}...",
+                    f"     🖨️  Đang tạo PDF: Trang {b_start + 1} - {b_end}/{total_pages}...",
                     progress={
                         "phase": "rendering",
                         "current_page": b_end,
                         "total_pages": total_pages,
                         "percent": min(95, int((b_end / total_pages) * 95)),
-                        "message": f"Xuất & gộp PDF: {b_end}/{total_pages} trang ({int(b_end/total_pages*100)}%)",
+                        "message": f"Đang tạo PDF: {b_end}/{total_pages} trang ({int(b_end/total_pages*100)}%)",
                     },
                 )
                 await page_client.eval(get_chunk_mount_js(b_start, b_end))

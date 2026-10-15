@@ -16,7 +16,7 @@ export function renderHeroPasteCard(state) {
           <span>Scribd Downloader</span>
         </h2>
         <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-lg mx-auto leading-relaxed">
-          Trích xuất tài liệu Scribd sang PDF chất lượng cao. Dán liên kết hoặc nhấn <kbd class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-mono text-[11px] border border-zinc-200 dark:border-zinc-700">Ctrl + V</kbd>.
+          Tải tài liệu Scribd sang file PDF rõ nét. Dán link hoặc nhấn <kbd class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-mono text-[11px] border border-zinc-200 dark:border-zinc-700">Ctrl + V</kbd>.
         </p>
       </div>
 
@@ -72,17 +72,17 @@ export function renderHeroPasteCard(state) {
           <div id="scribdOptionsDrawer" class="hidden text-left mt-2.5 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-3">
             <label class="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 select-none cursor-pointer">
               <input type="checkbox" id="chkScribdForceReload" class="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500" />
-              <span class="font-medium">Tải lại từ đầu</span>
-              <span class="text-zinc-400 dark:text-zinc-500 text-[11px]">(Bỏ qua bộ nhớ đệm Cache)</span>
+              <span class="font-medium">Tải lại bản mới</span>
+              <span class="text-zinc-400 dark:text-zinc-500 text-[11px]">(Bỏ qua bản đã lưu)</span>
             </label>
 
             <div>
-              <label class="block text-xs font-mono text-zinc-700 dark:text-zinc-300 mb-1">Nhập liên kết hoặc ID thủ công</label>
+              <label class="block text-xs font-mono text-zinc-700 dark:text-zinc-300 mb-1">Nhập link hoặc ID tài liệu</label>
               <div class="flex items-center gap-2">
                 <input
                   type="text"
                   id="scribdManualUrlInput"
-                  placeholder="https://www.scribd.com/document/... hoặc 693471767"
+                  placeholder="Dán link tài liệu vào đây hoặc nhập ID..."
                   class="flex-1 text-xs bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/60 rounded-lg px-2.5 py-1.5 text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-indigo-500 transition"
                 />
                 <button

@@ -60,7 +60,7 @@ def sanitize_filename(name: str, max_length: int = 100) -> str:
 
 
 class ScribdArchiver:
-    """Bộ kết xuất tài liệu Scribd sang PDF qua Playwright Embed Reader và PyMuPDF."""
+    """Bộ tải tài liệu Scribd sang PDF qua Playwright Embed Reader và PyMuPDF."""
 
     def __init__(
         self,
@@ -98,9 +98,9 @@ class ScribdArchiver:
                 pass
 
     def cancel(self) -> None:
-        """Hủy tiến trình kết xuất ngay lập tức."""
+        """Hủy tiến trình tải ngay lập tức."""
         self.is_cancelled = True
-        self._log("🛑 Nhận lệnh hủy: Đang đóng trình duyệt kết xuất...")
+        self._log("🛑 Nhận lệnh hủy: Đang dừng trình duyệt...")
         if self._browser:
             try:
                 self._browser.close()
@@ -109,7 +109,7 @@ class ScribdArchiver:
             self._browser = None
 
     def find_cached_file(self) -> Optional[Path]:
-        """Tìm file đã kết xuất trước đó trong thư mục downloads theo doc_id."""
+        """Tìm file đã tải trước đó trong thư mục downloads theo doc_id."""
         for p in self.output_dir.glob(f"*_{self.doc_id}.pdf"):
             if p.is_file() and p.stat().st_size > 50000:
                 return p
@@ -123,7 +123,7 @@ class ScribdArchiver:
         3. Cuộn tuần tự để kích hoạt lazy loading tất cả các trang.
         4. Đồng bộ thuộc tính orig sang src trên các thẻ ảnh absimg.
         5. Áp dụng bảng kiểu CSS chuẩn hóa in ấn @media print.
-        6. Kết xuất PDF chất lượng cao.
+        6. Tạo file PDF chất lượng cao.
         7. PyMuPDF hậu xử lý, kiểm tra số trang và lưu tệp.
         """
         # 1. Kiểm tra cache
@@ -131,7 +131,7 @@ class ScribdArchiver:
             cached = self.find_cached_file()
             if cached:
                 self._log(f"⚡ Đã tìm thấy tài liệu trong kho lưu trữ: {cached.name}")
-                self._progress(100, "Đã lấy từ bộ nhớ đệm (Cache)")
+                self._progress(100, "Đã có sẵn trên máy chủ")
                 try:
                     with pymupdf.open(cached) as doc:
                         page_count = doc.page_count
@@ -149,7 +149,7 @@ class ScribdArchiver:
                     "path": str(cached),
                 }
 
-        self._progress(5, "Đang khởi tạo trình duyệt kết xuất...")
+        self._progress(5, "Đang khởi tạo trình duyệt...")
         self._log(f"🚀 Mở tài liệu Scribd Embed ID {self.doc_id}: {self.embed_url}")
 
         with sync_playwright() as p:
@@ -334,9 +334,9 @@ class ScribdArchiver:
                     document.head.appendChild(style);
                 }}""")
 
-                # 8. Kết xuất file PDF qua Chromium CDP
-                self._progress(92, "Đang kết xuất PDF vector qua Chromium Engine...")
-                self._log("🖨️ Đang in PDF vector (printBackground=True)...")
+                # 8. Tạo file PDF qua Chromium CDP
+                self._progress(92, "Đang tạo file PDF qua Chromium Engine...")
+                self._log("🖨️ Đang tạo file PDF...")
 
                 pdf_raw_bytes = page.pdf(
                     prefer_css_page_size=True,
@@ -375,7 +375,7 @@ class ScribdArchiver:
                 final_size = final_pdf_path.stat().st_size
                 final_size_mb = round(final_size / (1024 * 1024), 2)
                 self._progress(100, f"Hoàn tất! ({final_pages} trang, {final_size_mb} MB)")
-                self._log(f"✅ Kết xuất PDF thành công: {target_filename} ({final_pages} trang, {final_size_mb} MB)")
+                self._log(f"✅ Đã tải xong file PDF: {target_filename} ({final_pages} trang, {final_size_mb} MB)")
 
                 return {
                     "id": self.doc_id,

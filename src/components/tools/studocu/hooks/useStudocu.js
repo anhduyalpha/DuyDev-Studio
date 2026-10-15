@@ -300,7 +300,7 @@ class StudocuManager {
           return;
         } else if (job.status === 'error' || job.status === 'failed') {
           this.stopPolling();
-          this.finishJob(false, job.error || 'Quá trình trích xuất gặp lỗi');
+          this.finishJob(false, job.error || 'Không thể tải tài liệu');
           return;
         } else if (job.status === 'cancelled') {
           this.stopPolling();
@@ -522,7 +522,7 @@ class StudocuManager {
         id: `studocu-job-${this.currentJobId || 'active'}`,
         moduleId: this.moduleId,
         moduleTitle: this.moduleTitle,
-        title: this.stepLabel ? `Tài liệu: ${this.stepLabel}` : 'Tải tài liệu Studocu',
+        title: this.currentDocTitle ? `Đang xử lý: ${this.currentDocTitle}` : 'Tải tài liệu Studocu',
         status: 'running',
         progress: this.progress || 5,
         stage: this.stepLabel || 'Đang xử lý...',

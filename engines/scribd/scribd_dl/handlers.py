@@ -388,7 +388,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             "status": "completed",
                             "progress": 100,
                             "step_label": "Tài liệu đã có sẵn trên máy chủ",
-                            "logs": ["⚡ Tài liệu đã có sẵn trong kho lưu trữ (Bỏ qua kết xuất)"],
+                            "logs": ["⚡ Tài liệu đã có sẵn trong kho lưu trữ"],
                             "result": cached_result,
                         }
                         self.send_response(HTTPStatus.OK)

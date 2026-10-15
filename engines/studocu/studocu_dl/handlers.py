@@ -475,11 +475,11 @@ class StudocuHTTPRequestHandler(SimpleHTTPRequestHandler):
 
             cookie = None
             initial_logs = [
-                f"🚀 Tiếp nhận yêu cầu tải: {url}",
+                f"🚀 Đang xử lý liên kết: {url}",
                 f"🎯 Định dạng: {fmt.upper()} • Người tải: {downloaded_by['name']} ({device_summary})"
             ]
             if force_reload:
-                initial_logs.append("🔄 Chế độ tải mới (Bỏ qua bộ nhớ đệm Cache)")
+                initial_logs.append("🔄 Tải lại bản mới (Bỏ qua bản đã lưu)")
 
             if raw_cookie:
                 has_auth = (

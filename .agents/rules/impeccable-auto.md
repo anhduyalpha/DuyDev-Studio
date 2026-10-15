@@ -13,8 +13,8 @@ description: Autonomous Impeccable UI/UX Protocol for DuyDev-Studio
 - Light Mode First: Validate contrast on `#F4F4F6` base (dark text `#09090B`) and `#09090B` base (light text `#FAFAFA`).
 
 ## 2. Anti-AI-Slop & Microcopy
-- Ban buzzwords (*"Bóc tách"*, *"Khám phá sức mạnh"*, *"Trải nghiệm đỉnh cao"*, *"Hệ sinh thái"*).
-- Utilitarian verbs only: *"Tải Video"*, *"Tải Audio"*, *"Lưu vào Drive"*, *"Sao chép"*, *"Xem trước"*.
+- Strictly ban robotic AI-translated terms: *"Kết xuất"*, *"Trích xuất"*, *"Bóc tách"*, *"Bộ nhớ đệm Cache"*, *"Văn bản vector"*, *"Thực thi tác vụ"*, *"Tiếp nhận yêu cầu"*, *"Khám phá sức mạnh"*, *"Trải nghiệm đỉnh cao"*, *"Hệ sinh thái"*.
+- Enforce natural, concise everyday Vietnamese: *"Xử lý"*, *"Tải tài liệu"*, *"Tạo PDF"*, *"Đang tải trang..."*, *"Tải lại bản mới"*, *"Tải Video"*, *"Tải Audio"*, *"Lưu vào Drive"*, *"Sao chép"*, *"Xem trước"*.
 - No parenthetical options per KI-CON-001 (`PNG`, not `PNG (Ảnh số)`). No fake telemetry.
 
 ## 3. Ergonomics & Polish

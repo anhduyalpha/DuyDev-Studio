@@ -467,7 +467,7 @@ function updateProgressBar(logs, status, elapsed) {
             }
             if (line.includes('LOCAL CACHE HIT')) {
                 percent = 95;
-                label = 'Khôi phục từ bộ nhớ đệm máy chủ...';
+                label = 'Tài liệu đã có sẵn trên máy chủ...';
                 break;
             }
         }
@@ -588,7 +588,7 @@ async function pollJobStatus() {
             }
 
             badge.className = 'badge-status badge-completed';
-            badge.textContent = data.from_cache ? 'BỘ NHỚ ĐỆM' : 'HOÀN TẤT';
+            badge.textContent = data.from_cache ? 'CÓ SẴN' : 'HOÀN TẤT';
             if (indicator) indicator.className = 'status-indicator completed';
 
             const dlContainer = document.getElementById('jobDownloads');
