@@ -3,23 +3,23 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v22.87';
+const CACHE_NAME = 'duydev-studio-v22.88';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=22.87',
-  './src/styles/studocu.css?v=22.87',
-  './src/styles/scribd.css?v=22.87',
-  './src/styles/highlight-theme.css?v=22.87',
+  './src/styles/stitch-tokens.css?v=22.88',
+  './src/styles/studocu.css?v=22.88',
+  './src/styles/scribd.css?v=22.88',
+  './src/styles/highlight-theme.css?v=22.88',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=22.80',
+  './src/app.js?v=22.88',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/pages/DashboardPage.js',

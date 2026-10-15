@@ -54,7 +54,7 @@ export function renderTerminalLogs(logs) {
 
 export function getStatusBadgeHtml(state) {
   if (state.isDownloading) {
-    return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-teal-500/20 text-teal-300 border border-teal-500/30 animate-pulse">ĐANG XỬ LÝ</span>';
+    return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30 animate-pulse">ĐANG XỬ LÝ</span>';
   }
   if (state.hasError) {
     return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30">LỖI</span>';
@@ -62,7 +62,7 @@ export function getStatusBadgeHtml(state) {
   if (state.progress === 100) {
     return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HOÀN TẤT</span>';
   }
-  return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-teal-500/20 text-teal-300 border border-teal-500/30">ĐANG XỬ LÝ</span>';
+  return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30">ĐANG XỬ LÝ</span>';
 }
 
 export function renderLiveTerminalCard(state) {
@@ -81,7 +81,7 @@ export function renderLiveTerminalCard(state) {
             <span class="dot green"></span>
           </div>
           <div class="flex items-center gap-1.5 text-xs text-zinc-400 font-mono min-w-0">
-            <i data-lucide="terminal" class="w-3.5 h-3.5 text-teal-500 shrink-0"></i>
+            <i data-lucide="terminal" class="w-3.5 h-3.5 text-[#EA580C] shrink-0"></i>
             <span class="truncate">Live Stream</span>
           </div>
         </div>
@@ -129,11 +129,11 @@ export function renderLiveTerminalCard(state) {
       <!-- Real-time Progress Bar -->
       <div class="px-4 py-2 border-b border-zinc-800/60 bg-zinc-950/40 space-y-1.5">
         <div class="flex items-center justify-between text-xs font-mono">
-          <span id="scribdProgressStep" class="text-teal-400 font-medium truncate max-w-[80%]">${state.stepLabel || 'Đang kết nối máy chủ xử lý...'}</span>
+          <span id="scribdProgressStep" class="text-orange-400 font-medium truncate max-w-[80%]">${state.stepLabel || 'Đang kết nối máy chủ xử lý...'}</span>
           <span id="scribdProgressPct" class="text-zinc-200 font-bold">${state.progress || 5}%</span>
         </div>
         <div class="h-1.5 w-full bg-zinc-800/80 rounded-full overflow-hidden">
-          <div id="scribdProgressBar" class="h-full bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-300" style="width: ${state.progress || 5}%;"></div>
+          <div id="scribdProgressBar" class="h-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 rounded-full transition-all duration-300" style="width: ${state.progress || 5}%;"></div>
         </div>
       </div>
 

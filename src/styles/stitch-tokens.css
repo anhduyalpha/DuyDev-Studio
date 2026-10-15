@@ -299,6 +299,16 @@ html.dark .task-micro-dock {
   100% { background-position: 0% 50%; }
 }
 
+#globalTaskDockCapsule {
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  #globalTaskDockCapsule {
+    bottom: 1.25rem !important;
+  }
+}
+
 .glass-panel-contained {
   background: var(--glass-card, rgba(255, 255, 255, 0.96));
   border: 1px solid rgba(0, 0, 0, 0.08);

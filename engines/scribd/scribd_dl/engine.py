@@ -358,7 +358,7 @@ class ScribdArchiver:
                 }}""")
 
                 # 8. Tạo file PDF qua Chromium CDP
-                self._progress(92, "Đang tạo file PDF qua Chromium Engine...")
+                self._progress(92, "Đang hoàn thiện file PDF...")
                 self._log("🖨️ Đang tạo file PDF...")
 
                 pdf_raw_bytes = page.pdf(

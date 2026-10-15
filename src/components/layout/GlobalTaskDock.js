@@ -4,11 +4,34 @@
  * across all modules (Archive, PDF, Converter, Studocu, etc.).
  * Linear/Vercel developer utility aesthetic (Rule 3).
  * Selective in-place DOM diffing prevents layout thrashing & flickering (KI-FIX-010).
+ * Auto-hides on active tool routes (#tool/scribd, #tool/studocu-dl) to prevent UI overlap.
  */
 
 import { taskCoordinator } from '../../utilities/taskCoordinator.js';
 
 let isMinimized = false;
+
+/**
+ * Filters out tasks whose page is currently active with an on-screen Live Stream view.
+ * Eliminates duplicate progress indicators and floating dock overlap.
+ * @param {import('../../utilities/taskCoordinator.js').ActiveTask[]} tasks
+ * @returns {import('../../utilities/taskCoordinator.js').ActiveTask[]}
+ */
+export function getVisibleDockTasks(tasks = []) {
+  if (!tasks || tasks.length === 0) return [];
+  const currentRoute = (typeof window !== 'undefined' ? (window.location.hash || '') : '').split('?')[0];
+  if (!currentRoute) return tasks;
+
+  // Tools that have their own prominent on-screen Live Stream
+  const selfStreamingRoutes = new Set(['#tool/scribd', '#tool/studocu-dl']);
+  if (selfStreamingRoutes.has(currentRoute)) {
+    return tasks.filter((task) => {
+      const taskRoute = (task.route || '').split('?')[0];
+      return taskRoute !== currentRoute;
+    });
+  }
+  return tasks;
+}
 
 /**
  * Renders the HTML structure for an individual task item in the Glassmorphic Micro-Dock.
@@ -74,6 +97,7 @@ export function renderTaskRow(task) {
 
 /**
  * Renders the entire dock capsule container for initial mounting.
+ * Features mobile ultra-compact pill bar (44-48px) and desktop expandable card.
  * @param {import('../../utilities/taskCoordinator.js').ActiveTask[]} tasks
  * @returns {string}
  */
@@ -83,10 +107,49 @@ export function renderGlobalTaskDock(tasks = []) {
   }
 
   const count = tasks.length;
+  const primaryTask = tasks[0];
+  const primaryPct = Math.max(0, Math.min(100, Math.round(primaryTask.progress || 0)));
+  const primaryTitle = primaryTask.title ? `Đang tải ${primaryTask.title}...` : `Đang tải ${primaryTask.moduleTitle}...`;
 
   return `
-    <div id="globalTaskDockCapsule" class="fixed bottom-20 right-4 sm:bottom-5 sm:right-5 z-50 flex flex-col items-end gap-1.5 w-[calc(100vw-2rem)] sm:w-[340px] max-w-[340px] select-none pointer-events-none">
-      <div class="task-micro-dock pointer-events-auto w-full rounded-2xl p-2.5 transition-all duration-300">
+    <div 
+      id="globalTaskDockCapsule" 
+      class="fixed right-3 left-3 sm:left-auto sm:right-5 z-50 flex flex-col items-center sm:items-end gap-1.5 w-[calc(100vw-1.5rem)] sm:w-[340px] max-w-[340px] select-none pointer-events-none"
+    >
+      <!-- Mobile Minimalist Pill Bar (44px - 48px single row, sm:hidden) -->
+      <div 
+        class="sm:hidden task-micro-dock pointer-events-auto w-full h-[46px] rounded-full px-3.5 flex items-center justify-between gap-2.5 cursor-pointer relative overflow-hidden transition-all duration-300 shadow-md border border-black/[0.08] dark:border-white/[0.12]"
+        data-task-route="${primaryTask.route || ''}"
+        data-task-id="${primaryTask.id}"
+        title="Nhấn để mở ${primaryTask.moduleTitle}"
+      >
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+          <span class="relative flex h-2 w-2 shrink-0">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="mobile-dock-text text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
+            ${count > 1 ? `${count} tác vụ: ${primaryTitle}` : primaryTitle}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="mobile-dock-pct text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+            ${primaryPct}%
+          </span>
+        </div>
+
+        <!-- Sub-pixel Micro-gradient Progress Thread at bottom of Pill -->
+        <div class="w-full bg-zinc-200/50 dark:bg-white/[0.08] h-[2px] rounded-full overflow-hidden absolute bottom-0 left-0 right-0">
+          <div 
+            class="mobile-dock-bar dock-progress-thread h-[2px] rounded-full transition-all duration-300 ease-out" 
+            style="width: ${primaryPct}%"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Desktop Micro-Dock Card (hidden on mobile, visible on sm+) -->
+      <div class="hidden sm:block task-micro-dock pointer-events-auto w-full rounded-2xl p-2.5 transition-all duration-300">
         
         <!-- Dock Micro-Header -->
         <div class="flex items-center justify-between pb-1.5 mb-1 border-b border-black/[0.05] dark:border-white/[0.06] px-1">
@@ -141,9 +204,9 @@ function attachDockListeners(container) {
     };
   }
 
-  const tasksContainer = container.querySelector('#dockTasksContainer');
-  if (tasksContainer) {
-    tasksContainer.onclick = (e) => {
+  const capsule = container.querySelector('#globalTaskDockCapsule');
+  if (capsule) {
+    capsule.onclick = (e) => {
       const cancelBtn = e.target.closest('.btn-cancel-dock-task');
       if (cancelBtn) {
         e.stopPropagation();
@@ -168,10 +231,13 @@ function attachDockListeners(container) {
 /**
  * Updates the GlobalTaskDock DOM in-place to prevent flicker, layout thrashing,
  * and CSS keyframe animation restarts (Rule 1 & Rule 3).
+ * Auto-filters tasks when the user is directly viewing that tool's live stream.
  * @param {HTMLElement} host
- * @param {import('../../utilities/taskCoordinator.js').ActiveTask[]} tasks
+ * @param {import('../../utilities/taskCoordinator.js').ActiveTask[]} rawTasks
  */
-export function updateDockDOM(host, tasks = []) {
+export function updateDockDOM(host, rawTasks = []) {
+  const tasks = getVisibleDockTasks(rawTasks);
+
   if (!tasks || tasks.length === 0) {
     if (host.innerHTML !== '') {
       host.innerHTML = '';
@@ -188,7 +254,30 @@ export function updateDockDOM(host, tasks = []) {
     return;
   }
 
-  // Capsule already exists: selective in-place mutation
+  // Update mobile pill bar
+  const primaryTask = tasks[0];
+  const primaryPct = Math.max(0, Math.min(100, Math.round(primaryTask.progress || 0)));
+  const primaryTitle = primaryTask.title ? `Đang tải ${primaryTask.title}...` : `Đang tải ${primaryTask.moduleTitle}...`;
+  const mobilePill = capsule.querySelector('.sm\\:hidden.task-micro-dock');
+  if (mobilePill) {
+    mobilePill.setAttribute('data-task-route', primaryTask.route || '');
+    mobilePill.setAttribute('data-task-id', primaryTask.id);
+    const mText = mobilePill.querySelector('.mobile-dock-text');
+    if (mText) {
+      const newTitle = tasks.length > 1 ? `${tasks.length} tác vụ: ${primaryTitle}` : primaryTitle;
+      if (mText.textContent !== newTitle) mText.textContent = newTitle;
+    }
+    const mPct = mobilePill.querySelector('.mobile-dock-pct');
+    if (mPct && mPct.textContent.trim() !== `${primaryPct}%`) {
+      mPct.textContent = `${primaryPct}%`;
+    }
+    const mBar = mobilePill.querySelector('.mobile-dock-bar');
+    if (mBar && mBar.style.width !== `${primaryPct}%`) {
+      mBar.style.width = `${primaryPct}%`;
+    }
+  }
+
+  // Capsule already exists: selective in-place mutation for desktop
   const countEl = capsule.querySelector('#dockTaskCountText');
   if (countEl) {
     const newText = `${tasks.length} tác vụ đang chạy`;
@@ -259,12 +348,23 @@ export function updateDockDOM(host, tasks = []) {
 }
 
 let dockUnsubscribe = null;
+let hashListenerBound = false;
 
 /**
  * Initializes the GlobalTaskDock singleton mount.
  * Subscribes to taskCoordinator and updates the DOM in-place.
+ * Also listens to hashchange to re-evaluate route-specific task visibility.
  */
 export function initGlobalTaskDock() {
+  if (!hashListenerBound && typeof window !== 'undefined') {
+    window.addEventListener('hashchange', () => {
+      const host = document.getElementById('globalTaskDockContainer');
+      if (!host) return;
+      updateDockDOM(host, taskCoordinator.getActiveTasks());
+    });
+    hashListenerBound = true;
+  }
+
   if (dockUnsubscribe) return;
 
   dockUnsubscribe = taskCoordinator.subscribe((tasks) => {
@@ -273,4 +373,3 @@ export function initGlobalTaskDock() {
     updateDockDOM(host, tasks);
   });
 }
-

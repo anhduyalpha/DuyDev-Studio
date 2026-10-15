@@ -17,16 +17,16 @@ export function renderScribdWorkspace() {
   const state = scribdManager.getState();
 
   return `
-    <div id="scribdWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-4xl mx-auto">
-      <!-- Breadcrumb Header -->
+    <div id="scribdWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-4xl mx-auto pb-24 sm:pb-8">
+      <!-- Breadcrumb Header with Brand Terracotta Identity -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
           <a href="#" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs">
             <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
           </a>
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
-          <span class="text-teal-700 dark:text-teal-300 font-semibold truncate inline-flex items-center gap-1.5">
-            <i data-lucide="book-open" class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"></i>
+          <span class="text-orange-700 dark:text-orange-400 font-semibold truncate inline-flex items-center gap-1.5">
+            <i data-lucide="book-open" class="w-3.5 h-3.5 text-[#EA580C]"></i>
             <span>Scribd Downloader</span>
           </span>
         </div>
@@ -67,10 +67,51 @@ export function attachScribdListeners() {
   function attachHeroHandlers() {
     const urlInput = document.getElementById('scribdUrlInput');
     const clearBtn = document.getElementById('btnClearScribdUrl');
-    const quickPasteBtn = document.getElementById('btnQuickPasteScribd');
     const heroCancel = document.getElementById('scribdHeroCancelBtn');
     const resetBtn = document.getElementById('btnResetScribdState');
     const form = document.getElementById('scribdDownloadForm');
+    const toggleManualBtn = document.getElementById('scribdToggleManualBtn');
+    const manualDrawer = document.getElementById('scribdManualDrawer');
+    const manualChevron = document.getElementById('scribdManualChevron');
+    const pasteBtn = document.getElementById('scribdPasteBtn');
+
+    if (toggleManualBtn && manualDrawer) {
+      toggleManualBtn.onclick = () => {
+        const isHidden = manualDrawer.classList.toggle('hidden');
+        if (manualChevron) manualChevron.style.transform = isHidden ? '' : 'rotate(180deg)';
+        if (!isHidden && urlInput) {
+          urlInput.focus();
+        }
+      };
+    }
+
+    if (pasteBtn && !pasteBtn.disabled) {
+      pasteBtn.onclick = async () => {
+        if (scribdManager.getState().isDownloading) return;
+        // 1-Click Clipboard Read & Start
+        if (navigator.clipboard?.readText) {
+          try {
+            const text = await navigator.clipboard.readText();
+            if (text && text.trim()) {
+              const check = validateScribdUrlOrId(text.trim());
+              if (check.valid) {
+                handleUrlCandidate(text.trim());
+                return;
+              }
+            }
+          } catch (_) {}
+        }
+        // Fallback: open manual drawer and focus input
+        if (manualDrawer) {
+          manualDrawer.classList.remove('hidden');
+          if (manualChevron) manualChevron.style.transform = 'rotate(180deg)';
+        }
+        if (urlInput) {
+          urlInput.focus();
+        }
+        showToast('Dán liên kết vào ô nhập hoặc nhấn Ctrl + V', 'info');
+      };
+    }
 
     function syncClearBtn() {
       if (clearBtn && urlInput) {
@@ -89,29 +130,6 @@ export function attachScribdListeners() {
         urlInput.value = '';
         syncClearBtn();
         urlInput.focus();
-      };
-    }
-
-    if (quickPasteBtn && urlInput) {
-      quickPasteBtn.onclick = async () => {
-        if (navigator.clipboard?.readText) {
-          try {
-            const text = await navigator.clipboard.readText();
-            if (text && text.trim()) {
-              urlInput.value = text.trim();
-              syncClearBtn();
-              urlInput.focus();
-              urlInput.select();
-              showToast('Đã dán liên kết vào ô nhập', 'info');
-              return;
-            }
-            showToast('Clipboard rỗng', 'warning');
-            urlInput.focus();
-            return;
-          } catch (_) {}
-        }
-        urlInput.focus();
-        showToast('Nhấn Ctrl + V để dán link vào ô nhập', 'info');
       };
     }
 
@@ -319,7 +337,7 @@ export function attachScribdListeners() {
       const badgeEl = document.getElementById('scribdStatusBadge');
       if (badgeEl) {
         if (state.isDownloading) {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-teal-500/20 text-teal-300 border border-teal-500/30 animate-pulse';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30 animate-pulse';
           badgeEl.textContent = 'ĐANG XỬ LÝ';
         } else if (state.hasError) {
           badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30';

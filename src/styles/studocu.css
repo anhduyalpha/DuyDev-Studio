@@ -226,6 +226,8 @@ html.dark .btn-hero-badge,
   font-size: 0.78rem;
   color: #a1a1aa;
   padding: 12px 14px;
+  scroll-padding-top: 10px;
+  scroll-padding-bottom: 16px;
   height: 240px;
   overflow-y: auto;
   line-height: 1.65;
@@ -609,9 +611,10 @@ html.dark .btn-action.btn-del:hover,
 
 /* Mobile Viewport Optimizations */
 @media (max-width: 640px) {
+  #studocuWorkspaceRoot { padding-bottom: 96px; }
   .border-beam-card { padding: 16px 14px; }
   .btn-hero-badge { display: none !important; }
-  .terminal-screen { height: 190px; padding: 8px 10px; font-size: 0.72rem; }
+  .terminal-screen { height: 200px; padding: 12px 14px; scroll-padding-top: 10px; scroll-padding-bottom: 16px; font-size: 0.72rem; }
   .file-item { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px 12px; }
   .file-actions { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
   .file-actions .btn-action { flex: 1 1 calc(25% - 6px); justify-content: center; min-height: 34px; padding: 6px 6px; font-size: 0.72rem; }
