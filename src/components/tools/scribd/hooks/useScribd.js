@@ -384,10 +384,17 @@ class ScribdManager {
     this.isPolling = false;
   }
 
+  dismissError() {
+    this.hasError = false;
+    this.stepLabel = '';
+    this.notify();
+  }
+
   startPolling(jobId) {
     this.stopPolling();
     this.isPolling = true;
     let isPollingTick = false;
+    let notFoundCount = 0;
 
     const pollTick = async () => {
       if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
@@ -398,11 +405,28 @@ class ScribdManager {
         const res = await fetch(`/api/v1/scribd/status/${jobId}`);
         if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
         if (!res.ok) {
+          if (res.status === 404) {
+            notFoundCount++;
+            if (notFoundCount >= 4) {
+              this.isDownloading = false;
+              this.hasError = true;
+              this.stepLabel = 'Tác vụ không tồn tại hoặc đã hết hạn';
+              this.logs.push('❌ Tác vụ không tồn tại trên máy chủ.');
+              this.stopTimer();
+              this.stopThinkingOrbs();
+              this.stopPolling();
+              saveActiveJob(null);
+              showToast('Tác vụ không tồn tại hoặc đã kết thúc', 'error');
+              this.notify();
+              return;
+            }
+          }
           if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
             this.pollTimeout = setTimeout(pollTick, 1000);
           }
           return;
         }
+        notFoundCount = 0;
         const job = await res.json().catch(() => null);
         if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
         if (!job || job.error) {

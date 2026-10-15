@@ -123,6 +123,9 @@ export function attachScribdListeners() {
     const cancelBtn = document.getElementById('scribdCancelBtn');
     if (cancelBtn) cancelBtn.onclick = () => scribdManager.cancelJob();
 
+    const dismissBtn = document.getElementById('scribdDismissErrorBtn');
+    if (dismissBtn) dismissBtn.onclick = () => scribdManager.dismissError();
+
     const copyBtn = document.getElementById('scribdCopyLogsBtn');
     if (copyBtn) {
       copyBtn.onclick = () => {
@@ -256,7 +259,7 @@ export function attachScribdListeners() {
       if (window.lucide?.createIcons) window.lucide.createIcons();
     }
 
-    const shouldShowTerminal = state.isDownloading;
+    const shouldShowTerminal = state.isDownloading || state.hasError;
     if (termCard) {
       termCard.classList.toggle('hidden', !shouldShowTerminal);
       const screenEl = document.getElementById('scribdTerminalScreen');

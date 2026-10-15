@@ -189,6 +189,25 @@ class ScribdArchiver:
                 if self.is_cancelled:
                     raise RuntimeError("Tiến trình bị hủy bởi người dùng")
 
+                # Kiểm tra xem tài liệu có tồn tại không (Document Not Found, Private, Removed)
+                error_state = page.evaluate("""() => {
+                    const text = document.body ? document.body.innerText : '';
+                    if (text.includes('Document Not Found') || 
+                        text.includes("Sorry, we can't display this document") ||
+                        text.includes("Sorry, we cannot display this document") ||
+                        text.includes("This document is private") ||
+                        text.includes("This document has been removed")) {
+                        return 'Document Not Found';
+                    }
+                    const outerPages = document.querySelectorAll('.outer_page_container .outer_page, [id^="outer_page_"]');
+                    if (outerPages.length === 0) {
+                        return 'Tài liệu rỗng hoặc không có trang hiển thị';
+                    }
+                    return null;
+                }""")
+                if error_state:
+                    raise RuntimeError(f"Tài liệu không khả dụng trên Scribd: {error_state}")
+
                 # Lấy tiêu đề tài liệu
                 doc_title = page.evaluate("""() => {
                     let title = '';
@@ -212,7 +231,7 @@ class ScribdArchiver:
                     return outerPages.length;
                 }""")
                 if not total_pages or total_pages <= 0:
-                    total_pages = 1
+                    raise RuntimeError("Không tìm thấy trang tài liệu hợp lệ trong giao diện đọc nhúng")
                 self._log(f"📚 Phát hiện tổng số trang: {total_pages}")
                 self._progress(15, f"Bắt đầu nạp {total_pages} trang tài liệu...")
 
@@ -356,6 +375,13 @@ class ScribdArchiver:
 
                 doc = pymupdf.open(stream=pdf_raw_bytes, filetype="pdf")
                 final_pages = doc.page_count
+
+                # Kiểm tra nội dung PDF đơn trang có phải là trang thông báo lỗi Scribd không
+                if final_pages == 1:
+                    first_text = doc[0].get_text() or ""
+                    if "Document Not Found" in first_text or "can't display this document" in first_text or "cannot display this document" in first_text:
+                        doc.close()
+                        raise RuntimeError("Tài liệu không khả dụng trên Scribd (Document Not Found)")
 
                 # Loại bỏ trang trắng cuối nếu bị thừa do page-break
                 if final_pages > total_pages:

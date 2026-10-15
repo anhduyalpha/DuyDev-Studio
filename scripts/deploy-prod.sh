@@ -16,7 +16,9 @@ npx prisma generate
 npx prisma db push --skip-generate
 npm run build
 
-echo "🔄 [PROD DEPLOY] Restarting dd-studio.service..."
+echo "🔄 [PROD DEPLOY] Restarting dd-studio.service and companion Python daemons..."
+pkill -f 'engines/scribd/daemon.py' || true
+pkill -f 'engines/studocu/daemon.py' || true
 pkill -f 'node dist/app.js' || true
 sleep 3
 

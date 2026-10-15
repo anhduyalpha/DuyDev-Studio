@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import time
+import unicodedata
 import urllib.parse
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -21,6 +22,68 @@ from typing import Optional, Tuple
 from .config import DOWNLOADS_DIR, TRASH_DIR
 from .engine import extract_scribd_doc_id
 from .job_worker import JOBS, create_job, run_archive_job, cancel_job
+
+
+def extract_doc_id_from_filename(name: str) -> Optional[str]:
+    """Rút trích mã số tài liệu từ tên file PDF."""
+    if not name:
+        return None
+    stem = Path(name).stem
+    m = re.search(r'[_.-](\d{6,15})$', stem)
+    if m:
+        return m.group(1)
+    m = re.search(r'(\d{6,15})', stem)
+    return m.group(1) if m else None
+
+
+def extract_title_from_filename(name: str, doc_id: Optional[str] = None) -> str:
+    """Tạo tiêu đề hiển thị từ tên file."""
+    if not name:
+        return "Tài liệu Scribd"
+    stem = Path(name).stem
+    clean = stem
+    if doc_id and clean.endswith(f"_{doc_id}"):
+        clean = clean[:-len(f"_{doc_id}")]
+    elif doc_id and f"_{doc_id}" in clean:
+        clean = clean.replace(f"_{doc_id}", "")
+    clean = clean.replace("_", " ").strip()
+    return clean or stem
+
+
+def find_file_in_dir(directory: Path, target: str) -> Optional[Path]:
+    """Tìm file trên đĩa với cơ chế giải mã URL, Unicode NFC/NFD và doc_id."""
+    if not target or not directory.is_dir():
+        return None
+    raw = target.strip()
+    unq1 = urllib.parse.unquote(raw).strip()
+    unq2 = urllib.parse.unquote(unq1).strip()
+
+    # 1. Khớp đường dẫn trực tiếp
+    for cand_name in (raw, unq1, unq2):
+        cand = directory / cand_name
+        if cand.is_file():
+            return cand
+
+    # 2. Khớp Unicode và doc_id
+    target_nfc = unicodedata.normalize('NFC', unq1).strip()
+    target_nfd = unicodedata.normalize('NFD', unq1).strip()
+    doc_id = extract_scribd_doc_id(unq1) or extract_doc_id_from_filename(unq1)
+
+    for p in directory.glob("*.pdf"):
+        if not p.is_file():
+            continue
+        p_name = p.name
+        p_nfc = unicodedata.normalize('NFC', p_name).strip()
+        p_nfd = unicodedata.normalize('NFD', p_name).strip()
+
+        if p_nfc in (target_nfc, raw) or p_nfd in (target_nfd, raw):
+            return p
+        if p.stem.lower() in (target_nfc.lower(), unq1.lower()):
+            return p
+        if doc_id and (p.name.endswith(f"_{doc_id}.pdf") or f"_{doc_id}." in p.name or p.stem == doc_id):
+            return p
+
+    return None
 
 
 def parse_byte_range(header_val: str, file_size: int) -> Optional[Tuple[int, int]]:
@@ -187,11 +250,15 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
             for p in sorted(DOWNLOADS_DIR.glob("*.pdf"), key=lambda x: x.stat().st_mtime, reverse=True):
                 if p.is_file():
                     st = p.stat()
-                    doc_id = extract_scribd_doc_id(p.name) or ""
+                    # Loại bỏ tệp lỗi rác kích thước quá nhỏ (< 12KB) nếu có
+                    if st.st_size < 12000 and "Scribd_" in p.name:
+                        continue
+                    doc_id = extract_doc_id_from_filename(p.name) or extract_scribd_doc_id(p.name) or ""
+                    title = extract_title_from_filename(p.name, doc_id)
                     files.append({
                         "id": doc_id,
                         "name": p.name,
-                        "title": p.stem.replace(f"_{doc_id}", "").replace("_", " "),
+                        "title": title,
                         "format": "pdf",
                         "is_pdf": True,
                         "size_bytes": st.st_size,
@@ -201,7 +268,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                         "stream_url": f"/api/document-stream?file={urllib.parse.quote(p.name)}",
                         "downloaded_by": {"name": "Scribd Archiver"},
                     })
-            encoded = json.dumps(files).encode("utf-8")
+            encoded = json.dumps(files, ensure_ascii=False).encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_cors_headers()
             self.send_no_cache_headers()
@@ -219,11 +286,12 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                 for p in sorted(TRASH_DIR.glob("*.pdf"), key=lambda x: x.stat().st_mtime, reverse=True):
                     if p.is_file():
                         st = p.stat()
-                        doc_id = extract_scribd_doc_id(p.name) or ""
+                        doc_id = extract_doc_id_from_filename(p.name) or extract_scribd_doc_id(p.name) or ""
+                        title = extract_title_from_filename(p.name, doc_id)
                         trashed.append({
                             "id": doc_id,
                             "name": p.name,
-                            "title": p.stem.replace(f"_{doc_id}", "").replace("_", " "),
+                            "title": title,
                             "format": "pdf",
                             "is_pdf": True,
                             "size_bytes": st.st_size,
@@ -231,7 +299,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime)),
                             "download_url": f"/downloads/{urllib.parse.quote(p.name)}",
                         })
-            encoded = json.dumps(trashed).encode("utf-8")
+            encoded = json.dumps(trashed, ensure_ascii=False).encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_cors_headers()
             self.send_no_cache_headers()
@@ -250,14 +318,9 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
 
             target_file: Optional[Path] = None
             if file_name:
-                cand = DOWNLOADS_DIR / urllib.parse.unquote(file_name)
-                if cand.is_file():
-                    target_file = cand
+                target_file = find_file_in_dir(DOWNLOADS_DIR, file_name)
             if not target_file and doc_id:
-                for p in DOWNLOADS_DIR.glob(f"*_{doc_id}.pdf"):
-                    if p.is_file():
-                        target_file = p
-                        break
+                target_file = find_file_in_dir(DOWNLOADS_DIR, doc_id)
 
             if not target_file or not target_file.is_file():
                 self.send_response(HTTPStatus.NOT_FOUND)
@@ -305,9 +368,9 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
 
         # 7. Tải file attachment: /downloads/<filename>
         if path.startswith("/downloads/"):
-            filename = urllib.parse.unquote(path.replace("/downloads/", "").split("?")[0])
-            file_path = DOWNLOADS_DIR / filename
-            if not file_path.is_file():
+            raw_dl_name = path.replace("/downloads/", "").split("?")[0]
+            file_path = find_file_in_dir(DOWNLOADS_DIR, raw_dl_name)
+            if not file_path or not file_path.is_file():
                 self.send_response(HTTPStatus.NOT_FOUND)
                 self.send_cors_headers()
                 self.end_headers()
@@ -427,14 +490,18 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
 
         # 3. Phục hồi từ thùng rác: /api/trash/restore/<filename>
         if path.startswith("/api/trash/restore/"):
-            filename = urllib.parse.unquote(path.replace("/api/trash/restore/", "").strip())
-            trash_path = TRASH_DIR / filename
-            if trash_path.is_file():
-                shutil.move(str(trash_path), str(DOWNLOADS_DIR / filename))
+            raw_param = path.replace("/api/trash/restore/", "").strip()
+            trash_path = find_file_in_dir(TRASH_DIR, raw_param)
+            if trash_path and trash_path.is_file():
+                DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+                dest = DOWNLOADS_DIR / trash_path.name
+                if dest.exists():
+                    dest.unlink()
+                shutil.move(str(trash_path), str(dest))
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "restored": filename}).encode("utf-8"))
+                self.wfile.write(json.dumps({"success": True, "restored": trash_path.name}).encode("utf-8"))
                 return
             self.send_response(HTTPStatus.NOT_FOUND)
             self.send_cors_headers()
@@ -451,18 +518,18 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
 
         # 1. Chuyển vào thùng rác: /api/files/<filename>
         if path.startswith("/api/files/"):
-            filename = urllib.parse.unquote(path.replace("/api/files/", "").strip())
-            file_path = DOWNLOADS_DIR / filename
-            if file_path.is_file():
+            raw_param = path.replace("/api/files/", "").strip()
+            file_path = find_file_in_dir(DOWNLOADS_DIR, raw_param)
+            if file_path and file_path.is_file():
                 TRASH_DIR.mkdir(parents=True, exist_ok=True)
-                dest = TRASH_DIR / filename
+                dest = TRASH_DIR / file_path.name
                 if dest.exists():
                     dest.unlink()
                 shutil.move(str(file_path), str(dest))
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "trashed": filename}).encode("utf-8"))
+                self.wfile.write(json.dumps({"success": True, "trashed": file_path.name}).encode("utf-8"))
                 return
             self.send_response(HTTPStatus.NOT_FOUND)
             self.send_cors_headers()
@@ -471,8 +538,8 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
 
         # 2. Xóa vĩnh viễn: /api/trash/<filename>
         if path.startswith("/api/trash/"):
-            filename = urllib.parse.unquote(path.replace("/api/trash/", "").strip())
-            if filename == "empty":
+            raw_param = path.replace("/api/trash/", "").strip()
+            if raw_param in ("empty", ""):
                 if TRASH_DIR.is_dir():
                     for f in TRASH_DIR.glob("*.pdf"):
                         try:
@@ -485,13 +552,14 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"success": True, "message": "Thùng rác đã được dọn sạch"}).encode("utf-8"))
                 return
 
-            trash_path = TRASH_DIR / filename
-            if trash_path.is_file():
+            trash_path = find_file_in_dir(TRASH_DIR, raw_param)
+            if trash_path and trash_path.is_file():
+                deleted_name = trash_path.name
                 trash_path.unlink()
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({"success": True, "deleted": filename}).encode("utf-8"))
+                self.wfile.write(json.dumps({"success": True, "deleted": deleted_name}).encode("utf-8"))
                 return
 
             self.send_response(HTTPStatus.NOT_FOUND)

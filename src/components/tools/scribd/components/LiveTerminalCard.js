@@ -102,6 +102,18 @@ export function renderLiveTerminalCard(state) {
             </button>
           ` : ''}
 
+          ${!isRunning && state.hasError ? `
+            <button
+              type="button"
+              id="scribdDismissErrorBtn"
+              class="flex items-center gap-1 px-2 py-1 rounded text-xs text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-zinc-700/60 transition cursor-pointer"
+              title="Đóng bảng nhật ký"
+            >
+              <i data-lucide="x" class="w-3 h-3"></i>
+              <span>Đóng</span>
+            </button>
+          ` : ''}
+
           <button
             type="button"
             id="scribdCopyLogsBtn"
