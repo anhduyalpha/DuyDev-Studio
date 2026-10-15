@@ -1,8 +1,8 @@
 /**
- * ScribdWorkspace Component (< 280 lines)
+ * ScribdWorkspace Component (< 320 lines)
  * Native Zero-Iframe workspace orchestrator for Scribd Downloader.
  * High-performance selective DOM updates eliminating input focus loss.
- * 100% parity with Studocu Downloader specifications (KI-FIX-015).
+ * Editorial Command Deck & Bookshelf Architecture (Stitch UI Design System).
  */
 
 import { renderHeroPasteCard } from './components/HeroPasteCard.js';
@@ -17,7 +17,7 @@ export function renderScribdWorkspace() {
   const state = scribdManager.getState();
 
   return `
-    <div id="scribdWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-4xl mx-auto pb-24 sm:pb-8">
+    <div id="scribdWorkspaceRoot" class="space-y-4 animate-fadeIn max-w-4xl mx-auto pb-28 sm:pb-12">
       <!-- Breadcrumb Header with Brand Terracotta Identity -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
@@ -32,9 +32,15 @@ export function renderScribdWorkspace() {
         </div>
       </div>
 
+      <!-- Stitch Bento Command Deck Top Card -->
       <div id="scribdHeroContainer">${renderHeroPasteCard(state)}</div>
+
+      <!-- Integrated Compact Progress Drawer -->
       <div id="scribdTerminalContainer">${renderLiveTerminalCard(state)}</div>
+
+      <!-- Stitch Editorial Bookshelf -->
       <div id="scribdListContainer">${renderDocumentListCard(state)}</div>
+
       ${renderSlideConfirmModal()}
     </div>
   `.trim();
@@ -50,13 +56,7 @@ function handleUrlCandidate(raw) {
       t.textContent = check.isSearch ? 'Link tìm kiếm' : 'Link không hợp lệ';
       setTimeout(() => { if (t) t.textContent = old; }, 2500);
     }
-    const manualDrawer = document.getElementById('scribdManualDrawer');
-    const manualChevron = document.getElementById('scribdManualChevron');
     const urlInput = document.getElementById('scribdUrlInput');
-    if (manualDrawer) {
-      manualDrawer.classList.remove('hidden');
-      if (manualChevron) manualChevron.style.transform = 'rotate(180deg)';
-    }
     if (urlInput && raw) {
       urlInput.value = String(raw).trim();
       const clearBtn = document.getElementById('btnClearScribdUrl');
@@ -77,35 +77,62 @@ export function attachScribdListeners() {
   let prevStructureKey = '';
   let prevSearchQuery = '';
 
+  function syncOmnibarState() {
+    const urlInput = document.getElementById('scribdUrlInput');
+    const val = (urlInput?.value || '').trim();
+    const idBadge = document.getElementById('scribdIdBadge');
+    const pasteBtn = document.getElementById('scribdPasteBtn');
+    const submitBtn = document.getElementById('btnManualSubmitScribd');
+    const clearBtn = document.getElementById('btnClearScribdUrl');
+
+    if (clearBtn) {
+      clearBtn.classList.toggle('hidden', !val);
+    }
+
+    if (idBadge) {
+      const candidate = extractScribdUrlOrId(val);
+      if (candidate) {
+        const numericMatch = candidate.match(/\d{6,15}/);
+        const displayId = numericMatch ? numericMatch[0] : candidate;
+        idBadge.textContent = `ID #${displayId}`;
+        idBadge.classList.add('bg-orange-500/20', 'border-orange-500/40');
+      } else {
+        idBadge.textContent = 'SCRIBD';
+        idBadge.classList.remove('bg-orange-500/20', 'border-orange-500/40');
+      }
+    }
+
+    if (pasteBtn && submitBtn) {
+      if (val) {
+        pasteBtn.classList.add('hidden');
+        submitBtn.classList.remove('hidden');
+      } else {
+        pasteBtn.classList.remove('hidden');
+        submitBtn.classList.add('hidden');
+      }
+    }
+  }
+
   function attachHeroHandlers() {
     const urlInput = document.getElementById('scribdUrlInput');
     const clearBtn = document.getElementById('btnClearScribdUrl');
     const heroCancel = document.getElementById('scribdHeroCancelBtn');
     const resetBtn = document.getElementById('btnResetScribdState');
     const form = document.getElementById('scribdDownloadForm');
-    const toggleManualBtn = document.getElementById('scribdToggleManualBtn');
-    const manualDrawer = document.getElementById('scribdManualDrawer');
-    const manualChevron = document.getElementById('scribdManualChevron');
     const pasteBtn = document.getElementById('scribdPasteBtn');
-
-    if (toggleManualBtn && manualDrawer) {
-      toggleManualBtn.onclick = () => {
-        const isHidden = manualDrawer.classList.toggle('hidden');
-        if (manualChevron) manualChevron.style.transform = isHidden ? '' : 'rotate(180deg)';
-        if (!isHidden && urlInput) {
-          urlInput.focus();
-        }
-      };
-    }
 
     if (pasteBtn && !pasteBtn.disabled) {
       pasteBtn.onclick = async () => {
         if (scribdManager.getState().isDownloading) return;
-        // 1-Click Clipboard Read & Start
+        // 1-Click Clipboard Read & Instant Download
         if (navigator.clipboard?.readText) {
           try {
             const text = await navigator.clipboard.readText();
             if (text && text.trim()) {
+              if (urlInput) {
+                urlInput.value = text.trim();
+                syncOmnibarState();
+              }
               handleUrlCandidate(text.trim());
               return;
             } else {
@@ -113,34 +140,23 @@ export function attachScribdListeners() {
             }
           } catch (_) {}
         }
-        // Fallback: open manual drawer and focus input
-        if (manualDrawer) {
-          manualDrawer.classList.remove('hidden');
-          if (manualChevron) manualChevron.style.transform = 'rotate(180deg)';
-        }
         if (urlInput) {
           urlInput.focus();
         }
-        showToast('Dán liên kết vào ô nhập hoặc nhấn Ctrl + V', 'info');
+        showToast('Dán liên kết Scribd vào ô nhập hoặc nhấn Ctrl + V', 'info');
       };
     }
 
-    function syncClearBtn() {
-      if (clearBtn && urlInput) {
-        clearBtn.classList.toggle('hidden', !urlInput.value.trim());
-      }
-    }
-
     if (urlInput) {
-      urlInput.oninput = () => syncClearBtn();
-      urlInput.onpaste = () => setTimeout(syncClearBtn, 50);
-      syncClearBtn();
+      urlInput.oninput = () => syncOmnibarState();
+      urlInput.onpaste = () => setTimeout(syncOmnibarState, 30);
+      syncOmnibarState();
     }
 
     if (clearBtn && urlInput) {
       clearBtn.onclick = () => {
         urlInput.value = '';
-        syncClearBtn();
+        syncOmnibarState();
         urlInput.focus();
       };
     }
@@ -159,7 +175,7 @@ export function attachScribdListeners() {
                 val = text.trim();
                 if (urlInput) {
                   urlInput.value = val;
-                  syncClearBtn();
+                  syncOmnibarState();
                 }
               }
             } catch (_) {}
@@ -182,7 +198,7 @@ export function attachScribdListeners() {
       resetBtn.onclick = () => {
         if (urlInput) {
           urlInput.value = '';
-          syncClearBtn();
+          syncOmnibarState();
         }
         scribdManager.resetState();
       };
@@ -195,6 +211,16 @@ export function attachScribdListeners() {
 
     const dismissBtn = document.getElementById('scribdDismissErrorBtn');
     if (dismissBtn) dismissBtn.onclick = () => scribdManager.dismissError();
+
+    const toggleTickerBtn = document.getElementById('scribdToggleTickerBtn');
+    const tickerContent = document.getElementById('scribdTickerContent');
+    const tickerChevron = document.getElementById('scribdTickerChevron');
+    if (toggleTickerBtn && tickerContent) {
+      toggleTickerBtn.onclick = () => {
+        const isHidden = tickerContent.classList.toggle('hidden');
+        if (tickerChevron) tickerChevron.style.transform = isHidden ? 'rotate(-90deg)' : '';
+      };
+    }
 
     const copyBtn = document.getElementById('scribdCopyLogsBtn');
     if (copyBtn) {
@@ -328,8 +354,6 @@ export function attachScribdListeners() {
       const newInput = document.getElementById('scribdUrlInput');
       if (newInput && currentVal) {
         newInput.value = currentVal;
-        const clearBtn = document.getElementById('btnClearScribdUrl');
-        if (clearBtn) clearBtn.classList.remove('hidden');
       }
       prevDownloading = state.isDownloading;
       attachHeroHandlers();
@@ -343,7 +367,7 @@ export function attachScribdListeners() {
       }
     }
 
-    const shouldShowTerminal = state.isDownloading || state.hasError;
+    const shouldShowTerminal = Boolean(state.isDownloading || state.hasError);
     if (termCard) {
       termCard.classList.toggle('hidden', !shouldShowTerminal);
       const screenEl = document.getElementById('scribdTerminalScreen');
@@ -353,28 +377,40 @@ export function attachScribdListeners() {
       }
       const timerEl = document.getElementById('scribdTimer');
       if (timerEl) timerEl.textContent = `${state.elapsedSeconds || 0}s`;
+
       const badgeEl = document.getElementById('scribdStatusBadge');
       if (badgeEl) {
         if (state.isDownloading) {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30 animate-pulse';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-orange-500/20 text-[#EA580C] dark:text-orange-400 border border-orange-500/30 animate-pulse';
           badgeEl.textContent = 'ĐANG XỬ LÝ';
         } else if (state.hasError) {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/30';
           badgeEl.textContent = 'LỖI';
         } else if (state.progress === 100) {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
           badgeEl.textContent = 'HOÀN TẤT';
         } else {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-zinc-500/20 text-zinc-400 border border-zinc-500/30';
-          badgeEl.textContent = 'ĐÃ HỦY';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30';
+          badgeEl.textContent = 'SẴN SÀNG';
         }
       }
+
       const stepEl = document.getElementById('scribdProgressStep');
       if (stepEl) stepEl.textContent = state.stepLabel || 'Đang kết nối máy chủ xử lý...';
+
+      const pct = Number(state.progress || 5);
       const pctEl = document.getElementById('scribdProgressPct');
-      if (pctEl) pctEl.textContent = `${state.progress || 5}%`;
+      if (pctEl) pctEl.textContent = `${pct}%`;
+
       const barEl = document.getElementById('scribdProgressBar');
-      if (barEl) barEl.style.width = `${state.progress || 5}%`;
+      if (barEl) barEl.style.width = `${pct}%`;
+
+      const s1 = document.getElementById('scribdStep1');
+      const s2 = document.getElementById('scribdStep2');
+      const s3 = document.getElementById('scribdStep3');
+      if (s1) s1.className = `scribd-step-item ${pct >= 25 ? 'step-done' : 'step-active'}`;
+      if (s2) s2.className = `scribd-step-item ${pct >= 85 ? 'step-done' : (pct >= 25 ? 'step-active' : '')}`;
+      if (s3) s3.className = `scribd-step-item ${pct >= 100 ? 'step-done' : (pct >= 85 ? 'step-active' : '')}`;
     }
 
     const itemsEl = document.getElementById('scribdItemsContainer');
@@ -420,8 +456,7 @@ export function attachScribdListeners() {
       const urlInput = document.getElementById('scribdUrlInput');
       if (urlInput) {
         urlInput.value = text.trim();
-        const clearBtn = document.getElementById('btnClearScribdUrl');
-        if (clearBtn) clearBtn.classList.remove('hidden');
+        syncOmnibarState();
       }
       handleUrlCandidate(text);
     }

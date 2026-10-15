@@ -1,7 +1,7 @@
 /* ==========================================================================
-   Scribd Document Archiver - Scoped Styles for DD Studio
+   Scribd Document Archiver - Editorial Command Deck & Bookshelf Design System
    Warm Terracotta / Editorial Amber Brand Identity (#EA580C -> #C2410C)
-   With Conic Border Beam & High Density Typography (Rules 1 & 3)
+   Stitch UI Design System Tokens & High Density Typography Parity
    ========================================================================== */
 
 #scribdWorkspaceRoot {
@@ -20,23 +20,25 @@ html.dark #scribdWorkspaceRoot,
   }
 }
 
-/* 1. Scribd Hero Card with Amber/Terracotta Conic Border Beam & Radial Glow */
-.border-beam-card-scribd {
+/* ==========================================================================
+   1. Bento Command Deck Top Card
+   ========================================================================== */
+.scribd-command-deck {
   position: relative;
-  border-radius: 16px;
-  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(234, 88, 12, 0.08), transparent 70%), #ffffff;
-  border: 1px solid rgba(234, 88, 12, 0.18);
-  padding: 22px 20px;
+  border-radius: 18px;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(234, 88, 12, 0.08), transparent 75%), #ffffff;
+  border: 1px solid rgba(234, 88, 12, 0.20);
+  padding: 20px 22px;
   overflow: hidden;
-  isolation: isolate;
-  box-shadow: 0 4px 20px -2px rgba(234, 88, 12, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(234, 88, 12, 0.07), 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-html.dark .border-beam-card-scribd,
-.dark .border-beam-card-scribd {
-  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(234, 88, 12, 0.12), transparent 70%), #111114 !important;
-  border: 1px solid rgba(249, 115, 22, 0.22);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+html.dark .scribd-command-deck,
+.dark .scribd-command-deck {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(234, 88, 12, 0.12), transparent 75%), #111114 !important;
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 /* 3px Top Brand Accent Stripe */
@@ -46,172 +48,460 @@ html.dark .border-beam-card-scribd,
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #F97316 0%, #EA580C 100%);
+  background: linear-gradient(90deg, #F97316 0%, #EA580C 50%, #C2410C 100%);
   z-index: 3;
 }
 
-.border-beam-card-scribd::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 45deg,
-    rgba(234, 88, 12, 0.06) 75deg,
-    rgba(249, 115, 22, 0.40) 120deg,
-    rgba(234, 88, 12, 0.90) 180deg,
-    rgba(251, 146, 60, 0.40) 240deg,
-    rgba(234, 88, 12, 0.06) 285deg,
-    transparent 315deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  animation: border-beam-spin 4s linear infinite;
-  z-index: 2;
-  opacity: 0.95;
+/* ==========================================================================
+   2. Unified Stitch Command Omnibar
+   ========================================================================== */
+.scribd-omnibar {
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  padding: 6px 6px 6px 14px;
+  background: #F8F9FA;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html.dark .border-beam-card-scribd::before,
-.dark .border-beam-card-scribd::before {
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 45deg,
-    rgba(249, 115, 22, 0.08) 75deg,
-    rgba(251, 146, 60, 0.45) 120deg,
-    rgba(234, 88, 12, 0.98) 180deg,
-    rgba(253, 186, 116, 0.45) 240deg,
-    rgba(249, 115, 22, 0.08) 285deg,
-    transparent 315deg,
-    transparent 360deg
-  );
+html.dark .scribd-omnibar,
+.dark .scribd-omnibar {
+  background: #09090C;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-.border-beam-card-scribd::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 18px;
-  padding: 3px;
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 55deg,
-    rgba(234, 88, 12, 0.10) 105deg,
-    rgba(249, 115, 22, 0.60) 180deg,
-    rgba(234, 88, 12, 0.10) 255deg,
-    transparent 305deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  filter: blur(10px);
-  pointer-events: none;
-  animation: border-beam-spin 4s linear infinite;
-  z-index: 1;
-  opacity: 0.65;
+.scribd-omnibar:focus-within {
+  border-color: #EA580C !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03), 0 0 0 3px rgba(234, 88, 12, 0.16) !important;
 }
 
-html.dark .border-beam-card-scribd::after,
-.dark .border-beam-card-scribd::after {
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 55deg,
-    rgba(249, 115, 22, 0.12) 105deg,
-    rgba(251, 146, 60, 0.70) 180deg,
-    rgba(249, 115, 22, 0.12) 255deg,
-    transparent 305deg,
-    transparent 360deg
-  );
+html.dark .scribd-omnibar:focus-within,
+.dark .scribd-omnibar:focus-within {
+  border-color: #F97316 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .border-beam-card-scribd::before,
-  .border-beam-card-scribd::after {
-    animation: none !important;
-  }
+/* Dynamic Monospace ID / Source Badge */
+.scribd-id-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(234, 88, 12, 0.10);
+  color: #EA580C;
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.2s ease;
 }
 
-/* 2. Hero Large 1-Click Paste & Action Buttons (Terracotta Brand Accent) */
-.btn-hero-paste-scribd {
+html.dark .scribd-id-badge,
+.dark .scribd-id-badge {
+  background: rgba(249, 115, 22, 0.15);
+  color: #FB923C;
+  border-color: rgba(251, 146, 60, 0.35);
+}
+
+/* Terracotta Action Button inside Omnibar */
+.btn-omnibar-action {
   background: #EA580C !important;
   color: #ffffff !important;
   border: 1px solid rgba(251, 146, 60, 0.4) !important;
-  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3) !important;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.3) !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.btn-hero-paste-scribd:hover {
+.btn-omnibar-action:hover {
   background: #C2410C !important;
-  border-color: rgba(253, 186, 116, 0.6) !important;
-  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45) !important;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45) !important;
+  transform: translateY(-0.5px);
+}
+
+.btn-omnibar-action:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   3. Integrated Progress Panel & Segmented Steps
+   ========================================================================== */
+.scribd-progress-panel {
+  border-radius: 16px;
+  background: #FFFFFF;
+  border: 1px solid rgba(234, 88, 12, 0.20);
+  box-shadow: 0 4px 16px -2px rgba(234, 88, 12, 0.08);
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+html.dark .scribd-progress-panel,
+.dark .scribd-progress-panel {
+  background: #111114 !important;
+  border: 1px solid rgba(249, 115, 22, 0.22);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Segmented Step Indicator */
+.scribd-step-container {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scribd-step-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #F8F9FA;
+  color: #71717A;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+html.dark .scribd-step-item,
+.dark .scribd-step-item {
+  background: #18181B;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #A1A1AA;
+}
+
+.scribd-step-item.step-active {
+  background: rgba(234, 88, 12, 0.12);
+  border-color: rgba(234, 88, 12, 0.35);
+  color: #EA580C;
+}
+
+html.dark .scribd-step-item.step-active,
+.dark .scribd-step-item.step-active {
+  background: rgba(249, 115, 22, 0.16);
+  border-color: rgba(251, 146, 60, 0.4);
+  color: #FB923C;
+}
+
+.scribd-step-item.step-done {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #059669;
+}
+
+html.dark .scribd-step-item.step-done,
+.dark .scribd-step-item.step-done {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: #34D399;
+}
+
+/* Big Percentage Readout */
+.scribd-progress-pct-big {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #EA580C;
+}
+
+html.dark .scribd-progress-pct-big,
+.dark .scribd-progress-pct-big {
+  color: #FB923C;
+}
+
+/* 4-Line Collapsible Log Ticker (Generous Internal Padding: 12px 16px) */
+.scribd-ticker-box {
+  padding: 12px 16px !important;
+  max-height: 110px;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: #09090C !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #E4E4E7;
+  scroll-padding-top: 8px;
+  scroll-padding-bottom: 8px;
+}
+
+.scribd-ticker-box::-webkit-scrollbar {
+  width: 5px;
+}
+.scribd-ticker-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scribd-ticker-box::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   4. Stitch Bookshelf & Book-Spine Document Cards
+   ========================================================================== */
+.scribd-bookshelf {
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  padding: 18px 20px;
+  transition: all 0.2s ease;
+}
+
+html.dark .scribd-bookshelf,
+.dark .scribd-bookshelf {
+  background: #111114 !important;
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+/* Segmented Pill Switcher in Header */
+.scribd-segmented-switcher {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: 12px;
+  background: #F4F4F6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html.dark .scribd-segmented-switcher,
+.dark .scribd-segmented-switcher {
+  background: #18181B;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.scribd-segmented-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #52525B;
+  transition: all 0.16s ease;
+  user-select: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+html.dark .scribd-segmented-tab,
+.dark .scribd-segmented-tab {
+  color: #A1A1AA;
+}
+
+.scribd-segmented-tab:hover {
+  color: #09090B;
+}
+
+html.dark .scribd-segmented-tab:hover,
+.dark .scribd-segmented-tab:hover {
+  color: #FAFAFA;
+}
+
+.scribd-segmented-tab.active {
+  background: #EA580C !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.35);
+}
+
+html.dark .scribd-segmented-tab.active,
+.dark .scribd-segmented-tab.active {
+  background: #EA580C !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
+}
+
+/* Book-Spine Document Card */
+.scribd-book-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 12px 16px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .scribd-book-card,
+.dark .scribd-book-card {
+  background: #151519 !important;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.scribd-book-card:hover {
+  border-color: rgba(234, 88, 12, 0.35);
+  box-shadow: 0 4px 16px -2px rgba(234, 88, 12, 0.10);
   transform: translateY(-1px);
 }
 
-.btn-hero-paste-scribd:active {
-  transform: translateY(0) scale(0.98);
+html.dark .scribd-book-card:hover,
+.dark .scribd-book-card:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
-html.dark .btn-hero-paste-scribd,
-.dark .btn-hero-paste-scribd {
+/* 4px Vertical Terracotta Book-Spine Accent Bar */
+.scribd-book-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #EA580C;
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+
+html.dark .scribd-book-spine,
+.dark .scribd-book-spine {
+  background: #F97316;
+}
+
+/* 3:4 Miniature Book-Cover Badge */
+.scribd-book-badge {
+  width: 36px;
+  height: 48px;
+  aspect-ratio: 3 / 4;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 3px;
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.12);
+  flex-shrink: 0;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+html.dark .scribd-book-badge,
+.dark .scribd-book-badge {
+  background: linear-gradient(135deg, #1C1917 0%, #292524 100%);
+  border-color: rgba(251, 146, 60, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.scribd-book-badge::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(234, 88, 12, 0.5);
+}
+
+/* Highlighted Download Button on Card */
+.btn-dl-highlight {
   background: #EA580C !important;
-  color: #ffffff !important;
+  color: #FFFFFF !important;
   border: 1px solid rgba(251, 146, 60, 0.5) !important;
-  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.35) !important;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25) !important;
+  transition: all 0.18s ease !important;
 }
 
-html.dark .btn-hero-paste-scribd:hover,
-.dark .btn-hero-paste-scribd:hover {
-  background: #F97316 !important;
-  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5) !important;
+.btn-dl-highlight:hover {
+  background: #C2410C !important;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4) !important;
+  transform: translateY(-0.5px);
 }
 
-/* 3. Live Stream Terminal Scroll & Clipping Fix */
-#scribdWorkspaceRoot .terminal-screen {
-  padding: 14px 14px 18px 14px !important;
-  scroll-padding-top: 12px !important;
-  scroll-padding-bottom: 18px !important;
-}
-
-#scribdWorkspaceRoot .log-active .log-text::after {
-  color: #F97316 !important;
-}
-
-/* 4. Document Item & Filter Accents */
-#scribdWorkspaceRoot .badge-type-pdf {
-  background: rgba(234, 88, 12, 0.12) !important;
-  color: #EA580C !important;
-  border-color: rgba(234, 88, 12, 0.25) !important;
-}
-
-html.dark #scribdWorkspaceRoot .badge-type-pdf,
-.dark #scribdWorkspaceRoot .badge-type-pdf {
-  background: rgba(249, 115, 22, 0.16) !important;
-  color: #FB923C !important;
-  border-color: rgba(251, 146, 60, 0.35) !important;
-}
-
-#scribdWorkspaceRoot .filter-tab.active {
+html.dark .btn-dl-highlight,
+.dark .btn-dl-highlight {
   background: #EA580C !important;
-  color: #ffffff !important;
-  border-color: #C2410C !important;
+  border-color: rgba(251, 146, 60, 0.6) !important;
 }
 
-#scribdWorkspaceRoot .file-item:hover {
-  border-color: rgba(234, 88, 12, 0.35);
+html.dark .btn-dl-highlight:hover,
+.dark .btn-dl-highlight:hover {
+  background: #F97316 !important;
 }
 
-#scribdWorkspaceRoot .btn-view:hover {
-  color: #EA580C !important;
-  border-color: rgba(234, 88, 12, 0.4) !important;
+/* Secondary Action Button on Card */
+.btn-book-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: #F4F4F6;
+  color: #3F3F46;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.16s ease;
+  min-height: 44px;
+  cursor: pointer;
+  user-select: none;
+}
+
+html.dark .btn-book-action,
+.dark .btn-book-action {
+  background: #18181B;
+  color: #D4D4D8;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.btn-book-action:hover {
+  background: #E4E4E7;
+  color: #09090B;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+html.dark .btn-book-action:hover,
+.dark .btn-book-action:hover {
+  background: #27272A;
+  color: #FAFAFA;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ==========================================================================
+   5. Refined Empty State
+   ========================================================================== */
+.scribd-bookshelf-empty {
+  min-height: 140px;
+  border-radius: 14px;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.015);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  text-align: center;
+  gap: 6px;
+}
+
+html.dark .scribd-bookshelf-empty,
+.dark .scribd-bookshelf-empty {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Touch Targets: minimum 44px ergonomics */
+@media (max-width: 640px) {
+  .scribd-book-card {
+    padding: 12px 12px 12px 14px;
+  }
+  .scribd-omnibar {
+    padding: 4px 4px 4px 10px;
+  }
 }
