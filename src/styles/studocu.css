@@ -19,13 +19,16 @@
   50% { opacity: 0; }
 }
 
-#studocuWorkspaceRoot {
+#studocuWorkspaceRoot,
+#scribdWorkspaceRoot {
   font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text-primary, #09090b);
 }
 
 html.dark #studocuWorkspaceRoot,
-.dark #studocuWorkspaceRoot {
+.dark #studocuWorkspaceRoot,
+html.dark #scribdWorkspaceRoot,
+.dark #scribdWorkspaceRoot {
   color: #f4f4f5;
 }
 
@@ -488,6 +491,29 @@ html.dark .btn-action.btn-view:hover,
 .btn-action.btn-tab:hover { color: #4f46e5; border-color: rgba(79, 70, 229, 0.35); }
 html.dark .btn-action.btn-tab:hover,
 .dark .btn-action.btn-tab:hover { color: #818cf8; border-color: rgba(129, 140, 248, 0.35); }
+
+.btn-action.btn-drive {
+  color: #4f46e5;
+  border-color: rgba(79, 70, 229, 0.25);
+  background-color: rgba(79, 70, 229, 0.05);
+}
+.btn-action.btn-drive:hover {
+  background-color: #4f46e5;
+  border-color: #4338ca;
+  color: #ffffff;
+}
+html.dark .btn-action.btn-drive,
+.dark .btn-action.btn-drive {
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.3);
+  background-color: rgba(99, 102, 241, 0.1);
+}
+html.dark .btn-action.btn-drive:hover,
+.dark .btn-action.btn-drive:hover {
+  background-color: #4f46e5;
+  border-color: #6366f1;
+  color: #ffffff;
+}
 
 /* Prominent Download Button (High visibility, light/dark contrast) */
 .btn-action.btn-dl {
