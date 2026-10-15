@@ -212,7 +212,9 @@ class ScribdManager {
     this.subscribers.forEach((fn) => {
       try { fn(state); } catch (_) {}
     });
-    taskCoordinator.notify();
+    if (typeof taskCoordinator?.syncTasks === 'function') {
+      taskCoordinator.syncTasks();
+    }
   }
 
   getActiveTasks() {
@@ -314,27 +316,27 @@ class ScribdManager {
     }
     const candidate = check.candidate;
 
-    if (this.isDownloading) {
-      this.closeConnections();
-      this.isDownloading = false;
-      this.stopTimer();
-      this.stopThinkingOrbs();
-      saveActiveJob(null);
-    }
-
-    this.isDownloading = true;
-    this.hasError = false;
-    this.jobStartTime = Date.now();
-    this.elapsedSeconds = 0;
-    this.progress = 5;
-    this.stepLabel = 'Đang kết nối máy chủ xử lý...';
-    this.logs = [`🚀 Đang xử lý liên kết: ${candidate}`];
-    this.currentDocTitle = 'Tài liệu Scribd ' + candidate;
-    this.startTimer();
-    this.startThinkingOrbs();
-    this.notify();
-
     try {
+      if (this.isDownloading) {
+        this.closeConnections();
+        this.isDownloading = false;
+        this.stopTimer();
+        this.stopThinkingOrbs();
+        saveActiveJob(null);
+      }
+
+      this.isDownloading = true;
+      this.hasError = false;
+      this.jobStartTime = Date.now();
+      this.elapsedSeconds = 0;
+      this.progress = 5;
+      this.stepLabel = 'Đang kết nối máy chủ xử lý...';
+      this.logs = [`🚀 Đang xử lý liên kết: ${candidate}`];
+      this.currentDocTitle = 'Tài liệu Scribd ' + candidate;
+      this.startTimer();
+      this.startThinkingOrbs();
+      this.notify();
+
       const data = await startDownloadApi(candidate, forceReload);
 
       if (data.from_cache && data.status === 'completed') {
