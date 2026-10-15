@@ -1,6 +1,6 @@
 /* ==========================================================================
    Scribd Document Archiver - Scoped Styles for DD Studio
-   High Density Minimalist Typography, Obsidian Palette & Border Beam
+   Teal / Emerald Editorial Identity with Conic Border Beam & High Density Typography
    ========================================================================== */
 
 #scribdWorkspaceRoot {
@@ -13,32 +13,170 @@ html.dark #scribdWorkspaceRoot,
   color: #f4f4f5;
 }
 
-.scribd-hero-card {
+/* 1. Scribd Hero Card with Teal/Emerald Conic Border Beam & Radial Glow */
+.border-beam-card-scribd {
   position: relative;
-  border-radius: 16px;
-  background: var(--surface-base, #ffffff);
-  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 14px;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(13, 148, 136, 0.12), transparent 70%), #ffffff;
+  border: 1px solid rgba(13, 148, 136, 0.20);
   padding: 22px 20px;
   overflow: hidden;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  isolation: isolate;
+  box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.08);
 }
 
-html.dark .scribd-hero-card,
-.dark .scribd-hero-card {
-  background: #111114 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+html.dark .border-beam-card-scribd,
+.dark .border-beam-card-scribd {
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(13, 148, 136, 0.16), transparent 70%), #111114 !important;
+  border: 1px solid rgba(20, 184, 166, 0.22);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 
-.scribd-terminal-box {
-  background: #0d0e12;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #a1a1aa;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.6;
+.border-beam-card-scribd::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 45deg,
+    rgba(13, 148, 136, 0.06) 75deg,
+    rgba(20, 184, 166, 0.40) 120deg,
+    rgba(13, 148, 136, 0.90) 180deg,
+    rgba(16, 185, 129, 0.40) 240deg,
+    rgba(13, 148, 136, 0.06) 285deg,
+    transparent 315deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: border-beam-spin 4s linear infinite;
+  z-index: 2;
+  opacity: 0.95;
 }
 
-.scribd-file-item:hover {
-  border-color: rgba(79, 70, 229, 0.4);
+html.dark .border-beam-card-scribd::before,
+.dark .border-beam-card-scribd::before {
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 45deg,
+    rgba(20, 184, 166, 0.08) 75deg,
+    rgba(45, 212, 191, 0.45) 120deg,
+    rgba(13, 148, 136, 0.98) 180deg,
+    rgba(52, 211, 153, 0.45) 240deg,
+    rgba(20, 184, 166, 0.08) 285deg,
+    transparent 315deg,
+    transparent 360deg
+  );
+}
+
+.border-beam-card-scribd::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 55deg,
+    rgba(13, 148, 136, 0.10) 105deg,
+    rgba(20, 184, 166, 0.60) 180deg,
+    rgba(13, 148, 136, 0.10) 255deg,
+    transparent 305deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: blur(10px);
+  pointer-events: none;
+  animation: border-beam-spin 4s linear infinite;
+  z-index: 1;
+  opacity: 0.65;
+}
+
+html.dark .border-beam-card-scribd::after,
+.dark .border-beam-card-scribd::after {
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 55deg,
+    rgba(20, 184, 166, 0.12) 105deg,
+    rgba(45, 212, 191, 0.70) 180deg,
+    rgba(20, 184, 166, 0.12) 255deg,
+    transparent 305deg,
+    transparent 360deg
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-beam-card-scribd::before,
+  .border-beam-card-scribd::after {
+    animation: none !important;
+  }
+}
+
+/* 2. Hero Petite Pill Paste Button (Teal Accent) */
+.btn-hero-paste-scribd {
+  background: linear-gradient(180deg, #134e4a 0%, #042f2e 100%) !important;
+  color: #f0fdfa !important;
+  border: 1px solid rgba(20, 184, 166, 0.4) !important;
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.22) !important;
+}
+
+.btn-hero-paste-scribd:hover {
+  background: linear-gradient(180deg, #0f766e 0%, #115e59 100%) !important;
+  border-color: rgba(45, 212, 191, 0.6) !important;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35) !important;
+}
+
+html.dark .btn-hero-paste-scribd,
+.dark .btn-hero-paste-scribd {
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
+  color: #042f2e !important;
+  border: 1px solid rgba(94, 234, 212, 0.8) !important;
+  box-shadow: 0 2px 12px rgba(13, 148, 136, 0.3) !important;
+}
+
+html.dark .btn-hero-paste-scribd:hover,
+.dark .btn-hero-paste-scribd:hover {
+  background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 100%) !important;
+  box-shadow: 0 4px 18px rgba(20, 184, 166, 0.45) !important;
+}
+
+/* 3. Document Item & Filter Accents */
+#scribdWorkspaceRoot .badge-type-pdf {
+  background: rgba(13, 148, 136, 0.12) !important;
+  color: #0d9488 !important;
+  border-color: rgba(13, 148, 136, 0.25) !important;
+}
+
+html.dark #scribdWorkspaceRoot .badge-type-pdf,
+.dark #scribdWorkspaceRoot .badge-type-pdf {
+  background: rgba(20, 184, 166, 0.16) !important;
+  color: #2dd4bf !important;
+  border-color: rgba(45, 212, 191, 0.35) !important;
+}
+
+#scribdWorkspaceRoot .filter-tab.active {
+  background: #0d9488 !important;
+  color: #ffffff !important;
+  border-color: #0f766e !important;
+}
+
+#scribdWorkspaceRoot .file-item:hover {
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+#scribdWorkspaceRoot .btn-view:hover {
+  color: #0d9488 !important;
+  border-color: rgba(13, 148, 136, 0.4) !important;
 }

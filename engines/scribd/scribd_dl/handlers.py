@@ -359,10 +359,11 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
 
             doc_id = extract_scribd_doc_id(url)
             if not doc_id:
+                err_msg = "Đây là link tìm kiếm. Vui lòng mở tài liệu cụ thể trên Scribd rồi sao chép link!" if "scribd.com/search" in url.lower() else "URL hoặc mã Scribd không hợp lệ"
                 self.send_response(HTTPStatus.BAD_REQUEST)
                 self.send_cors_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "URL Scribd không hợp lệ"}).encode("utf-8"))
+                self.wfile.write(json.dumps({"error": err_msg}).encode("utf-8"))
                 return
 
             force_reload = bool(data.get("force_reload", False) or data.get("bypass_cache", False))

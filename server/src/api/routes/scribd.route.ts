@@ -48,12 +48,31 @@ export async function scribdRoute(app: FastifyInstance): Promise<void> {
   // 2. Start download job
   app.post('/api/v1/scribd/download', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
+      const body = (req.body as any) || {};
+      const url = body.url;
+      if (!url || typeof url !== 'string' || !url.trim()) {
+        return reply.status(400).send({ error: 'Thiếu liên kết tài liệu Scribd' });
+      }
+
+      if (/scribd\.com\/search(?:\/|\?|$)/i.test(url.trim())) {
+        return reply.status(400).send({
+          error: 'Đây là link tìm kiếm. Vui lòng mở tài liệu cụ thể trên Scribd rồi sao chép link!'
+        });
+      }
+
+      const clean = url.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+      if (clean.toLowerCase() === 'scribd.com') {
+        return reply.status(400).send({
+          error: 'Đây là trang chủ Scribd. Vui lòng mở tài liệu cụ thể trên Scribd rồi sao chép link!'
+        });
+      }
+
       await ScribdDaemonService.ensureDaemonRunning();
 
       const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body || {})
+        body: JSON.stringify(body)
       });
       return reply.status(status).send(data);
     } catch (err: any) {

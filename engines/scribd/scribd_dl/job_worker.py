@@ -48,7 +48,7 @@ def run_archive_job(job_id: str, url: str, force_reload: bool = False, user_name
     def _worker():
         job["status"] = "running"
         job["progress"] = 5
-        job["step_label"] = "Đang chuẩn bị tải tài liệu..."
+        job["step_label"] = "Đang kết nối máy chủ xử lý..."
 
         def on_progress(pct: int, label: str):
             job["progress"] = pct

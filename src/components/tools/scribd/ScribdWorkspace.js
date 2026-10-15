@@ -9,7 +9,7 @@ import { renderHeroPasteCard } from './components/HeroPasteCard.js';
 import { renderLiveTerminalCard, renderTerminalLogs } from './components/LiveTerminalCard.js';
 import { renderDocumentListCard, renderDocumentItemsHtml } from './components/DocumentListCard.js';
 import { renderSlideConfirmModal, openSlideConfirmModal } from './components/SlideConfirmModal.js';
-import { scribdManager, extractScribdUrlOrId, isScribdSearchUrl } from './hooks/useScribd.js';
+import { scribdManager, validateScribdUrlOrId, extractScribdUrlOrId } from './hooks/useScribd.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
 
@@ -25,7 +25,10 @@ export function renderScribdWorkspace() {
             <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
           </a>
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
-          <span class="text-zinc-900 dark:text-zinc-200 font-semibold truncate">Scribd Downloader</span>
+          <span class="text-teal-700 dark:text-teal-300 font-semibold truncate inline-flex items-center gap-1.5">
+            <i data-lucide="book-open" class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"></i>
+            <span>Scribd Downloader</span>
+          </span>
         </div>
       </div>
 
@@ -38,29 +41,19 @@ export function renderScribdWorkspace() {
 }
 
 function handleUrlCandidate(raw) {
-  if (isScribdSearchUrl(raw)) {
-    showToast('Vui lòng dán liên kết tài liệu Scribd (/document/...) thay vì trang tìm kiếm', 'warning');
+  const check = validateScribdUrlOrId(raw);
+  if (!check.valid) {
+    showToast(check.error, check.isSearch ? 'warning' : 'error');
     const t = document.getElementById('scribdPasteBtnTitle');
     if (t) {
       const old = t.textContent;
-      t.textContent = 'Trang tìm kiếm không hợp lệ';
+      t.textContent = check.isSearch ? 'Link tìm kiếm' : 'Link không hợp lệ';
       setTimeout(() => { if (t) t.textContent = old; }, 2500);
     }
     return;
   }
-  const candidate = extractScribdUrlOrId(raw);
-  if (!candidate) {
-    showToast('Link hoặc mã Scribd không hợp lệ', 'error');
-    const t = document.getElementById('scribdPasteBtnTitle');
-    if (t) {
-      const old = t.textContent;
-      t.textContent = 'Liên kết không hợp lệ';
-      setTimeout(() => { if (t) t.textContent = old; }, 2000);
-    }
-    return;
-  }
   const forceReload = Boolean(document.getElementById('chkScribdForceReload')?.checked);
-  scribdManager.startDownload(candidate, forceReload);
+  scribdManager.startDownload(check.candidate, forceReload);
 }
 
 export function attachScribdListeners() {
@@ -276,18 +269,21 @@ export function attachScribdListeners() {
       const badgeEl = document.getElementById('scribdStatusBadge');
       if (badgeEl) {
         if (state.isDownloading) {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse';
-          badgeEl.textContent = 'ĐANG TẢI';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-teal-500/20 text-teal-300 border border-teal-500/30 animate-pulse';
+          badgeEl.textContent = 'ĐANG XỬ LÝ';
         } else if (state.hasError) {
           badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30';
-          badgeEl.textContent = 'THẤT BẠI';
-        } else {
+          badgeEl.textContent = 'LỖI';
+        } else if (state.progress === 100) {
           badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
           badgeEl.textContent = 'HOÀN TẤT';
+        } else {
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-zinc-500/20 text-zinc-400 border border-zinc-500/30';
+          badgeEl.textContent = 'ĐÃ HỦY';
         }
       }
       const stepEl = document.getElementById('scribdProgressStep');
-      if (stepEl) stepEl.textContent = state.stepLabel || 'Khởi tạo...';
+      if (stepEl) stepEl.textContent = state.stepLabel || 'Đang kết nối máy chủ xử lý...';
       const pctEl = document.getElementById('scribdProgressPct');
       if (pctEl) pctEl.textContent = `${state.progress || 5}%`;
       const barEl = document.getElementById('scribdProgressBar');

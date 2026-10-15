@@ -25,12 +25,18 @@ export function isScribdSearchUrl(raw) {
   return /scribd\.com\/search(?:\/|\?|$)/i.test(raw.trim());
 }
 
+export function isScribdHomeUrl(raw) {
+  if (!raw || typeof raw !== 'string') return false;
+  const s = raw.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+  return s.toLowerCase() === 'scribd.com';
+}
+
 export function extractScribdUrlOrId(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const str = raw.trim();
 
-  // Reject search URLs immediately
-  if (isScribdSearchUrl(str)) return null;
+  // Reject search or home URLs immediately
+  if (isScribdSearchUrl(str) || isScribdHomeUrl(str)) return null;
 
   // 1. Specific Scribd Document URL pattern
   const docUrlMatch = str.match(/https?:\/\/(?:www\.)?scribd\.com\/(?:document|doc|presentation|embeds|d)\/(\d{6,15})(?:[^\s]*)/i);
@@ -41,6 +47,38 @@ export function extractScribdUrlOrId(raw) {
   if (standaloneIdMatch) return standaloneIdMatch[1];
 
   return null;
+}
+
+export function validateScribdUrlOrId(raw) {
+  if (!raw || typeof raw !== 'string' || !raw.trim()) {
+    return { valid: false, error: 'Vui lòng nhập liên kết hoặc mã tài liệu Scribd' };
+  }
+  const str = raw.trim();
+
+  if (isScribdSearchUrl(str)) {
+    return {
+      valid: false,
+      isSearch: true,
+      error: 'Đây là link tìm kiếm. Vui lòng mở tài liệu cụ thể trên Scribd rồi sao chép link!'
+    };
+  }
+
+  if (isScribdHomeUrl(str)) {
+    return {
+      valid: false,
+      error: 'Đây là trang chủ Scribd. Vui lòng mở tài liệu cụ thể trên Scribd rồi sao chép link!'
+    };
+  }
+
+  const candidate = extractScribdUrlOrId(str);
+  if (!candidate) {
+    return {
+      valid: false,
+      error: 'Link không hợp lệ. Vui lòng dán link tài liệu Scribd (/document/...) hoặc mã số ID!'
+    };
+  }
+
+  return { valid: true, candidate };
 }
 
 class ScribdManager {
@@ -269,16 +307,12 @@ class ScribdManager {
   }
 
   async startDownload(rawInput, forceReload = false) {
-    if (isScribdSearchUrl(rawInput)) {
-      showToast('Vui lòng dán liên kết tài liệu Scribd (/document/...) thay vì trang tìm kiếm', 'warning');
+    const check = validateScribdUrlOrId(rawInput);
+    if (!check.valid) {
+      showToast(check.error, check.isSearch ? 'warning' : 'error');
       return;
     }
-
-    const candidate = extractScribdUrlOrId(rawInput);
-    if (!candidate) {
-      showToast('Không tìm thấy liên kết hoặc mã tài liệu Scribd hợp lệ', 'error');
-      return;
-    }
+    const candidate = check.candidate;
 
     if (this.isDownloading) {
       this.closeConnections();
@@ -293,7 +327,7 @@ class ScribdManager {
     this.jobStartTime = Date.now();
     this.elapsedSeconds = 0;
     this.progress = 5;
-    this.stepLabel = 'Đang chuẩn bị tải tài liệu...';
+    this.stepLabel = 'Đang kết nối máy chủ xử lý...';
     this.logs = [`🚀 Đang xử lý liên kết: ${candidate}`];
     this.currentDocTitle = 'Tài liệu Scribd ' + candidate;
     this.startTimer();

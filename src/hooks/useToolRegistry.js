@@ -136,11 +136,11 @@ const DEFAULT_TOOLS = [
   {
     id: 'studocu-dl',
     title: 'Studocu Downloader',
-    description: 'Tải tài liệu Studocu sang file PDF rõ nét.',
+    description: 'Tải giáo trình & tài liệu Studocu sang PDF rõ nét.',
     category: 'system',
     icon: 'file-down',
     featured: false,
-    specs: ['PDF'],
+    specs: ['PDF', 'Tài liệu học tập'],
     color: '#6366F1',
     route: '#tool/studocu-dl',
     tags: ['studocu', 'tài liệu', 'tiện ích', 'download', 'pdf', 'slide', 'bài giảng']
@@ -160,12 +160,12 @@ const DEFAULT_TOOLS = [
   {
     id: 'scribd-archiver',
     title: 'Scribd Downloader',
-    description: 'Tải tài liệu Scribd sang file PDF rõ nét.',
+    description: 'Tải tài liệu & slide Scribd sang file PDF rõ nét.',
     category: 'system',
-    icon: 'file-text',
+    icon: 'book-open',
     featured: true,
-    specs: ['PDF', 'Lưu Drive'],
-    color: '#1A7BBA',
+    specs: ['PDF', 'Slides', 'Drive'],
+    color: '#0D9488',
     route: '#tool/scribd',
     tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']
   },
