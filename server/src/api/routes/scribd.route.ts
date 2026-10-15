@@ -135,6 +135,7 @@ export async function scribdRoute(app: FastifyInstance): Promise<void> {
   // 6. List active files
   app.get('/api/v1/scribd/files', async (_req, reply: FastifyReply) => {
     try {
+      await ScribdDaemonService.ensureDaemonRunning();
       const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/files`);
       return reply.status(status).send(data);
     } catch (err: any) {
@@ -145,6 +146,7 @@ export async function scribdRoute(app: FastifyInstance): Promise<void> {
   // 7. List trash files
   app.get('/api/v1/scribd/trash', async (_req, reply: FastifyReply) => {
     try {
+      await ScribdDaemonService.ensureDaemonRunning();
       const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/trash`);
       return reply.status(status).send(data);
     } catch (err: any) {

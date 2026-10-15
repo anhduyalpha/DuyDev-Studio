@@ -86,6 +86,10 @@ export class ScribdDaemonService {
         detached: process.platform !== 'win32'
       });
 
+      if (this.process && process.platform !== 'win32') {
+        this.process.unref();
+      }
+
       this.process.on('error', (err) => {
         logger.error({ err }, 'Scribd daemon process error');
         this.process = null;
