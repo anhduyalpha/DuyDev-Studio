@@ -56,10 +56,10 @@ export function renderLiveTerminalCard(state) {
   const isVisible = state.isDownloading;
   const isRunning = state.isDownloading;
   const statusBadge = isRunning
-    ? '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">ĐANG TẢI</span>'
+    ? '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">ĐANG TẢI</span>'
     : state.hasError
-      ? '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30">THẤT BẠI</span>'
-      : '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HOÀN TẤT</span>';
+      ? '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30">THẤT BẠI</span>'
+      : '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HOÀN TẤT</span>';
 
   return `
     <div id="scribdTerminalCard" class="${isVisible ? '' : 'hidden'} rounded-xl overflow-hidden border border-zinc-800 bg-[#0d0d10] shadow-md dark:shadow-xl space-y-0">

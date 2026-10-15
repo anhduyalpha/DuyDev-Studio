@@ -9,7 +9,7 @@ import { renderHeroPasteCard } from './components/HeroPasteCard.js';
 import { renderLiveTerminalCard, renderTerminalLogs } from './components/LiveTerminalCard.js';
 import { renderDocumentListCard, renderDocumentItemsHtml } from './components/DocumentListCard.js';
 import { renderSlideConfirmModal, openSlideConfirmModal } from './components/SlideConfirmModal.js';
-import { scribdManager, extractScribdUrlOrId } from './hooks/useScribd.js';
+import { scribdManager, extractScribdUrlOrId, isScribdSearchUrl } from './hooks/useScribd.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
 
@@ -38,6 +38,16 @@ export function renderScribdWorkspace() {
 }
 
 function handleUrlCandidate(raw) {
+  if (isScribdSearchUrl(raw)) {
+    showToast('Vui lòng dán liên kết tài liệu Scribd (/document/...) thay vì trang tìm kiếm', 'warning');
+    const t = document.getElementById('scribdPasteBtnTitle');
+    if (t) {
+      const old = t.textContent;
+      t.textContent = 'Trang tìm kiếm không hợp lệ';
+      setTimeout(() => { if (t) t.textContent = old; }, 2500);
+    }
+    return;
+  }
   const candidate = extractScribdUrlOrId(raw);
   if (!candidate) {
     showToast('Link hoặc mã Scribd không hợp lệ', 'error');
@@ -263,6 +273,19 @@ export function attachScribdListeners() {
       }
       const timerEl = document.getElementById('scribdTimer');
       if (timerEl) timerEl.textContent = `${state.elapsedSeconds || 0}s`;
+      const badgeEl = document.getElementById('scribdStatusBadge');
+      if (badgeEl) {
+        if (state.isDownloading) {
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse';
+          badgeEl.textContent = 'ĐANG TẢI';
+        } else if (state.hasError) {
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30';
+          badgeEl.textContent = 'THẤT BẠI';
+        } else {
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+          badgeEl.textContent = 'HOÀN TẤT';
+        }
+      }
       const stepEl = document.getElementById('scribdProgressStep');
       if (stepEl) stepEl.textContent = state.stepLabel || 'Khởi tạo...';
       const pctEl = document.getElementById('scribdProgressPct');
@@ -309,7 +332,7 @@ export function attachScribdListeners() {
   function handleGlobalPaste(e) {
     if (['TEXTAREA', 'INPUT'].includes(e.target?.tagName)) return;
     const text = (e.clipboardData || window.clipboardData)?.getData('text');
-    if (text && text.trim() && extractScribdUrlOrId(text)) {
+    if (text && text.trim() && (extractScribdUrlOrId(text) || isScribdSearchUrl(text))) {
       e.preventDefault();
       handleUrlCandidate(text);
     }

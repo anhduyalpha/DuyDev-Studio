@@ -20,17 +20,25 @@ import {
   safeFetchJson
 } from '../services/scribdApi.js';
 
+export function isScribdSearchUrl(raw) {
+  if (!raw || typeof raw !== 'string') return false;
+  return /scribd\.com\/search(?:\/|\?|$)/i.test(raw.trim());
+}
+
 export function extractScribdUrlOrId(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const str = raw.trim();
 
-  // URL extraction
-  const urlMatch = str.match(/https?:\/\/[^\s]*scribd\.com[^\s]*/i);
-  if (urlMatch) return urlMatch[0].replace(/[)\]'",;]+$/, '');
+  // Reject search URLs immediately
+  if (isScribdSearchUrl(str)) return null;
 
-  // Numeric ID extraction
-  const idMatch = str.match(/\b\d{6,15}\b/);
-  if (idMatch) return idMatch[0];
+  // 1. Specific Scribd Document URL pattern
+  const docUrlMatch = str.match(/https?:\/\/(?:www\.)?scribd\.com\/(?:document|doc|presentation|embeds|d)\/(\d{6,15})(?:[^\s]*)/i);
+  if (docUrlMatch) return docUrlMatch[0].replace(/[)\]'",;]+$/, '');
+
+  // 2. Pure standalone numeric ID only
+  const standaloneIdMatch = str.match(/^\s*(\d{6,15})\s*$/);
+  if (standaloneIdMatch) return standaloneIdMatch[1];
 
   return null;
 }
@@ -60,6 +68,8 @@ class ScribdManager {
     this.subscribers = new Set();
     this.eventSource = null;
     this.pollTimer = null;
+    this.pollTimeout = null;
+    this.isPolling = false;
     this.timerInterval = null;
     this.orbInstance = null;
 
@@ -259,9 +269,14 @@ class ScribdManager {
   }
 
   async startDownload(rawInput, forceReload = false) {
+    if (isScribdSearchUrl(rawInput)) {
+      showToast('Vui lòng dán liên kết tài liệu Scribd (/document/...) thay vì trang tìm kiếm', 'warning');
+      return;
+    }
+
     const candidate = extractScribdUrlOrId(rawInput);
     if (!candidate) {
-      showToast('Không tìm thấy URL hoặc mã Scribd hợp lệ trong nội dung đã nhập', 'error');
+      showToast('Không tìm thấy liên kết hoặc mã tài liệu Scribd hợp lệ', 'error');
       return;
     }
 
@@ -308,7 +323,7 @@ class ScribdManager {
 
       this.currentJobId = data.job_id;
       saveActiveJob({ jobId: data.job_id, jobStartTime: this.jobStartTime, url: candidate });
-      this.connectSse(data.job_id);
+      this.startPolling(data.job_id);
     } catch (err) {
       this.isDownloading = false;
       this.hasError = true;
@@ -323,57 +338,57 @@ class ScribdManager {
     }
   }
 
-  connectSse(jobId) {
-    this.closeConnections();
-
-    try {
-      this.eventSource = new EventSource(`/api/v1/scribd/events/${jobId}`);
-
-      this.eventSource.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          this.handleJobUpdate(msg);
-        } catch (_) {}
-      };
-
-      this.eventSource.onerror = () => {
-        if (this.eventSource) {
-          try { this.eventSource.close(); } catch (_) {}
-          this.eventSource = null;
-        }
-        this.startPolling(jobId);
-      };
-    } catch (_) {
-      this.startPolling(jobId);
+  stopPolling() {
+    if (this.pollTimeout) {
+      clearTimeout(this.pollTimeout);
+      this.pollTimeout = null;
     }
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+    this.isPolling = false;
   }
 
   startPolling(jobId) {
-    this.closeConnections();
+    this.stopPolling();
+    this.isPolling = true;
+    let isPollingTick = false;
 
-    let failCount = 0;
-    const poll = async () => {
+    const pollTick = async () => {
+      if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
+      if (isPollingTick) return;
+      isPollingTick = true;
+
       try {
-        const data = await safeFetchJson(`/api/v1/scribd/status/${jobId}`);
-        failCount = 0;
-        this.handleJobUpdate(data);
-      } catch (err) {
-        failCount++;
-        if (failCount >= 2) {
-          this.closeConnections();
-          this.isDownloading = false;
-          this.currentJobId = null;
-          this.stopTimer();
-          this.stopThinkingOrbs();
-          saveActiveJob(null);
-          this.stepLabel = 'Tác vụ đã kết thúc hoặc máy chủ khởi động lại.';
-          this.notify();
+        const res = await fetch(`/api/v1/scribd/status/${jobId}`);
+        if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
+        if (!res.ok) {
+          if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
+            this.pollTimeout = setTimeout(pollTick, 1000);
+          }
+          return;
+        }
+        const job = await res.json().catch(() => null);
+        if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
+        if (!job || job.error) {
+          if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
+            this.pollTimeout = setTimeout(pollTick, 1000);
+          }
+          return;
+        }
+
+        this.handleJobUpdate(job);
+      } catch (_) {
+      } finally {
+        isPollingTick = false;
+        if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
+          this.pollTimeout = setTimeout(pollTick, 800);
         }
       }
     };
 
-    poll();
-    this.pollTimer = setInterval(poll, 1500);
+    this.pollTimeout = setTimeout(pollTick, 500);
   }
 
   handleJobUpdate(msg) {
@@ -385,21 +400,14 @@ class ScribdManager {
     if (msg.step_label) {
       this.stepLabel = msg.step_label;
     }
-    if (Array.isArray(msg.logs) && msg.logs.length > 0) {
-      msg.logs.forEach((line) => {
-        if (!this.logs.includes(line)) {
-          this.logs.push(line);
-        }
-      });
-      if (this.logs.length > 200) {
-        this.logs = this.logs.slice(-200);
-      }
+    if (Array.isArray(msg.logs)) {
+      this.logs = msg.logs;
     }
     if (msg.result?.title) {
       this.currentDocTitle = msg.result.title;
     }
 
-    if (msg.status === 'completed') {
+    if (msg.status === 'completed' || msg.status === 'success') {
       this.isDownloading = false;
       this.hasError = false;
       this.progress = 100;
@@ -407,17 +415,17 @@ class ScribdManager {
       if (msg.result?.name) {
         this.markAsDownloaded(msg.result.name, true);
       }
-      this.closeConnections();
+      this.stopPolling();
       this.stopTimer();
       this.stopThinkingOrbs();
       saveActiveJob(null);
       showToast('Đã tải xong file PDF!', 'success');
       this.refreshFiles();
-    } else if (msg.status === 'failed' || msg.status === 'cancelled') {
+    } else if (msg.status === 'failed' || msg.status === 'error' || msg.status === 'cancelled') {
       this.isDownloading = false;
-      this.hasError = msg.status === 'failed';
+      this.hasError = (msg.status !== 'cancelled');
       this.stepLabel = msg.status === 'cancelled' ? 'Đã hủy tác vụ' : (msg.error || 'Không thể tải tài liệu');
-      this.closeConnections();
+      this.stopPolling();
       this.stopTimer();
       this.stopThinkingOrbs();
       saveActiveJob(null);
@@ -447,11 +455,11 @@ class ScribdManager {
       this.jobStartTime = startTime || Date.now();
       this.progress = typeof data.progress === 'number' ? data.progress : 20;
       this.stepLabel = data.step_label || 'Đang tiếp tục theo dõi tiến trình...';
-      this.logs = ['🔄 Khôi phục theo dõi tiến trình: ' + jobId];
+      this.logs = Array.isArray(data.logs) ? data.logs : ['🔄 Khôi phục theo dõi tiến trình: ' + jobId];
       this.startTimer();
       this.startThinkingOrbs();
       this.notify();
-      this.connectSse(jobId);
+      this.startPolling(jobId);
     } catch (_) {
       saveActiveJob(null);
       this.isDownloading = false;
@@ -627,13 +635,10 @@ class ScribdManager {
   }
 
   closeConnections() {
+    this.stopPolling();
     if (this.eventSource) {
       try { this.eventSource.close(); } catch (_) {}
       this.eventSource = null;
-    }
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
     }
   }
 

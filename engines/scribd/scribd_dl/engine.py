@@ -31,21 +31,25 @@ def extract_scribd_doc_id(url: str) -> Optional[str]:
     - https://www.scribd.com/doc/693471767/...
     - https://www.scribd.com/presentation/693471767/...
     - https://www.scribd.com/embeds/693471767/content
+    - https://www.scribd.com/d/693471767
     - 693471767 (mã số thuần)
     """
     if not url or not isinstance(url, str):
         return None
     raw = url.strip()
 
-    # 1. URL pattern match
-    match = re.search(r'/(?:document|doc|presentation|embeds)/(\d{6,15})', raw, re.IGNORECASE)
+    # Từ chối trang tìm kiếm hoặc URL không phải tài liệu
+    if "scribd.com/search" in raw.lower():
+        return None
+
+    # 1. URL pattern match cho tài liệu chuẩn
+    match = re.search(r'/(?:document|doc|presentation|embeds|d)/(\d{6,15})', raw, re.IGNORECASE)
     if match:
         return match.group(1)
 
-    # 2. Query param or direct numeric ID match (handling underscores and boundaries)
-    num_match = re.search(r'(?:^|\D)(\d{6,15})(?:\D|$)', raw)
-    if num_match:
-        return num_match.group(1)
+    # 2. Mã số thuần (toàn bộ chuỗi chỉ gồm 6-15 chữ số)
+    if re.fullmatch(r'\d{6,15}', raw):
+        return raw
 
     return None
 
