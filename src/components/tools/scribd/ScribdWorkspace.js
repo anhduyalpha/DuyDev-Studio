@@ -118,7 +118,6 @@ export function attachScribdListeners() {
     const urlInput = document.getElementById('scribdUrlInput');
     const clearBtn = document.getElementById('btnClearScribdUrl');
     const heroCancel = document.getElementById('scribdHeroCancelBtn');
-    const resetBtn = document.getElementById('btnResetScribdState');
     const form = document.getElementById('scribdDownloadForm');
     const pasteBtn = document.getElementById('scribdPasteBtn');
 
@@ -194,16 +193,6 @@ export function attachScribdListeners() {
     }
 
     if (heroCancel) heroCancel.onclick = () => scribdManager.cancelJob();
-
-    if (resetBtn) {
-      resetBtn.onclick = () => {
-        if (urlInput) {
-          urlInput.value = '';
-          syncOmnibarState();
-        }
-        scribdManager.resetState();
-      };
-    }
   }
 
   function attachTerminalHandlers() {

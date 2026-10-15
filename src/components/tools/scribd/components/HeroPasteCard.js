@@ -11,37 +11,23 @@ export function renderHeroPasteCard(state) {
   if (isDownloading) {
     return `
       <div class="scribd-command-deck space-y-3.5 relative overflow-hidden select-none">
-        <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status + Controls) -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-0.5">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
-              <i data-lucide="book-open" class="w-5 h-5"></i>
-            </div>
-            <div class="min-w-0">
-              <div class="flex items-center gap-2">
-                <h2 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-                  Scribd Downloader
-                </h2>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-[#EA580C] dark:text-orange-400 border border-orange-500/30 animate-pulse">
-                  ĐANG XỬ LÝ
-                </span>
-              </div>
-              <p id="scribdHeroDocTitle" class="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-md">
-                ${state.currentDocTitle || 'Đang tải tài liệu Scribd...'}
-              </p>
-            </div>
+        <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status) -->
+        <div class="flex items-center gap-3 pt-0.5">
+          <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
           </div>
-
-          <!-- Right: Reset Button -->
-          <div class="flex items-center gap-2.5 shrink-0 select-none">
-            <button
-              type="button"
-              id="btnResetScribdState"
-              class="p-2 rounded-xl text-zinc-400 hover:text-[#EA580C] dark:hover:text-orange-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition cursor-pointer select-none min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
-              title="Đặt lại trạng thái"
-            >
-              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-            </button>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h2 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+                Scribd Downloader
+              </h2>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-[#EA580C] dark:text-orange-400 border border-orange-500/30 animate-pulse">
+                ĐANG XỬ LÝ
+              </span>
+            </div>
+            <p id="scribdHeroDocTitle" class="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-md">
+              ${state.currentDocTitle || 'Đang tải tài liệu Scribd...'}
+            </p>
           </div>
         </div>
 
@@ -79,33 +65,18 @@ export function renderHeroPasteCard(state) {
 
   return `
     <div class="scribd-command-deck space-y-3.5 relative overflow-hidden">
-      <!-- Deck Header Row (Left-Aligned Editorial Header + Reset) -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pt-0.5">
-        <!-- Left: Sculpted Icon Tile + Editorial Title & Subtitle -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
-            <i data-lucide="book-open" class="w-5 h-5"></i>
-          </div>
-          <div class="min-w-0">
-            <h2 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-              Scribd Downloader
-            </h2>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-              Lưu tài liệu &amp; sách Scribd sang PDF nguyên bản
-            </p>
-          </div>
+      <!-- Deck Header Row (Sculpted Icon Tile + Editorial Title & Subtitle) -->
+      <div class="flex items-center gap-3 pt-0.5">
+        <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
         </div>
-
-        <!-- Right: Reset Button -->
-        <div class="flex items-center gap-2.5 shrink-0 select-none">
-          <button
-            type="button"
-            id="btnResetScribdState"
-            class="p-2 rounded-xl text-zinc-400 hover:text-[#EA580C] dark:hover:text-orange-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition cursor-pointer select-none min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
-            title="Đặt lại trạng thái"
-          >
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-          </button>
+        <div class="min-w-0">
+          <h2 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+            Scribd Downloader
+          </h2>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+            Lưu tài liệu &amp; sách Scribd sang PDF nguyên bản
+          </p>
         </div>
       </div>
 
