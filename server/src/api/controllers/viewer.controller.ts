@@ -12,6 +12,7 @@ import { DriveService } from '../../services/drive.service.js';
 import { AuthService } from '../../services/auth.service.js';
 import { ViewerService } from '../../services/viewer.service.js';
 import { previewPdfQuerySchema } from '../../schemas/viewer.schema.js';
+import { checkETagMatch } from '../../lib/http.utils.js';
 
 function verifyStorageAdminAuth(request: FastifyRequest): boolean {
   const authHeader = (request.headers['x-storage-auth'] as string) || (request.headers.authorization as string) || '';
@@ -81,26 +82,65 @@ export async function previewPdfHandler(request: FastifyRequest, reply: FastifyR
 
   reply.header('Content-Type', 'application/pdf');
   reply.header('Content-Disposition', 'inline; filename="preview.pdf"');
-  reply.header('Cache-Control', 'public, max-age=86400');
+  reply.header('X-Content-Type-Options', 'nosniff');
   reply.header('Accept-Ranges', 'bytes');
 
-  const rangeHeader = request.headers.range;
-  if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-    const parts = rangeHeader.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+  const etag = `"${stat.mtimeMs.toString(36)}-${totalSize.toString(36)}"`;
+  reply.header('ETag', etag);
 
-    if (!isNaN(start) && start < totalSize && end >= start) {
-      const clampedEnd = Math.min(end, totalSize - 1);
-      const chunkSize = (clampedEnd - start) + 1;
-
-      reply.status(206);
-      reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${totalSize}`);
-      reply.header('Content-Length', chunkSize.toString());
-      return reply.send(createReadStream(pdfPath, { start, end: clampedEnd }));
-    }
+  // RFC 7232: 304 Not Modified evaluated first
+  if (checkETagMatch(request.headers['if-none-match'], etag)) {
+    reply.status(304);
+    return reply.send();
   }
 
+  const rangeHeader = request.headers.range;
+  const ifRange = request.headers['if-range'];
+  const ifRangeMatches = !ifRange || checkETagMatch(ifRange, etag);
+
+  if (rangeHeader && rangeHeader.startsWith('bytes=') && ifRangeMatches) {
+    if (totalSize === 0) {
+      reply.status(416);
+      reply.header('Content-Range', 'bytes */0');
+      return reply.send();
+    }
+
+    const parts = rangeHeader.replace(/bytes=/, '').trim().split('-');
+    let start: number;
+    let end: number;
+
+    if (parts[0] === '' && parts[1]) {
+      const suffix = parseInt(parts[1], 10);
+      if (isNaN(suffix) || suffix <= 0) {
+        reply.status(416);
+        reply.header('Content-Range', `bytes */${totalSize}`);
+        return reply.send();
+      }
+      start = Math.max(0, totalSize - suffix);
+      end = totalSize - 1;
+    } else {
+      start = parseInt(parts[0], 10);
+      end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+    }
+
+    if (isNaN(start) || isNaN(end) || start < 0 || start >= totalSize || end < start) {
+      reply.status(416);
+      reply.header('Content-Range', `bytes */${totalSize}`);
+      return reply.send();
+    }
+
+    const clampedEnd = Math.min(end, totalSize - 1);
+    const chunkSize = (clampedEnd - start) + 1;
+
+    reply.status(206);
+    reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${totalSize}`);
+    reply.header('Content-Length', chunkSize.toString());
+    reply.header('Cache-Control', 'no-cache');
+    return reply.send(createReadStream(pdfPath, { start, end: clampedEnd }));
+  }
+
+  // 200 OK Full content
+  reply.header('Cache-Control', 'public, max-age=86400');
   reply.header('Content-Length', totalSize.toString());
   return reply.send(createReadStream(pdfPath));
 }

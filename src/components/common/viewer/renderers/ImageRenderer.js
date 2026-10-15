@@ -130,7 +130,7 @@ export function attachImageListeners(state, registerCleanup) {
     updateTransform();
   }, { passive: false });
 
-  // Pan / Drag
+  // Pan / Drag (Mouse)
   container?.addEventListener('mousedown', (e) => {
     if (e.target.closest('button')) return;
     isDragging = true;
@@ -151,10 +151,67 @@ export function attachImageListeners(state, registerCleanup) {
 
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', onMouseUp);
+
+  // Mobile Touch Pan & Pinch-to-Zoom
+  let initialPinchDist = 0;
+  let initialScale = 1.0;
+
+  const onTouchStart = (e) => {
+    if (e.target.closest('button')) return;
+    if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - posX;
+      startY = e.touches[0].clientY - posY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initialPinchDist = Math.hypot(dx, dy);
+      initialScale = scale;
+    }
+  };
+
+  const onTouchMove = (e) => {
+    if (e.touches.length === 1 && isDragging) {
+      posX = e.touches[0].clientX - startX;
+      posY = e.touches[0].clientY - startY;
+      updateTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 2 && initialPinchDist > 0) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const currentDist = Math.hypot(dx, dy);
+      const pinchFactor = currentDist / initialPinchDist;
+      scale = Math.min(5.0, Math.max(0.2, initialScale * pinchFactor));
+      updateTransform();
+      e.preventDefault();
+    }
+  };
+
+  const onTouchEnd = (e) => {
+    initialPinchDist = 0;
+    if (e.touches && e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - posX;
+      startY = e.touches[0].clientY - posY;
+    } else {
+      isDragging = false;
+    }
+  };
+
+  container?.addEventListener('touchstart', onTouchStart, { passive: true });
+  container?.addEventListener('touchmove', onTouchMove, { passive: false });
+  container?.addEventListener('touchend', onTouchEnd, { passive: true });
+  container?.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
   if (registerCleanup) {
     registerCleanup(() => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      container?.removeEventListener('touchstart', onTouchStart);
+      container?.removeEventListener('touchmove', onTouchMove);
+      container?.removeEventListener('touchend', onTouchEnd);
+      container?.removeEventListener('touchcancel', onTouchEnd);
     });
   }
 
@@ -166,8 +223,8 @@ export function attachImageListeners(state, registerCleanup) {
       svgSourceContainer?.classList.add('hidden');
       copyBtn?.classList.add('hidden');
       copyBtn?.classList.remove('flex');
-      btnVector.className = 'px-2.5 py-1 rounded-md bg-white/20 text-white shadow-xs cursor-pointer transition';
-      btnCode.className = 'px-2.5 py-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition';
+      btnVector.className = 'px-2.5 py-1 rounded-md bg-zinc-200/80 dark:bg-white/20 text-zinc-900 dark:text-white shadow-xs cursor-pointer transition';
+      btnCode.className = 'px-2.5 py-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white cursor-pointer transition';
     };
 
     btnCode.onclick = async () => {
@@ -176,8 +233,8 @@ export function attachImageListeners(state, registerCleanup) {
       svgSourceContainer?.classList.remove('hidden');
       copyBtn?.classList.remove('hidden');
       copyBtn?.classList.add('flex');
-      btnCode.className = 'px-2.5 py-1 rounded-md bg-white/20 text-white shadow-xs cursor-pointer transition';
-      btnVector.className = 'px-2.5 py-1 rounded-md text-zinc-400 hover:text-white cursor-pointer transition';
+      btnCode.className = 'px-2.5 py-1 rounded-md bg-zinc-200/80 dark:bg-white/20 text-zinc-900 dark:text-white shadow-xs cursor-pointer transition';
+      btnVector.className = 'px-2.5 py-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white cursor-pointer transition';
 
       if (!rawSvgText) {
         try {

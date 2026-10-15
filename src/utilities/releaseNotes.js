@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.03': {
+    version: 'v23.03',
+    title: 'Bản cập nhật v23.03',
+    date: '16/10/2026',
+    features: [
+      'Trình xem tệp vạn năng: Tăng cường bảo mật renderer (HTML sandbox/DOMPurify, blob URL tracking)',
+      'Hỗ trợ streaming phạm vi byte an toàn, bảo vệ chống traversal và kiểm soát tải tệp lớn'
+    ],
+    fixes: [
+      'Sửa lỗi rò rỉ bộ nhớ Blob URL trên ImageRenderer và AudioRenderer',
+      'Đồng bộ hóa cache PWA và service worker v23.03'
+    ]
+  },
   'v23.01': {
     version: 'v23.01',
     title: 'Bản cập nhật v23.01',
@@ -57,7 +70,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.01'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.03'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -65,7 +78,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.01'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.01';
+  if (!rawVer) return 'v23.03';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

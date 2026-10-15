@@ -114,8 +114,30 @@ export function attachVideoListeners(state, registerCleanup) {
     } catch {}
   });
 
+  let hasRetried = false;
   // Resilient blob recovery fallback if direct range stream fails
   video.addEventListener('error', async () => {
+    if (hasRetried) {
+      const container = document.getElementById('videoViewerContainer');
+      if (container && !document.getElementById('videoErrorNotice')) {
+        const notice = document.createElement('div');
+        notice.id = 'videoErrorNotice';
+        notice.className = 'absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-black/85 text-center text-white space-y-3';
+        notice.innerHTML = `
+          <div class="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center">
+            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+          </div>
+          <p class="text-xs text-zinc-300">Không thể phát trực tiếp định dạng video này trên trình duyệt.</p>
+          <a href="${state.downloadUrl || state.viewUrl}" download="${state.name}" class="px-3.5 py-1.5 rounded-xl bg-white text-zinc-900 text-xs font-semibold inline-flex items-center gap-1.5 shadow-md">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải về video
+          </a>
+        `;
+        container.appendChild(notice);
+        if (window.lucide?.createIcons) window.lucide.createIcons({ root: notice });
+      }
+      return;
+    }
+    hasRetried = true;
     try {
       const res = await fetch(state.viewUrl);
       if (res.ok) {

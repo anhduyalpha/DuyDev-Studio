@@ -220,4 +220,10 @@ These file groups must be changed together:
 - **What**: Failing to call `webView.onPause()` and `webView.pauseTimers()` keeps JS timers, WebGL/Canvas rendering, and audio/video decoders active when the APK is backgrounded or screen is turned off. Hardcoding `preferredDisplayModeId` to a fixed 120Hz mode prevents Android LTPO hardware from downscaling to 10Hz/60Hz on static views. Infinite CSS keyframe animations and unthrottled telemetry polling wake cellular/Wi-Fi radios continuously.
 - **Action**: In `MainActivity.kt`, always call `webView.onPause()` and `webView.pauseTimers()` on `onPause()`/`onStop()`, and `resumeTimers()`/`onResume()` on `onResume()`. Set `preferredDisplayModeId = 0` (system default adaptive mode). In `src/app.js`, toggle `html.app-backgrounded` and dispatch `ds:visibility-change` to pause telemetry/polling and pause infinite CSS animations via `html.app-backgrounded * { animation-play-state: paused !important; }`. Hold `FLAG_KEEP_SCREEN_ON` wake-lock strictly while foreground jobs actively run.
 
+### [CONFIRMED] Universal Viewer Iframe Sandbox Privilege Escalation & Media Decoder Infinite Loops (`KI-FIX-024`)
+- **Location**: `src/components/common/viewer/renderers/HtmlRenderer.js`, `AudioRenderer.js`, `VideoRenderer.js`
+- **What**: Combining `allow-same-origin` and `allow-scripts` on an iframe previewing untrusted HTML files allows embedded scripts to break out of the sandbox and access the parent origin's `localStorage`, cookies, and auth credentials. Furthermore, listening to the `error` event on `<audio>`/`<video>` elements to attempt an automated blob fetch fallback without a one-shot retry guard causes an infinite loop when media files are corrupted or unsupported, freezing the browser tab at 100% CPU.
+- **Action**: Never combine `allow-same-origin` with `allow-scripts` in user file preview iframes. Always guard media retry fallbacks with a `hasRetried` boolean flag and display an explicit error state on failure.
+
+
 

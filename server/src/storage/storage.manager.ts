@@ -46,22 +46,27 @@ export class StorageManager {
    * Returns path for raw uploaded file
    */
   static getUploadPath(fileId: string, ext = '.bin'): string {
-    return path.join(resolvedStoragePaths.uploads, `${fileId}${ext}`);
+    const cleanId = path.basename(fileId).replace(/^[.]+/, '') || 'upload';
+    const sanitizedExt = ext.startsWith('.') ? ext : `.${ext}`;
+    return StorageManager.sanitizeSafePath(resolvedStoragePaths.uploads, `${cleanId}${sanitizedExt}`);
   }
 
   /**
    * Returns path for processed artifact
    */
   static getProcessedPath(fileId: string, ext: string): string {
+    const cleanId = path.basename(fileId).replace(/^[.]+/, '') || 'artifact';
     const sanitizedExt = ext.startsWith('.') ? ext : `.${ext}`;
-    return path.join(resolvedStoragePaths.processed, `${fileId}${sanitizedExt}`);
+    return StorageManager.sanitizeSafePath(resolvedStoragePaths.processed, `${cleanId}${sanitizedExt}`);
   }
 
   /**
    * Returns path for temporary scratch file
    */
   static getTempPath(tempId: string, ext = '.tmp'): string {
-    return path.join(resolvedStoragePaths.temp, `${tempId}${ext}`);
+    const cleanId = path.basename(tempId).replace(/^[.]+/, '') || 'scratch';
+    const sanitizedExt = ext.startsWith('.') ? ext : `.${ext}`;
+    return StorageManager.sanitizeSafePath(resolvedStoragePaths.temp, `${cleanId}${sanitizedExt}`);
   }
 
   /**
@@ -83,6 +88,9 @@ export class StorageManager {
    * Validates that requested relative path does not escape destination sandbox
    */
   static sanitizeSafePath(destinationDir: string, userPath: string): string {
+    if (userPath && userPath.includes('\0')) {
+      throw new SecurityException('Null byte injection detected in path');
+    }
     const dest = path.resolve(destinationDir);
     // Strip leading slashes to prevent path.resolve from treating relative paths as root on POSIX
     const cleanRel = (userPath || '').replace(/^[/\\]+/, '');

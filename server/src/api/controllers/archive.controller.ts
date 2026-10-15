@@ -177,12 +177,13 @@ export async function extractFileHandler(request: FastifyRequest, reply: Fastify
   const ext = path.extname(extracted.name).toLowerCase();
   const mimeType = getMimeTypeForExt(ext);
   reply.header('Content-Type', mimeType);
+  reply.header('X-Content-Type-Options', 'nosniff');
   if (inline) {
     reply.header('Content-Disposition', `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
   } else {
     reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
   }
-  reply.header('Accept-Ranges', 'bytes');
+  reply.header('Accept-Ranges', 'none');
 
   request.raw.on('close', () => {
     extracted.close?.().catch(() => {});

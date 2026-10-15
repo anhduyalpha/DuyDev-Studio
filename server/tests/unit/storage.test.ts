@@ -36,13 +36,22 @@ describe('StorageManager Sanitization & Path Tests', () => {
     expect(rootPath).toBe(sandboxDir);
   });
 
-  it('should generate safe drive paths', () => {
-    const drivePath = StorageManager.getDrivePath('/my_folder/file.pdf');
-    expect(drivePath).toContain('my_folder');
-    expect(drivePath).toContain('file.pdf');
+  it('should reject null byte injection in user path', () => {
+    const sandboxDir = path.resolve('data/storage/drive');
+    expect(() => {
+      StorageManager.sanitizeSafePath(sandboxDir, 'legit_file.txt\0/../../etc/passwd');
+    }).toThrow(SecurityException);
+  });
 
-    const rootDrive = StorageManager.getDrivePath('/');
-    expect(rootDrive).toBeDefined();
+  it('should confine upload and temp paths even if untrusted ID has traversal sequences', () => {
+    const maliciousId = '../../../etc/evil_payload';
+    const uploadPath = StorageManager.getUploadPath(maliciousId, '.bin');
+    expect(uploadPath).not.toContain('..');
+    expect(uploadPath).toContain('evil_payload.bin');
+
+    const tempPath = StorageManager.getTempPath('../../scratch', '.tmp');
+    expect(tempPath).not.toContain('..');
+    expect(tempPath).toContain('scratch.tmp');
   });
 });
 

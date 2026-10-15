@@ -96,21 +96,36 @@ export function getMimeTypeForExt(ext: string): string {
     flac: 'audio/flac', m4a: 'audio/mp4', opus: 'audio/opus',
     pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     doc: 'application/msword', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ppt: 'application/vnd.ms-powerpoint',
     xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    xls: 'application/vnd.ms-excel', ods: 'application/vnd.oasis.opendocument.spreadsheet',
+    odt: 'application/vnd.oasis.opendocument.text', odp: 'application/vnd.oasis.opendocument.presentation',
     txt: 'text/plain; charset=utf-8', html: 'text/html; charset=utf-8', htm: 'text/html; charset=utf-8',
     md: 'text/markdown; charset=utf-8', markdown: 'text/markdown; charset=utf-8',
     rtf: 'application/rtf',
-    json: 'application/json; charset=utf-8', xml: 'text/xml; charset=utf-8',
-    csv: 'text/csv; charset=utf-8', log: 'text/plain; charset=utf-8',
-    js: 'text/javascript; charset=utf-8', mjs: 'text/javascript; charset=utf-8',
+    json: 'application/json; charset=utf-8', json5: 'application/json; charset=utf-8', xml: 'text/xml; charset=utf-8',
+    csv: 'text/csv; charset=utf-8', tsv: 'text/tab-separated-values; charset=utf-8', log: 'text/plain; charset=utf-8',
+    js: 'text/javascript; charset=utf-8', mjs: 'text/javascript; charset=utf-8', cjs: 'text/javascript; charset=utf-8',
     ts: 'text/plain; charset=utf-8', tsx: 'text/plain; charset=utf-8', jsx: 'text/javascript; charset=utf-8',
-    css: 'text/css; charset=utf-8', py: 'text/plain; charset=utf-8', sh: 'text/plain; charset=utf-8',
-    yaml: 'text/yaml; charset=utf-8', yml: 'text/yaml; charset=utf-8',
-    c: 'text/plain; charset=utf-8', cpp: 'text/plain; charset=utf-8', h: 'text/plain; charset=utf-8',
+    vue: 'text/plain; charset=utf-8', svelte: 'text/plain; charset=utf-8',
+    css: 'text/css; charset=utf-8', scss: 'text/x-scss; charset=utf-8', sass: 'text/x-sass; charset=utf-8', less: 'text/x-less; charset=utf-8',
+    py: 'text/plain; charset=utf-8', pyw: 'text/plain; charset=utf-8', sh: 'text/plain; charset=utf-8',
+    yaml: 'text/yaml; charset=utf-8', yml: 'text/yaml; charset=utf-8', toml: 'text/plain; charset=utf-8',
+    c: 'text/plain; charset=utf-8', cpp: 'text/plain; charset=utf-8', h: 'text/plain; charset=utf-8', hpp: 'text/plain; charset=utf-8',
     rs: 'text/plain; charset=utf-8', go: 'text/plain; charset=utf-8', java: 'text/plain; charset=utf-8',
+    kt: 'text/plain; charset=utf-8', kts: 'text/plain; charset=utf-8', cs: 'text/plain; charset=utf-8',
+    php: 'text/plain; charset=utf-8', rb: 'text/plain; charset=utf-8', swift: 'text/plain; charset=utf-8',
+    dart: 'text/plain; charset=utf-8', lua: 'text/plain; charset=utf-8', r: 'text/plain; charset=utf-8',
     sql: 'text/plain; charset=utf-8', ini: 'text/plain; charset=utf-8', env: 'text/plain; charset=utf-8',
+    dockerfile: 'text/plain; charset=utf-8', makefile: 'text/plain; charset=utf-8',
+    diff: 'text/plain; charset=utf-8', patch: 'text/plain; charset=utf-8', properties: 'text/plain; charset=utf-8',
+    // Fonts
+    woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf', eot: 'application/vnd.ms-fontobject',
+    // Subtitles & Web formats
+    vtt: 'text/vtt; charset=utf-8', srt: 'text/plain; charset=utf-8', wasm: 'application/wasm',
+    // Archives
     zip: 'application/zip', '7z': 'application/x-7z-compressed', tar: 'application/x-tar',
-    rar: 'application/x-rar-compressed', gz: 'application/gzip', bz2: 'application/x-bzip2'
+    rar: 'application/x-rar-compressed', gz: 'application/gzip', bz2: 'application/x-bzip2', xz: 'application/x-xz'
   };
   return mimeMap[clean] || 'application/octet-stream';
 }

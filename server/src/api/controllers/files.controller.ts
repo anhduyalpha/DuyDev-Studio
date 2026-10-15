@@ -10,6 +10,7 @@ import { limits, isPermanentRetention, computeExpiresAt } from '../../config/lim
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { fileIdParamSchema, uploadPurposeSchema, fileDownloadQuerySchema, importDriveBodySchema, probeDriveBodySchema } from '../../schemas/files.schema.js';
 import { getMimeTypeForExt } from '../../schemas/converter.schema.js';
+import { checkETagMatch } from '../../lib/http.utils.js';
 import { logger } from '../../lib/logger.js';
 import { downloadGoogleDriveFile, probeGoogleDriveFile } from '../../services/drive-download.service.js';
 
@@ -145,6 +146,7 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
   const encodedFilename = encodeURIComponent(effectiveName);
   const asciiName = effectiveName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
   reply.header('Content-Type', mimeType);
+  reply.header('X-Content-Type-Options', 'nosniff');
   if (isInline) {
     reply.header('Content-Disposition', 'inline');
   } else {
@@ -152,9 +154,29 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
   }
   reply.header('Accept-Ranges', 'bytes');
 
-  // Handle Range requests (HTTP 206 Partial Content) according to RFC 7233
+  const etag = fileRecord.hashSha256
+    ? `"${fileRecord.hashSha256}"`
+    : `"${stat.mtimeMs.toString(36)}-${totalSize.toString(36)}"`;
+  reply.header('ETag', etag);
+
+  // RFC 7232: 304 Not Modified evaluated first
+  if (checkETagMatch(request.headers['if-none-match'], etag)) {
+    reply.status(304);
+    return reply.send();
+  }
+
+  // Handle Range requests (HTTP 206 Partial Content) according to RFC 7233 / RFC 9110
   const rangeHeader = request.headers.range;
-  if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+  const ifRange = request.headers['if-range'];
+  const ifRangeMatches = !ifRange || checkETagMatch(ifRange, etag);
+
+  if (rangeHeader && rangeHeader.startsWith('bytes=') && ifRangeMatches) {
+    if (totalSize === 0) {
+      reply.status(416);
+      reply.header('Content-Range', 'bytes */0');
+      return reply.send();
+    }
+
     const parts = rangeHeader.replace(/bytes=/, '').trim().split('-');
     let start: number;
     let end: number;
@@ -174,7 +196,7 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
       end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
     }
 
-    if (isNaN(start) || isNaN(end) || start >= totalSize || end < start) {
+    if (isNaN(start) || isNaN(end) || start < 0 || start >= totalSize || end < start) {
       reply.status(416);
       reply.header('Content-Range', `bytes */${totalSize}`);
       return reply.send();
@@ -187,21 +209,10 @@ async function handleFileSend(request: FastifyRequest, reply: FastifyReply, forc
     reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${totalSize}`);
     reply.header('Content-Length', chunkSize.toString());
     reply.header('Cache-Control', 'no-cache');
-    if (fileRecord.hashSha256) {
-      reply.header('ETag', `"${fileRecord.hashSha256}"`);
-    }
     return reply.send(fs.createReadStream(fileRecord.storagePath, { start, end: clampedEnd }));
   }
 
   // 200 OK Full content
-  if (fileRecord.hashSha256) {
-    const etag = `"${fileRecord.hashSha256}"`;
-    reply.header('ETag', etag);
-    if (request.headers['if-none-match'] === etag) {
-      reply.status(304);
-      return reply.send();
-    }
-  }
   reply.header('Cache-Control', 'public, max-age=600, must-revalidate');
   reply.header('Content-Length', totalSize.toString());
   return reply.send(fs.createReadStream(fileRecord.storagePath));

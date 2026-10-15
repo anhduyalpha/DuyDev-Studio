@@ -35,6 +35,18 @@ import { showToast } from '../../../utilities/toast.js';
 
 let activeCleanups = [];
 let savedScrollY = 0;
+let currentViewerState = null;
+
+function getOpenTabDetails(state) {
+  const isPdf = state.category === FILE_CATEGORIES.PDF;
+  const isArchive = state.category === FILE_CATEGORIES.ARCHIVE;
+  const rawUrl = state.viewUrl || state.downloadUrl;
+  const canOpenInTab = Boolean(state.viewUrl && !state.viewUrl.includes('/api/v1/files/download/') && !state.viewUrl.includes('/api/v1/studocu/'));
+  const openTabUrl = isPdf
+    ? `/#view/pdf?file=${encodeURIComponent(state.viewUrl || rawUrl)}&name=${encodeURIComponent(state.name || '')}`
+    : isArchive ? `/#archive` : (state.viewUrl || '');
+  return { canOpenInTab, openTabUrl };
+}
 
 export function cleanupCurrentView() {
   // 1. Quét và giải phóng cưỡng chế toàn bộ thẻ audio và video trong DOM
@@ -83,10 +95,47 @@ if (typeof window !== 'undefined') {
   window.closeFileViewer = closeFileViewer;
 }
 
+function renderCategoryBody(state) {
+  switch (state.category) {
+    case FILE_CATEGORIES.IMAGE: return renderImageViewer(state);
+    case FILE_CATEGORIES.AUDIO: return renderAudioViewer(state);
+    case FILE_CATEGORIES.VIDEO: return renderVideoViewer(state);
+    case FILE_CATEGORIES.PDF:
+    case FILE_CATEGORIES.PRESENTATION:
+      return renderPdfViewer(state);
+    case FILE_CATEGORIES.WORD: return renderDocxViewer(state);
+    case FILE_CATEGORIES.SHEET: return renderSpreadsheetViewer(state);
+    case FILE_CATEGORIES.HTML: return renderHtmlViewer(state);
+    case FILE_CATEGORIES.FONT: return renderFontViewer(state);
+    case FILE_CATEGORIES.TEXT: return renderTextViewer(state);
+    case FILE_CATEGORIES.ARCHIVE: return renderArchiveViewer(state);
+    default: return renderFallbackViewer(state);
+  }
+}
+
+function attachCategoryListeners(state, registerCleanup) {
+  switch (state.category) {
+    case FILE_CATEGORIES.IMAGE: attachImageListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.AUDIO: attachAudioListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.VIDEO: attachVideoListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.PDF:
+    case FILE_CATEGORIES.PRESENTATION:
+      attachPdfListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.WORD: attachDocxListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.SHEET: attachSpreadsheetListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.HTML: attachHtmlListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.FONT: attachFontListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.TEXT: attachTextListeners(state, registerCleanup); break;
+    case FILE_CATEGORIES.ARCHIVE: attachArchiveViewerListeners(state, registerCleanup); break;
+    default: attachFallbackListeners(state, registerCleanup); break;
+  }
+}
+
 export function openFileViewer(state) {
   const existingModal = document.getElementById('fileViewerCoreModal');
   if (existingModal && state.direction) {
     cleanupCurrentView();
+    currentViewerState = state;
 
     const ext = state.name && state.name.includes('.')
       ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
@@ -96,6 +145,16 @@ export function openFileViewer(state) {
     if (state.isBlob && state.viewUrl) {
       registerCleanup(() => URL.revokeObjectURL(state.viewUrl));
     }
+
+    // Re-bind Escape key listener
+    const onKeydown = (e) => {
+      if (e.key === 'Escape') {
+        closeFileViewer();
+        window.removeEventListener('keydown', onKeydown);
+      }
+    };
+    window.addEventListener('keydown', onKeydown);
+    registerCleanup(() => window.removeEventListener('keydown', onKeydown));
 
     // Update Header elements
     const extBadge = document.getElementById('viewerFileExtBadge');
@@ -110,18 +169,42 @@ export function openFileViewer(state) {
       downloadBtn.download = state.name;
     }
 
-    // Render body with direction animation
-    let bodyHtml = '';
-    switch (state.category) {
-      case FILE_CATEGORIES.VIDEO: bodyHtml = renderVideoViewer(state); break;
-      case FILE_CATEGORIES.IMAGE: bodyHtml = renderImageViewer(state); break;
-      case FILE_CATEGORIES.AUDIO: bodyHtml = renderAudioViewer(state); break;
-      default: bodyHtml = renderFallbackViewer(state); break;
+    const { canOpenInTab, openTabUrl } = getOpenTabDetails(state);
+    const openTabBtn = document.getElementById('btnOpenViewerTab');
+    if (openTabBtn) {
+      if (canOpenInTab && openTabUrl) {
+        openTabBtn.href = openTabUrl;
+        openTabBtn.classList.remove('hidden');
+        openTabBtn.classList.add('flex');
+      } else {
+        openTabBtn.classList.add('hidden');
+        openTabBtn.classList.remove('flex');
+      }
+    }
+
+    const isFullHeight = [
+      FILE_CATEGORIES.PDF,
+      FILE_CATEGORIES.PRESENTATION,
+      FILE_CATEGORIES.WORD,
+      FILE_CATEGORIES.SHEET,
+      FILE_CATEGORIES.HTML,
+      FILE_CATEGORIES.FONT,
+      FILE_CATEGORIES.ARCHIVE
+    ].includes(state.category);
+
+    const modalBox = existingModal.firstElementChild;
+    if (modalBox) {
+      modalBox.className = isFullHeight
+        ? 'relative w-full h-full sm:h-auto sm:max-h-[95vh] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col'
+        : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]';
     }
 
     const viewerBody = document.getElementById('fileViewerBody');
     if (viewerBody) {
-      viewerBody.innerHTML = bodyHtml;
+      viewerBody.className = isFullHeight
+        ? 'p-0 flex-1 overflow-hidden flex flex-col bg-zinc-100/70 dark:bg-[#09090b]'
+        : 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center bg-zinc-50/50 dark:bg-[#0e0e11]';
+      viewerBody.innerHTML = renderCategoryBody(state);
       const animClass = state.direction === 'prev' ? 'animate-slideDown' : 'animate-slideUp';
       viewerBody.classList.remove('animate-slideUp', 'animate-slideDown');
       void viewerBody.offsetWidth; // trigger reflow
@@ -130,21 +213,15 @@ export function openFileViewer(state) {
 
     if (window.lucide) window.lucide.createIcons({ root: existingModal });
 
-    // Re-attach specific renderer listeners
-    if (state.category === FILE_CATEGORIES.VIDEO) {
-      attachVideoListeners(state, registerCleanup);
-    } else if (state.category === FILE_CATEGORIES.IMAGE) {
-      attachImageListeners(state, registerCleanup);
-    } else if (state.category === FILE_CATEGORIES.AUDIO) {
-      attachAudioListeners(state, registerCleanup);
-    }
-
+    // Attach specific renderer listeners for active category
+    attachCategoryListeners(state, registerCleanup);
     return;
   }
 
   const currentScroll = window.scrollY;
   closeFileViewer();
   savedScrollY = currentScroll;
+  currentViewerState = state;
 
   const ext = state.name && state.name.includes('.')
     ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
@@ -155,22 +232,7 @@ export function openFileViewer(state) {
     registerCleanup(() => URL.revokeObjectURL(state.viewUrl));
   }
 
-  let bodyHtml = '';
-  switch (state.category) {
-    case FILE_CATEGORIES.IMAGE: bodyHtml = renderImageViewer(state); break;
-    case FILE_CATEGORIES.AUDIO: bodyHtml = renderAudioViewer(state); break;
-    case FILE_CATEGORIES.VIDEO: bodyHtml = renderVideoViewer(state); break;
-    case FILE_CATEGORIES.PDF:
-    case FILE_CATEGORIES.PRESENTATION:
-      bodyHtml = renderPdfViewer(state); break;
-    case FILE_CATEGORIES.WORD: bodyHtml = renderDocxViewer(state); break;
-    case FILE_CATEGORIES.SHEET: bodyHtml = renderSpreadsheetViewer(state); break;
-    case FILE_CATEGORIES.HTML: bodyHtml = renderHtmlViewer(state); break;
-    case FILE_CATEGORIES.FONT: bodyHtml = renderFontViewer(state); break;
-    case FILE_CATEGORIES.TEXT: bodyHtml = renderTextViewer(state); break;
-    case FILE_CATEGORIES.ARCHIVE: bodyHtml = renderArchiveViewer(state); break;
-    default: bodyHtml = renderFallbackViewer(state); break;
-  }
+  const bodyHtml = renderCategoryBody(state);
 
   const isFullHeight = [
     FILE_CATEGORIES.PDF,
@@ -182,13 +244,7 @@ export function openFileViewer(state) {
     FILE_CATEGORIES.ARCHIVE
   ].includes(state.category);
 
-  const isPdf = state.category === FILE_CATEGORIES.PDF;
-  const isArchive = state.category === FILE_CATEGORIES.ARCHIVE;
-  const rawUrl = state.viewUrl || state.downloadUrl;
-  const canOpenInTab = Boolean(state.viewUrl && !state.viewUrl.includes('/api/v1/files/download/') && !state.viewUrl.includes('/api/v1/studocu/'));
-  const openTabUrl = isPdf
-    ? `/#view/pdf?file=${encodeURIComponent(state.viewUrl || rawUrl)}&name=${encodeURIComponent(state.name || '')}`
-    : isArchive ? `/#archive` : (state.viewUrl || '');
+  const { canOpenInTab, openTabUrl } = getOpenTabDetails(state);
 
   const modalHtml = `
     <div id="fileViewerCoreModal" class="fixed inset-0 z-50 flex items-center justify-center ${isFullHeight ? 'p-0 sm:p-4' : 'p-2.5 sm:p-5'} bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn">
@@ -204,20 +260,18 @@ export function openFileViewer(state) {
             <span id="viewerFileSize" class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden sm:inline">${state.size > 0 ? `(${formatBytes(state.size)})` : ''}</span>
           </div>
 
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btnCopyViewerLink" type="button" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" title="Sao chép liên kết">
+          <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <button id="btnCopyViewerLink" type="button" class="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer" title="Sao chép liên kết">
               <i data-lucide="link" class="w-4 h-4"></i>
             </button>
-            ${canOpenInTab && openTabUrl ? `
-              <a href="${openTabUrl}" target="_blank" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Mở tab mới">
-                <i data-lucide="external-link" class="w-4 h-4"></i>
-              </a>
-            ` : ''}
-            <a id="btnDownloadViewerFile" href="${state.downloadUrl}" download="${state.name}" class="p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition" title="Tải về">
+            <a id="btnOpenViewerTab" href="${openTabUrl}" target="_blank" class="${canOpenInTab && openTabUrl ? 'flex' : 'hidden'} min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white items-center justify-center transition" title="Mở tab mới">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+            <a id="btnDownloadViewerFile" href="${state.downloadUrl}" download="${state.name}" class="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition" title="Tải về">
               <i data-lucide="download" class="w-4 h-4"></i>
             </a>
-            <div class="w-px h-4 bg-zinc-200 dark:bg-white/10 mx-1"></div>
-            <button id="btnCloseFileViewer" type="button" class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition cursor-pointer" title="Đóng">
+            <div class="w-px h-4 bg-zinc-200 dark:bg-white/10 mx-0.5 sm:mx-1"></div>
+            <button id="btnCloseFileViewer" type="button" class="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 flex items-center justify-center transition cursor-pointer" title="Đóng">
               <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
@@ -256,25 +310,13 @@ export function openFileViewer(state) {
   registerCleanup(() => window.removeEventListener('keydown', onKeydown));
 
   document.getElementById('btnCopyViewerLink')?.addEventListener('click', async () => {
-    const fullUrl = state.downloadUrl.startsWith('http') ? state.downloadUrl : `${window.location.origin}${state.downloadUrl}`;
+    const active = currentViewerState || state;
+    const targetUrl = active.downloadUrl || active.viewUrl || '';
+    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `${window.location.origin}${targetUrl}`;
     const ok = await copyText(fullUrl);
     showToast(ok ? 'Đã sao chép liên kết' : 'Lỗi sao chép', ok ? 'success' : 'error');
   });
 
   // Attach Specific Renderer Listeners
-  switch (state.category) {
-    case FILE_CATEGORIES.IMAGE: attachImageListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.AUDIO: attachAudioListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.VIDEO: attachVideoListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.PDF:
-    case FILE_CATEGORIES.PRESENTATION:
-      attachPdfListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.WORD: attachDocxListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.SHEET: attachSpreadsheetListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.HTML: attachHtmlListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.FONT: attachFontListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.TEXT: attachTextListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.ARCHIVE: attachArchiveViewerListeners(state, registerCleanup); break;
-    default: attachFallbackListeners(state, registerCleanup); break;
-  }
+  attachCategoryListeners(state, registerCleanup);
 }

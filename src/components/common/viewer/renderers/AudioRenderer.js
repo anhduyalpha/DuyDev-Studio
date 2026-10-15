@@ -141,8 +141,18 @@ export function attachAudioListeners(state, registerCleanup) {
     if (speedBtn) speedBtn.textContent = `${speed}x`;
   });
 
+  let hasRetried = false;
   // Resilient blob recovery fallback if direct audio stream errors
   audio.addEventListener('error', async () => {
+    if (hasRetried) {
+      if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
+      if (playBtn) {
+        playBtn.disabled = true;
+        playBtn.classList.add('opacity-40', 'pointer-events-none');
+      }
+      return;
+    }
+    hasRetried = true;
     try {
       const res = await fetch(state.viewUrl);
       if (res.ok) {
@@ -151,9 +161,20 @@ export function attachAudioListeners(state, registerCleanup) {
         registerCleanup(() => URL.revokeObjectURL(blobUrl));
         audio.src = blobUrl;
         audio.play().catch(() => {});
+      } else {
+        if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
+        if (playBtn) {
+          playBtn.disabled = true;
+          playBtn.classList.add('opacity-40', 'pointer-events-none');
+        }
       }
     } catch (e) {
       console.warn('Audio fallback recovery failed:', e);
+      if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
+      if (playBtn) {
+        playBtn.disabled = true;
+        playBtn.classList.add('opacity-40', 'pointer-events-none');
+      }
     }
   });
 }

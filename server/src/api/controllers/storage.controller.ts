@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service.js';
 import { StorageManager } from '../../storage/storage.manager.js';
 import { resolvedStoragePaths } from '../../config/env.config.js';
 import { getMimeTypeForExt } from '../../schemas/converter.schema.js';
+import { checkETagMatch } from '../../lib/http.utils.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 
@@ -241,6 +242,7 @@ export async function downloadStorageHandler(request: FastifyRequest, reply: Fas
   const mimeType = getMimeTypeForExt(ext);
   const fileSize = stat.size;
   reply.header('Content-Type', mimeType);
+  reply.header('X-Content-Type-Options', 'nosniff');
   const encodedName = encodeURIComponent(fileName);
   const asciiName = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
   if (inline) {
@@ -250,27 +252,61 @@ export async function downloadStorageHandler(request: FastifyRequest, reply: Fas
   }
   reply.header('Accept-Ranges', 'bytes');
 
-  // Handle Range Header for video/audio seeking
-  const rangeHeader = request.headers.range;
-  if (rangeHeader) {
-    const parts = rangeHeader.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+  const etag = `"${stat.mtimeMs.toString(36)}-${fileSize.toString(36)}"`;
+  reply.header('ETag', etag);
 
-    if (start >= fileSize || end >= fileSize || start > end) {
+  // RFC 7232: 304 Not Modified evaluated first
+  if (checkETagMatch(request.headers['if-none-match'], etag)) {
+    reply.status(304);
+    return reply.send();
+  }
+
+  // Handle Range Header for video/audio seeking and chunked viewing
+  const rangeHeader = request.headers.range;
+  const ifRange = request.headers['if-range'];
+  const ifRangeMatches = !ifRange || checkETagMatch(ifRange, etag);
+
+  if (rangeHeader && rangeHeader.startsWith('bytes=') && ifRangeMatches) {
+    if (fileSize === 0) {
+      reply.header('Content-Range', 'bytes */0');
+      return reply.status(416).send('Requested Range Not Satisfiable');
+    }
+
+    const parts = rangeHeader.replace(/bytes=/, '').trim().split('-');
+    let start: number;
+    let end: number;
+
+    if (parts[0] === '' && parts[1]) {
+      const suffix = parseInt(parts[1], 10);
+      if (isNaN(suffix) || suffix <= 0) {
+        reply.header('Content-Range', `bytes */${fileSize}`);
+        return reply.status(416).send('Requested Range Not Satisfiable');
+      }
+      start = Math.max(0, fileSize - suffix);
+      end = fileSize - 1;
+    } else {
+      start = parseInt(parts[0], 10);
+      end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    }
+
+    if (isNaN(start) || isNaN(end) || start < 0 || start >= fileSize || end < start) {
       reply.header('Content-Range', `bytes */${fileSize}`);
       return reply.status(416).send('Requested Range Not Satisfiable');
     }
 
-    const chunksize = end - start + 1;
+    const clampedEnd = Math.min(end, fileSize - 1);
+    const chunksize = clampedEnd - start + 1;
     reply.status(206);
-    reply.header('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+    reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${fileSize}`);
     reply.header('Content-Length', chunksize);
+    reply.header('Cache-Control', 'no-cache');
 
-    const stream = fs.createReadStream(diskPath, { start, end });
+    const stream = fs.createReadStream(diskPath, { start, end: clampedEnd });
     return reply.send(stream);
   }
 
+  // 200 OK Full content
+  reply.header('Cache-Control', 'public, max-age=600, must-revalidate');
   reply.header('Content-Length', fileSize);
   return reply.send(fs.createReadStream(diskPath));
 }

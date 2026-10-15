@@ -41,8 +41,8 @@ export function renderHtmlViewer(state) {
       </div>
 
       <!-- Preview Viewport -->
-      <div id="htmlPreviewContainer" class="flex-1 flex justify-center items-stretch overflow-hidden p-2 sm:p-4">
-        <iframe id="htmlIframe" src="${state.viewUrl}" sandbox="allow-same-origin allow-scripts" class="w-full h-full bg-white rounded-lg border border-zinc-200/80 shadow-md transition-all duration-200"></iframe>
+      <div id="htmlPreviewContainer" class="flex-1 flex justify-center items-stretch overflow-hidden p-2 sm:p-4 relative">
+        <iframe id="htmlIframe" src="${state.rawFile instanceof Blob ? 'about:blank' : state.viewUrl}" sandbox="allow-scripts allow-forms allow-modals" class="w-full h-full bg-white rounded-lg border border-zinc-200/80 shadow-md transition-all duration-200"></iframe>
       </div>
 
       <!-- Source Viewport -->
@@ -72,6 +72,49 @@ export function attachHtmlListeners(state, registerCleanup) {
 
   let rawSource = '';
 
+  function renderSourceHighlight(text) {
+    if (!sourceCodeEl) return;
+    if (window.hljs && text.length <= 300000) {
+      try {
+        sourceCodeEl.innerHTML = window.hljs.highlight(text, { language: 'xml' }).value;
+      } catch {
+        sourceCodeEl.textContent = text;
+      }
+    } else {
+      sourceCodeEl.textContent = text;
+    }
+  }
+
+  // Populate srcdoc for Blobs to bypass opaque-origin blob restrictions in sandboxed iframe
+  if (state.rawFile instanceof Blob) {
+    state.rawFile.text().then((text) => {
+      rawSource = text;
+      if (iframe) iframe.srcdoc = text;
+    }).catch((err) => {
+      console.warn('Failed to read local HTML blob:', err);
+    });
+  }
+
+  iframe?.addEventListener('error', () => {
+    if (!iframe.srcdoc && previewContainer && !document.getElementById('htmlErrorNotice')) {
+      const notice = document.createElement('div');
+      notice.id = 'htmlErrorNotice';
+      notice.className = 'absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-zinc-900/90 text-center text-white space-y-3';
+      notice.innerHTML = `
+        <div class="w-12 h-12 rounded-2xl bg-white/10 text-amber-400 flex items-center justify-center">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <p class="text-xs text-zinc-300">Không thể hiển thị bản xem trước trực tiếp trang HTML này.</p>
+        <button id="btnSwitchToHtmlSource" type="button" class="px-3 py-1.5 rounded-xl bg-white text-zinc-900 text-xs font-semibold inline-flex items-center gap-1.5 shadow-md cursor-pointer">
+          <i data-lucide="code" class="w-3.5 h-3.5"></i> Xem mã nguồn
+        </button>
+      `;
+      previewContainer.appendChild(notice);
+      if (window.lucide) window.lucide.createIcons({ root: notice });
+      document.getElementById('btnSwitchToHtmlSource')?.addEventListener('click', () => setMode('source'));
+    }
+  });
+
   function setMode(mode) {
     const isPrev = mode === 'preview';
     if (previewContainer) previewContainer.classList.toggle('hidden', !isPrev);
@@ -90,7 +133,11 @@ export function attachHtmlListeners(state, registerCleanup) {
         : 'px-2.5 py-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white cursor-pointer transition';
     }
 
-    if (!isPrev && !rawSource) {
+    if (!isPrev) {
+      if (rawSource) {
+        renderSourceHighlight(rawSource);
+        return;
+      }
       const getSourcePromise = (state.rawFile instanceof Blob)
         ? state.rawFile.text()
         : fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' }).then(r => {
@@ -101,17 +148,7 @@ export function attachHtmlListeners(state, registerCleanup) {
       getSourcePromise
         .then(t => {
           rawSource = t;
-          if (sourceCodeEl) {
-            if (window.hljs && t.length <= 500000) {
-              try {
-                sourceCodeEl.innerHTML = window.hljs.highlight(t, { language: 'xml' }).value;
-              } catch {
-                sourceCodeEl.textContent = t;
-              }
-            } else {
-              sourceCodeEl.textContent = t;
-            }
-          }
+          renderSourceHighlight(t);
         })
         .catch(err => {
           if (sourceCodeEl) sourceCodeEl.textContent = `Lỗi đọc mã nguồn: ${err.message}`;

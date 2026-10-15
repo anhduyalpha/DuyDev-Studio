@@ -150,38 +150,58 @@ export function attachTextListeners(state, registerCleanup) {
   getContentPromise
     .then((text) => {
       rawContent = text;
-      let highlighted = '';
       let displayLang = targetLang || 'text';
 
+      const allLines = text.split('\n');
+      const totalLineCount = allLines.length;
+      const MAX_PREVIEW_LINES = 3000;
+      const MAX_PREVIEW_CHARS = 300000;
+
+      let truncateReason = '';
+      let previewText = text;
+
+      if (totalLineCount > MAX_PREVIEW_LINES) {
+        truncateReason = ` (hiển thị ${MAX_PREVIEW_LINES.toLocaleString()} dòng đầu)`;
+        previewText = allLines.slice(0, MAX_PREVIEW_LINES).join('\n');
+      }
+
+      if (previewText.length > MAX_PREVIEW_CHARS) {
+        truncateReason = ` (hiển thị ${(MAX_PREVIEW_CHARS / 1000).toFixed(0)}k ký tự đầu)`;
+        previewText = previewText.slice(0, MAX_PREVIEW_CHARS);
+      }
+
       if (mdPane && targetLang === 'markdown') {
-        mdPane.innerHTML = parseMarkdownToHtml(text);
+        mdPane.innerHTML = parseMarkdownToHtml(previewText);
       }
 
       const hljs = window.hljs;
-      if (hljs && text.length <= 500000) {
+      let highlighted = '';
+      if (hljs && previewText.length <= MAX_PREVIEW_CHARS) {
         try {
           if (targetLang && hljs.getLanguage(targetLang)) {
-            highlighted = hljs.highlight(text, { language: targetLang, ignoreIllegals: true }).value;
+            highlighted = hljs.highlight(previewText, { language: targetLang, ignoreIllegals: true }).value;
           } else {
-            const autoRes = hljs.highlightAuto(text);
+            const autoRes = hljs.highlightAuto(previewText);
             highlighted = autoRes.value;
             if (autoRes.language) displayLang = autoRes.language;
           }
         } catch {
-          highlighted = escapeHtml(text);
+          highlighted = escapeHtml(previewText);
         }
       } else {
-        highlighted = escapeHtml(text);
+        highlighted = escapeHtml(previewText);
       }
 
       if (codeEl) codeEl.innerHTML = highlighted;
 
-      const lineCount = text.split('\n').length;
+      const renderLines = previewText.split('\n');
+      const renderCount = renderLines.length;
       if (lineNumbers) {
-        lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join('<br>');
+        lineNumbers.innerHTML = Array.from({ length: renderCount }, (_, i) => i + 1).join('<br>');
       }
       if (metaInfo) {
-        metaInfo.textContent = `${lineCount.toLocaleString()} dòng • ${formatBytes(new Blob([text]).size)}`;
+        const fileSize = state.size > 0 ? state.size : text.length;
+        metaInfo.textContent = `${totalLineCount.toLocaleString()} dòng${truncateReason} • ${formatBytes(fileSize)}`;
       }
       if (langBadge) {
         langBadge.textContent = displayLang.toUpperCase();
