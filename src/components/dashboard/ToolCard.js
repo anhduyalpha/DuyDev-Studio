@@ -19,6 +19,7 @@ export function renderToolCard(tool) {
   const categoryLabel = CATEGORY_LABELS[tool.category] || tool.category;
   const contrastMap = {
     '#F59E0B': '#B45309', // Amber-700
+    '#EA580C': '#C2410C', // Orange-700 (Scribd Terracotta)
     '#0EA5E9': '#0369A1', // Sky-700
     '#8B5CF6': '#6D28D9', // Purple-700
     '#10B981': '#047857', // Emerald-700

@@ -165,7 +165,7 @@ const DEFAULT_TOOLS = [
     icon: 'book-open',
     featured: true,
     specs: ['PDF', 'Slides', 'Drive'],
-    color: '#0D9488',
+    color: '#EA580C',
     route: '#tool/scribd',
     tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']
   },
