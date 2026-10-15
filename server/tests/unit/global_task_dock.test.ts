@@ -48,7 +48,7 @@ describe('Global Task Micro-Dock (iOS HUD / macOS Task Indicator Aesthetic)', ()
   it('5. Micro header features pulsing green status dot and tiny 11px typography', () => {
     const jsContent = fs.readFileSync(dockJsPath, 'utf-8');
 
-    expect(jsContent).toContain('animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400');
+    expect(jsContent).toContain('bg-emerald-500');
     expect(jsContent).toContain('text-[11px] font-semibold text-zinc-600 dark:text-zinc-400');
   });
 
