@@ -122,18 +122,6 @@ const DEFAULT_TOOLS = [
     tags: ['viewsplit', 'view split', 'so sánh ảnh', 'soi điểm ảnh', 'pixel inspector', 'slider wipe', 'diff', 'compare']
   },
   {
-    id: 'hash-checksum',
-    title: 'Mã Băm & Base64',
-    description: 'Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.',
-    category: 'system',
-    icon: 'binary',
-    featured: false,
-    specs: ['MD5', 'SHA-256', 'Base64'],
-    color: '#64748B',
-    route: '#tool/hash-checksum',
-    tags: ['hash', 'md5', 'sha256', 'base64']
-  },
-  {
     id: 'studocu-dl',
     title: 'Studocu Downloader',
     description: 'Tải giáo trình & tài liệu Studocu sang PDF rõ nét.',
@@ -169,17 +157,31 @@ const DEFAULT_TOOLS = [
     route: '#tool/scribd',
     tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']
   },
+
+  // 6. Advanced Tools
+  {
+    id: 'hash-checksum',
+    title: 'Mã Băm & Base64',
+    description: 'Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.',
+    category: 'advanced',
+    icon: 'binary',
+    featured: false,
+    specs: ['MD5', 'SHA-256', 'Base64'],
+    color: '#64748B',
+    route: '#tool/hash-checksum',
+    tags: ['hash', 'md5', 'sha256', 'base64', 'nâng cao', 'advanced']
+  },
   {
     id: 'storage',
     title: 'Bộ Nhớ Lưu Trữ',
     description: 'Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.',
-    category: 'system',
+    category: 'advanced',
     icon: 'hard-drive',
     featured: false,
     specs: ['Cloud Drive', 'Truyền tệp'],
     color: '#6366F1',
     route: '#storage',
-    tags: ['storage', 'drive', 'files', 'lưu trữ', 'casaos', 'tập tin', 'upload', 'download']
+    tags: ['storage', 'drive', 'files', 'lưu trữ', 'casaos', 'tập tin', 'upload', 'download', 'bộ nhớ', 'nâng cao']
   }
 ];
 

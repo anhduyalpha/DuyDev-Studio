@@ -11,7 +11,8 @@ const CATEGORY_LABELS = {
   convert: 'Chuyển đổi',
   archive: 'File nén',
   qr: 'Mã QR',
-  system: 'Tiện ích'
+  system: 'Tiện ích',
+  advanced: 'Nâng cao'
 };
 
 export function renderToolCard(tool) {
@@ -24,6 +25,7 @@ export function renderToolCard(tool) {
     '#8B5CF6': '#6D28D9', // Purple-700
     '#10B981': '#047857', // Emerald-700
     '#64748B': '#334155', // Slate-700
+    '#EC4899': '#BE185D', // Pink-700
     '#A1A1AA': '#3F3F46'  // Zinc-700
   };
   const contrastColor = contrastMap[accent] || accent;

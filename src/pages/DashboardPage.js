@@ -44,7 +44,8 @@ export function renderDashboardPage() {
     convert: toolRegistry.tools.filter(t => t.category === 'convert').length,
     archive: toolRegistry.tools.filter(t => t.category === 'archive').length,
     qr: toolRegistry.tools.filter(t => t.category === 'qr').length,
-    system: toolRegistry.tools.filter(t => t.category === 'system').length
+    system: toolRegistry.tools.filter(t => t.category === 'system').length,
+    advanced: toolRegistry.tools.filter(t => t.category === 'advanced').length
   };
 
   return `
