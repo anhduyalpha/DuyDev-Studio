@@ -92,9 +92,9 @@ html.dark .scribd-omnibar:focus-within,
   letter-spacing: 0.04em;
   padding: 4px 8px;
   border-radius: 8px;
-  background: rgba(234, 88, 12, 0.10);
-  color: #EA580C;
-  border: 1px solid rgba(234, 88, 12, 0.25);
+  background: var(--surface-hover, #EBECEF);
+  color: var(--text-muted, #71717A);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.09));
   white-space: nowrap;
   user-select: none;
   transition: all 0.2s ease;
@@ -102,9 +102,22 @@ html.dark .scribd-omnibar:focus-within,
 
 html.dark .scribd-id-badge,
 .dark .scribd-id-badge {
-  background: rgba(249, 115, 22, 0.15);
-  color: #FB923C;
-  border-color: rgba(251, 146, 60, 0.35);
+  background: #18181B;
+  color: #A1A1AA;
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+.scribd-id-badge.active {
+  background: rgba(234, 88, 12, 0.12) !important;
+  color: #EA580C !important;
+  border-color: rgba(234, 88, 12, 0.35) !important;
+}
+
+html.dark .scribd-id-badge.active,
+.dark .scribd-id-badge.active {
+  background: rgba(249, 115, 22, 0.18) !important;
+  color: #FB923C !important;
+  border-color: rgba(251, 146, 60, 0.45) !important;
 }
 
 /* Terracotta Action Button inside Omnibar */
@@ -281,7 +294,7 @@ html.dark .scribd-segmented-switcher,
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 9px;
   font-size: 11.5px;
   font-weight: 500;
@@ -290,6 +303,8 @@ html.dark .scribd-segmented-switcher,
   user-select: none;
   cursor: pointer;
   border: 1px solid transparent;
+  min-height: 38px;
+  touch-action: manipulation;
 }
 
 html.dark .scribd-segmented-tab,
@@ -485,7 +500,7 @@ html.dark .btn-book-action:hover,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 28px 16px;
+  padding: 32px 16px 96px 16px;
   text-align: center;
   gap: 6px;
 }

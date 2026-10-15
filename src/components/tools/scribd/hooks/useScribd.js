@@ -27,7 +27,7 @@ export function isScribdSearchUrl(raw) {
 
 export function isScribdHomeUrl(raw) {
   if (!raw || typeof raw !== 'string') return false;
-  const s = raw.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+  const s = raw.trim().replace(/^https?:\/\//i, '').replace(/^(?:[a-z0-9-]+\.)?scribd\.com\/?$/i, 'scribd.com');
   return s.toLowerCase() === 'scribd.com';
 }
 
@@ -38,8 +38,8 @@ export function extractScribdUrlOrId(raw) {
   // Reject search or home URLs immediately
   if (isScribdSearchUrl(str) || isScribdHomeUrl(str)) return null;
 
-  // 1. Specific Scribd Document URL pattern
-  const docUrlMatch = str.match(/https?:\/\/(?:www\.)?scribd\.com\/(?:document|doc|presentation|embeds|d)\/(\d{6,15})(?:[^\s]*)/i);
+  // 1. Specific Scribd Document URL pattern (supports www, vi, es, id, m, etc.)
+  const docUrlMatch = str.match(/https?:\/\/(?:[a-z0-9-]+\.)?scribd\.com\/(?:document|doc|presentation|embeds|d)\/(\d{6,15})(?:[^\s]*)/i);
   if (docUrlMatch) return docUrlMatch[0].replace(/[)\]'",;]+$/, '');
 
   // 2. Pure standalone numeric ID only

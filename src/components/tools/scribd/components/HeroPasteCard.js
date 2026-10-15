@@ -1,7 +1,8 @@
 /**
  * HeroPasteCard Component - Stitch Editorial Bento Command Deck
  * Scoped for Scribd Document Archiver.
- * Implements 1-click clipboard paste, unified recessed Omnibar, and dynamic ID preview.
+ * Implements 1-click clipboard paste, unified recessed Omnibar, dynamic ID preview,
+ * and seamless loading transformation with integrated cancel button.
  */
 
 export function renderHeroPasteCard(state) {
@@ -12,8 +13,8 @@ export function renderHeroPasteCard(state) {
       <div class="scribd-command-deck space-y-3.5 relative overflow-hidden select-none">
         <div class="scribd-hero-top-stripe"></div>
 
-        <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status) -->
-        <div class="flex items-center justify-between gap-3 pt-0.5">
+        <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status + Controls) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-0.5">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
               <i data-lucide="book-open" class="w-5 h-5"></i>
@@ -33,36 +34,51 @@ export function renderHeroPasteCard(state) {
             </div>
           </div>
 
-          <!-- Quick Reset/Cancel Action -->
-          <div class="flex items-center gap-2 shrink-0">
+          <!-- Right: Inline Toggle Pill & Reset Button (Preserved during loading) -->
+          <div class="flex items-center gap-2.5 shrink-0 select-none">
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 select-none text-xs font-medium text-zinc-500 dark:text-zinc-400 opacity-60 cursor-not-allowed min-h-[44px] touch-manipulation" title="Đang xử lý tải xuống...">
+              <input type="checkbox" id="chkScribdForceReload" class="sr-only peer" disabled />
+              <span class="w-7 h-4 bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-[#EA580C] rounded-full relative transition-colors duration-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-3"></span>
+              <span class="text-[11.5px]">Tải bản mới</span>
+            </label>
+
             <button
               type="button"
-              id="scribdHeroCancelBtn"
-              class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition active:scale-[0.98] cursor-pointer min-h-[44px] touch-manipulation"
-              title="Hủy tiến trình tải"
+              id="btnResetScribdState"
+              class="p-2 rounded-xl text-zinc-400 hover:text-[#EA580C] dark:hover:text-orange-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition cursor-pointer select-none min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
+              title="Đặt lại trạng thái"
             >
-              <i data-lucide="circle-x" class="w-4 h-4"></i>
-              <span class="hidden xs:inline">Hủy</span>
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
             </button>
           </div>
         </div>
 
-        <!-- Recessed Omnibar in Processing State -->
+        <!-- Recessed Omnibar in Processing State with Spinner & Integrated Cancel Button -->
         <div class="scribd-omnibar opacity-95">
-          <span id="scribdIdBadge" class="scribd-id-badge shrink-0">
+          <span id="scribdIdBadge" class="scribd-id-badge active shrink-0">
             ${state.currentJobId ? `ID #${state.currentJobId.slice(0, 8)}` : 'SCRIBD'}
           </span>
-          <div class="flex-1 px-3 py-2 text-xs sm:text-sm font-mono text-zinc-600 dark:text-zinc-400 truncate min-w-0">
+          <div class="flex-1 px-3 py-2 text-xs sm:text-sm font-mono text-zinc-700 dark:text-zinc-300 truncate min-w-0">
             ${state.currentDocTitle || 'Tiến trình xuất PDF đang hoạt động...'}
           </div>
+          <!-- Right Integrated Action Button: "Đang xử lý..." Alongside Compact "Hủy" Button -->
           <div class="flex items-center gap-2 shrink-0">
-            <div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-[#EA580C] shadow-2xs select-none min-h-[40px]">
+            <div class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[#EA580C] shadow-2xs select-none min-h-[44px]">
               <svg class="animate-spin w-4 h-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
               </svg>
-              <span id="scribdPasteBtnTitle">Đang xử lý</span>
+              <span id="scribdPasteBtnTitle">Đang xử lý...</span>
             </div>
+            <button
+              type="button"
+              id="scribdHeroCancelBtn"
+              class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition active:scale-[0.98] cursor-pointer min-h-[44px] touch-manipulation"
+              title="Hủy tiến trình tải"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+              <span>Hủy</span>
+            </button>
           </div>
         </div>
       </div>
@@ -156,11 +172,10 @@ export function renderHeroPasteCard(state) {
             <button
               type="submit"
               id="btnManualSubmitScribd"
-              class="btn-omnibar-action hidden inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-2xs select-none min-h-[44px] touch-manipulation cursor-pointer"
+              class="btn-omnibar-action hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-2xs select-none min-h-[44px] touch-manipulation cursor-pointer"
               title="Bắt đầu tải tài liệu"
             >
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
-              <span>Tải PDF</span>
+              <span>Tải PDF &rarr;</span>
             </button>
           </div>
         </div>

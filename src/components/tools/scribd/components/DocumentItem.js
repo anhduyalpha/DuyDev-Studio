@@ -99,7 +99,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
         </div>
 
         <!-- Right: Action Buttons Strip -->
-        <div class="file-actions flex items-center gap-1.5 sm:self-center shrink-0 pt-1 sm:pt-0">
+        <div class="file-actions flex flex-wrap items-center gap-1.5 sm:self-center shrink-0 pt-1 sm:pt-0">
           ${!isTrash ? `
             <button
               type="button"
@@ -133,7 +133,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
               title="Lưu vào Drive"
             >
               <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
-              <span class="hidden xs:inline">Drive</span>
+              <span>Drive</span>
             </button>
 
             <button

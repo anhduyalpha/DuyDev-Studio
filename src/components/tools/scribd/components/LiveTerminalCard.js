@@ -52,6 +52,16 @@ export function renderTerminalLogs(logs) {
   }).join('');
 }
 
+export function renderStepIcon(isDone, isActive) {
+  if (isDone) {
+    return `<svg class="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+  }
+  if (isActive) {
+    return `<svg class="w-3.5 h-3.5 shrink-0 animate-pulse text-[#EA580C]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M4.9 19.1C1 15.2 1 8.9 4.9 5.1"/></svg>`;
+  }
+  return `<svg class="w-3.5 h-3.5 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+}
+
 export function getStatusBadgeHtml(state) {
   if (state.isDownloading) {
     return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-orange-500/20 text-[#EA580C] dark:text-orange-400 border border-orange-500/30 animate-pulse">ĐANG XỬ LÝ</span>';
@@ -71,24 +81,31 @@ export function renderLiveTerminalCard(state) {
   const statusBadge = getStatusBadgeHtml(state);
   const pct = Number(state.progress || 5);
 
-  const step1Class = pct >= 25 ? 'step-done' : 'step-active';
-  const step2Class = pct >= 85 ? 'step-done' : (pct >= 25 ? 'step-active' : '');
-  const step3Class = pct >= 100 ? 'step-done' : (pct >= 85 ? 'step-active' : '');
+  const step1Done = pct >= 25;
+  const step1Active = !step1Done;
+  const step2Done = pct >= 85;
+  const step2Active = !step2Done && pct >= 25;
+  const step3Done = pct >= 100;
+  const step3Active = !step3Done && pct >= 85;
+
+  const step1Class = step1Done ? 'step-done' : 'step-active';
+  const step2Class = step2Done ? 'step-done' : (step2Active ? 'step-active' : '');
+  const step3Class = step3Done ? 'step-done' : (step3Active ? 'step-active' : '');
 
   return `
     <div id="scribdTerminalCard" class="scribd-progress-panel ${isVisible ? '' : 'hidden'} p-4 sm:p-5 space-y-4">
       <!-- 1. Segmented Step Indicator -->
       <div class="scribd-step-container">
         <div id="scribdStep1" class="scribd-step-item ${step1Class}">
-          <i data-lucide="${pct >= 25 ? 'check' : 'radio'}" class="w-3.5 h-3.5 shrink-0 ${pct < 25 ? 'animate-pulse text-[#EA580C]' : ''}"></i>
+          <span class="step-icon-wrap flex items-center">${renderStepIcon(step1Done, step1Active)}</span>
           <span class="truncate">1. Kết nối</span>
         </div>
         <div id="scribdStep2" class="scribd-step-item ${step2Class}">
-          <i data-lucide="${pct >= 85 ? 'check' : (pct >= 25 ? 'radio' : 'clock')}" class="w-3.5 h-3.5 shrink-0 ${pct >= 25 && pct < 85 ? 'animate-pulse text-[#EA580C]' : ''}"></i>
+          <span class="step-icon-wrap flex items-center">${renderStepIcon(step2Done, step2Active)}</span>
           <span class="truncate">2. Tải trang</span>
         </div>
         <div id="scribdStep3" class="scribd-step-item ${step3Class}">
-          <i data-lucide="${pct >= 100 ? 'check' : (pct >= 85 ? 'radio' : 'file-check')}" class="w-3.5 h-3.5 shrink-0 ${pct >= 85 && pct < 100 ? 'animate-pulse text-[#EA580C]' : ''}"></i>
+          <span class="step-icon-wrap flex items-center">${renderStepIcon(step3Done, step3Active)}</span>
           <span class="truncate">3. Đóng gói PDF</span>
         </div>
       </div>
@@ -138,34 +155,33 @@ export function renderLiveTerminalCard(state) {
           </button>
 
           <div class="flex items-center gap-2">
-            ${isRunning ? `
-              <button
-                type="button"
-                id="scribdCancelBtn"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 border border-rose-500/25 transition cursor-pointer select-none min-h-[44px] touch-manipulation"
-                title="Hủy tiến trình"
-              >
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                <span>Hủy</span>
-              </button>
-            ` : ''}
+            <!-- Cancel Button (Active while running) -->
+            <button
+              type="button"
+              id="scribdCancelBtn"
+              class="${isRunning ? '' : 'hidden '}inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition cursor-pointer select-none min-h-[44px] touch-manipulation"
+              title="Hủy tiến trình"
+            >
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              <span>Hủy</span>
+            </button>
 
-            ${!isRunning ? `
-              <button
-                type="button"
-                id="scribdDismissErrorBtn"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer select-none min-h-[44px] touch-manipulation"
-                title="Đóng bảng"
-              >
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                <span>Đóng</span>
-              </button>
-            ` : ''}
+            <!-- Dismiss Error Button (Active when idle/failed) -->
+            <button
+              type="button"
+              id="scribdDismissErrorBtn"
+              class="${!isRunning ? '' : 'hidden '}inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer select-none min-h-[44px] touch-manipulation"
+              title="Đóng bảng thông báo"
+            >
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              <span>Đóng</span>
+            </button>
 
+            <!-- Copy Logs Button -->
             <button
               type="button"
               id="scribdCopyLogsBtn"
-              class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/60 transition cursor-pointer select-none min-h-[44px] touch-manipulation"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/60 transition cursor-pointer select-none min-h-[44px] touch-manipulation"
               title="Sao chép toàn bộ nhật ký"
             >
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>

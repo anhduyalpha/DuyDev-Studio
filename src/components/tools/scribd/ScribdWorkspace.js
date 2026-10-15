@@ -6,7 +6,7 @@
  */
 
 import { renderHeroPasteCard } from './components/HeroPasteCard.js';
-import { renderLiveTerminalCard, renderTerminalLogs } from './components/LiveTerminalCard.js';
+import { renderLiveTerminalCard, renderTerminalLogs, renderStepIcon } from './components/LiveTerminalCard.js';
 import { renderDocumentListCard, renderDocumentItemsHtml } from './components/DocumentListCard.js';
 import { renderSlideConfirmModal, openSlideConfirmModal } from './components/SlideConfirmModal.js';
 import { scribdManager, validateScribdUrlOrId, extractScribdUrlOrId, isScribdSearchUrl } from './hooks/useScribd.js';
@@ -21,8 +21,9 @@ export function renderScribdWorkspace() {
       <!-- Breadcrumb Header with Brand Terracotta Identity -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-          <a href="#" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
+          <a href="#" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs min-h-[44px]">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            <span>Dashboard</span>
           </a>
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-orange-700 dark:text-orange-400 font-semibold truncate inline-flex items-center gap-1.5">
@@ -32,11 +33,11 @@ export function renderScribdWorkspace() {
         </div>
       </div>
 
-      <!-- Stitch Bento Command Deck Top Card -->
-      <div id="scribdHeroContainer">${renderHeroPasteCard(state)}</div>
-
-      <!-- Integrated Compact Progress Drawer -->
-      <div id="scribdTerminalContainer">${renderLiveTerminalCard(state)}</div>
+      <!-- Stitch Bento Command Deck & Integrated Progress Panel -->
+      <div class="space-y-2.5">
+        <div id="scribdHeroContainer">${renderHeroPasteCard(state)}</div>
+        <div id="scribdTerminalContainer">${renderLiveTerminalCard(state)}</div>
+      </div>
 
       <!-- Stitch Editorial Bookshelf -->
       <div id="scribdListContainer">${renderDocumentListCard(state)}</div>
@@ -95,10 +96,10 @@ export function attachScribdListeners() {
         const numericMatch = candidate.match(/\d{6,15}/);
         const displayId = numericMatch ? numericMatch[0] : candidate;
         idBadge.textContent = `ID #${displayId}`;
-        idBadge.classList.add('bg-orange-500/20', 'border-orange-500/40');
+        idBadge.classList.add('active');
       } else {
         idBadge.textContent = 'SCRIBD';
-        idBadge.classList.remove('bg-orange-500/20', 'border-orange-500/40');
+        idBadge.classList.remove('active');
       }
     }
 
@@ -231,6 +232,8 @@ export function attachScribdListeners() {
             const txt = document.getElementById('scribdCopyLogsText');
             if (txt) { txt.textContent = 'Đã chép'; setTimeout(() => { txt.textContent = 'Sao chép'; }, 1500); }
             showToast('Đã sao chép nhật ký', 'success');
+          }).catch(() => {
+            showToast('Không thể sao chép nhật ký vào clipboard', 'warning');
           });
         }
       };
@@ -288,7 +291,7 @@ export function attachScribdListeners() {
     });
 
     container.querySelectorAll('.btn-dl').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.onclick = () => {
         const docName = btn.getAttribute('data-doc-name') || btn.getAttribute('download');
         if (docName) {
           scribdManager.markAsDownloaded(docName, true);
@@ -297,7 +300,7 @@ export function attachScribdListeners() {
         if (fileItem) {
           fileItem.classList.add('file-item-downloaded', 'file-item-just-downloaded');
         }
-      });
+      };
     });
   }
 
@@ -350,10 +353,15 @@ export function attachScribdListeners() {
 
     if (heroEl && state.isDownloading !== prevDownloading) {
       const currentVal = document.getElementById('scribdUrlInput')?.value || '';
+      const wasForceReload = Boolean(document.getElementById('chkScribdForceReload')?.checked);
       heroEl.innerHTML = renderHeroPasteCard(state);
       const newInput = document.getElementById('scribdUrlInput');
       if (newInput && currentVal) {
         newInput.value = currentVal;
+      }
+      const newToggle = document.getElementById('chkScribdForceReload');
+      if (newToggle) {
+        newToggle.checked = wasForceReload;
       }
       prevDownloading = state.isDownloading;
       attachHeroHandlers();
@@ -408,9 +416,33 @@ export function attachScribdListeners() {
       const s1 = document.getElementById('scribdStep1');
       const s2 = document.getElementById('scribdStep2');
       const s3 = document.getElementById('scribdStep3');
-      if (s1) s1.className = `scribd-step-item ${pct >= 25 ? 'step-done' : 'step-active'}`;
-      if (s2) s2.className = `scribd-step-item ${pct >= 85 ? 'step-done' : (pct >= 25 ? 'step-active' : '')}`;
-      if (s3) s3.className = `scribd-step-item ${pct >= 100 ? 'step-done' : (pct >= 85 ? 'step-active' : '')}`;
+      const step1Done = pct >= 25;
+      const step1Active = !step1Done;
+      const step2Done = pct >= 85;
+      const step2Active = !step2Done && pct >= 25;
+      const step3Done = pct >= 100;
+      const step3Active = !step3Done && pct >= 85;
+
+      if (s1) {
+        s1.className = `scribd-step-item ${step1Done ? 'step-done' : 'step-active'}`;
+        const wrap = s1.querySelector('.step-icon-wrap');
+        if (wrap) wrap.innerHTML = renderStepIcon(step1Done, step1Active);
+      }
+      if (s2) {
+        s2.className = `scribd-step-item ${step2Done ? 'step-done' : (step2Active ? 'step-active' : '')}`;
+        const wrap = s2.querySelector('.step-icon-wrap');
+        if (wrap) wrap.innerHTML = renderStepIcon(step2Done, step2Active);
+      }
+      if (s3) {
+        s3.className = `scribd-step-item ${step3Done ? 'step-done' : (step3Active ? 'step-active' : '')}`;
+        const wrap = s3.querySelector('.step-icon-wrap');
+        if (wrap) wrap.innerHTML = renderStepIcon(step3Done, step3Active);
+      }
+
+      const cancelBtn = document.getElementById('scribdCancelBtn');
+      if (cancelBtn) cancelBtn.classList.toggle('hidden', !state.isDownloading);
+      const dismissBtn = document.getElementById('scribdDismissErrorBtn');
+      if (dismissBtn) dismissBtn.classList.toggle('hidden', state.isDownloading);
     }
 
     const itemsEl = document.getElementById('scribdItemsContainer');

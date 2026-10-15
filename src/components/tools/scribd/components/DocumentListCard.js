@@ -2,7 +2,7 @@
  * DocumentListCard Component - Stitch Editorial Bookshelf
  * Scoped for Scribd Document Archiver.
  * Implements unified segmented header bar, compact horizontal search+sort bar,
- * book-spine item rows, and refined empty states.
+ * book-spine item rows, and refined empty states with bottom navigation protection.
  */
 
 import { renderDocumentItem } from './DocumentItem.js';
@@ -26,14 +26,14 @@ export function renderDocumentItemsHtml(items, isTrash, options = {}) {
   }
 
   return `
-    <div class="scribd-bookshelf-empty">
-      <div class="w-9 h-9 rounded-xl bg-orange-500/10 dark:bg-orange-500/15 text-[#EA580C] dark:text-orange-400 flex items-center justify-center mb-1">
-        <i data-lucide="${isTrash ? 'trash-2' : 'book-open'}" class="w-4 h-4"></i>
+    <div class="scribd-bookshelf-empty pb-24 sm:pb-16">
+      <div class="w-10 h-10 rounded-xl bg-orange-500/10 dark:bg-orange-500/15 text-[#EA580C] dark:text-orange-400 flex items-center justify-center mb-1">
+        <i data-lucide="${isTrash ? 'trash-2' : 'book-open'}" class="w-5 h-5"></i>
       </div>
       <p class="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
         ${isTrash ? 'Thùng rác trống' : 'Chưa có tài liệu nào trên kệ'}
       </p>
-      <p class="text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xs">
+      <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400 max-w-xs">
         ${isTrash ? 'Các tài liệu bị xóa sẽ được lưu trữ tạm thời tại đây.' : 'Dán liên kết tài liệu Scribd vào thanh nhập lệnh ở trên để tải.'}
       </p>
     </div>
@@ -80,7 +80,7 @@ export function renderDocumentListCard(state) {
           <div class="scribd-segmented-switcher">
             <button
               type="button"
-              class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'pdf' ? 'active' : ''}"
+              class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'pdf' ? 'active' : ''} min-h-[40px] touch-manipulation cursor-pointer"
               data-tab="pdf"
             >
               <span>Tất cả</span>
@@ -88,10 +88,10 @@ export function renderDocumentListCard(state) {
             </button>
             <button
               type="button"
-              class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'trash' ? 'active' : ''}"
+              class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'trash' ? 'active' : ''} min-h-[40px] touch-manipulation cursor-pointer"
               data-tab="trash"
             >
-              <i data-lucide="trash-2" class="w-3 h-3"></i>
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               <span>Thùng rác</span>
               <span class="text-[10px] font-mono opacity-80">(${counts.trash || 0})</span>
             </button>
@@ -101,7 +101,7 @@ export function renderDocumentListCard(state) {
             <button
               type="button"
               id="btnEmptyScribdTrash"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition cursor-pointer min-h-[38px] touch-manipulation"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition cursor-pointer min-h-[44px] touch-manipulation"
               title="Dọn sạch thùng rác"
             >
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -112,10 +112,10 @@ export function renderDocumentListCard(state) {
           <button
             type="button"
             id="btnRefreshScribdList"
-            class="inline-flex items-center justify-center p-2 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 border border-zinc-200/80 dark:border-zinc-700/60 transition cursor-pointer min-h-[38px] min-w-[38px] touch-manipulation"
+            class="inline-flex items-center justify-center p-2 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 border border-zinc-200/80 dark:border-zinc-700/60 transition cursor-pointer min-h-[44px] min-w-[44px] touch-manipulation"
             title="Làm mới danh sách"
           >
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
@@ -124,18 +124,18 @@ export function renderDocumentListCard(state) {
       <div class="flex items-center gap-2 pt-0.5">
         <!-- Search Input -->
         <div class="relative flex-1 min-w-0">
-          <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <i data-lucide="search" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           <input
             type="text"
             id="scribdSearchInput"
             value="${escapeHtml(state.searchQuery || '')}"
             placeholder="Lọc theo tên..."
-            class="w-full pl-9 pr-8 py-2 text-xs font-sans bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#EA580C] min-h-[40px] transition"
+            class="w-full pl-9 pr-9 py-2 text-xs sm:text-sm font-sans bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#EA580C] min-h-[44px] transition"
           />
           <button
             type="button"
             id="btnClearScribdSearch"
-            class="${state.searchQuery ? '' : 'hidden '}absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer min-h-[32px] min-w-[32px] inline-flex items-center justify-center"
+            class="${state.searchQuery ? '' : 'hidden '}absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer min-h-[40px] min-w-[40px] inline-flex items-center justify-center touch-manipulation"
             title="Xóa tìm kiếm"
           >
             ✕
@@ -146,7 +146,7 @@ export function renderDocumentListCard(state) {
         <div class="shrink-0">
           <select
             id="scribdSortSelect"
-            class="py-2 px-2.5 text-xs bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-[#EA580C] min-h-[40px] cursor-pointer"
+            class="py-2 px-3 text-xs sm:text-sm bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-[#EA580C] min-h-[44px] cursor-pointer"
             title="Sắp xếp danh sách"
           >
             <option value="newest" ${state.sortOption === 'newest' ? 'selected' : ''}>Mới nhất</option>
