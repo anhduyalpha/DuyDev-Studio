@@ -169,24 +169,34 @@ class App {
 
       // Native Android lifecycle: suspend audio/video and stop coordinator heartbeat when app pauses
       window.addEventListener('ds:native-app-paused', () => {
+        document.documentElement.classList.add('app-backgrounded');
         document.querySelectorAll('audio, video').forEach((media) => {
           try { media.pause(); } catch {}
         });
         taskCoordinator.stopHeartbeat();
+        window.dispatchEvent(new CustomEvent('ds:visibility-change', { detail: { hidden: true } }));
       });
 
       // Native Android lifecycle: resume heartbeat when app returns to foreground
       window.addEventListener('ds:native-app-resumed', () => {
+        document.documentElement.classList.remove('app-backgrounded');
         taskCoordinator.updateHeartbeatState();
+        window.dispatchEvent(new CustomEvent('ds:visibility-change', { detail: { hidden: false } }));
       });
 
-      // Pause active media when browser/tab/app moves to background
+      // Global Page Visibility Governor: freeze animations, pause media, toggle app-backgrounded
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
+        const isHidden = document.hidden || document.visibilityState === 'hidden';
+        document.documentElement.classList.toggle('app-backgrounded', isHidden);
+        if (isHidden) {
           document.querySelectorAll('audio, video').forEach((media) => {
             try { media.pause(); } catch {}
           });
+          taskCoordinator.stopHeartbeat();
+        } else {
+          taskCoordinator.updateHeartbeatState();
         }
+        window.dispatchEvent(new CustomEvent('ds:visibility-change', { detail: { hidden: isHidden } }));
       });
     }
 

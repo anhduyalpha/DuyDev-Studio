@@ -35,7 +35,7 @@ export function renderHeroPasteCard(state) {
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div class="scribd-input-bar flex-1 flex items-center gap-2 px-3.5 py-2 min-h-[48px]">
             <span id="scribdIdBadge" class="scribd-id-badge active shrink-0">
-              ${state.currentJobId ? `ID #${state.currentJobId.slice(0, 8)}` : 'SCRIBD'}
+              ${state.currentJobId ? `ID #${state.currentJobId.slice(0, 8)}` : '#ID'}
             </span>
             <div class="flex-1 text-xs sm:text-sm font-mono text-zinc-700 dark:text-zinc-300 truncate min-w-0">
               ${state.currentDocTitle || 'Tiến trình xuất PDF đang hoạt động...'}
@@ -86,7 +86,7 @@ export function renderHeroPasteCard(state) {
       <form id="scribdDownloadForm" class="m-0 p-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5" onsubmit="event.preventDefault(); return false;">
         <!-- Row 1: Full-Width Clean Input Bar (Height: 48px) -->
         <div class="scribd-input-bar flex-1 flex items-center min-w-0">
-          <i data-lucide="link-2" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0 ml-3.5 mr-2"></i>
+          <i data-lucide="link-2" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0 mr-2"></i>
 
           <!-- Dynamic ID Badge: Only shown if valid ID detected -->
           <span id="scribdIdBadge" class="scribd-id-badge hidden shrink-0 mr-1.5" title="Định danh nguồn tài liệu Scribd"></span>

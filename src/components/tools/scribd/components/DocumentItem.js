@@ -16,8 +16,8 @@ function escapeHtml(str) {
 function formatCleanTime(timeStr) {
   if (!timeStr) return '';
   const str = String(timeStr).trim();
-  // Case 1: YYYY-MM-DD HH:mm:ss or YYYY-MM-DD HH:mm
-  const ymdMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}:\d{2})(?::\d{2})?$/);
+  // Case 1: YYYY-MM-DD[T or space]HH:mm(:ss)?(.fraction)?(Z/offset)?
+  const ymdMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T\s](\d{1,2}:\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
   if (ymdMatch) {
     const [, y, m, d, hm] = ymdMatch;
     const dd = d.padStart(2, '0');
@@ -25,7 +25,7 @@ function formatCleanTime(timeStr) {
     return `${dd}/${mm}/${y} ${hm}`;
   }
   // Case 2: DD/MM/YYYY HH:mm:ss -> DD/MM/YYYY HH:mm
-  const dmyMatch = str.match(/^(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\s+\d{1,2}:\d{2}):\d{2}$/);
+  const dmyMatch = str.match(/^(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\s+\d{1,2}:\d{2})(?::\d{2})?$/);
   if (dmyMatch) {
     return dmyMatch[1];
   }
@@ -41,7 +41,8 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
   const docName = doc.name || 'Tài liệu không tên';
   const docTitle = doc.title || docName;
   const docSize = doc.size || (doc.size_mb ? `${doc.size_mb} MB` : (doc.size_bytes ? `${(doc.size_bytes / (1024 * 1024)).toFixed(2)} MB` : ''));
-  const cleanTime = formatCleanTime(doc.time);
+  const rawTime = doc.time || doc.created_at || (doc.mtime ? new Date(doc.mtime * 1000).toISOString() : '');
+  const cleanTime = formatCleanTime(rawTime);
   const downloadUrl = `/api/v1/scribd/download/${encodeURIComponent(docName)}`;
   const streamUrl = `/api/v1/scribd/stream?file=${encodeURIComponent(docName)}`;
 

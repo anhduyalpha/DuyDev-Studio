@@ -326,7 +326,17 @@ export function attachScribdListeners() {
 
     const btnRefresh = document.getElementById('btnRefreshScribdList');
     if (btnRefresh) {
-      btnRefresh.onclick = () => scribdManager.refreshFiles();
+      btnRefresh.onclick = async () => {
+        const icon = btnRefresh.querySelector('i, svg');
+        if (icon) icon.classList.add('animate-spin');
+        try {
+          await scribdManager.refreshFiles();
+        } finally {
+          setTimeout(() => {
+            if (icon) icon.classList.remove('animate-spin');
+          }, 450);
+        }
+      };
     }
 
     const btnEmptyTrash = document.getElementById('btnEmptyScribdTrash');

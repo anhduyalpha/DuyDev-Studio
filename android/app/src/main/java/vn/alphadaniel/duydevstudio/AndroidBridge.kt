@@ -50,6 +50,20 @@ class AndroidBridge(
     }
 
     /**
+     * Controls FLAG_KEEP_SCREEN_ON wake-lock. Active only during critical foreground processing.
+     */
+    @JavascriptInterface
+    fun setKeepScreenOn(enabled: Boolean) {
+        activity.runOnUiThread {
+            if (enabled) {
+                activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+    }
+
+    /**
      * Return app version dynamically from Gradle BuildConfig.
      */
     @JavascriptInterface

@@ -17,6 +17,12 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const quizApiPath = path.join(rootDir, 'src/components/tools/quiz/hooks/quizApi.js');
   const appJsPath = path.join(rootDir, 'src/app.js');
   const mainActivityPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/MainActivity.kt');
+  const globalTaskDockPath = path.join(rootDir, 'src/components/layout/GlobalTaskDock.js');
+  const headerPath = path.join(rootDir, 'src/components/layout/Header.js');
+  const adminPagePath = path.join(rootDir, 'src/pages/AdminPage.js');
+  const visitorTrackerPath = path.join(rootDir, 'src/utilities/visitorTracker.js');
+  const taskCoordinatorPath = path.join(rootDir, 'src/utilities/taskCoordinator.js');
+  const adminIpTrafficPath = path.join(rootDir, 'src/components/admin/AdminIpTrafficManager.js');
 
   const swContent = fs.readFileSync(swPath, 'utf-8');
   const indexContent = fs.readFileSync(indexPath, 'utf-8');
@@ -28,6 +34,12 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const quizApiContent = fs.readFileSync(quizApiPath, 'utf-8');
   const appJsContent = fs.readFileSync(appJsPath, 'utf-8');
   const mainActivityContent = fs.readFileSync(mainActivityPath, 'utf-8');
+  const globalTaskDockContent = fs.readFileSync(globalTaskDockPath, 'utf-8');
+  const headerContent = fs.readFileSync(headerPath, 'utf-8');
+  const adminPageContent = fs.readFileSync(adminPagePath, 'utf-8');
+  const visitorTrackerContent = fs.readFileSync(visitorTrackerPath, 'utf-8');
+  const taskCoordinatorContent = fs.readFileSync(taskCoordinatorPath, 'utf-8');
+  const adminIpTrafficContent = fs.readFileSync(adminIpTrafficPath, 'utf-8');
 
   describe('1. Fastify Static Tiered Caching & ETag (Pillar 1)', () => {
     let app: FastifyInstance;
@@ -186,6 +198,32 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       const stopBlock = mainActivityContent.slice(stopIdx, stopIdx + 400);
       expect(stopBlock).toContain('CookieManager.getInstance().flush()');
     });
+
+    it('MainActivity.kt onPause and onStop must call webView.onPause(), pauseTimers(), and clear FLAG_KEEP_SCREEN_ON', () => {
+      const pauseIdx = mainActivityContent.indexOf('override fun onPause()');
+      const pauseBlock = mainActivityContent.slice(pauseIdx, pauseIdx + 600);
+      expect(pauseBlock).toContain('webView.onPause()');
+      expect(pauseBlock).toContain('webView.pauseTimers()');
+      expect(pauseBlock).toContain('window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)');
+
+      const stopIdx = mainActivityContent.indexOf('override fun onStop()');
+      const stopBlock = mainActivityContent.slice(stopIdx, stopIdx + 600);
+      expect(stopBlock).toContain('webView.onPause()');
+      expect(stopBlock).toContain('webView.pauseTimers()');
+      expect(stopBlock).toContain('window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)');
+    });
+
+    it('MainActivity.kt unlockHighRefreshRate must delegate to adaptive display mode 0 for LTPO power saving', () => {
+      expect(mainActivityContent).toContain('unlockHighRefreshRate()');
+      expect(mainActivityContent).toContain('params.preferredDisplayModeId = 0');
+    });
+
+    it('MainActivity.kt onDestroy must cleanly teardown and destroy WebView', () => {
+      const destroyIdx = mainActivityContent.indexOf('override fun onDestroy()');
+      expect(destroyIdx).toBeGreaterThan(-1);
+      const destroyBlock = mainActivityContent.slice(destroyIdx, destroyIdx + 500);
+      expect(destroyBlock).toContain('webView.destroy()');
+    });
   });
 
   describe('3. GPU Compositor & Shader Throttling (Pillar 3)', () => {
@@ -197,12 +235,29 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(completedBlock).not.toContain('animation: quiz-border-rotate');
     });
 
-    it('stitch-tokens.css body::before must isolate fixed background to dedicated GPU layer', () => {
+    it('stitch-tokens.css body::before must NOT retain will-change: transform to save VRAM on idle layers', () => {
       const beforeIdx = stitchContent.indexOf('body::before {');
       expect(beforeIdx).toBeGreaterThan(-1);
       const beforeBlock = stitchContent.slice(beforeIdx, beforeIdx + 400);
       expect(beforeBlock).toContain('transform: translateZ(0);');
-      expect(beforeBlock).toContain('will-change: transform;');
+      expect(beforeBlock).not.toContain('will-change: transform;');
+
+      // Sticky chrome headers and bottom navigation retain will-change
+      expect(stitchContent).toContain('.glass-panel');
+      expect(stitchContent).toContain('.glass-dock');
+      expect(stitchContent).toContain('will-change: transform;');
+    });
+
+    it('stitch-tokens.css must define html.app-backgrounded rule pausing animations and transitions', () => {
+      expect(stitchContent).toContain('html.app-backgrounded');
+      expect(stitchContent).toContain('animation-play-state: paused !important;');
+      expect(stitchContent).toContain('transition: none !important;');
+    });
+
+    it('GlobalTaskDock.js, AdminPage.js, and AdminIpTrafficManager.js must NOT use infinite animate-ping or animate-pulse on idle dots', () => {
+      expect(globalTaskDockContent).not.toContain('animate-ping');
+      expect(adminPageContent).not.toContain('animate-pulse');
+      expect(adminIpTrafficContent).not.toContain('animate-pulse');
     });
 
     it('studocu.css must include prefers-reduced-motion: reduce rule for border-beam-card', () => {
@@ -239,6 +294,43 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(appJsContent).toContain('taskCoordinator.stopHeartbeat()');
       expect(appJsContent).toContain("window.addEventListener('ds:native-app-resumed'");
       expect(appJsContent).toContain('taskCoordinator.updateHeartbeatState()');
+    });
+
+    it('app.js must handle visibilitychange and toggle app-backgrounded class', () => {
+      expect(appJsContent).toContain("document.addEventListener('visibilitychange'");
+      expect(appJsContent).toContain("document.documentElement.classList.toggle('app-backgrounded'");
+      expect(appJsContent).toContain("ds:visibility-change");
+    });
+
+    it('visitorTracker.js must double interval on mobile/APK, pause on hidden document, and handle native lifecycle events', () => {
+      expect(visitorTrackerContent).toContain('this.heartbeatIntervalMs = isMobileOrApk ? 50_000 : 25_000;');
+      expect(visitorTrackerContent).toContain("document.hidden || document.visibilityState === 'hidden'");
+      expect(visitorTrackerContent).toContain("window.addEventListener('ds:visibility-change'");
+      expect(visitorTrackerContent).toContain("window.addEventListener('ds:native-app-paused'");
+      expect(visitorTrackerContent).toContain("window.addEventListener('ds:native-app-resumed'");
+    });
+
+    it('AdminPage.js must suspend polling when document is hidden and remove visibility listener on stop', () => {
+      expect(adminPageContent).toContain("document.hidden || document.visibilityState === 'hidden' || isPollingPaused");
+      expect(adminPageContent).toContain("document.removeEventListener('visibilitychange', adminVisibilityHandler);");
+      expect(adminPageContent).toContain("window.addEventListener('ds:visibility-change', adminVisibilityHandler);");
+    });
+
+    it('Header.js must double telemetry interval on mobile/APK to 60s and debounce resume sync', () => {
+      expect(headerContent).toContain('const telemetryIntervalMs = isMobileOrApk ? 60000 : 30000;');
+      expect(headerContent).toContain('triggerDebouncedResumeSync();');
+      expect(headerContent).toContain("window.addEventListener('ds:visibility-change'");
+    });
+
+    it('taskCoordinator.js must throttle mobile heartbeat to 5000ms and govern Android screen wake-lock', () => {
+      expect(taskCoordinatorContent).toContain('const intervalMs = isMobileOrApk ? 5000 : 2500;');
+      expect(taskCoordinatorContent).toContain('window.AndroidBridge.setKeepScreenOn(!isHidden && hasRunning)');
+      expect(taskCoordinatorContent).toContain('window.AndroidBridge.setKeepScreenOn(false)');
+    });
+
+    it('AdminIpTrafficManager.js must throttle sessions polling on mobile to 16s and suspend on hidden tab', () => {
+      expect(adminIpTrafficContent).toContain('const sessionsIntervalMs = isMobileOrApk ? 16000 : 8000;');
+      expect(adminIpTrafficContent).toContain("if (document.hidden || document.visibilityState === 'hidden') return;");
     });
   });
 

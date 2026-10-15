@@ -173,15 +173,27 @@ export function attachHeaderListeners(onSearch) {
   // Initial telemetry fetch
   syncHeaderSystemTelemetry();
 
-  // Low-frequency background telemetry refresh (every 30s when tab is active)
+  // Low-frequency background telemetry refresh (60s on mobile/APK, 30s on desktop when active)
   let telemetryInterval = null;
+  let lastResumeFetchTime = Date.now();
+  const isMobileOrApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || ''));
+  const telemetryIntervalMs = isMobileOrApk ? 60000 : 30000;
+
+  const triggerDebouncedResumeSync = () => {
+    const now = Date.now();
+    if (now - lastResumeFetchTime >= 20000) {
+      lastResumeFetchTime = now;
+      syncHeaderSystemTelemetry();
+    }
+  };
+
   const startTelemetryTimer = () => {
     if (!telemetryInterval) {
       telemetryInterval = setInterval(() => {
-        if (typeof document !== 'undefined' && !document.hidden) {
+        if (typeof document !== 'undefined' && !document.hidden && document.visibilityState !== 'hidden') {
           syncHeaderSystemTelemetry();
         }
-      }, 30000);
+      }, telemetryIntervalMs);
     }
   };
   const stopTelemetryTimer = () => {
@@ -195,10 +207,10 @@ export function attachHeaderListeners(onSearch) {
 
   // Throttle timer on visibility change to preserve battery & avoid unnecessary wakeups
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
+    if (document.hidden || document.visibilityState === 'hidden') {
       stopTelemetryTimer();
     } else {
-      syncHeaderSystemTelemetry();
+      triggerDebouncedResumeSync();
       startTelemetryTimer();
     }
   });
@@ -206,7 +218,15 @@ export function attachHeaderListeners(onSearch) {
   // Handle native Android lifecycle pausing if dispatched
   window.addEventListener('ds:native-app-paused', stopTelemetryTimer);
   window.addEventListener('ds:native-app-resumed', () => {
-    syncHeaderSystemTelemetry();
+    triggerDebouncedResumeSync();
     startTelemetryTimer();
+  });
+  window.addEventListener('ds:visibility-change', (e) => {
+    if (e.detail?.hidden) {
+      stopTelemetryTimer();
+    } else {
+      triggerDebouncedResumeSync();
+      startTelemetryTimer();
+    }
   });
 }

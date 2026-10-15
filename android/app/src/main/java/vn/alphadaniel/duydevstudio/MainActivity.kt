@@ -184,6 +184,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (::webView.isInitialized) {
             evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-paused')); }")
             webView.onPause()
@@ -196,7 +197,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (::webView.isInitialized) {
+            webView.onPause()
+            webView.pauseTimers()
             try {
                 CookieManager.getInstance().flush()
             } catch (_: Exception) {}
@@ -222,6 +226,14 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (currentInstance == this) {
             currentInstance = null
+        }
+        if (::webView.isInitialized) {
+            try {
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.stopLoading()
+                webView.clearHistory()
+                webView.destroy()
+            } catch (_: Exception) {}
         }
         super.onDestroy()
     }
@@ -570,24 +582,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Unlocks high refresh rate (90Hz / 120Hz / 144Hz) for the WebView window on devices with adaptive display.
+     * Enables adaptive high refresh rate (90Hz / 120Hz / 144Hz) for the WebView window.
+     * Uses preferredDisplayModeId = 0 (system adaptive mode) rather than locking to a fixed frequency,
+     * allowing Android SurfaceFlinger & LTPO display hardware to downscale on static scenes (saving battery)
+     * and ramp up dynamically during active scrolling and touch gestures.
      */
     private fun unlockHighRefreshRate() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             try {
-                val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    display
-                } else {
-                    @Suppress("DEPRECATION")
-                    windowManager.defaultDisplay
-                }
-                val modes = display?.supportedModes
-                val maxMode = modes?.maxByOrNull { it.refreshRate }
-                if (maxMode != null && maxMode.refreshRate > 60f) {
-                    val params = window.attributes
-                    params.preferredDisplayModeId = maxMode.modeId
-                    window.attributes = params
-                }
+                val params = window.attributes
+                // Set preferredDisplayModeId = 0 to allow native adaptive refresh rate (LTPO power saving)
+                params.preferredDisplayModeId = 0
+                window.attributes = params
             } catch (_: Exception) {}
         }
     }

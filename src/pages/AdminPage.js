@@ -25,6 +25,7 @@ import { renderEngineTimeoutsCard, attachEngineTimeoutsListeners, fetchEngineTim
 
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
+let adminVisibilityHandler = null;
 let isPollingPaused = false;
 let latestTelemetryData = null;
 let cachedFailedJobsData = [];
@@ -169,7 +170,7 @@ function renderUnlockedDashboardView() {
             <h1 class="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
               Admin Mission Control
               <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
                 ACTIVE
               </span>
             </h1>
@@ -188,8 +189,8 @@ function renderUnlockedDashboardView() {
             id="btnToggleAdminTicker"
             class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
           >
-            <span class="w-2 h-2 rounded-full ${isPollingPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}"></span>
-            <span id="adminTickerText">${isPollingPaused ? 'Tiếp tục 3s' : 'Đang trực tiếp 3s'}</span>
+            <span class="w-2 h-2 rounded-full ${isPollingPaused ? 'bg-amber-400' : 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]'}"></span>
+            <span id="adminTickerText">${isPollingPaused ? `Tiếp tục ${typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || '')) ? '6s' : '3s'}` : `Đang trực tiếp ${typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || '')) ? '6s' : '3s'}`}</span>
           </button>
 
           <button
@@ -553,7 +554,7 @@ function renderUnlockedDashboardView() {
           <!-- Cloudflare Tunnel Status -->
           <div class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-white/5 flex items-center justify-between text-xs">
             <div class="flex items-center gap-2.5">
-              <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
               <div>
                 <div class="font-medium text-zinc-800 dark:text-zinc-200">Cloudflare Tunnel (HTTP/2 Multiplexing)</div>
                 <div class="text-zinc-500 dark:text-zinc-400 text-[11px] mt-0.5">Vượt bóp băng thông UDP QUIC của nhà mạng ISP</div>
@@ -1104,11 +1105,13 @@ export function attachAdminPageListeners(onRerender) {
   if (btnToggleTicker) {
     btnToggleTicker.onclick = () => {
       isPollingPaused = !isPollingPaused;
+      const isMobile = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || ''));
+      const secLabel = isMobile ? '6s' : '3s';
       const textEl = document.getElementById('adminTickerText');
       if (textEl) {
-        textEl.textContent = isPollingPaused ? 'Tiếp tục 3s' : 'Đang trực tiếp 3s';
+        textEl.textContent = isPollingPaused ? `Tiếp tục ${secLabel}` : `Đang trực tiếp ${secLabel}`;
       }
-      showToast(isPollingPaused ? 'Đã tạm dừng tự động làm mới' : 'Đã bật trực tiếp 3s', 'info');
+      showToast(isPollingPaused ? 'Đã tạm dừng tự động làm mới' : `Đã bật trực tiếp ${secLabel}`, 'info');
     };
   }
 
@@ -1491,32 +1494,45 @@ async function fetchAdminTelemetry(onRerender) {
 }
 
 /**
- * Starts 3s adaptive polling with battery-conscious background suspension
+ * Starts adaptive polling with battery-conscious background suspension
+ * Uses 6s interval on mobile/APK (2x) and 3s on desktop.
+ * Suspends polling completely when document.hidden === true.
+ * Debounces resume calls by at least 15s to avoid thundering herd on rapid switching.
  */
 function startAdminPolling(onRerender) {
   stopAdminPolling();
 
+  const isMobileOrApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || ''));
+  const pollIntervalMs = isMobileOrApk ? 6000 : 3000;
+
   telemetryPollingTimer = setInterval(() => {
     // Battery optimization: pause polling if tab is in background or manually paused
-    if (document.hidden || isPollingPaused) {
+    if (document.hidden || document.visibilityState === 'hidden' || isPollingPaused) {
       return;
     }
     fetchAdminTelemetry(onRerender);
-  }, 3000);
+  }, pollIntervalMs);
 
-  // Resume immediately on tab focus
-  const handleVisibility = () => {
-    if (!document.hidden && !isPollingPaused) {
-      fetchAdminTelemetry(onRerender);
+  let lastResumeFetch = 0;
+  adminVisibilityHandler = (e) => {
+    const isHidden = document.hidden || document.visibilityState === 'hidden' || Boolean(e?.detail?.hidden);
+    if (!isHidden && !isPollingPaused) {
+      const now = Date.now();
+      if (now - lastResumeFetch >= 15000) {
+        lastResumeFetch = now;
+        fetchAdminTelemetry(onRerender);
+      }
     }
   };
 
-  document.removeEventListener('visibilitychange', handleVisibility);
-  document.addEventListener('visibilitychange', handleVisibility);
+  document.addEventListener('visibilitychange', adminVisibilityHandler);
+  window.addEventListener('ds:visibility-change', adminVisibilityHandler);
+  window.addEventListener('ds:native-app-paused', stopAdminPolling);
+  window.addEventListener('ds:native-app-resumed', adminVisibilityHandler);
 }
 
 /**
- * Stops polling timer
+ * Stops polling timer and removes visibility change listener
  */
 export function stopAdminPolling() {
   if (telemetryPollingTimer) {
@@ -1526,5 +1542,12 @@ export function stopAdminPolling() {
   if (idleAutoLockTimer) {
     clearInterval(idleAutoLockTimer);
     idleAutoLockTimer = null;
+  }
+  if (adminVisibilityHandler) {
+    document.removeEventListener('visibilitychange', adminVisibilityHandler);
+    window.removeEventListener('ds:visibility-change', adminVisibilityHandler);
+    window.removeEventListener('ds:native-app-paused', stopAdminPolling);
+    window.removeEventListener('ds:native-app-resumed', adminVisibilityHandler);
+    adminVisibilityHandler = null;
   }
 }

@@ -236,11 +236,21 @@ html:not(.dark) .glass-panel {
               inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
 }
 
-/* Persistent Global Task Dock GPU Layer */
+/* ==============================================================================
+   Power & Battery Optimization: Global Sleep Governor
+   Completely suspends all animations, transitions and GPU repaint loops when backgrounded
+   ============================================================================== */
+html.app-backgrounded *,
+html.app-backgrounded *::before,
+html.app-backgrounded *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
+/* Global Task Dock Layer */
 #globalTaskDockCapsule,
 .global-task-dock-layer {
   transform: translateZ(0);
-  will-change: transform;
   backface-visibility: hidden;
 }
 
@@ -514,7 +524,6 @@ body::before {
   pointer-events: none;
   background-repeat: no-repeat;
   transform: translateZ(0);
-  will-change: transform;
   /* Mobile Default: Flowing smoothly through translucent frost glass */
   background-image: 
     radial-gradient(circle 440px at -5% -5%, rgba(99, 102, 241, 0.24) 0%, rgba(79, 70, 229, 0.12) 40%, transparent 75%),

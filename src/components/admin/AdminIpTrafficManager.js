@@ -127,7 +127,7 @@ function renderSessionCardsMarkup(devices) {
     if (isBlocked) {
       statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-500 border border-rose-500/30 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Đã bị chặn</span>`;
     } else if (isOnline) {
-      statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Đang online</span>`;
+      statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span> Đang online</span>`;
     } else if (isIdle) {
       statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1.5 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Tạm dừng</span>`;
     } else {
@@ -445,7 +445,7 @@ function renderSessionsView() {
         <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-white/5 space-y-1 shadow-xs">
           <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 font-medium">
             <span>Đang Online</span>
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
           </div>
           <div id="statSessionsOnline" class="text-2xl font-bold font-mono text-emerald-500">${onlineCount}</div>
           <div class="text-[11px] text-zinc-400">Thiết bị đang mở web</div>
@@ -528,7 +528,7 @@ function renderSessionsView() {
       <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-zinc-950/80 border border-white/5 space-y-3 shadow-lg">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
             <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider font-mono">
               Dòng Sự Kiện Vào / Ra Web Trực Tiếp (Live Activity Stream)
             </h3>
@@ -584,7 +584,7 @@ export function renderIpTrafficManager() {
             id="subTabBtnSessions"
             class="w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${activeSubTab === 'sessions' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
           >
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)] shrink-0"></span>
             <span class="truncate">Khách Vào/Ra (Live)</span>
           </button>
           <button
@@ -1503,23 +1503,59 @@ export function attachIpTrafficListeners(containerEl) {
   const subViewUsers = containerEl.querySelector('#subViewUserAccounts');
 
   let sessionsPollTimer = null;
+  let sessionsVisibilityHandler = null;
+  const isMobileOrApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || ''));
+  const sessionsIntervalMs = isMobileOrApk ? 16000 : 8000;
 
   const stopSessionsPolling = () => {
     if (sessionsPollTimer) {
       clearInterval(sessionsPollTimer);
       sessionsPollTimer = null;
     }
+    if (sessionsVisibilityHandler) {
+      document.removeEventListener('visibilitychange', sessionsVisibilityHandler);
+      window.removeEventListener('ds:visibility-change', sessionsVisibilityHandler);
+      window.removeEventListener('ds:native-app-paused', stopSessionsPolling);
+      sessionsVisibilityHandler = null;
+    }
   };
 
   const startSessionsPolling = () => {
     stopSessionsPolling();
     sessionsPollTimer = setInterval(() => {
+      if (document.hidden || document.visibilityState === 'hidden') return;
       if (activeSubTab === 'sessions' && document.contains(containerEl)) {
         fetchAndRenderSessionsData(true);
       } else {
         stopSessionsPolling();
       }
-    }, 8000);
+    }, sessionsIntervalMs);
+
+    let lastResumeFetch = 0;
+    sessionsVisibilityHandler = (e) => {
+      const isHidden = document.hidden || document.visibilityState === 'hidden' || Boolean(e?.detail?.hidden);
+      if (isHidden) {
+        if (sessionsPollTimer) {
+          clearInterval(sessionsPollTimer);
+          sessionsPollTimer = null;
+        }
+      } else {
+        if (activeSubTab === 'sessions' && document.contains(containerEl)) {
+          const now = Date.now();
+          if (now - lastResumeFetch >= 15000) {
+            lastResumeFetch = now;
+            fetchAndRenderSessionsData(true);
+          }
+          if (!sessionsPollTimer) {
+            startSessionsPolling();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', sessionsVisibilityHandler);
+    window.addEventListener('ds:visibility-change', sessionsVisibilityHandler);
+    window.addEventListener('ds:native-app-paused', stopSessionsPolling);
   };
 
   const activeTabClasses = 'w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs border border-zinc-200/50 dark:border-white/10';

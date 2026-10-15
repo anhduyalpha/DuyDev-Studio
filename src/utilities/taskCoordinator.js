@@ -63,15 +63,32 @@ class TaskCoordinator {
     this.initialized = true;
 
     if (typeof window !== 'undefined') {
-      // Dynamic lifecycle management: pause timers when page/app is in background
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
+      // Dynamic lifecycle management: pause timers and release wake-locks when backgrounded
+      const handleVisibility = () => {
+        const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+        if (isHidden) {
+          this.stopHeartbeat();
+        } else {
+          this.syncTasks(true);
+          this.updateHeartbeatState();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibility);
+      window.addEventListener('ds:visibility-change', (e) => {
+        if (e.detail?.hidden) {
           this.stopHeartbeat();
         } else {
           this.syncTasks(true);
           this.updateHeartbeatState();
         }
       });
+      window.addEventListener('ds:native-app-paused', () => this.stopHeartbeat());
+      window.addEventListener('ds:native-app-resumed', () => {
+        this.syncTasks(true);
+        this.updateHeartbeatState();
+      });
+
       this.updateHeartbeatState();
     }
   }
@@ -82,7 +99,17 @@ class TaskCoordinator {
 
   updateHeartbeatState() {
     if (typeof window === 'undefined') return;
-    if (document.hidden || !this.hasActiveRunningTasks()) {
+    const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+    const hasRunning = this.hasActiveRunningTasks();
+
+    // Hardware wake-lock governor: acquire screen wake-lock ONLY while foreground tasks run
+    if (window.AndroidBridge && typeof window.AndroidBridge.setKeepScreenOn === 'function') {
+      try {
+        window.AndroidBridge.setKeepScreenOn(!isHidden && hasRunning);
+      } catch {}
+    }
+
+    if (isHidden || !hasRunning) {
       this.stopHeartbeat();
     } else if (!this.heartbeatTimer) {
       this.startHeartbeat();
@@ -91,15 +118,22 @@ class TaskCoordinator {
 
   startHeartbeat() {
     if (this.heartbeatTimer || typeof window === 'undefined') return;
+    const isMobileOrApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || ''));
+    const intervalMs = isMobileOrApk ? 5000 : 2500;
     this.heartbeatTimer = window.setInterval(() => {
       this.syncTasks();
-    }, 2500);
+    }, intervalMs);
   }
 
   stopHeartbeat() {
     if (this.heartbeatTimer) {
       window.clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
+    }
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.setKeepScreenOn === 'function') {
+      try {
+        window.AndroidBridge.setKeepScreenOn(false);
+      } catch {}
     }
   }
 

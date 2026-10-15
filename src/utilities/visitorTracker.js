@@ -17,7 +17,9 @@ class VisitorTracker {
     this.heartbeatTimer = null;
     this.isInitialized = false;
     this.leaveReported = false;
-    this.heartbeatIntervalMs = 25_000; // 25s heartbeat while active
+    // 2x interval on mobile/APK (window.AndroidBridge or mobile UA) to reduce cellular/Wi-Fi radio wake-ups
+    const isMobileOrApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || /Android|iPhone|iPad|iPod/i.test(navigator?.userAgent || ''));
+    this.heartbeatIntervalMs = isMobileOrApk ? 50_000 : 25_000;
   }
 
   init() {
@@ -57,16 +59,38 @@ class VisitorTracker {
     // 4. Start Periodic Heartbeat
     this.startHeartbeat();
 
-    // 5. Visibility Change (pause heartbeat when tab hidden, resume & tick when visible)
+    // 5. Visibility Change (pause heartbeat when tab/app hidden, resume & tick when visible with debounce)
+    let lastResumeHeartbeatTime = 0;
+    const handleForeground = () => {
+      this.leaveReported = false;
+      this.startHeartbeat();
+      const now = Date.now();
+      if (now - lastResumeHeartbeatTime >= 20_000) {
+        lastResumeHeartbeatTime = now;
+        this.sendHeartbeat();
+      }
+    };
+    const handleBackground = () => {
+      this.stopHeartbeat();
+    };
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        this.leaveReported = false;
-        this.startHeartbeat();
-        this.sendHeartbeat();
+        handleForeground();
       } else {
-        this.stopHeartbeat();
+        handleBackground();
       }
     });
+
+    window.addEventListener('ds:visibility-change', (e) => {
+      if (e.detail?.hidden) {
+        handleBackground();
+      } else {
+        handleForeground();
+      }
+    });
+    window.addEventListener('ds:native-app-paused', handleBackground);
+    window.addEventListener('ds:native-app-resumed', handleForeground);
 
     // 6. Page Exit / Unload Beacon (pagehide is most reliable on mobile Safari & modern browsers)
     const handleExit = () => {
@@ -127,6 +151,7 @@ class VisitorTracker {
 
   sendHeartbeat(routeOverride = null) {
     if (!this.sessionId) return;
+    if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) return;
     try {
       const route = routeOverride || this.currentRoute || window.location.hash || '#dashboard';
       const isAdmin = Boolean(isAdminAuthenticated());

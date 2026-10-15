@@ -157,8 +157,7 @@ export function renderGlobalTaskDock(tasks = []) {
       >
         <div class="flex items-center gap-2 min-w-0 flex-1">
           <span class="relative flex h-2 w-2 shrink-0">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span class="inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
           </span>
           <span class="mobile-dock-text text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
             ${count > 1 ? `${count} tác vụ: ${primaryTitle}` : primaryTitle}
@@ -187,8 +186,7 @@ export function renderGlobalTaskDock(tasks = []) {
         <div class="flex items-center justify-between pb-1.5 mb-1 border-b border-black/[0.05] dark:border-white/[0.06] px-1">
           <div class="flex items-center gap-1.5">
             <span class="relative flex h-1.5 w-1.5 shrink-0">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              <span class="inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]"></span>
             </span>
             <span id="dockTaskCountText" class="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 tracking-tight">
               ${count} ${count === 1 ? 'tác vụ đang chạy' : 'tác vụ đang chạy'}

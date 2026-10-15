@@ -253,7 +253,7 @@ export function renderAiAgentsCard(aiData) {
                   </h4>
                   ${clsData.daemonStatus === 'running' ? `
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"></span>
                       Đang chạy (&lt;50ms)
                     </span>
                   ` : `
