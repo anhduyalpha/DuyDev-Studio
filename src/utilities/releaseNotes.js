@@ -1,0 +1,195 @@
+/**
+ * Release Notes & Changelog Registry for DuyDev Studio
+ * Maps version strings (e.g., 'v23.00', 'duydev-studio-v23.00') to structured release highlights:
+ * - features: Newly added capabilities and user-facing tools
+ * - fixes: Resolved bugs, layout fixes, and performance/ergonomics refinements
+ */
+
+export const RELEASE_NOTES_MAP = {
+  'v23.01': {
+    version: 'v23.01',
+    title: 'Bản cập nhật v23.01',
+    date: '16/10/2026',
+    features: [
+      'Thông báo cập nhật PWA: Hiển thị chi tiết tính năng mới & lỗi đã sửa theo từng phiên bản',
+      'Tự động đồng bộ thông tin phát hành khi có bản cập nhật mới trên máy chủ'
+    ],
+    fixes: [
+      'Loại bỏ hoàn toàn 3 câu mô tả cố định rập khuôn trong hộp thoại cập nhật',
+      'Tối ưu độ tương phản huy hiệu Chức năng mới và Tính năng đã sửa theo chuẩn giao diện Apple Obsidian'
+    ]
+  },
+  'v23.00': {
+    version: 'v23.00',
+    title: 'Bản cập nhật v23.00',
+    date: '16/10/2026',
+    features: [
+      'Kệ tài liệu Scribd: Tab chuyển Tất cả / Thùng rác dàn đều toàn chiều rộng, không bị ngắt chữ',
+      'Thêm nhóm công cụ Nâng cao (Bộ nhớ & Mã Băm) riêng biệt trên Trang chủ'
+    ],
+    fixes: [
+      'Sửa dứt điểm lỗi chữ nhảy 2 dòng ("Tất / cả", "Thùng / rác") trên màn hình hẹp',
+      'Thay thế icon PDF cồng kềnh bằng huy hiệu 38px, dàn đều nút thao tác 100% card',
+      'Loại bỏ nút xoay tròn mồ côi và dải viền tĩnh trong box dán link Scribd'
+    ]
+  },
+  'v22.99': {
+    version: 'v22.99',
+    title: 'Bản cập nhật v22.99',
+    date: '15/10/2026',
+    features: [
+      'Phân loại danh mục công cụ "Nâng cao" cho các tiện ích hệ thống'
+    ],
+    fixes: [
+      'Tối ưu hóa tiêu thụ pin và tài nguyên chạy ngầm'
+    ]
+  },
+  'v22.96': {
+    version: 'v22.96',
+    title: 'Bản cập nhật v22.96',
+    date: '15/10/2026',
+    features: [
+      'Giao diện Scribd Downloader chuẩn Stitch UI với viền xoay cam hổ phách 360°'
+    ],
+    fixes: [
+      'Sửa lỗi kẹt tiến trình 5% và từ chối liên kết tìm kiếm Scribd không hợp lệ'
+    ]
+  }
+};
+
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.01'];
+
+/**
+ * Normalizes any version string into standard 'vX.XX' key
+ * @param {string} [rawVer]
+ * @returns {string}
+ */
+export function normalizeVersionKey(rawVer) {
+  if (!rawVer) return 'v23.01';
+  const str = String(rawVer).trim();
+  const match = str.match(/v?\d+\.\d+/i);
+  if (match) {
+    return match[0].startsWith('v') ? match[0].toLowerCase() : `v${match[0]}`;
+  }
+  return str;
+}
+
+/**
+ * Retrieves release notes for a specific version or falls back to latest release
+ * @param {string} [version]
+ * @returns {{ version: string, title: string, features: string[], fixes: string[] }}
+ */
+export function getReleaseNotes(version) {
+  if (version) {
+    const key = normalizeVersionKey(version);
+    if (RELEASE_NOTES_MAP[key]) {
+      return RELEASE_NOTES_MAP[key];
+    }
+  }
+  return LATEST_RELEASE;
+}
+
+/**
+ * Safely escapes HTML special characters
+ * @param {string} str
+ * @returns {string}
+ */
+export function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Generates semantic HTML markup for the release notes highlights container in PWA update capsule
+ * @param {{ version?: string, features?: string[], fixes?: string[] }} notes
+ * @returns {string}
+ */
+export function renderReleaseHighlightsHtml(notes) {
+  const safeNotes = notes || LATEST_RELEASE;
+  const features = safeNotes.features || [];
+  const fixes = safeNotes.fixes || [];
+
+  if (features.length === 0 && fixes.length === 0) {
+    return `
+      <div style="display: flex; align-items: center; gap: 0.5rem; line-height: 1.4; padding: 0.25rem 0;">
+        <span style="color: #0071e3; font-weight: bold; flex-shrink: 0;">•</span>
+        <span style="color: var(--ds-up-hl-text); font-weight: 450;">Đã cập nhật phiên bản mới nhất với các cải tiến hệ thống.</span>
+      </div>
+    `;
+  }
+
+  let html = '';
+
+  // 1. Chức năng mới thêm vào (New Features)
+  if (features.length > 0) {
+    html += `
+      <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+        <div style="display: flex; align-items: center; gap: 0.375rem;">
+          <span style="
+            font-size: 0.6875rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #0071e3;
+            background: rgba(0, 113, 227, 0.12);
+            border: 0.5px solid rgba(0, 113, 227, 0.25);
+            padding: 0.125rem 0.4375rem;
+            border-radius: 0.375rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+          ">
+            <svg style="width: 0.6875rem; height: 0.6875rem;" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Chức năng mới</span>
+          </span>
+        </div>
+        ${features.map(feat => `
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.4; padding-left: 0.25rem;">
+            <span style="color: #0071e3; font-weight: bold; flex-shrink: 0; font-size: 0.8125rem; line-height: 1.2;">•</span>
+            <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.005em;">${escapeHtml(feat)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // 2. Tính năng mới sửa / Cải tiến (Bug Fixes & Refinements)
+  if (fixes.length > 0) {
+    html += `
+      <div style="display: flex; flex-direction: column; gap: 0.375rem; ${features.length > 0 ? 'margin-top: 0.375rem; padding-top: 0.5rem; border-top: var(--ds-up-hl-border);' : ''}">
+        <div style="display: flex; align-items: center; gap: 0.375rem;">
+          <span style="
+            font-size: 0.6875rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #ea580c;
+            background: rgba(234, 88, 12, 0.12);
+            border: 0.5px solid rgba(234, 88, 12, 0.25);
+            padding: 0.125rem 0.4375rem;
+            border-radius: 0.375rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+          ">
+            <svg style="width: 0.6875rem; height: 0.6875rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span>Tính năng mới sửa</span>
+          </span>
+        </div>
+        ${fixes.map(fix => `
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.4; padding-left: 0.25rem;">
+            <span style="color: #ea580c; font-weight: bold; flex-shrink: 0; font-size: 0.8125rem; line-height: 1.2;">•</span>
+            <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.005em;">${escapeHtml(fix)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  return html.trim();
+}

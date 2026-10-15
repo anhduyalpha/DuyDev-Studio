@@ -4,8 +4,13 @@
  * and exposes helpers for the Settings page.
  */
 
+import { getReleaseNotes, renderReleaseHighlightsHtml } from './releaseNotes.js';
+
 /** @type {ServiceWorkerRegistration | null} */
 let swRegistration = null;
+
+/** @type {string | null} */
+let latestDiscoveredServerVersion = null;
 
 /**
  * Check if PWA is running in standalone mode (installed on device).
@@ -18,7 +23,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v23.00';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v23.01';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -181,12 +186,21 @@ export async function executeTripleLockPurge(waitingWorker) {
 
 /**
  * Renders a prominent, centered Update Notification Center with blurred backdrop
- * (Dark Obsidian Glass aesthetic, version badge, 3 key highlights, in-flight task safety warning).
+ * (Dark Obsidian Glass aesthetic, version badge, structured release notes, in-flight task safety warning).
  * @param {ServiceWorker | null} waitingWorker
+ * @param {{ version?: string, notes?: { version?: string, features?: string[], fixes?: string[] } }} [options={}]
  */
-export function showUpdateNotificationCenter(waitingWorker) {
+export function showUpdateNotificationCenter(waitingWorker, options = {}) {
   if (typeof document === 'undefined' || !document.body || typeof document.createElement !== 'function') {
     return;
+  }
+
+  // Handle case where options object is passed as 1st parameter
+  let worker = waitingWorker;
+  let opts = options || {};
+  if (waitingWorker && typeof waitingWorker === 'object' && !('postMessage' in waitingWorker) && (waitingWorker.version || waitingWorker.notes)) {
+    opts = waitingWorker;
+    worker = null;
   }
 
   try {
@@ -221,7 +235,11 @@ export function showUpdateNotificationCenter(waitingWorker) {
     'transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
   ].join(';');
 
-  const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '') || 'v22.58';
+  const targetVersion = opts.version || opts.notes?.version || latestDiscoveredServerVersion || CURRENT_PWA_VERSION;
+  const displayVer = (opts.version ? opts.version.replace('duydev-studio-', '') : (latestDiscoveredServerVersion ? latestDiscoveredServerVersion.replace('duydev-studio-', '') : CURRENT_PWA_VERSION.replace('duydev-studio-', ''))) || 'v23.01';
+
+  const notes = opts.notes || getReleaseNotes(targetVersion);
+  const highlightsHtml = renderReleaseHighlightsHtml(notes);
 
   capsule.innerHTML = `
     <style>
@@ -417,30 +435,7 @@ export function showUpdateNotificationCenter(waitingWorker) {
 
       <!-- Release Notes Highlights -->
       <div id="ds-update-highlights" style="margin-top: 1.125rem; display: flex; flex-direction: column; gap: 0.625rem; padding: 0.8125rem 0.9375rem; border-radius: 0.875rem; background: var(--ds-up-hl-bg); border: var(--ds-up-hl-border); font-size: 0.8125rem;">
-        <div style="display: flex; align-items: center; gap: 0.625rem;">
-          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: var(--ds-up-hl-icon-perf-bg); border: var(--ds-up-hl-icon-perf-border); display: flex; align-items: center; justify-content: center; color: var(--ds-up-hl-icon-perf-color); flex-shrink: 0;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
-          <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.01em;">Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.625rem;">
-          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: var(--ds-up-hl-icon-ui-bg); border: var(--ds-up-hl-icon-ui-border); display: flex; align-items: center; justify-content: center; color: var(--ds-up-hl-icon-ui-color); flex-shrink: 0;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-              <path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 16.6l-6.3 4.4 2.3-7.2-6-4.4h7.6z" />
-            </svg>
-          </div>
-          <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.01em;">Tinh chỉnh giao diện mượt mà & loại bỏ độ trễ</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.625rem;">
-          <div style="width: 1.375rem; height: 1.375rem; border-radius: 0.375rem; background: var(--ds-up-hl-icon-bug-bg); border: var(--ds-up-hl-icon-bug-border); display: flex; align-items: center; justify-content: center; color: var(--ds-up-hl-icon-bug-color); flex-shrink: 0;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </div>
-          <span style="color: var(--ds-up-hl-text); font-weight: 450; letter-spacing: -0.01em;">Vá lỗi hệ thống & đồng bộ bộ nhớ đệm an toàn</span>
-        </div>
+        ${highlightsHtml}
       </div>
 
       <!-- In-flight Task Warning (Initially hidden) -->
@@ -558,13 +553,14 @@ export function showUpdateNotificationCenter(waitingWorker) {
     userRequestedReload = true;
     capsule.remove();
 
-    if (waitingWorker) {
+    const activeWorker = worker || waitingWorker;
+    if (activeWorker) {
       try {
-        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+        activeWorker.postMessage({ type: 'SKIP_WAITING' });
       } catch {}
     }
 
-    executeTripleLockPurge(waitingWorker);
+    executeTripleLockPurge(activeWorker);
   };
 
   reloadBtn?.addEventListener('click', () => {
@@ -596,7 +592,7 @@ export function showUpdateNotificationCenter(waitingWorker) {
   cancelWarningBtn?.addEventListener('click', () => {
     if (warningContainer && highlightsContainer) {
       warningContainer.style.display = 'none';
-      highlightsContainer.style.display = 'block';
+      highlightsContainer.style.display = 'flex';
     }
   });
 
@@ -702,12 +698,16 @@ export async function checkForAppUpdate() {
       listenForWaitingWorker(reg);
     }
 
+    if (serverVer) {
+      latestDiscoveredServerVersion = serverVer;
+    }
+
     if (serverVer && serverVer !== localVer) {
       // New version found on server! Update Service Worker silently in background
       if (reg) {
         reg.update().catch(() => {});
         if (reg.waiting && navigator.serviceWorker?.controller) {
-          showUpdateCapsule(reg.waiting);
+          showUpdateCapsule(reg.waiting, { version: serverVer });
         }
       }
 

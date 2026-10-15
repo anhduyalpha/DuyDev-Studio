@@ -595,11 +595,36 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(capsule).toBeDefined();
       expect(capsule.style.cssText).toContain('blur');
       expect(capsule.innerHTML).toContain('ds-update-modal-card');
-      expect(capsule.innerHTML).toContain('Tối ưu hóa hiệu năng & tốc độ xử lý tác vụ');
+      expect(capsule.innerHTML).toContain('Chức năng mới');
+      expect(capsule.innerHTML).toContain('Tính năng mới sửa');
       expect(capsule.innerHTML).toContain('Để sau');
       expect(capsule.innerHTML).toContain('--ds-up-card-bg');
       expect(capsule.innerHTML).toContain('.dark #ds-update-capsule');
       expect(capsule.innerHTML).toContain('--ds-up-text-primary');
+    });
+
+    it('showUpdateNotificationCenter renders custom version release notes or custom notes object', () => {
+      showUpdateNotificationCenter(null, { version: 'v23.00' });
+      let capsule = elementsById['ds-update-capsule'];
+      expect(capsule).toBeDefined();
+      expect(capsule.innerHTML).toContain('Kệ tài liệu Scribd');
+      expect(capsule.innerHTML).toContain('Sửa dứt điểm lỗi chữ nhảy 2 dòng');
+
+      // Dismiss to test custom notes object
+      elementsById['ds-update-dismiss-btn'].trigger('click');
+      delete mockSessionStore['ds_update_capsule_dismissed'];
+      delete elementsById['ds-update-capsule'];
+
+      showUpdateNotificationCenter(null, {
+        notes: {
+          version: 'v99.00',
+          features: ['Tính năng siêu tốc mới'],
+          fixes: ['Vá lỗi kết nối mạng']
+        }
+      });
+      capsule = elementsById['ds-update-capsule'];
+      expect(capsule.innerHTML).toContain('Tính năng siêu tốc mới');
+      expect(capsule.innerHTML).toContain('Vá lỗi kết nối mạng');
     });
 
     it('clicking [Vẫn cập nhật] when tasks are active overrides warning and executes purge', () => {
