@@ -78,9 +78,9 @@ export class ScribdDaemonService {
     }
 
     const pythonBin = this.resolvePythonBin();
-    logger.info(`🚀 Starting Scribd Archiver Engine daemon on port ${this.port} using ${pythonBin}...`);
     try {
-      this.process = spawn(pythonBin, ['-m', 'scribd_dl.server', '--host', '0.0.0.0', '--port', String(this.port)], {
+      const scriptPath = path.join(engineDir, 'daemon.py');
+      this.process = spawn(pythonBin, [scriptPath, '--host', '0.0.0.0', '--port', String(this.port)], {
         cwd: engineDir,
         stdio: 'ignore',
         detached: process.platform !== 'win32'
