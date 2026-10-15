@@ -16,169 +16,86 @@ html.dark #scribdWorkspaceRoot,
 
 @media (max-width: 640px) {
   #scribdWorkspaceRoot {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 }
 
 /* ==========================================================================
-   1. Bento Command Deck Top Card with Rotating Orange Border Beam
+   1. Bento Command Deck Top Card with Refined Top Accent Bar
    ========================================================================== */
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-@keyframes border-beam-spin {
-  0% { --beam-angle: 0deg; }
-  100% { --beam-angle: 360deg; }
-}
-
 .scribd-command-deck {
   position: relative;
   border-radius: 18px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 20px 22px;
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  padding: 22px 18px;
   overflow: hidden;
-  isolation: isolate;
   box-shadow: 0 4px 20px -2px rgba(234, 88, 12, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .scribd-command-deck {
+    padding: 28px 24px;
+  }
 }
 
 html.dark .scribd-command-deck,
 .dark .scribd-command-deck {
   background: #111114 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
-.scribd-command-deck > * {
-  position: relative;
-  z-index: 5;
-}
-
-/* Sharp Rotating Orange Border Beam (around all 4 edges of the box) */
+/* Refined 3px Top Accent Bar */
 .scribd-command-deck::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 18px;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 45deg,
-    rgba(234, 88, 12, 0.08) 75deg,
-    rgba(249, 115, 22, 0.45) 120deg,
-    rgba(234, 88, 12, 0.95) 180deg,
-    rgba(249, 115, 22, 0.45) 240deg,
-    rgba(234, 88, 12, 0.08) 285deg,
-    transparent 315deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  animation: border-beam-spin 4s linear infinite;
-  z-index: 2;
-  opacity: 0.95;
-}
-
-html.dark .scribd-command-deck::before,
-.dark .scribd-command-deck::before {
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 45deg,
-    rgba(251, 146, 60, 0.08) 75deg,
-    rgba(249, 115, 22, 0.45) 120deg,
-    rgba(251, 146, 60, 0.98) 180deg,
-    rgba(249, 115, 22, 0.45) 240deg,
-    rgba(251, 146, 60, 0.08) 285deg,
-    transparent 315deg,
-    transparent 360deg
-  );
-}
-
-/* Soft Ambient Glowing Aura around outer edges */
-.scribd-command-deck::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 20px;
-  padding: 3px;
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 55deg,
-    rgba(234, 88, 12, 0.12) 105deg,
-    rgba(234, 88, 12, 0.65) 180deg,
-    rgba(234, 88, 12, 0.12) 255deg,
-    transparent 305deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  filter: blur(10px);
-  pointer-events: none;
-  animation: border-beam-spin 4s linear infinite;
-  z-index: 1;
-  opacity: 0.70;
-}
-
-html.dark .scribd-command-deck::after,
-.dark .scribd-command-deck::after {
-  background: conic-gradient(
-    from var(--beam-angle, 0deg),
-    transparent 0deg,
-    transparent 55deg,
-    rgba(249, 115, 22, 0.10) 105deg,
-    rgba(251, 146, 60, 0.75) 180deg,
-    rgba(249, 115, 22, 0.10) 255deg,
-    transparent 305deg,
-    transparent 360deg
-  );
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scribd-command-deck::before,
-  .scribd-command-deck::after {
-    animation: none !important;
-  }
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #EA580C 0%, #F97316 100%);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  z-index: 10;
 }
 
 /* ==========================================================================
-   2. Unified Stitch Command Omnibar
+   2. Unified Stitch Command Omnibar & Input Bar
    ========================================================================== */
+.scribd-input-bar,
 .scribd-omnibar {
   display: flex;
   align-items: center;
-  border-radius: 14px;
-  padding: 6px 6px 6px 14px;
+  border-radius: 12px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 14px;
   background: #F8F9FA;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.12));
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+html.dark .scribd-input-bar,
 html.dark .scribd-omnibar,
+.dark .scribd-input-bar,
 .dark .scribd-omnibar {
   background: #09090C;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
+.scribd-input-bar:focus-within,
 .scribd-omnibar:focus-within {
   border-color: #EA580C !important;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03), 0 0 0 3px rgba(234, 88, 12, 0.16) !important;
 }
 
+html.dark .scribd-input-bar:focus-within,
 html.dark .scribd-omnibar:focus-within,
+.dark .scribd-input-bar:focus-within,
 .dark .scribd-omnibar:focus-within {
   border-color: #F97316 !important;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
@@ -659,12 +576,71 @@ html.dark .scribd-book-card.file-item-downloaded:hover,
   }
 }
 
+/* Document Card Typography & Balanced Full-Width Actions */
+.scribd-book-card .file-name {
+  font-size: 15.5px !important;
+  line-height: 1.4 !important;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.scribd-book-card .file-actions {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.scribd-book-card .file-actions .btn-book-action {
+  height: 42px;
+  min-height: 42px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.scribd-book-card .file-actions .btn-view {
+  flex: 1;
+}
+
+.scribd-book-card .file-actions .btn-dl {
+  flex: 1.2;
+}
+
+.scribd-book-card .file-actions .btn-restore {
+  flex: 1;
+}
+
+.scribd-book-card .file-actions .btn-del {
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .scribd-book-card .file-actions {
+    width: auto;
+  }
+  .scribd-book-card .file-actions .btn-view,
+  .scribd-book-card .file-actions .btn-dl,
+  .scribd-book-card .file-actions .btn-restore {
+    flex: initial;
+    padding: 0 16px;
+  }
+}
+
 /* Touch Targets: minimum 44px ergonomics */
 @media (max-width: 640px) {
   .scribd-book-card {
-    padding: 12px 12px 12px 14px;
-  }
-  .scribd-omnibar {
-    padding: 4px 4px 4px 10px;
+    padding: 14px 14px 14px 16px;
   }
 }

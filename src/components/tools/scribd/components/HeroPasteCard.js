@@ -1,8 +1,8 @@
 /**
  * HeroPasteCard Component - Stitch Editorial Bento Command Deck
  * Scoped for Scribd Document Archiver.
- * Implements 1-click clipboard paste, unified recessed Omnibar, dynamic ID preview,
- * and seamless loading transformation with integrated cancel button.
+ * Implements spacious vertical mobile ergonomics, 1-click clipboard paste,
+ * dynamic ID preview, and seamless loading transformation.
  */
 
 export function renderHeroPasteCard(state) {
@@ -10,7 +10,7 @@ export function renderHeroPasteCard(state) {
 
   if (isDownloading) {
     return `
-      <div class="scribd-command-deck space-y-3.5 relative overflow-hidden select-none">
+      <div class="scribd-command-deck flex flex-col gap-4 relative overflow-hidden select-none">
         <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status) -->
         <div class="flex items-center gap-3 pt-0.5">
           <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
@@ -31,17 +31,19 @@ export function renderHeroPasteCard(state) {
           </div>
         </div>
 
-        <!-- Recessed Omnibar in Processing State with Spinner & Integrated Cancel Button -->
-        <div class="scribd-omnibar opacity-95">
-          <span id="scribdIdBadge" class="scribd-id-badge active shrink-0">
-            ${state.currentJobId ? `ID #${state.currentJobId.slice(0, 8)}` : 'SCRIBD'}
-          </span>
-          <div class="flex-1 px-3 py-2 text-xs sm:text-sm font-mono text-zinc-700 dark:text-zinc-300 truncate min-w-0">
-            ${state.currentDocTitle || 'Tiến trình xuất PDF đang hoạt động...'}
+        <!-- Recessed Bar in Processing State with Spinner & Integrated Cancel Button -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div class="scribd-input-bar flex-1 flex items-center gap-2 px-3.5 py-2 min-h-[48px]">
+            <span id="scribdIdBadge" class="scribd-id-badge active shrink-0">
+              ${state.currentJobId ? `ID #${state.currentJobId.slice(0, 8)}` : 'SCRIBD'}
+            </span>
+            <div class="flex-1 text-xs sm:text-sm font-mono text-zinc-700 dark:text-zinc-300 truncate min-w-0">
+              ${state.currentDocTitle || 'Tiến trình xuất PDF đang hoạt động...'}
+            </div>
           </div>
-          <!-- Right Integrated Action Button: "Đang xử lý..." Alongside Compact "Hủy" Button -->
-          <div class="flex items-center gap-2 shrink-0">
-            <div class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[#EA580C] shadow-2xs select-none min-h-[44px]">
+          <!-- Integrated Action Buttons: "Đang xử lý..." Alongside "Hủy" Button -->
+          <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <div class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[#EA580C] shadow-2xs select-none h-12 min-h-[48px]">
               <svg class="animate-spin w-4 h-4 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
@@ -51,7 +53,7 @@ export function renderHeroPasteCard(state) {
             <button
               type="button"
               id="scribdHeroCancelBtn"
-              class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition active:scale-[0.98] cursor-pointer min-h-[44px] touch-manipulation"
+              class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition active:scale-[0.98] cursor-pointer h-12 min-h-[48px] touch-manipulation"
               title="Hủy tiến trình tải"
             >
               <i data-lucide="x" class="w-4 h-4"></i>
@@ -64,7 +66,7 @@ export function renderHeroPasteCard(state) {
   }
 
   return `
-    <div class="scribd-command-deck space-y-3.5 relative overflow-hidden">
+    <div class="scribd-command-deck flex flex-col gap-4 relative overflow-hidden">
       <!-- Deck Header Row (Sculpted Icon Tile + Editorial Title & Subtitle) -->
       <div class="flex items-center gap-3 pt-0.5">
         <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
@@ -80,13 +82,14 @@ export function renderHeroPasteCard(state) {
         </div>
       </div>
 
-      <!-- Unified Stitch Command Omnibar -->
-      <form id="scribdDownloadForm" class="m-0 p-0" onsubmit="event.preventDefault(); return false;">
-        <div class="scribd-omnibar">
-          <!-- Left Prefix: Dynamic Monospace Pill -->
-          <span id="scribdIdBadge" class="scribd-id-badge shrink-0" title="Định danh nguồn tài liệu Scribd">
-            SCRIBD
-          </span>
+      <!-- Unified Stitch Command Omnibar: Stacked on Mobile (< 640px), Inline on Desktop (>= 640px) -->
+      <form id="scribdDownloadForm" class="m-0 p-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5" onsubmit="event.preventDefault(); return false;">
+        <!-- Row 1: Full-Width Clean Input Bar (Height: 48px) -->
+        <div class="scribd-input-bar flex-1 flex items-center min-w-0">
+          <i data-lucide="link-2" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0 ml-3.5 mr-2"></i>
+
+          <!-- Dynamic ID Badge: Only shown if valid ID detected -->
+          <span id="scribdIdBadge" class="scribd-id-badge hidden shrink-0 mr-1.5" title="Định danh nguồn tài liệu Scribd"></span>
 
           <!-- Center: Clean Borderless Input -->
           <input
@@ -96,8 +99,8 @@ export function renderHeroPasteCard(state) {
             value=""
             autocomplete="off"
             spellcheck="false"
-            placeholder="Dán link Scribd hoặc nhấn nút bên cạnh..."
-            class="flex-1 bg-transparent border-0 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none px-3 py-2 min-w-0"
+            placeholder="Dán liên kết tài liệu Scribd..."
+            class="flex-1 bg-transparent border-0 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none py-3 pr-2 min-w-0 h-full"
           />
 
           <!-- Clear Input Button -->
@@ -109,30 +112,30 @@ export function renderHeroPasteCard(state) {
           >
             <i data-lucide="x" class="w-3.5 h-3.5"></i>
           </button>
+        </div>
 
-          <!-- Right Integrated Action Button: 1-Click Paste & Start OR Submit -->
-          <div class="flex items-center shrink-0">
-            <!-- 1. Paste & Download Button (Default when empty) -->
-            <button
-              type="button"
-              id="scribdPasteBtn"
-              class="btn-omnibar-action inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-2xs select-none min-h-[44px] touch-manipulation cursor-pointer"
-              title="Dán liên kết từ clipboard và tải ngay"
-            >
-              <i data-lucide="clipboard" class="w-4 h-4"></i>
-              <span id="scribdPasteBtnTitle">Dán &amp; Tải</span>
-            </button>
+        <!-- Row 2 (Mobile) / Inline Right (Desktop): Primary CTA Buttons (Full-Width on Mobile) -->
+        <div class="scribd-cta-wrap w-full sm:w-auto shrink-0">
+          <!-- 1. Paste & Download Button (Default when empty) -->
+          <button
+            type="button"
+            id="scribdPasteBtn"
+            class="btn-omnibar-action w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[15px] sm:text-sm font-bold sm:font-semibold text-white shadow-2xs select-none h-12 min-h-[48px] touch-manipulation cursor-pointer transition active:scale-[0.98]"
+            title="Dán liên kết từ clipboard và tải ngay"
+          >
+            <i data-lucide="clipboard" class="w-4 h-4"></i>
+            <span id="scribdPasteBtnTitle">Dán link &amp; Tải ngay</span>
+          </button>
 
-            <!-- 2. Manual Submit Button (Revealed when text is entered) -->
-            <button
-              type="submit"
-              id="btnManualSubmitScribd"
-              class="btn-omnibar-action hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-2xs select-none min-h-[44px] touch-manipulation cursor-pointer"
-              title="Bắt đầu tải tài liệu"
-            >
-              <span>Tải PDF &rarr;</span>
-            </button>
-          </div>
+          <!-- 2. Manual Submit Button (Revealed when text is entered) -->
+          <button
+            type="submit"
+            id="btnManualSubmitScribd"
+            class="btn-omnibar-action hidden w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[15px] sm:text-sm font-bold sm:font-semibold text-white shadow-2xs select-none h-12 min-h-[48px] touch-manipulation cursor-pointer transition active:scale-[0.98]"
+            title="Bắt đầu tải tài liệu"
+          >
+            <span>Tải PDF &rarr;</span>
+          </button>
         </div>
       </form>
     </div>

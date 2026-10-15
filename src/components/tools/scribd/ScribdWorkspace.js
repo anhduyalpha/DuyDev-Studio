@@ -95,11 +95,13 @@ export function attachScribdListeners() {
       if (candidate) {
         const numericMatch = candidate.match(/\d{6,15}/);
         const displayId = numericMatch ? numericMatch[0] : candidate;
-        idBadge.textContent = `ID #${displayId}`;
+        idBadge.textContent = `#${displayId}`;
         idBadge.classList.add('active');
+        idBadge.classList.remove('hidden');
       } else {
-        idBadge.textContent = 'SCRIBD';
+        idBadge.textContent = '';
         idBadge.classList.remove('active');
+        idBadge.classList.add('hidden');
       }
     }
 
