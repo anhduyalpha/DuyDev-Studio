@@ -395,7 +395,7 @@ export function attachScribdListeners() {
           badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/30';
           badgeEl.textContent = 'LỖI';
         } else if (state.progress === 100) {
-          badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+          badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-orange-500/20 text-[#EA580C] dark:text-orange-400 border border-orange-500/30';
           badgeEl.textContent = 'HOÀN TẤT';
         } else {
           badgeEl.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30';

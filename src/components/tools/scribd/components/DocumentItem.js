@@ -83,8 +83,8 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
               ` : ''}
 
               ${isDownloaded ? `
-                <span class="meta-pill px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 inline-flex items-center gap-1" title="Tệp đã tải về máy">
-                  <i data-lucide="${isJustDownloaded ? 'sparkles' : 'check'}" class="w-3 h-3 text-emerald-500"></i>
+                <span class="meta-pill px-2 py-0.5 rounded-md bg-orange-500/10 text-[#EA580C] dark:text-orange-400 border border-orange-500/25 inline-flex items-center gap-1" title="Tệp đã tải về máy">
+                  <i data-lucide="${isJustDownloaded ? 'sparkles' : 'check'}" class="w-3 h-3 text-[#EA580C] dark:text-orange-400"></i>
                   <span>${isJustDownloaded ? 'Vừa tải xong' : 'Đã tải'}</span>
                 </span>
               ` : ''}
@@ -98,7 +98,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
           </div>
         </div>
 
-        <!-- Right: Action Buttons Strip -->
+        <!-- Right: Action Buttons Strip (Đọc, Tải PDF, Xóa) -->
         <div class="file-actions flex flex-wrap items-center gap-1.5 sm:self-center shrink-0 pt-1 sm:pt-0">
           ${!isTrash ? `
             <button
@@ -124,17 +124,6 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
               <span>Tải PDF</span>
             </a>
-
-            <button
-              type="button"
-              class="btn-book-action btn-drive btn-save-scribd-drive touch-manipulation"
-              data-doc-name="${escapeHtml(docName)}"
-              data-doc-title="${escapeHtml(docTitle)}"
-              title="Lưu vào Drive"
-            >
-              <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
-              <span>Drive</span>
-            </button>
 
             <button
               type="button"

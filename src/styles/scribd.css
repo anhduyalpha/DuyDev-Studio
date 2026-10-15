@@ -202,16 +202,16 @@ html.dark .scribd-step-item.step-active,
 }
 
 .scribd-step-item.step-done {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.25);
-  color: #059669;
+  background: rgba(234, 88, 12, 0.08);
+  border-color: rgba(234, 88, 12, 0.25);
+  color: #EA580C;
 }
 
 html.dark .scribd-step-item.step-done,
 .dark .scribd-step-item.step-done {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(52, 211, 153, 0.3);
-  color: #34D399;
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(251, 146, 60, 0.3);
+  color: #FB923C;
 }
 
 /* Big Percentage Readout */
@@ -509,6 +509,54 @@ html.dark .scribd-bookshelf-empty,
 .dark .scribd-bookshelf-empty {
   border-color: rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.02);
+}
+
+/* ==========================================================================
+   6. Highlighted Downloaded State for Book-Spine Cards (Scribd Orange Tone)
+   ========================================================================== */
+.scribd-book-card.file-item-downloaded {
+  border: 1.5px solid #EA580C !important;
+  background-color: rgba(234, 88, 12, 0.035) !important;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.18), 0 2px 10px rgba(234, 88, 12, 0.08) !important;
+  position: relative;
+}
+
+.scribd-book-card.file-item-downloaded:hover {
+  border-color: #C2410C !important;
+  background-color: rgba(234, 88, 12, 0.06) !important;
+  box-shadow: 0 0 0 2.5px rgba(234, 88, 12, 0.28), 0 4px 14px rgba(234, 88, 12, 0.12) !important;
+}
+
+html.dark .scribd-book-card.file-item-downloaded,
+.dark .scribd-book-card.file-item-downloaded {
+  border: 1.5px solid #F97316 !important;
+  background-color: rgba(249, 115, 22, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.24), 0 2px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .scribd-book-card.file-item-downloaded:hover,
+.dark .scribd-book-card.file-item-downloaded:hover {
+  border-color: #FB923C !important;
+  background-color: rgba(249, 115, 22, 0.12) !important;
+  box-shadow: 0 0 0 2.5px rgba(251, 146, 60, 0.35), 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+.scribd-book-card.file-item-just-downloaded {
+  animation: scribd-download-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes scribd-download-pulse {
+  0% {
+    box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.5), 0 4px 16px rgba(234, 88, 12, 0.35) !important;
+    transform: scale(1.008);
+  }
+  50% {
+    box-shadow: 0 0 0 2.5px rgba(234, 88, 12, 0.3), 0 2px 10px rgba(234, 88, 12, 0.2) !important;
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.18), 0 2px 10px rgba(234, 88, 12, 0.08) !important;
+    transform: scale(1);
+  }
 }
 
 /* Touch Targets: minimum 44px ergonomics */

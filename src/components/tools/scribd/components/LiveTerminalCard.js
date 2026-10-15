@@ -54,7 +54,7 @@ export function renderTerminalLogs(logs) {
 
 export function renderStepIcon(isDone, isActive) {
   if (isDone) {
-    return `<svg class="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+    return `<svg class="w-3.5 h-3.5 shrink-0 text-[#EA580C] dark:text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
   }
   if (isActive) {
     return `<svg class="w-3.5 h-3.5 shrink-0 animate-pulse text-[#EA580C]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M4.9 19.1C1 15.2 1 8.9 4.9 5.1"/></svg>`;
@@ -70,7 +70,7 @@ export function getStatusBadgeHtml(state) {
     return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/30">LỖI</span>';
   }
   if (state.progress === 100) {
-    return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">HOÀN TẤT</span>';
+    return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-orange-500/20 text-[#EA580C] dark:text-orange-400 border border-orange-500/30">HOÀN TẤT</span>';
   }
   return '<span id="scribdStatusBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-zinc-500/20 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30">SẴN SÀNG</span>';
 }
