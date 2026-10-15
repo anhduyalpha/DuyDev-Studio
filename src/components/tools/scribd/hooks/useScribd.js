@@ -390,6 +390,22 @@ class ScribdManager {
     this.notify();
   }
 
+  resetState() {
+    this.closeConnections();
+    this.stopPolling();
+    this.stopTimer();
+    this.stopThinkingOrbs();
+    this.isDownloading = false;
+    this.currentJobId = null;
+    this.hasError = false;
+    this.stepLabel = '';
+    this.progress = 0;
+    this.logs = [];
+    saveActiveJob(null);
+    this.notify();
+    showToast('Đã đặt lại trạng thái tải', 'info');
+  }
+
   startPolling(jobId) {
     this.stopPolling();
     this.isPolling = true;
@@ -502,6 +518,13 @@ class ScribdManager {
         if (data?.status === 'completed') {
           this.refreshFiles();
         }
+        this.notify();
+        return;
+      }
+
+      if (startTime && (Date.now() - startTime > 300000)) {
+        saveActiveJob(null);
+        this.isDownloading = false;
         this.notify();
         return;
       }

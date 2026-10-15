@@ -65,56 +65,96 @@ export function attachScribdListeners() {
   let prevSearchQuery = '';
 
   function attachHeroHandlers() {
-    const toggle = document.getElementById('scribdToggleOptionsBtn');
-    const drawer = document.getElementById('scribdOptionsDrawer');
-    const chevron = document.getElementById('scribdOptionsChevron');
-    if (toggle && drawer) {
-      toggle.onclick = () => {
-        const isHidden = drawer.classList.toggle('hidden');
-        if (chevron) chevron.style.transform = isHidden ? '' : 'rotate(180deg)';
-      };
-    }
-
-    const manualStart = document.getElementById('btnScribdManualStart');
-    const manualInput = document.getElementById('scribdManualUrlInput');
-    if (manualStart && manualInput) {
-      manualStart.onclick = () => {
-        const val = manualInput.value.trim();
-        if (val) handleUrlCandidate(val);
-      };
-      manualInput.onkeydown = (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const val = manualInput.value.trim();
-          if (val) handleUrlCandidate(val);
-        }
-      };
-    }
-
+    const urlInput = document.getElementById('scribdUrlInput');
+    const clearBtn = document.getElementById('btnClearScribdUrl');
+    const quickPasteBtn = document.getElementById('btnQuickPasteScribd');
     const heroCancel = document.getElementById('scribdHeroCancelBtn');
-    if (heroCancel) heroCancel.onclick = () => scribdManager.cancelJob();
-
+    const resetBtn = document.getElementById('btnResetScribdState');
     const form = document.getElementById('scribdDownloadForm');
-    if (form) form.onsubmit = (e) => { e.preventDefault(); return false; };
 
-    const pasteBtn = document.getElementById('scribdPasteBtn');
-    if (pasteBtn && !pasteBtn.disabled) {
-      pasteBtn.onclick = async () => {
-        if (scribdManager.getState().isDownloading) return;
+    function syncClearBtn() {
+      if (clearBtn && urlInput) {
+        clearBtn.classList.toggle('hidden', !urlInput.value.trim());
+      }
+    }
+
+    if (urlInput) {
+      urlInput.oninput = () => syncClearBtn();
+      urlInput.onpaste = () => setTimeout(syncClearBtn, 50);
+      syncClearBtn();
+    }
+
+    if (clearBtn && urlInput) {
+      clearBtn.onclick = () => {
+        urlInput.value = '';
+        syncClearBtn();
+        urlInput.focus();
+      };
+    }
+
+    if (quickPasteBtn && urlInput) {
+      quickPasteBtn.onclick = async () => {
         if (navigator.clipboard?.readText) {
           try {
             const text = await navigator.clipboard.readText();
-            if (text?.trim()) { handleUrlCandidate(text); return; }
+            if (text && text.trim()) {
+              urlInput.value = text.trim();
+              syncClearBtn();
+              urlInput.focus();
+              urlInput.select();
+              showToast('Đã dán liên kết vào ô nhập', 'info');
+              return;
+            }
             showToast('Clipboard rỗng', 'warning');
+            urlInput.focus();
             return;
           } catch (_) {}
         }
-        showToast('Nhấn Ctrl + V để dán link', 'info');
-        if (drawer && drawer.classList.contains('hidden')) {
-          drawer.classList.remove('hidden');
-          if (chevron) chevron.style.transform = 'rotate(180deg)';
-          if (manualInput) manualInput.focus();
+        urlInput.focus();
+        showToast('Nhấn Ctrl + V để dán link vào ô nhập', 'info');
+      };
+    }
+
+    if (form) {
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        let val = urlInput ? urlInput.value.trim() : '';
+
+        // If input is empty, try reading from clipboard automatically
+        if (!val) {
+          if (navigator.clipboard?.readText) {
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text && text.trim()) {
+                val = text.trim();
+                if (urlInput) {
+                  urlInput.value = val;
+                  syncClearBtn();
+                }
+              }
+            } catch (_) {}
+          }
         }
+
+        if (!val) {
+          showToast('Vui lòng nhập hoặc dán liên kết tài liệu Scribd', 'warning');
+          if (urlInput) urlInput.focus();
+          return;
+        }
+
+        handleUrlCandidate(val);
+      };
+    }
+
+    if (heroCancel) heroCancel.onclick = () => scribdManager.cancelJob();
+
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        if (urlInput) {
+          urlInput.value = '';
+          syncClearBtn();
+        }
+        scribdManager.resetState();
       };
     }
   }
@@ -253,7 +293,14 @@ export function attachScribdListeners() {
     const listEl = document.getElementById('scribdListContainer');
 
     if (heroEl && state.isDownloading !== prevDownloading) {
+      const currentVal = document.getElementById('scribdUrlInput')?.value || '';
       heroEl.innerHTML = renderHeroPasteCard(state);
+      const newInput = document.getElementById('scribdUrlInput');
+      if (newInput && currentVal) {
+        newInput.value = currentVal;
+        const clearBtn = document.getElementById('btnClearScribdUrl');
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      }
       prevDownloading = state.isDownloading;
       attachHeroHandlers();
       if (window.lucide?.createIcons) window.lucide.createIcons();
@@ -333,6 +380,12 @@ export function attachScribdListeners() {
     const text = (e.clipboardData || window.clipboardData)?.getData('text');
     if (text && text.trim() && (extractScribdUrlOrId(text) || isScribdSearchUrl(text))) {
       e.preventDefault();
+      const urlInput = document.getElementById('scribdUrlInput');
+      if (urlInput) {
+        urlInput.value = text.trim();
+        const clearBtn = document.getElementById('btnClearScribdUrl');
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      }
       handleUrlCandidate(text);
     }
   }

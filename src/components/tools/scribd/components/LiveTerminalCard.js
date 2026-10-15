@@ -102,7 +102,7 @@ export function renderLiveTerminalCard(state) {
             </button>
           ` : ''}
 
-          ${!isRunning && state.hasError ? `
+          ${!isRunning ? `
             <button
               type="button"
               id="scribdDismissErrorBtn"

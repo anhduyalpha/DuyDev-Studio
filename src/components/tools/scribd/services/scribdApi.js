@@ -4,6 +4,7 @@
  */
 
 const ACTIVE_JOB_KEY = 'ds_scribd_active_job';
+const MAX_JOB_AGE_MS = 5 * 60 * 1000; // 5 phút
 
 export function saveActiveJob(data) {
   try {
@@ -15,7 +16,14 @@ export function saveActiveJob(data) {
 export function loadActiveJob() {
   try {
     const raw = localStorage.getItem(ACTIVE_JOB_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.jobId) return null;
+    if (parsed.jobStartTime && (Date.now() - parsed.jobStartTime > MAX_JOB_AGE_MS)) {
+      localStorage.removeItem(ACTIVE_JOB_KEY);
+      return null;
+    }
+    return parsed;
   } catch (_) { return null; }
 }
 
