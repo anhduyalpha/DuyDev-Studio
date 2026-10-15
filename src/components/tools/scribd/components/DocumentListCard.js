@@ -61,41 +61,54 @@ export function renderDocumentListCard(state) {
 
   return `
     <div class="scribd-bookshelf space-y-3.5">
-      <!-- Row 1: Header + Refresh Action -->
-      <div class="flex items-center justify-between gap-3 pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
+      <!-- Row 1: Header + Sort Dropdown + Actions -->
+      <div class="flex items-center justify-between gap-2.5 pb-2.5 border-b border-zinc-200/80 dark:border-zinc-800/80">
         <!-- Left: Title & Count Badge -->
-        <div class="flex items-center gap-2.5 min-w-0">
-          <span class="text-base select-none">📚</span>
-          <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-base select-none shrink-0">📚</span>
+          <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 tracking-tight whitespace-nowrap truncate">
             Kệ tài liệu
           </h3>
-          <span id="scribdItemCountBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border border-zinc-200/70 dark:border-zinc-700/60">
+          <span id="scribdItemCountBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border border-zinc-200/70 dark:border-zinc-700/60 whitespace-nowrap shrink-0">
             ${items.length} tệp
           </span>
         </div>
 
-        <!-- Right: Actions (Empty Trash if applicable + Refresh Button) -->
-        <div class="flex items-center gap-2 select-none shrink-0">
+        <!-- Right: Sort Dropdown + Actions (Empty Trash + Refresh) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 select-none shrink-0">
+          <select
+            id="scribdSortSelect"
+            class="scribd-sort-select py-1 px-2 text-xs bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-[#EA580C] min-h-[38px] h-[38px] cursor-pointer whitespace-nowrap"
+            title="Sắp xếp danh sách"
+          >
+            <option value="newest" ${state.sortOption === 'newest' ? 'selected' : ''}>Mới nhất</option>
+            <option value="oldest" ${state.sortOption === 'oldest' ? 'selected' : ''}>Cũ nhất</option>
+            <option value="name_asc" ${state.sortOption === 'name_asc' ? 'selected' : ''}>Tên A-Z</option>
+            <option value="name_desc" ${state.sortOption === 'name_desc' ? 'selected' : ''}>Tên Z-A</option>
+            <option value="size_desc" ${state.sortOption === 'size_desc' ? 'selected' : ''}>Dung lượng lớn</option>
+            <option value="size_asc" ${state.sortOption === 'size_asc' ? 'selected' : ''}>Dung lượng nhỏ</option>
+          </select>
+
           ${isTrash && counts.trash > 0 ? `
             <button
               type="button"
               id="btnEmptyScribdTrash"
-              class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition cursor-pointer min-h-[44px] min-w-[44px] sm:min-w-0 touch-manipulation"
+              class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition cursor-pointer min-h-[38px] min-w-[38px] touch-manipulation whitespace-nowrap"
               title="Dọn sạch thùng rác"
             >
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-              <span class="hidden sm:inline">Dọn sạch</span>
+              <span class="hidden md:inline">Dọn sạch</span>
             </button>
           ` : ''}
 
           <button
             type="button"
             id="btnRefreshScribdList"
-            class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 border border-zinc-200/80 dark:border-zinc-700/60 transition cursor-pointer min-h-[44px] min-w-[44px] sm:min-w-0 touch-manipulation"
+            class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 border border-zinc-200/80 dark:border-zinc-700/60 transition cursor-pointer min-h-[38px] min-w-[38px] touch-manipulation whitespace-nowrap"
             title="Làm mới danh sách"
           >
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline text-xs font-medium">Làm mới</span>
+            <span class="hidden md:inline text-xs font-medium">Làm mới</span>
           </button>
         </div>
       </div>
@@ -120,48 +133,31 @@ export function renderDocumentListCard(state) {
         </button>
       </div>
 
-      <!-- Row 3: Segmented Tabs (Left) + Sort Dropdown (Right) -->
-      <div class="flex items-center justify-between gap-2 select-none pt-0.5">
-        <!-- Segmented Pill Switcher -->
-        <div class="scribd-segmented-switcher">
+      <!-- Row 3: Full-Width Segmented Tabs (Never wrap, 50% width each on mobile) -->
+      <div class="w-full select-none pt-0.5">
+        <div class="scribd-segmented-switcher w-full grid grid-cols-2">
           <button
             type="button"
-            class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'pdf' ? 'active' : ''} min-h-[38px] touch-manipulation cursor-pointer"
+            class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'pdf' ? 'active' : ''} min-h-[40px] touch-manipulation cursor-pointer whitespace-nowrap"
             data-tab="pdf"
           >
-            <span>Tất cả</span>
-            <span class="text-[10px] font-mono opacity-80">(${counts.pdf || 0})</span>
+            <span class="whitespace-nowrap">Tất cả</span>
+            <span class="text-[11px] font-mono opacity-80 whitespace-nowrap">(${counts.pdf || 0})</span>
           </button>
           <button
             type="button"
-            class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'trash' ? 'active' : ''} min-h-[38px] touch-manipulation cursor-pointer"
+            class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'trash' ? 'active' : ''} min-h-[40px] touch-manipulation cursor-pointer whitespace-nowrap"
             data-tab="trash"
           >
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            <span>Thùng rác</span>
-            <span class="text-[10px] font-mono opacity-80">(${counts.trash || 0})</span>
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="whitespace-nowrap">Thùng rác</span>
+            <span class="text-[11px] font-mono opacity-80 whitespace-nowrap">(${counts.trash || 0})</span>
           </button>
-        </div>
-
-        <!-- Sort Select (Compact Dropdown aligned on the same row) -->
-        <div class="shrink-0">
-          <select
-            id="scribdSortSelect"
-            class="py-1.5 px-2.5 sm:px-3 text-xs sm:text-sm bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-[#EA580C] min-h-[38px] h-[38px] cursor-pointer"
-            title="Sắp xếp danh sách"
-          >
-            <option value="newest" ${state.sortOption === 'newest' ? 'selected' : ''}>Mới nhất</option>
-            <option value="oldest" ${state.sortOption === 'oldest' ? 'selected' : ''}>Cũ nhất</option>
-            <option value="name_asc" ${state.sortOption === 'name_asc' ? 'selected' : ''}>Tên A-Z</option>
-            <option value="name_desc" ${state.sortOption === 'name_desc' ? 'selected' : ''}>Tên Z-A</option>
-            <option value="size_desc" ${state.sortOption === 'size_desc' ? 'selected' : ''}>Dung lượng lớn</option>
-            <option value="size_asc" ${state.sortOption === 'size_asc' ? 'selected' : ''}>Dung lượng nhỏ</option>
-          </select>
         </div>
       </div>
 
-      <!-- 4. Items Container -->
-      <div id="scribdItemsContainer" class="pt-1 space-y-2">
+      <!-- 4. Items Container with 14px Vertical Gap -->
+      <div id="scribdItemsContainer" class="pt-1 space-y-3.5">
         ${renderDocumentItemsHtml(items, isTrash, itemOptions)}
       </div>
     </div>

@@ -280,7 +280,7 @@ html.dark .scribd-progress-pct-big,
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-  padding: 18px 16px;
+  padding: 16px 12px;
   transition: all 0.2s ease;
 }
 
@@ -297,14 +297,17 @@ html.dark .scribd-bookshelf,
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
-/* Segmented Pill Switcher in Header */
+/* Segmented Pill Switcher in Header (100% full width, never wrap) */
 .scribd-segmented-switcher {
-  display: inline-flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
   padding: 3px;
   border-radius: 12px;
   background: #F4F4F6;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 
 html.dark .scribd-segmented-switcher,
@@ -316,18 +319,31 @@ html.dark .scribd-segmented-switcher,
 .scribd-segmented-tab {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
   border-radius: 9px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 500;
   color: #52525B;
   transition: all 0.16s ease;
   user-select: none;
   cursor: pointer;
   border: 1px solid transparent;
-  min-height: 38px;
+  min-height: 40px;
   touch-action: manipulation;
+  white-space: nowrap !important;
+  flex: 1;
+}
+
+.scribd-segmented-tab span {
+  white-space: nowrap !important;
+}
+
+.scribd-sort-select {
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  max-width: 130px;
 }
 
 html.dark .scribd-segmented-tab,
@@ -358,13 +374,13 @@ html.dark .scribd-segmented-tab.active,
   box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
 }
 
-/* Book-Spine Document Card */
+/* Book-Spine Document Card (Spacious 16px internal padding, 12px gap) */
 .scribd-book-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px 12px 16px;
+  gap: 12px;
+  padding: 16px;
   border-radius: 14px;
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -409,20 +425,19 @@ html.dark .scribd-book-spine,
   background: #F97316;
 }
 
-/* 3:4 Miniature Book-Cover Badge */
+/* Sleek Compact 38x38px Document Icon Badge (aligned with title) */
 .scribd-book-badge {
-  width: 36px;
-  height: 48px;
-  aspect-ratio: 3 / 4;
-  border-radius: 6px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 10px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 4px 3px;
+  justify-content: center;
   background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
   border: 1px solid rgba(234, 88, 12, 0.25);
-  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.12);
+  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.10);
   flex-shrink: 0;
   user-select: none;
   position: relative;
@@ -433,17 +448,7 @@ html.dark .scribd-book-badge,
 .dark .scribd-book-badge {
   background: linear-gradient(135deg, #1C1917 0%, #292524 100%);
   border-color: rgba(251, 146, 60, 0.3);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-}
-
-.scribd-book-badge::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: rgba(234, 88, 12, 0.5);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 /* Highlighted Download Button on Card */
@@ -453,6 +458,7 @@ html.dark .scribd-book-badge,
   border: 1px solid rgba(251, 146, 60, 0.5) !important;
   box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25) !important;
   transition: all 0.18s ease !important;
+  white-space: nowrap !important;
 }
 
 .btn-dl-highlight:hover {
@@ -472,23 +478,25 @@ html.dark .btn-dl-highlight:hover,
   background: #F97316 !important;
 }
 
-/* Secondary Action Button on Card */
+/* Secondary Action Button on Card (44px touch ergonomics & nowrap) */
 .btn-book-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-radius: 9px;
-  font-size: 11.5px;
-  font-weight: 500;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 600;
   background: #F4F4F6;
-  color: #3F3F46;
+  color: #27272A;
   border: 1px solid rgba(0, 0, 0, 0.08);
   transition: all 0.16s ease;
   min-height: 44px;
+  height: 44px;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap !important;
 }
 
 html.dark .btn-book-action,
