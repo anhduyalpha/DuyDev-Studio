@@ -179,7 +179,7 @@ export async function extractFileHandler(request: FastifyRequest, reply: Fastify
   reply.header('Content-Type', mimeType);
   reply.header('X-Content-Type-Options', 'nosniff');
   if (inline) {
-    reply.header('Content-Disposition', `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
+    reply.header('Content-Disposition', 'inline');
   } else {
     reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
   }

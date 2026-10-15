@@ -38,7 +38,7 @@ let savedScrollY = 0;
 let currentViewerState = null;
 
 function getOpenTabDetails(state) {
-  const isPdf = state.category === FILE_CATEGORIES.PDF;
+  const isPdf = state.category === FILE_CATEGORIES.PDF || state.category === FILE_CATEGORIES.PRESENTATION;
   const isArchive = state.category === FILE_CATEGORIES.ARCHIVE;
   const rawUrl = state.viewUrl || state.downloadUrl;
   const canOpenInTab = Boolean(state.viewUrl && !state.viewUrl.includes('/api/v1/files/download/') && !state.viewUrl.includes('/api/v1/studocu/'));

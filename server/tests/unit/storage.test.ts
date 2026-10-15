@@ -36,6 +36,15 @@ describe('StorageManager Sanitization & Path Tests', () => {
     expect(rootPath).toBe(sandboxDir);
   });
 
+  it('should generate safe drive paths', () => {
+    const drivePath = StorageManager.getDrivePath('/my_folder/file.pdf');
+    expect(drivePath).toContain('my_folder');
+    expect(drivePath).toContain('file.pdf');
+
+    const rootDrive = StorageManager.getDrivePath('/');
+    expect(rootDrive).toBeDefined();
+  });
+
   it('should reject null byte injection in user path', () => {
     const sandboxDir = path.resolve('data/storage/drive');
     expect(() => {

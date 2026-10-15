@@ -15,7 +15,9 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
   const testFilesToCleanup: string[] = [];
   let testFileId: string;
   let testFileHash: string;
+  let testPdfId: string;
   const testContent = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'; // 62 bytes
+  const pdfContent = '%PDF-1.4 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'; // 71 bytes
   const adminToken = AuthService.generateSessionToken();
 
   beforeAll(async () => {
@@ -44,6 +46,27 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
       }
     });
     createdFileIds.push(testFileId);
+
+    // Create a known PDF file for viewer.controller preview-pdf testing
+    testPdfId = `fil_test_pdf_${Date.now().toString(36)}`;
+    const pdfPath = StorageManager.getUploadPath(testPdfId, '.pdf');
+    await fs.promises.writeFile(pdfPath, pdfContent, 'utf-8');
+    testFilesToCleanup.push(pdfPath);
+
+    await prisma.fileRecord.create({
+      data: {
+        id: testPdfId,
+        purpose: 'UPLOAD',
+        originalName: 'viewer_hardening_specimen.pdf',
+        storagePath: pdfPath,
+        mimeType: 'application/pdf',
+        sizeBytes: BigInt(pdfContent.length),
+        hashSha256: await StorageManager.computeSha256(pdfPath),
+        isPurged: false,
+        expiresAt: new Date(Date.now() + 86400000)
+      }
+    });
+    createdFileIds.push(testPdfId);
   });
 
   afterAll(async () => {
@@ -281,6 +304,65 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
 
       expect(res.statusCode).toBe(416);
       expect(res.headers['content-range']).toBe(`bytes */${testContent.length}`);
+    });
+  });
+
+  describe('4. Viewer Controller PDF Preview Range & Header Hardening', () => {
+    it('should stream partial range on preview-pdf with HTTP 206', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/viewer/preview-pdf?fileId=${testPdfId}`,
+        headers: { range: 'bytes=0-8' }
+      });
+
+      expect(res.statusCode).toBe(206);
+      expect(res.headers['content-range']).toBe(`bytes 0-8/${pdfContent.length}`);
+      expect(res.headers['content-type']).toBe('application/pdf');
+      expect(res.headers['x-content-type-options']).toBe('nosniff');
+      expect(res.payload).toBe('%PDF-1.4 ');
+    });
+
+    it('should support suffix range on preview-pdf (bytes=-15)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/viewer/preview-pdf?fileId=${testPdfId}`,
+        headers: { range: 'bytes=-15' }
+      });
+
+      expect(res.statusCode).toBe(206);
+      const expectedStart = pdfContent.length - 15;
+      const expectedEnd = pdfContent.length - 1;
+      expect(res.headers['content-range']).toBe(`bytes ${expectedStart}-${expectedEnd}/${pdfContent.length}`);
+      expect(res.payload).toBe(pdfContent.slice(-15));
+    });
+
+    it('should return HTTP 416 for out-of-bounds preview-pdf range', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/viewer/preview-pdf?fileId=${testPdfId}`,
+        headers: { range: 'bytes=5000-6000' }
+      });
+
+      expect(res.statusCode).toBe(416);
+      expect(res.headers['content-range']).toBe(`bytes */${pdfContent.length}`);
+    });
+
+    it('should return HTTP 304 when If-None-Match matches on preview-pdf', async () => {
+      const initial = await app.inject({
+        method: 'GET',
+        url: `/api/v1/viewer/preview-pdf?fileId=${testPdfId}`
+      });
+      expect(initial.statusCode).toBe(200);
+      const etag = initial.headers.etag as string;
+      expect(etag).toBeTruthy();
+
+      const cached = await app.inject({
+        method: 'GET',
+        url: `/api/v1/viewer/preview-pdf?fileId=${testPdfId}`,
+        headers: { 'if-none-match': etag }
+      });
+      expect(cached.statusCode).toBe(304);
+      expect(cached.payload).toBe('');
     });
   });
 });
