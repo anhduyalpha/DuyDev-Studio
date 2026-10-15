@@ -111,24 +111,18 @@ class ScribdManager {
     this.timerInterval = null;
     this.orbInstance = null;
 
-    this.downloadedDocNames = this.loadDownloadedDocs();
+    this.downloadedDocNames = new Set();
     this.justDownloadedDocName = null;
     this.initialized = false;
+    try { sessionStorage.removeItem('ds_scribd_downloaded_docs'); } catch (_) {}
   }
 
   loadDownloadedDocs() {
-    try {
-      const raw = sessionStorage.getItem('ds_scribd_downloaded_docs');
-      return raw ? new Set(JSON.parse(raw)) : new Set();
-    } catch (_) {
-      return new Set();
-    }
+    return new Set();
   }
 
   saveDownloadedDocs() {
-    try {
-      sessionStorage.setItem('ds_scribd_downloaded_docs', JSON.stringify([...this.downloadedDocNames]));
-    } catch (_) {}
+    // Ephemeral in-memory only: do not persist to sessionStorage/localStorage
   }
 
   markAsDownloaded(docName, isJust = false) {
@@ -136,7 +130,6 @@ class ScribdManager {
     const norm = (s) => (s || '').normalize('NFC').trim();
     const key = norm(docName);
     this.downloadedDocNames.add(key);
-    this.saveDownloadedDocs();
     if (isJust) {
       this.justDownloadedDocName = key;
       setTimeout(() => {
@@ -162,6 +155,11 @@ class ScribdManager {
   }
 
   init() {
+    try { sessionStorage.removeItem('ds_scribd_downloaded_docs'); } catch (_) {}
+    if (!this.isDownloading) {
+      this.downloadedDocNames.clear();
+      this.justDownloadedDocName = null;
+    }
     if (this.initialized) {
       this.refreshFiles();
       return;
@@ -728,6 +726,9 @@ class ScribdManager {
   cleanupWorkspace() {
     this.stopTimer();
     this.stopThinkingOrbs();
+    this.downloadedDocNames.clear();
+    this.justDownloadedDocName = null;
+    try { sessionStorage.removeItem('ds_scribd_downloaded_docs'); } catch (_) {}
     if (!this.isDownloading) {
       this.closeConnections();
     }
