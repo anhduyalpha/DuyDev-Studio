@@ -353,15 +353,10 @@ export function attachScribdListeners() {
 
     if (heroEl && state.isDownloading !== prevDownloading) {
       const currentVal = document.getElementById('scribdUrlInput')?.value || '';
-      const wasForceReload = Boolean(document.getElementById('chkScribdForceReload')?.checked);
       heroEl.innerHTML = renderHeroPasteCard(state);
       const newInput = document.getElementById('scribdUrlInput');
       if (newInput && currentVal) {
         newInput.value = currentVal;
-      }
-      const newToggle = document.getElementById('chkScribdForceReload');
-      if (newToggle) {
-        newToggle.checked = wasForceReload;
       }
       prevDownloading = state.isDownloading;
       attachHeroHandlers();

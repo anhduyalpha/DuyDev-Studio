@@ -21,35 +21,135 @@ html.dark #scribdWorkspaceRoot,
 }
 
 /* ==========================================================================
-   1. Bento Command Deck Top Card
+   1. Bento Command Deck Top Card with Rotating Orange Border Beam
    ========================================================================== */
+@property --beam-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes border-beam-spin {
+  0% { --beam-angle: 0deg; }
+  100% { --beam-angle: 360deg; }
+}
+
 .scribd-command-deck {
   position: relative;
   border-radius: 18px;
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(234, 88, 12, 0.08), transparent 75%), #ffffff;
-  border: 1px solid rgba(234, 88, 12, 0.20);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 20px 22px;
   overflow: hidden;
-  box-shadow: 0 4px 20px -2px rgba(234, 88, 12, 0.07), 0 1px 3px rgba(0, 0, 0, 0.03);
+  isolation: isolate;
+  box-shadow: 0 4px 20px -2px rgba(234, 88, 12, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 html.dark .scribd-command-deck,
 .dark .scribd-command-deck {
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(234, 88, 12, 0.12), transparent 75%), #111114 !important;
-  border: 1px solid rgba(249, 115, 22, 0.24);
+  background: #111114 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
-/* 3px Top Brand Accent Stripe */
-.scribd-hero-top-stripe {
+.scribd-command-deck > * {
+  position: relative;
+  z-index: 5;
+}
+
+/* Sharp Rotating Orange Border Beam (around all 4 edges of the box) */
+.scribd-command-deck::before {
+  content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #F97316 0%, #EA580C 50%, #C2410C 100%);
-  z-index: 3;
+  inset: 0;
+  border-radius: 18px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 45deg,
+    rgba(234, 88, 12, 0.08) 75deg,
+    rgba(249, 115, 22, 0.45) 120deg,
+    rgba(234, 88, 12, 0.95) 180deg,
+    rgba(249, 115, 22, 0.45) 240deg,
+    rgba(234, 88, 12, 0.08) 285deg,
+    transparent 315deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: border-beam-spin 4s linear infinite;
+  z-index: 2;
+  opacity: 0.95;
+}
+
+html.dark .scribd-command-deck::before,
+.dark .scribd-command-deck::before {
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 45deg,
+    rgba(251, 146, 60, 0.08) 75deg,
+    rgba(249, 115, 22, 0.45) 120deg,
+    rgba(251, 146, 60, 0.98) 180deg,
+    rgba(249, 115, 22, 0.45) 240deg,
+    rgba(251, 146, 60, 0.08) 285deg,
+    transparent 315deg,
+    transparent 360deg
+  );
+}
+
+/* Soft Ambient Glowing Aura around outer edges */
+.scribd-command-deck::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 20px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 55deg,
+    rgba(234, 88, 12, 0.12) 105deg,
+    rgba(234, 88, 12, 0.65) 180deg,
+    rgba(234, 88, 12, 0.12) 255deg,
+    transparent 305deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: blur(10px);
+  pointer-events: none;
+  animation: border-beam-spin 4s linear infinite;
+  z-index: 1;
+  opacity: 0.70;
+}
+
+html.dark .scribd-command-deck::after,
+.dark .scribd-command-deck::after {
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    transparent 55deg,
+    rgba(249, 115, 22, 0.10) 105deg,
+    rgba(251, 146, 60, 0.75) 180deg,
+    rgba(249, 115, 22, 0.10) 255deg,
+    transparent 305deg,
+    transparent 360deg
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scribd-command-deck::before,
+  .scribd-command-deck::after {
+    animation: none !important;
+  }
 }
 
 /* ==========================================================================

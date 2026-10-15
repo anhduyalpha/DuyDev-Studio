@@ -11,8 +11,6 @@ export function renderHeroPasteCard(state) {
   if (isDownloading) {
     return `
       <div class="scribd-command-deck space-y-3.5 relative overflow-hidden select-none">
-        <div class="scribd-hero-top-stripe"></div>
-
         <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status + Controls) -->
         <div class="flex flex-wrap items-center justify-between gap-3 pt-0.5">
           <div class="flex items-center gap-3 min-w-0">
@@ -34,14 +32,8 @@ export function renderHeroPasteCard(state) {
             </div>
           </div>
 
-          <!-- Right: Inline Toggle Pill & Reset Button (Preserved during loading) -->
+          <!-- Right: Reset Button -->
           <div class="flex items-center gap-2.5 shrink-0 select-none">
-            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 select-none text-xs font-medium text-zinc-500 dark:text-zinc-400 opacity-60 cursor-not-allowed min-h-[44px] touch-manipulation" title="Đang xử lý tải xuống...">
-              <input type="checkbox" id="chkScribdForceReload" class="sr-only peer" disabled />
-              <span class="w-7 h-4 bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-[#EA580C] rounded-full relative transition-colors duration-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-3"></span>
-              <span class="text-[11.5px]">Tải bản mới</span>
-            </label>
-
             <button
               type="button"
               id="btnResetScribdState"
@@ -87,9 +79,7 @@ export function renderHeroPasteCard(state) {
 
   return `
     <div class="scribd-command-deck space-y-3.5 relative overflow-hidden">
-      <div class="scribd-hero-top-stripe"></div>
-
-      <!-- Deck Header Row (Left-Aligned Editorial Header + Inline Toggle) -->
+      <!-- Deck Header Row (Left-Aligned Editorial Header + Reset) -->
       <div class="flex flex-wrap items-center justify-between gap-3 pt-0.5">
         <!-- Left: Sculpted Icon Tile + Editorial Title & Subtitle -->
         <div class="flex items-center gap-3 min-w-0">
@@ -106,14 +96,8 @@ export function renderHeroPasteCard(state) {
           </div>
         </div>
 
-        <!-- Right: Inline Compact Toggle Pill for Force Reload & Reset -->
+        <!-- Right: Reset Button -->
         <div class="flex items-center gap-2.5 shrink-0 select-none">
-          <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 cursor-pointer select-none text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:border-orange-500/40 transition min-h-[44px] touch-manipulation" title="Bỏ qua bộ đệm lưu trữ để tải bản mới nhất">
-            <input type="checkbox" id="chkScribdForceReload" class="sr-only peer" />
-            <span class="w-7 h-4 bg-zinc-300 dark:bg-zinc-700 peer-checked:bg-[#EA580C] rounded-full relative transition-colors duration-200 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-3"></span>
-            <span class="text-[11.5px]">Tải bản mới</span>
-          </label>
-
           <button
             type="button"
             id="btnResetScribdState"
