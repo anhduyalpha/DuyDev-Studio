@@ -11,6 +11,40 @@ import { taskCoordinator } from '../../utilities/taskCoordinator.js';
 
 let isMinimized = false;
 
+function normalizeRoute(route) {
+  if (!route) return '';
+  return route.split('?')[0].replace(/\/+$/, '').toLowerCase();
+}
+
+function isScribdRoute(route) {
+  const r = normalizeRoute(route);
+  return r === '#tool/scribd' || r === '#tool/scribd-archiver' || r === '#scribd' || r === '#scribd-archiver';
+}
+
+function isStudocuRoute(route) {
+  const r = normalizeRoute(route);
+  return r === '#tool/studocu-dl' || r === '#tool/studocu' || r === '#studocu' || r === '#studocu-dl';
+}
+
+function isScribdTask(task) {
+  if (!task) return false;
+  return task.moduleId === 'scribd-archiver' || task.moduleId === 'scribd' || isScribdRoute(task.route);
+}
+
+function isStudocuTask(task) {
+  if (!task) return false;
+  return task.moduleId === 'studocu-dl' || task.moduleId === 'studocu' || isStudocuRoute(task.route);
+}
+
+export function formatTaskTitle(task) {
+  if (!task) return 'Tác vụ';
+  const raw = (task.title || task.moduleTitle || 'Tác vụ').trim();
+  if (/^(đang\s|tải\s|xử\s|chuyển\s|giải\s)/i.test(raw)) {
+    return raw;
+  }
+  return `Đang tải ${raw}`;
+}
+
 /**
  * Filters out tasks whose page is currently active with an on-screen Live Stream view.
  * Eliminates duplicate progress indicators and floating dock overlap.
@@ -19,16 +53,14 @@ let isMinimized = false;
  */
 export function getVisibleDockTasks(tasks = []) {
   if (!tasks || tasks.length === 0) return [];
-  const currentRoute = (typeof window !== 'undefined' ? (window.location.hash || '') : '').split('?')[0];
+  const currentRoute = typeof window !== 'undefined' ? (window.location.hash || '') : '';
   if (!currentRoute) return tasks;
 
-  // Tools that have their own prominent on-screen Live Stream
-  const selfStreamingRoutes = new Set(['#tool/scribd', '#tool/studocu-dl']);
-  if (selfStreamingRoutes.has(currentRoute)) {
-    return tasks.filter((task) => {
-      const taskRoute = (task.route || '').split('?')[0];
-      return taskRoute !== currentRoute;
-    });
+  if (isScribdRoute(currentRoute)) {
+    return tasks.filter((task) => !isScribdTask(task));
+  }
+  if (isStudocuRoute(currentRoute)) {
+    return tasks.filter((task) => !isStudocuTask(task));
   }
   return tasks;
 }
@@ -109,12 +141,12 @@ export function renderGlobalTaskDock(tasks = []) {
   const count = tasks.length;
   const primaryTask = tasks[0];
   const primaryPct = Math.max(0, Math.min(100, Math.round(primaryTask.progress || 0)));
-  const primaryTitle = primaryTask.title ? `Đang tải ${primaryTask.title}...` : `Đang tải ${primaryTask.moduleTitle}...`;
+  const primaryTitle = formatTaskTitle(primaryTask);
 
   return `
     <div 
       id="globalTaskDockCapsule" 
-      class="fixed right-3 left-3 sm:left-auto sm:right-5 z-50 flex flex-col items-center sm:items-end gap-1.5 w-[calc(100vw-1.5rem)] sm:w-[340px] max-w-[340px] select-none pointer-events-none"
+      class="fixed right-3 left-3 mx-auto sm:mx-0 sm:left-auto sm:right-5 z-50 flex flex-col items-center sm:items-end gap-1.5 w-[calc(100vw-1.5rem)] sm:w-[340px] max-w-[340px] select-none pointer-events-none"
     >
       <!-- Mobile Minimalist Pill Bar (44px - 48px single row, sm:hidden) -->
       <div 
@@ -257,7 +289,7 @@ export function updateDockDOM(host, rawTasks = []) {
   // Update mobile pill bar
   const primaryTask = tasks[0];
   const primaryPct = Math.max(0, Math.min(100, Math.round(primaryTask.progress || 0)));
-  const primaryTitle = primaryTask.title ? `Đang tải ${primaryTask.title}...` : `Đang tải ${primaryTask.moduleTitle}...`;
+  const primaryTitle = formatTaskTitle(primaryTask);
   const mobilePill = capsule.querySelector('.sm\\:hidden.task-micro-dock');
   if (mobilePill) {
     mobilePill.setAttribute('data-task-route', primaryTask.route || '');

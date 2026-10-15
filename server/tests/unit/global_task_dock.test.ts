@@ -61,4 +61,38 @@ describe('Global Task Micro-Dock (iOS HUD / macOS Task Indicator Aesthetic)', ()
     expect(cssContent).toContain('.dock-progress-thread');
     expect(cssContent).toContain('@keyframes dockProgressShimmer');
   });
+
+  it('7. getVisibleDockTasks hides active tasks on matching tool views including route aliases', async () => {
+    const { getVisibleDockTasks } = await import(dockJsPath);
+
+    const scribdTask = { id: 'scribd-1', moduleId: 'scribd-archiver', route: '#tool/scribd' };
+    const studocuTask = { id: 'studocu-1', moduleId: 'studocu-dl', route: '#tool/studocu-dl' };
+    const converterTask = { id: 'conv-1', moduleId: 'converter', route: '#tool/universal-converter' };
+    const allTasks = [scribdTask, studocuTask, converterTask];
+
+    // On #tool/scribd
+    (global as any).window = { location: { hash: '#tool/scribd' } };
+    expect(getVisibleDockTasks(allTasks)).toEqual([studocuTask, converterTask]);
+
+    // On #tool/scribd-archiver
+    (global as any).window = { location: { hash: '#tool/scribd-archiver' } };
+    expect(getVisibleDockTasks(allTasks)).toEqual([studocuTask, converterTask]);
+
+    // On #studocu-dl alias
+    (global as any).window = { location: { hash: '#studocu-dl' } };
+    expect(getVisibleDockTasks(allTasks)).toEqual([scribdTask, converterTask]);
+
+    // On #dashboard
+    (global as any).window = { location: { hash: '#dashboard' } };
+    expect(getVisibleDockTasks(allTasks)).toEqual(allTasks);
+  });
+
+  it('8. formatTaskTitle prevents duplicate action prefixes', async () => {
+    const { formatTaskTitle } = await import(dockJsPath);
+
+    expect(formatTaskTitle({ title: 'Đang xử lý: Sách Toán' })).toBe('Đang xử lý: Sách Toán');
+    expect(formatTaskTitle({ title: 'Tài liệu Scribd' })).toBe('Đang tải Tài liệu Scribd');
+    expect(formatTaskTitle({ title: 'Chuyển đổi: test.mp4' })).toBe('Chuyển đổi: test.mp4');
+  });
 });
+

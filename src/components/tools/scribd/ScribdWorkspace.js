@@ -9,7 +9,7 @@ import { renderHeroPasteCard } from './components/HeroPasteCard.js';
 import { renderLiveTerminalCard, renderTerminalLogs } from './components/LiveTerminalCard.js';
 import { renderDocumentListCard, renderDocumentItemsHtml } from './components/DocumentListCard.js';
 import { renderSlideConfirmModal, openSlideConfirmModal } from './components/SlideConfirmModal.js';
-import { scribdManager, validateScribdUrlOrId, extractScribdUrlOrId } from './hooks/useScribd.js';
+import { scribdManager, validateScribdUrlOrId, extractScribdUrlOrId, isScribdSearchUrl } from './hooks/useScribd.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
 
@@ -49,6 +49,19 @@ function handleUrlCandidate(raw) {
       const old = t.textContent;
       t.textContent = check.isSearch ? 'Link tìm kiếm' : 'Link không hợp lệ';
       setTimeout(() => { if (t) t.textContent = old; }, 2500);
+    }
+    const manualDrawer = document.getElementById('scribdManualDrawer');
+    const manualChevron = document.getElementById('scribdManualChevron');
+    const urlInput = document.getElementById('scribdUrlInput');
+    if (manualDrawer) {
+      manualDrawer.classList.remove('hidden');
+      if (manualChevron) manualChevron.style.transform = 'rotate(180deg)';
+    }
+    if (urlInput && raw) {
+      urlInput.value = String(raw).trim();
+      const clearBtn = document.getElementById('btnClearScribdUrl');
+      if (clearBtn) clearBtn.classList.remove('hidden');
+      urlInput.focus();
     }
     return;
   }
@@ -93,11 +106,10 @@ export function attachScribdListeners() {
           try {
             const text = await navigator.clipboard.readText();
             if (text && text.trim()) {
-              const check = validateScribdUrlOrId(text.trim());
-              if (check.valid) {
-                handleUrlCandidate(text.trim());
-                return;
-              }
+              handleUrlCandidate(text.trim());
+              return;
+            } else {
+              showToast('Clipboard rỗng', 'warning');
             }
           } catch (_) {}
         }
@@ -322,6 +334,13 @@ export function attachScribdListeners() {
       prevDownloading = state.isDownloading;
       attachHeroHandlers();
       if (window.lucide?.createIcons) window.lucide.createIcons();
+    }
+
+    if (state.isDownloading) {
+      const heroDocTitleEl = document.getElementById('scribdHeroDocTitle');
+      if (heroDocTitleEl && state.currentDocTitle && heroDocTitleEl.textContent !== state.currentDocTitle) {
+        heroDocTitleEl.textContent = state.currentDocTitle;
+      }
     }
 
     const shouldShowTerminal = state.isDownloading || state.hasError;

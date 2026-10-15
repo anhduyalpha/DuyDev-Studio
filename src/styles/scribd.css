@@ -16,7 +16,7 @@ html.dark #scribdWorkspaceRoot,
 
 @media (max-width: 640px) {
   #scribdWorkspaceRoot {
-    padding-bottom: 96px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -178,9 +178,13 @@ html.dark .btn-hero-paste-scribd:hover,
 
 /* 3. Live Stream Terminal Scroll & Clipping Fix */
 #scribdWorkspaceRoot .terminal-screen {
-  padding: 12px 14px !important;
-  scroll-padding-top: 10px !important;
-  scroll-padding-bottom: 16px !important;
+  padding: 14px 14px 18px 14px !important;
+  scroll-padding-top: 12px !important;
+  scroll-padding-bottom: 18px !important;
+}
+
+#scribdWorkspaceRoot .log-active .log-text::after {
+  color: #F97316 !important;
 }
 
 /* 4. Document Item & Filter Accents */

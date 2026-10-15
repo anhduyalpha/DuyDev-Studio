@@ -611,7 +611,7 @@ html.dark .btn-action.btn-del:hover,
 
 /* Mobile Viewport Optimizations */
 @media (max-width: 640px) {
-  #studocuWorkspaceRoot { padding-bottom: 96px; }
+  #studocuWorkspaceRoot { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   .border-beam-card { padding: 16px 14px; }
   .btn-hero-badge { display: none !important; }
   .terminal-screen { height: 200px; padding: 12px 14px; scroll-padding-top: 10px; scroll-padding-bottom: 16px; font-size: 0.72rem; }
