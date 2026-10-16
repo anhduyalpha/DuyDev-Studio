@@ -121,18 +121,18 @@ describe('Domain Migration Suite (duydev.studio.alphadaniel.io.vn -> studio.duyd
     });
   });
 
-  describe('3. PWA Cache Version Synchronization (v22.50)', () => {
-    it('synchronizes v22.50 across sw.js, pwa.js and index.html', () => {
+  describe('3. PWA Cache Version Synchronization (v23.06)', () => {
+    it('synchronizes v23.06 across sw.js, pwa.js and index.html', () => {
       const projectRoot = path.resolve(__dirname, '../../../');
       const swContent = fs.readFileSync(path.join(projectRoot, 'sw.js'), 'utf-8');
       const pwaContent = fs.readFileSync(path.join(projectRoot, 'src/utilities/pwa.js'), 'utf-8');
       const indexContent = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf-8');
 
-      expect(swContent).toContain("CACHE_NAME = 'duydev-studio-v22.50'");
+      expect(swContent).toContain("CACHE_NAME = 'duydev-studio-v23.06'");
       expect(swContent).toContain("MigrationNoticeModal.js");
-      expect(pwaContent).toContain("CURRENT_PWA_VERSION = 'duydev-studio-v22.50'");
-      expect(indexContent).toContain("stitch-tokens.css?v=22.50");
-      expect(indexContent).toContain("app.js?v=22.50");
+      expect(pwaContent).toContain("CURRENT_PWA_VERSION = 'duydev-studio-v23.06'");
+      expect(indexContent).toContain("stitch-tokens.css?v=23.06");
+      expect(indexContent).toContain("app.js?v=23.06");
     });
   });
 });

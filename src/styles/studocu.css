@@ -3,15 +3,15 @@
    Monochrome Obsidian Palette with Silver Border Beam & High Density Typography
    ========================================================================== */
 
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 @keyframes border-beam-spin {
-  0% { --beam-angle: 0deg; }
-  100% { --beam-angle: 360deg; }
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.006);
+  }
 }
 
 @keyframes terminal-blink {
@@ -70,7 +70,7 @@ html.dark .border-beam-card,
   border-radius: 14px;
   padding: 1.5px;
   background: conic-gradient(
-    from var(--beam-angle, 0deg),
+    from 180deg,
     transparent 0deg,
     transparent 45deg,
     rgba(99, 102, 241, 0.06) 75deg,
@@ -86,7 +86,7 @@ html.dark .border-beam-card,
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
-  animation: border-beam-spin 4s linear infinite;
+  animation: border-beam-spin 3s ease-in-out infinite;
   z-index: 2;
   opacity: 0.95;
   will-change: transform, opacity;
@@ -97,7 +97,7 @@ html.dark .border-beam-card.is-processing::before,
 html.dark .studocu-hero-card.is-processing::before,
 .dark .studocu-hero-card.is-processing::before {
   background: conic-gradient(
-    from var(--beam-angle, 0deg),
+    from 180deg,
     transparent 0deg,
     transparent 45deg,
     rgba(255, 255, 255, 0.04) 75deg,
@@ -116,7 +116,7 @@ html.dark .studocu-hero-card.is-processing::before,
   border-radius: 16px;
   padding: 3px;
   background: conic-gradient(
-    from var(--beam-angle, 0deg),
+    from 180deg,
     transparent 0deg,
     transparent 55deg,
     rgba(99, 102, 241, 0.10) 105deg,
@@ -130,7 +130,7 @@ html.dark .studocu-hero-card.is-processing::before,
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
-  animation: border-beam-spin 4s linear infinite;
+  animation: border-beam-spin 3s ease-in-out infinite;
   z-index: 1;
   opacity: 0.65;
   will-change: transform, opacity;
@@ -141,7 +141,7 @@ html.dark .border-beam-card.is-processing::after,
 html.dark .studocu-hero-card.is-processing::after,
 .dark .studocu-hero-card.is-processing::after {
   background: conic-gradient(
-    from var(--beam-angle, 0deg),
+    from 180deg,
     transparent 0deg,
     transparent 55deg,
     rgba(255, 255, 255, 0.08) 105deg,

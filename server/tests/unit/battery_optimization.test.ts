@@ -286,6 +286,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(studocuContent).not.toMatch(/\.border-beam-card::before\s*\{[^}]*animation:\s*border-beam-spin/);
       expect(studocuContent).not.toMatch(/\.border-beam-card::after\s*\{[^}]*animation:\s*border-beam-spin/);
       expect(studocuContent).not.toContain('filter: blur(10px)');
+      expect(studocuContent).not.toContain('@property --beam-angle');
 
       expect(studocuContent).toContain('.border-beam-card.is-processing::before');
       expect(studocuContent).toContain('.border-beam-card.is-processing::after');

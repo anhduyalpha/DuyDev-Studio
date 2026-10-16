@@ -90,9 +90,9 @@ Các icon trạng thái và dock tiến trình sử dụng CSS `animate-ping` ho
    Chuyển các chấm `animate-ping` và `animate-pulse` trên `GlobalTaskDock.js`, `AdminPage.js`, `AdminAiAgentsCard.js` và `AdminIpTrafficManager.js` thành chấm sáng tĩnh có chiều sâu (`shadow-[0_0_8px_rgba(16,185,129,0.7)]`).
 
 ### 4.4. Chính Sách Zero-Idle-Animation Tiền Cảnh & Tối Ưu Tần Số Quét LTPO 1Hz (Foreground GPU Optimization)
-1. **Khóa Cổng Hoạt Họa `border-beam-spin` Dưới `.is-processing` (`studocu.css`):**
+1. **Khóa Cổng Hoạt Họa `border-beam-spin` Dưới `.is-processing` & Triệt Tiêu `@property` (`studocu.css`):**
    - Loại bỏ hoàn toàn `animation: border-beam-spin ... infinite` và bộ lọc tính toán nặng `filter: blur(10px)` ở trạng thái nhàn rỗi (idle) mặc định của `.border-beam-card` và `.studocu-hero-card`.
-   - Chỉ kích hoạt hiệu ứng xoay viền khi thẻ workspace có class `.is-processing` (trong khi tác vụ trích xuất/tải xuống đang chạy thực sự).
+   - Loại bỏ hoàn toàn Houdini `@property --beam-angle` (vốn ép GPU repaint conic-gradient trên từng frame). Thay thế bằng hoạt họa `transform` và `opacity` thân thiện với compositor khi thẻ workspace có class `.is-processing` (trong khi tác vụ trích xuất/tải xuống đang chạy thực sự).
    - `StudocuWorkspace.js` và `ScribdWorkspace.js` kích hoạt `.is-processing` khi bắt đầu tải và hủy sạch trong `finally`/completion/abort handlers.
 2. **Triệt Tiêu Vòng Lặp `animate-pulse` & `animate-ping` Nhàn Rỗi Trên Toàn Repo:**
    - `FormatSelector.js`: Thay thế chấm nhấp nháy "Định dạng đích" bằng chấm phát sáng tĩnh có độ sâu (`shadow-[0_0_8px_rgba(99,102,241,0.6)]`).
@@ -103,6 +103,6 @@ Các icon trạng thái và dock tiến trình sử dụng CSS `animate-ping` ho
 ---
 
 ## 5. Quy trình Kiểm thử & Xác minh (Verification)
-1. **Unit Tests:** Kiểm tra bộ test `server/tests/unit/battery_optimization.test.ts` (37 tests), `server/tests/unit/pwa_lifecycle.test.ts` (34 tests) và `server/tests/unit/smooth_scroll_120hz.test.ts` (9 tests) chạy qua 100% (Tổng cộng 80/80 tests PASS).
+1. **Unit Tests:** Kiểm tra bộ test `server/tests/unit/battery_optimization.test.ts` (37 tests), `server/tests/unit/pwa_lifecycle.test.ts` (34 tests), `server/tests/unit/smooth_scroll_120hz.test.ts` (9 tests) và `server/tests/unit/domain_migration.test.ts` (6 tests) chạy qua 100% (Tổng cộng 86/86 tests PASS).
 2. **Cú pháp JS & TS:** `node --check` trên tất cả file frontend đã sửa và `tsc --noEmit` hoàn tất với mã thoát 0.
-3. **Quy Tắc Tam Giác Phiên Bản:** Đồng bộ tuyệt đối phiên bản `duydev-studio-v23.06` qua `sw.js`, `index.html` và `pwa.js`.
+3. **Quy Tắc Tam Giác Phiên Bản:** Đồng bộ tuyệt đối phiên bản `duydev-studio-v23.06` qua `sw.js`, `index.html`, `pwa.js` và `domain_migration.test.ts`.
