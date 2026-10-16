@@ -84,6 +84,12 @@ class MockElement {
   addEventListener(_event: string, _handler: any) {}
   removeEventListener(_event: string, _handler: any) {}
   scrollIntoView() {}
+  scrollTo(options: any) {
+    if (typeof options === 'object' && options !== null) {
+      if (options.top !== undefined) this.scrollTop = options.top;
+      if (options.left !== undefined) this.scrollLeft = options.left;
+    }
+  }
   focus() {}
   select() {}
 
@@ -392,26 +398,17 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
       expect(viewer.nightMode).toBe('dark');
     });
 
-    it('should clamp zoom scale between 0.4 and 3.5', () => {
+    it('should clamp zoom scale between 0.25 and 4.0 and update scale immediately', () => {
       const viewer = new PdfCanvasViewer(mockContainer);
       viewer.scale = 1.0;
 
       viewer.zoomIn();
-      expect(viewer.scale).toBe(1.0); // before debounce
-      viewer.setScale(5.0); // should clamp to 3.5
-      // Fast forward debounce
-      if (viewer.zoomDebounceTimer) {
-        clearTimeout(viewer.zoomDebounceTimer);
-        viewer.scale = 3.5;
-      }
-      expect(viewer.scale).toBe(3.5);
+      expect(viewer.scale).toBe(1.25);
+      viewer.setScale(5.0); // should clamp to 4.0
+      expect(viewer.scale).toBe(4.0);
 
-      viewer.setScale(0.1); // should clamp to 0.4
-      if (viewer.zoomDebounceTimer) {
-        clearTimeout(viewer.zoomDebounceTimer);
-        viewer.scale = 0.4;
-      }
-      expect(viewer.scale).toBe(0.4);
+      viewer.setScale(0.1); // should clamp to 0.25
+      expect(viewer.scale).toBe(0.25);
     });
   });
 
@@ -585,6 +582,120 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
 
       expect(mockContainer.scrollLeft).toBe(350);
       expect(mockContainer.scrollTop).toBe(450);
+    });
+
+    it('should dispatch onScaleChange and update floating dock state on wheel zoom', () => {
+      const scaleSpy = vi.fn();
+      const viewer = new PdfCanvasViewer(mockContainer, null, scaleSpy);
+      viewer.scale = 1.0;
+      viewer.totalPages = 1;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+      viewer.initGestureListeners();
+
+      // Ensure dock badge element exists
+      const mockZoomLabel = new MockElement('SPAN');
+      mockZoomLabel.id = 'pdfZoomPctLabel';
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfZoomPctLabel') return mockZoomLabel;
+        return origGetElementById(id);
+      };
+
+      // Mock wheel event with Ctrl key (Zoom In)
+      const mockWheelEvent = {
+        ctrlKey: true,
+        deltaY: -100,
+        clientX: 400,
+        clientY: 300,
+        preventDefault: vi.fn()
+      };
+
+      viewer.boundWheel(mockWheelEvent);
+
+      expect(mockWheelEvent.preventDefault).toHaveBeenCalled();
+      expect(scaleSpy).toHaveBeenCalledWith(1.1);
+      expect(viewer.scale).toBeCloseTo(1.1, 2);
+
+      // Verify Floating Dock state update
+      updateFloatingDockState({ zoomPct: Math.round(viewer.scale * 100) });
+      expect(mockZoomLabel.textContent).toBe('110%');
+
+      // Test Zoom Out with wheel
+      mockWheelEvent.deltaY = 100;
+      viewer.boundWheel(mockWheelEvent);
+      expect(scaleSpy).toHaveBeenCalledWith(expect.closeTo(1.1 * 0.9, 2));
+
+      // Cleanup
+      (global as any).document.getElementById = origGetElementById;
+    });
+
+    it('should clamp scale within bounds (0.25 to 4.0) and maintain stable scroll anchors', () => {
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.scale = 1.0;
+      viewer.totalPages = 1;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+
+      // Extreme zoom in test
+      viewer.setScale(10.0, 400, 300);
+      expect(viewer.scale).toBe(4.0);
+
+      // Extreme zoom out test
+      viewer.setScale(0.05, 400, 300);
+      expect(viewer.scale).toBe(0.25);
+    });
+
+    it('should smoothly target match element without abrupt jump resets during search navigation', async () => {
+      const pageChangeSpy = vi.fn();
+      const viewer = new PdfCanvasViewer(mockContainer, pageChangeSpy);
+      viewer.totalPages = 2;
+      viewer.currentPage = 1;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+      viewer.pageDimensions.set(2, { width: 600, height: 800, ratio: 800 / 600 });
+
+      // Mock rendered page 1 with textLayer
+      const mockPage1Box = new MockElement('DIV');
+      mockPage1Box.id = 'pdfPageBox_1';
+      const textLayer = new MockElement('DIV');
+      textLayer.className = 'textLayer select-text';
+      const span1 = new MockElement('SPAN');
+      span1.textContent = 'Trang đầu của tài liệu PDF DD Studio.';
+      const span2 = new MockElement('SPAN');
+      span2.textContent = 'DD Studio cung cấp giải pháp xử lý tài liệu.';
+      textLayer.appendChild(span1);
+      textLayer.appendChild(span2);
+      mockPage1Box.appendChild(textLayer);
+
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockPage1Box;
+        return origGetElementById(id);
+      };
+
+      viewer.renderedPages.set(1, {
+        canvas: new MockElement('CANVAS'),
+        renderTask: null,
+        textLayerDiv: textLayer,
+        textTask: null,
+        page: null
+      });
+
+      const matches = [
+        { pageNum: 1, matchIndex: 0, query: 'DD Studio' },
+        { pageNum: 1, matchIndex: 1, query: 'DD Studio' }
+      ];
+
+      // Initial search navigation to match 0
+      await viewer.navigateToMatch(matches[0], 'DD Studio', matches);
+      expect(span1.innerHTML).toContain('<span class="highlight selected">DD Studio</span>');
+      expect(span2.innerHTML).toContain('<span class="highlight">DD Studio</span>');
+
+      // Navigate to match 1 on same page: should not reset page or trigger jumpToPage to start
+      await viewer.navigateToMatch(matches[1]);
+      expect(span1.innerHTML).toContain('<span class="highlight">DD Studio</span>');
+      expect(span2.innerHTML).toContain('<span class="highlight selected">DD Studio</span>');
+
+      // Cleanup
+      (global as any).document.getElementById = origGetElementById;
     });
 
     it('should cleanly disconnect sidebar observer and remove fullscreen listeners', () => {

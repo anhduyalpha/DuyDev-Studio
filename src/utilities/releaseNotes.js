@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.09': {
+    version: 'v23.09',
+    title: 'Bản cập nhật v23.09',
+    date: '16/10/2026',
+    features: [
+      'Thu phóng Ctrl+Cuộn chuột mượt mà: Tự động đồng bộ phần trăm hiển thị trên thanh nổi (HUD Floating Dock) tức thì',
+      'Điều hướng tìm kiếm chuẩn xác: Trực tiếp cuộn mượt và căn giữa từ khóa tìm kiếm mà không bị nhảy lùi về đầu trang',
+      'Khóa vị trí đọc chính xác: Neo giữ tọa độ trang chính xác dưới con trỏ chuột khi thu phóng không bị dịch chuyển'
+    ],
+    fixes: [
+      'Khắc phục triệt để hiện tượng nhảy giật trang và trôi tọa độ khi phóng to / thu nhỏ tài liệu PDF',
+      'Loại bỏ xung đột cuộn giữa IntersectionObserver và thanh tìm kiếm từ khóa',
+      'Đồng bộ hóa cache PWA và service worker v23.09'
+    ]
+  },
   'v23.08': {
     version: 'v23.08',
     title: 'Bản cập nhật v23.08',
@@ -152,7 +167,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.07'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.09'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -160,7 +175,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.07'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.07';
+  if (!rawVer) return 'v23.09';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

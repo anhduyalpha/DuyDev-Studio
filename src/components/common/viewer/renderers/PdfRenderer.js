@@ -189,10 +189,16 @@ export function attachPdfListeners(state, registerCleanup) {
 
       if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
 
-      canvasViewer = new PdfCanvasViewer(scrollHost, (page, total) => {
-        updateFloatingDockState({ currentPage: page, totalPages: total });
-        updateActiveSidebarPage(page);
-      });
+      canvasViewer = new PdfCanvasViewer(
+        scrollHost,
+        (page, total) => {
+          updateFloatingDockState({ currentPage: page, totalPages: total });
+          updateActiveSidebarPage(page);
+        },
+        (scale) => {
+          updateFloatingDockState({ zoomPct: Math.round(scale * 100) });
+        }
+      );
 
       await canvasViewer.loadDocument(pdfDoc);
 
@@ -240,25 +246,24 @@ export function attachPdfListeners(state, registerCleanup) {
         onSearch: async (query) => {
           const result = await searchEngine.search(query);
           updateSearchBarMatchCount(result.current, result.total);
-          canvasViewer.setSearchResults(query, result.matches, result.activeMatch);
           if (result.activeMatch) {
-            canvasViewer.jumpToPage(result.activeMatch.pageNum);
+            await canvasViewer.navigateToMatch(result.activeMatch, query, result.matches);
+          } else {
+            canvasViewer.clearSearchResults();
           }
         },
         onNext: () => {
           const next = searchEngine.nextMatch();
           if (next) {
             updateSearchBarMatchCount(next.current, next.total);
-            canvasViewer.setSearchResults(searchEngine.currentQuery, searchEngine.matches, next.match);
-            canvasViewer.jumpToPage(next.match.pageNum);
+            canvasViewer.navigateToMatch(next.match);
           }
         },
         onPrev: () => {
           const prev = searchEngine.prevMatch();
           if (prev) {
             updateSearchBarMatchCount(prev.current, prev.total);
-            canvasViewer.setSearchResults(searchEngine.currentQuery, searchEngine.matches, prev.match);
-            canvasViewer.jumpToPage(prev.match.pageNum);
+            canvasViewer.navigateToMatch(prev.match);
           }
         },
         onClose: () => {
