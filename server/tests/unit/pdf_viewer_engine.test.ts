@@ -1067,6 +1067,133 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
       (global as any).document.createElement = origCreateElement;
       (global as any).document.getElementById = origGetElementById;
     });
+
+    it('should set canvas and textLayer display dimensions to 100% to track parent box scaling', async () => {
+      const mockCanvas = new MockElement('CANVAS');
+      mockCanvas.getContext = () => ({
+        scale: vi.fn(),
+        fillRect: vi.fn(),
+        fillStyle: '#000000',
+        clearRect: vi.fn(),
+        drawImage: vi.fn()
+      });
+
+      let capturedTextLayer: any = null;
+      const origCreateElement = (global as any).document.createElement;
+      (global as any).document.createElement = (tag: string) => {
+        if (tag === 'canvas') return mockCanvas;
+        const el = origCreateElement(tag);
+        if (tag === 'div') capturedTextLayer = el;
+        return el;
+      };
+
+      const mockBox = new MockElement('DIV');
+      mockBox.id = 'pdfPageBox_1';
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockBox;
+        return origGetElementById(id);
+      };
+
+      const mockPage = {
+        rotate: 0,
+        getViewport: () => ({ width: 595, height: 842, scale: 1 }),
+        render: vi.fn(() => ({ promise: Promise.resolve() })),
+        getTextContent: vi.fn(async () => ({ items: [] })),
+        cleanup: vi.fn()
+      };
+      const mockDoc = {
+        numPages: 1,
+        getPage: vi.fn(async () => mockPage),
+        destroy: vi.fn()
+      };
+
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.pdfDoc = mockDoc as any;
+      viewer.totalPages = 1;
+      viewer.scale = 1.0;
+      viewer.pageDimensions.set(1, { width: 595, height: 842, ratio: 842 / 595 });
+
+      await viewer.renderPage(1);
+
+      // Verify canvas and textLayer use 100% CSS dimensions to scale with box during zoom
+      expect(mockCanvas.style.width).toBe('100%');
+      expect(mockCanvas.style.height).toBe('100%');
+      if (capturedTextLayer) {
+        expect(capturedTextLayer.style.width).toBe('100%');
+        expect(capturedTextLayer.style.height).toBe('100%');
+      }
+
+      (global as any).document.createElement = origCreateElement;
+      (global as any).document.getElementById = origGetElementById;
+    });
+
+    it('should set isZooming flag and guard unrenderPage during continuous zoom gestures', () => {
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.scale = 1.0;
+      viewer.totalPages = 2;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+      viewer.pageDimensions.set(2, { width: 600, height: 800, ratio: 800 / 600 });
+
+      const mockBox1 = new MockElement('DIV');
+      mockBox1.id = 'pdfPageBox_1';
+      const mockCanvas1 = new MockElement('CANVAS');
+      mockBox1.appendChild(mockCanvas1);
+
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockBox1;
+        return origGetElementById(id);
+      };
+
+      viewer.renderedPages.set(1, {
+        canvas: mockCanvas1,
+        renderTask: null,
+        textLayerDiv: null,
+        textTask: null,
+        page: null,
+        scale: 1.0,
+        rotation: 0
+      });
+
+      // Initially isZooming is false
+      expect(viewer.isZooming).toBe(false);
+
+      // Trigger zoom
+      viewer.setScale(1.2, 300, 400);
+
+      // isZooming must immediately activate
+      expect(viewer.isZooming).toBe(true);
+
+      // Attempting to unrender while zooming must be suppressed to prevent canvas wiping
+      viewer.unrenderPage(1);
+      expect(viewer.renderedPages.has(1)).toBe(true);
+      expect(mockBox1.children.includes(mockCanvas1)).toBe(true);
+
+      (global as any).document.getElementById = origGetElementById;
+    });
+
+    it('should reset isZooming flag and trigger renderVisiblePages when debounce window expires', async () => {
+      vi.useFakeTimers();
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.scale = 1.0;
+      viewer.totalPages = 1;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+
+      const renderSpy = vi.spyOn(viewer, 'renderVisiblePages').mockImplementation(() => {});
+
+      viewer.setScale(1.5, 300, 400);
+      expect(viewer.isZooming).toBe(true);
+      expect(renderSpy).not.toHaveBeenCalled();
+
+      // Advance debounce timer (150ms)
+      vi.advanceTimersByTime(150);
+
+      expect(viewer.isZooming).toBe(false);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
   });
 });
 

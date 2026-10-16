@@ -28,6 +28,7 @@ export class PdfCanvasViewer {
     this.inFlightRenders = new Map(); // pageNum -> { renderTask, textTask, targetScale, targetRotation, canvas, textLayerDiv, page }
     this.observer = null;
     this.nightMode = 'normal'; // 'normal' | 'dark' | 'sepia'
+    this.isZooming = false;
     this.zoomDebounceTimer = null;
     this.touchPinch = null;
     this.boundWheel = null;
@@ -137,6 +138,11 @@ export class PdfCanvasViewer {
 
     this.observer = new IntersectionObserver(
       (entries) => {
+        // Suppress intersection churn and premature re-renders during active continuous zoom
+        if (this.isZooming) {
+          return;
+        }
+
         entries.forEach((entry) => {
           const pageNum = Number(entry.target.getAttribute('data-page'));
           if (entry.isIntersecting) {
@@ -238,8 +244,8 @@ export class PdfCanvasViewer {
       const ctx = canvas.getContext ? canvas.getContext('2d', { alpha: false }) : null;
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
       canvas.className = 'pdf-canvas absolute inset-0 w-full h-full block select-none pointer-events-none z-1';
 
       if (ctx) {
@@ -252,8 +258,8 @@ export class PdfCanvasViewer {
       // 2. Prepare Selectable Text Layer
       const textLayerDiv = document.createElement('div');
       textLayerDiv.className = 'textLayer select-text';
-      textLayerDiv.style.width = `${Math.floor(viewport.width)}px`;
-      textLayerDiv.style.height = `${Math.floor(viewport.height)}px`;
+      textLayerDiv.style.width = '100%';
+      textLayerDiv.style.height = '100%';
       if (typeof textLayerDiv.style?.setProperty === 'function') {
         textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
       }
@@ -372,7 +378,7 @@ export class PdfCanvasViewer {
   }
 
   unrenderPage(pageNum) {
-    if (this.targetNavPage === pageNum) return;
+    if (this.isZooming || this.targetNavPage === pageNum) return;
     const inFlight = this.inFlightRenders.get(pageNum);
     if (inFlight) {
       try { inFlight.renderTask?.cancel(); } catch {}
@@ -618,6 +624,7 @@ export class PdfCanvasViewer {
       return;
     }
 
+    this.isZooming = true;
     const prevScale = this.scale;
     const containerW = this.containerEl.clientWidth || window.innerWidth || 800;
     const containerH = this.containerEl.clientHeight || window.innerHeight || 600;
@@ -628,21 +635,53 @@ export class PdfCanvasViewer {
     const anchorClientX = containerRect.left + ax;
     const anchorClientY = containerRect.top + ay;
 
-    // Identify page box currently under the anchor point
-    const boxes = this.containerEl.querySelectorAll('.pdf-page-box');
+    // Identify page box currently under the anchor point (fast path on current page)
     let targetBox = null;
     let targetPageNum = this.currentPage || 1;
     let fractionX = 0.5;
     let fractionY = 0.5;
 
-    for (const box of boxes) {
-      const rect = box.getBoundingClientRect();
+    const curBox = document.getElementById(`pdfPageBox_${targetPageNum}`);
+    if (curBox) {
+      const rect = curBox.getBoundingClientRect();
       if (rect.top <= anchorClientY && rect.bottom >= anchorClientY) {
-        targetBox = box;
-        targetPageNum = Number(box.getAttribute('data-page')) || targetPageNum;
+        targetBox = curBox;
         fractionY = rect.height > 0 ? (anchorClientY - rect.top) / rect.height : 0.5;
         fractionX = rect.width > 0 ? (anchorClientX - rect.left) / rect.width : 0.5;
-        break;
+      }
+    }
+
+    if (!targetBox) {
+      // Check adjacent pages (+1, -1) before querying entire DOM
+      for (const offset of [-1, 1]) {
+        const p = targetPageNum + offset;
+        if (p >= 1 && p <= this.totalPages) {
+          const adjBox = document.getElementById(`pdfPageBox_${p}`);
+          if (adjBox) {
+            const rect = adjBox.getBoundingClientRect();
+            if (rect.top <= anchorClientY && rect.bottom >= anchorClientY) {
+              targetBox = adjBox;
+              targetPageNum = p;
+              fractionY = rect.height > 0 ? (anchorClientY - rect.top) / rect.height : 0.5;
+              fractionX = rect.width > 0 ? (anchorClientX - rect.left) / rect.width : 0.5;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!targetBox) {
+      const boxes = this.containerEl.querySelectorAll('.pdf-page-box');
+      for (const box of boxes) {
+        const rect = box.getBoundingClientRect();
+        if (rect.top <= anchorClientY && rect.bottom >= anchorClientY) {
+          targetBox = box;
+          targetPageNum = Number(box.getAttribute('data-page')) || targetPageNum;
+          fractionY = rect.height > 0 ? (anchorClientY - rect.top) / rect.height : 0.5;
+          fractionX = rect.width > 0 ? (anchorClientX - rect.left) / rect.width : 0.5;
+          break;
+        }
       }
     }
 
@@ -702,6 +741,7 @@ export class PdfCanvasViewer {
     // Debounce re-rendering visible pages at target DPR without clearing existing canvas records
     if (this.zoomDebounceTimer) clearTimeout(this.zoomDebounceTimer);
     this.zoomDebounceTimer = setTimeout(() => {
+      this.isZooming = false;
       this.renderVisiblePages();
     }, 150);
   }
@@ -813,7 +853,10 @@ export class PdfCanvasViewer {
         const ratio = currentDist / this.touchPinch.startDist;
         const liveScale = Math.max(0.25, Math.min(this.touchPinch.initialScale * ratio, 4.0));
         if (Math.abs(liveScale - this.scale) >= 0.005) {
-          this.setScale(liveScale, this.touchPinch.midX, this.touchPinch.midY);
+          const rect = this.containerEl.getBoundingClientRect();
+          const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+          const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+          this.setScale(liveScale, midX, midY);
         }
       }
     };
@@ -830,6 +873,7 @@ export class PdfCanvasViewer {
   }
 
   destroy() {
+    this.isZooming = false;
     if (this.zoomDebounceTimer) clearTimeout(this.zoomDebounceTimer);
     if (this.navigationTimer) clearTimeout(this.navigationTimer);
     if (this.observer) this.observer.disconnect();

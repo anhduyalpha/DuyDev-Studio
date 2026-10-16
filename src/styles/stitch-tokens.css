@@ -706,14 +706,21 @@ html.dark .linear-card {
    Zero-Flicker Double-Buffered PDF Canvas & Paper Frame
    ========================================================================== */
 .pdf-page-box {
-  background-color: #ffffff;
+  background-color: #ffffff !important;
   will-change: width, height;
 }
 
 .pdf-canvas {
+  width: 100% !important;
+  height: 100% !important;
   image-rendering: auto;
   image-rendering: -webkit-optimize-contrast;
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+.pdf-page-box .textLayer {
+  width: 100% !important;
+  height: 100% !important;
 }
 

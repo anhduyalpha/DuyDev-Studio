@@ -40,28 +40,39 @@
    - Bổ sung cấu hình CSS chuẩn hóa trong `src/styles/stitch-tokens.css`:
      ```css
      .pdf-page-box {
-       background-color: #ffffff;
+       background-color: #ffffff !important;
        will-change: width, height;
      }
      .pdf-canvas {
+       width: 100% !important;
+       height: 100% !important;
        image-rendering: auto;
        image-rendering: -webkit-optimize-contrast;
        transform: translateZ(0);
        backface-visibility: hidden;
      }
+     .pdf-page-box .textLayer {
+       width: 100% !important;
+       height: 100% !important;
+     }
      ```
-   - Đảm bảo `.pdf-page-box` luôn duy trì màu nền giấy trắng (hoặc giấy tối màu khi bật Dark/Sepia mode) mà không bao giờ để lộ màu nền tối `#09090b` của viewer root.
+   - Cố định `style.width = '100%'` và `style.height = '100%'` trên phần tử `<canvas>` thay vì pixel tuyệt đối, đảm bảo GPU luôn co giãn tức thời 0ms khớp với `.pdf-page-box`.
+   - Bổ sung cờ `isZooming` chặn `IntersectionObserver` và `unrenderPage` kích hoạt các tác vụ rasterize hoặc dọn dẹp sớm trong cửa sổ debounce 150ms khi đang cuộn chuột/pinch liên tục.
 
 ---
 
 ## 4. Xác minh (Verification Evidence)
-- **Kiểm thử tự động:** `server/tests/unit/pdf_viewer_engine.test.ts` (Section 8) bổ sung 4 ca kiểm thử chuyên sâu:
+- **Kiểm thử tự động:** `server/tests/unit/pdf_viewer_engine.test.ts` (Section 8) bổ sung 7 ca kiểm thử chuyên sâu:
   - Kiểm tra tô nền trắng phòng vệ ngay khi tạo canvas mới trước khi rasterize.
   - Kiểm tra bảo toàn canvas cũ trong DOM và cập nhật kích thước hộp 0ms khi `setScale`.
   - Kiểm tra hoán đổi nguyên tử `replaceWith` sau khi `renderTask.promise` hoàn thành.
   - Kiểm tra loại bỏ tác vụ vẽ nền lỗi thời khi tỷ lệ zoom thay đổi liên tiếp.
+  - Kiểm tra gán kích thước hiển thị 100% cho canvas và textLayer để co giãn đồng bộ với box.
+  - Kiểm tra cờ `isZooming` bảo vệ `unrenderPage` không xóa canvas khi đang thu phóng liên tục.
+  - Kiểm tra đặt lại `isZooming` và kích hoạt `renderVisiblePages` khi hết hạn debounce 150ms.
 - **Kết quả thực thi:**
-  - `rtk vitest run tests/unit/pdf_viewer_engine.test.ts tests/unit/battery_optimization.test.ts tests/unit/pwa_lifecycle.test.ts tests/unit/viewer_hardening.test.ts` -> **PASS (120) FAIL (0)**.
+  - `rtk vitest run tests/unit/pdf_viewer_engine.test.ts tests/unit/battery_optimization.test.ts tests/unit/pwa_lifecycle.test.ts tests/unit/viewer_hardening.test.ts` -> **PASS (123) FAIL (0)**.
   - `rtk npm --prefix server run build` (`tsc`) -> **Exit 0**.
   - `rtk err node --check ...` -> **Exit 0**.
   - Cache Version: Đã nâng cấp đồng bộ lên **v23.10** (`sw.js`, `index.html`, `pwa.js`, `releaseNotes.js`).
+
