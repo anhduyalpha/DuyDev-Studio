@@ -41,12 +41,34 @@ class AndroidBridge(
         sharedPayloadJson = null
     }
 
+    @Volatile
+    private var activeTaskCount = 0
+
     /**
      * Signal to the web application that it is executing inside the native Android APK.
      */
     @JavascriptInterface
     fun isNativeApp(): Boolean {
         return true
+    }
+
+    /**
+     * Report active background tasks from frontend task coordinator.
+     * Allows native Activity to perform work-aware sleep without killing active downloads.
+     */
+    @JavascriptInterface
+    fun reportActiveTasks(count: Int) {
+        val safeCount = if (count < 0) 0 else count
+        activeTaskCount = safeCount
+        activity.onActiveTaskCountChanged(safeCount)
+    }
+
+    /**
+     * Check whether there are ongoing active tasks.
+     */
+    @JavascriptInterface
+    fun hasActiveTasks(): Boolean {
+        return activeTaskCount > 0
     }
 
     /**

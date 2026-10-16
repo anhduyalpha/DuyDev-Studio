@@ -66,6 +66,23 @@ class MainActivity : AppCompatActivity() {
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var lastBackPressTime = 0L
 
+    private val lifecycleHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    @Volatile private var isAppPaused = false
+    @Volatile private var isWebViewFrozen = false
+    @Volatile private var activeTaskCount = 0
+
+    private val deepFreezeRunnable = Runnable {
+        if (isAppPaused && !isWebViewFrozen) {
+            executeDeepFreeze()
+        }
+    }
+
+    private val taskSafetyTimeoutRunnable = Runnable {
+        if (isAppPaused && !isWebViewFrozen) {
+            executeDeepFreeze()
+        }
+    }
+
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermissionRequest: PermissionRequest? = null
     private val sharedUrisList = mutableListOf<Uri>()
@@ -182,37 +199,81 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun executeDeepFreeze() {
+        if (!::webView.isInitialized || isWebViewFrozen) return
+        isWebViewFrozen = true
+        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
+        try {
+            webView.onPause()
+            webView.pauseTimers()
+            CookieManager.getInstance().flush()
+        } catch (_: Exception) {}
+    }
+
+    fun onActiveTaskCountChanged(count: Int) {
+        val safeCount = if (count < 0) 0 else count
+        activeTaskCount = safeCount
+        if (isAppPaused) {
+            if (safeCount == 0) {
+                executeDeepFreeze()
+            } else if (isWebViewFrozen) {
+                try {
+                    webView.resumeTimers()
+                    webView.onResume()
+                    isWebViewFrozen = false
+                    lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+                    lifecycleHandler.postDelayed(taskSafetyTimeoutRunnable, 75000L)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     override fun onPause() {
         super.onPause()
         window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        isAppPaused = true
+
         if (::webView.isInitialized) {
             evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-paused')); }")
-            webView.onPause()
-            webView.pauseTimers()
             try {
                 CookieManager.getInstance().flush()
             } catch (_: Exception) {}
+        }
+
+        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
+
+        if (activeTaskCount > 0) {
+            // Background tasks running (e.g. download or conversion): allow background execution with 75s safety cap
+            lifecycleHandler.postDelayed(taskSafetyTimeoutRunnable, 75000L)
+        } else {
+            // Grant a 5,000ms grace window for quick app switching (e.g. copying URL from Chrome/Telegram)
+            lifecycleHandler.postDelayed(deepFreezeRunnable, 5000L)
         }
     }
 
     override fun onStop() {
         super.onStop()
         window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        if (::webView.isInitialized) {
-            webView.onPause()
-            webView.pauseTimers()
-            try {
-                CookieManager.getInstance().flush()
-            } catch (_: Exception) {}
+        if (activeTaskCount == 0 && !isWebViewFrozen) {
+            executeDeepFreeze()
         }
     }
 
     override fun onResume() {
         super.onResume()
+        isAppPaused = false
+        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
+
         unlockHighRefreshRate()
         if (::webView.isInitialized) {
-            webView.resumeTimers()
-            webView.onResume()
+            if (isWebViewFrozen) {
+                webView.resumeTimers()
+                webView.onResume()
+                isWebViewFrozen = false
+            }
         }
         currentInstance = this
         evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-resumed')); }")
@@ -224,6 +285,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
         if (currentInstance == this) {
             currentInstance = null
         }

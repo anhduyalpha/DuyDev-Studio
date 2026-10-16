@@ -17,6 +17,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const quizApiPath = path.join(rootDir, 'src/components/tools/quiz/hooks/quizApi.js');
   const appJsPath = path.join(rootDir, 'src/app.js');
   const mainActivityPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/MainActivity.kt');
+  const androidBridgePath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/AndroidBridge.kt');
   const globalTaskDockPath = path.join(rootDir, 'src/components/layout/GlobalTaskDock.js');
   const headerPath = path.join(rootDir, 'src/components/layout/Header.js');
   const adminPagePath = path.join(rootDir, 'src/pages/AdminPage.js');
@@ -37,6 +38,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const quizApiContent = fs.readFileSync(quizApiPath, 'utf-8');
   const appJsContent = fs.readFileSync(appJsPath, 'utf-8');
   const mainActivityContent = fs.readFileSync(mainActivityPath, 'utf-8');
+  const androidBridgeContent = fs.readFileSync(androidBridgePath, 'utf-8');
   const globalTaskDockContent = fs.readFileSync(globalTaskDockPath, 'utf-8');
   const headerContent = fs.readFileSync(headerPath, 'utf-8');
   const adminPageContent = fs.readFileSync(adminPagePath, 'utf-8');
@@ -188,35 +190,42 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(mainActivityContent).toMatch(/settings\.safeBrowsingEnabled\s*=\s*false/);
     });
 
-    it('MainActivity.kt onPause must dispatch ds:native-app-paused before pausing timers', () => {
+    it('MainActivity.kt onPause must dispatch ds:native-app-paused and clear FLAG_KEEP_SCREEN_ON', () => {
       const pauseIdx = mainActivityContent.indexOf('override fun onPause()');
       expect(pauseIdx).toBeGreaterThan(-1);
-      const pauseBlock = mainActivityContent.slice(pauseIdx, pauseIdx + 600);
+      const pauseBlock = mainActivityContent.slice(pauseIdx, pauseIdx + 800);
       expect(pauseBlock).toContain("window.dispatchEvent(new CustomEvent('ds:native-app-paused'))");
-      const eventIdx = pauseBlock.indexOf("ds:native-app-paused");
-      const webViewPauseIdx = pauseBlock.indexOf("webView.onPause()");
-      expect(eventIdx).toBeLessThan(webViewPauseIdx);
+      expect(pauseBlock).toContain('window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)');
     });
 
-    it('MainActivity.kt must define onStop() with cookie flush', () => {
+    it('MainActivity.kt must implement work-aware smart grace window and task-aware lifecycle handler', () => {
+      expect(mainActivityContent).toContain('deepFreezeRunnable');
+      expect(mainActivityContent).toContain('taskSafetyTimeoutRunnable');
+      expect(mainActivityContent).toContain('lifecycleHandler.postDelayed(deepFreezeRunnable, 5000L)');
+      expect(mainActivityContent).toContain('lifecycleHandler.postDelayed(taskSafetyTimeoutRunnable, 75000L)');
+      expect(mainActivityContent).toContain('executeDeepFreeze()');
+      expect(mainActivityContent).toContain('onActiveTaskCountChanged(count: Int)');
+    });
+
+    it('MainActivity.kt executeDeepFreeze and onStop must enforce webView.onPause(), pauseTimers(), and cookie flush', () => {
+      const freezeIdx = mainActivityContent.indexOf('fun executeDeepFreeze()');
+      expect(freezeIdx).toBeGreaterThan(-1);
+      const freezeBlock = mainActivityContent.slice(freezeIdx, freezeIdx + 600);
+      expect(freezeBlock).toContain('webView.onPause()');
+      expect(freezeBlock).toContain('webView.pauseTimers()');
+      expect(freezeBlock).toContain('CookieManager.getInstance().flush()');
+
       const stopIdx = mainActivityContent.indexOf('override fun onStop()');
       expect(stopIdx).toBeGreaterThan(-1);
       const stopBlock = mainActivityContent.slice(stopIdx, stopIdx + 400);
-      expect(stopBlock).toContain('CookieManager.getInstance().flush()');
+      expect(stopBlock).toContain('executeDeepFreeze()');
+      expect(stopBlock).toContain('window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)');
     });
 
-    it('MainActivity.kt onPause and onStop must call webView.onPause(), pauseTimers(), and clear FLAG_KEEP_SCREEN_ON', () => {
-      const pauseIdx = mainActivityContent.indexOf('override fun onPause()');
-      const pauseBlock = mainActivityContent.slice(pauseIdx, pauseIdx + 600);
-      expect(pauseBlock).toContain('webView.onPause()');
-      expect(pauseBlock).toContain('webView.pauseTimers()');
-      expect(pauseBlock).toContain('window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)');
-
-      const stopIdx = mainActivityContent.indexOf('override fun onStop()');
-      const stopBlock = mainActivityContent.slice(stopIdx, stopIdx + 600);
-      expect(stopBlock).toContain('webView.onPause()');
-      expect(stopBlock).toContain('webView.pauseTimers()');
-      expect(stopBlock).toContain('window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)');
+    it('AndroidBridge.kt must expose reportActiveTasks and hasActiveTasks JavaScript interfaces', () => {
+      expect(androidBridgeContent).toContain('@JavascriptInterface');
+      expect(androidBridgeContent).toContain('fun reportActiveTasks(count: Int)');
+      expect(androidBridgeContent).toContain('fun hasActiveTasks(): Boolean');
     });
 
     it('MainActivity.kt unlockHighRefreshRate must delegate to adaptive display mode 0 for LTPO power saving', () => {
@@ -358,10 +367,16 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(headerContent).toContain("window.addEventListener('ds:visibility-change'");
     });
 
-    it('taskCoordinator.js must throttle mobile heartbeat to 5000ms and govern Android screen wake-lock', () => {
+    it('taskCoordinator.js must throttle mobile heartbeat to 5000ms, govern Android screen wake-lock, and report active tasks', () => {
       expect(taskCoordinatorContent).toContain('const intervalMs = isMobileOrApk ? 5000 : 2500;');
       expect(taskCoordinatorContent).toContain('window.AndroidBridge.setKeepScreenOn(!isHidden && hasRunning)');
       expect(taskCoordinatorContent).toContain('window.AndroidBridge.setKeepScreenOn(false)');
+      expect(taskCoordinatorContent).toContain('window.AndroidBridge.reportActiveTasks(this.getActiveTasks().length)');
+    });
+
+    it('jobWatcher.js watchdogTimer must guard against starting fallback polling when hidden and pause on background', () => {
+      expect(jobWatcherContent).toContain('!isHidden && Date.now() - lastActivityTime >= 12000');
+      expect(jobWatcherContent).toContain('stopFallbackPolling()');
     });
 
     it('AdminIpTrafficManager.js must throttle sessions polling on mobile to 16s and suspend on hidden tab', () => {

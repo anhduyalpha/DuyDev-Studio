@@ -6,6 +6,22 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.13': {
+    version: 'v23.13',
+    title: 'Bản cập nhật v23.13',
+    date: '17/10/2026',
+    features: [
+      'Smart Task-Aware Background Execution: Cho phép tải ngầm và xử lý tác vụ tiếp tục hoàn tất khi chuyển ứng dụng mà không bị đóng băng',
+      '5-Giây Grace Window: Chuyển qua app khác copy link rồi quay lại ngay lập tức trong 5s với 0ms delay, không giật lag',
+      'Work-Aware Deep Freeze: Tự động đóng băng WebView và dừng toàn bộ timers ngay khi tác vụ hoàn thành để tiết kiệm 100% pin nhàn rỗi',
+      'Two-Way Task Reporting: Cầu nối JavaScript Bridge báo cáo chính xác số lượng tác vụ đang chạy từ Task Coordinator lên Android Native'
+    ],
+    fixes: [
+      'Khắc phục triệt để hiện tượng đứng app khi chuyển tab sao chép URL trên APK Android',
+      'Tự động hạ tần suất polling từ 800ms xuống 5s–6s khi ứng dụng chạy ngầm',
+      'Bảo vệ giới hạn an toàn 75s chống rò rỉ pin khi có tác vụ mạng bị treo ngầm'
+    ]
+  },
   'v23.12': {
     version: 'v23.12',
     title: 'Bản cập nhật v23.12',

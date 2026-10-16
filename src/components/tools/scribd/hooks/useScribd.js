@@ -373,6 +373,15 @@ class ScribdManager {
   }
 
   stopPolling() {
+    if (this.visibilityHandler) {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', this.visibilityHandler);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('ds:visibility-change', this.visibilityHandler);
+      }
+      this.visibilityHandler = null;
+    }
     if (this.pollTimeout) {
       clearTimeout(this.pollTimeout);
       this.pollTimeout = null;
@@ -438,7 +447,8 @@ class ScribdManager {
             }
           }
           if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
-            this.pollTimeout = setTimeout(pollTick, 1000);
+            const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+            this.pollTimeout = setTimeout(pollTick, isHidden ? 6000 : 1000);
           }
           return;
         }
@@ -447,7 +457,8 @@ class ScribdManager {
         if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
         if (!job || job.error) {
           if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
-            this.pollTimeout = setTimeout(pollTick, 1000);
+            const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+            this.pollTimeout = setTimeout(pollTick, isHidden ? 6000 : 1000);
           }
           return;
         }
@@ -457,10 +468,30 @@ class ScribdManager {
       } finally {
         isPollingTick = false;
         if (this.isPolling && this.isDownloading && this.currentJobId === jobId) {
-          this.pollTimeout = setTimeout(pollTick, 800);
+          const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+          this.pollTimeout = setTimeout(pollTick, isHidden ? 5000 : 800);
         }
       }
     };
+
+    this.visibilityHandler = () => {
+      if (!this.isPolling || !this.isDownloading || this.currentJobId !== jobId) return;
+      const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+      if (!isHidden) {
+        if (this.pollTimeout) {
+          clearTimeout(this.pollTimeout);
+          this.pollTimeout = null;
+        }
+        pollTick();
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.visibilityHandler);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ds:visibility-change', this.visibilityHandler);
+    }
 
     this.pollTimeout = setTimeout(pollTick, 500);
   }
@@ -506,7 +537,11 @@ class ScribdManager {
       showToast(this.stepLabel, msg.status === 'cancelled' ? 'info' : 'error');
     }
 
-    this.notify();
+    const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+    const isFinished = msg.status === 'completed' || msg.status === 'success' || msg.status === 'failed' || msg.status === 'error' || msg.status === 'cancelled';
+    if (isFinished || !isHidden) {
+      this.notify();
+    }
   }
 
   async resumeJob(jobId, url, startTime) {

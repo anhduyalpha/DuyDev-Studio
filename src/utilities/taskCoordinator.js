@@ -109,6 +109,13 @@ class TaskCoordinator {
       } catch {}
     }
 
+    // Report active running tasks to native Android lifecycle governor for work-aware sleep
+    if (window.AndroidBridge && typeof window.AndroidBridge.reportActiveTasks === 'function') {
+      try {
+        window.AndroidBridge.reportActiveTasks(this.getActiveTasks().length);
+      } catch {}
+    }
+
     if (isHidden || !hasRunning) {
       this.stopHeartbeat();
     } else if (!this.heartbeatTimer) {

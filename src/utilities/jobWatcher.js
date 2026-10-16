@@ -21,19 +21,31 @@ export function watchJobProgress({
 
   const onVisibilityChange = () => {
     if (isDone) return;
-    if (typeof document !== 'undefined' && !document.hidden) {
+    const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+    if (!isHidden) {
       pollStatus();
+      if (Date.now() - lastActivityTime >= 12000) {
+        startFallbackPolling();
+      }
+    } else {
+      stopFallbackPolling();
     }
   };
 
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', onVisibilityChange);
   }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('ds:visibility-change', onVisibilityChange);
+  }
 
   const cleanup = () => {
     isDone = true;
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', onVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('ds:visibility-change', onVisibilityChange);
     }
     if (activePollAbort) {
       try {
@@ -137,10 +149,11 @@ export function watchJobProgress({
   // 1. Proactive status check at t = 0 (immediately catches jobs completed < 200ms)
   pollStatus();
 
-  // 2. Heartbeat watchdog timer: if no progress/event received for 12 seconds, engage fallback polling
+  // 2. Heartbeat watchdog timer: if no progress/event received for 12 seconds and page is visible, engage fallback polling
   watchdogTimer = setInterval(() => {
     if (isDone) return;
-    if (Date.now() - lastActivityTime >= 12000) {
+    const isHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden' || document.documentElement.classList.contains('app-backgrounded'));
+    if (!isHidden && Date.now() - lastActivityTime >= 12000) {
       startFallbackPolling();
     }
   }, 3000);
