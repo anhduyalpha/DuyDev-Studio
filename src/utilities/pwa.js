@@ -23,7 +23,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v23.03';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v23.04';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -236,7 +236,7 @@ export function showUpdateNotificationCenter(waitingWorker, options = {}) {
   ].join(';');
 
   const targetVersion = opts.version || opts.notes?.version || latestDiscoveredServerVersion || CURRENT_PWA_VERSION;
-  const displayVer = (opts.version ? opts.version.replace('duydev-studio-', '') : (latestDiscoveredServerVersion ? latestDiscoveredServerVersion.replace('duydev-studio-', '') : CURRENT_PWA_VERSION.replace('duydev-studio-', ''))) || 'v23.03';
+  const displayVer = (opts.version ? opts.version.replace('duydev-studio-', '') : (latestDiscoveredServerVersion ? latestDiscoveredServerVersion.replace('duydev-studio-', '') : CURRENT_PWA_VERSION.replace('duydev-studio-', ''))) || 'v23.04';
 
   const notes = opts.notes || getReleaseNotes(targetVersion);
   const highlightsHtml = renderReleaseHighlightsHtml(notes);

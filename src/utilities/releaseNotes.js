@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.04': {
+    version: 'v23.04',
+    title: 'Bản cập nhật v23.04',
+    date: '16/10/2026',
+    features: [
+      'Scribd Archiver Dual-Engine: Tăng tốc kết nối & ghép tài liệu lên đến 7x (sách 244 trang chỉ mất 18 giây)',
+      'Tích hợp khiên chặn Tracker/Ads (chặn 12+ dịch vụ theo dõi) giúp vào tài liệu trong < 1.5s',
+      'Định tuyến thông minh: Tự động tải song song stream ảnh CDN với PyMuPDF cho tài liệu scan và giữ 100% văn bản Vector qua Chromium'
+    ],
+    fixes: [
+      'Khắc phục hoàn toàn hiện tượng treo 30 giây khi bắt đầu nạp trang Scribd',
+      'Loại bỏ tắc nghẽn bộ nhớ Skia khi render sách hàng trăm trang'
+    ]
+  },
   'v23.03': {
     version: 'v23.03',
     title: 'Bản cập nhật v23.03',
