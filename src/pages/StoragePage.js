@@ -290,7 +290,7 @@ export function renderStoragePage() {
       <div id="storageUploadDock" class="${state.isUploading ? '' : 'hidden'} p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/20 space-y-2">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-semibold text-indigo-900 dark:text-indigo-200">
           <div class="flex items-center gap-2 min-w-0">
-            <div id="storageUploadIndicator" class="w-2 h-2 rounded-full bg-indigo-500 animate-ping shrink-0"></div>
+            <div id="storageUploadIndicator" class="w-2 h-2 rounded-full bg-indigo-500 ${state.isUploading ? 'animate-ping' : ''} shadow-[0_0_8px_rgba(99,102,241,0.6)] shrink-0"></div>
             <span id="storageUploadText" class="truncate">${escapeHtml(state.uploadStatusText || 'Đang tải lên tệp...')}</span>
           </div>
           <div class="flex items-center gap-2.5 font-mono text-xs shrink-0 self-end sm:self-auto">
@@ -310,7 +310,7 @@ export function renderStoragePage() {
         
         <!-- Drag & Drop Hover Overlay -->
         <div id="storageDropOverlay" class="absolute inset-0 z-20 hidden bg-indigo-600/10 backdrop-blur-xs border-2 border-dashed border-indigo-500 rounded-2xl flex flex-col items-center justify-center pointer-events-none space-y-2">
-          <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg animate-pulse">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)]">
             <i data-lucide="upload-cloud" class="w-6 h-6"></i>
           </div>
           <p class="font-bold text-sm text-indigo-600 dark:text-indigo-400">Thả tệp vào đây để tải lên thư mục hiện tại</p>

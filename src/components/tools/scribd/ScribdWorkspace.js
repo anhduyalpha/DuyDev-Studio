@@ -363,6 +363,7 @@ export function attachScribdListeners() {
       attachHeroHandlers();
       if (window.lucide?.createIcons) window.lucide.createIcons();
     }
+    heroEl?.querySelector('.scribd-command-deck')?.classList.toggle('is-processing', Boolean(state.isDownloading));
 
     if (state.isDownloading) {
       const heroDocTitleEl = document.getElementById('scribdHeroDocTitle');

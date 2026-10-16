@@ -10,7 +10,7 @@ export function renderHeroPasteCard(state) {
 
   if (isDownloading) {
     return `
-      <div class="scribd-command-deck flex flex-col gap-4 relative overflow-hidden select-none">
+      <div class="scribd-command-deck is-processing flex flex-col gap-4 relative overflow-hidden select-none">
         <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status) -->
         <div class="flex items-center gap-3 pt-0.5">
           <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">

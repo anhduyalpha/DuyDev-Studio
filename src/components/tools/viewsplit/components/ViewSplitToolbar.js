@@ -120,7 +120,7 @@ export function renderViewSplitToolbar(state) {
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
                 }"
               >
-                <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-cyan-400 animate-pulse' : hasImage ? 'bg-emerald-400' : 'bg-zinc-400/50'}"></span>
+                <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]' : hasImage ? 'bg-emerald-400' : 'bg-zinc-400/50'}"></span>
                 <span>${title}</span>
               </button>
             `;

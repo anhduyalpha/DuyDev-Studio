@@ -7,7 +7,7 @@ export function renderHeroPasteCard(state) {
   const isDownloading = Boolean(state.isDownloading);
 
   return `
-    <div class="border-beam-card bg-white dark:bg-[#111114] text-center space-y-4">
+    <div class="border-beam-card ${isDownloading ? 'is-processing' : ''} bg-white dark:bg-[#111114] text-center space-y-4">
       <!-- Title & Subtitle -->
       <div class="space-y-1">
         <h2 class="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center justify-center gap-2">

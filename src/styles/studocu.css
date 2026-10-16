@@ -51,9 +51,21 @@ html.dark .border-beam-card,
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 
-.border-beam-card::before {
+.border-beam-card::before,
+.border-beam-card::after,
+.studocu-hero-card::before,
+.studocu-hero-card::after {
   content: "";
   position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.border-beam-card.is-processing::before,
+.studocu-hero-card.is-processing::before {
   inset: 0;
   border-radius: 14px;
   padding: 1.5px;
@@ -77,10 +89,13 @@ html.dark .border-beam-card,
   animation: border-beam-spin 4s linear infinite;
   z-index: 2;
   opacity: 0.95;
+  will-change: transform, opacity;
 }
 
-html.dark .border-beam-card::before,
-.dark .border-beam-card::before {
+html.dark .border-beam-card.is-processing::before,
+.dark .border-beam-card.is-processing::before,
+html.dark .studocu-hero-card.is-processing::before,
+.dark .studocu-hero-card.is-processing::before {
   background: conic-gradient(
     from var(--beam-angle, 0deg),
     transparent 0deg,
@@ -95,9 +110,8 @@ html.dark .border-beam-card::before,
   );
 }
 
-.border-beam-card::after {
-  content: "";
-  position: absolute;
+.border-beam-card.is-processing::after,
+.studocu-hero-card.is-processing::after {
   inset: -2px;
   border-radius: 16px;
   padding: 3px;
@@ -115,15 +129,17 @@ html.dark .border-beam-card::before,
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  filter: blur(10px);
   pointer-events: none;
   animation: border-beam-spin 4s linear infinite;
   z-index: 1;
   opacity: 0.65;
+  will-change: transform, opacity;
 }
 
-html.dark .border-beam-card::after,
-.dark .border-beam-card::after {
+html.dark .border-beam-card.is-processing::after,
+.dark .border-beam-card.is-processing::after,
+html.dark .studocu-hero-card.is-processing::after,
+.dark .studocu-hero-card.is-processing::after {
   background: conic-gradient(
     from var(--beam-angle, 0deg),
     transparent 0deg,
@@ -138,7 +154,13 @@ html.dark .border-beam-card::after,
 
 @media (prefers-reduced-motion: reduce) {
   .border-beam-card::before,
-  .border-beam-card::after {
+  .border-beam-card::after,
+  .studocu-hero-card::before,
+  .studocu-hero-card::after,
+  .border-beam-card.is-processing::before,
+  .border-beam-card.is-processing::after,
+  .studocu-hero-card.is-processing::before,
+  .studocu-hero-card.is-processing::after {
     animation: none !important;
   }
 }

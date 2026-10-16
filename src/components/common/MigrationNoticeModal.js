@@ -111,7 +111,7 @@ export function checkAndRenderMigrationNotice() {
 
         <!-- Beacon Header Icon -->
         <div class="relative mx-auto w-16 h-16 flex items-center justify-center">
-          <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 opacity-20 blur-xl animate-pulse"></div>
+          <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 opacity-20 blur-xl"></div>
           <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-md">
             <i data-lucide="arrow-right-left" class="w-8 h-8"></i>
           </div>
@@ -120,7 +120,7 @@ export function checkAndRenderMigrationNotice() {
         <!-- Pill Badge & Title -->
         <div class="space-y-2">
           <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 text-[11px] font-bold tracking-wider uppercase font-mono">
-            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+            <span class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
             <span>Thông Báo Di Dời Tên Miền</span>
           </div>
           <h2 class="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
@@ -164,7 +164,7 @@ export function checkAndRenderMigrationNotice() {
 
         <!-- Countdown Ticker -->
         <div id="migrationCountdownContainer" class="text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-1.5 font-medium font-mono">
-          <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500 animate-spin"></i>
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
           <span>Tự động chuyển tiếp sau <strong id="migrationCountdownSec" class="text-amber-600 dark:text-amber-400 font-bold text-sm">8</strong>s...</span>
           <button type="button" id="btnToggleCountdownPause" class="ml-2 text-[11px] underline text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
             [Tạm dừng]

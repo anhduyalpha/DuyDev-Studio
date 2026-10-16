@@ -120,7 +120,7 @@ export function renderTiktokWorkspace() {
         <!-- Batch Progress Banner -->
         <div id="tiktokBatchProgressBanner" class="${batchQueue && batchQueue.isActive ? '' : 'hidden'} mt-3 p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between gap-3 animate-fadeIn">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping shrink-0"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 ${batchQueue && batchQueue.isActive ? 'animate-ping' : ''} shadow-[0_0_8px_rgba(99,102,241,0.6)] shrink-0"></div>
             <div class="min-w-0">
               <p class="font-semibold truncate">
                 Đang lưu hàng loạt vào Drive: <span id="tiktokBatchCountText">${batchQueue?.current || 0}/${batchQueue?.total || 0}</span>

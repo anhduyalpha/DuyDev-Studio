@@ -23,6 +23,9 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const visitorTrackerPath = path.join(rootDir, 'src/utilities/visitorTracker.js');
   const taskCoordinatorPath = path.join(rootDir, 'src/utilities/taskCoordinator.js');
   const adminIpTrafficPath = path.join(rootDir, 'src/components/admin/AdminIpTrafficManager.js');
+  const formatSelectorPath = path.join(rootDir, 'src/components/tools/converter/components/FormatSelector.js');
+  const viewSplitSliderOverlayPath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js');
+  const viewSplitPanePath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitPane.js');
 
   const swContent = fs.readFileSync(swPath, 'utf-8');
   const indexContent = fs.readFileSync(indexPath, 'utf-8');
@@ -40,6 +43,9 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const visitorTrackerContent = fs.readFileSync(visitorTrackerPath, 'utf-8');
   const taskCoordinatorContent = fs.readFileSync(taskCoordinatorPath, 'utf-8');
   const adminIpTrafficContent = fs.readFileSync(adminIpTrafficPath, 'utf-8');
+  const formatSelectorContent = fs.readFileSync(formatSelectorPath, 'utf-8');
+  const viewSplitSliderOverlayContent = fs.readFileSync(viewSplitSliderOverlayPath, 'utf-8');
+  const viewSplitPaneContent = fs.readFileSync(viewSplitPanePath, 'utf-8');
 
   describe('1. Fastify Static Tiered Caching & ETag (Pillar 1)', () => {
     let app: FastifyInstance;
@@ -274,6 +280,22 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
 
     it('DashboardPage.js must NOT use animate-ping for background animation', () => {
       expect(dashboardContent).not.toContain('animate-ping');
+    });
+
+    it('studocu.css does not apply infinite border-beam-spin or filter blur in default idle state and gates under .is-processing', () => {
+      expect(studocuContent).not.toMatch(/\.border-beam-card::before\s*\{[^}]*animation:\s*border-beam-spin/);
+      expect(studocuContent).not.toMatch(/\.border-beam-card::after\s*\{[^}]*animation:\s*border-beam-spin/);
+      expect(studocuContent).not.toContain('filter: blur(10px)');
+
+      expect(studocuContent).toContain('.border-beam-card.is-processing::before');
+      expect(studocuContent).toContain('.border-beam-card.is-processing::after');
+      expect(studocuContent).toContain('animation: border-beam-spin');
+    });
+
+    it('FormatSelector.js, ViewSplitSliderOverlay.js, and ViewSplitPane.js contain zero idle animate-pulse classes', () => {
+      expect(formatSelectorContent).not.toContain('animate-pulse');
+      expect(viewSplitSliderOverlayContent).not.toContain('animate-pulse');
+      expect(viewSplitPaneContent).not.toContain('animate-pulse');
     });
   });
 

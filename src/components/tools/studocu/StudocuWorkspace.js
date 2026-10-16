@@ -202,6 +202,7 @@ export function attachStudocuListeners() {
       attachHeroHandlers();
       if (window.lucide?.createIcons) window.lucide.createIcons();
     }
+    heroEl?.querySelector('.border-beam-card')?.classList.toggle('is-processing', Boolean(state.isDownloading));
 
     const shouldShowTerminal = state.isDownloading;
     if (termCard) {

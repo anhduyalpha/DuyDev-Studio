@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.06': {
+    version: 'v23.06',
+    title: 'Bản cập nhật v23.06',
+    date: '16/10/2026',
+    features: [
+      'Tối ưu hóa GPU & Màn hình LTPO: Giảm tải GPU về 0% ở trạng thái nhàn rỗi (idle), cho phép màn hình hạ tần số quét xuống 1Hz–10Hz tiết kiệm pin tối đa',
+      'Cổng hoạt họa thông minh (.is-processing): Hiệu ứng Border Beam xoay ánh sáng chỉ kích hoạt khi đang xử lý tệp hoặc tải tài liệu thực tế',
+      'Độ sâu phát sáng tĩnh (Static Depth Glow): Thay thế toàn bộ chấm trạng thái và huy hiệu nhấp nháy vô tận bằng bóng đổ tĩnh cao cấp'
+    ],
+    fixes: [
+      'Loại bỏ triệt để chu kỳ vẽ lại liên tục của conic-gradient và filter blur(10px) trong studocu.css',
+      'Khắc phục vòng lặp animate-pulse trong FormatSelector và ViewSplit khi đang soi so sánh ảnh',
+      'Tạm dừng vòng lặp Canvas Render Frame khi tab trình duyệt bị ẩn'
+    ]
+  },
   'v23.05': {
     version: 'v23.05',
     title: 'Bản cập nhật v23.05',

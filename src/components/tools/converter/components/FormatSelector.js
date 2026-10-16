@@ -178,7 +178,7 @@ export function renderFormatSelector(state) {
     <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.07] shadow-sm space-y-4">
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+          <span class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
           <h4 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Định dạng đích</h4>
         </div>
       </div>

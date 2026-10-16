@@ -97,7 +97,7 @@ describe('120Hz Native Compositor Optimization & Zero-JS Scroll Hijacking Suite'
     const swPath = path.join(rootDir, 'sw.js');
     const content = fs.readFileSync(swPath, 'utf-8');
 
-    expect(content).toMatch(/const CACHE_NAME = 'duydev-studio-v22\.(7[5-9]|[89]\d)/);
+    expect(content).toMatch(/const CACHE_NAME = 'duydev-studio-v(22\.(7[5-9]|[89]\d)|23\.\d+)'/);
     expect(content).not.toContain('lenis-smooth.js');
     expect(content).not.toContain('smoothScroll.js');
     expect(content).not.toContain('scrollOptimizer.js');

@@ -106,13 +106,13 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
       const dot = paneEl.querySelector('.viewsplit-pane-dot');
       if (dot) {
-        dot.className = `viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-500 dark:bg-cyan-400 animate-pulse' : 'bg-zinc-400'}`;
+        dot.className = `viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-500 dark:bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]' : 'bg-zinc-400'}`;
       }
 
       const badge = paneEl.querySelector('.viewsplit-pane-badge');
       if (badge) {
         badge.innerHTML = isActive
-          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[10px] tracking-wide border border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.25)]">ĐANG CHỌN</span>'
           : '';
       }
     });
@@ -132,7 +132,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         const dot = btn.querySelector('.rounded-full');
         if (dot) {
           dot.classList.toggle('bg-cyan-400', isSelected);
-          dot.classList.toggle('animate-pulse', isSelected);
+          dot.classList.toggle('shadow-[0_0_6px_rgba(6,182,212,0.6)]', isSelected);
         }
       }
     });
@@ -152,7 +152,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const b1 = document.querySelector('.viewsplit-overlay-badge-1');
       if (b1) {
         b1.innerHTML = isA
-          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.25)]">ĐANG CHỌN</span>'
           : '';
       }
     }
@@ -168,7 +168,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
       const b2 = document.querySelector('.viewsplit-overlay-badge-2');
       if (b2) {
         b2.innerHTML = isB
-          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/30 animate-pulse">ĐANG CHỌN</span>'
+          ? '<span class="px-1.5 py-0.5 rounded-md bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold text-[9px] border border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.25)]">ĐANG CHỌN</span>'
           : '';
       }
     }
@@ -245,6 +245,10 @@ export function attachViewSplitDomListeners(store, onReRender) {
   // ─── 1. RAF Canvas Render Loop ───
   const renderCanvasFrame = () => {
     if (!isAlive) return;
+    if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) {
+      rafId = null;
+      return;
+    }
 
     const dpr = window.devicePixelRatio || 1;
 
@@ -445,6 +449,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
   };
 
   rafId = requestAnimationFrame(renderCanvasFrame);
+
+  const onVisibilityChange = () => {
+    if (!isAlive) return;
+    if (typeof document !== 'undefined' && !document.hidden && !rafId) {
+      rafId = requestAnimationFrame(renderCanvasFrame);
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('ds:visibility-change', onVisibilityChange);
 
   // ─── 2. Mouse Wheel Interaction (Anchored Zoom) ───
   const onWheel = (e) => {
@@ -1402,5 +1415,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
     window.removeEventListener('paste', onGlobalPaste);
     document.removeEventListener('paste', onGlobalPaste);
     window.removeEventListener('keydown', onKeyDown);
+
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.removeEventListener('ds:visibility-change', onVisibilityChange);
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
   };
 }
