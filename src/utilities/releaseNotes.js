@@ -6,6 +6,26 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.08': {
+    version: 'v23.08',
+    title: 'Bản cập nhật v23.08',
+    date: '16/10/2026',
+    features: [
+      'Lớp phủ Text Layer PDF.js: Cho phép bôi đen, chọn chữ và sao chép văn bản trực tiếp trên tài liệu mượt mà',
+      'Thanh tìm kiếm từ khóa nổi (In-Document Search Ctrl+F): Tô sáng trực tiếp (in-DOM highlight) từ khóa trên lớp Text Layer với điều hướng nhanh',
+      'Ngăn bên Đa năng (Multi-Tab Sidebar): Chuyển đổi linh hoạt giữa Mục lục (TOC) và Lưới trang thu nhỏ (Thumbnails Grid)',
+      'Tỷ lệ trang động (Dynamic Aspect Ratio): Tự động tính toán chuẩn xác từng trang khổ đứng A4 lẫn khổ ngang 16:9 bảo toàn hướng gốc',
+      'Thu phóng neo con trỏ không nhấp nháy (Anchored Flicker-Free Zoom): Hỗ trợ cử chỉ 2 ngón tay Pinch-to-zoom và Ctrl+Wheel neo chuẩn vị trí đọc',
+      'Bộ lọc Chăm sóc Mắt & Xoay 90°: 3 chế độ đọc Sáng / Sepia / Tối sâu bảo toàn hình ảnh và xoay hướng đọc',
+      'Modal mở khóa PDF bảo vệ: Giao diện nhập mật khẩu kính mờ sang trọng cho tài liệu được mã hóa'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi biến dạng placeholder khi tài liệu có trang khổ ngang xen kẽ khổ đứng',
+      'Loại bỏ hoàn toàn tình trạng nhấp nháy màn hình trắng và nhảy vị trí khi thu phóng tài liệu',
+      'Khắc phục hiện tượng xoay sai hướng các trang có thuộc tính xoay gốc (intrinsic page rotation)',
+      'Dọn dẹp triệt để bộ lắng nghe sự kiện toàn màn hình và bộ quan sát trang thu nhỏ khi đóng viewer'
+    ]
+  },
   'v23.07': {
     version: 'v23.07',
     title: 'Bản cập nhật v23.07',

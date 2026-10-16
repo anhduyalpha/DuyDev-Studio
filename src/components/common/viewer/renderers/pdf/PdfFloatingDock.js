@@ -12,8 +12,9 @@ export function renderFloatingDock(currentPage = 1, totalPages = 1, zoomPct = 10
       <!-- Group 1: Sidebar Drawer & In-Doc Search -->
       <div class="flex items-center gap-0.5">
         <button id="btnPdfToggleSidebar" type="button" title="Mục lục & Trang thu nhỏ" 
-          class="min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
+          class="relative min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-white/10 dark:active:bg-white/15 text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer">
           <i data-lucide="panel-left" class="w-4 h-4"></i>
+          <span id="pdfSidebarBadge" class="absolute top-1 right-1 px-1 py-0.2 rounded-full text-[9px] font-mono font-bold bg-indigo-500 text-white leading-none scale-75 origin-top-right">TOC</span>
         </button>
 
         <button id="btnPdfToggleSearch" type="button" title="Tìm kiếm (Ctrl+F)" 
@@ -110,6 +111,7 @@ export function attachFloatingDockListeners({
 }) {
   const dock = document.getElementById('pdfFloatingDock');
   const sidebarHandler = onToggleSidebar || onToggleOutline;
+  let handleFullscreenChange = null;
 
   document.getElementById('btnPdfPrevPage')?.addEventListener('click', onPrev);
   document.getElementById('btnPdfNextPage')?.addEventListener('click', onNext);
@@ -144,7 +146,7 @@ export function attachFloatingDockListeners({
       }
     });
 
-    const handleFullscreenChange = () => {
+    handleFullscreenChange = () => {
       const isFull = Boolean(document.fullscreenElement);
       btnFullscreen.setAttribute('title', isFull ? 'Thu nhỏ' : 'Toàn màn hình');
       btnFullscreen.innerHTML = `<i data-lucide="${isFull ? 'minimize' : 'maximize'}" class="w-4 h-4"></i>`;
@@ -182,15 +184,22 @@ export function attachFloatingDockListeners({
       }, 350);
     }, { passive: true });
   }
+
+  return () => {
+    if (handleFullscreenChange) {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }
+  };
 }
 
-export function updateFloatingDockState({ currentPage, totalPages, zoomPct, nightMode }) {
+export function updateFloatingDockState({ currentPage, totalPages, zoomPct, nightMode, sidebarTab }) {
   const inputPage = document.getElementById('inputPdfCurrentPage');
   const labelTotal = document.getElementById('pdfTotalPagesLabel');
   const labelZoom = document.getElementById('pdfZoomPctLabel');
   const btnPrev = document.getElementById('btnPdfPrevPage');
   const btnNext = document.getElementById('btnPdfNextPage');
   const btnNight = document.getElementById('btnPdfNightMode');
+  const badge = document.getElementById('pdfSidebarBadge');
 
   if (inputPage && document.activeElement !== inputPage && currentPage !== undefined) {
     inputPage.value = currentPage;
@@ -204,5 +213,15 @@ export function updateFloatingDockState({ currentPage, totalPages, zoomPct, nigh
     const iconName = nightMode === 'dark' ? 'sun' : nightMode === 'sepia' ? 'coffee' : 'moon';
     btnNight.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
     if (window.lucide) window.lucide.createIcons({ root: btnNight });
+  }
+
+  if (badge && sidebarTab !== undefined) {
+    if (sidebarTab === 'thumbnails') {
+      badge.textContent = 'Trang';
+      badge.className = 'absolute top-1 right-1 px-1 py-0.2 rounded-full text-[9px] font-mono font-bold bg-zinc-500 text-white leading-none scale-75 origin-top-right';
+    } else {
+      badge.textContent = 'TOC';
+      badge.className = 'absolute top-1 right-1 px-1 py-0.2 rounded-full text-[9px] font-mono font-bold bg-indigo-500 text-white leading-none scale-75 origin-top-right';
+    }
   }
 }

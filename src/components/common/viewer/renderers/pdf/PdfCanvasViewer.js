@@ -3,6 +3,14 @@
  * Continuous Virtualized Canvas Engine with Dynamic Aspect Ratio, TextLayer & Gestures
  */
 
+function escapeHtml(str) {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export class PdfCanvasViewer {
   constructor(containerEl, onPageChange) {
     this.containerEl = containerEl;
@@ -14,7 +22,7 @@ export class PdfCanvasViewer {
     this.baseAspectRatio = 1.414; // Default A4
     this.basePageWidth = 595;
     this.rotation = 0; // 0, 90, 180, 270 deg
-    this.pageDimensions = new Map(); // pageNum -> { width: number, height: number, ratio: number }
+    this.pageDimensions = new Map(); // pageNum -> { width: number, height: number, ratio: number, rotate?: number }
     this.renderedPages = new Map(); // pageNum -> { canvas, renderTask, textLayerDiv, textTask, page }
     this.observer = null;
     this.nightMode = 'normal'; // 'normal' | 'dark' | 'sepia'
@@ -24,6 +32,11 @@ export class PdfCanvasViewer {
     this.boundTouchStart = null;
     this.boundTouchMove = null;
     this.boundTouchEnd = null;
+
+    // Search highlights state
+    this.searchMatches = [];
+    this.activeSearchMatch = null;
+    this.searchQuery = '';
   }
 
   async loadDocument(pdfDoc) {
@@ -33,13 +46,15 @@ export class PdfCanvasViewer {
 
     // 1. Pre-query dimensions for Page 1 for initial viewport calculations
     const firstPage = await pdfDoc.getPage(1);
-    const firstVp = firstPage.getViewport({ scale: 1.0, rotation: this.rotation });
+    const initialRot = ((firstPage.rotate || 0) + this.rotation) % 360;
+    const firstVp = firstPage.getViewport({ scale: 1.0, rotation: initialRot });
     this.basePageWidth = firstVp.width;
     this.baseAspectRatio = firstVp.height / firstVp.width;
     this.pageDimensions.set(1, {
       width: firstVp.width,
       height: firstVp.height,
-      ratio: this.baseAspectRatio
+      ratio: this.baseAspectRatio,
+      rotate: firstPage.rotate || 0
     });
 
     // 2. Pre-query dimensions for remaining pages concurrently in batches
@@ -50,17 +65,20 @@ export class PdfCanvasViewer {
       for (let p = b; p <= end; p++) {
         batchPromises.push(
           pdfDoc.getPage(p).then((page) => {
-            const vp = page.getViewport({ scale: 1.0, rotation: this.rotation });
+            const rot = ((page.rotate || 0) + this.rotation) % 360;
+            const vp = page.getViewport({ scale: 1.0, rotation: rot });
             this.pageDimensions.set(p, {
               width: vp.width,
               height: vp.height,
-              ratio: vp.height / vp.width
+              ratio: vp.height / vp.width,
+              rotate: page.rotate || 0
             });
           }).catch(() => {
             this.pageDimensions.set(p, {
               width: this.basePageWidth,
               height: this.basePageWidth * this.baseAspectRatio,
-              ratio: this.baseAspectRatio
+              ratio: this.baseAspectRatio,
+              rotate: 0
             });
           })
         );
@@ -149,7 +167,10 @@ export class PdfCanvasViewer {
 
     try {
       const page = await this.pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: this.scale, rotation: this.rotation });
+      const dim = this.pageDimensions.get(pageNum);
+      const intrinsicRotate = dim?.rotate ?? (page.rotate || 0);
+      const effectiveRotation = (intrinsicRotate + this.rotation) % 360;
+      const viewport = page.getViewport({ scale: this.scale, rotation: effectiveRotation });
 
       // Guard against canvas dimension overflow on high-DPI / mobile
       const maxDim = 4096;
@@ -179,6 +200,11 @@ export class PdfCanvasViewer {
       const record = { canvas, renderTask, textLayerDiv, textTask: null, page };
       this.renderedPages.set(pageNum, record);
 
+      // Mount canvas & text layer immediately to establish layout context
+      box.innerHTML = '';
+      box.appendChild(canvas);
+      box.appendChild(textLayerDiv);
+
       await renderTask.promise;
 
       // 3. Render PDF.js Text Layer overlay
@@ -205,9 +231,8 @@ export class PdfCanvasViewer {
         }
       }
 
-      box.innerHTML = '';
-      box.appendChild(canvas);
-      box.appendChild(textLayerDiv);
+      // Apply active search highlighting if search is active
+      this.highlightPageMatches(pageNum);
     } catch (e) {
       if (e?.name !== 'RenderingCancelledException') {
         console.warn(`Render error on page ${pageNum}:`, e);
@@ -234,6 +259,109 @@ export class PdfCanvasViewer {
     }
   }
 
+  renderVisiblePages() {
+    const containerTop = this.containerEl.scrollTop - 400;
+    const containerBottom = this.containerEl.scrollTop + this.containerEl.clientHeight + 400;
+    const boxes = this.containerEl.querySelectorAll('.pdf-page-box');
+    boxes.forEach((box) => {
+      const pageNum = Number(box.getAttribute('data-page'));
+      const top = box.offsetTop;
+      const bottom = top + box.offsetHeight;
+      if (bottom >= containerTop && top <= containerBottom) {
+        this.renderPage(pageNum);
+      } else {
+        this.unrenderPage(pageNum);
+      }
+    });
+  }
+
+  setSearchResults(query, matches, activeMatch) {
+    this.searchQuery = (query || '').trim();
+    this.searchMatches = matches || [];
+    this.activeSearchMatch = activeMatch || null;
+
+    this.renderedPages.forEach((_record, pageNum) => {
+      this.highlightPageMatches(pageNum);
+    });
+  }
+
+  clearSearchResults() {
+    this.searchQuery = '';
+    this.searchMatches = [];
+    this.activeSearchMatch = null;
+    this.renderedPages.forEach((_record, pageNum) => {
+      this.highlightPageMatches(pageNum);
+    });
+  }
+
+  highlightPageMatches(pageNum) {
+    const record = this.renderedPages.get(pageNum);
+    if (!record || !record.textLayerDiv) return;
+
+    const spans = record.textLayerDiv.querySelectorAll('span:not(.highlight)');
+    const query = this.searchQuery.trim().toLowerCase();
+
+    // 1. If query is empty, restore all original text
+    if (!query) {
+      spans.forEach((span) => {
+        if (span.dataset.rawText !== undefined) {
+          span.textContent = span.dataset.rawText;
+          delete span.dataset.rawText;
+        }
+      });
+      return;
+    }
+
+    // 2. Identify matches on this page
+    const pageMatches = this.searchMatches.filter((m) => m.pageNum === pageNum);
+    if (pageMatches.length === 0) {
+      spans.forEach((span) => {
+        if (span.dataset.rawText !== undefined) {
+          span.textContent = span.dataset.rawText;
+          delete span.dataset.rawText;
+        }
+      });
+      return;
+    }
+
+    const isPageActive = this.activeSearchMatch && this.activeSearchMatch.pageNum === pageNum;
+    const activeMatchIndex = isPageActive ? this.activeSearchMatch.matchIndex : -1;
+
+    let matchCounter = 0;
+    spans.forEach((span) => {
+      if (span.dataset.rawText === undefined) {
+        span.dataset.rawText = span.textContent;
+      }
+      const raw = span.dataset.rawText;
+      const lower = raw.toLowerCase();
+
+      if (!lower.includes(query)) {
+        span.textContent = raw;
+        return;
+      }
+
+      let html = '';
+      let lastIdx = 0;
+      let idx = 0;
+      while ((idx = lower.indexOf(query, lastIdx)) !== -1) {
+        html += escapeHtml(raw.slice(lastIdx, idx));
+        const matchedStr = escapeHtml(raw.slice(idx, idx + query.length));
+        const isSelected = matchCounter === activeMatchIndex;
+        html += `<span class="highlight${isSelected ? ' selected' : ''}">${matchedStr}</span>`;
+        matchCounter++;
+        lastIdx = idx + query.length;
+      }
+      html += escapeHtml(raw.slice(lastIdx));
+      span.innerHTML = html;
+
+      if (isPageActive && span.querySelector('.highlight.selected')) {
+        setTimeout(() => {
+          span.querySelector('.highlight.selected')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+      }
+    });
+  }
+
   jumpToPage(pageNum) {
     const target = Math.max(1, Math.min(pageNum, this.totalPages));
     const box = document.getElementById(`pdfPageBox_${target}`);
@@ -254,16 +382,25 @@ export class PdfCanvasViewer {
 
   zoomFit() {
     this.calcFitWidthScale();
-    this.applyScaleUpdate();
+    this.setScale(this.scale);
   }
 
-  setScale(newScale) {
+  setScale(newScale, anchorX = null, anchorY = null) {
     const targetScale = Math.max(0.4, Math.min(newScale, 3.5));
     const wrapper = document.getElementById('pdfPagesWrapper');
 
+    const containerW = this.containerEl.clientWidth || window.innerWidth;
+    const containerH = this.containerEl.clientHeight || window.innerHeight;
+    const ax = anchorX !== null ? anchorX : containerW / 2;
+    const ay = anchorY !== null ? anchorY : containerH / 2;
+
+    const docX = this.containerEl.scrollLeft + ax;
+    const docY = this.containerEl.scrollTop + ay;
+    const previewRatio = targetScale / this.scale;
+
     // Flicker-Free Zoom: Apply CSS preview scale immediately
     if (wrapper) {
-      const previewRatio = targetScale / this.scale;
+      wrapper.style.transformOrigin = '50% 0';
       wrapper.style.transform = `scale(${previewRatio})`;
     }
 
@@ -271,20 +408,31 @@ export class PdfCanvasViewer {
     this.zoomDebounceTimer = setTimeout(() => {
       this.scale = targetScale;
       if (wrapper) wrapper.style.transform = 'none';
-      this.applyScaleUpdate();
-    }, 150);
-  }
 
-  applyScaleUpdate() {
-    this.renderedPages.forEach((item) => {
-      try { item.renderTask?.cancel(); } catch {}
-      try { item.textTask?.cancel?.(); } catch {}
-      try { item.page?.cleanup(); } catch {}
-    });
-    this.renderedPages.clear();
-    this.renderPlaceholders();
-    this.initIntersectionObserver();
-    this.jumpToPage(this.currentPage);
+      // Update placeholder dimensions in-place without destroying DOM
+      for (let i = 1; i <= this.totalPages; i++) {
+        const box = document.getElementById(`pdfPageBox_${i}`);
+        const dims = this.pageDimensions.get(i);
+        if (box && dims) {
+          box.style.width = `${Math.round(dims.width * this.scale)}px`;
+          box.style.height = `${Math.round(dims.height * this.scale)}px`;
+        }
+      }
+
+      // Maintain scroll position anchored at target point
+      this.containerEl.scrollLeft = Math.max(0, docX * previewRatio - ax);
+      this.containerEl.scrollTop = Math.max(0, docY * previewRatio - ay);
+
+      // Re-render visible pages at target DPR and clean up off-screen
+      this.renderedPages.forEach((item) => {
+        try { item.renderTask?.cancel(); } catch {}
+        try { item.textTask?.cancel?.(); } catch {}
+        try { item.page?.cleanup(); } catch {}
+      });
+      this.renderedPages.clear();
+
+      this.renderVisiblePages();
+    }, 150);
   }
 
   rotateClockwise() {
@@ -294,7 +442,8 @@ export class PdfCanvasViewer {
       this.pageDimensions.set(pageNum, {
         width: dim.height,
         height: dim.width,
-        ratio: dim.width / dim.height
+        ratio: dim.width / dim.height,
+        rotate: dim.rotate
       });
     });
     const oldBaseWidth = this.basePageWidth;
@@ -302,7 +451,25 @@ export class PdfCanvasViewer {
     this.baseAspectRatio = oldBaseWidth / this.basePageWidth;
 
     this.calcFitWidthScale();
-    this.applyScaleUpdate();
+    
+    // Update all page box sizes in-place
+    for (let i = 1; i <= this.totalPages; i++) {
+      const box = document.getElementById(`pdfPageBox_${i}`);
+      const dims = this.pageDimensions.get(i);
+      if (box && dims) {
+        box.style.width = `${Math.round(dims.width * this.scale)}px`;
+        box.style.height = `${Math.round(dims.height * this.scale)}px`;
+      }
+    }
+
+    this.renderedPages.forEach((item) => {
+      try { item.renderTask?.cancel(); } catch {}
+      try { item.textTask?.cancel?.(); } catch {}
+      try { item.page?.cleanup(); } catch {}
+    });
+    this.renderedPages.clear();
+    this.renderVisiblePages();
+    this.jumpToPage(this.currentPage);
   }
 
   toggleNightMode() {
@@ -330,12 +497,15 @@ export class PdfCanvasViewer {
   }
 
   initGestureListeners() {
-    // 1. Ctrl + Wheel Zoom
+    // 1. Ctrl + Wheel Zoom anchored at cursor
     this.boundWheel = (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-      this.setScale(this.scale * zoomFactor);
+      const rect = this.containerEl.getBoundingClientRect();
+      const ax = e.clientX - rect.left;
+      const ay = e.clientY - rect.top;
+      this.setScale(this.scale * zoomFactor, ax, ay);
     };
     this.containerEl.addEventListener('wheel', this.boundWheel, { passive: false });
 
@@ -344,15 +514,19 @@ export class PdfCanvasViewer {
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const rect = this.containerEl.getBoundingClientRect();
         this.touchPinch = {
           startDist: Math.hypot(dx, dy),
-          initialScale: this.scale
+          initialScale: this.scale,
+          midX: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          midY: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
         };
       }
     };
 
     this.boundTouchMove = (e) => {
       if (e.touches.length === 2 && this.touchPinch) {
+        e.preventDefault();
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const currentDist = Math.hypot(dx, dy);
@@ -370,7 +544,7 @@ export class PdfCanvasViewer {
           if (match && match[1]) {
             const finalRatio = parseFloat(match[1]);
             if (!isNaN(finalRatio)) {
-              this.setScale(this.touchPinch.initialScale * finalRatio);
+              this.setScale(this.touchPinch.initialScale * finalRatio, this.touchPinch.midX, this.touchPinch.midY);
             }
           }
         }
@@ -379,7 +553,7 @@ export class PdfCanvasViewer {
     };
 
     this.containerEl.addEventListener('touchstart', this.boundTouchStart, { passive: true });
-    this.containerEl.addEventListener('touchmove', this.boundTouchMove, { passive: true });
+    this.containerEl.addEventListener('touchmove', this.boundTouchMove, { passive: false });
     this.containerEl.addEventListener('touchend', this.boundTouchEnd, { passive: true });
   }
 

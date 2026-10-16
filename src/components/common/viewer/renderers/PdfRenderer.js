@@ -4,7 +4,7 @@
  */
 
 import { renderFloatingDock, attachFloatingDockListeners, updateFloatingDockState } from './pdf/PdfFloatingDock.js';
-import { renderSidebarDrawer, toggleSidebarDrawer, attachSidebarListeners, updateActiveSidebarPage } from './pdf/PdfSidebarDrawer.js';
+import { renderSidebarDrawer, toggleSidebarDrawer, attachSidebarListeners, updateActiveSidebarPage, destroySidebarDrawer } from './pdf/PdfSidebarDrawer.js';
 import { renderSearchBar, toggleSearchBar, updateSearchBarMatchCount, attachSearchBarListeners, PdfSearchEngine } from './pdf/PdfSearchBar.js';
 import { renderPasswordModal, promptPdfPassword, closePasswordModal } from './pdf/PdfPasswordModal.js';
 import { PdfCanvasViewer } from './pdf/PdfCanvasViewer.js';
@@ -65,6 +65,7 @@ export function attachPdfListeners(state, registerCleanup) {
   let activeLoadingTask = null;
   let loadedDoc = null;
   let searchEngine = null;
+  let cleanupDock = null;
 
   const cMapUrl = new URL('/pdfjs/web/cmaps/', window.location.origin).href;
   const standardFontDataUrl = new URL('/pdfjs/web/standard_fonts/', window.location.origin).href;
@@ -165,7 +166,8 @@ export function attachPdfListeners(state, registerCleanup) {
         loadedDoc = pdfDoc;
       } catch (primaryErr) {
         if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
-        if (primaryErr?.name === 'PasswordException' || primaryErr?.message?.includes('password')) {
+        const errMsg = (primaryErr?.message || '').toLowerCase();
+        if (primaryErr?.name === 'PasswordException' || errMsg.includes('password') || errMsg.includes('mật khẩu')) {
           throw primaryErr;
         }
         console.warn('[PdfRenderer] Primary binary buffer load failed, trying direct URL streaming:', primaryErr);
@@ -201,7 +203,7 @@ export function attachPdfListeners(state, registerCleanup) {
       });
 
       // Wire Floating Dock
-      attachFloatingDockListeners({
+      cleanupDock = attachFloatingDockListeners({
         onPrev: () => canvasViewer.jumpToPage(canvasViewer.currentPage - 1),
         onNext: () => canvasViewer.jumpToPage(canvasViewer.currentPage + 1),
         onJump: (page) => canvasViewer.jumpToPage(page),
@@ -238,6 +240,7 @@ export function attachPdfListeners(state, registerCleanup) {
         onSearch: async (query) => {
           const result = await searchEngine.search(query);
           updateSearchBarMatchCount(result.current, result.total);
+          canvasViewer.setSearchResults(query, result.matches, result.activeMatch);
           if (result.activeMatch) {
             canvasViewer.jumpToPage(result.activeMatch.pageNum);
           }
@@ -246,6 +249,7 @@ export function attachPdfListeners(state, registerCleanup) {
           const next = searchEngine.nextMatch();
           if (next) {
             updateSearchBarMatchCount(next.current, next.total);
+            canvasViewer.setSearchResults(searchEngine.currentQuery, searchEngine.matches, next.match);
             canvasViewer.jumpToPage(next.match.pageNum);
           }
         },
@@ -253,11 +257,13 @@ export function attachPdfListeners(state, registerCleanup) {
           const prev = searchEngine.prevMatch();
           if (prev) {
             updateSearchBarMatchCount(prev.current, prev.total);
+            canvasViewer.setSearchResults(searchEngine.currentQuery, searchEngine.matches, prev.match);
             canvasViewer.jumpToPage(prev.match.pageNum);
           }
         },
         onClose: () => {
           updateSearchBarMatchCount(0, 0);
+          canvasViewer.clearSearchResults();
         }
       });
 
@@ -265,20 +271,25 @@ export function attachPdfListeners(state, registerCleanup) {
       pdfDoc.getOutline().then(async (rawOutline) => {
         if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
         const resolvedOutline = await resolveOutlinePages(pdfDoc, rawOutline);
+        const hasTOC = resolvedOutline && resolvedOutline.length > 0;
+        updateFloatingDockState({ sidebarTab: hasTOC ? 'outline' : 'thumbnails' });
         attachSidebarListeners({
           outlineItems: resolvedOutline,
           pdfDoc,
           totalPages: canvasViewer.totalPages,
           currentPage: 1,
-          onJumpPage: (destPage) => canvasViewer.jumpToPage(destPage)
+          onJumpPage: (destPage) => canvasViewer.jumpToPage(destPage),
+          onTabChange: (tab) => updateFloatingDockState({ sidebarTab: tab })
         });
       }).catch(() => {
+        updateFloatingDockState({ sidebarTab: 'thumbnails' });
         attachSidebarListeners({
           outlineItems: [],
           pdfDoc,
           totalPages: canvasViewer.totalPages,
           currentPage: 1,
-          onJumpPage: (destPage) => canvasViewer.jumpToPage(destPage)
+          onJumpPage: (destPage) => canvasViewer.jumpToPage(destPage),
+          onTabChange: (tab) => updateFloatingDockState({ sidebarTab: tab })
         });
       });
 
@@ -304,6 +315,8 @@ export function attachPdfListeners(state, registerCleanup) {
     isDestroyed = true;
     window.removeEventListener('keydown', handleKeydown);
     closePasswordModal();
+    try { cleanupDock?.(); } catch {}
+    try { destroySidebarDrawer(); } catch {}
     try { searchEngine?.destroy(); } catch {}
     try { activeLoadingTask?.destroy(); } catch {}
     try { loadedDoc?.destroy(); } catch {}

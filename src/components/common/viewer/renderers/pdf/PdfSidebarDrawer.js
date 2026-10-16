@@ -6,6 +6,7 @@
 let currentTab = 'outline';
 let thumbnailObserver = null;
 let activePdfDoc = null;
+let activeTabChangeCb = null;
 let renderedThumbnails = new Set();
 
 export function renderSidebarDrawer() {
@@ -113,6 +114,8 @@ export function switchSidebarTab(tab) {
     contentOutline?.classList.add('hidden');
     searchContainer?.classList.add('hidden');
   }
+
+  if (activeTabChangeCb) activeTabChangeCb(tab);
 }
 
 function renderTreeItems(items, level = 0, query = '') {
@@ -138,8 +141,9 @@ function renderTreeItems(items, level = 0, query = '') {
   return html;
 }
 
-export function attachSidebarListeners({ outlineItems = [], pdfDoc = null, totalPages = 1, currentPage = 1, onJumpPage }) {
+export function attachSidebarListeners({ outlineItems = [], pdfDoc = null, totalPages = 1, currentPage = 1, onJumpPage, onTabChange }) {
   activePdfDoc = pdfDoc;
+  activeTabChangeCb = onTabChange;
   renderedThumbnails.clear();
 
   const backdrop = document.getElementById('pdfSidebarBackdrop');
@@ -249,10 +253,11 @@ async function renderSingleThumbnail(pageNum) {
 
   try {
     const page = await activePdfDoc.getPage(pageNum);
-    const vp = page.getViewport({ scale: 1.0 });
+    const rotation = page.rotate || 0;
+    const vp = page.getViewport({ scale: 1.0, rotation });
     const targetDim = 150;
     const scale = Math.min(targetDim / vp.width, (targetDim * 1.4) / vp.height);
-    const thumbVp = page.getViewport({ scale });
+    const thumbVp = page.getViewport({ scale, rotation });
 
     canvas.width = Math.floor(thumbVp.width);
     canvas.height = Math.floor(thumbVp.height);
@@ -280,6 +285,17 @@ export function updateActiveSidebarPage(pageNum) {
       card.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500');
     }
   });
+}
+
+export function destroySidebarDrawer() {
+  if (thumbnailObserver) {
+    thumbnailObserver.disconnect();
+    thumbnailObserver = null;
+  }
+  renderedThumbnails.clear();
+  activePdfDoc = null;
+  activeTabChangeCb = null;
+  closeSidebarDrawer();
 }
 
 // Backward Compatibility Aliases for PdfOutlineDrawer

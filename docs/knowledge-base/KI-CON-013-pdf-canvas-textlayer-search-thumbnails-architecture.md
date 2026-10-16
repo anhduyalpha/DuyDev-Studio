@@ -58,27 +58,33 @@ Mỗi trang PDF được bọc trong một container `.pdf-page-box` chứa song
 - Khi nạp tài liệu `loadDocument()`, truy vấn metadata kích thước viewport của từng trang theo từng batch 25 trang bằng `Promise.all`.
 - Placeholder của từng trang nhận đúng kích thước `width: ${w}px; height: ${h}px;`, triệt tiêu hoàn toàn hiện tượng méo trang Landscape/Slide.
 
-### 3.3. Thu Phóng Không Nhấp Nháy (Flicker-Free Zoom) & Nhận Diện Cử Chỉ
-- Thay vì xóa innerHTML ngay khi zoom, áp dụng CSS Transform `scale(newScale / currentScale)` lên `#pdfPagesWrapper` để phản hồi tức thì với độ trễ 0ms.
-- Sau khoảng debounce 150ms, mới tiến hành tính lại layout, kết xuất canvas độ phân giải chuẩn DPR và gắn lại TextLayer.
-- Hỗ trợ cử chỉ cảm ứng 2 ngón tay Pinch-to-zoom và cuộn chuột `Ctrl + Wheel` mượt mà.
+### 3.3. Thu Phóng Neo Con Trỏ Không Nhấp Nháy (Anchored Flicker-Free Zoom) & Nhận Diện Cử Chỉ
+- Thay vì xóa DOM container khi zoom, áp dụng CSS Transform `scale(previewRatio)` lên `#pdfPagesWrapper` để phản hồi tức thì với độ trễ 0ms.
+- Sau khoảng debounce 150ms, cập nhật trực tiếp kích thước placeholder `box.style.width` và `box.style.height` in-place mà không phá hủy cây DOM.
+- Tính toán độ lệch cuộn (scroll offset) dựa trên điểm neo con trỏ chuột (`anchorX, anchorY` khi `Ctrl + Wheel`) hoặc tâm màn hình để giữ nguyên vị trí mắt đọc, triệt tiêu hoàn toàn hiện tượng nhảy cuộn lên đầu trang.
+- Chặn sự kiện zoom toàn trang trên trình duyệt di động qua `e.preventDefault()` trên `touchmove` khi nhận diện 2 ngón tay pinch-to-zoom.
 
-### 3.4. Công Cụ Tìm Kiếm Nội Tuyến (In-Document Search)
+### 3.4. Công Cụ Tìm Kiếm Nội Tuyến (In-Document Search) & Tô Sáng Trực Tiếp Lớp Chữ
 - `PdfSearchEngine` trích xuất và cache nội dung text từng trang bằng `page.getTextContent()`.
 - Hỗ trợ tìm kiếm không phân biệt hoa thường, đánh số thứ tự kết quả (`1/12`), nhảy trang tự động và duyệt kết quả bằng phím `Enter` (Next) / `Shift + Enter` (Prev) hoặc `Esc` để đóng.
+- **Tô sáng trực tiếp trên TextLayer (In-DOM Highlighting)**: Chèn thẻ `<span class="highlight">` vào đúng cụm từ trùng khớp trên các thẻ span của TextLayer; mục đang duyệt nhận thêm class `.selected` màu cam nổi bật và tự động cuộn vào tầm nhìn mượt mà. Khôi phục hoàn hảo text gốc khi đóng tìm kiếm.
 
 ### 3.5. Ngăn Bên Đa Năng 2 Tab (Multi-Tab Sidebar)
 - Tự động chuyển sang tab **Trang thu nhỏ (Thumbnails Grid)** nếu tài liệu không có Mục lục (TOC).
 - Thumbnails được kết xuất lười tải (Lazy-load) qua `IntersectionObserver` khi người dùng cuộn ngăn bên, giải phóng bộ nhớ RAM canvas ngay sau khi vẽ.
 - Đồng bộ viền nổi bật (Active Page Indicator) với trang đang đọc ở khung nhìn chính.
+- Bảo toàn góc xoay gốc của trang tài liệu (`page.rotate`) trong cả khung nhìn chính lẫn thumbnail grid.
+- Cung cấp hàm hủy `destroySidebarDrawer()` ngắt kết nối observer hoàn toàn khi unmount.
 
 ### 3.6. Xử Lý Tài Liệu Có Mật Khẩu (Password Callback Hook)
 - Tích hợp callback `onPassword` trong `pdfjsLib.getDocument()` kết nối với `PdfPasswordModal.js`.
 - Bắt cả hai trường hợp `NEED_PASSWORD` và `INCORRECT_PASSWORD` với giao diện kính mờ sang trọng, hỗ trợ hiện/ẩn mật khẩu và phím tắt `Enter`/`Esc`.
+- Nhận diện chính xác lỗi hủy nhập mật khẩu (`mật khẩu` / `password`), ngăn chặn việc tự động kích hoạt tải lại luồng mạng phụ thừa thãi.
 
 ---
 
 ## 4. Xác Minh & Kiểm Thử (Verification Record)
-- **Unit Test Suite**: `server/tests/unit/pdf_viewer_engine.test.ts` (10/10 tests PASS).
-- **Typecheck & Syntax**: `node --check` 7 file liên quan, `tsc` build exit code 0.
+- **Unit Test Suite**: `server/tests/unit/pdf_viewer_engine.test.ts` (14/14 tests PASS).
+- **Regression Suite**: `pdf_viewer_engine.test.ts`, `battery_optimization.test.ts`, `pwa_lifecycle.test.ts`, `viewer_hardening.test.ts` (111/111 tests PASS).
+- **Typecheck & Syntax**: `node --check` 10 file liên quan, `tsc` build exit code 0.
 - **Production HTTPS**: Triển khai homeserver `192.168.2.171` và xác minh endpoint `https://studio.duydev.cloud/api/v1/health` UP.

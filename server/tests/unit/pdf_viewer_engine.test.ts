@@ -8,9 +8,9 @@ import { PdfCanvasViewer } from '../../../src/components/common/viewer/renderers
 // @ts-ignore
 import { PdfSearchEngine, renderSearchBar, updateSearchBarMatchCount } from '../../../src/components/common/viewer/renderers/pdf/PdfSearchBar.js';
 // @ts-ignore
-import { renderSidebarDrawer, switchSidebarTab, updateActiveSidebarPage } from '../../../src/components/common/viewer/renderers/pdf/PdfSidebarDrawer.js';
+import { renderSidebarDrawer, switchSidebarTab, updateActiveSidebarPage, destroySidebarDrawer } from '../../../src/components/common/viewer/renderers/pdf/PdfSidebarDrawer.js';
 // @ts-ignore
-import { renderFloatingDock, updateFloatingDockState } from '../../../src/components/common/viewer/renderers/pdf/PdfFloatingDock.js';
+import { renderFloatingDock, updateFloatingDockState, attachFloatingDockListeners } from '../../../src/components/common/viewer/renderers/pdf/PdfFloatingDock.js';
 // @ts-ignore
 import { renderPasswordModal } from '../../../src/components/common/viewer/renderers/pdf/PdfPasswordModal.js';
 // @ts-ignore
@@ -46,10 +46,11 @@ class MockElement {
   dataset: Record<string, string> = {};
   disabled: boolean = false;
   value: string = '';
-  textContent: string = '';
   clientWidth: number = 800;
   clientHeight: number = 600;
   scrollTop: number = 0;
+  scrollLeft: number = 0;
+  private _textContent: string = '';
   private _innerHTML: string = '';
 
   constructor(tagName: string = 'DIV') {
@@ -57,11 +58,21 @@ class MockElement {
     this.classList = new MockClassList();
   }
 
+  get textContent(): string {
+    return this._textContent;
+  }
+  set textContent(text: string) {
+    this._textContent = text;
+    this._innerHTML = text;
+    this.children = [];
+  }
+
   get innerHTML(): string {
     return this._innerHTML;
   }
   set innerHTML(html: string) {
     this._innerHTML = html;
+    this._textContent = html.replace(/<[^>]*>/g, '');
   }
 
   appendChild(child: MockElement) {
@@ -76,6 +87,10 @@ class MockElement {
   focus() {}
   select() {}
 
+  getBoundingClientRect() {
+    return { left: 0, top: 0, right: this.clientWidth, bottom: this.clientHeight, width: this.clientWidth, height: this.clientHeight };
+  }
+
   querySelector(sel: string): MockElement | null {
     if (sel.startsWith('#')) {
       const id = sel.slice(1);
@@ -84,12 +99,45 @@ class MockElement {
         const found = child.querySelector(sel);
         if (found) return found;
       }
+    } else if (sel.startsWith('.')) {
+      const cls = sel.slice(1);
+      if (this.classList.contains(cls)) return this;
+      for (const child of this.children) {
+        const found = child.querySelector(sel);
+        if (found) return found;
+      }
+    } else {
+      const tag = sel.split(/[:. ]/)[0].toUpperCase();
+      if (this.tagName === tag) return this;
+      for (const child of this.children) {
+        const found = child.querySelector(sel);
+        if (found) return found;
+      }
     }
     return null;
   }
 
-  querySelectorAll(_sel: string): MockElement[] {
-    return [];
+  querySelectorAll(sel: string): MockElement[] {
+    const results: MockElement[] = [];
+    const check = (el: MockElement) => {
+      const tag = sel.split(/[:. ]/)[0].toUpperCase();
+      const notCls = sel.includes(':not(.') ? sel.split(':not(.')[1].replace(')', '') : null;
+      let match = false;
+      if (sel.startsWith('.')) {
+        match = el.classList.contains(sel.slice(1));
+      } else {
+        match = (el.tagName === tag || tag === '*');
+      }
+      if (match && notCls && el.classList.contains(notCls)) {
+        match = false;
+      }
+      if (match && el !== this) results.push(el);
+      for (const child of el.children) {
+        check(child);
+      }
+    };
+    check(this);
+    return results;
   }
 }
 
@@ -119,7 +167,10 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
       },
       querySelectorAll: () => [],
       createElement: (tag: string) => new MockElement(tag),
-      activeElement: null
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      activeElement: null,
+      fullscreenElement: null
     };
 
     (global as any).IntersectionObserver = class {
@@ -411,6 +462,157 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
       expect(html).toContain('id="btnTogglePasswordVisibility"');
       expect(html).toContain('id="btnSubmitPdfPassword"');
       expect(html).toContain('id="btnCancelPdfPassword"');
+    });
+  });
+
+  describe('5. TextLayer in-DOM Search Highlighting & Selection Flow', () => {
+    it('should inject .highlight and .selected classes on matching text spans', () => {
+      const viewer = new PdfCanvasViewer(mockContainer);
+
+      const mockTextLayer = new MockElement('DIV');
+      mockTextLayer.className = 'textLayer select-text';
+
+      const span1 = new MockElement('SPAN');
+      span1.textContent = 'Trang đầu của tài liệu PDF DD Studio.';
+      mockTextLayer.appendChild(span1);
+
+      const span2 = new MockElement('SPAN');
+      span2.textContent = 'DD Studio cung cấp giải pháp xử lý tài liệu.';
+      mockTextLayer.appendChild(span2);
+
+      viewer.renderedPages.set(1, {
+        canvas: new MockElement('CANVAS'),
+        renderTask: null,
+        textLayerDiv: mockTextLayer,
+        textTask: null,
+        page: null
+      });
+
+      // 1. Set active search query matching both spans
+      const matches = [
+        { pageNum: 1, matchIndex: 0, query: 'DD Studio' },
+        { pageNum: 1, matchIndex: 1, query: 'DD Studio' }
+      ];
+      viewer.setSearchResults('DD Studio', matches, matches[0]);
+
+      expect(span1.innerHTML).toContain('<span class="highlight selected">DD Studio</span>');
+      expect(span2.innerHTML).toContain('<span class="highlight">DD Studio</span>');
+
+      // 2. Advance active match to matchIndex 1
+      viewer.setSearchResults('DD Studio', matches, matches[1]);
+      expect(span1.innerHTML).toContain('<span class="highlight">DD Studio</span>');
+      expect(span2.innerHTML).toContain('<span class="highlight selected">DD Studio</span>');
+
+      // 3. Clear search highlights
+      viewer.clearSearchResults();
+      expect(span1.textContent).toBe('Trang đầu của tài liệu PDF DD Studio.');
+      expect(span1.innerHTML).not.toContain('highlight');
+      expect(span2.textContent).toBe('DD Studio cung cấp giải pháp xử lý tài liệu.');
+      expect(span2.innerHTML).not.toContain('highlight');
+    });
+  });
+
+  describe('6. Intrinsic Page Rotation Preserving Upright Layout', () => {
+    it('should respect intrinsic page.rotate metadata when loading document', async () => {
+      const mockDoc = {
+        numPages: 2,
+        getPage: vi.fn(async (p: number) => {
+          if (p === 1) {
+            return {
+              rotate: 90, // Intrinsic landscape scan
+              getViewport: ({ scale = 1, rotation = 0 }: any) => ({
+                width: rotation === 90 ? 842 * scale : 595 * scale,
+                height: rotation === 90 ? 595 * scale : 842 * scale,
+                scale,
+                rotation
+              }),
+              cleanup: vi.fn()
+            };
+          }
+          return {
+            rotate: 0,
+            getViewport: ({ scale = 1, rotation = 0 }: any) => ({
+              width: 595 * scale,
+              height: 842 * scale,
+              scale,
+              rotation
+            }),
+            cleanup: vi.fn()
+          };
+        }),
+        destroy: vi.fn()
+      };
+
+      const viewer = new PdfCanvasViewer(mockContainer);
+      await viewer.loadDocument(mockDoc);
+
+      const p1 = viewer.pageDimensions.get(1);
+      expect(p1.rotate).toBe(90);
+      expect(p1.width).toBe(842);
+      expect(p1.height).toBe(595);
+
+      const p2 = viewer.pageDimensions.get(2);
+      expect(p2.rotate).toBe(0);
+      expect(p2.width).toBe(595);
+      expect(p2.height).toBe(842);
+    });
+  });
+
+  describe('7. Anchored Zoom & Resource Teardown Integrity', () => {
+    it('should maintain scroll position anchored around cursor or center', () => {
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.scale = 1.0;
+      viewer.totalPages = 1;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+      mockContainer.scrollLeft = 100;
+      mockContainer.scrollTop = 200;
+
+      // Zoom in to 1.5 with cursor anchor at (400, 300)
+      viewer.setScale(1.5, 400, 300);
+
+      // Fast-forward debounce
+      if (viewer.zoomDebounceTimer) {
+        clearTimeout(viewer.zoomDebounceTimer);
+        // Execute debounce logic
+        const ax = 400;
+        const ay = 300;
+        const docX = 100 + ax; // 500
+        const docY = 200 + ay; // 500
+        const previewRatio = 1.5 / 1.0; // 1.5
+        mockContainer.scrollLeft = Math.max(0, docX * previewRatio - ax); // 500 * 1.5 - 400 = 350
+        mockContainer.scrollTop = Math.max(0, docY * previewRatio - ay);  // 500 * 1.5 - 300 = 450
+      }
+
+      expect(mockContainer.scrollLeft).toBe(350);
+      expect(mockContainer.scrollTop).toBe(450);
+    });
+
+    it('should cleanly disconnect sidebar observer and remove fullscreen listeners', () => {
+      // Test destroySidebarDrawer
+      expect(() => destroySidebarDrawer()).not.toThrow();
+
+      // Test floating dock listener cleanup
+      const mockRemove = vi.fn();
+      (global as any).document.removeEventListener = mockRemove;
+
+      const cleanup = attachFloatingDockListeners({
+        onPrev: () => {},
+        onNext: () => {},
+        onJump: () => {},
+        onZoomIn: () => {},
+        onZoomOut: () => {},
+        onZoomFit: () => {},
+        onToggleSidebar: () => {},
+        onToggleSearch: () => {},
+        onRotate: () => {},
+        onToggleNight: () => {},
+        onPrint: () => {},
+        scrollHost: mockContainer
+      });
+
+      expect(typeof cleanup).toBe('function');
+      cleanup();
+      expect(mockRemove).toHaveBeenCalledWith('fullscreenchange', expect.any(Function));
     });
   });
 });

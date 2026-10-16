@@ -678,6 +678,8 @@ html.dark .linear-card {
 }
 
 .textLayer .highlight {
+  position: relative !important;
+  display: inline !important;
   background: rgba(250, 204, 21, 0.45);
   border-radius: 2px;
 }
