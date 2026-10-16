@@ -1,10 +1,12 @@
 /**
- * PdfRenderer Component (< 160 lines)
- * Modern Native DD Studio Canvas PDF Reader Orchestrator
+ * PdfRenderer Component (< 230 lines)
+ * Modern Native DD Studio Canvas PDF Reader Orchestrator v2.0
  */
 
 import { renderFloatingDock, attachFloatingDockListeners, updateFloatingDockState } from './pdf/PdfFloatingDock.js';
-import { renderOutlineDrawer, toggleOutlineDrawer, attachOutlineListeners } from './pdf/PdfOutlineDrawer.js';
+import { renderSidebarDrawer, toggleSidebarDrawer, attachSidebarListeners, updateActiveSidebarPage } from './pdf/PdfSidebarDrawer.js';
+import { renderSearchBar, toggleSearchBar, updateSearchBarMatchCount, attachSearchBarListeners, PdfSearchEngine } from './pdf/PdfSearchBar.js';
+import { renderPasswordModal, promptPdfPassword, closePasswordModal } from './pdf/PdfPasswordModal.js';
 import { PdfCanvasViewer } from './pdf/PdfCanvasViewer.js';
 import { ensurePdfJsLoaded } from '../../../../utilities/pdfJsHelper.js';
 
@@ -38,11 +40,17 @@ export function renderPdfViewer(state) {
         </div>
       </div>
 
+      <!-- In-Document Floating Search Bar -->
+      ${renderSearchBar()}
+
       <!-- Floating Dock HUD -->
       ${renderFloatingDock(1, 1, 100)}
 
-      <!-- Outline / Table of Contents Drawer -->
-      ${renderOutlineDrawer()}
+      <!-- Multi-Tab Sidebar Drawer (TOC & Thumbnails) -->
+      ${renderSidebarDrawer()}
+
+      <!-- Password Prompt Modal -->
+      ${renderPasswordModal()}
     </div>
   `;
 }
@@ -56,14 +64,62 @@ export function attachPdfListeners(state, registerCleanup) {
   let canvasViewer = null;
   let activeLoadingTask = null;
   let loadedDoc = null;
+  let searchEngine = null;
 
   const cMapUrl = new URL('/pdfjs/web/cmaps/', window.location.origin).href;
   const standardFontDataUrl = new URL('/pdfjs/web/standard_fonts/', window.location.origin).href;
+
+  // Keyboard shortcut listener
+  const handleKeydown = (e) => {
+    const isInput = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+
+    // Ctrl + F: Search in document
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      toggleSearchBar();
+      return;
+    }
+
+    if (isInput) return;
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+      e.preventDefault();
+      canvasViewer?.zoomIn();
+      if (canvasViewer) updateFloatingDockState({ zoomPct: Math.round(canvasViewer.scale * 100) });
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+      e.preventDefault();
+      canvasViewer?.zoomOut();
+      if (canvasViewer) updateFloatingDockState({ zoomPct: Math.round(canvasViewer.scale * 100) });
+    } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+      e.preventDefault();
+      canvasViewer?.zoomFit();
+      updateFloatingDockState({ zoomPct: 100 });
+    } else if (e.key === 'ArrowLeft' || e.key === 'j') {
+      e.preventDefault();
+      if (canvasViewer) canvasViewer.jumpToPage(canvasViewer.currentPage - 1);
+    } else if (e.key === 'ArrowRight' || e.key === 'k') {
+      e.preventDefault();
+      if (canvasViewer) canvasViewer.jumpToPage(canvasViewer.currentPage + 1);
+    }
+  };
+
+  window.addEventListener('keydown', handleKeydown);
 
   ensurePdfJsLoaded()
     .then(async (pdfjsLib) => {
       if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
       let pdfDoc;
+
+      // Dynamic Password Callback Handler
+      const handlePassword = async (updatePassword, reason) => {
+        const isIncorrect = reason === (pdfjsLib.PasswordResponses?.INCORRECT_PASSWORD || 2);
+        const pass = await promptPdfPassword(isIncorrect);
+        if (pass !== null) {
+          updatePassword(pass);
+        } else {
+          updatePassword(new Error('Người dùng đã hủy nhập mật khẩu'));
+        }
+      };
 
       try {
         let pdfData = null;
@@ -79,7 +135,6 @@ export function attachPdfListeners(state, registerCleanup) {
           }
           pdfData = bytes.buffer;
         } else {
-          // Resolve to absolute URL if needed for same-origin fetch
           const fetchUrl = (fileUrl.startsWith('blob:') || fileUrl.startsWith('http://') || fileUrl.startsWith('https://'))
             ? fileUrl
             : new URL(fileUrl, window.location.href).href;
@@ -102,13 +157,17 @@ export function attachPdfListeners(state, registerCleanup) {
           data: new Uint8Array(pdfData),
           cMapUrl,
           cMapPacked: true,
-          standardFontDataUrl
+          standardFontDataUrl,
+          onPassword: handlePassword
         });
         activeLoadingTask = bufferTask;
         pdfDoc = await bufferTask.promise;
         loadedDoc = pdfDoc;
       } catch (primaryErr) {
         if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
+        if (primaryErr?.name === 'PasswordException' || primaryErr?.message?.includes('password')) {
+          throw primaryErr;
+        }
         console.warn('[PdfRenderer] Primary binary buffer load failed, trying direct URL streaming:', primaryErr);
         const absoluteUrl = (fileUrl.startsWith('blob:') || fileUrl.startsWith('data:'))
           ? fileUrl
@@ -118,16 +177,19 @@ export function attachPdfListeners(state, registerCleanup) {
           url: absoluteUrl,
           cMapUrl,
           cMapPacked: true,
-          standardFontDataUrl
+          standardFontDataUrl,
+          onPassword: handlePassword
         });
         activeLoadingTask = loadingTask;
         pdfDoc = await loadingTask.promise;
         loadedDoc = pdfDoc;
       }
+
       if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
 
       canvasViewer = new PdfCanvasViewer(scrollHost, (page, total) => {
         updateFloatingDockState({ currentPage: page, totalPages: total });
+        updateActiveSidebarPage(page);
       });
 
       await canvasViewer.loadDocument(pdfDoc);
@@ -135,7 +197,7 @@ export function attachPdfListeners(state, registerCleanup) {
       updateFloatingDockState({
         currentPage: 1,
         totalPages: canvasViewer.totalPages,
-        zoomPct: 100
+        zoomPct: Math.round(canvasViewer.scale * 100)
       });
 
       // Wire Floating Dock
@@ -153,24 +215,71 @@ export function attachPdfListeners(state, registerCleanup) {
         },
         onZoomFit: () => {
           canvasViewer.zoomFit();
-          updateFloatingDockState({ zoomPct: 100 });
+          updateFloatingDockState({ zoomPct: Math.round(canvasViewer.scale * 100) });
         },
-        onToggleOutline: () => toggleOutlineDrawer(),
+        onToggleSidebar: () => toggleSidebarDrawer(),
+        onToggleOutline: () => toggleSidebarDrawer('outline'),
+        onToggleSearch: () => toggleSearchBar(),
+        onRotate: () => {
+          canvasViewer.rotateClockwise();
+          updateFloatingDockState({ zoomPct: Math.round(canvasViewer.scale * 100) });
+        },
         onToggleNight: () => {
           const mode = canvasViewer.toggleNightMode();
           updateFloatingDockState({ nightMode: mode });
+        },
+        onPrint: () => window.print(),
+        scrollHost
+      });
+
+      // Wire In-Document Search Bar
+      searchEngine = new PdfSearchEngine(pdfDoc);
+      attachSearchBarListeners({
+        onSearch: async (query) => {
+          const result = await searchEngine.search(query);
+          updateSearchBarMatchCount(result.current, result.total);
+          if (result.activeMatch) {
+            canvasViewer.jumpToPage(result.activeMatch.pageNum);
+          }
+        },
+        onNext: () => {
+          const next = searchEngine.nextMatch();
+          if (next) {
+            updateSearchBarMatchCount(next.current, next.total);
+            canvasViewer.jumpToPage(next.match.pageNum);
+          }
+        },
+        onPrev: () => {
+          const prev = searchEngine.prevMatch();
+          if (prev) {
+            updateSearchBarMatchCount(prev.current, prev.total);
+            canvasViewer.jumpToPage(prev.match.pageNum);
+          }
+        },
+        onClose: () => {
+          updateSearchBarMatchCount(0, 0);
         }
       });
 
-      // Load & Wire Outline
+      // Load & Wire Sidebar (TOC & Thumbnails Grid)
       pdfDoc.getOutline().then(async (rawOutline) => {
         if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
         const resolvedOutline = await resolveOutlinePages(pdfDoc, rawOutline);
-        attachOutlineListeners(resolvedOutline, (destPage) => {
-          canvasViewer.jumpToPage(destPage);
+        attachSidebarListeners({
+          outlineItems: resolvedOutline,
+          pdfDoc,
+          totalPages: canvasViewer.totalPages,
+          currentPage: 1,
+          onJumpPage: (destPage) => canvasViewer.jumpToPage(destPage)
         });
       }).catch(() => {
-        attachOutlineListeners([], () => {});
+        attachSidebarListeners({
+          outlineItems: [],
+          pdfDoc,
+          totalPages: canvasViewer.totalPages,
+          currentPage: 1,
+          onJumpPage: (destPage) => canvasViewer.jumpToPage(destPage)
+        });
       });
 
       if (window.lucide) window.lucide.createIcons({ root: document.getElementById('pdfViewerRoot') });
@@ -193,6 +302,9 @@ export function attachPdfListeners(state, registerCleanup) {
 
   registerCleanup(() => {
     isDestroyed = true;
+    window.removeEventListener('keydown', handleKeydown);
+    closePasswordModal();
+    try { searchEngine?.destroy(); } catch {}
     try { activeLoadingTask?.destroy(); } catch {}
     try { loadedDoc?.destroy(); } catch {}
     if (canvasViewer) canvasViewer.destroy();

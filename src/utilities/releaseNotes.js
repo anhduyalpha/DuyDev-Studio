@@ -11,13 +11,17 @@ export const RELEASE_NOTES_MAP = {
     title: 'Bản cập nhật v23.07',
     date: '16/10/2026',
     features: [
-      'Giao diện Scribd chuẩn Responsive Đa màn hình: Bố cục 1 hàng liền mạch trên Desktop và thoải mái, dễ bấm trên Mobile',
-      'Thanh công cụ Kệ tài liệu thông minh: Tích hợp ô tìm kiếm và bộ lọc Tất cả / Thùng rác thẳng hàng gọn gàng trên Desktop',
-      'Thẻ sách trực quan tinh tế: Tiêu đề và thông tin tệp tự động dàn đều bên trái, cụm nút Xem/Tải/Xóa neo cố định bên phải'
+      'Lớp phủ Text Layer PDF.js: Cho phép bôi đen, chọn chữ và sao chép văn bản trực tiếp trên tài liệu mượt mà',
+      'Thanh tìm kiếm từ khóa nổi (In-Document Search Ctrl+F): Điều hướng nhanh giữa các kết quả với bộ đếm và tự động nhảy tới trang',
+      'Ngăn bên Đa năng (Multi-Tab Sidebar): Chuyển đổi linh hoạt giữa Mục lục (TOC) và Lưới trang thu nhỏ (Thumbnails Grid)',
+      'Tỷ lệ trang động (Dynamic Aspect Ratio): Tự động tính toán chuẩn xác từng trang khổ đứng A4 lẫn khổ ngang 16:9 không méo hình',
+      'Thu phóng không nhấp nháy (Flicker-Free Zoom): Hỗ trợ cử chỉ 2 ngón tay Pinch-to-zoom và Ctrl+Wheel mượt mà',
+      'Bộ lọc Chăm sóc Mắt & Xoay 90°: 3 chế độ đọc Sáng / Sepia / Tối sâu bảo toàn hình ảnh và xoay hướng đọc',
+      'Modal mở khóa PDF bảo vệ: Giao diện nhập mật khẩu kính mờ sang trọng cho tài liệu được mã hóa'
     ],
     fixes: [
-      'Khắc phục triệt để hiện tượng tab Tất cả / Thùng rác bị kéo giãn bè ngang trên màn hình Desktop lớn',
-      'Sửa lỗi cụm nút thao tác tài liệu bị co cụm lệch trái, trả lại bố cục cân đối chuẩn Desktop'
+      'Khắc phục triệt để lỗi biến dạng placeholder khi tài liệu có trang khổ ngang xen kẽ khổ đứng',
+      'Loại bỏ hoàn toàn tình trạng nhấp nháy màn hình trắng khi thu phóng tài liệu'
     ]
   },
   'v23.06': {
@@ -128,7 +132,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.05'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.07'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -136,7 +140,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.05'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.05';
+  if (!rawVer) return 'v23.07';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {
