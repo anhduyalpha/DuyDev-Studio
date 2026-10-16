@@ -113,46 +113,49 @@ export function renderDocumentListCard(state) {
         </div>
       </div>
 
-      <!-- Row 2: Full-Width Search Input (100% full width, height: 44px) -->
-      <div class="relative w-full">
-        <i data-lucide="search" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-        <input
-          type="text"
-          id="scribdSearchInput"
-          value="${escapeHtml(state.searchQuery || '')}"
-          placeholder="Tìm kiếm tài liệu..."
-          class="w-full pl-10 pr-10 py-2 text-xs sm:text-sm font-sans bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#EA580C] min-h-[44px] h-[44px] transition"
-        />
-        <button
-          type="button"
-          id="btnClearScribdSearch"
-          class="${state.searchQuery ? '' : 'hidden '}absolute right-1 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
-          title="Xóa tìm kiếm"
-        >
-          ✕
-        </button>
-      </div>
+      <!-- Row 2: Search & Segmented Switcher (Stacked on mobile, Inline on desktop) -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+        <!-- Search Input -->
+        <div class="relative w-full sm:flex-1 sm:min-w-0">
+          <i data-lucide="search" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input
+            type="text"
+            id="scribdSearchInput"
+            value="${escapeHtml(state.searchQuery || '')}"
+            placeholder="Tìm kiếm tài liệu..."
+            class="w-full pl-10 pr-10 py-2 text-xs sm:text-sm font-sans bg-zinc-50 dark:bg-[#0c0c0f] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#EA580C] min-h-[44px] h-[44px] transition"
+          />
+          <button
+            type="button"
+            id="btnClearScribdSearch"
+            class="${state.searchQuery ? '' : 'hidden '}absolute right-1 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
+            title="Xóa tìm kiếm"
+          >
+            ✕
+          </button>
+        </div>
 
-      <!-- Row 3: Full-Width Segmented Tabs (Never wrap, 50% width each on mobile) -->
-      <div class="w-full select-none pt-0.5">
-        <div class="scribd-segmented-switcher w-full grid grid-cols-2">
-          <button
-            type="button"
-            class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'pdf' ? 'active' : ''} min-h-[40px] touch-manipulation cursor-pointer whitespace-nowrap"
-            data-tab="pdf"
-          >
-            <span class="whitespace-nowrap">Tất cả</span>
-            <span class="text-[11px] font-mono opacity-80 whitespace-nowrap">(${counts.pdf || 0})</span>
-          </button>
-          <button
-            type="button"
-            class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'trash' ? 'active' : ''} min-h-[40px] touch-manipulation cursor-pointer whitespace-nowrap"
-            data-tab="trash"
-          >
-            <i data-lucide="trash-2" class="w-3.5 h-3.5 shrink-0"></i>
-            <span class="whitespace-nowrap">Thùng rác</span>
-            <span class="text-[11px] font-mono opacity-80 whitespace-nowrap">(${counts.trash || 0})</span>
-          </button>
+        <!-- Segmented Tabs Switcher (Full-width 50/50 grid on mobile, compact inline-flex on desktop) -->
+        <div class="w-full sm:w-auto shrink-0 select-none">
+          <div class="scribd-segmented-switcher w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+            <button
+              type="button"
+              class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'pdf' ? 'active' : ''} min-h-[40px] sm:min-h-[38px] touch-manipulation cursor-pointer whitespace-nowrap"
+              data-tab="pdf"
+            >
+              <span class="whitespace-nowrap">Tất cả</span>
+              <span class="text-[11px] font-mono opacity-80 whitespace-nowrap">(${counts.pdf || 0})</span>
+            </button>
+            <button
+              type="button"
+              class="scribd-segmented-tab tab-filter-scribd ${currentTab === 'trash' ? 'active' : ''} min-h-[40px] sm:min-h-[38px] touch-manipulation cursor-pointer whitespace-nowrap"
+              data-tab="trash"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5 shrink-0"></i>
+              <span class="whitespace-nowrap">Thùng rác</span>
+              <span class="text-[11px] font-mono opacity-80 whitespace-nowrap">(${counts.trash || 0})</span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -310,6 +310,24 @@ html.dark .scribd-bookshelf,
   white-space: nowrap;
 }
 
+@media (min-width: 640px) {
+  .scribd-segmented-switcher {
+    display: inline-flex !important;
+    width: auto !important;
+    grid-template-columns: none !important;
+    height: 44px;
+    padding: 3px;
+    align-items: center;
+  }
+
+  .scribd-segmented-tab {
+    flex: 0 0 auto !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 6px 14px !important;
+  }
+}
+
 html.dark .scribd-segmented-switcher,
 .dark .scribd-segmented-switcher {
   background: #18181B;
@@ -387,6 +405,39 @@ html.dark .scribd-segmented-tab.active,
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   overflow: hidden;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 640px) {
+  .scribd-book-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding: 12px 18px 12px 20px !important;
+    min-height: 64px !important;
+  }
+
+  .scribd-book-card .file-actions {
+    width: auto !important;
+    padding-top: 0 !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .scribd-book-card .btn-book-action {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+  }
+
+  .scribd-book-card .btn-book-action.btn-del {
+    width: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+  }
 }
 
 html.dark .scribd-book-card,

@@ -57,17 +57,17 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
       <!-- 1. 4px Vertical Terracotta Book-Spine Accent Bar -->
       <div class="scribd-book-spine"></div>
 
-      <!-- 2. Content Row: Sleek 38x38px Badge + Title + Clean Metadata -->
-      <div class="flex items-start gap-3 min-w-0">
+      <!-- 2. Content Column: Sleek 38x38px Badge + Title + Clean Metadata -->
+      <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
         <!-- Sleek Compact 38x38px Icon Badge (aligned with title) -->
         <div class="scribd-book-badge shrink-0" title="Tài liệu PDF Scribd">
           <i data-lucide="book-open" class="w-4 h-4 text-[#EA580C] dark:text-orange-400"></i>
         </div>
 
         <!-- Title & Clean Monospace Metadata -->
-        <div class="min-w-0 flex-1 space-y-1.5">
+        <div class="min-w-0 flex-1 space-y-1.5 sm:space-y-0.5">
           <span
-            class="file-name btn-view-scribd-doc text-[15.5px] leading-[1.4] font-semibold text-zinc-900 dark:text-zinc-100 hover:text-[#EA580C] dark:hover:text-orange-400 line-clamp-2 cursor-pointer transition select-none block"
+            class="file-name btn-view-scribd-doc text-[15.5px] sm:text-[15px] leading-[1.4] sm:leading-[1.3] font-semibold text-zinc-900 dark:text-zinc-100 hover:text-[#EA580C] dark:hover:text-orange-400 line-clamp-2 sm:line-clamp-1 cursor-pointer transition select-none block"
             data-doc-name="${escapeHtml(docName)}"
             data-doc-title="${escapeHtml(docTitle)}"
             data-stream-url="${escapeHtml(streamUrl)}"
@@ -113,12 +113,12 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
         </div>
       </div>
 
-      <!-- 3. Bottom Action Row: Full-Width Balanced Action Bar -->
-      <div class="file-actions w-full flex items-center gap-2.5 pt-1 shrink-0">
+      <!-- 3. Action Row: Full-width stacked on mobile (<640px), docked right on desktop (>=640px) -->
+      <div class="file-actions w-full sm:w-auto flex items-center gap-2 pt-1 sm:pt-0 shrink-0">
         ${!isTrash ? `
           <button
             type="button"
-            class="btn-book-action btn-view btn-view-scribd-doc flex-1 h-[44px] min-h-[44px] px-3.5 rounded-xl text-sm font-semibold touch-manipulation cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+            class="btn-book-action btn-view btn-view-scribd-doc flex-1 sm:flex-initial h-[42px] sm:h-[38px] min-h-[42px] sm:min-h-[38px] px-3.5 rounded-xl text-sm font-semibold touch-manipulation cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1.5"
             data-doc-name="${escapeHtml(docName)}"
             data-doc-title="${escapeHtml(docTitle)}"
             data-stream-url="${escapeHtml(streamUrl)}"
@@ -132,7 +132,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
           <a
             href="${downloadUrl}"
             download="${escapeHtml(docName)}"
-            class="btn-book-action btn-dl btn-dl-highlight flex-[1.2] h-[44px] min-h-[44px] px-4 rounded-xl text-sm font-semibold touch-manipulation cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+            class="btn-book-action btn-dl btn-dl-highlight flex-[1.2] sm:flex-initial h-[42px] sm:h-[38px] min-h-[42px] sm:min-h-[38px] px-4 rounded-xl text-sm font-semibold touch-manipulation cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1.5"
             data-doc-name="${escapeHtml(docName)}"
             title="Tải tệp PDF"
           >
@@ -142,7 +142,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
 
           <button
             type="button"
-            class="btn-book-action btn-del btn-trash-scribd-doc w-[44px] min-w-[44px] h-[44px] min-h-[44px] p-0 rounded-xl shrink-0 text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 touch-manipulation cursor-pointer inline-flex items-center justify-center"
+            class="btn-book-action btn-del btn-trash-scribd-doc w-[42px] sm:w-[38px] min-w-[42px] sm:min-w-[38px] h-[42px] sm:h-[38px] min-h-[42px] sm:min-h-[38px] p-0 rounded-xl shrink-0 text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10 transition touch-manipulation cursor-pointer inline-flex items-center justify-center"
             data-doc-name="${escapeHtml(docName)}"
             title="Chuyển vào thùng rác"
           >
@@ -151,7 +151,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
         ` : `
           <button
             type="button"
-            class="btn-book-action btn-restore btn-restore-scribd-doc flex-1 h-[44px] min-h-[44px] px-4 rounded-xl text-sm font-semibold touch-manipulation cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+            class="btn-book-action btn-restore btn-restore-scribd-doc flex-1 sm:flex-initial h-[42px] sm:h-[38px] min-h-[42px] sm:min-h-[38px] px-4 rounded-xl text-sm font-semibold touch-manipulation cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1.5"
             data-doc-name="${escapeHtml(docName)}"
             title="Khôi phục tài liệu"
           >
@@ -161,7 +161,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
 
           <button
             type="button"
-            class="btn-book-action btn-del btn-delete-perm-scribd-doc w-[44px] min-w-[44px] h-[44px] min-h-[44px] p-0 rounded-xl shrink-0 text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 touch-manipulation cursor-pointer inline-flex items-center justify-center"
+            class="btn-book-action btn-del btn-delete-perm-scribd-doc w-[42px] sm:w-[38px] min-w-[42px] sm:min-w-[38px] h-[42px] sm:h-[38px] min-h-[42px] sm:min-h-[38px] p-0 rounded-xl shrink-0 text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition touch-manipulation cursor-pointer inline-flex items-center justify-center"
             data-doc-name="${escapeHtml(docName)}"
             title="Xóa vĩnh viễn"
           >

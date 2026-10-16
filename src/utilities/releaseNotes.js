@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.07': {
+    version: 'v23.07',
+    title: 'Bản cập nhật v23.07',
+    date: '16/10/2026',
+    features: [
+      'Giao diện Scribd chuẩn Responsive Đa màn hình: Bố cục 1 hàng liền mạch trên Desktop và thoải mái, dễ bấm trên Mobile',
+      'Thanh công cụ Kệ tài liệu thông minh: Tích hợp ô tìm kiếm và bộ lọc Tất cả / Thùng rác thẳng hàng gọn gàng trên Desktop',
+      'Thẻ sách trực quan tinh tế: Tiêu đề và thông tin tệp tự động dàn đều bên trái, cụm nút Xem/Tải/Xóa neo cố định bên phải'
+    ],
+    fixes: [
+      'Khắc phục triệt để hiện tượng tab Tất cả / Thùng rác bị kéo giãn bè ngang trên màn hình Desktop lớn',
+      'Sửa lỗi cụm nút thao tác tài liệu bị co cụm lệch trái, trả lại bố cục cân đối chuẩn Desktop'
+    ]
+  },
   'v23.06': {
     version: 'v23.06',
     title: 'Bản cập nhật v23.06',
