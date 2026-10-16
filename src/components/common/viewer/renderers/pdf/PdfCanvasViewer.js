@@ -34,6 +34,11 @@ export class PdfCanvasViewer {
     this.boundTouchMove = null;
     this.boundTouchEnd = null;
 
+    // Navigation lock state to prevent conflicting IntersectionObserver midpoint detections
+    this.isNavigating = false;
+    this.targetNavPage = null;
+    this.navigationTimer = null;
+
     // Search highlights state
     this.searchMatches = [];
     this.activeSearchMatch = null;
@@ -87,22 +92,22 @@ export class PdfCanvasViewer {
       await Promise.all(batchPromises);
     }
 
-    this.calcFitWidthScale();
+    this.scale = this.calcFitWidthScale();
+    if (this.onScaleChange) this.onScaleChange(this.scale);
     this.renderPlaceholders();
     this.initIntersectionObserver();
     this.initGestureListeners();
   }
 
   calcFitWidthScale() {
-    const containerW = this.containerEl.clientWidth || window.innerWidth;
+    const containerW = this.containerEl.clientWidth || window.innerWidth || 800;
     const padding = containerW < 640 ? 16 : 48;
     const targetW = Math.max(300, Math.min(containerW - padding, 960));
-    this.scale = Math.max(0.25, Math.min(targetW / this.basePageWidth, 4.0));
-    if (this.onScaleChange) this.onScaleChange(this.scale);
+    return Math.max(0.25, Math.min(targetW / this.basePageWidth, 4.0));
   }
 
   renderPlaceholders() {
-    let html = `<div id="pdfPagesWrapper" class="flex flex-col items-center gap-4 origin-top">`;
+    let html = `<div id="pdfPagesWrapper" class="w-fit min-w-full flex flex-col items-center gap-4 origin-top">`;
     for (let i = 1; i <= this.totalPages; i++) {
       const dims = this.pageDimensions.get(i) || {
         width: this.basePageWidth,
@@ -113,7 +118,7 @@ export class PdfCanvasViewer {
       const pageH = Math.round(dims.height * this.scale);
 
       html += `
-        <div id="pdfPageBox_${i}" data-page="${i}" class="pdf-page-box relative bg-white shadow-md dark:shadow-2xl rounded-xs overflow-hidden transition-all duration-200 border border-zinc-200/60 dark:border-transparent select-text" 
+        <div id="pdfPageBox_${i}" data-page="${i}" class="pdf-page-box relative bg-white shadow-md dark:shadow-2xl rounded-xs overflow-hidden transition-colors duration-150 border border-zinc-200/60 dark:border-transparent select-text" 
           style="width: ${pageW}px; height: ${pageH}px;">
           <div class="pdf-placeholder absolute inset-0 flex items-center justify-center text-zinc-400 dark:text-zinc-500 font-mono text-xs select-none pointer-events-none">
             Trang ${i}
@@ -139,6 +144,11 @@ export class PdfCanvasViewer {
             this.unrenderPage(pageNum);
           }
         });
+
+        // Suppress midpoint detection while programmatic navigation scroll is active
+        if (this.isNavigating) {
+          return;
+        }
 
         // Determine visible page based on viewport midpoint
         const boxes = this.containerEl.querySelectorAll('.pdf-page-box');
@@ -246,6 +256,7 @@ export class PdfCanvasViewer {
   }
 
   unrenderPage(pageNum) {
+    if (this.targetNavPage === pageNum) return;
     const item = this.renderedPages.get(pageNum);
     if (!item) return;
 
@@ -296,6 +307,20 @@ export class PdfCanvasViewer {
     }
   }
 
+  setNavigating(targetPage) {
+    this.isNavigating = true;
+    this.targetNavPage = targetPage;
+    if (targetPage && targetPage !== this.currentPage) {
+      this.currentPage = targetPage;
+      if (this.onPageChange) this.onPageChange(targetPage, this.totalPages);
+    }
+    if (this.navigationTimer) clearTimeout(this.navigationTimer);
+    this.navigationTimer = setTimeout(() => {
+      this.isNavigating = false;
+      this.targetNavPage = null;
+    }, 600);
+  }
+
   async navigateToMatch(match, query = null, matches = null) {
     if (!match) return;
     if (query !== null) {
@@ -323,6 +348,8 @@ export class PdfCanvasViewer {
   }
 
   scrollToMatchElement(targetPage, matchIndex) {
+    this.setNavigating(targetPage);
+
     const box = document.getElementById(`pdfPageBox_${targetPage}`);
     const selected = box?.querySelector('.highlight.selected');
 
@@ -331,7 +358,20 @@ export class PdfCanvasViewer {
       const elRect = selected.getBoundingClientRect();
 
       const currentScrollTop = this.containerEl.scrollTop;
+      const currentScrollLeft = this.containerEl.scrollLeft;
       const targetScrollTop = currentScrollTop + (elRect.top - containerRect.top) - (containerRect.height / 2 - elRect.height / 2);
+      const targetScrollLeft = currentScrollLeft + (elRect.left - containerRect.left) - (containerRect.width / 2 - elRect.width / 2);
+
+      this.containerEl.scrollTo({
+        top: Math.max(0, Math.round(targetScrollTop)),
+        left: Math.max(0, Math.round(targetScrollLeft)),
+        behavior: 'smooth'
+      });
+    } else if (box && typeof this.containerEl.scrollTo === 'function') {
+      const containerRect = this.containerEl.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      const currentScrollTop = this.containerEl.scrollTop;
+      const targetScrollTop = currentScrollTop + (boxRect.top - containerRect.top) - 24;
 
       this.containerEl.scrollTo({
         top: Math.max(0, Math.round(targetScrollTop)),
@@ -341,11 +381,6 @@ export class PdfCanvasViewer {
       selected.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
     } else if (box?.scrollIntoView) {
       box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    if (targetPage && targetPage !== this.currentPage) {
-      this.currentPage = targetPage;
-      if (this.onPageChange) this.onPageChange(targetPage, this.totalPages);
     }
   }
 
@@ -422,11 +457,21 @@ export class PdfCanvasViewer {
 
   jumpToPage(pageNum) {
     const target = Math.max(1, Math.min(pageNum, this.totalPages));
+    this.setNavigating(target);
     const box = document.getElementById(`pdfPageBox_${target}`);
     if (box) {
-      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      this.currentPage = target;
-      if (this.onPageChange) this.onPageChange(target, this.totalPages);
+      if (typeof this.containerEl.scrollTo === 'function') {
+        const containerRect = this.containerEl.getBoundingClientRect();
+        const boxRect = box.getBoundingClientRect();
+        const currentScrollTop = this.containerEl.scrollTop;
+        const targetScrollTop = currentScrollTop + (boxRect.top - containerRect.top) - 24;
+        this.containerEl.scrollTo({
+          top: Math.max(0, Math.round(targetScrollTop)),
+          behavior: 'smooth'
+        });
+      } else if (box.scrollIntoView) {
+        box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   }
 
@@ -439,8 +484,8 @@ export class PdfCanvasViewer {
   }
 
   zoomFit() {
-    this.calcFitWidthScale();
-    this.setScale(this.scale);
+    const fitScale = this.calcFitWidthScale();
+    this.setScale(fitScale);
   }
 
   setScale(newScale, anchorX = null, anchorY = null) {
@@ -454,9 +499,36 @@ export class PdfCanvasViewer {
     const ax = anchorX !== null ? anchorX : containerW / 2;
     const ay = anchorY !== null ? anchorY : containerH / 2;
 
-    const docX = this.containerEl.scrollLeft + ax;
-    const docY = this.containerEl.scrollTop + ay;
-    const ratio = targetScale / (this.scale || 1.0);
+    const containerRect = this.containerEl.getBoundingClientRect();
+    const anchorClientX = containerRect.left + ax;
+    const anchorClientY = containerRect.top + ay;
+
+    // Identify page box currently under the anchor point
+    const boxes = this.containerEl.querySelectorAll('.pdf-page-box');
+    let targetBox = null;
+    let targetPageNum = this.currentPage || 1;
+    let fractionX = 0.5;
+    let fractionY = 0.5;
+
+    for (const box of boxes) {
+      const rect = box.getBoundingClientRect();
+      if (rect.top <= anchorClientY && rect.bottom >= anchorClientY) {
+        targetBox = box;
+        targetPageNum = Number(box.getAttribute('data-page')) || targetPageNum;
+        fractionY = rect.height > 0 ? (anchorClientY - rect.top) / rect.height : 0.5;
+        fractionX = rect.width > 0 ? (anchorClientX - rect.left) / rect.width : 0.5;
+        break;
+      }
+    }
+
+    if (!targetBox) {
+      targetBox = document.getElementById(`pdfPageBox_${targetPageNum}`);
+      if (targetBox) {
+        const rect = targetBox.getBoundingClientRect();
+        fractionY = rect.height > 0 ? Math.max(0, Math.min(1, (anchorClientY - rect.top) / rect.height)) : 0.5;
+        fractionX = rect.width > 0 ? Math.max(0, Math.min(1, (anchorClientX - rect.left) / rect.width)) : 0.5;
+      }
+    }
 
     this.scale = targetScale;
     if (this.onScaleChange) {
@@ -474,8 +546,23 @@ export class PdfCanvasViewer {
     }
 
     // Maintain scroll position anchored around cursor or center
-    this.containerEl.scrollLeft = Math.max(0, Math.round(docX * ratio - ax));
-    this.containerEl.scrollTop = Math.max(0, Math.round(docY * ratio - ay));
+    if (targetBox && typeof targetBox.offsetTop === 'number') {
+      const newBoxDims = this.pageDimensions.get(targetPageNum);
+      const newBoxHeight = newBoxDims ? Math.round(newBoxDims.height * this.scale) : (targetBox.offsetHeight || 0);
+      const newBoxWidth = newBoxDims ? Math.round(newBoxDims.width * this.scale) : (targetBox.offsetWidth || 0);
+
+      const newAnchorY = targetBox.offsetTop + fractionY * newBoxHeight;
+      const newAnchorX = targetBox.offsetLeft + fractionX * newBoxWidth;
+
+      this.containerEl.scrollTop = Math.max(0, Math.round(newAnchorY - ay));
+      this.containerEl.scrollLeft = Math.max(0, Math.round(newAnchorX - ax));
+    } else {
+      const docX = this.containerEl.scrollLeft + ax;
+      const docY = this.containerEl.scrollTop + ay;
+      const ratio = targetScale / (this.scale || 1.0);
+      this.containerEl.scrollLeft = Math.max(0, Math.round(docX * ratio - ax));
+      this.containerEl.scrollTop = Math.max(0, Math.round(docY * ratio - ay));
+    }
 
     const wrapper = document.getElementById('pdfPagesWrapper');
     if (wrapper) wrapper.style.transform = 'none';
@@ -508,7 +595,9 @@ export class PdfCanvasViewer {
     this.basePageWidth = this.basePageWidth * this.baseAspectRatio;
     this.baseAspectRatio = oldBaseWidth / this.basePageWidth;
 
-    this.calcFitWidthScale();
+    const fitScale = this.calcFitWidthScale();
+    this.scale = fitScale;
+    if (this.onScaleChange) this.onScaleChange(this.scale);
     
     // Update all page box sizes in-place
     for (let i = 1; i <= this.totalPages; i++) {
@@ -559,7 +648,14 @@ export class PdfCanvasViewer {
     this.boundWheel = (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      let zoomFactor;
+      if (Math.abs(e.deltaY) < 50) {
+        // Continuous precision trackpad: smooth exponential scale
+        zoomFactor = Math.max(0.85, Math.min(1.15, Math.exp(-e.deltaY * 0.005)));
+      } else {
+        // Standard discrete mouse wheel
+        zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      }
       const rect = this.containerEl.getBoundingClientRect();
       const ax = typeof e.clientX === 'number' ? e.clientX - rect.left : this.containerEl.clientWidth / 2;
       const ay = typeof e.clientY === 'number' ? e.clientY - rect.top : this.containerEl.clientHeight / 2;
@@ -590,7 +686,9 @@ export class PdfCanvasViewer {
         const currentDist = Math.hypot(dx, dy);
         const ratio = currentDist / this.touchPinch.startDist;
         const liveScale = Math.max(0.25, Math.min(this.touchPinch.initialScale * ratio, 4.0));
-        this.setScale(liveScale, this.touchPinch.midX, this.touchPinch.midY);
+        if (Math.abs(liveScale - this.scale) >= 0.005) {
+          this.setScale(liveScale, this.touchPinch.midX, this.touchPinch.midY);
+        }
       }
     };
 
@@ -607,6 +705,7 @@ export class PdfCanvasViewer {
 
   destroy() {
     if (this.zoomDebounceTimer) clearTimeout(this.zoomDebounceTimer);
+    if (this.navigationTimer) clearTimeout(this.navigationTimer);
     if (this.observer) this.observer.disconnect();
 
     if (this.boundWheel) {

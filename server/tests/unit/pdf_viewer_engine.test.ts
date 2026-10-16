@@ -50,6 +50,10 @@ class MockElement {
   clientHeight: number = 600;
   scrollTop: number = 0;
   scrollLeft: number = 0;
+  offsetTop: number = 0;
+  offsetLeft: number = 0;
+  offsetWidth: number = 600;
+  offsetHeight: number = 800;
   private _textContent: string = '';
   private _innerHTML: string = '';
 
@@ -725,5 +729,40 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
       cleanup();
       expect(mockRemove).toHaveBeenCalledWith('fullscreenchange', expect.any(Function));
     });
+
+    it('should properly execute zoomFit by computing fit scale and updating scale state without early bailout', () => {
+      const scaleSpy = vi.fn();
+      const viewer = new PdfCanvasViewer(mockContainer, null, scaleSpy);
+      viewer.scale = 2.5; // Start zoomed in
+      viewer.totalPages = 1;
+      viewer.basePageWidth = 595;
+      viewer.pageDimensions.set(1, { width: 595, height: 842, ratio: 842 / 595 });
+
+      viewer.zoomFit();
+
+      // Ensure scale changed from 2.5 to fit width scale
+      expect(viewer.scale).toBeLessThan(2.5);
+      expect(scaleSpy).toHaveBeenCalledWith(viewer.scale);
+    });
+
+    it('should lock midpoint detection while programmatic navigation is active', () => {
+      const pageChangeSpy = vi.fn();
+      const viewer = new PdfCanvasViewer(mockContainer, pageChangeSpy);
+      viewer.totalPages = 5;
+      viewer.currentPage = 1;
+
+      // Start programmatic navigation to page 4
+      viewer.setNavigating(4);
+      expect(viewer.isNavigating).toBe(true);
+      expect(viewer.targetNavPage).toBe(4);
+      expect(viewer.currentPage).toBe(4);
+      expect(pageChangeSpy).toHaveBeenCalledWith(4, 5);
+
+      // Verify unrenderPage does not destroy targetNavPage
+      viewer.renderedPages.set(4, { canvas: new MockElement('CANVAS'), renderTask: null, textLayerDiv: null, textTask: null, page: null });
+      viewer.unrenderPage(4);
+      expect(viewer.renderedPages.has(4)).toBe(true);
+    });
   });
 });
+

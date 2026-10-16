@@ -33,7 +33,7 @@ export function renderPdfViewer(state) {
   return `
     <div id="pdfViewerRoot" class="relative w-full h-[78vh] sm:h-[84vh] bg-zinc-100 dark:bg-[#09090b] overflow-hidden flex flex-col rounded-xl select-none">
       <!-- Scrollable Pages Viewport -->
-      <div id="pdfScrollHost" class="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center py-6 px-2 sm:px-6">
+      <div id="pdfScrollHost" class="w-full h-full overflow-auto custom-scrollbar flex flex-col items-center py-6 px-2 sm:px-6">
         <div id="pdfLoadingSpinner" class="flex flex-col items-center justify-center py-24 gap-3 text-zinc-500 dark:text-zinc-400">
           <div class="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
           <span class="text-xs font-mono">Đang tải tài liệu PDF...</span>
