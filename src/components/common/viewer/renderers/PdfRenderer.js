@@ -54,10 +54,15 @@ export function attachPdfListeners(state, registerCleanup) {
 
   let isDestroyed = false;
   let canvasViewer = null;
+  let activeLoadingTask = null;
+  let loadedDoc = null;
+
+  const cMapUrl = new URL('/pdfjs/web/cmaps/', window.location.origin).href;
+  const standardFontDataUrl = new URL('/pdfjs/web/standard_fonts/', window.location.origin).href;
 
   ensurePdfJsLoaded()
     .then(async (pdfjsLib) => {
-      if (isDestroyed) return;
+      if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
       let pdfDoc;
 
       try {
@@ -81,25 +86,29 @@ export function attachPdfListeners(state, registerCleanup) {
 
           const resp = await fetch(fetchUrl, {
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/pdf, */*' }
+            headers: { 'Accept': 'application/pdf, */*' },
+            signal: state.abortSignal
           });
           if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
           pdfData = await resp.arrayBuffer();
         }
 
-        if (isDestroyed) return;
+        if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
         if (!pdfData || pdfData.byteLength === 0) {
           throw new Error('Tệp PDF trống hoặc không thể tải nội dung');
         }
 
         const bufferTask = pdfjsLib.getDocument({
           data: new Uint8Array(pdfData),
-          cMapUrl: '/pdfjs/web/cmaps/',
+          cMapUrl,
           cMapPacked: true,
-          standardFontDataUrl: '/pdfjs/web/standard_fonts/'
+          standardFontDataUrl
         });
+        activeLoadingTask = bufferTask;
         pdfDoc = await bufferTask.promise;
+        loadedDoc = pdfDoc;
       } catch (primaryErr) {
+        if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
         console.warn('[PdfRenderer] Primary binary buffer load failed, trying direct URL streaming:', primaryErr);
         const absoluteUrl = (fileUrl.startsWith('blob:') || fileUrl.startsWith('data:'))
           ? fileUrl
@@ -107,13 +116,15 @@ export function attachPdfListeners(state, registerCleanup) {
 
         const loadingTask = pdfjsLib.getDocument({
           url: absoluteUrl,
-          cMapUrl: '/pdfjs/web/cmaps/',
+          cMapUrl,
           cMapPacked: true,
-          standardFontDataUrl: '/pdfjs/web/standard_fonts/'
+          standardFontDataUrl
         });
+        activeLoadingTask = loadingTask;
         pdfDoc = await loadingTask.promise;
+        loadedDoc = pdfDoc;
       }
-      if (isDestroyed) return;
+      if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
 
       canvasViewer = new PdfCanvasViewer(scrollHost, (page, total) => {
         updateFloatingDockState({ currentPage: page, totalPages: total });
@@ -153,7 +164,7 @@ export function attachPdfListeners(state, registerCleanup) {
 
       // Load & Wire Outline
       pdfDoc.getOutline().then(async (rawOutline) => {
-        if (isDestroyed) return;
+        if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
         const resolvedOutline = await resolveOutlinePages(pdfDoc, rawOutline);
         attachOutlineListeners(resolvedOutline, (destPage) => {
           canvasViewer.jumpToPage(destPage);
@@ -165,7 +176,10 @@ export function attachPdfListeners(state, registerCleanup) {
       if (window.lucide) window.lucide.createIcons({ root: document.getElementById('pdfViewerRoot') });
     })
     .catch((err) => {
-      if (scrollHost && !isDestroyed) {
+      if (err?.name === 'AbortError' || isDestroyed) return;
+      if (state.showErrorFallback) {
+        state.showErrorFallback('Không thể tải hoặc hiển thị tệp PDF', err.message);
+      } else if (scrollHost && !isDestroyed) {
         scrollHost.innerHTML = `
           <div class="py-20 text-center space-y-3">
             <p class="text-xs text-rose-500 font-mono font-medium">Lỗi hiển thị PDF: ${err.message}</p>
@@ -179,6 +193,8 @@ export function attachPdfListeners(state, registerCleanup) {
 
   registerCleanup(() => {
     isDestroyed = true;
+    try { activeLoadingTask?.destroy(); } catch {}
+    try { loadedDoc?.destroy(); } catch {}
     if (canvasViewer) canvasViewer.destroy();
   });
 }

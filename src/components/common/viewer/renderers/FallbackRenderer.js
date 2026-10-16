@@ -34,7 +34,7 @@ export function renderFallbackViewer(state) {
 
       <!-- Hex Inspector Notice -->
       <div class="px-4 py-2 bg-amber-500/5 dark:bg-amber-500/10 border-b border-amber-500/20 text-[11px] font-mono text-amber-800 dark:text-amber-300 flex items-center justify-between">
-        <span>Không có trình xem trước chuyên dụng. Đang hiển thị Hex Dump (16KB đầu tiên):</span>
+        <span>Không có trình xem trước chuyên dụng. Đang hiển thị Hex Dump (64KB đầu tiên):</span>
         <span id="hexBytesCount" class="font-bold">Đang đọc...</span>
       </div>
 
@@ -59,7 +59,7 @@ export function attachFallbackListeners(state, registerCleanup) {
   function formatHexDump(buffer) {
     const bytes = new Uint8Array(buffer);
     const lines = [];
-    const max = Math.min(bytes.length, 16384);
+    const max = Math.min(bytes.length, 65536);
 
     for (let i = 0; i < max; i += 16) {
       const chunk = bytes.slice(i, i + 16);
@@ -94,23 +94,53 @@ export function attachFallbackListeners(state, registerCleanup) {
     try {
       let buffer;
       if (state.rawFile instanceof Blob) {
-        const slice = state.rawFile.slice(0, 16384);
+        const slice = state.rawFile.slice(0, 65536);
         buffer = await slice.arrayBuffer();
       } else {
         const res = await fetch(state.viewUrl, {
-          headers: { Range: 'bytes=0-16383' },
-          signal: abortController.signal,
+          headers: { Range: 'bytes=0-65535' },
+          signal: state.abortSignal || abortController.signal,
           credentials: 'same-origin'
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        buffer = await res.arrayBuffer();
+        if (!res.ok && res.status !== 206) throw new Error(`HTTP ${res.status}`);
+
+        // Bounded stream consumption: cancel stream after 64KB to guarantee zero OOM risk on large files
+        if (res.body && typeof res.body.getReader === 'function') {
+          const reader = res.body.getReader();
+          const chunks = [];
+          let totalBytes = 0;
+          try {
+            while (totalBytes < 65536) {
+              const { done, value } = await reader.read();
+              if (done || !value) break;
+              chunks.push(value);
+              totalBytes += value.byteLength;
+            }
+          } finally {
+            try { await reader.cancel(); } catch {}
+          }
+          const clamped = new Uint8Array(Math.min(totalBytes, 65536));
+          let offset = 0;
+          for (const ch of chunks) {
+            const n = Math.min(ch.byteLength, clamped.byteLength - offset);
+            clamped.set(ch.subarray(0, n), offset);
+            offset += n;
+            if (offset >= clamped.byteLength) break;
+          }
+          buffer = clamped.buffer;
+        } else {
+          const fullBuf = await res.arrayBuffer();
+          buffer = fullBuf.byteLength > 65536 ? fullBuf.slice(0, 65536) : fullBuf;
+        }
       }
+
+      if (state.isCurrentSession && !state.isCurrentSession()) return;
 
       const dump = formatHexDump(buffer);
       rawHexOutput = dump;
 
       if (dumpEl) dumpEl.textContent = dump;
-      if (countEl) countEl.textContent = `${Math.min(buffer.byteLength, 16384)} bytes`;
+      if (countEl) countEl.textContent = `${Math.min(buffer.byteLength, 65536).toLocaleString()} bytes`;
       if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       if (err.name === 'AbortError') return;

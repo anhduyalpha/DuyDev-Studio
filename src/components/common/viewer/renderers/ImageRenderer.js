@@ -96,7 +96,9 @@ export function attachImageListeners(state, registerCleanup) {
     };
     img.onerror = () => {
       if (spinner) spinner.classList.add('hidden');
-      if (container) {
+      if (state.showErrorFallback) {
+        state.showErrorFallback('Không thể tải hoặc hiển thị hình ảnh này', 'Định dạng ảnh không được hỗ trợ hoặc tệp ảnh bị hỏng cấu trúc');
+      } else if (container) {
         container.innerHTML = `
           <div class="py-12 text-center text-zinc-400 space-y-2">
             <i data-lucide="image-off" class="w-10 h-10 mx-auto text-red-400 stroke-[1.5]"></i>

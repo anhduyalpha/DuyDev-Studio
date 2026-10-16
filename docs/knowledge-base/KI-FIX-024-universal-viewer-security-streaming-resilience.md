@@ -82,10 +82,34 @@ Quản lý `currentViewerState` tập trung: khi điều hướng Prev/Next tron
 3. Bổ sung `Cache-Control: no-cache` cho HTTP 206 Partial Content và `Cache-Control: public, max-age=600, must-revalidate` cho HTTP 200 trên các endpoint lưu trữ.
 4. Gia cố `StorageManager.sanitizeSafePath`: chặn đứng tấn công Null Byte Injection (`\0`), đồng thời làm sạch basename trong `getUploadPath`, `getProcessedPath`, `getTempPath` để ngăn chặn hoàn toàn directory traversal.
 
+### 4.8. Khử Race Condition Bằng `renderSessionId` Tuần Tự & `AbortController`
+Trong `FileViewerCore.js`, mỗi lần gọi `openFileViewer` hoặc chuyển tệp (Next/Prev) sẽ tăng biến đếm nguyên tử `currentSessionId++` và kích hoạt `currentAbortController.abort()`. Các tác vụ bất đồng bộ (tải tài liệu, phân tích PDF/DOCX/XLSX, nạp ảnh, fetch range) đều truyền `abortSignal` và kiểm tra `if (thisSessionId !== currentSessionId) return;` trước khi ghi đè DOM, triệt tiêu hoàn toàn lỗi chồng lấn renderer.
+
+### 4.9. Universal Error Boundary Fallback Card & Nút Phục Hồi Nhanh
+Tất cả các renderer (`PdfRenderer`, `DocxRenderer`, `SpreadsheetRenderer`, `VideoRenderer`, `AudioRenderer`, `ArchiveRenderer`, `ImageRenderer`) đều được bọc trong cấu trúc try/catch và gắn handler lỗi chuẩn hóa gọi về `showViewerFallbackCard`. Giao diện lỗi hiển thị thông báo tiếng Việt trực quan, mã lỗi chi tiết và 2 nút hành động cứu cánh:
+1. **Xem dạng Mã Hex / Văn bản thô:** Chuyển ngay sang chế độ Hex Inspector an toàn mà không làm sập modal, thiết lập lại phiên render mới (`currentSessionId++`) và cấp phát `AbortController` mới để kích hoạt tải dữ liệu Hex tức thì mà không bị kẹt `AbortError`.
+2. **Tải tệp xuống máy:** Kích hoạt tải trực tiếp tệp về máy người dùng.
+
+### 4.10. Giới Hạn Range 64KB Hex Inspector & 512KB Text Chunking Chống OOM
+1. `FallbackRenderer.js` gửi request `Range: bytes=0-65535` (64KB) và áp dụng cơ chế đọc stream có chặn (`ReadableStreamDefaultReader` kết hợp `reader.cancel()`): chỉ đọc tối đa 64KB đầu tiên từ mạng rồi ngắt luồng ngay lập tức. Ngay cả khi máy chủ trả về HTTP 200 (không hỗ trợ Range) cho tệp ISO/BIN dung lượng hàng chục Gigabyte, trình duyệt cũng không bao giờ tải quá 64KB vào bộ nhớ, triệt tiêu 100% nguy cơ sập RAM / OOM.
+2. `TextRenderer.js` kiểm tra kích thước tệp hoặc tệp không rõ kích thước: chỉ fetch và đọc tối đa 512KB đầu tiên (`Range: bytes=0-524287` qua stream reader bị hủy sau 512KB hoặc `blob.slice(0, 524288)`) kèm thông báo rõ ràng về số byte đã nạp, triệt tiêu hoàn toàn tình trạng đơ UI thread.
+3. `VideoRenderer.js` & `AudioRenderer.js` chặn hoàn toàn việc tải Blob dự phòng khi gặp mã lỗi `MEDIA_ERR_SRC_NOT_SUPPORTED` (code 4 - codec không được hỗ trợ như HEVC, AC3, AVI) hoặc tệp đa phương tiện kích thước lớn (>20MB - 25MB), chuyển thẳng sang Fallback Card để tránh tải hàng Gigabyte video vào bộ nhớ gây crash tab.
+
+### 4.11. Giới Hạn DPR, Kích Thước Canvas Mobile & Thu Hồi Tài Nguyên PDF.js (`PdfCanvasViewer.js`)
+1. Trên các thiết bị di động có màn hình Retina/High-DPI (`window.devicePixelRatio >= 3`), canvas vẽ trang PDF độ phân giải cao có thể vượt quá giới hạn phần cứng đồ họa (vượt quá 4096px). Bổ sung cơ chế bảo vệ: nếu chiều rộng hoặc chiều cao ước tính nhân với DPR vượt quá 4096px, DPR sẽ được tự động điều chỉnh giảm xuống mức an toàn, loại bỏ triệt để hiện tượng sập bộ nhớ GPU / canvas crash trên điện thoại.
+2. Lưu trữ tham chiếu `page` và gọi tường minh `page.cleanup()` khi cuộn trang ra khỏi viewport (`unrenderPage`), khi co giãn tỷ lệ (`applyScaleUpdate`) và khi hủy viewer (`destroy`), giải phóng hoàn toàn bộ nhớ cache glyphs và ảnh nhị phân trong bộ nhớ PDF.js.
+
+### 4.12. Gia Cố LibreOffice Process & Kiểm Tra Thư Mục Hợp Lệ
+Trong `viewer.service.ts`:
+1. Bổ sung các cờ bảo vệ bắt buộc khi khởi tạo tiến trình LibreOffice headless: `--invisible --nologo --nodefault --nofirststartwizard --nolockcheck --norestore`.
+2. Hỗ trợ ngắt toàn bộ cây tiến trình đa nền tảng (`taskkill /pid <PID> /T /F` trên Windows để diệt cả worker `soffice.bin`, hoặc `process.kill(-PID, 'SIGKILL')` trên Unix) khi hết hạn timeout (30 giây), triệt tiêu hoàn toàn tiến trình zombie chạy ngầm.
+3. Phát hiện sớm lỗi tài liệu có mật khẩu bảo vệ hoặc file bị hỏng để trả về mã lỗi rõ ràng.
+4. Trong `viewer.controller.ts`, kiểm tra `fs.statSync(sourcePath).isDirectory()` để từ chối chuyển đổi xem trước thư mục, tránh gây lỗi tiến trình ngoài ý muốn.
+
 ---
 
 ## 5. Kiểm thử & Xác minh (Verification Record)
-- **Unit & Integration Tests:** `tests/unit/viewer_hardening.test.ts`, `tests/unit/storage.test.ts`, `tests/integration/files.test.ts`, `tests/integration/storage-api.test.ts` (50/50 test cases thành công 100%).
-- **TypeScript Typecheck:** `tsc --noEmit` và `npm run build` thành công, mã thoát 0.
-- **Frontend Syntax Check:** `node --check` kiểm tra toàn bộ 8 module renderer và connector.
-- **Service Worker Cache:** Đã nâng cấp `duydev-studio-v23.03` trong `sw.js`.
+- **Unit & Integration Tests:** Chạy toàn bộ test suites liên quan bằng `rtk vitest run` (`universal_viewer.test.ts`, `viewer_hardening.test.ts`, `pwa_lifecycle.test.ts`, `battery_optimization.test.ts`, `archive.test.ts`, `converter.test.ts`, `drive_import.test.ts`) - 133/133 tests PASS (0 fail).
+- **TypeScript Typecheck:** `rtk tsc --noEmit` trên `server/` thành công 100% (No errors found).
+- **Frontend Syntax Check:** `node --check` kiểm tra toàn bộ 12 module renderer, connector, utility và `sw.js`.
+- **PWA Service Worker Cache Alignment:** Đồng bộ phiên bản `duydev-studio-v23.05` trên `sw.js`, `pwa.js`, `releaseNotes.js` và `index.html`.

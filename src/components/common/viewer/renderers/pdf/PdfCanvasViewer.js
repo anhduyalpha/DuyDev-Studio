@@ -103,8 +103,14 @@ export class PdfCanvasViewer {
 
     try {
       const page = await this.pdfDoc.getPage(pageNum);
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const viewport = page.getViewport({ scale: this.scale });
+
+      // Guard against canvas dimension overflow on mobile / high-DPI
+      const maxDim = 4096;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (viewport.width * dpr > maxDim || viewport.height * dpr > maxDim) {
+        dpr = Math.max(0.5, Math.min(maxDim / viewport.width, maxDim / viewport.height, 1));
+      }
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
@@ -118,7 +124,7 @@ export class PdfCanvasViewer {
       ctx.scale(dpr, dpr);
 
       const renderTask = page.render({ canvasContext: ctx, viewport });
-      this.renderedPages.set(pageNum, { canvas, renderTask });
+      this.renderedPages.set(pageNum, { canvas, renderTask, page });
 
       await renderTask.promise;
       box.innerHTML = '';
@@ -135,6 +141,7 @@ export class PdfCanvasViewer {
     if (!item) return;
 
     try { item.renderTask?.cancel(); } catch {}
+    try { item.page?.cleanup(); } catch {}
     this.renderedPages.delete(pageNum);
 
     const box = document.getElementById(`pdfPageBox_${pageNum}`);
@@ -178,6 +185,7 @@ export class PdfCanvasViewer {
   applyScaleUpdate() {
     this.renderedPages.forEach((item) => {
       try { item.renderTask?.cancel(); } catch {}
+      try { item.page?.cleanup(); } catch {}
     });
     this.renderedPages.clear();
     this.renderPlaceholders();
@@ -209,8 +217,10 @@ export class PdfCanvasViewer {
     if (this.observer) this.observer.disconnect();
     this.renderedPages.forEach((item) => {
       try { item.renderTask?.cancel(); } catch {}
+      try { item.page?.cleanup(); } catch {}
     });
     this.renderedPages.clear();
+    try { this.pdfDoc?.destroy(); } catch {}
     this.pdfDoc = null;
   }
 }

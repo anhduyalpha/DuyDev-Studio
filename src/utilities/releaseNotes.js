@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.05': {
+    version: 'v23.05',
+    title: 'Bản cập nhật v23.05',
+    date: '16/10/2026',
+    features: [
+      'Trình xem tệp vạn năng: Tăng cường độ ổn định toàn diện cho tất cả định dạng (PDF, DOCX, XLSX, Audio, Video, Mã nguồn, Nén, Hex)',
+      'Giới hạn đọc tệp lớn thông minh: Chống tràn RAM với 64KB Hex Inspector và 512KB Text chunking',
+      'Thẻ cảnh báo lỗi tập trung: Tích hợp nút xem nhanh dạng Hex thô và tải tệp trực tiếp khi renderer gặp sự cố'
+    ],
+    fixes: [
+      'Khắc phục triệt để hiện tượng kẹt phiên render chồng lấn bằng mã định danh renderSessionId và AbortController',
+      'Bổ sung khiên chắn kích thước Canvas trên thiết bị di động chống quá tải bộ nhớ đồ họa',
+      'Gia cố tiến trình LibreOffice với cờ an toàn, timeout đa nền tảng và kiểm tra thư mục hợp lệ'
+    ]
+  },
   'v23.04': {
     version: 'v23.04',
     title: 'Bản cập nhật v23.04',
@@ -84,7 +99,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.03'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.05'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -92,7 +107,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.03'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.03';
+  if (!rawVer) return 'v23.05';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

@@ -117,7 +117,24 @@ export function attachVideoListeners(state, registerCleanup) {
   let hasRetried = false;
   // Resilient blob recovery fallback if direct range stream fails
   video.addEventListener('error', async () => {
-    if (hasRetried) {
+    const errCode = video.error?.code;
+    let errorMsg = 'Không thể phát trực tiếp định dạng video này trên trình duyệt.';
+    if (errCode === 4) {
+      errorMsg = 'Trình duyệt không hỗ trợ giải mã định dạng hoặc codec video này (ví dụ: HEVC/H.265, AC3, AVI, FLV).';
+    } else if (errCode === 3) {
+      errorMsg = 'Dữ liệu video bị hỏng cấu trúc hoặc lỗi giải mã luồng phát.';
+    } else if (errCode === 2) {
+      errorMsg = 'Lỗi kết nối mạng khi tải luồng phát video.';
+    }
+
+    const isCodecUnsupported = errCode === 4;
+    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 25 * 1024 * 1024);
+
+    if (isCodecUnsupported || isTooLargeForBlob || hasRetried) {
+      if (state.showErrorFallback) {
+        state.showErrorFallback(errorMsg, `MediaError code: ${errCode || 'unknown'}`);
+        return;
+      }
       const container = document.getElementById('videoViewerContainer');
       if (container && !document.getElementById('videoErrorNotice')) {
         const notice = document.createElement('div');
@@ -127,10 +144,12 @@ export function attachVideoListeners(state, registerCleanup) {
           <div class="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center">
             <i data-lucide="alert-triangle" class="w-6 h-6"></i>
           </div>
-          <p class="text-xs text-zinc-300">Không thể phát trực tiếp định dạng video này trên trình duyệt.</p>
-          <a href="${state.downloadUrl || state.viewUrl}" download="${state.name}" class="px-3.5 py-1.5 rounded-xl bg-white text-zinc-900 text-xs font-semibold inline-flex items-center gap-1.5 shadow-md">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải về video
-          </a>
+          <p class="text-xs text-zinc-300 max-w-sm">${errorMsg}</p>
+          <div class="flex items-center gap-2 pt-1">
+            <a href="${state.downloadUrl || state.viewUrl}" download="${state.name}" class="px-3.5 py-1.5 rounded-xl bg-white text-zinc-900 text-xs font-semibold inline-flex items-center gap-1.5 shadow-md">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải về video
+            </a>
+          </div>
         `;
         container.appendChild(notice);
         if (window.lucide?.createIcons) window.lucide.createIcons({ root: notice });
@@ -139,16 +158,25 @@ export function attachVideoListeners(state, registerCleanup) {
     }
     hasRetried = true;
     try {
-      const res = await fetch(state.viewUrl);
+      const res = await fetch(state.viewUrl, { signal: state.abortSignal });
       if (res.ok) {
         const blob = await res.blob();
+        if (state.isCurrentSession && !state.isCurrentSession()) return;
         const blobUrl = URL.createObjectURL(blob);
         registerCleanup(() => URL.revokeObjectURL(blobUrl));
         video.src = blobUrl;
         video.play().catch(() => {});
+      } else {
+        if (state.showErrorFallback) {
+          state.showErrorFallback(errorMsg, `HTTP ${res.status}`);
+        }
       }
     } catch (e) {
+      if (e?.name === 'AbortError') return;
       console.warn('Video fallback recovery failed:', e);
+      if (state.showErrorFallback) {
+        state.showErrorFallback(errorMsg, e?.message || '');
+      }
     }
   });
 

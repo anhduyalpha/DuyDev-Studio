@@ -144,7 +144,24 @@ export function attachAudioListeners(state, registerCleanup) {
   let hasRetried = false;
   // Resilient blob recovery fallback if direct audio stream errors
   audio.addEventListener('error', async () => {
-    if (hasRetried) {
+    const errCode = audio.error?.code;
+    let errorMsg = 'Không thể phát âm thanh này trên trình duyệt.';
+    if (errCode === 4) {
+      errorMsg = 'Trình duyệt không hỗ trợ giải mã định dạng âm thanh này (ví dụ: WMA/AIFF/lossless).';
+    } else if (errCode === 3) {
+      errorMsg = 'Dữ liệu âm thanh bị hỏng hoặc lỗi giải mã luồng phát.';
+    } else if (errCode === 2) {
+      errorMsg = 'Lỗi kết nối mạng khi tải luồng phát âm thanh.';
+    }
+
+    const isCodecUnsupported = errCode === 4;
+    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 20 * 1024 * 1024);
+
+    if (isCodecUnsupported || isTooLargeForBlob || hasRetried) {
+      if (state.showErrorFallback) {
+        state.showErrorFallback(errorMsg, `MediaError code: ${errCode || 'unknown'}`);
+        return;
+      }
       if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
       if (playBtn) {
         playBtn.disabled = true;
@@ -154,26 +171,36 @@ export function attachAudioListeners(state, registerCleanup) {
     }
     hasRetried = true;
     try {
-      const res = await fetch(state.viewUrl);
+      const res = await fetch(state.viewUrl, { signal: state.abortSignal });
       if (res.ok) {
         const blob = await res.blob();
+        if (state.isCurrentSession && !state.isCurrentSession()) return;
         const blobUrl = URL.createObjectURL(blob);
         registerCleanup(() => URL.revokeObjectURL(blobUrl));
         audio.src = blobUrl;
         audio.play().catch(() => {});
+      } else {
+        if (state.showErrorFallback) {
+          state.showErrorFallback(errorMsg, `HTTP ${res.status}`);
+        } else {
+          if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
+          if (playBtn) {
+            playBtn.disabled = true;
+            playBtn.classList.add('opacity-40', 'pointer-events-none');
+          }
+        }
+      }
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      console.warn('Audio fallback recovery failed:', e);
+      if (state.showErrorFallback) {
+        state.showErrorFallback(errorMsg, e?.message);
       } else {
         if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
         if (playBtn) {
           playBtn.disabled = true;
           playBtn.classList.add('opacity-40', 'pointer-events-none');
         }
-      }
-    } catch (e) {
-      console.warn('Audio fallback recovery failed:', e);
-      if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
-      if (playBtn) {
-        playBtn.disabled = true;
-        playBtn.classList.add('opacity-40', 'pointer-events-none');
       }
     }
   });

@@ -140,15 +140,53 @@ export function attachTextListeners(state, registerCleanup) {
     };
   }
 
+  const isLargeFile = Number(state.size) > 2 * 1024 * 1024;
+  const shouldLimitStream = isLargeFile || !state.size;
+
+  async function fetchBoundedText(url, signal) {
+    const res = await fetch(url, {
+      headers: shouldLimitStream ? { Range: 'bytes=0-524287' } : {},
+      signal,
+      credentials: 'same-origin'
+    });
+    if (!res.ok && res.status !== 206) throw new Error(`HTTP ${res.status}`);
+
+    if (shouldLimitStream && res.body && typeof res.body.getReader === 'function') {
+      const reader = res.body.getReader();
+      const chunks = [];
+      let totalBytes = 0;
+      const MAX_BYTES = 512 * 1024;
+      try {
+        while (totalBytes < MAX_BYTES) {
+          const { done, value } = await reader.read();
+          if (done || !value) break;
+          chunks.push(value);
+          totalBytes += value.byteLength;
+        }
+      } finally {
+        try { await reader.cancel(); } catch {}
+      }
+      const clamped = new Uint8Array(Math.min(totalBytes, MAX_BYTES));
+      let offset = 0;
+      for (const ch of chunks) {
+        const n = Math.min(ch.byteLength, clamped.byteLength - offset);
+        clamped.set(ch.subarray(0, n), offset);
+        offset += n;
+        if (offset >= clamped.byteLength) break;
+      }
+      return new TextDecoder('utf-8', { fatal: false }).decode(clamped);
+    }
+    const fullText = await res.text();
+    return fullText.length > 512 * 1024 && shouldLimitStream ? fullText.slice(0, 512 * 1024) : fullText;
+  }
+
   const getContentPromise = (state.rawFile instanceof Blob)
-    ? state.rawFile.text()
-    : fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' }).then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.text();
-      });
+    ? (state.rawFile.size > 512 * 1024 ? state.rawFile.slice(0, 512 * 1024).text() : state.rawFile.text())
+    : fetchBoundedText(state.viewUrl, state.abortSignal || abortController.signal);
 
   getContentPromise
     .then((text) => {
+      if (state.isCurrentSession && !state.isCurrentSession()) return;
       rawContent = text;
       let displayLang = targetLang || 'text';
 
@@ -159,6 +197,10 @@ export function attachTextListeners(state, registerCleanup) {
 
       let truncateReason = '';
       let previewText = text;
+
+      if (isLargeFile || (state.rawFile instanceof Blob && state.rawFile.size > 512 * 1024)) {
+        truncateReason = ' (hiển thị 512KB đầu tiên)';
+      }
 
       if (totalLineCount > MAX_PREVIEW_LINES) {
         truncateReason = ` (hiển thị ${MAX_PREVIEW_LINES.toLocaleString()} dòng đầu)`;
@@ -209,6 +251,7 @@ export function attachTextListeners(state, registerCleanup) {
       if (window.lucide) window.lucide.createIcons();
     })
     .catch((err) => {
+      if (err.name === 'AbortError') return;
       if (codeEl) codeEl.textContent = `Không thể đọc nội dung: ${err.message}`;
       if (mdPane) mdPane.textContent = `Lỗi đọc nội dung: ${err.message}`;
       if (metaInfo) metaInfo.textContent = 'Lỗi';

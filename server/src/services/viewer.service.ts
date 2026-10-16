@@ -81,6 +81,12 @@ export class ViewerService {
       await new Promise<void>((resolve, reject) => {
         const child = spawn(bin, [
           '--headless',
+          '--invisible',
+          '--nologo',
+          '--nodefault',
+          '--nofirststartwizard',
+          '--nolockcheck',
+          '--norestore',
           `-env:UserInstallation=${userProfileUrl}`,
           '--convert-to',
           'pdf',
@@ -93,9 +99,21 @@ export class ViewerService {
         child.stderr.on('data', (d) => { stderr += d.toString(); });
 
         const timer = setTimeout(() => {
-          child.kill('SIGKILL');
-          reject(new BadRequestError('Chuyển đổi tệp sang PDF vượt quá thời gian chờ (60s)'));
-        }, 60_000);
+          try {
+            if (process.platform === 'win32' && child.pid) {
+              spawn('taskkill', ['/pid', child.pid.toString(), '/T', '/F']);
+            } else if (child.pid) {
+              try {
+                process.kill(-child.pid, 'SIGKILL');
+              } catch {
+                child.kill('SIGKILL');
+              }
+            } else {
+              child.kill();
+            }
+          } catch {}
+          reject(new BadRequestError('Chuyển đổi tệp sang PDF vượt quá thời gian chờ (30s)'));
+        }, 30_000);
 
         child.on('error', (err) => {
           clearTimeout(timer);
@@ -107,7 +125,11 @@ export class ViewerService {
           if (code === 0) {
             resolve();
           } else {
-            reject(new BadRequestError(`LibreOffice conversion failed (exit code ${code}): ${stderr}`));
+            const isPasswordOrCorrupt = /password|encrypted|corrupt|damaged|unsupported/i.test(stderr);
+            const msg = isPasswordOrCorrupt
+              ? 'Tệp tài liệu bị hỏng hoặc có mật khẩu bảo vệ không thể chuyển đổi'
+              : `LibreOffice conversion failed (exit code ${code}): ${stderr || 'Lỗi không xác định'}`;
+            reject(new BadRequestError(msg));
           }
         });
       });

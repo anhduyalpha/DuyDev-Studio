@@ -134,12 +134,16 @@ export function attachDocxListeners(state, registerCleanup) {
   async function renderDocxContent() {
     if (!fileBuffer || !window.docx || !container) return;
     container.innerHTML = '';
-    await window.docx.renderAsync(fileBuffer, container, null, {
-      inWrapper: true,
-      breakPages: isPaginated,
-      ignoreWidth: false,
-      ignoreHeight: false
-    });
+    try {
+      await window.docx.renderAsync(fileBuffer, container, null, {
+        inWrapper: true,
+        breakPages: isPaginated,
+        ignoreWidth: false,
+        ignoreHeight: false
+      });
+    } catch (renderErr) {
+      throw new Error(`docx-preview kết xuất thất bại: ${renderErr.message || 'Cấu trúc DOCX không hợp lệ'}`);
+    }
 
     // Apply clean A4 styling
     const sections = container.querySelectorAll('section.docx');
@@ -169,15 +173,21 @@ export function attachDocxListeners(state, registerCleanup) {
   async function loadAndRender() {
     try {
       await ensureDocxLoaded();
+      if (state.isCurrentSession && !state.isCurrentSession()) return;
+
+      if (state.size > 25 * 1024 * 1024) {
+        throw new Error(`Tệp Word quá lớn (${formatBytes(state.size)}) để đọc trực tiếp trong trình duyệt`);
+      }
 
       if (state.rawFile instanceof Blob) {
         fileBuffer = await state.rawFile.arrayBuffer();
       } else {
-        const res = await fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' });
+        const res = await fetch(state.viewUrl, { signal: state.abortSignal || abortController.signal, credentials: 'same-origin' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fileBuffer = await res.arrayBuffer();
       }
 
+      if (state.isCurrentSession && !state.isCurrentSession()) return;
       await renderDocxContent();
       if (loading) loading.classList.add('hidden');
       if (scrollWrapper) scrollWrapper.classList.remove('hidden');
@@ -185,7 +195,9 @@ export function attachDocxListeners(state, registerCleanup) {
     } catch (err) {
       if (err.name === 'AbortError') return;
       if (scrollWrapper) scrollWrapper.classList.add('hidden');
-      if (loading) {
+      if (state.showErrorFallback) {
+        state.showErrorFallback('Không thể kết xuất tài liệu Word', err.message);
+      } else if (loading) {
         loading.classList.remove('hidden');
         const dlUrl = state.downloadUrl || state.viewUrl || '#';
         loading.innerHTML = `

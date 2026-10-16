@@ -33,6 +33,8 @@ import { formatBytes } from '../../../utilities/formatters.js';
 import { copyText } from '../../../utilities/clipboard.js';
 import { showToast } from '../../../utilities/toast.js';
 
+let currentSessionId = 0;
+let currentAbortController = null;
 let activeCleanups = [];
 let savedScrollY = 0;
 let currentViewerState = null;
@@ -49,6 +51,11 @@ function getOpenTabDetails(state) {
 }
 
 export function cleanupCurrentView() {
+  if (currentAbortController) {
+    try { currentAbortController.abort(); } catch {}
+    currentAbortController = null;
+  }
+
   // 1. Quét và giải phóng cưỡng chế toàn bộ thẻ audio và video trong DOM
   const mediaElements = document.querySelectorAll('audio, video');
   mediaElements.forEach((el) => {
@@ -74,7 +81,14 @@ export function cleanupCurrentView() {
 }
 
 export function closeFileViewer() {
+  currentSessionId++;
   cleanupCurrentView();
+
+  // Restore scroll lock on body & html
+  try {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  } catch {}
 
   // 4. Xóa modal khỏi DOM
   const modal = document.getElementById('fileViewerCoreModal');
@@ -89,45 +103,136 @@ export function closeFileViewer() {
     window.scrollTo({ top: savedScrollY, behavior: 'instant' });
     savedScrollY = 0;
   }
+  currentViewerState = null;
 }
 
 if (typeof window !== 'undefined') {
   window.closeFileViewer = closeFileViewer;
 }
 
+export function renderFallbackErrorCard(state, reason = '', details = '') {
+  const ext = (state.name?.split('.').pop() || 'FILE').toUpperCase();
+  const displayReason = reason || 'Định dạng này không hỗ trợ xem trực tiếp hoặc tệp bị lỗi cấu trúc';
+  const downloadUrl = state.downloadUrl || state.viewUrl || '#';
+  const fileSizeStr = state.size > 0 ? `(${formatBytes(state.size)})` : '';
+
+  return `
+    <div id="viewerFallbackCard" class="py-12 sm:py-16 px-4 max-w-lg mx-auto w-full text-center space-y-5 animate-fadeIn">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center mx-auto shadow-inner">
+        <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+      </div>
+
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-zinc-200/80 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
+            ${ext}
+          </span>
+          <h3 class="font-semibold text-sm sm:text-base text-zinc-900 dark:text-white truncate max-w-[280px] font-mono">
+            ${state.name || 'Tài liệu'}
+          </h3>
+        </div>
+        ${fileSizeStr ? `<p class="text-xs font-mono text-zinc-400 dark:text-zinc-500">${fileSizeStr}</p>` : ''}
+        <p class="text-xs text-zinc-600 dark:text-zinc-400 max-w-md mx-auto pt-1 leading-relaxed">
+          ${displayReason}
+        </p>
+        ${details ? `<p class="text-[11px] font-mono text-rose-500/90 dark:text-rose-400/90 break-words max-w-md mx-auto pt-0.5">${details}</p>` : ''}
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+        <button id="btnSwitchToHexDump" type="button" class="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs">
+          <i data-lucide="binary" class="w-4 h-4"></i>
+          <span>Xem dạng Mã Hex / Văn bản thô</span>
+        </button>
+        <a id="btnFallbackDirectDownload" href="${downloadUrl}" download="${state.name}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-2 transition shadow-xs cursor-pointer">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Tải tệp xuống máy</span>
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+export function showViewerFallbackCard(state, reason = '', details = '') {
+  const viewerBody = document.getElementById('fileViewerBody');
+  if (!viewerBody) return;
+  viewerBody.className = 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center bg-zinc-50/50 dark:bg-[#0e0e11]';
+  viewerBody.innerHTML = renderFallbackErrorCard(state, reason, details);
+  if (window.lucide) window.lucide.createIcons({ root: viewerBody });
+
+  const hexBtn = document.getElementById('btnSwitchToHexDump');
+  hexBtn?.addEventListener('click', () => {
+    cleanupCurrentView();
+
+    currentSessionId++;
+    const sessionId = currentSessionId;
+    currentAbortController = new AbortController();
+    const abortSignal = currentAbortController.signal;
+
+    state.category = FILE_CATEGORIES.FALLBACK;
+    state.sessionId = sessionId;
+    state.abortSignal = abortSignal;
+    state.isCurrentSession = () => sessionId === currentSessionId && !abortSignal.aborted;
+    state.showErrorFallback = (r, d) => {
+      if (state.isCurrentSession()) {
+        showViewerFallbackCard(state, r, d);
+      }
+    };
+    currentViewerState = state;
+
+    const badge = document.getElementById('viewerFileExtBadge');
+    if (badge) badge.textContent = 'HEX';
+
+    viewerBody.className = 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center bg-zinc-50/50 dark:bg-[#0e0e11]';
+    viewerBody.innerHTML = renderCategoryBody(state);
+    if (window.lucide) window.lucide.createIcons({ root: viewerBody });
+    const registerCleanup = (fn) => activeCleanups.push(fn);
+    attachCategoryListeners(state, registerCleanup);
+  });
+}
+
 function renderCategoryBody(state) {
-  switch (state.category) {
-    case FILE_CATEGORIES.IMAGE: return renderImageViewer(state);
-    case FILE_CATEGORIES.AUDIO: return renderAudioViewer(state);
-    case FILE_CATEGORIES.VIDEO: return renderVideoViewer(state);
-    case FILE_CATEGORIES.PDF:
-    case FILE_CATEGORIES.PRESENTATION:
-      return renderPdfViewer(state);
-    case FILE_CATEGORIES.WORD: return renderDocxViewer(state);
-    case FILE_CATEGORIES.SHEET: return renderSpreadsheetViewer(state);
-    case FILE_CATEGORIES.HTML: return renderHtmlViewer(state);
-    case FILE_CATEGORIES.FONT: return renderFontViewer(state);
-    case FILE_CATEGORIES.TEXT: return renderTextViewer(state);
-    case FILE_CATEGORIES.ARCHIVE: return renderArchiveViewer(state);
-    default: return renderFallbackViewer(state);
+  try {
+    switch (state.category) {
+      case FILE_CATEGORIES.IMAGE: return renderImageViewer(state);
+      case FILE_CATEGORIES.AUDIO: return renderAudioViewer(state);
+      case FILE_CATEGORIES.VIDEO: return renderVideoViewer(state);
+      case FILE_CATEGORIES.PDF:
+      case FILE_CATEGORIES.PRESENTATION:
+        return renderPdfViewer(state);
+      case FILE_CATEGORIES.WORD: return renderDocxViewer(state);
+      case FILE_CATEGORIES.SHEET: return renderSpreadsheetViewer(state);
+      case FILE_CATEGORIES.HTML: return renderHtmlViewer(state);
+      case FILE_CATEGORIES.FONT: return renderFontViewer(state);
+      case FILE_CATEGORIES.TEXT: return renderTextViewer(state);
+      case FILE_CATEGORIES.ARCHIVE: return renderArchiveViewer(state);
+      default: return renderFallbackViewer(state);
+    }
+  } catch (err) {
+    console.error('[FileViewerCore] Render category error:', err);
+    return renderFallbackErrorCard(state, 'Không thể khởi tạo giao diện xem trước', err?.message || '');
   }
 }
 
 function attachCategoryListeners(state, registerCleanup) {
-  switch (state.category) {
-    case FILE_CATEGORIES.IMAGE: attachImageListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.AUDIO: attachAudioListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.VIDEO: attachVideoListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.PDF:
-    case FILE_CATEGORIES.PRESENTATION:
-      attachPdfListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.WORD: attachDocxListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.SHEET: attachSpreadsheetListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.HTML: attachHtmlListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.FONT: attachFontListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.TEXT: attachTextListeners(state, registerCleanup); break;
-    case FILE_CATEGORIES.ARCHIVE: attachArchiveViewerListeners(state, registerCleanup); break;
-    default: attachFallbackListeners(state, registerCleanup); break;
+  try {
+    switch (state.category) {
+      case FILE_CATEGORIES.IMAGE: attachImageListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.AUDIO: attachAudioListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.VIDEO: attachVideoListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.PDF:
+      case FILE_CATEGORIES.PRESENTATION:
+        attachPdfListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.WORD: attachDocxListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.SHEET: attachSpreadsheetListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.HTML: attachHtmlListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.FONT: attachFontListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.TEXT: attachTextListeners(state, registerCleanup); break;
+      case FILE_CATEGORIES.ARCHIVE: attachArchiveViewerListeners(state, registerCleanup); break;
+      default: attachFallbackListeners(state, registerCleanup); break;
+    }
+  } catch (err) {
+    console.error('[FileViewerCore] Attach listeners error:', err);
+    showViewerFallbackCard(state, 'Lỗi khi kích hoạt bộ đọc tệp', err?.message || '');
   }
 }
 
@@ -136,6 +241,23 @@ export function openFileViewer(state) {
   if (existingModal && state.direction) {
     cleanupCurrentView();
     currentViewerState = state;
+
+    currentSessionId++;
+    const sessionId = currentSessionId;
+    if (currentAbortController) {
+      try { currentAbortController.abort(); } catch {}
+    }
+    currentAbortController = new AbortController();
+    const abortSignal = currentAbortController.signal;
+
+    state.sessionId = sessionId;
+    state.abortSignal = abortSignal;
+    state.isCurrentSession = () => sessionId === currentSessionId && !abortSignal.aborted;
+    state.showErrorFallback = (reason, details) => {
+      if (state.isCurrentSession()) {
+        showViewerFallbackCard(state, reason, details);
+      }
+    };
 
     const ext = state.name && state.name.includes('.')
       ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
@@ -222,6 +344,29 @@ export function openFileViewer(state) {
   closeFileViewer();
   savedScrollY = currentScroll;
   currentViewerState = state;
+
+  // Lock scrolling while modal is open
+  try {
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  } catch {}
+
+  currentSessionId++;
+  const sessionId = currentSessionId;
+  if (currentAbortController) {
+    try { currentAbortController.abort(); } catch {}
+  }
+  currentAbortController = new AbortController();
+  const abortSignal = currentAbortController.signal;
+
+  state.sessionId = sessionId;
+  state.abortSignal = abortSignal;
+  state.isCurrentSession = () => sessionId === currentSessionId && !abortSignal.aborted;
+  state.showErrorFallback = (reason, details) => {
+    if (state.isCurrentSession()) {
+      showViewerFallbackCard(state, reason, details);
+    }
+  };
 
   const ext = state.name && state.name.includes('.')
     ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')

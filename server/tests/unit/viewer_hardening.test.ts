@@ -8,6 +8,8 @@ import { prisma } from '../../src/lib/prisma.js';
 import { closeTaskQueue } from '../../src/queues/task.queue.js';
 import { getMimeTypeForExt } from '../../src/schemas/converter.schema.js';
 import { AuthService } from '../../src/services/auth.service.js';
+// @ts-ignore
+import { extractFileName, extractFileExtension, detectFileCategory, FILE_CATEGORIES } from '../../../src/components/common/viewer/FileViewerConnector.js';
 
 describe('Universal File Viewer Subsystem Hardening Tests', () => {
   let app: FastifyInstance;
@@ -365,4 +367,44 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
       expect(cached.payload).toBe('');
     });
   });
+
+  describe('5. Frontend File Type Detection & URL Normalization Hardening', () => {
+    it('should extract filename from query parameter path when wrapped in download URL', () => {
+      const url = '/api/v1/storage/download?path=finance/q3_report.DOCX';
+      const name = extractFileName({}, url);
+      expect(name).toBe('q3_report.DOCX');
+    });
+
+    it('should fallback to URL parameter path when item.fileName is generic "download" or "view"', () => {
+      const url = '/api/v1/storage/download?path=%C4%90%E1%BB%81%20thi%20To%C3%A1n.pdf';
+      const name = extractFileName({ fileName: 'download' }, url);
+      expect(name).toBe('Đề thi Toán.pdf');
+    });
+
+    it('should extract extension from query parameter path even when filename is empty', () => {
+      const ext = extractFileExtension('', '', '/api/v1/storage/download?path=archive.tar.gz');
+      expect(ext).toBe('gz');
+    });
+
+    it('should normalize uppercase extensions to lowercase', () => {
+      expect(extractFileExtension('REPORT.PDF')).toBe('pdf');
+      expect(extractFileExtension('SPREADSHEET.XLSX')).toBe('xlsx');
+      expect(extractFileExtension('CLIP.MKV')).toBe('mkv');
+    });
+
+    it('should route .iso and .bin files to FALLBACK category for instant 64KB Hex inspection', () => {
+      expect(detectFileCategory('ubuntu-22.04.iso')).toBe(FILE_CATEGORIES.FALLBACK);
+      expect(detectFileCategory('firmware.bin')).toBe(FILE_CATEGORIES.FALLBACK);
+      expect(detectFileCategory('memory.dat')).toBe(FILE_CATEGORIES.FALLBACK);
+    });
+
+    it('should route media formats with mixed case or MIME type correctly', () => {
+      expect(detectFileCategory('video.MKV')).toBe(FILE_CATEGORIES.VIDEO);
+      expect(detectFileCategory('image.WEBP')).toBe(FILE_CATEGORIES.IMAGE);
+      expect(detectFileCategory('data.CSV')).toBe(FILE_CATEGORIES.SHEET);
+      expect(detectFileCategory('notes.MD')).toBe(FILE_CATEGORIES.TEXT);
+      expect(detectFileCategory('archive.7Z')).toBe(FILE_CATEGORIES.ARCHIVE);
+    });
+  });
 });
+

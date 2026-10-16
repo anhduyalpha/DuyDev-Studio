@@ -18,6 +18,7 @@ const EXT_MAP = {
   webp: FILE_CATEGORIES.IMAGE, avif: FILE_CATEGORIES.IMAGE, gif: FILE_CATEGORIES.IMAGE,
   svg: FILE_CATEGORIES.IMAGE, bmp: FILE_CATEGORIES.IMAGE, ico: FILE_CATEGORIES.IMAGE,
   tiff: FILE_CATEGORIES.IMAGE, tif: FILE_CATEGORIES.IMAGE,
+  heic: FILE_CATEGORIES.IMAGE, heif: FILE_CATEGORIES.IMAGE,
   // Audio
   mp3: FILE_CATEGORIES.AUDIO, wav: FILE_CATEGORIES.AUDIO, flac: FILE_CATEGORIES.AUDIO,
   aac: FILE_CATEGORIES.AUDIO, ogg: FILE_CATEGORIES.AUDIO, m4a: FILE_CATEGORIES.AUDIO,
@@ -44,6 +45,7 @@ const EXT_MAP = {
   zip: FILE_CATEGORIES.ARCHIVE, rar: FILE_CATEGORIES.ARCHIVE, '7z': FILE_CATEGORIES.ARCHIVE,
   tar: FILE_CATEGORIES.ARCHIVE, gz: FILE_CATEGORIES.ARCHIVE, bz2: FILE_CATEGORIES.ARCHIVE,
   tgz: FILE_CATEGORIES.ARCHIVE, xz: FILE_CATEGORIES.ARCHIVE,
+  iso: FILE_CATEGORIES.FALLBACK, bin: FILE_CATEGORIES.FALLBACK, dat: FILE_CATEGORIES.FALLBACK,
   // Code & Plain Text
   txt: FILE_CATEGORIES.TEXT, md: FILE_CATEGORIES.TEXT, markdown: FILE_CATEGORIES.TEXT,
   json: FILE_CATEGORIES.TEXT, json5: FILE_CATEGORIES.TEXT,
@@ -71,42 +73,151 @@ const EXT_MAP = {
   vtt: FILE_CATEGORIES.TEXT, srt: FILE_CATEGORIES.TEXT
 };
 
+export function extractFileName(item = {}, viewUrl = '', downloadUrl = '') {
+  let name = item.fileName || item.name || item.originalName || item.title || '';
+  if (!name && (item.path || item.drivePath)) {
+    const rawPath = item.path || item.drivePath;
+    name = rawPath.replace(/\\/g, '/').split('/').pop() || '';
+  }
+
+  // Fallback to URL inspection if no clean name is present or generic route name was provided
+  const lowerName = (name || '').toLowerCase().trim();
+  if (!name || lowerName === 'tài liệu' || lowerName === 'tệp tin' || lowerName === 'download' || lowerName === 'view') {
+    const targetUrl = viewUrl || downloadUrl || item.url || '';
+    if (targetUrl) {
+      const queryMatch = targetUrl.match(/[?&](?:path|file|name|fileName)=([^&#]+)/i);
+      if (queryMatch) {
+        try {
+          const decoded = decodeURIComponent(queryMatch[1]);
+          name = decoded.replace(/\\/g, '/').split('/').pop() || '';
+        } catch {}
+      }
+
+      if (!name) {
+        const fileRouteMatch = targetUrl.match(/\/api\/v1\/files\/(?:view|download)\/([^/?#]+)/i);
+        if (fileRouteMatch) {
+          try {
+            name = decodeURIComponent(fileRouteMatch[1]);
+          } catch {}
+        }
+      }
+
+      if (!name && targetUrl.includes('/')) {
+        const cleanPath = targetUrl.split('?')[0].split('#')[0];
+        const lastPart = cleanPath.split('/').pop() || '';
+        if (lastPart && !lastPart.startsWith('api') && !lastPart.startsWith('download') && !lastPart.startsWith('stream')) {
+          try {
+            name = decodeURIComponent(lastPart);
+          } catch {}
+        }
+      }
+    }
+  }
+
+  try {
+    name = decodeURIComponent(name);
+  } catch {}
+
+  name = name.split('?')[0].split('#')[0].trim();
+  return name || 'Tài liệu';
+}
+
+export function extractFileExtension(fileName = '', mimeType = '', viewUrl = '') {
+  let cleanName = (fileName || '').split('?')[0].split('#')[0].trim();
+  try { cleanName = decodeURIComponent(cleanName); } catch {}
+  if (cleanName.includes('.')) {
+    const ext = cleanName.split('.').pop()?.toLowerCase();
+    if (ext && ext.length <= 10) return ext;
+  }
+  if (viewUrl) {
+    const qMatch = viewUrl.match(/[?&](?:path|file|name|fileName)=([^&#]+)/i);
+    if (qMatch) {
+      try {
+        const decoded = decodeURIComponent(qMatch[1]);
+        if (decoded.includes('.')) {
+          const ext = decoded.split('.').pop()?.toLowerCase();
+          if (ext && ext.length <= 10) return ext;
+        }
+      } catch {}
+    }
+    const cleanUrl = viewUrl.split('?')[0].split('#')[0].trim();
+    if (cleanUrl.includes('.')) {
+      const ext = cleanUrl.split('.').pop()?.toLowerCase();
+      if (ext && ext.length <= 10) return ext;
+    }
+  }
+  if (mimeType) {
+    const lower = mimeType.toLowerCase();
+    if (lower === 'application/pdf') return 'pdf';
+    if (lower.includes('wordprocessingml')) return 'docx';
+    if (lower === 'application/msword') return 'doc';
+    if (lower.includes('spreadsheetml')) return 'xlsx';
+    if (lower === 'application/vnd.ms-excel') return 'xls';
+    if (lower === 'text/csv') return 'csv';
+    if (lower.includes('presentationml')) return 'pptx';
+    if (lower === 'application/vnd.ms-powerpoint') return 'ppt';
+    if (lower === 'application/zip') return 'zip';
+    if (lower.includes('rar')) return 'rar';
+    if (lower.includes('7z')) return '7z';
+    if (lower.startsWith('image/jpeg')) return 'jpg';
+    if (lower.startsWith('image/png')) return 'png';
+    if (lower.startsWith('image/webp')) return 'webp';
+    if (lower.startsWith('image/svg')) return 'svg';
+    if (lower.startsWith('audio/mpeg')) return 'mp3';
+    if (lower.startsWith('video/mp4')) return 'mp4';
+    if (lower.startsWith('text/html')) return 'html';
+    if (lower.startsWith('text/plain')) return 'txt';
+  }
+  return '';
+}
+
 export function detectFileCategory(fileName = '', mimeType = '', viewUrl = '') {
   if (viewUrl && (viewUrl.startsWith('data:image/') || viewUrl.startsWith('data:image/svg+xml'))) {
     return FILE_CATEGORIES.IMAGE;
   }
-  const baseName = fileName.split(/[\\/]/).pop()?.toLowerCase() || '';
+
+  let cleanName = fileName || '';
+  try { cleanName = decodeURIComponent(cleanName); } catch {}
+  cleanName = cleanName.split('?')[0].split('#')[0].trim();
+
+  const baseName = cleanName.split(/[\\/]/).pop()?.toLowerCase() || '';
   if (['dockerfile', 'makefile', 'license', 'licence', 'cmakelists.txt', '.gitignore', '.env', '.dockerignore', '.editorconfig'].includes(baseName)) {
     return FILE_CATEGORIES.TEXT;
   }
+
   if (mimeType) {
-    if (mimeType.startsWith('image/')) return FILE_CATEGORIES.IMAGE;
-    if (mimeType.startsWith('audio/')) return FILE_CATEGORIES.AUDIO;
-    if (mimeType.startsWith('video/')) return FILE_CATEGORIES.VIDEO;
-    if (mimeType === 'application/pdf') return FILE_CATEGORIES.PDF;
-    if (mimeType.includes('wordprocessingml') || mimeType === 'application/msword') {
+    const lowerMime = mimeType.toLowerCase();
+    if (lowerMime.startsWith('image/')) return FILE_CATEGORIES.IMAGE;
+    if (lowerMime.startsWith('audio/')) return FILE_CATEGORIES.AUDIO;
+    if (lowerMime.startsWith('video/')) return FILE_CATEGORIES.VIDEO;
+    if (lowerMime === 'application/pdf') return FILE_CATEGORIES.PDF;
+    if (lowerMime.includes('wordprocessingml') || lowerMime === 'application/msword') {
       const ext = baseName.split('.').pop() || '';
       return ext === 'docx' || ext === 'dotx' ? FILE_CATEGORIES.WORD : FILE_CATEGORIES.PDF;
     }
-    if (mimeType.includes('spreadsheetml') || mimeType === 'application/vnd.ms-excel') return FILE_CATEGORIES.SHEET;
-    if (mimeType.includes('presentationml') || mimeType === 'application/vnd.ms-powerpoint') return FILE_CATEGORIES.PDF;
-    if (mimeType === 'text/html') return FILE_CATEGORIES.HTML;
-    if (mimeType.startsWith('font/') || mimeType.includes('font-')) return FILE_CATEGORIES.FONT;
+    if (lowerMime.includes('spreadsheetml') || lowerMime === 'application/vnd.ms-excel') return FILE_CATEGORIES.SHEET;
+    if (lowerMime.includes('presentationml') || lowerMime === 'application/vnd.ms-powerpoint') return FILE_CATEGORIES.PDF;
+    if (lowerMime === 'text/html' || lowerMime === 'application/xhtml+xml') return FILE_CATEGORIES.HTML;
+    if (lowerMime.startsWith('font/') || lowerMime.includes('font-')) return FILE_CATEGORIES.FONT;
     if (
-      mimeType === 'application/zip' ||
-      mimeType === 'application/x-zip-compressed' ||
-      mimeType === 'application/x-rar-compressed' ||
-      mimeType === 'application/x-7z-compressed' ||
-      mimeType === 'application/x-tar' ||
-      mimeType === 'application/gzip'
+      lowerMime === 'application/zip' ||
+      lowerMime === 'application/x-zip-compressed' ||
+      lowerMime === 'application/x-rar-compressed' ||
+      lowerMime === 'application/x-7z-compressed' ||
+      lowerMime === 'application/x-tar' ||
+      lowerMime === 'application/gzip' ||
+      lowerMime === 'application/x-bzip2' ||
+      lowerMime === 'application/x-xz'
     ) return FILE_CATEGORIES.ARCHIVE;
-    if (mimeType.startsWith('text/') || mimeType.includes('json') || mimeType.includes('xml')) return FILE_CATEGORIES.TEXT;
+    if (lowerMime.startsWith('text/') || lowerMime.includes('json') || lowerMime.includes('xml')) return FILE_CATEGORIES.TEXT;
   }
-  if (fileName.includes('.')) {
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    if (EXT_MAP[ext]) return EXT_MAP[ext];
+
+  const ext = extractFileExtension(cleanName, mimeType, viewUrl);
+  if (ext && EXT_MAP[ext]) {
+    return EXT_MAP[ext];
   }
-  if (fileName.startsWith('[') || fileName.startsWith('QR_') || fileName.startsWith('Quét QR')) {
+
+  if (cleanName.startsWith('[') || cleanName.startsWith('QR_') || cleanName.startsWith('Quét QR')) {
     if (viewUrl && (viewUrl.startsWith('data:image') || viewUrl.includes('/api/v1/files/'))) {
       return FILE_CATEGORIES.IMAGE;
     }
@@ -119,9 +230,11 @@ export function resolveViewerUrls(item) {
   let viewUrl = item.viewUrl || item.url || item.downloadUrl || '';
   let downloadUrl = item.downloadUrl || item.url || '';
   const drivePath = item.path || item.drivePath || null;
-  const fileName = item.fileName || item.name || item.originalName || (drivePath ? drivePath.split('/').pop() : '');
-  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  const fileName = extractFileName(item, viewUrl, downloadUrl);
+  const ext = extractFileExtension(fileName, item.mimeType || item.type, viewUrl);
   const isServerConvertedDoc = SERVER_CONVERTED_EXTS.includes(ext);
+  const token = getAdminToken();
+  const authParam = token ? `&auth=${encodeURIComponent(token)}` : '';
 
   // 1. Storage Drive items with relative path
   if (drivePath && !viewUrl && !fileId) {
@@ -141,6 +254,13 @@ export function resolveViewerUrls(item) {
       if (p1 === '&') return p2 ? '&' : '';
       return '';
     });
+    // Ensure token is attached for Range streams and media decoders
+    if (token && !sView.includes('auth=') && !sView.includes('token=')) {
+      sView = sView.includes('?') ? `${sView}${authParam}` : `${sView}?${authParam.replace(/^&/, '')}`;
+    }
+    if (token && !sDl.includes('auth=') && !sDl.includes('token=')) {
+      sDl = sDl.includes('?') ? `${sDl}${authParam}` : `${sDl}?${authParam.replace(/^&/, '')}`;
+    }
     viewUrl = sView;
     downloadUrl = sDl;
   }
@@ -254,7 +374,7 @@ export const ViewerConnector = {
       isBlob = true;
     }
 
-    const name = item.fileName || item.name || item.originalName || (item.path ? item.path.split('/').pop() : 'Tài liệu');
+    const name = extractFileName(item, viewUrl, downloadUrl);
     const mimeType = item.mimeType || item.type || (rawFile ? rawFile.type : '');
     let size = Number(item.resultSize || item.originalSize || item.sizeBytes || item.size || (rawFile ? rawFile.size : 0));
 

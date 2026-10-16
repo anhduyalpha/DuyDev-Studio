@@ -3,24 +3,24 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v23.04';
+const CACHE_NAME = 'duydev-studio-v23.05';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=23.04',
-  './src/styles/studocu.css?v=23.04',
-  './src/styles/scribd.css?v=23.04',
-  './src/styles/highlight-theme.css?v=23.04',
+  './src/styles/stitch-tokens.css?v=23.05',
+  './src/styles/studocu.css?v=23.05',
+  './src/styles/scribd.css?v=23.05',
+  './src/styles/highlight-theme.css?v=23.05',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=23.04',
-  './src/utilities/releaseNotes.js?v=23.04',
+  './src/app.js?v=23.05',
+  './src/utilities/releaseNotes.js?v=23.05',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/pages/DashboardPage.js',
@@ -318,6 +318,11 @@ self.addEventListener('fetch', (event) => {
 
   // 1. Never intercept or cache API endpoints
   if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // 1b. Pass through HTTP Range requests natively (streaming media, chunk inspection)
+  if (event.request.headers.has('range')) {
     return;
   }
 

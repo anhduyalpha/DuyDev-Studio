@@ -169,17 +169,44 @@ export function attachSpreadsheetListeners(state, registerCleanup) {
   async function loadAndRender() {
     try {
       await ensureSheetJsLoaded();
+      if (state.isCurrentSession && !state.isCurrentSession()) return;
+
+      if (state.size > 25 * 1024 * 1024) {
+        throw new Error(`Tệp bảng tính quá lớn (${formatBytes(state.size)}) để xử lý an toàn trong trình duyệt`);
+      }
 
       let buffer;
       if (state.rawFile instanceof Blob) {
         buffer = await state.rawFile.arrayBuffer();
       } else {
-        const res = await fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' });
+        const res = await fetch(state.viewUrl, { signal: state.abortSignal || abortController.signal, credentials: 'same-origin' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         buffer = await res.arrayBuffer();
       }
 
-      workbook = window.XLSX.read(buffer, { type: 'array' });
+      if (state.isCurrentSession && !state.isCurrentSession()) return;
+
+      try {
+        workbook = window.XLSX.read(buffer, { type: 'array' });
+      } catch (readErr) {
+        throw new Error(`SheetJS không thể đọc tệp bảng tính: ${readErr.message || 'Tệp bị lỗi hoặc có mật khẩu'}`);
+      }
+
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        if (loading) loading.classList.add('hidden');
+        if (container) {
+          container.classList.remove('hidden');
+          container.innerHTML = `
+            <div class="text-center py-16 text-xs font-mono text-zinc-400 space-y-2">
+              <i data-lucide="file-x" class="w-8 h-8 mx-auto text-zinc-400 stroke-1"></i>
+              <p>Tệp bảng tính không chứa trang tính (sheet) nào.</p>
+            </div>
+          `;
+          if (window.lucide) window.lucide.createIcons({ root: container });
+        }
+        return;
+      }
+
       activeSheetName = workbook.SheetNames[0] || '';
 
       if (loading) loading.classList.add('hidden');
@@ -191,7 +218,9 @@ export function attachSpreadsheetListeners(state, registerCleanup) {
       if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       if (err.name === 'AbortError') return;
-      if (loading) {
+      if (state.showErrorFallback) {
+        state.showErrorFallback('Không thể đọc tệp bảng tính', err.message);
+      } else if (loading) {
         const dlUrl = state.downloadUrl || state.viewUrl || '#';
         loading.innerHTML = `
           <div class="w-10 h-10 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center mx-auto">

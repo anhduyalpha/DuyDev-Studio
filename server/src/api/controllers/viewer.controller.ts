@@ -46,6 +46,9 @@ export async function previewPdfHandler(request: FastifyRequest, reply: FastifyR
     if (!existsSync(sourcePath)) {
       throw new NotFoundError(`Tệp '${relPath}' không tồn tại trên hệ thống`);
     }
+    if (statSync(sourcePath).isDirectory()) {
+      throw new BadRequestError('Không thể tạo bản xem trước PDF cho thư mục');
+    }
   } else if (fileId && typeof fileId === 'string' && fileId.trim() !== '') {
     const fileRecord = await prisma.fileRecord.findUnique({
       where: { id: fileId.trim() }
@@ -74,6 +77,9 @@ export async function previewPdfHandler(request: FastifyRequest, reply: FastifyR
     }
 
     sourcePath = fileRecord.storagePath;
+    if (statSync(sourcePath).isDirectory()) {
+      throw new BadRequestError('Không thể tạo bản xem trước PDF cho thư mục');
+    }
   }
 
   const pdfPath = await ViewerService.getPreviewPdfPath(sourcePath);

@@ -206,20 +206,24 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
       displayArchive();
     } catch (err) {
       if (err.name === 'AbortError') return;
-      const loading = document.getElementById('archiveViewerLoading');
-      if (loading) {
-        loading.innerHTML = `
-          <div class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center mx-auto">
-            <i data-lucide="alert-circle" class="w-6 h-6"></i>
-          </div>
-          <p class="font-mono text-sm font-semibold text-red-500">${err.message || 'Không thể đọc tệp nén'}</p>
-          <div class="pt-2">
-            <a href="${state.downloadUrl}" download="${state.name}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-2">
-              <i data-lucide="download" class="w-4 h-4"></i> Tải về
-            </a>
-          </div>
-        `;
-        if (window.lucide) window.lucide.createIcons({ root: loading });
+      if (state.showErrorFallback) {
+        state.showErrorFallback('Tệp nén bị lỗi cấu trúc hoặc có mật khẩu bảo vệ', err.message || '');
+      } else {
+        const loading = document.getElementById('archiveViewerLoading');
+        if (loading) {
+          loading.innerHTML = `
+            <div class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center mx-auto">
+              <i data-lucide="alert-circle" class="w-6 h-6"></i>
+            </div>
+            <p class="font-mono text-sm font-semibold text-red-500">${err.message || 'Tệp nén bị lỗi cấu trúc hoặc có mật khẩu bảo vệ'}</p>
+            <div class="pt-2">
+              <a href="${state.downloadUrl}" download="${state.name}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Tải về
+              </a>
+            </div>
+          `;
+          if (window.lucide) window.lucide.createIcons({ root: loading });
+        }
       }
     }
   }
