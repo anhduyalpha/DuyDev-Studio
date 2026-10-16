@@ -5,12 +5,31 @@
 
 @keyframes border-beam-spin {
   0%, 100% {
-    opacity: 0.65;
+    opacity: 0.70;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.006);
+    transform: scale(1.008);
+  }
+}
+
+@keyframes border-beam-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  30% {
+    opacity: 0.95;
+    transform: scale(1.002);
+  }
+  75% {
+    opacity: 0.60;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
   }
 }
 
@@ -32,28 +51,110 @@ html.dark #scribdWorkspaceRoot,
   color: #f4f4f5;
 }
 
-/* 1. Main Hero Card with Silver/Indigo Border Beam */
-.border-beam-card {
+/* 1. Main Hero Card with Silver/Indigo Border Beam & Specular Glass */
+.border-beam-card,
+.studocu-hero-card {
   position: relative;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 22px 20px;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  /* Dual-layer specular border & soft ambient elevation (0 FPS idle cost) */
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    0 1px 3px 0 rgba(0, 0, 0, 0.04),
+    0 10px 30px -10px rgba(99, 102, 241, 0.10);
+  transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html.dark .border-beam-card,
-.dark .border-beam-card {
-  background: #111114 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+.dark .border-beam-card,
+html.dark .studocu-hero-card,
+.dark .studocu-hero-card {
+  background: radial-gradient(85% 60% at 50% 0%, rgba(99, 102, 241, 0.09) 0%, transparent 100%), #111114 !important;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 12px 36px -10px rgba(0, 0, 0, 0.70),
+    0 0 30px -10px rgba(99, 102, 241, 0.15);
 }
 
+/* Focus & Interaction: Awakening Ambient Glow */
+.border-beam-card:focus-within,
+.studocu-hero-card:focus-within {
+  border-color: rgba(99, 102, 241, 0.40);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    0 0 0 1px rgba(99, 102, 241, 0.30),
+    0 16px 40px -8px rgba(99, 102, 241, 0.22);
+}
+
+html.dark .border-beam-card:focus-within,
+.dark .border-beam-card:focus-within,
+html.dark .studocu-hero-card:focus-within,
+.dark .studocu-hero-card:focus-within {
+  border-color: rgba(129, 140, 248, 0.45);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 0 1px rgba(129, 140, 248, 0.25),
+    0 20px 48px -10px rgba(0, 0, 0, 0.85),
+    0 0 40px -6px rgba(99, 102, 241, 0.35);
+}
+
+/* Entrance Shimmer (Single-pass on mount) */
 .border-beam-card::before,
+.studocu-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 180deg,
+    transparent 0deg,
+    transparent 60deg,
+    rgba(99, 102, 241, 0.08) 100deg,
+    rgba(99, 102, 241, 0.45) 150deg,
+    rgba(165, 180, 252, 0.95) 180deg,
+    rgba(99, 102, 241, 0.45) 210deg,
+    rgba(99, 102, 241, 0.08) 260deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  animation: border-beam-entrance 1.6s cubic-bezier(0.16, 1, 0.3, 1) 1 forwards;
+  will-change: transform, opacity;
+}
+
+html.dark .border-beam-card::before,
+.dark .border-beam-card::before,
+html.dark .studocu-hero-card::before,
+.dark .studocu-hero-card::before {
+  background: conic-gradient(
+    from 180deg,
+    transparent 0deg,
+    transparent 60deg,
+    rgba(255, 255, 255, 0.08) 100deg,
+    rgba(255, 255, 255, 0.65) 150deg,
+    rgba(255, 255, 255, 0.98) 180deg,
+    rgba(255, 255, 255, 0.65) 210deg,
+    rgba(255, 255, 255, 0.08) 260deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+}
+
 .border-beam-card::after,
-.studocu-hero-card::before,
 .studocu-hero-card::after {
   content: "";
   position: absolute;
@@ -64,10 +165,11 @@ html.dark .border-beam-card,
   transition: opacity 0.3s ease;
 }
 
+/* Active Processing State: Continuous 120 FPS Composited Pulse */
 .border-beam-card.is-processing::before,
 .studocu-hero-card.is-processing::before {
   inset: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 1.5px;
   background: conic-gradient(
     from 180deg,
@@ -113,7 +215,7 @@ html.dark .studocu-hero-card.is-processing::before,
 .border-beam-card.is-processing::after,
 .studocu-hero-card.is-processing::after {
   inset: -2px;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 3px;
   background: conic-gradient(
     from 180deg,

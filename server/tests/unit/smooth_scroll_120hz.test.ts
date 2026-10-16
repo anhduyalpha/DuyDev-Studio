@@ -79,6 +79,7 @@ describe('120Hz Native Compositor Optimization & Zero-JS Scroll Hijacking Suite'
 
     expect(content).toContain('unlockHighRefreshRate()');
     expect(content).toContain('preferredDisplayModeId');
+    expect(content).toContain('setPreferMinimalPostProcessing(true)');
     expect(content).toContain('View.LAYER_TYPE_NONE');
     expect(content).not.toContain('View.LAYER_TYPE_HARDWARE');
   });

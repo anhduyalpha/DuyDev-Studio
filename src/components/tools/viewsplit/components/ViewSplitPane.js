@@ -42,7 +42,7 @@ export function renderViewSplitPane(pane, isActive = false, filter = 'bilinear')
       <div class="absolute top-2.5 inset-x-2.5 flex items-center justify-between gap-2 pointer-events-none z-10">
         <!-- Pane Identifier & File Name -->
         <div class="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/85 dark:bg-black/75 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-xs shadow-sm">
-          <span class="viewsplit-pane-dot w-2 h-2 rounded-full ${isActive ? 'bg-cyan-500 dark:bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]' : 'bg-zinc-400'}"></span>
+          <span class="viewsplit-pane-dot ${isActive ? 'specular-status-dot specular-status-dot-cyan' : 'w-2 h-2 rounded-full bg-zinc-400'}"></span>
           <span class="font-bold text-zinc-900 dark:text-white tracking-wide">${pane.title}</span>
           <span class="viewsplit-pane-badge">
           ${

@@ -6,6 +6,23 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.12': {
+    version: 'v23.12',
+    title: 'Bản cập nhật v23.12',
+    date: '17/10/2026',
+    features: [
+      'Visual Craft & 120Hz Fluidity: Khôi phục độ hoàn thiện thị giác đỉnh cao theo kiến trúc Hoạt Họa Kích Hoạt Theo Sự Kiện (Event-Driven Choreography)',
+      'Specular Glass & Ambient Lighting: Thẻ Hero và Command Deck sở hữu viền kính phản chiếu đa tầng và ánh sáng tỏa êm ái ở trạng thái nghỉ (0% CPU/GPU redraw)',
+      '3-Layer Specular Glowing Orbs: Đèn báo trạng thái 3 tầng chiều sâu phát sáng sang trọng trên Header, FormatSelector, ViewSplit và TaskDock',
+      'Tactile Spring Micro-Physics: Phản hồi xúc giác nảy nhẹ chân thực trên màn hình cảm ứng 120Hz khi chạm vào mọi nút bấm và thẻ công cụ',
+      'Chế độ độ trễ cực thấp trên Android Native: Kích hoạt Minimal Post-Processing Mode trên Android 11+ cho phản hồi chạm tức thì'
+    ],
+    fixes: [
+      'Triệt tiêu hoàn toàn CPU Paint thrashing: 100% animations vận hành độc quyền trên GPU Compositor qua transform và opacity',
+      'Entrance Shimmer quét sáng 1 lần duy nhất trên mount và chuyển tiếp mượt mà vào specular state khi nhàn rỗi',
+      'Tương tác bừng sáng mượt mà khi người dùng tương tác hoặc focus vào ô nhập liệu (:focus-within)'
+    ]
+  },
   'v23.11': {
     version: 'v23.11',
     title: 'Bản cập nhật v23.11',

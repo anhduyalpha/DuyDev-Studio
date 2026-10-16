@@ -291,12 +291,25 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       expect(studocuContent).toContain('.border-beam-card.is-processing::before');
       expect(studocuContent).toContain('.border-beam-card.is-processing::after');
       expect(studocuContent).toContain('animation: border-beam-spin');
+      expect(studocuContent).toContain('animation: border-beam-entrance 1.6s');
     });
 
-    it('FormatSelector.js, ViewSplitSliderOverlay.js, and ViewSplitPane.js contain zero idle animate-pulse classes', () => {
+    it('FormatSelector.js, ViewSplitSliderOverlay.js, and ViewSplitPane.js contain zero idle animate-pulse classes and use specular status dots', () => {
       expect(formatSelectorContent).not.toContain('animate-pulse');
       expect(viewSplitSliderOverlayContent).not.toContain('animate-pulse');
       expect(viewSplitPaneContent).not.toContain('animate-pulse');
+
+      expect(formatSelectorContent).toContain('specular-status-dot-indigo');
+      expect(viewSplitSliderOverlayContent).toContain('specular-status-dot-cyan');
+      expect(viewSplitPaneContent).toContain('specular-status-dot-cyan');
+    });
+
+    it('stitch-tokens.css provides 3-layer specular glowing orbs and tactile spring micro-physics', () => {
+      expect(stitchContent).toContain('.specular-status-dot');
+      expect(stitchContent).toContain('.specular-status-dot-emerald');
+      expect(stitchContent).toContain('.specular-status-dot-indigo');
+      expect(stitchContent).toContain('.specular-status-dot-cyan');
+      expect(stitchContent).toContain('transform: scale(0.975)');
     });
   });
 

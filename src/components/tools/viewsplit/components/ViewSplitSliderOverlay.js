@@ -40,7 +40,7 @@ export function renderViewSplitSliderOverlay(state) {
       <div class="absolute top-3 inset-x-3 flex items-center justify-between gap-2 pointer-events-none z-20">
         <!-- Mode Badge & Image Labels -->
         <div class="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/85 dark:bg-black/70 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-xs shadow-md">
-          <span class="w-2.5 h-2.5 rounded-full ${isDiffMode ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'bg-cyan-500 dark:bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]'}"></span>
+          <span class="specular-status-dot ${isDiffMode ? 'specular-status-dot-rose' : 'specular-status-dot-cyan'}"></span>
           <span class="font-bold text-zinc-900 dark:text-white uppercase tracking-wider text-[11px]">
             ${isDiffMode ? 'Difference Diff' : 'Slider Wipe'}
           </span>
@@ -56,7 +56,7 @@ export function renderViewSplitSliderOverlay(state) {
                 : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10'
             }"
           >
-            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 1 ? 'bg-cyan-500 dark:bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]' : 'bg-zinc-400'}"></span>
+            <span class="${activePaneId === 1 ? 'specular-status-dot specular-status-dot-cyan' : 'w-1.5 h-1.5 rounded-full bg-zinc-400'}"></span>
             <span>${paneA.title}</span>
           </button>
           <span class="text-zinc-400 dark:text-zinc-500">vs</span>
@@ -71,7 +71,7 @@ export function renderViewSplitSliderOverlay(state) {
                 : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10'
             }"
           >
-            <span class="w-1.5 h-1.5 rounded-full ${activePaneId === 2 ? 'bg-cyan-500 dark:bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]' : 'bg-zinc-400'}"></span>
+            <span class="${activePaneId === 2 ? 'specular-status-dot specular-status-dot-cyan' : 'w-1.5 h-1.5 rounded-full bg-zinc-400'}"></span>
             <span>${paneB.title}</span>
           </button>
         </div>

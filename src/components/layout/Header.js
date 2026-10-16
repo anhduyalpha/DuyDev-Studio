@@ -68,7 +68,7 @@ export function renderHeader() {
                aria-label="Trạng thái hệ thống"
                title="Trực tuyến" 
                class="inline-flex items-center justify-center w-6 h-6 select-none">
-            <span id="headerSystemDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+            <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
           </div>
 
           <!-- Theme Toggle Button -->
@@ -105,21 +105,21 @@ export async function syncHeaderSystemTelemetry() {
       const isDegraded = data.redis !== 'connected';
 
       if (activeJobs > 0) {
-        dotEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]';
+        dotEl.className = 'specular-status-dot specular-status-dot-amber';
         if (labelEl) {
           labelEl.textContent = `${activeJobs} TÁC VỤ`;
           labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-400';
         }
         statusEl.title = `Hệ thống: Đang xử lý (${activeJobs} tác vụ)`;
       } else if (isDegraded) {
-        dotEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]';
+        dotEl.className = 'specular-status-dot specular-status-dot-amber';
         if (labelEl) {
           labelEl.textContent = 'DEGRADED';
           labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-400';
         }
         statusEl.title = 'Hệ thống: Tải chậm';
       } else {
-        dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]';
+        dotEl.className = 'specular-status-dot specular-status-dot-emerald';
         if (labelEl) {
           labelEl.textContent = 'ONLINE';
           labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-emerald-600 dark:text-emerald-400';
@@ -130,7 +130,7 @@ export async function syncHeaderSystemTelemetry() {
       throw new Error('Gateway not online');
     }
   } catch {
-    dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]';
+    dotEl.className = 'specular-status-dot specular-status-dot-rose';
     if (labelEl) {
       labelEl.textContent = 'OFFLINE';
       labelEl.className = 'hidden lg:inline text-[10px] font-semibold tracking-wide text-rose-600 dark:text-rose-400';

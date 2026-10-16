@@ -596,6 +596,12 @@ class MainActivity : AppCompatActivity() {
                 window.attributes = params
             } catch (_: Exception) {}
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            try {
+                // Eliminate display pipeline buffering for instant 120Hz touch response
+                window.setPreferMinimalPostProcessing(true)
+            } catch (_: Exception) {}
+        }
     }
 
     private fun setupBackHandler() {
