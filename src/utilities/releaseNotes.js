@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.10': {
+    version: 'v23.10',
+    title: 'Bản cập nhật v23.10',
+    date: '16/10/2026',
+    features: [
+      'Thu phóng Double-Buffering không chớp đen: Giữ nguyên khung hình hiện tại trên màn hình và hoán đổi canvas nguyên tử sau khi PDF.js render xong 100%',
+      'Tương tác 120Hz mượt mà: Cập nhật tỷ lệ kích thước tức thì trên luồng Compositor, debounce tác vụ rasterization chống quá tải CPU/GPU',
+      'Đệm nền trang trắng phòng vệ: Bảo toàn nền giấy trang PDF, triệt tiêu hoàn toàn khoảng trống tối màu của viewport khi thu phóng'
+    ],
+    fixes: [
+      'Khắc phục triệt để hiện tượng nhấp nháy đen trước khi phóng to/thu nhỏ tài liệu PDF',
+      'Bảo vệ trạng thái canvas đang hiển thị không bị xóa sớm trong lúc chờ renderTask hoàn tất',
+      'Hủy kịp thời các tác vụ vẽ nền lỗi thời khi người dùng cuộn chuột hoặc pinch liên tục'
+    ]
+  },
   'v23.09': {
     version: 'v23.09',
     title: 'Bản cập nhật v23.09',
@@ -167,7 +182,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.09'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.10'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -175,7 +190,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.09'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.09';
+  if (!rawVer) return 'v23.10';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

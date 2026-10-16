@@ -701,3 +701,19 @@ html.dark .linear-card {
 .pdf-mode-dark .pdf-image-preserved {
   filter: invert(1) hue-rotate(180deg);
 }
+
+/* ==========================================================================
+   Zero-Flicker Double-Buffered PDF Canvas & Paper Frame
+   ========================================================================== */
+.pdf-page-box {
+  background-color: #ffffff;
+  will-change: width, height;
+}
+
+.pdf-canvas {
+  image-rendering: auto;
+  image-rendering: -webkit-optimize-contrast;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+

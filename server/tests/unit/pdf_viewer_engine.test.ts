@@ -40,7 +40,7 @@ class MockElement {
   id: string = '';
   tagName: string = 'DIV';
   classList: MockClassList;
-  style: Record<string, any> = {};
+  style: Record<string, any>;
   children: MockElement[] = [];
   parentElement: MockElement | null = null;
   dataset: Record<string, string> = {};
@@ -60,6 +60,9 @@ class MockElement {
   constructor(tagName: string = 'DIV') {
     this.tagName = tagName.toUpperCase();
     this.classList = new MockClassList();
+    this.style = {
+      setProperty: vi.fn((k: string, v: any) => { this.style[k] = v; })
+    };
   }
 
   get textContent(): string {
@@ -83,6 +86,48 @@ class MockElement {
     child.parentElement = this;
     this.children.push(child);
     return child;
+  }
+
+  replaceWith(newEl: MockElement) {
+    if (!this.parentElement) return;
+    const idx = this.parentElement.children.indexOf(this);
+    if (idx !== -1) {
+      newEl.parentElement = this.parentElement;
+      this.parentElement.children[idx] = newEl;
+      this.parentElement = null;
+    }
+  }
+
+  replaceChild(newChild: MockElement, oldChild: MockElement) {
+    const idx = this.children.indexOf(oldChild);
+    if (idx !== -1) {
+      newChild.parentElement = this;
+      this.children[idx] = newChild;
+      oldChild.parentElement = null;
+    }
+  }
+
+  remove() {
+    if (this.parentElement) {
+      const idx = this.parentElement.children.indexOf(this);
+      if (idx !== -1) {
+        this.parentElement.children.splice(idx, 1);
+      }
+      this.parentElement = null;
+    }
+  }
+
+  getContext(type: string, _options?: any) {
+    if (type === '2d') {
+      return {
+        scale: vi.fn(),
+        fillRect: vi.fn(),
+        fillStyle: '#000000',
+        clearRect: vi.fn(),
+        drawImage: vi.fn()
+      };
+    }
+    return null;
   }
 
   addEventListener(_event: string, _handler: any) {}
@@ -764,5 +809,265 @@ describe('PDF Viewer Engine Subsystem Tests (v2.0)', () => {
       expect(viewer.renderedPages.has(4)).toBe(true);
     });
   });
+
+  describe('8. Zero-Flicker Double-Buffering & Seamless Canvas Swapping', () => {
+    it('should initialize canvas with defensive white background before rasterization', async () => {
+      const fillRectSpy = vi.fn();
+      const mockCanvas = new MockElement('CANVAS');
+      mockCanvas.getContext = () => ({
+        scale: vi.fn(),
+        fillRect: fillRectSpy,
+        fillStyle: '#000000',
+        clearRect: vi.fn(),
+        drawImage: vi.fn()
+      });
+
+      const origCreateElement = (global as any).document.createElement;
+      (global as any).document.createElement = (tag: string) => {
+        if (tag === 'canvas') return mockCanvas;
+        return origCreateElement(tag);
+      };
+
+      const mockBox = new MockElement('DIV');
+      mockBox.id = 'pdfPageBox_1';
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockBox;
+        return origGetElementById(id);
+      };
+
+      const renderPromise = Promise.resolve();
+      const mockPage = {
+        rotate: 0,
+        getViewport: () => ({ width: 595, height: 842, scale: 1 }),
+        render: vi.fn(() => ({ promise: renderPromise })),
+        getTextContent: vi.fn(async () => ({ items: [] })),
+        cleanup: vi.fn()
+      };
+      const mockDoc = {
+        numPages: 1,
+        getPage: vi.fn(async () => mockPage),
+        destroy: vi.fn()
+      };
+
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.pdfDoc = mockDoc as any;
+      viewer.totalPages = 1;
+      viewer.scale = 1.0;
+      viewer.pageDimensions.set(1, { width: 595, height: 842, ratio: 842 / 595 });
+
+      await viewer.renderPage(1);
+
+      // Verify defense-in-depth white background fill was called to prevent black flash
+      expect(fillRectSpy).toHaveBeenCalled();
+      expect(viewer.renderedPages.has(1)).toBe(true);
+
+      (global as any).document.createElement = origCreateElement;
+      (global as any).document.getElementById = origGetElementById;
+    });
+
+    it('should retain existing canvas in DOM when zooming and update box dimensions with 0ms visual feedback', () => {
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.scale = 1.0;
+      viewer.totalPages = 2;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+      viewer.pageDimensions.set(2, { width: 600, height: 800, ratio: 800 / 600 });
+
+      const mockBox1 = new MockElement('DIV');
+      mockBox1.id = 'pdfPageBox_1';
+      const mockCanvas1 = new MockElement('CANVAS');
+      mockCanvas1.className = 'pdf-canvas absolute inset-0 w-full h-full block';
+      mockBox1.appendChild(mockCanvas1);
+
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockBox1;
+        return origGetElementById(id);
+      };
+
+      viewer.renderedPages.set(1, {
+        canvas: mockCanvas1,
+        renderTask: null,
+        textLayerDiv: null,
+        textTask: null,
+        page: null,
+        scale: 1.0,
+        rotation: 0
+      });
+
+      // Zoom in to 1.5
+      viewer.setScale(1.5, 400, 300);
+
+      // 1. Box dimensions must update immediately (0ms visual feedback)
+      expect(mockBox1.style.width).toBe('900px'); // 600 * 1.5
+      expect(mockBox1.style.height).toBe('1200px'); // 800 * 1.5
+
+      // 2. Existing canvas must NOT be wiped or deleted from the DOM during zoom
+      expect(mockBox1.children.includes(mockCanvas1)).toBe(true);
+      expect(viewer.renderedPages.has(1)).toBe(true);
+      expect(viewer.renderedPages.get(1)?.canvas).toBe(mockCanvas1);
+
+      (global as any).document.getElementById = origGetElementById;
+    });
+
+    it('should atomically swap old canvas with new canvas only after renderTask resolves', async () => {
+      const mockBox1 = new MockElement('DIV');
+      mockBox1.id = 'pdfPageBox_1';
+      const oldCanvas = new MockElement('CANVAS');
+      oldCanvas.id = 'oldCanvas';
+      const oldTextLayer = new MockElement('DIV');
+      oldTextLayer.id = 'oldTextLayer';
+      mockBox1.appendChild(oldCanvas);
+      mockBox1.appendChild(oldTextLayer);
+
+      const newCanvas = new MockElement('CANVAS');
+      newCanvas.id = 'newCanvas';
+
+      const origCreateElement = (global as any).document.createElement;
+      (global as any).document.createElement = (tag: string) => {
+        if (tag === 'canvas') {
+          return newCanvas;
+        }
+        return origCreateElement(tag);
+      };
+
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockBox1;
+        return origGetElementById(id);
+      };
+
+      let resolveRender: any;
+      const deferredRenderPromise = new Promise((resolve) => {
+        resolveRender = resolve;
+      });
+
+      const mockPage = {
+        rotate: 0,
+        getViewport: () => ({ width: 900, height: 1200, scale: 1.5 }),
+        render: vi.fn(() => ({ promise: deferredRenderPromise })),
+        getTextContent: vi.fn(async () => ({ items: [] })),
+        cleanup: vi.fn()
+      };
+      const mockDoc = {
+        numPages: 1,
+        getPage: vi.fn(async () => mockPage),
+        destroy: vi.fn()
+      };
+
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.pdfDoc = mockDoc as any;
+      viewer.totalPages = 1;
+      viewer.scale = 1.5;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+
+      // Seed old rendered page at scale 1.0
+      viewer.renderedPages.set(1, {
+        canvas: oldCanvas,
+        renderTask: null,
+        textLayerDiv: oldTextLayer,
+        textTask: null,
+        page: null,
+        scale: 1.0,
+        rotation: 0
+      });
+
+      // Start rendering page 1 at scale 1.5
+      const renderPromise = viewer.renderPage(1);
+
+      // In-flight assertion: before renderTask resolves, old canvas MUST remain in box
+      expect(mockBox1.children.includes(oldCanvas)).toBe(true);
+      expect(mockBox1.children.includes(newCanvas)).toBe(false);
+      expect(viewer.inFlightRenders.has(1)).toBe(true);
+
+      // Now resolve the render task
+      resolveRender();
+      await renderPromise;
+
+      // Post-render assertion: new canvas has atomically replaced old canvas
+      expect(mockBox1.children.includes(newCanvas)).toBe(true);
+      expect(mockBox1.children.includes(oldCanvas)).toBe(false);
+      expect(viewer.renderedPages.get(1)?.canvas).toBe(newCanvas);
+      expect(viewer.renderedPages.get(1)?.scale).toBe(1.5);
+      expect(viewer.inFlightRenders.has(1)).toBe(false);
+
+      (global as any).document.createElement = origCreateElement;
+      (global as any).document.getElementById = origGetElementById;
+    });
+
+    it('should discard obsolete background render if scale changes before renderTask finishes', async () => {
+      const mockBox1 = new MockElement('DIV');
+      mockBox1.id = 'pdfPageBox_1';
+      const initialCanvas = new MockElement('CANVAS');
+      mockBox1.appendChild(initialCanvas);
+
+      const obsoleteCanvas = new MockElement('CANVAS');
+      obsoleteCanvas.id = 'obsoleteCanvas';
+
+      const origCreateElement = (global as any).document.createElement;
+      (global as any).document.createElement = (tag: string) => {
+        if (tag === 'canvas') return obsoleteCanvas;
+        return origCreateElement(tag);
+      };
+
+      const origGetElementById = (global as any).document.getElementById;
+      (global as any).document.getElementById = (id: string) => {
+        if (id === 'pdfPageBox_1') return mockBox1;
+        return origGetElementById(id);
+      };
+
+      let resolveSlowRender: any;
+      const slowRenderPromise = new Promise((resolve) => {
+        resolveSlowRender = resolve;
+      });
+
+      const mockPage = {
+        rotate: 0,
+        getViewport: () => ({ width: 750, height: 1000, scale: 1.25 }),
+        render: vi.fn(() => ({ promise: slowRenderPromise })),
+        getTextContent: vi.fn(async () => ({ items: [] })),
+        cleanup: vi.fn()
+      };
+      const mockDoc = {
+        numPages: 1,
+        getPage: vi.fn(async () => mockPage),
+        destroy: vi.fn()
+      };
+
+      const viewer = new PdfCanvasViewer(mockContainer);
+      viewer.pdfDoc = mockDoc as any;
+      viewer.totalPages = 1;
+      viewer.scale = 1.25;
+      viewer.pageDimensions.set(1, { width: 600, height: 800, ratio: 800 / 600 });
+
+      viewer.renderedPages.set(1, {
+        canvas: initialCanvas,
+        renderTask: null,
+        textLayerDiv: null,
+        textTask: null,
+        page: null,
+        scale: 1.0,
+        rotation: 0
+      });
+
+      // Launch render at 1.25
+      const renderPromise = viewer.renderPage(1);
+
+      // User quickly zooms again to 2.0 before 1.25 finishes
+      viewer.setScale(2.0, 400, 300);
+
+      // Now resolve the obsolete 1.25 render
+      resolveSlowRender();
+      await renderPromise;
+
+      // Obsolete canvas must NOT be swapped into DOM because scale changed to 2.0
+      expect(mockBox1.children.includes(obsoleteCanvas)).toBe(false);
+      expect(mockBox1.children.includes(initialCanvas)).toBe(true);
+
+      (global as any).document.createElement = origCreateElement;
+      (global as any).document.getElementById = origGetElementById;
+    });
+  });
 });
+
 

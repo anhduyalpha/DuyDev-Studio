@@ -24,7 +24,8 @@ export class PdfCanvasViewer {
     this.basePageWidth = 595;
     this.rotation = 0; // 0, 90, 180, 270 deg
     this.pageDimensions = new Map(); // pageNum -> { width: number, height: number, ratio: number, rotate?: number }
-    this.renderedPages = new Map(); // pageNum -> { canvas, renderTask, textLayerDiv, textTask, page }
+    this.renderedPages = new Map(); // pageNum -> { canvas, renderTask, textLayerDiv, textTask, page, scale, rotation }
+    this.inFlightRenders = new Map(); // pageNum -> { renderTask, textTask, targetScale, targetRotation, canvas, textLayerDiv, page }
     this.observer = null;
     this.nightMode = 'normal'; // 'normal' | 'dark' | 'sepia'
     this.zoomDebounceTimer = null;
@@ -176,16 +177,54 @@ export class PdfCanvasViewer {
   }
 
   async renderPage(pageNum) {
-    if (this.renderedPages.has(pageNum)) return;
+    const existingRecord = this.renderedPages.get(pageNum);
+    if (existingRecord) {
+      if (Math.abs((existingRecord.scale || 1.0) - this.scale) < 0.001 &&
+          (existingRecord.rotation ?? 0) === this.rotation) {
+        return;
+      }
+    }
+
     const box = document.getElementById(`pdfPageBox_${pageNum}`);
     if (!box || !this.pdfDoc) return;
 
+    // Guard duplicate in-flight renders for exact same scale and rotation
+    const currentInFlight = this.inFlightRenders.get(pageNum);
+    if (currentInFlight) {
+      if (Math.abs(currentInFlight.targetScale - this.scale) < 0.001 &&
+          currentInFlight.targetRotation === this.rotation) {
+        return;
+      }
+      try { currentInFlight.renderTask?.cancel(); } catch {}
+      try { currentInFlight.textTask?.cancel?.(); } catch {}
+      this.inFlightRenders.delete(pageNum);
+    }
+
+    const targetScale = this.scale;
+    const targetRotation = this.rotation;
+    const inFlightRecord = {
+      renderTask: null,
+      textTask: null,
+      targetScale,
+      targetRotation,
+      canvas: null,
+      textLayerDiv: null,
+      page: null
+    };
+    this.inFlightRenders.set(pageNum, inFlightRecord);
+
     try {
       const page = await this.pdfDoc.getPage(pageNum);
+      inFlightRecord.page = page;
+      if (this.scale !== targetScale || this.rotation !== targetRotation ||
+          this.inFlightRenders.get(pageNum) !== inFlightRecord) {
+        return;
+      }
+
       const dim = this.pageDimensions.get(pageNum);
       const intrinsicRotate = dim?.rotate ?? (page.rotate || 0);
-      const effectiveRotation = (intrinsicRotate + this.rotation) % 360;
-      const viewport = page.getViewport({ scale: this.scale, rotation: effectiveRotation });
+      const effectiveRotation = (intrinsicRotate + targetRotation) % 360;
+      const viewport = page.getViewport({ scale: targetScale, rotation: effectiveRotation });
 
       // Guard against canvas dimension overflow on high-DPI / mobile
       const maxDim = 4096;
@@ -194,55 +233,128 @@ export class PdfCanvasViewer {
         dpr = Math.max(0.5, Math.min(maxDim / viewport.width, maxDim / viewport.height, 1));
       }
 
-      // 1. Prepare Hi-DPI Canvas Layer
+      // 1. Prepare Hi-DPI Canvas Layer in Background (Off-DOM)
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { alpha: false });
+      const ctx = canvas.getContext ? canvas.getContext('2d', { alpha: false }) : null;
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
       canvas.className = 'pdf-canvas absolute inset-0 w-full h-full block select-none pointer-events-none z-1';
-      ctx.scale(dpr, dpr);
+
+      if (ctx) {
+        // Defensive paper fill to eliminate black void before PDF.js render starts
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(dpr, dpr);
+      }
 
       // 2. Prepare Selectable Text Layer
       const textLayerDiv = document.createElement('div');
       textLayerDiv.className = 'textLayer select-text';
       textLayerDiv.style.width = `${Math.floor(viewport.width)}px`;
       textLayerDiv.style.height = `${Math.floor(viewport.height)}px`;
-      textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
+      if (typeof textLayerDiv.style?.setProperty === 'function') {
+        textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
+      }
 
-      const renderTask = page.render({ canvasContext: ctx, viewport });
-      const record = { canvas, renderTask, textLayerDiv, textTask: null, page };
+      let renderTask = null;
+      if (ctx && typeof page.render === 'function') {
+        renderTask = page.render({ canvasContext: ctx, viewport });
+      }
+
+      inFlightRecord.renderTask = renderTask;
+      inFlightRecord.canvas = canvas;
+      inFlightRecord.textLayerDiv = textLayerDiv;
+
+      if (renderTask?.promise) {
+        await renderTask.promise;
+      }
+
+      // If scale, rotation, or document changed while rasterizing, discard obsolete render
+      if (this.scale !== targetScale || this.rotation !== targetRotation ||
+          this.inFlightRenders.get(pageNum) !== inFlightRecord) {
+        try { page.cleanup?.(); } catch {}
+        return;
+      }
+
+      // 3. Double-Buffering & Zero-Flicker Canvas Swapping:
+      // Replace existing canvas only AFTER renderTask completely resolves
+      const oldRecord = this.renderedPages.get(pageNum);
+      if (oldRecord && oldRecord.canvas && oldRecord.canvas.parentElement === box) {
+        if (typeof oldRecord.canvas.replaceWith === 'function') {
+          oldRecord.canvas.replaceWith(canvas);
+        } else if (box.replaceChild) {
+          box.replaceChild(canvas, oldRecord.canvas);
+        } else {
+          box.appendChild(canvas);
+        }
+
+        if (oldRecord.textLayerDiv && oldRecord.textLayerDiv.parentElement === box) {
+          if (typeof oldRecord.textLayerDiv.replaceWith === 'function') {
+            oldRecord.textLayerDiv.replaceWith(textLayerDiv);
+          } else if (box.replaceChild) {
+            box.replaceChild(textLayerDiv, oldRecord.textLayerDiv);
+          } else {
+            box.appendChild(textLayerDiv);
+          }
+        } else {
+          box.appendChild(textLayerDiv);
+        }
+
+        const placeholder = box.querySelector('.pdf-placeholder');
+        if (placeholder && typeof placeholder.remove === 'function') {
+          placeholder.remove();
+        }
+
+        try { oldRecord.renderTask?.cancel(); } catch {}
+        try { oldRecord.textTask?.cancel?.(); } catch {}
+        try { oldRecord.page?.cleanup?.(); } catch {}
+      } else {
+        // Initial render: replace placeholder cleanly without exposing unrendered void
+        box.innerHTML = '';
+        box.appendChild(canvas);
+        box.appendChild(textLayerDiv);
+      }
+
+      const record = {
+        canvas,
+        renderTask,
+        textLayerDiv,
+        textTask: null,
+        page,
+        scale: targetScale,
+        rotation: targetRotation
+      };
       this.renderedPages.set(pageNum, record);
+      this.inFlightRenders.delete(pageNum);
 
-      // Mount canvas & text layer immediately to establish layout context
-      box.innerHTML = '';
-      box.appendChild(canvas);
-      box.appendChild(textLayerDiv);
-
-      await renderTask.promise;
-
-      // 3. Render PDF.js Text Layer overlay
+      // 4. Render PDF.js Text Layer overlay
       const textContent = await page.getTextContent();
       const pdfjsLib = window.pdfjsLib;
       if (pdfjsLib && this.renderedPages.has(pageNum)) {
-        if (typeof pdfjsLib.renderTextLayer === 'function') {
-          const textTask = pdfjsLib.renderTextLayer({
-            textContentSource: textContent,
-            container: textLayerDiv,
-            viewport: viewport,
-            textDivs: []
-          });
-          record.textTask = textTask;
-          await textTask.promise;
-        } else if (pdfjsLib.TextLayer) {
-          const tl = new pdfjsLib.TextLayer({
-            textContentSource: textContent,
-            container: textLayerDiv,
-            viewport: viewport
-          });
-          record.textTask = tl;
-          await tl.render();
+        const activeRec = this.renderedPages.get(pageNum);
+        if (activeRec && activeRec.canvas === canvas) {
+          if (typeof pdfjsLib.renderTextLayer === 'function') {
+            const textTask = pdfjsLib.renderTextLayer({
+              textContentSource: textContent,
+              container: textLayerDiv,
+              viewport: viewport,
+              textDivs: []
+            });
+            activeRec.textTask = textTask;
+            if (inFlightRecord) inFlightRecord.textTask = textTask;
+            await textTask.promise;
+          } else if (pdfjsLib.TextLayer) {
+            const tl = new pdfjsLib.TextLayer({
+              textContentSource: textContent,
+              container: textLayerDiv,
+              viewport: viewport
+            });
+            activeRec.textTask = tl;
+            if (inFlightRecord) inFlightRecord.textTask = tl;
+            await tl.render();
+          }
         }
       }
 
@@ -252,11 +364,23 @@ export class PdfCanvasViewer {
       if (e?.name !== 'RenderingCancelledException') {
         console.warn(`Render error on page ${pageNum}:`, e);
       }
+    } finally {
+      if (inFlightRecord && this.inFlightRenders.get(pageNum) === inFlightRecord) {
+        this.inFlightRenders.delete(pageNum);
+      }
     }
   }
 
   unrenderPage(pageNum) {
     if (this.targetNavPage === pageNum) return;
+    const inFlight = this.inFlightRenders.get(pageNum);
+    if (inFlight) {
+      try { inFlight.renderTask?.cancel(); } catch {}
+      try { inFlight.textTask?.cancel?.(); } catch {}
+      try { inFlight.page?.cleanup?.(); } catch {}
+      this.inFlightRenders.delete(pageNum);
+    }
+
     const item = this.renderedPages.get(pageNum);
     if (!item) return;
 
@@ -268,7 +392,7 @@ export class PdfCanvasViewer {
     const box = document.getElementById(`pdfPageBox_${pageNum}`);
     if (box) {
       box.innerHTML = `
-        <div class="pdf-placeholder absolute inset-0 flex items-center justify-center text-zinc-400 font-mono text-xs select-none pointer-events-none">
+        <div class="pdf-placeholder absolute inset-0 flex items-center justify-center text-zinc-400 dark:text-zinc-500 font-mono text-xs select-none pointer-events-none">
           Trang ${pageNum}
         </div>
       `;
@@ -494,6 +618,7 @@ export class PdfCanvasViewer {
       return;
     }
 
+    const prevScale = this.scale;
     const containerW = this.containerEl.clientWidth || window.innerWidth || 800;
     const containerH = this.containerEl.clientHeight || window.innerHeight || 600;
     const ax = anchorX !== null ? anchorX : containerW / 2;
@@ -559,7 +684,7 @@ export class PdfCanvasViewer {
     } else {
       const docX = this.containerEl.scrollLeft + ax;
       const docY = this.containerEl.scrollTop + ay;
-      const ratio = targetScale / (this.scale || 1.0);
+      const ratio = targetScale / (prevScale || 1.0);
       this.containerEl.scrollLeft = Math.max(0, Math.round(docX * ratio - ax));
       this.containerEl.scrollTop = Math.max(0, Math.round(docY * ratio - ay));
     }
@@ -567,15 +692,16 @@ export class PdfCanvasViewer {
     const wrapper = document.getElementById('pdfPagesWrapper');
     if (wrapper) wrapper.style.transform = 'none';
 
-    // Debounce re-rendering visible pages at target DPR and clean up off-screen
+    // Cancel in-flight background renders for previous scales to prevent CPU/GPU thrashing
+    this.inFlightRenders.forEach((item) => {
+      try { item.renderTask?.cancel(); } catch {}
+      try { item.textTask?.cancel?.(); } catch {}
+    });
+    this.inFlightRenders.clear();
+
+    // Debounce re-rendering visible pages at target DPR without clearing existing canvas records
     if (this.zoomDebounceTimer) clearTimeout(this.zoomDebounceTimer);
     this.zoomDebounceTimer = setTimeout(() => {
-      this.renderedPages.forEach((item) => {
-        try { item.renderTask?.cancel(); } catch {}
-        try { item.textTask?.cancel?.(); } catch {}
-        try { item.page?.cleanup(); } catch {}
-      });
-      this.renderedPages.clear();
       this.renderVisiblePages();
     }, 150);
   }
@@ -609,12 +735,12 @@ export class PdfCanvasViewer {
       }
     }
 
-    this.renderedPages.forEach((item) => {
+    this.inFlightRenders.forEach((item) => {
       try { item.renderTask?.cancel(); } catch {}
       try { item.textTask?.cancel?.(); } catch {}
-      try { item.page?.cleanup(); } catch {}
     });
-    this.renderedPages.clear();
+    this.inFlightRenders.clear();
+
     this.renderVisiblePages();
     this.jumpToPage(this.currentPage);
   }
@@ -720,6 +846,13 @@ export class PdfCanvasViewer {
     if (this.boundTouchEnd) {
       this.containerEl.removeEventListener('touchend', this.boundTouchEnd);
     }
+
+    this.inFlightRenders.forEach((item) => {
+      try { item.renderTask?.cancel(); } catch {}
+      try { item.textTask?.cancel?.(); } catch {}
+      try { item.page?.cleanup?.(); } catch {}
+    });
+    this.inFlightRenders.clear();
 
     this.renderedPages.forEach((item) => {
       try { item.renderTask?.cancel(); } catch {}
