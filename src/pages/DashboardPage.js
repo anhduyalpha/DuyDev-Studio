@@ -49,7 +49,7 @@ export function renderDashboardPage() {
   };
 
   return `
-    <div class="space-y-6 sm:space-y-8 animate-fadeIn">
+    <div class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16">
       
       <!-- Category Filter Pills Bar -->
       <div class="w-full min-w-0 overflow-hidden">

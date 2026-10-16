@@ -17,7 +17,7 @@ export function renderScribdWorkspace() {
   const state = scribdManager.getState();
 
   return `
-    <div id="scribdWorkspaceRoot" class="space-y-4 animate-fadeIn max-w-4xl mx-auto pb-28 sm:pb-12">
+    <div id="scribdWorkspaceRoot" class="space-y-4 animate-fadeIn max-w-4xl mx-auto pb-16 sm:pb-20">
       <!-- Breadcrumb Header with Brand Terracotta Identity -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">

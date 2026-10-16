@@ -14,7 +14,7 @@ export function renderQuizWorkspace() {
   const state = quizManager.getState();
 
   return `
-    <div id="quizWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-3xl mx-auto">
+    <div id="quizWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-3xl mx-auto pb-12 md:pb-16">
       <!-- Top Navigation & Breadcrumb -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
@@ -37,7 +37,7 @@ export function renderQuizWorkspace() {
         </div>
 
         <!-- Collapsible History Section -->
-        <div id="quizHistoryContainer" class="pt-2">
+        <div id="quizHistoryContainer" class="pt-4 sm:pt-6">
           ${renderQuizHistoryList()}
         </div>
       </div>

@@ -56,7 +56,7 @@ export function renderConverterWorkspace(state) {
       </div>
 
       <!-- Dedicated History Section -->
-      <div id="converterHistoryContainer" class="pt-2">
+      <div id="converterHistoryContainer" class="pt-4 sm:pt-6">
         ${renderConverterHistoryList()}
       </div>
     </div>

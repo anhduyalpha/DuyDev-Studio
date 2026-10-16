@@ -21,7 +21,7 @@ export function renderQrScanner() {
   const { scan, error } = qrState;
 
   return `
-    <div class="space-y-6 animate-fadeIn">
+    <div class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16">
       <!-- Breadcrumb -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
@@ -52,7 +52,9 @@ export function renderQrScanner() {
       ${renderQrScannerWorkspace(scan)}
 
       <!-- Scanned QR History -->
-      ${renderQrHistoryList('scan')}
+      <div id="qrScanHistoryContainer" class="pt-2 sm:pt-4">
+        ${renderQrHistoryList('scan')}
+      </div>
     </div>
   `.trim();
 }
@@ -67,7 +69,7 @@ export function renderQrStudio(initialTab = null) {
   const { activeTab, error, dynamic, styling, vietqr, wifi, vcard } = qrState;
 
   return `
-    <div class="space-y-6 animate-fadeIn">
+    <div class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16">
       <!-- Breadcrumb -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
@@ -122,7 +124,9 @@ export function renderQrStudio(initialTab = null) {
       </div>
 
       <!-- Created QR History Section -->
-      ${renderQrHistoryList('create')}
+      <div id="qrHistoryContainer" class="pt-2 sm:pt-4">
+        ${renderQrHistoryList('create')}
+      </div>
     </div>
   `.trim();
 }

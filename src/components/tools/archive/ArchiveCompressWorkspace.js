@@ -12,7 +12,7 @@ import { storage } from '../../../utilities/storage.js';
 
 export function renderArchiveCompressWorkspace(state = archiveCompressManager.getState()) {
   return `
-    <div class="space-y-6 animate-fadeIn">
+    <div class="space-y-6 animate-fadeIn pb-12 md:pb-16">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
           <a href="#dashboard" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] dark:text-zinc-300 dark:hover:text-white border border-zinc-200 dark:border-white/[0.06] transition shadow-xs">

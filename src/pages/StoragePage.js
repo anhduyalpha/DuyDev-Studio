@@ -153,7 +153,7 @@ export function renderStoragePage() {
   state.currentPath = getStoragePathFromHash();
 
   return `
-    <div class="max-w-7xl mx-auto space-y-4 animate-fadeIn">
+    <div class="max-w-7xl mx-auto space-y-4 animate-fadeIn pb-12 md:pb-16">
       
       <!-- Top Header & Actions Bar -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] shadow-xs">

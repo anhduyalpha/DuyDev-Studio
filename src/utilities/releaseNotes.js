@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.11': {
+    version: 'v23.11',
+    title: 'Bản cập nhật v23.11',
+    date: '16/10/2026',
+    features: [
+      'Chuẩn hóa khoảng đệm thoáng đãng toàn bộ web: Tăng đệm đáy lên 80px–96px trên Desktop và duy trì vùng an toàn chân trang trên Mobile',
+      'Tách biệt khối Lịch sử và Chân trang: Đảm bảo khoảng cách tối thiểu ≥48px giữa card cuối cùng và viền Footer trên tất cả công cụ',
+      'Khoảng cách không gian thoáng đãng theo tiêu chuẩn Impeccable Design: Triệt tiêu hoàn toàn cảm giác khít chật ở đáy màn hình'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi thẻ Lịch sử tạo QR và Tùy biến giao diện bị dính sát vào đường kẻ Footer',
+      'Đồng bộ khoảng đệm đáy pb-12 md:pb-16 trên toàn bộ 15 trang công cụ và dashboard',
+      'Đồng bộ hóa cache PWA và Service Worker v23.11'
+    ]
+  },
   'v23.10': {
     version: 'v23.10',
     title: 'Bản cập nhật v23.10',

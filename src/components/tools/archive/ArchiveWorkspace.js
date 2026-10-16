@@ -22,7 +22,7 @@ export function renderArchiveViewer(state = {}) {
   } = state;
 
   return `
-    <div class="space-y-6 animate-fadeIn">
+    <div class="space-y-6 animate-fadeIn pb-12 md:pb-16">
       <!-- Breadcrumb & Actions Bar -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">

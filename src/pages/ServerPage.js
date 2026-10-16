@@ -23,7 +23,7 @@ export function renderServerPage() {
   const isNative = isNativeApp();
 
   return `
-    <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+    <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn pb-12 md:pb-16">
       <div>
         <h2 class="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
           <i data-lucide="settings" class="w-5 h-5 text-indigo-500 dark:text-indigo-400"></i> Cài đặt & Tùy chọn

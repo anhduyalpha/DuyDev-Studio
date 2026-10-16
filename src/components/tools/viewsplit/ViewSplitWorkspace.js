@@ -22,7 +22,7 @@ export function renderViewSplitWorkspace() {
   const { layout, panes, activePaneId, filter, mobileActiveTab } = state;
 
   return `
-    <div id="viewsplit-workspace" class="w-full flex flex-col gap-3 min-h-[calc(100vh-140px)] animate-fadeIn">
+    <div id="viewsplit-workspace" class="w-full flex flex-col gap-3 min-h-[calc(100vh-140px)] animate-fadeIn pb-12 md:pb-16">
       <!-- Top Action Toolbar -->
       ${renderViewSplitToolbar(state)}
 

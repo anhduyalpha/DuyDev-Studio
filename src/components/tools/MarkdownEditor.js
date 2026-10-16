@@ -73,7 +73,7 @@ export function renderMarkdownEditor() {
   const renderedHtml = parseMarkdownToHtml(content);
 
   return `
-    <div class="space-y-6 animate-fadeIn">
+    <div class="space-y-6 animate-fadeIn pb-12 md:pb-16">
       
       <!-- Top Breadcrumb & Controls -->
       <div class="flex flex-wrap items-center justify-between gap-3">

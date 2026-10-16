@@ -40,7 +40,7 @@ export function renderTiktokWorkspace() {
   const hasUrl = Boolean(url && url.length > 0);
 
   return `
-    <div id="tiktokWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-4xl mx-auto pb-12">
+    <div id="tiktokWorkspaceRoot" class="space-y-6 animate-fadeIn max-w-4xl mx-auto pb-12 md:pb-16">
       <!-- Breadcrumb Bar -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">

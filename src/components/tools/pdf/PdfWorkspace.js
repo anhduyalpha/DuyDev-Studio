@@ -23,7 +23,7 @@ export function renderPdfConverter(queueState = {}) {
   const rightSpan = !hasFiles ? 'hidden' : (isVisualMode ? 'lg:col-span-4' : 'lg:col-span-5');
 
   return `
-    <div id="pdfStudioWorkspaceRoot" class="space-y-6 animate-fadeIn pb-12 md:pb-8">
+    <div id="pdfStudioWorkspaceRoot" class="space-y-6 animate-fadeIn pb-12 md:pb-16">
       <!-- Breadcrumb Navigation -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -61,7 +61,7 @@ export function renderPdfConverter(queueState = {}) {
       </div>
 
       <!-- History List -->
-      <div id="pdfHistoryContainer" class="pt-2">
+      <div id="pdfHistoryContainer" class="pt-4 sm:pt-6">
         ${renderPdfHistoryList()}
       </div>
     </div>
