@@ -302,6 +302,29 @@ describe('Web Share Target & Classifier Suite', () => {
       (global as any).window.__FAST_PATH_SHARE_ACTIVE = false;
       expect(isShareTargetModalOpen()).toBe(false);
     });
+
+    it('should classify TikTok and Douyin URLs and recommend TikTok downloader route #tool/tiktok', () => {
+      const urls = [
+        'https://www.tiktok.com/@username/video/71234567890',
+        'https://vt.tiktok.com/ZS123456/',
+        'https://v.douyin.com/iJabcdef/'
+      ];
+      for (const u of urls) {
+        const result = classifySharedPayload({ url: u });
+        expect(result.type).toBe(SharePayloadType.TIKTOK_URL);
+        expect(result.recommendations[0].isPrimary).toBe(true);
+        expect(result.recommendations[0].route).toBe('#tool/tiktok');
+      }
+    });
+
+    it('should classify Scribd URLs and recommend Scribd downloader route #tool/scribd', () => {
+      const result = classifySharedPayload({
+        url: 'https://www.scribd.com/document/12345678/My-Doc'
+      });
+      expect(result.type).toBe(SharePayloadType.SCRIBD_URL);
+      expect(result.recommendations[0].isPrimary).toBe(true);
+      expect(result.recommendations[0].route).toBe('#tool/scribd');
+    });
   });
 
   describe('IndexedDB Lock-Free & Polling Suite', () => {

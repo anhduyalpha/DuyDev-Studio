@@ -480,7 +480,7 @@ export function classifySharedPayload(payload) {
         return {
           type: SharePayloadType.TIKTOK_URL,
           recommendations: [
-            { label: isPhoto ? 'Tải Album Ảnh TikTok' : 'Tải Video / Album Ảnh TikTok Không Logo', route: '#tool/tiktok-downloader', isPrimary: true },
+            { label: isPhoto ? 'Tải Album Ảnh TikTok' : 'Tải Video / Album Ảnh TikTok Không Logo', route: '#tool/tiktok', isPrimary: true },
             { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
           ],
         };

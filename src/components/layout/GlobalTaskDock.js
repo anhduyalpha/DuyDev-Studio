@@ -8,8 +8,54 @@
  */
 
 import { taskCoordinator } from '../../utilities/taskCoordinator.js';
+import { soundEngine } from '../../utilities/soundEngine.js';
 
 let isMinimized = false;
+
+export const completedTaskIds = new Set();
+export const failedTaskIds = new Set();
+const previousTaskStates = new Map();
+
+/**
+ * Tracks task transitions and triggers acoustic cues strictly once per event.
+ * @param {import('../../utilities/taskCoordinator.js').ActiveTask[]} tasks
+ */
+export function trackTaskTransitions(tasks = []) {
+  if (!tasks || !Array.isArray(tasks)) return;
+
+  const currentIds = new Set();
+
+  tasks.forEach((task) => {
+    if (!task || !task.id) return;
+    currentIds.add(task.id);
+
+    const prev = previousTaskStates.get(task.id);
+    const isCompleted = task.status === 'completed' || task.status === 'done' || (typeof task.progress === 'number' && task.progress >= 100);
+    const isFailed = task.status === 'error' || task.status === 'failed';
+
+    if (isCompleted && !completedTaskIds.has(task.id)) {
+      if (!prev || (prev.progress !== undefined && prev.progress < 100) || prev.status === 'running') {
+        completedTaskIds.add(task.id);
+        soundEngine.playJobComplete();
+      }
+    } else if (isFailed && !failedTaskIds.has(task.id)) {
+      failedTaskIds.add(task.id);
+      soundEngine.playError();
+    }
+
+    previousTaskStates.set(task.id, {
+      progress: task.progress || 0,
+      status: task.status
+    });
+  });
+
+  // Prune task states that are no longer present
+  for (const id of previousTaskStates.keys()) {
+    if (!currentIds.has(id)) {
+      previousTaskStates.delete(id);
+    }
+  }
+}
 
 function normalizeRoute(route) {
   if (!route) return '';
@@ -156,7 +202,7 @@ export function renderGlobalTaskDock(tasks = []) {
         title="Nhấn để mở ${primaryTask.moduleTitle}"
       >
         <div class="flex items-center gap-2 min-w-0 flex-1">
-          <span class="specular-status-dot specular-status-dot-emerald"></span>
+          <span class="specular-status-dot specular-status-dot-emerald bg-emerald-500"></span>
           <span class="mobile-dock-text text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
             ${count > 1 ? `${count} tác vụ: ${primaryTitle}` : primaryTitle}
           </span>
@@ -183,7 +229,7 @@ export function renderGlobalTaskDock(tasks = []) {
         <!-- Dock Micro-Header -->
         <div class="flex items-center justify-between pb-1.5 mb-1 border-b border-black/[0.05] dark:border-white/[0.06] px-1">
           <div class="flex items-center gap-1.5">
-            <span class="specular-status-dot specular-status-dot-emerald"></span>
+            <span class="specular-status-dot specular-status-dot-emerald bg-emerald-500"></span>
             <span id="dockTaskCountText" class="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 tracking-tight">
               ${count} ${count === 1 ? 'tác vụ đang chạy' : 'tác vụ đang chạy'}
             </span>
@@ -262,6 +308,7 @@ function attachDockListeners(container) {
  * @param {import('../../utilities/taskCoordinator.js').ActiveTask[]} rawTasks
  */
 export function updateDockDOM(host, rawTasks = []) {
+  trackTaskTransitions(rawTasks);
   const tasks = getVisibleDockTasks(rawTasks);
 
   if (!tasks || tasks.length === 0) {

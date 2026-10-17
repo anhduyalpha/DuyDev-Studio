@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.24': {
+    version: 'v23.24',
+    title: 'Bản cập nhật v23.24',
+    date: '17/10/2026',
+    features: [
+      'Android Native Share Sheet Everywhere: Khai báo chuẩn text/plain và text/* cho Android Chooser giúp DuyDev Studio xuất hiện trên bảng chia sẻ của mọi ứng dụng (TikTok, Chrome, YouTube, Zalo)',
+      'Hộp thoại Tác vụ Chia sẻ Trực quan: Hiển thị đầy đủ các tùy chọn xử lý phù hợp (Tải TikTok không logo, tạo QR, tính mã băm) khi chia sẻ link',
+      'Cold-Start Link Auto-Start: Khắc phục triệt để hiện tượng mất URL khi chia sẻ lúc ứng dụng chưa mở bằng cơ chế hàng đợi pendingAutoStartScript'
+    ],
+    fixes: [
+      'Khắc phục lỗi ClassCastException khi trích xuất text chia sẻ từ TikTok',
+      'Đồng bộ toàn diện phiên bản Service Worker và PWA Cache Storage v23.24'
+    ]
+  },
+
   'v23.23': {
     version: 'v23.23',
     title: 'Bản cập nhật v23.23',

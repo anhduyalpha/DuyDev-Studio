@@ -62,30 +62,25 @@ class ShareReceiverActivity : AppCompatActivity() {
             }
         }
 
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        val urlRegex = Regex("""https?://[^\s]+""")
-        val url = if (text.startsWith("http://") || text.startsWith("https://")) {
-            text
-        } else {
-            urlRegex.find(text)?.value ?: ""
+        val text = (intent.getCharSequenceExtra(Intent.EXTRA_TEXT)
+            ?: intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text
+            ?: intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)
+            ?: intent.dataString
+            ?: "").toString().trim()
+
+        val urlRegex = Regex("""https?://[^\s"'<>()]+""")
+        val url = when {
+            intent.dataString?.startsWith("http://") == true || intent.dataString?.startsWith("https://") == true ->
+                intent.dataString!!.trim()
+            text.startsWith("http://") || text.startsWith("https://") ->
+                urlRegex.find(text)?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: text
+            else ->
+                urlRegex.find(text)?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: ""
         }
 
         if (collectedUris.isEmpty() && text.isBlank() && url.isBlank()) {
             finish()
-            return
-        }
-
-        // Fast-path: When sharing Scribd link, auto-launch Scribd Downloader directly
-        if (collectedUris.isEmpty() && isScribdContent(url, text)) {
-            val scribdUrl = extractScribdUrl(url, text)
-            forwardToMainActivity(ShareAction("Tải Tài Liệu Scribd", "#tool/scribd"), scribdUrl)
-            return
-        }
-
-        // Fast-path: When sharing TikTok link, auto-launch TikTok Downloader directly
-        if (collectedUris.isEmpty() && isTikTokContent(url, text)) {
-            val tikTokUrl = extractTikTokUrl(url, text)
-            forwardToMainActivity(ShareAction("Tải Video TikTok", "#tool/tiktok"), tikTokUrl)
             return
         }
 
@@ -99,8 +94,8 @@ class ShareReceiverActivity : AppCompatActivity() {
 
     private fun extractScribdUrl(url: String, text: String): String {
         val combined = if (url.isNotBlank()) url else text
-        val match = Regex("""https?://(?:www\.)?scribd\.com/(?:document|doc|presentation|embeds)/\d+[^\s"']*""").find(combined)
-        return match?.value ?: (if (url.isNotBlank()) url else text)
+        val match = Regex("""https?://(?:www\.)?scribd\.com/(?:document|doc|presentation|embeds)/\d+[^\s"'<>()]*""").find(combined)
+        return match?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
     }
 
     private fun isTikTokContent(url: String, text: String): Boolean {
@@ -110,8 +105,8 @@ class ShareReceiverActivity : AppCompatActivity() {
 
     private fun extractTikTokUrl(url: String, text: String): String {
         val combined = if (url.isNotBlank()) url else text
-        val match = Regex("""https?://(?:(?:vt|vm|m|www|v)\.)?(?:tiktok\.com|douyin\.com)/[^\s"']+""").find(combined)
-        return match?.value ?: (if (url.isNotBlank()) url else text)
+        val match = Regex("""https?://(?:(?:vt|vm|m|www|v)\.)?(?:tiktok\.com|douyin\.com)/[^\s"'<>()]+""").find(combined)
+        return match?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
     }
 
     private fun showNativeShareDialog(sharedUris: List<Uri>, text: String, url: String) {
@@ -176,24 +171,34 @@ class ShareReceiverActivity : AppCompatActivity() {
             // Text or URL
             val isLink = url.isNotEmpty()
             tvFileName.text = if (isLink) url else text
-            tvFileMeta.text = if (isLink) "LIÊN KẾT WEB" else "VĂN BẢN THUẦN"
 
-            if (isScribdContent(url, text)) {
+            if (isTikTokContent(url, text)) {
+                tvFileMeta.text = "VIDEO / ALBUM ẢNH TIKTOK"
+                actions.add(ShareAction("Tải Video & Album Ảnh TikTok Không Logo", "#tool/tiktok"))
+                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
+                actions.add(ShareAction("Tính mã băm toàn vẹn", "#tool/hash-checksum"))
+            } else if (isScribdContent(url, text)) {
+                tvFileMeta.text = "TÀI LIỆU SCRIBD"
                 actions.add(ShareAction("Tải tài liệu Scribd", "#tool/scribd"))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
-            } else if (isTikTokContent(url, text)) {
-                actions.add(ShareAction("Tải Video TikTok Không Logo", "#tool/tiktok"))
-                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
             } else if (url.contains("studocu.com") || url.contains("studocu.vn")) {
+                tvFileMeta.text = "TÀI LIỆU STUDOCU"
                 actions.add(ShareAction("Tải tài liệu Studocu", "#tool/studocu-dl"))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
             } else if (isImageExtension(url)) {
+                tvFileMeta.text = "LIÊN KẾT HÌNH ẢNH"
                 actions.add(ShareAction("Quét mã QR từ ảnh", "#tool/qr-scan"))
+                actions.add(ShareAction("Đổi định dạng ảnh (Converter)", "#tool/universal-converter"))
+                actions.add(ShareAction("Chuyển ảnh thành PDF", "#tool/pdf-studio", "images_to_pdf"))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
             } else if (isLink) {
+                tvFileMeta.text = "LIÊN KẾT WEB"
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
                 actions.add(ShareAction("Quét mã QR từ trang web", "#tool/qr-scan"))
+                actions.add(ShareAction("Thử tải Video / Media (TikTok, v.v.)", "#tool/tiktok"))
+                actions.add(ShareAction("Tính mã băm toàn vẹn", "#tool/hash-checksum"))
             } else {
+                tvFileMeta.text = "VĂN BẢN THUẦN"
                 actions.add(ShareAction("Tạo mã QR cho văn bản", "#tool/qr-multi"))
                 actions.add(ShareAction("Tính mã băm chuỗi", "#tool/hash-checksum"))
             }
@@ -208,7 +213,13 @@ class ShareReceiverActivity : AppCompatActivity() {
 
             itemView.setOnClickListener {
                 dialog.dismiss()
-                forwardToMainActivity(item)
+                val targetUrl = when {
+                    isTikTokContent(url, text) -> extractTikTokUrl(url, text)
+                    isScribdContent(url, text) -> extractScribdUrl(url, text)
+                    url.isNotBlank() -> url
+                    else -> text
+                }
+                forwardToMainActivity(item, targetUrl)
             }
             actionsContainer.addView(itemView)
         }

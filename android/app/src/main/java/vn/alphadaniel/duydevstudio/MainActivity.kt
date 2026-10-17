@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermissionRequest: PermissionRequest? = null
     private val sharedUrisList = mutableListOf<Uri>()
+    private var pendingAutoStartScript: String? = null
 
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -629,6 +630,11 @@ class MainActivity : AppCompatActivity() {
                 if (AndroidBridge.sharedPayloadJson != null) {
                     evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }")
                 }
+
+                pendingAutoStartScript?.let { script ->
+                    evaluateJs(script)
+                    pendingAutoStartScript = null
+                }
             }
 
             override fun onReceivedError(
@@ -788,13 +794,19 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT) ?: ""
+        val text = (intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+            ?: intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: "").trim()
+        val subject = (intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString()
+            ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)
+            ?: "").trim()
 
+        val explicitUrl = intent.getStringExtra("explicitUrl")
         val detectedUrl = when {
+            !explicitUrl.isNullOrBlank() -> explicitUrl
             intent.dataString?.startsWith("http://") == true || intent.dataString?.startsWith("https://") == true -> intent.dataString
             text.startsWith("http://") || text.startsWith("https://") -> text
-            else -> Regex("""https?://[^\s]+""").find(text)?.value
+            else -> Regex("""https?://[^\s"'<>()]+""").find(text)?.value
         }
 
         if (uris.isNotEmpty() || text.isNotBlank() || !detectedUrl.isNullOrBlank()) {
@@ -845,22 +857,42 @@ class MainActivity : AppCompatActivity() {
 
             val autoStartScript = if (uris.isEmpty() && !detectedUrl.isNullOrBlank()) {
                 val cleanUrl = detectedUrl.replace("\\", "\\\\").replace("'", "\\'")
-                when {
-                    cleanUrl.contains("scribd.com") -> """
+                if (!targetRoute.isNullOrBlank()) {
+                    val toolId = when {
+                        targetRoute.contains("tiktok") -> "tiktok"
+                        targetRoute.contains("scribd") -> "scribd"
+                        targetRoute.contains("qr") -> "qr"
+                        targetRoute.contains("hash") -> "hash"
+                        else -> "share"
+                    }
+                    """
                         try {
-                            sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'scribd', url: '$cleanUrl', ts: Date.now() }));
-                            window.location.hash = '#tool/scribd';
+                            sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: '$toolId', url: '$cleanUrl', ts: Date.now() }));
+                            window.location.hash = '$targetRoute';
                         } catch (_) {}
                     """.trimIndent()
-                    cleanUrl.contains("tiktok.com") || cleanUrl.contains("douyin.com") -> """
-                        try {
-                            sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'tiktok', url: '$cleanUrl', ts: Date.now() }));
-                            window.location.hash = '#tool/tiktok';
-                        } catch (_) {}
-                    """.trimIndent()
-                    else -> ""
+                } else {
+                    when {
+                        cleanUrl.contains("scribd.com") -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'scribd', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/scribd';
+                            } catch (_) {}
+                        """.trimIndent()
+                        cleanUrl.contains("tiktok.com") || cleanUrl.contains("douyin.com") -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'tiktok', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/tiktok';
+                            } catch (_) {}
+                        """.trimIndent()
+                        else -> ""
+                    }
                 }
             } else ""
+
+            if (autoStartScript.isNotBlank()) {
+                pendingAutoStartScript = autoStartScript
+            }
 
             // Notify web application if already loaded
             webView.evaluateJavascript("""

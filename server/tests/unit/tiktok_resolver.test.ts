@@ -57,7 +57,7 @@ describe('TikTok Downloader Suite', () => {
       };
       const res = classifySharedPayload(payload);
       expect(res.type).toBe(SharePayloadType.TIKTOK_URL);
-      expect(res.recommendations[0].route).toBe('#tool/tiktok-downloader');
+      expect(res.recommendations[0].route).toBe('#tool/tiktok');
       expect(res.recommendations[0].isPrimary).toBe(true);
     });
 
@@ -67,7 +67,7 @@ describe('TikTok Downloader Suite', () => {
       };
       const res = classifySharedPayload(payload);
       expect(res.type).toBe(SharePayloadType.TIKTOK_URL);
-      expect(res.recommendations[0].route).toBe('#tool/tiktok-downloader');
+      expect(res.recommendations[0].route).toBe('#tool/tiktok');
     });
   });
 

@@ -14,7 +14,7 @@ const SCRIBD_REGEX = /(?:https?:\/\/)?(?:www\.)?scribd\.com\/(?:document|doc|pre
 
 // TikTok video/photo/short URL patterns
 const TIKTOK_REGEX = /(?:https?:\/\/)?(?:(?:vt|vm|www|m|v)\.)?tiktok\.com\/[^\s"']+/i;
-const DOUYIN_REGEX = /(?:https?:\/\/)?(?:www\.)?douyin\.com\/[^\s"']+/i;
+const DOUYIN_REGEX = /(?:https?:\/\/)?(?:(?:v|www|m)\.)?douyin\.com\/[^\s"']+/i;
 
 /**
  * Detect if text contains a supported tool URL.

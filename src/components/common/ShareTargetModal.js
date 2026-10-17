@@ -160,8 +160,8 @@ export function openShareTargetModal(payload) {
 
   window.__FAST_PATH_SHARE_ACTIVE = true;
 
-  // Fast-path: When sharing plain-text Scribd or TikTok URL, bypass manual modal friction
-  if (!payload.files || payload.files.length === 0) {
+  // Fast-path: When sharing plain-text Scribd or TikTok URL without explicit target route, bypass manual modal friction
+  if ((!payload.files || payload.files.length === 0) && !payload.targetRoute) {
     const smart = detectSmartRoute(payload.url || payload.text || '');
     if (smart) {
       document.documentElement.classList.remove('is-share-target');
