@@ -13,8 +13,10 @@ import { renderConverterHistoryList } from './components/ConverterHistoryList.js
 export { attachConverterListeners } from './hooks/useConverterDom.js';
 
 export function renderConverterWorkspace(state) {
+  const hasItems = (state.items || []).length > 0;
+
   return `
-    <div id="converterWorkspaceRoot" class="space-y-6 pb-32 sm:pb-24">
+    <div id="converterWorkspaceRoot" class="space-y-6 pb-36 sm:pb-32">
       <!-- Breadcrumb Navigation -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -39,18 +41,18 @@ export function renderConverterWorkspace(state) {
         </button>
       </div>
 
-      <!-- 2-Column Responsive Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Left Column: Dropzone, Batch Format Selector, Queue List, Result/ZIP -->
-        <div class="lg:col-span-7 space-y-4">
+      <!-- Stage-Driven Responsive Layout -->
+      <div id="converterMainGrid" class="${hasItems ? 'grid grid-cols-1 lg:grid-cols-12 gap-6' : 'max-w-2xl mx-auto space-y-4'}">
+        <!-- Left Column / Center Dropzone: Dropzone, Batch Format Selector, Queue List, Result/ZIP -->
+        <div id="converterLeftCol" class="${hasItems ? 'lg:col-span-7 space-y-4' : 'space-y-4'}">
           <div id="converterDropzoneContainer">${renderConverterDropzone(state)}</div>
-          <div id="converterFormatContainer">${renderFormatSelector(state)}</div>
-          <div id="converterQueueContainer">${renderConverterQueueList(state)}</div>
-          <div id="converterResultContainer">${renderConverterResult(state)}</div>
+          <div id="converterFormatContainer" class="${hasItems ? '' : 'hidden'}">${renderFormatSelector(state)}</div>
+          <div id="converterQueueContainer" class="${hasItems ? '' : 'hidden'}">${renderConverterQueueList(state)}</div>
+          <div id="converterResultContainer" class="${hasItems ? '' : 'hidden'}">${renderConverterResult(state)}</div>
         </div>
 
         <!-- Right Column: Contextual Options & Action Button -->
-        <div class="lg:col-span-5 space-y-4">
+        <div id="converterRightCol" class="${hasItems ? 'lg:col-span-5 space-y-4 lg:sticky lg:top-6 lg:self-start' : 'hidden'}">
           <div id="converterOptionsContainer">${renderConverterOptions(state)}</div>
         </div>
       </div>

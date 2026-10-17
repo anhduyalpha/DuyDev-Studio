@@ -160,20 +160,41 @@ export function updateBatchButton(manager) {
  */
 export function setupConverterObserver(manager) {
   const refreshDynamicSections = () => {
+    const hasItems = (manager.items || []).length > 0;
+
+    const mainGrid = document.getElementById('converterMainGrid');
+    const leftCol = document.getElementById('converterLeftCol');
+    const rightCol = document.getElementById('converterRightCol');
+
+    if (mainGrid && leftCol && rightCol) {
+      if (hasItems) {
+        mainGrid.className = 'grid grid-cols-1 lg:grid-cols-12 gap-6';
+        leftCol.className = 'lg:col-span-7 space-y-4';
+        rightCol.className = 'lg:col-span-5 space-y-4 lg:sticky lg:top-6 lg:self-start';
+      } else {
+        mainGrid.className = 'max-w-2xl mx-auto space-y-4';
+        leftCol.className = 'space-y-4';
+        rightCol.className = 'hidden';
+      }
+    }
+
     const formatElement = document.getElementById('converterFormatContainer');
     if (formatElement) {
+      formatElement.classList.toggle('hidden', !hasItems);
       formatElement.innerHTML = renderFormatSelector(manager);
       refreshLucide(formatElement);
     }
 
     const queueElement = document.getElementById('converterQueueContainer');
     if (queueElement) {
+      queueElement.classList.toggle('hidden', !hasItems);
       queueElement.innerHTML = renderConverterQueueList(manager);
       refreshLucide(queueElement);
     }
 
     const resultElement = document.getElementById('converterResultContainer');
     if (resultElement) {
+      resultElement.classList.toggle('hidden', !hasItems);
       resultElement.innerHTML = renderConverterResult(manager);
       refreshLucide(resultElement);
     }

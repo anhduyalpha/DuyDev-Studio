@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.21': {
+    version: 'v23.21',
+    title: 'Bản cập nhật v23.21',
+    date: '17/10/2026',
+    features: [
+      'Converter Pro Progressive Disclosure: Tái cấu trúc giao diện theo giai đoạn xử lý, trạng thái trống chỉ hiển thị vùng thả tệp Stitch Dropzone tinh tế',
+      'Compact Top Action Strip: Tự động thu gọn vùng thả tệp thành thanh công cụ nhỏ gọn (+ Thêm tệp, đếm số lượng & dung lượng) khi có tệp trong hàng đợi',
+      'Công thái học di động: Tối ưu khoảng đệm chân trang pb-36 tránh đè thanh điều hướng và kích thước nút bấm tối thiểu 44px'
+    ],
+    fixes: [
+      'Triệt tiêu tình trạng quá tải thông tin thị giác khi vừa vào trang Chuyển đổi tệp tin',
+      'Định dạng nút lựa chọn đồng đều, hỗ trợ cố định thanh cấu hình (sticky) trên màn hình rộng'
+    ]
+  },
+
   'v23.20': {
     version: 'v23.20',
     title: 'Bản cập nhật v23.20',
