@@ -429,7 +429,14 @@ export function renderTierStructuralLayers(tierCode) {
           <div class="solar-flare-core"></div>
           <div class="solar-flare-anamorphic"></div>
           <div class="solar-flare-ring"></div>
+          <svg viewBox="0 0 40 40" class="solar-glare-star" fill="none">
+            <path d="M20 0L22.5 16L40 20L22.5 24L20 40L17.5 24L0 20L17.5 16Z" fill="#FFFFFF" filter="drop-shadow(0 0 10px #FDE047)"/>
+            <circle cx="20" cy="20" r="4.5" fill="#FEF08A"/>
+          </svg>
         </div>
+
+        <!-- Sweeping Solar Light Beam (Blinding Specular Glare) -->
+        <div class="tier-solar-beam-sweep pointer-events-none" aria-hidden="true"></div>
 
         <!-- Real Golden Solar Strobe Lightning Arcs -->
         <svg class="tier-solar-lightning-lr pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
