@@ -205,11 +205,19 @@ export class TikTokService {
     const cover = itemStruct.video?.cover || itemStruct.video?.originCover || (images.length > 0 ? images[0] : '');
     const duration = Number(itemStruct.video?.duration || 0);
     const audioUrl = itemStruct.music?.playUrl || '';
+    const statsViews = Number(itemStruct.stats?.playCount || 0);
+    const statsLikes = Number(itemStruct.stats?.diggCount || 0);
+    const statsComments = Number(itemStruct.stats?.commentCount || 0);
+    const statsShares = Number(itemStruct.stats?.shareCount || 0);
     const stats = {
-      views: Number(itemStruct.stats?.playCount || 0),
-      likes: Number(itemStruct.stats?.diggCount || 0),
-      comments: Number(itemStruct.stats?.commentCount || 0),
-      shares: Number(itemStruct.stats?.shareCount || 0)
+      views: statsViews,
+      likes: statsLikes,
+      comments: statsComments,
+      shares: statsShares,
+      playCount: statsViews,
+      diggCount: statsLikes,
+      commentCount: statsComments,
+      shareCount: statsShares
     };
 
     return {
@@ -269,11 +277,19 @@ export class TikTokService {
     const audioUrl = ensureAbsolute(d.music || d.music_info?.play);
     const cover = d.cover || d.origin_cover || (images && images.length > 0 ? images[0] : '');
 
+    const statsViews = Number(d.play_count || 0);
+    const statsLikes = Number(d.digg_count || 0);
+    const statsComments = Number(d.comment_count || 0);
+    const statsShares = Number(d.share_count || 0);
     const stats = {
-      views: Number(d.play_count || 0),
-      likes: Number(d.digg_count || 0),
-      comments: Number(d.comment_count || 0),
-      shares: Number(d.share_count || 0)
+      views: statsViews,
+      likes: statsLikes,
+      comments: statsComments,
+      shares: statsShares,
+      playCount: statsViews,
+      diggCount: statsLikes,
+      commentCount: statsComments,
+      shareCount: statsShares
     };
 
     return {
@@ -329,11 +345,19 @@ export class TikTokService {
     const audioUrl = info.audio_channels ? (info.url || '') : undefined;
     const cover = info.thumbnail || (images.length > 0 ? images[0] : '');
 
+    const statsViews = Number(info.view_count || 0);
+    const statsLikes = Number(info.like_count || 0);
+    const statsComments = Number(info.comment_count || 0);
+    const statsShares = Number(info.repost_count || 0);
     const stats = {
-      views: Number(info.view_count || 0),
-      likes: Number(info.like_count || 0),
-      comments: Number(info.comment_count || 0),
-      shares: Number(info.repost_count || 0)
+      views: statsViews,
+      likes: statsLikes,
+      comments: statsComments,
+      shares: statsShares,
+      playCount: statsViews,
+      diggCount: statsLikes,
+      commentCount: statsComments,
+      shareCount: statsShares
     };
 
     return {

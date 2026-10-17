@@ -84,6 +84,12 @@ describe('TikTok Downloader Suite', () => {
       expect(result.videoUrl).toMatch(/^https?:\/\//);
       expect(result.duration).toBeGreaterThan(0);
       expect(result.stats).toBeDefined();
+      expect(result.stats.views).toBeGreaterThan(0);
+      expect(result.stats.likes).toBeGreaterThan(0);
+      expect(result.stats.comments).toBeGreaterThan(0);
+      expect(result.stats.shares).toBeGreaterThan(0);
+      expect(result.stats.playCount).toBe(result.stats.views);
+      expect(result.stats.diggCount).toBe(result.stats.likes);
     }, 15000);
   });
 

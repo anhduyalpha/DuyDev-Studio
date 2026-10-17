@@ -333,19 +333,19 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
           <div class="grid grid-cols-4 gap-2 text-center py-2 px-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-100 dark:border-zinc-800/60">
             <div>
               <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Lượt xem</p>
-              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.playCount)}</p>
+              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.views ?? video.stats?.playCount)}</p>
             </div>
             <div>
               <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Thích</p>
-              <p class="text-xs font-semibold text-rose-500 mt-0.5">${formatCompactNumber(video.stats?.diggCount)}</p>
+              <p class="text-xs font-semibold text-rose-500 mt-0.5">${formatCompactNumber(video.stats?.likes ?? video.stats?.diggCount)}</p>
             </div>
             <div>
               <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Bình luận</p>
-              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.commentCount)}</p>
+              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.comments ?? video.stats?.commentCount)}</p>
             </div>
             <div>
               <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Chia sẻ</p>
-              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.shareCount)}</p>
+              <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5">${formatCompactNumber(video.stats?.shares ?? video.stats?.shareCount)}</p>
             </div>
           </div>
 

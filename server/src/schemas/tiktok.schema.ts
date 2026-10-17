@@ -69,6 +69,10 @@ export interface TikTokVideoData {
     likes: number;
     comments: number;
     shares: number;
+    playCount?: number;
+    diggCount?: number;
+    commentCount?: number;
+    shareCount?: number;
   };
   extractor: 'ssr' | 'resolver' | 'ytdlp';
   existingInDrive?: ExistingDriveItem | null;

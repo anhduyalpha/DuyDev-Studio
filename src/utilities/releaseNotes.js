@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.23': {
+    version: 'v23.23',
+    title: 'Bản cập nhật v23.23',
+    date: '17/10/2026',
+    features: [
+      'TikTok Live Metrics Alignment: Đồng bộ định danh chỉ số thống kê (lượt xem, lượt thích, bình luận, chia sẻ) đa tầng giữa Backend Resolver và giao diện người dùng'
+    ],
+    fixes: [
+      'Sửa lỗi hiển thị toàn bộ 0 0 0 0 ở hàng thống kê video TikTok khi tải video/ảnh',
+      'Đồng bộ toàn diện phiên bản Service Worker và PWA Cache Storage v23.23'
+    ]
+  },
+
   'v23.22': {
     version: 'v23.22',
     title: 'Bản cập nhật v23.22 (Android APK v23.21.0)',
