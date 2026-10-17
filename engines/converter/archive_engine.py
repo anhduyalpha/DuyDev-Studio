@@ -222,24 +222,37 @@ def handle_compress(args):
         mode = 'w:gz' if 'gz' in fmt else 'w'
         with tarfile.open(output_path, mode) as tf:
             for item in items:
-                tf.add(item['filePath'], arcname=item['originalName'])
+                if os.path.exists(item['filePath']):
+                    tf.add(item['filePath'], arcname=item.get('originalName') or os.path.basename(item['filePath']))
     elif fmt == '7z':
         seven_zip = find_7z_binary()
         if seven_zip:
             cmd = [seven_zip, 'a', '-t7z', '-mx7', '-bd', output_path]
-            # Add files
             for item in items:
-                cmd.append(item['filePath'])
+                if os.path.exists(item['filePath']):
+                    cmd.append(item['filePath'])
             subprocess.run(cmd, check=True)
         else:
             with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for item in items:
-                    zf.write(item['filePath'], arcname=item['originalName'])
+                    if os.path.exists(item['filePath']):
+                        zf.write(item['filePath'], arcname=item.get('originalName') or os.path.basename(item['filePath']))
     else:  # zip
-        level = 9 if args.level == 'maximum' else 1 if args.level == 'fast' else 6
+        if args.level == 'maximum':
+            level = 9
+        elif args.level == 'fast':
+            level = 1
+        else:
+            try:
+                level = int(args.level)
+                level = max(1, min(9, level))
+            except (ValueError, TypeError):
+                level = 6
+
         with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=level) as zf:
             for item in items:
-                zf.write(item['filePath'], arcname=item['originalName'])
+                if os.path.exists(item['filePath']):
+                    zf.write(item['filePath'], arcname=item.get('originalName') or os.path.basename(item['filePath']))
 
     size_bytes = os.path.getsize(output_path)
     print(json.dumps({'success': True, 'data': {'sizeBytes': size_bytes}}))

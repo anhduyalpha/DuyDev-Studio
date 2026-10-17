@@ -3,28 +3,28 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v23.30';
+const CACHE_NAME = 'duydev-studio-v23.31';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=23.30',
-  './src/styles/card-tiers-10.css?v=23.30',
-  './src/styles/studocu.css?v=23.30',
-  './src/styles/scribd.css?v=23.30',
-  './src/styles/highlight-theme.css?v=23.30',
+  './src/styles/stitch-tokens.css?v=23.31',
+  './src/styles/card-tiers-10.css?v=23.31',
+  './src/styles/studocu.css?v=23.31',
+  './src/styles/scribd.css?v=23.31',
+  './src/styles/highlight-theme.css?v=23.31',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=23.30',
-  './src/utilities/soundEngine.js?v=23.30',
-  './src/utilities/releaseNotes.js?v=23.30',
-  './src/utilities/smartUrlRouter.js?v=23.30',
-  './src/components/common/SoundVolumeModal.js?v=23.30',
+  './src/app.js?v=23.31',
+  './src/utilities/soundEngine.js?v=23.31',
+  './src/utilities/releaseNotes.js?v=23.31',
+  './src/utilities/smartUrlRouter.js?v=23.31',
+  './src/components/common/SoundVolumeModal.js?v=23.31',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/pages/DashboardPage.js',

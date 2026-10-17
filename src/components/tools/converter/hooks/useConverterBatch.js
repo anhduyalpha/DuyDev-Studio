@@ -324,7 +324,7 @@ async function ensureJsZipLoaded() {
   if (window.JSZip) return window.JSZip;
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = '/src/vendor/jszip.min.js';
+    s.src = './src/vendor/jszip.min.js';
     s.onload = () => resolve(window.JSZip);
     s.onerror = () => reject(new Error('Không thể tải thư viện JSZip'));
     document.head.appendChild(s);
@@ -343,41 +343,55 @@ export async function createZipBundleFromCompleted(manager) {
 
   showToast('Đang nén tệp ZIP...', 'info');
 
+  const bundleWithJsZip = async () => {
+    const JSZip = await ensureJsZipLoaded();
+    const zip = new JSZip();
+
+    for (const it of completed) {
+      let blob = it.result.clientBlob;
+      if (!blob && it.result.downloadUrl) {
+        try {
+          const resp = await fetch(it.result.downloadUrl);
+          if (resp.ok) {
+            blob = await resp.blob();
+          }
+        } catch (fetchErr) {
+          console.warn('[Converter] Failed to fetch item blob for ZIP:', fetchErr);
+        }
+      }
+      if (blob) {
+        zip.file(it.result.fileName, blob);
+      }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const downloadUrl = URL.createObjectURL(zipBlob);
+
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = archiveName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('Đang tải tệp ZIP', 'success');
+  };
+
   try {
     const hasClientBlobs = completed.some(it => !it.result?.fileId || it.result?.clientBlob);
 
     if (hasClientBlobs) {
-      // Client-side ZIP using JSZip
-      const JSZip = await ensureJsZipLoaded();
-      const zip = new JSZip();
-
-      for (const it of completed) {
-        let blob = it.result.clientBlob;
-        if (!blob && it.result.downloadUrl) {
-          const resp = await fetch(it.result.downloadUrl);
-          blob = await resp.blob();
-        }
-        if (blob) {
-          zip.file(it.result.fileName, blob);
-        }
-      }
-
-      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-      const downloadUrl = URL.createObjectURL(zipBlob);
-
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = archiveName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      showToast('Đang tải tệp ZIP', 'success');
+      await bundleWithJsZip();
       return;
     }
 
     // Pure server files: use server compressor
     const fileIds = completed.map(it => it.result.fileId).filter(Boolean);
+    if (fileIds.length === 0) {
+      await bundleWithJsZip();
+      return;
+    }
+
     const res = await fetch('/api/v1/archive/compress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -385,14 +399,23 @@ export async function createZipBundleFromCompleted(manager) {
         fileIds,
         archiveName,
         format: 'zip',
-        compressionLevel: 6
+        compressionLevel: 'normal'
       })
     });
 
-    if (!res.ok) throw new Error(`Lỗi nén tệp (${res.status})`);
+    if (!res.ok) {
+      console.warn(`[Converter] Server compressor returned ${res.status}, falling back to JSZip client compression`);
+      await bundleWithJsZip();
+      return;
+    }
+
     const body = await res.json();
     const downloadUrl = body.data?.downloadUrl;
-    if (!downloadUrl) throw new Error('Không có link tải ZIP');
+    if (!downloadUrl) {
+      console.warn('[Converter] Missing downloadUrl from server compressor, falling back to JSZip');
+      await bundleWithJsZip();
+      return;
+    }
 
     const link = document.createElement('a');
     link.href = downloadUrl;
@@ -403,6 +426,11 @@ export async function createZipBundleFromCompleted(manager) {
 
     showToast('Đang tải tệp ZIP', 'success');
   } catch (err) {
-    showToast(err.message || 'Không thể tạo tệp ZIP', 'error');
+    console.warn('[Converter] Error creating ZIP bundle, trying client fallback:', err);
+    try {
+      await bundleWithJsZip();
+    } catch (fallbackErr) {
+      showToast(fallbackErr.message || 'Không thể tạo tệp ZIP', 'error');
+    }
   }
 }

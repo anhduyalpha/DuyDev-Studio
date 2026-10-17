@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.31': {
+    version: 'v23.31',
+    title: 'Bản cập nhật v23.31',
+    date: '17/10/2026',
+    features: [
+      'Dual-Track Resilient ZIP Bundler: Tự động gom tệp nén bằng engine máy chủ hoặc dự phòng tức thì qua JSZip trên trình duyệt',
+      'Flexible Compression Level: Hỗ trợ linh hoạt cả mức nén số và chuỗi (fast/normal/maximum) giúp triệt tiêu hoàn toàn lỗi nén tệp'
+    ],
+    fixes: [
+      'Sửa lỗi nén tệp (400) khi tải ZIP trên Converter Pro do sai định dạng compressionLevel',
+      'Đồng bộ toàn diện phiên bản Service Worker và PWA Cache Storage v23.31'
+    ]
+  },
+
   'v23.30': {
     version: 'v23.30',
     title: 'Bản cập nhật v23.30',

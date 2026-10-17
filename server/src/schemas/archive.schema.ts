@@ -34,7 +34,17 @@ export const compressArchiveSchema = z.object({
   fileIds: z.array(z.string().min(1)).min(1, 'At least one file is required to create an archive'),
   archiveName: z.string().optional().default('archive.zip'),
   format: z.enum(['zip', 'tar', '7z', 'tar.gz']).optional().default('zip'),
-  compressionLevel: z.enum(['fast', 'normal', 'maximum']).optional().default('normal')
+  compressionLevel: z.union([
+    z.enum(['fast', 'normal', 'maximum']),
+    z.number().transform((n) => (n <= 3 ? 'fast' : n >= 8 ? 'maximum' : 'normal')),
+    z.string().transform((s) => {
+      const lower = s.toLowerCase();
+      if (lower === 'fast' || lower === 'maximum') return lower as 'fast' | 'maximum';
+      const num = parseInt(lower, 10);
+      if (!isNaN(num)) return num <= 3 ? 'fast' : num >= 8 ? 'maximum' : 'normal';
+      return 'normal';
+    })
+  ]).optional().default('normal')
 });
 
 export type CompressArchiveInput = z.infer<typeof compressArchiveSchema>;

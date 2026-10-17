@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { ArchiveService } from '../../src/services/archive.service.js';
 import { SecurityException, NotFoundError, FileCorruptedError } from '../../src/lib/errors.js';
+import { compressArchiveSchema } from '../../src/schemas/archive.schema.js';
 
 function crc32(buf: Buffer): number {
   let crc = ~0;
@@ -214,5 +215,43 @@ describe('ArchiveService Unit Tests', () => {
     const innerInspected = await ArchiveService.inspectArchive(extractedNestedPath);
     expect(innerInspected.totalFiles).toBe(1);
     expect(innerInspected.tree[0].name).toBe('inner_note.txt');
+  });
+
+  it('compressArchiveSchema should flexibly accept numeric and string compressionLevel', () => {
+    // Numeric level 6 (from JS default)
+    const parsed1 = compressArchiveSchema.parse({
+      fileIds: ['fil_test_123'],
+      archiveName: 'bundle.zip',
+      format: 'zip',
+      compressionLevel: 6
+    });
+    expect(parsed1.compressionLevel).toBe('normal');
+
+    // Numeric level 9 (maximum)
+    const parsed2 = compressArchiveSchema.parse({
+      fileIds: ['fil_test_123'],
+      compressionLevel: 9
+    });
+    expect(parsed2.compressionLevel).toBe('maximum');
+
+    // Numeric level 1 (fast)
+    const parsed3 = compressArchiveSchema.parse({
+      fileIds: ['fil_test_123'],
+      compressionLevel: 1
+    });
+    expect(parsed3.compressionLevel).toBe('fast');
+
+    // String enum
+    const parsed4 = compressArchiveSchema.parse({
+      fileIds: ['fil_test_123'],
+      compressionLevel: 'fast'
+    });
+    expect(parsed4.compressionLevel).toBe('fast');
+
+    // Default when omitted
+    const parsed5 = compressArchiveSchema.parse({
+      fileIds: ['fil_test_123']
+    });
+    expect(parsed5.compressionLevel).toBe('normal');
   });
 });
