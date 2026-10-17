@@ -193,112 +193,112 @@ export const CARD_TIERS = Object.freeze({
   E: {
     id: 'E',
     code: 'E',
-    name: 'Common',
+    name: 'Matte Slate',
     titleVi: 'Cơ bản thấp',
     level: 1,
     className: 'tier-e',
-    badgeText: 'TIER E',
+    badgeText: 'E · BASIC',
     color: '#71717A',
-    description: 'Viền tối giản, màu xám trung tính, bo góc gọn gàng.'
+    description: 'Viền đơn phiến tối giản, bề mặt mờ thanh lịch, zero glow.'
   },
   D: {
     id: 'D',
     code: 'D',
-    name: 'Standard',
+    name: 'Frosted Quartz',
     titleVi: 'Tiêu chuẩn',
     level: 2,
     className: 'tier-d',
-    badgeText: 'TIER D',
+    badgeText: 'D · STANDARD',
     color: '#0EA5E9',
-    description: 'Viền xanh thanh lịch, bóng kính tối giản, bo góc trang nhã.'
+    description: 'Viền thép mát lạnh, rãnh sáng specular đỉnh thẻ, tinh tế trang nhã.'
   },
   C: {
     id: 'C',
     code: 'C',
-    name: 'Uncommon',
+    name: 'Anodized Emerald',
     titleVi: 'Khá',
     level: 3,
     className: 'tier-c',
-    badgeText: 'TIER C',
+    badgeText: 'C · UNCOMMON',
     color: '#10B981',
-    description: 'Viền xanh ngọc / xanh lá mạ tươi mới, corner notches gọn gàng.'
+    description: 'Viền ngọc lục bảo anode hóa, ngạnh L-shaped micro-ticks 4 góc trong.'
   },
   B: {
     id: 'B',
     code: 'B',
-    name: 'Rare',
+    name: 'Brushed Titanium',
     titleVi: 'Hiếm',
     level: 4,
     className: 'tier-b',
-    badgeText: 'TIER B',
+    badgeText: 'B · RARE',
     color: '#94A3B8',
-    description: 'Viền kim loại bạc nổi khối, bóng kính đa tầng, huy hiệu Bạc.'
+    description: 'Khung giáp Double-Bezel rãnh kép phay xước, huy hiệu titan sapphire.'
   },
   A: {
     id: 'A',
     code: 'A',
-    name: 'Epic',
+    name: 'Imperial Gold',
     titleVi: 'Sử thi',
     level: 5,
     className: 'tier-a',
-    badgeText: 'TIER A',
+    badgeText: 'A · EPIC',
     color: '#F59E0B',
-    description: 'Viền vàng đồng quý tộc, ánh kim đa tầng, ngạnh góc vát 45 độ, huy hiệu Vàng đồng.'
+    description: 'Viền vàng đồng gia công cơ khí chính xác, dải laser vàng phẳng đỉnh thẻ.'
   },
   S: {
     id: 'S',
     code: 'S',
-    name: 'Master',
+    name: 'Royal Amethyst',
     titleVi: 'Siêu việt',
     level: 6,
     className: 'tier-s',
-    badgeText: 'TIER S',
+    badgeText: 'S · MASTER',
     color: '#8B5CF6',
-    description: 'Viền tím hoàng gia siêu việt, huy hiệu Master rực rỡ, ngạnh góc kép tinh tế.'
+    description: 'Mặt nạ viền kim loại vàng hồng & tím hoàng gia, vân lụa chéo, bệ icon phát sáng.'
   },
   SS: {
     id: 'SS',
     code: 'SS',
-    name: 'Grandmaster',
+    name: 'Crimson Prestige',
     titleVi: 'Đại cao thủ',
     level: 7,
     className: 'tier-ss',
-    badgeText: 'TIER SS',
+    badgeText: '★ SS · GRANDMASTER',
     color: '#F43F5E',
-    description: 'Viền năng lượng chuyển sắc Crimson-Violet rực lửa, ngạnh góc sắc bén, huy hiệu Đại cao thủ.'
+    description: 'Phiến sưu tập cao cấp, ngạnh góc CAD vát cạnh trong, tiêu điểm hồng ngọc.'
   },
   UR: {
     id: 'UR',
     code: 'UR',
-    name: 'Ultra Rare',
+    name: 'Prismatic Hologram',
     titleVi: 'Thần thoại',
     level: 8,
     className: 'tier-ur',
-    badgeText: 'TIER UR',
+    badgeText: '✦ UR · MYTHIC',
     color: '#EC4899',
-    description: 'Viền quang phổ Holographic Prismatic, ngạnh góc 4 góc, hiệu ứng quét sáng mặt kính Holo Foil Sheen.'
+    description: 'Viền lưỡng sắc chuyển màu mượt mà, ánh kim quang học Holo Foil quét đa chiều.'
   },
   LR: {
     id: 'LR',
     code: 'LR',
-    name: 'Legend Rare',
+    name: 'Sovereign Flare',
     titleVi: 'Huyền thoại tối thượng',
     level: 9,
     className: 'tier-lr',
-    badgeText: 'TIER LR',
+    badgeText: '❖ LR · SOVEREIGN',
     color: '#EAB308',
-    description: 'Viền hiệu ứng động đa sắc rực rỡ, vầng hào quang tỏa sáng Radial Aura, ngạnh vương miện 4 góc tinh xảo, 100% GPU.'
+    description: 'Khung cấu trúc 3 tầng hoàng kim đế vương, chân góc hình học, chân trời ánh sáng.'
   },
   EX: {
     id: 'EX',
     code: 'EX',
-    name: 'Extra',
+    name: 'Astral Singularity',
     titleVi: 'Đẳng cấp vũ trụ đặc biệt',
     level: 10,
     className: 'tier-ex',
-    badgeText: 'TIER EX',
+    badgeText: '✦ EX · CELESTIAL',
     color: '#06B6D4',
-    description: 'Cấp độ vũ trụ lượng tử tinh vân, vầng hào quang tinh tú breathing quang phổ, quét ánh sao lấp lánh, 100% GPU.'
+    description: 'Tuyệt tác vũ trụ, viền Conic quay 360 độ siêu nét 1.5px, lưới tọa độ sao và hào quang tinh vân.'
   }
 });
 

@@ -16,11 +16,16 @@ import {
 } from '../utilities/apkUpdater.js';
 import { toggleTheme, getStoredTheme } from '../hooks/useTheme.js';
 import { showToast } from '../utilities/toast.js';
+import { soundEngine } from '../utilities/soundEngine.js';
 
 export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
   const isStandalone = isStandaloneMode();
   const isNative = isNativeApp();
+  const isSoundEnabled = soundEngine.isEnabled();
+  const soundVolume = soundEngine.getVolume();
+  const soundVolumePercent = Math.round(soundVolume * 100);
+  const audioDiag = soundEngine.getAudioDiagnostics();
 
   return `
     <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn pb-12 md:pb-16">
@@ -55,7 +60,112 @@ export function renderServerPage() {
         </div>
       </div>
 
-      <!-- 2. Ứng dụng & Cập nhật -->
+      <!-- 2. Âm thanh & Khuếch đại -->
+      <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="volume-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Âm thanh & Khuếch đại
+          </h3>
+          <span id="badgeServerSoundVolume" class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 font-bold">
+            ${soundVolumePercent}%
+          </span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm py-2.5 border-b border-zinc-100 dark:border-white/5">
+          <div>
+            <p class="font-semibold text-zinc-900 dark:text-zinc-100">Âm thanh phản hồi hệ thống</p>
+            <p id="serverSoundStatusText" class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              ${isSoundEnabled ? 'Đang bật phản hồi âm thanh (Procedural Web Audio)' : 'Đang tắt âm thanh (Muted)'}
+            </p>
+          </div>
+          <button id="btnServerSoundToggle" class="w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-semibold border transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer ${isSoundEnabled ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-zinc-200 border-zinc-200 dark:border-white/10' : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent'}">
+            <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4"></i>
+            <span>${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}</span>
+          </button>
+        </div>
+
+        <!-- Volume Amplification Slider -->
+        <div class="space-y-3 py-1 border-b border-zinc-100 dark:border-white/5 pb-4">
+          <div class="flex items-center justify-between">
+            <label for="serverSoundVolumeSlider" class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <span>Độ khuếch đại âm lượng (Gain Staging)</span>
+              <span id="serverSoundMultiplierLabel" class="text-[11px] font-mono text-zinc-400">(${(soundVolumePercent / 100).toFixed(2)}x)</span>
+            </label>
+            <span id="serverSoundVolumeVal" class="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              ${soundVolumePercent}%
+            </span>
+          </div>
+
+          <input 
+            type="range" 
+            id="serverSoundVolumeSlider" 
+            min="0" 
+            max="250" 
+            step="5" 
+            value="${soundVolumePercent}" 
+            class="w-full h-2 bg-zinc-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+
+          <!-- Presets -->
+          <div class="flex flex-wrap items-center gap-1.5 pt-1">
+            <button type="button" data-preset="50" class="btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${soundVolumePercent === 50 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
+              50%
+            </button>
+            <button type="button" data-preset="100" class="btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${soundVolumePercent === 100 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
+              100% (Tiêu chuẩn)
+            </button>
+            <button type="button" data-preset="150" class="btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${soundVolumePercent === 150 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
+              150% (Lớn)
+            </button>
+            <button type="button" data-preset="200" class="btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${soundVolumePercent === 200 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
+              200% (Khuếch đại cao)
+            </button>
+            <button type="button" data-preset="250" class="btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${soundVolumePercent === 250 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
+              250% (Tối đa)
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Sound Preview -->
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Nghe thử âm thanh phản hồi:</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button type="button" data-test="jobComplete" class="btn-server-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="bell-ring" class="w-3.5 h-3.5 text-indigo-500"></i>
+              <span>Hoàn thành</span>
+            </button>
+            <button type="button" data-test="start" class="btn-server-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="play" class="w-3.5 h-3.5 text-emerald-500"></i>
+              <span>Bắt đầu</span>
+            </button>
+            <button type="button" data-test="notification" class="btn-server-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="message-square" class="w-3.5 h-3.5 text-blue-500"></i>
+              <span>Thông báo</span>
+            </button>
+            <button type="button" data-test="error" class="btn-server-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-rose-50 dark:bg-white/[0.05] dark:hover:bg-rose-500/10 text-zinc-800 dark:text-zinc-200 hover:text-rose-600 dark:hover:text-rose-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-500"></i>
+              <span>Báo lỗi</span>
+            </button>
+            <button type="button" data-test="toggle" class="btn-server-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer col-span-2 sm:col-span-1">
+              <i data-lucide="toggle-right" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Micro-Click</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hardware & APK Guidance -->
+        <div class="flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/60 dark:border-white/5 text-zinc-500 dark:text-zinc-400">
+          <span class="flex items-center gap-1.5 font-medium">
+            <span class="w-2 h-2 rounded-full ${audioDiag.state === 'running' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+            Web Audio: <strong class="uppercase font-mono">${audioDiag.state}</strong>
+          </span>
+          <button id="btnServerSoundUnlock" type="button" class="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">
+            Mở khóa thử
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Ứng dụng & Cập nhật -->
       <div class="p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/[0.07] space-y-4 shadow-xs">
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -290,4 +400,66 @@ export function attachServerPageListeners(onRerender) {
       });
     }
   }
+
+  // 6. Sound & Volume Amplification Listeners
+  const btnSoundToggle = document.getElementById('btnServerSoundToggle');
+  if (btnSoundToggle) {
+    btnSoundToggle.addEventListener('click', () => {
+      const newEnabled = soundEngine.toggleMute();
+      if (newEnabled) {
+        soundEngine.playToggle();
+      }
+      triggerUpdate();
+    });
+  }
+
+  const soundSlider = document.getElementById('serverSoundVolumeSlider');
+  const soundVal = document.getElementById('serverSoundVolumeVal');
+  const soundMult = document.getElementById('serverSoundMultiplierLabel');
+  const soundBadge = document.getElementById('badgeServerSoundVolume');
+
+  const updateSoundVolumeUI = (pct) => {
+    if (soundVal) soundVal.textContent = `${pct}%`;
+    if (soundMult) soundMult.textContent = `(${(pct / 100).toFixed(2)}x)`;
+    if (soundBadge) soundBadge.textContent = `${pct}%`;
+    document.querySelectorAll('.btn-server-sound-preset').forEach((btn) => {
+      const p = parseInt(btn.getAttribute('data-preset'), 10);
+      if (p === pct) {
+        btn.className = 'btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer bg-indigo-600 text-white';
+      } else {
+        btn.className = 'btn-server-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5';
+      }
+    });
+  };
+
+  if (soundSlider) {
+    soundSlider.addEventListener('input', (e) => {
+      const pct = parseInt(e.target.value, 10);
+      soundEngine.setVolume(pct / 100);
+      updateSoundVolumeUI(pct);
+    });
+  }
+
+  document.querySelectorAll('.btn-server-sound-preset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pct = parseInt(btn.getAttribute('data-preset'), 10);
+      if (soundSlider) soundSlider.value = String(pct);
+      soundEngine.setVolume(pct / 100);
+      updateSoundVolumeUI(pct);
+      soundEngine.testSound('toggle');
+    });
+  });
+
+  document.querySelectorAll('.btn-server-test-sound').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cue = btn.getAttribute('data-test');
+      soundEngine.testSound(cue);
+    });
+  });
+
+  document.getElementById('btnServerSoundUnlock')?.addEventListener('click', () => {
+    soundEngine.unlockAudioContext();
+    soundEngine.testSound('toggle');
+    triggerUpdate();
+  });
 }

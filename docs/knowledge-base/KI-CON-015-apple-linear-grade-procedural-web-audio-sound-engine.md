@@ -64,23 +64,39 @@ Tất cả các nốt âm và dao động (oscillators) đều được định 
 
 Tuân thủ nghiêm ngặt chuẩn quản trị năng lượng trong `KI-FIX-023`:
 
-### 5.1. Lazy Gesture Unlock
-- Không bao giờ tự động khởi tạo hoặc gọi `resume()` trên `AudioContext` khi trang vừa nạp nhằm tránh cảnh báo vi phạm chính sách Autoplay của trình duyệt.
-- Lắng nghe các sự kiện tương tác hợp lệ đầu tiên của người dùng (`pointerdown`, `keydown`, `touchstart`) để mở khóa âm thanh một cách tự nhiên.
+### 5.1. Mobile & APK Hardware Audio Unlock
+- **1-Sample Silent Buffer Prime**: Trên iOS Safari và Android Mobile WebKit/Blink, chỉ gọi `ctx.resume()` không thể mở khóa phần cứng âm thanh. `SoundEngine` tự động tạo và kích hoạt một buffer im lặng 1-sample (`createBuffer(1, 1, 22050) -> start(0)`) trong sự kiện chạm đầu tiên (`click`, `touchstart`, `touchend`, `pointerup`, `keydown`), giải phóng ngay lập tức audio hardware pipeline.
+- **Android WebView `mediaPlaybackRequiresUserGesture = false`**: Cấu hình trong `MainActivity.kt` cho phép WebView chạy Web Audio API tự do mà không bị chặn khi các sự kiện bất đồng bộ (SSE, WebSocket, download/convert hoàn thành) kích hoạt chuông âm thanh từ background.
 
-### 5.2. Tự Động Suspend Khi Nhàn Rỗi (Idle Debounce Suspend)
-- Sau khi nốt nhạc cuối cùng kết thúc, một bộ đếm nhàn rỗi $2500\text{ms}$ được thiết lập.
-- Nếu không có âm thanh nào tiếp theo trong $2.5\text{s}$, hệ thống tự động gọi `audioCtx.suspend()`, giải phóng luồng mixer phần cứng của OS (tiết kiệm 100% CPU âm thanh).
-
-### 5.3. Tuân Thủ Trạng Thái Ẩn/Chạy Nền (Page Visibility & Native Sleep)
-- Khi nhận sự kiện `visibilitychange` (`document.visibilityState === 'hidden'`), sự kiện nội bộ `ds:visibility-change` (ẩn), hoặc `ds:native-app-paused` từ Android Native Bridge:
-  - Lập tức hủy bộ đếm nhàn rỗi.
-  - Lập tức gọi `audioCtx.suspend()`.
-- Khi app mở lại, `SoundEngine` **không** vội vàng đánh thức `AudioContext` mà giữ trạng thái ngủ cho tới khi người dùng thực sự kích hoạt một tác vụ cần phát âm thanh.
+### 5.2. Quản Trị Ngủ Nhàn Rỗi Thông Minh (Smart Foreground vs Background Suspend)
+- **Trên Mobile & APK**: Không tự ý suspend `AudioContext` khi app vẫn đang hiển thị ở foreground (`visibilityState === 'visible'`). Nhờ đó, các thông báo âm thanh khi tác vụ chạy xong 10-30s sau luôn phát được 100% mà không bị hệ điều hành chặn vì thiếu cử chỉ người dùng mới.
+- **Tuân thủ trạng thái ẩn/chạy nền (`KI-FIX-023`)**: Ngay khi nhận sự kiện `visibilitychange` (`hidden`) hoặc `ds:native-app-paused`:
+  - Lập tức gọi `audioCtx.suspend()`, giải phóng hoàn toàn luồng mixer OS (tiết kiệm 100% pin khi ẩn app).
+  - Khi app mở lại (`visible` / `ds:native-app-resumed`), tự động gọi `unlockAudioContext()` để sẵn sàng phát âm thanh.
+- **Trên Desktop**: Duy trì bộ đếm nhàn rỗi hào phóng 30s sau khi phát âm thanh trước khi tạm suspend.
 
 ---
 
-## 6. Điểm Tích Hợp & Quy Tắc Cách Ly (Integration Points & Quarantine Rules)
+## 6. Khuếch Đại Âm Lượng & Bộ Nén Dynamics Compressor (Gain Staging & Volume Control)
+
+1. **Chuỗi Tín Hiệu Âm Thanh (Audio Signal Chain):**
+   ```
+   Oscillator Nodes -> MasterGain (Base 0.60 * Volume) -> MasterFilter (Lowpass 2200Hz, Q: 0.7) -> DynamicsCompressorNode -> Destination
+   ```
+2. **Bộ Nén Giới Hạn Tự Động (DynamicsCompressorNode):**
+   - Thiết lập `threshold: -6dB`, `knee: 6`, `ratio: 4`, `attack: 0.003s`, `release: 0.15s`.
+   - Ngăn chặn hoàn toàn hiện tượng méo tiếng (digital clipping) khi tăng âm lượng lên $200\% - 250\%$, đồng thời giữ cho âm sắc ấm áp, tròn trịa và rõ ràng trên loa ngoài điện thoại lẫn laptop.
+3. **Cơ Chế Điều Khiển Cho Admin & User:**
+   - **Header (`#btnSoundToggle`)**:
+     - 1 chạm: Bật/tắt nhanh âm thanh (Mute/Unmute).
+     - Nhấp đúp, nhấn giữ (>350ms trên điện thoại), hoặc chuột phải: Mở hộp thoại `SoundVolumeModal` tùy chỉnh khuếch đại từ $0\%$ đến $250\%$.
+   - **Trang Cài Đặt (`#settings` - `ServerPage.js`)**:
+     - Thẻ "Âm thanh & Khuếch đại" với thanh trượt volume, các nút gán sẵn $50\%, 100\%, 150\%, 200\%, 250\%$, và hệ thống nút "Nghe thử" 5 loại âm thanh trực tiếp.
+     - Trạng thái lưu trong `localStorage.getItem('ds_sound_volume')` (mặc định $1.0 = 100\%$).
+
+---
+
+## 7. Điểm Tích Hợp & Quy Tắc Cách Ly (Integration Points & Quarantine Rules)
 
 1. **`GlobalTaskDock.js` & `taskCoordinator.js`:**
    - Sử dụng bộ bảo vệ nguyên tử `completedTaskIds = new Set()` và phương thức `soundEngine.playJobCompleteOnce(taskId)` để đảm bảo chuông hoàn tất tác vụ chỉ ngân vang **đúng một lần duy nhất** cho mỗi tác vụ, không lặp lại khi re-render.
@@ -89,13 +105,13 @@ Tuân thủ nghiêm ngặt chuẩn quản trị năng lượng trong `KI-FIX-023
    - Kích hoạt `playNotification()`, `playWarning()`, `playError()` tương ứng với các biến thể Toast thông báo.
 3. **`Header.js`:**
    - Nút chuyển trạng thái âm thanh `#btnSoundToggle` nằm cạnh nút giao diện sáng/tối với icon `volume-2` và `volume-x`.
-   - Trạng thái lưu trữ trong `localStorage.getItem('ds_sound_enabled')` (mặc định bật).
+   - Trạng thái lưu trữ trong `localStorage.getItem('ds_sound_enabled')` (mặc định bật) và `localStorage.getItem('ds_sound_volume')`.
 4. **Quy Tắc Cách Ly Studocu (Quarantine Rule):**
    - Tuyệt đối không chèn trực tiếp mã vào các tệp thuộc mô-đun `src/components/tools/studocu/`. Âm thanh hoàn tất tác vụ Studocu được điều phối tập trung thông qua `GlobalTaskDock.js` và `taskCoordinator.js`.
 
 ---
 
-## 7. Tiêu Chuẩn Nghiệm Thu & Lệnh Xác Minh (Verification Commands)
+## 8. Tiêu Chuẩn Nghiệm Thu & Lệnh Xác Minh (Verification Commands)
 
 ```powershell
 # 1. Chạy toàn bộ test kiểm thử SoundEngine & hồi quy

@@ -5,6 +5,7 @@
 
 import { renderToolIcon } from '../common/ToolIcons.js';
 import { getCardTierConfig } from '../../hooks/useToolRegistry.js';
+import { renderTierStructuralLayers } from './TierFrameAssets.js';
 
 const CATEGORY_LABELS = {
   all: 'Tất cả',
@@ -36,18 +37,11 @@ export function renderToolCard(tool) {
   const tierBadgeHtml = tierConfig ? `
     <div class="tier-crest-badge shadow-xs shrink-0" title="${tierConfig.name} - ${tierConfig.titleVi}">
       <span class="tier-badge-indicator"></span>
-      <span>${tierConfig.badgeText}</span>
+      <span class="tier-badge-label">${tierConfig.badgeText}</span>
     </div>
   `.trim() : '';
 
-  const tierOrnamentsHtml = tierConfig ? `
-    <div class="tier-corner corner-tl"></div>
-    <div class="tier-corner corner-tr"></div>
-    <div class="tier-corner corner-bl"></div>
-    <div class="tier-corner corner-br"></div>
-    ${['UR', 'LR', 'EX'].includes(tierConfig.code) ? '<div class="tier-holo-sheen pointer-events-none"></div>' : ''}
-    ${['LR', 'EX'].includes(tierConfig.code) ? '<div class="tier-radial-aura pointer-events-none"></div>' : ''}
-  `.trim() : '';
+  const tierOrnamentsHtml = tierConfig ? renderTierStructuralLayers(tierConfig.code) : '';
 
   return `
     <a href="${tool.route}"

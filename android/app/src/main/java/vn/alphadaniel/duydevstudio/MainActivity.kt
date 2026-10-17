@@ -367,7 +367,7 @@ class MainActivity : AppCompatActivity() {
         settings.allowContentAccess = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        settings.mediaPlaybackRequiresUserGesture = true
+        settings.mediaPlaybackRequiresUserGesture = false
         settings.safeBrowsingEnabled = false
         settings.userAgentString = "${settings.userAgentString} DuyDevStudioNative/1.0"
 

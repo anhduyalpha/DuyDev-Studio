@@ -17,7 +17,9 @@
  */
 
 const STORAGE_KEY = 'ds_sound_enabled';
-const IDLE_SUSPEND_DELAY_MS = 2500;
+const STORAGE_KEY_VOLUME = 'ds_sound_volume';
+const IDLE_SUSPEND_DELAY_MS = 30000; // 30s generous idle on desktop
+const BASE_MASTER_GAIN = 0.60; // Clean, audible base gain staging
 
 class SoundEngine {
   constructor() {
@@ -31,6 +33,8 @@ class SoundEngine {
     this.masterFilter = null;
     /** @type {GainNode|null} */
     this.masterGain = null;
+    /** @type {DynamicsCompressorNode|null} */
+    this.compressor = null;
 
     /** @type {boolean} */
     this.unlocked = false;
@@ -46,9 +50,17 @@ class SoundEngine {
 
     // Load initial mute state from localStorage (default: enabled / unmuted)
     this.enabled = true;
+    // Load initial volume / amplification (range: 0.0 to 2.5, default: 1.0 = 100%)
+    this.volume = 1.0;
+
     if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      this.enabled = stored === null ? true : stored === 'true';
+      const storedMute = window.localStorage.getItem(STORAGE_KEY);
+      this.enabled = storedMute === null ? true : storedMute === 'true';
+
+      const storedVol = parseFloat(window.localStorage.getItem(STORAGE_KEY_VOLUME) || '1.0');
+      if (!isNaN(storedVol) && storedVol >= 0) {
+        this.volume = Math.max(0.0, Math.min(2.5, storedVol));
+      }
     }
 
     if (typeof window !== 'undefined') {
@@ -58,58 +70,98 @@ class SoundEngine {
   }
 
   /**
+   * Helper to detect mobile or touch-driven environments (iOS, Android, Tablets, WebView).
+   * @private
+   * @returns {boolean}
+   */
+  _isMobileDevice() {
+    if (typeof window === 'undefined') return false;
+    return Boolean(
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+    );
+  }
+
+  /**
    * Binds user interaction gesture unlocks and page visibility lifecycle governors.
    * @private
    */
   _bindLifecycleGovernance() {
     if (typeof window === 'undefined') return;
 
-    // 1. Lazy Gesture Unlock: register one-time pointer/keyboard listeners
+    // 1. Bulletproof Mobile Gesture Unlock: listen to common user interaction events
+    const gestureEvents = ['click', 'touchstart', 'touchend', 'pointerup', 'keydown'];
     const unlockHandler = () => {
       this.unlockAudioContext();
-      window.removeEventListener('pointerdown', unlockHandler);
-      window.removeEventListener('keydown', unlockHandler);
-      window.removeEventListener('touchstart', unlockHandler);
     };
 
-    window.addEventListener('pointerdown', unlockHandler, { passive: true });
-    window.addEventListener('keydown', unlockHandler, { passive: true });
-    window.addEventListener('touchstart', unlockHandler, { passive: true });
+    gestureEvents.forEach((evt) => {
+      window.addEventListener(evt, unlockHandler, { passive: true, capture: true });
+    });
 
     // 2. KI-FIX-023 Page Visibility & Native App Lifecycle Governor
     const suspendHandler = () => {
       this.suspendNow();
     };
 
+    const resumeHandler = () => {
+      if (this.enabled) {
+        this.unlockAudioContext();
+      }
+    };
+
     document.addEventListener('visibilitychange', () => {
       if (document.hidden || document.visibilityState === 'hidden') {
         suspendHandler();
+      } else {
+        resumeHandler();
       }
     });
 
     window.addEventListener('ds:visibility-change', (e) => {
       if (e.detail?.hidden) {
         suspendHandler();
+      } else {
+        resumeHandler();
       }
     });
 
     window.addEventListener('ds:native-app-paused', suspendHandler);
+    window.addEventListener('ds:native-app-resumed', resumeHandler);
   }
 
   /**
    * Unlocks the Web Audio AudioContext upon genuine user interaction.
+   * Plays a 1-sample silent buffer to unlock the mobile audio hardware pipeline on iOS/Android.
    */
   unlockAudioContext() {
-    if (this.unlocked && this.ctx && this.ctx.state === 'running') return;
-    this.unlocked = true;
     const ctx = this._ensureContext();
-    if (ctx && ctx.state === 'suspended') {
+    if (!ctx) return;
+
+    if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
       ctx.resume().catch(() => {});
+    }
+
+    // Play 1-sample silent buffer to prime mobile OS mixer pipeline
+    try {
+      const silentBuf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = silentBuf;
+      src.connect(ctx.destination);
+      src.start(0);
+      src.onended = () => {
+        try { src.disconnect(); } catch (_) {}
+      };
+    } catch (_) {}
+
+    if (ctx.state === 'running') {
+      this.unlocked = true;
     }
   }
 
   /**
-   * Lazy-initializes the AudioContext, master low-pass filter and master gain stage.
+   * Lazy-initializes the AudioContext, master low-pass filter, dynamics compressor, and master gain stage.
    * @private
    * @returns {AudioContext|null}
    */
@@ -123,19 +175,29 @@ class SoundEngine {
       try {
         this.ctx = new AudioContextClass();
 
-        // Master Low-pass Filter (Warm acoustic shaping, 2200Hz, Q: 0.7)
+        // 1. Master Low-pass Filter (Warm acoustic shaping, 2200Hz, Q: 0.7)
         this.masterFilter = this.ctx.createBiquadFilter();
         this.masterFilter.type = 'lowpass';
         this.masterFilter.frequency.setValueAtTime(2200, this.ctx.currentTime);
         this.masterFilter.Q.setValueAtTime(0.7, this.ctx.currentTime);
 
-        // Master Gain Stage (Gentle volume <= 0.18 peak)
-        this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.setValueAtTime(0.16, this.ctx.currentTime);
+        // 2. Dynamics Compressor Node (Analog Limiting & Saturation Protection)
+        // Prevents any harsh digital clipping even under 2.5x volume amplification
+        this.compressor = this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.setValueAtTime(-6, this.ctx.currentTime);
+        this.compressor.knee.setValueAtTime(6, this.ctx.currentTime);
+        this.compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+        this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+        this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
 
-        // Route: Nodes -> masterGain -> masterFilter -> destination
+        // 3. Master Gain Stage (Adjustable Volume Amplification 0.0x to 2.5x)
+        this.masterGain = this.ctx.createGain();
+        this._updateMasterGain();
+
+        // Route: Nodes -> masterGain -> masterFilter (2200Hz) -> compressor -> destination
         this.masterGain.connect(this.masterFilter);
-        this.masterFilter.connect(this.ctx.destination);
+        this.masterFilter.connect(this.compressor);
+        this.compressor.connect(this.ctx.destination);
       } catch (err) {
         console.warn('[SoundEngine] Failed to initialize AudioContext:', err);
         return null;
@@ -146,7 +208,23 @@ class SoundEngine {
   }
 
   /**
-   * Schedules an automatic suspend after sounds finish playing to release OS audio threads.
+   * Updates master gain node according to enabled state and volume multiplier.
+   * @private
+   */
+  _updateMasterGain() {
+    if (this.masterGain && this.ctx) {
+      const targetGain = this.enabled ? (BASE_MASTER_GAIN * this.volume) : 0.0001;
+      try {
+        this.masterGain.gain.setValueAtTime(targetGain, this.ctx.currentTime);
+      } catch (_) {
+        this.masterGain.gain.value = targetGain;
+      }
+    }
+  }
+
+  /**
+   * Schedules an automatic suspend after sounds finish playing to release OS audio threads on desktop.
+   * On mobile devices, does NOT suspend in foreground to preserve async notification capability.
    * @private
    * @param {number} durationSec Sound duration in seconds
    */
@@ -158,7 +236,13 @@ class SoundEngine {
       this.idleTimer = null;
     }
 
-    const waitMs = Math.max(100, Math.round(durationSec * 1000) + IDLE_SUSPEND_DELAY_MS);
+    // On mobile devices, keep context ready while foregrounded so async task completion sounds can play
+    if (this._isMobileDevice()) {
+      return;
+    }
+
+    // On desktop, use a generous idle window
+    const waitMs = Math.max(1000, Math.round(durationSec * 1000) + IDLE_SUSPEND_DELAY_MS);
     this.idleTimer = setTimeout(() => {
       this.suspendNow();
     }, waitMs);
@@ -248,6 +332,94 @@ class SoundEngine {
   }
 
   // =========================================================================
+  // Volume & Amplification Management (Admin Configurable 0.0x to 2.5x)
+  // =========================================================================
+
+  /**
+   * Returns current sound volume multiplier (0.0 to 2.5).
+   * @returns {number}
+   */
+  getVolume() {
+    return this.volume;
+  }
+
+  /**
+   * Sets volume multiplier, updates master gain, persists to localStorage, and notifies listeners.
+   * @param {number|string} vol Multiplier from 0.0 (0%) to 2.5 (250%)
+   * @returns {number}
+   */
+  setVolume(vol) {
+    const parsed = parseFloat(vol);
+    if (isNaN(parsed)) return this.volume;
+
+    // Clamp volume safely between 0.0 (mute) and 2.5 (250% maximum amplification)
+    this.volume = Math.max(0.0, Math.min(2.5, Math.round(parsed * 100) / 100));
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY_VOLUME, String(this.volume));
+      } catch (_) {}
+    }
+
+    this._updateMasterGain();
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ds:sound-volume-change', {
+        detail: { volume: this.volume, percent: Math.round(this.volume * 100) }
+      }));
+    }
+
+    return this.volume;
+  }
+
+  /**
+   * Returns diagnostic telemetry of the Web Audio subsystem.
+   * @returns {{unlocked: boolean, state: string, enabled: boolean, volume: number, volumePercent: number, isMobile: boolean, hasCompressor: boolean}}
+   */
+  getAudioDiagnostics() {
+    return {
+      unlocked: this.unlocked,
+      state: this.ctx ? this.ctx.state : 'uninitialized',
+      enabled: this.enabled,
+      volume: this.volume,
+      volumePercent: Math.round(this.volume * 100),
+      isMobile: this._isMobileDevice(),
+      hasCompressor: Boolean(this.compressor)
+    };
+  }
+
+  /**
+   * Plays a requested sound cue immediately for real-time volume adjustment preview.
+   * @param {'jobComplete'|'start'|'notification'|'error'|'warning'|'toggle'} [cue='jobComplete']
+   */
+  testSound(cue = 'jobComplete') {
+    switch (cue) {
+      case 'start':
+      case 'paste':
+        this.playStart();
+        break;
+      case 'notification':
+        this.playNotification();
+        break;
+      case 'error':
+        this.playError();
+        break;
+      case 'warning':
+        this.playWarning();
+        break;
+      case 'toggle':
+      case 'snap':
+        this.playToggle();
+        break;
+      case 'jobComplete':
+      case 'success':
+      default:
+        this.playJobComplete();
+        break;
+    }
+  }
+
+  // =========================================================================
   // Curated Signature Sound Palette (6 Distinct Procedural Cues)
   // =========================================================================
 
@@ -277,7 +449,7 @@ class SoundEngine {
       // Note Gain with smooth 12ms attack & silky exponential decay
       const noteGain = ctx.createGain();
       noteGain.gain.setValueAtTime(0.0001, noteStart);
-      noteGain.gain.linearRampToValueAtTime(0.14, noteStart + 0.012);
+      noteGain.gain.linearRampToValueAtTime(0.28, noteStart + 0.012);
       noteGain.gain.exponentialRampToValueAtTime(0.0001, noteStop);
       noteGain.connect(this.masterGain);
 
@@ -293,7 +465,7 @@ class SoundEngine {
       oscHarmonic.frequency.setValueAtTime(note.freq, noteStart);
 
       const harmGain = ctx.createGain();
-      harmGain.gain.setValueAtTime(0.035, noteStart);
+      harmGain.gain.setValueAtTime(0.06, noteStart);
       oscHarmonic.connect(harmGain);
       harmGain.connect(noteGain);
 
@@ -370,7 +542,7 @@ class SoundEngine {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.13, now + 0.008);
+    gain.gain.linearRampToValueAtTime(0.30, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
     gain.connect(this.masterGain);
 
@@ -415,7 +587,7 @@ class SoundEngine {
 
     const noteGain = ctx.createGain();
     noteGain.gain.setValueAtTime(0.0001, now);
-    noteGain.gain.linearRampToValueAtTime(0.12, now + 0.008);
+    noteGain.gain.linearRampToValueAtTime(0.28, now + 0.008);
     noteGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
     noteGain.connect(this.masterGain);
 
@@ -431,7 +603,7 @@ class SoundEngine {
     undertoneOsc.frequency.setValueAtTime(440, now);
 
     const undertoneGain = ctx.createGain();
-    undertoneGain.gain.setValueAtTime(0.04, now);
+    undertoneGain.gain.setValueAtTime(0.07, now);
     undertoneOsc.connect(undertoneGain);
     undertoneGain.connect(noteGain);
 
@@ -476,7 +648,7 @@ class SoundEngine {
     const t1Stop = now + 0.075;
     const gain1 = ctx.createGain();
     gain1.gain.setValueAtTime(0.0001, t1Start);
-    gain1.gain.linearRampToValueAtTime(0.14, t1Start + 0.006);
+    gain1.gain.linearRampToValueAtTime(0.30, t1Start + 0.006);
     gain1.gain.exponentialRampToValueAtTime(0.0001, t1Stop);
     gain1.connect(filter);
 
@@ -490,7 +662,7 @@ class SoundEngine {
     const t2Stop = now + totalDuration;
     const gain2 = ctx.createGain();
     gain2.gain.setValueAtTime(0.0001, t2Start);
-    gain2.gain.linearRampToValueAtTime(0.12, t2Start + 0.006);
+    gain2.gain.linearRampToValueAtTime(0.26, t2Start + 0.006);
     gain2.gain.exponentialRampToValueAtTime(0.0001, t2Stop);
     gain2.connect(filter);
 
@@ -532,7 +704,7 @@ class SoundEngine {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.11, now + 0.008);
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
     gain.connect(this.masterGain);
 
@@ -558,7 +730,7 @@ class SoundEngine {
   /**
    * Cue 6: `playToggle()` / `playSnap()` (UI Switch / Tab / Copy)
    * Ultra-short, crisp micro-click:
-   * 12ms filtered sine impulse at 1100Hz at 0.06 gain.
+   * 12ms filtered sine impulse at 1100Hz at 0.18 gain.
    */
   playToggle() {
     const ctx = this._prepareForPlayback();
@@ -570,7 +742,7 @@ class SoundEngine {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.06, now + 0.002);
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
     gain.connect(this.masterGain);
 

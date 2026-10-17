@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Mẫu 10 Cấp Độ Khung Viền Thẻ - DuyDev Studio</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css">
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background-color: #F4F4F6;
+      background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+    html.dark body {
+      background-color: #09090B;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    }
+    .active-filter {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      border-color: rgba(99, 102, 241, 0.5) !important;
+      color: #6366F1 !important;
+      font-weight: 700 !important;
+    }
+    html.dark .active-filter {
+      background-color: rgba(99, 102, 241, 0.2) !important;
+      color: #818CF8 !important;
+    }
+  </style>
+</head>
+<body class="text-zinc-900 dark:text-zinc-100 min-h-screen p-4 sm:p-8 lg:p-12 pb-24">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-white/85 dark:bg-zinc-900/85 backdrop-blur-xl border border-zinc-200/80 dark:border-white/10 shadow-xl transition">
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono text-xs font-bold">
+          <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+          <span>ARCHITECTURAL 10-TIER PROGRESSION &bull; LIVE PREVIEW</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          Hệ Thống 10 Cấp Độ Khung Viền &amp; Thẻ Công Cụ
+        </h1>
+        <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
+          Tiến hóa cấu trúc qua 4 giai đoạn: từ viền đơn phiến tối giản (E&bull;D&bull;C), rãnh kim loại kép CNC (B&bull;A&bull;S), phiến ép tán sắc quang học (SS&bull;UR) đến viền xoay đa chiều 360&deg; vũ trụ (LR&bull;EX). Chuẩn thiết kế Linear/Vercel, tối ưu 100% GPU. Bấm vào thẻ để sao chép lệnh gán.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0">
+        <button id="btnToggleTheme" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white text-xs font-bold transition cursor-pointer select-none border border-zinc-200 dark:border-white/10 shadow-xs">
+          <i id="themeIcon" data-lucide="moon" class="w-4 h-4 text-indigo-600 dark:text-amber-400"></i>
+          <span id="themeText">Chế độ Tối</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Filter Buttons -->
+    <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
+      <button type="button" class="filter-btn active-filter px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="all">
+        Tất cả (10 Tiers)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="basic">
+        Cơ bản (E &bull; D &bull; C)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="metal">
+        Kim loại (B &bull; A &bull; S)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="mythic">
+        Cao cấp (SS &bull; UR)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="cosmic">
+        Tối thượng (LR &bull; EX)
+      </button>
+    </div>
+
+    <!-- 10 Tiers Grid -->
+    <main id="tiersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 pt-2">
+      
+      <!-- ==========================================
+           STAGE 1: FOUNDATION SERIES (E, D, C)
+           ========================================== -->
+
+      <!-- Tier 1: E (Matte Slate) -->
+      <div class="tier-card tier-e group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="basic"
+           data-tier="E"
+           data-tool-name="Mã Băm & Base64"
+           style="--accent: #64748B; --accent-contrast: #334155;">
+        
+        <!-- Top Precision Accent Beam -->
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <!-- Header: Tool Icon & Tier Crest Badge -->
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
+              <i data-lucide="binary" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Matte Slate - Cơ bản thấp">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">E &bull; BASIC</span>
+            </div>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Mã Băm &amp; Base64
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-zinc-400 dark:text-zinc-500">
+            Matte Slate &bull; Cơ bản thấp
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.
+          </p>
+
+          <!-- Specs -->
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">MD5</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">SHA-256</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Base64</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-zinc-400 dark:text-zinc-500">NÂNG CAO</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <!-- 1-Click Copy Prompt Bar -->
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier E</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- Tier 2: D (Frosted Quartz) -->
+      <div class="tier-card tier-d group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="basic"
+           data-tier="D"
+           data-tool-name="Quét Mã QR"
+           style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
+        
+        <!-- Architectural Layer: Specular Hairline -->
+        <div class="tier-inner-specular pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
+              <i data-lucide="scan-line" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Frosted Quartz - Tiêu chuẩn">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">D &bull; STANDARD</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Quét Mã QR
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-sky-600 dark:text-sky-400">
+            Frosted Quartz &bull; Tiêu chuẩn
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Quét và giải mã barcode, QR Code thời gian thực từ camera hoặc ảnh.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Camera</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Ảnh</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Barcode</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-sky-600 dark:text-sky-400">MÃ QR</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier D</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- Tier 3: C (Anodized Emerald) -->
+      <div class="tier-card tier-c group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="basic"
+           data-tier="C"
+           data-tool-name="Nén Tệp ZIP"
+           style="--accent: #10B981; --accent-contrast: #047857;">
+        
+        <!-- Architectural Layer: Corner Micro-Ticks -->
+        <div class="tier-micro-ticks pointer-events-none" aria-hidden="true">
+          <span class="tick-tl"></span>
+          <span class="tick-tr"></span>
+          <span class="tick-bl"></span>
+          <span class="tick-br"></span>
+        </div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
+              <i data-lucide="folder-archive" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Anodized Emerald - Khá">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">C &bull; UNCOMMON</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Nén Tệp ZIP
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-emerald-600 dark:text-emerald-400">
+            Anodized Emerald &bull; Khá
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Nén tệp tin và thư mục thành định dạng ZIP với độ nén tối ưu.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">ZIP</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Bảo mật</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400">FILE NÉN</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier C</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           STAGE 2: PRECISION MACHINED METAL (B, A, S)
+           ========================================== -->
+
+      <!-- Tier 4: B (Brushed Titanium) -->
+      <div class="tier-card tier-b group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="metal"
+           data-tier="B"
+           data-tool-name="Soi Tệp Nén"
+           style="--accent: #94A3B8; --accent-contrast: #334155;">
+        
+        <!-- Architectural Layer: Recessed Double-Bezel Track -->
+        <div class="tier-double-bezel pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 40%, transparent);">
+              <i data-lucide="archive" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Brushed Titanium - Hiếm">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">B &bull; RARE</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Soi Tệp Nén
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-slate-600 dark:text-slate-400">
+            Brushed Titanium &bull; Hiếm
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Duyệt cấu trúc thư mục và trích xuất không cần giải nén.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">.ZIP</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">.RAR</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Trích xuất</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-slate-600 dark:text-slate-400">FILE NÉN</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier B</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- Tier 5: A (Imperial Gold) -->
+      <div class="tier-card tier-a group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="metal"
+           data-tier="A"
+           data-tool-name="PDF Studio"
+           style="--accent: #F59E0B; --accent-contrast: #B45309;">
+        
+        <!-- Architectural Layers: Top Gold Laser Bar + Double Bezel -->
+        <div class="tier-top-laser-bar pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-double-bezel pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);">
+              <i data-lucide="file-text" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Imperial Gold - Sử thi">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">A &bull; EPIC</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            PDF Studio
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-amber-600 dark:text-amber-400">
+            Imperial Gold &bull; Sử thi
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector sắc nét.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Nén &amp; Ghép</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Tách &amp; Xoay</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Watermark</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-amber-600 dark:text-amber-400">PDF</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier A</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- Tier 6: S (Royal Amethyst) -->
+      <div class="tier-card tier-s group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="metal"
+           data-tier="S"
+           data-tool-name="File Converter"
+           style="--accent: #8B5CF6; --accent-contrast: #6D28D9;">
+        
+        <!-- Architectural Layers: Brushed Silk Texture + Double Bezel -->
+        <div class="tier-silk-texture pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-double-bezel pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);">
+              <i data-lucide="refresh-cw" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Siêu việt">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">S &bull; MASTER</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            File Converter
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-purple-600 dark:text-purple-400">
+            Royal Amethyst &bull; Siêu việt
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Hình ảnh</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Video &amp; Nhạc</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Tài liệu</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-purple-600 dark:text-purple-400">CHUYỂN ĐỔI</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier S</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           STAGE 3: PRESTIGE & HOLOGRAPHIC SLAB (SS, UR)
+           ========================================== -->
+
+      <!-- Tier 7: SS (Crimson Prestige) -->
+      <div class="tier-card tier-ss group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="mythic"
+           data-tier="SS"
+           data-tool-name="Tạo Bài Tập Trắc Nghiệm"
+           style="--accent: #F43F5E; --accent-contrast: #BE123C;">
+        
+        <!-- Architectural Layers: CAD Brackets + Dot Matrix + Icon Spotlight -->
+        <div class="tier-cad-brackets pointer-events-none" aria-hidden="true">
+          <span class="cad-tl"></span>
+          <span class="cad-tr"></span>
+          <span class="cad-bl"></span>
+          <span class="cad-br"></span>
+        </div>
+        <div class="tier-dot-matrix pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-icon-spotlight pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);">
+              <i data-lucide="graduation-cap" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Crimson Prestige - Đại cao thủ">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">★ SS &bull; GRANDMASTER</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Tạo Bài Tập Trắc Nghiệm
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-rose-600 dark:text-rose-400">
+            Crimson Prestige &bull; Đại cao thủ
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Đề bài A4</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Đáp án A4</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Agnes AI</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-rose-600 dark:text-rose-400">PDF</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier SS</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- Tier 8: UR (Prismatic Hologram) -->
+      <div class="tier-card tier-ur group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="mythic"
+           data-tier="UR"
+           data-tool-name="Studocu Downloader"
+           style="--accent: #EC4899; --accent-contrast: #BE185D;">
+        
+        <!-- Architectural Layers: Corner Filigrees + Holographic Foil Sheen -->
+        <div class="tier-filigree-corners pointer-events-none" aria-hidden="true">
+          <span class="filigree-tl"></span>
+          <span class="filigree-tr"></span>
+          <span class="filigree-bl"></span>
+          <span class="filigree-br"></span>
+        </div>
+        <div class="tier-holo-sheen pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);">
+              <i data-lucide="file-down" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Prismatic Hologram - Thần thoại">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">✦ UR &bull; MYTHIC</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Studocu Downloader
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-pink-600 dark:text-pink-400">
+            Prismatic Hologram &bull; Thần thoại
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Tải giáo trình &amp; tài liệu Studocu sang PDF rõ nét không che.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">PDF</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Tài liệu học</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-pink-600 dark:text-pink-400">TIỆN ÍCH</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier UR</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           STAGE 4: SIGNATURE CELESTIAL SERIES (LR, EX)
+           ========================================== -->
+
+      <!-- Tier 9: LR (Sovereign Flare) -->
+      <div class="tier-card tier-lr group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="cosmic"
+           data-tier="LR"
+           data-tool-name="ViewSplit So Sánh Ảnh"
+           style="--accent: #EAB308; --accent-contrast: #A16207;">
+        
+        <!-- Architectural Layers: Triple Frame + Corner Nodes + Horizon Beam + Holo Sheen -->
+        <div class="tier-triple-frame pointer-events-none" aria-hidden="true">
+          <span class="node-tl"></span>
+          <span class="node-tr"></span>
+          <span class="node-bl"></span>
+          <span class="node-br"></span>
+        </div>
+        <div class="tier-horizon-beam pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-holo-sheen pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);">
+              <i data-lucide="columns-2" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Sovereign Flare - Huyền thoại tối thượng">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">❖ LR &bull; SOVEREIGN</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            ViewSplit So Sánh Ảnh
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-yellow-600 dark:text-yellow-400">
+            Sovereign Flare &bull; Huyền thoại
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            So sánh chi tiết 2 hình ảnh theo thanh trượt tương tác &amp; chế độ Diff.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Slider Wipe</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Diff View</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-yellow-600 dark:text-yellow-400">TIỆN ÍCH</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier LR</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+      <!-- Tier 10: EX (Astral Singularity) -->
+      <div class="tier-card tier-ex group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="cosmic"
+           data-tier="EX"
+           data-tool-name="TikTok Downloader"
+           style="--accent: #06B6D4; --accent-contrast: #0E7490;">
+        
+        <!-- Architectural Layers: 360° Rotating Conic Perimeter + Astral Glow + Laser Sightlines + Holo Sheen -->
+        <div class="tier-conic-perimeter pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-astral-glow pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-laser-sightlines pointer-events-none" aria-hidden="true">
+          <span class="sight-tl"></span>
+          <span class="sight-tr"></span>
+          <span class="sight-bl"></span>
+          <span class="sight-br"></span>
+        </div>
+        <div class="tier-holo-sheen pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
+                 style="background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 65%, transparent);">
+              <i data-lucide="video" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Astral Singularity - Đẳng cấp vũ trụ đặc biệt">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">✦ EX &bull; CELESTIAL</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            TikTok Downloader
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-cyan-600 dark:text-cyan-400">
+            Astral Singularity &bull; Đẳng cấp vũ trụ
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Tải video &amp; slideshow ảnh TikTok không logo, âm thanh MP3 lưu Drive.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Không Logo</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Lưu Drive</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">MP3</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-cyan-600 dark:text-cyan-400">TIỆN ÍCH</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+          <span class="truncate">Áp dụng tier EX</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Interactive Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-2xl border border-white/10 text-xs font-semibold">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
+    <span id="toastMsg">Đã sao chép cú pháp!</span>
+  </div>
+
+  <script>
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+
+    const btnToggleTheme = document.getElementById('btnToggleTheme');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    btnToggleTheme.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      if (isDark) {
+        themeText.textContent = 'Chế độ Sáng';
+        themeIcon.setAttribute('data-lucide', 'sun');
+        themeIcon.className = 'w-4 h-4 text-amber-500';
+      } else {
+        themeText.textContent = 'Chế độ Tối';
+        themeIcon.setAttribute('data-lucide', 'moon');
+        themeIcon.className = 'w-4 h-4 text-indigo-600';
+      }
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.tier-card');
+
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
+        const filter = btn.getAttribute('data-filter');
+
+        cards.forEach(card => {
+          if (filter === 'all' || card.getAttribute('data-group') === filter) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    const toast = document.getElementById('toastNotification');
+    const toastMsg = document.getElementById('toastMsg');
+    let toastTimeout;
+
+    function showToast(message) {
+      toastMsg.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('click', () => {
+        const tier = card.getAttribute('data-tier');
+        const toolName = card.getAttribute('data-tool-name');
+        const command = `Áp dụng box tier ${tier} cho card ${toolName}`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(command).then(() => {
+            showToast(`Đã sao chép: "${command}"`);
+          }).catch(() => {
+            showToast(`Lệnh: "${command}"`);
+          });
+        } else {
+          showToast(`Lệnh: "${command}"`);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -53,6 +53,24 @@ class MockAudioContext {
   createGain = vi.fn(() => new MockGainNode());
   createBiquadFilter = vi.fn(() => new MockBiquadFilterNode());
   createOscillator = vi.fn(() => new MockOscillatorNode());
+  createDynamicsCompressor = vi.fn(() => ({
+    threshold: new MockAudioParam(-6),
+    knee: new MockAudioParam(6),
+    ratio: new MockAudioParam(4),
+    attack: new MockAudioParam(0.003),
+    release: new MockAudioParam(0.15),
+    connect: vi.fn(),
+    disconnect: vi.fn()
+  }));
+  createBuffer = vi.fn(() => ({}));
+  createBufferSource = vi.fn(() => ({
+    buffer: null,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    onended: null
+  }));
 
   resume = vi.fn(async () => {
     this.state = 'running';
@@ -131,7 +149,7 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(soundEngine.isMuted()).toBe(false);
   });
 
-  it('2. Enforces warm acoustic shaping: master lowpass filter (2200Hz, Q: 0.7) and soft gain (<= 0.18)', async () => {
+  it('2. Enforces warm acoustic shaping: master lowpass filter (2200Hz, Q: 0.7) and audible base gain (0.60)', async () => {
     const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
 
     soundEngine.ctx = null as any;
@@ -145,11 +163,8 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(soundEngine.masterFilter?.frequency.setValueAtTime).toHaveBeenCalledWith(2200, 0);
     expect(soundEngine.masterFilter?.Q.setValueAtTime).toHaveBeenCalledWith(0.7, 0);
 
-    // Master gain peak volume <= 0.18
-    expect(soundEngine.masterGain?.gain.setValueAtTime).toHaveBeenCalledWith(
-      expect.toBeWithinRange ? expect.toBeWithinRange(0.01, 0.18) : 0.16,
-      0
-    );
+    // Master gain base volume (0.60)
+    expect(soundEngine.masterGain?.gain.setValueAtTime).toHaveBeenCalledWith(0.6, 0);
   });
 
   it('3. Curated Sound Palette: playJobComplete / playSuccess schedules 4-note ascending chord arpeggio', async () => {
@@ -246,14 +261,14 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(playSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('10. Auto-Suspend Idle Timer: automatically calls ctx.suspend() after idle debounce delay (2500ms)', async () => {
+  it('10. Auto-Suspend Idle Timer: automatically calls ctx.suspend() on desktop after idle debounce delay', async () => {
     const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
 
     soundEngine.playNotification();
     expect(mockContext.suspend).not.toHaveBeenCalled();
 
-    // Advance timers by 3000ms
-    vi.advanceTimersByTime(3000);
+    // Advance timers past the generous desktop idle window (30s)
+    vi.advanceTimersByTime(35000);
 
     expect(mockContext.suspend).toHaveBeenCalled();
   });
@@ -280,5 +295,53 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
         }
       }
     }
+  });
+
+  it('13. Volume Amplification & Gain Staging: getVolume(), setVolume(vol) persists to localStorage and clamps 0.0 - 2.5', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    // Default volume is 1.0 (100%)
+    expect(soundEngine.getVolume()).toBe(1.0);
+
+    // Set volume to 1.5 (150%)
+    soundEngine.setVolume(1.5);
+    expect(soundEngine.getVolume()).toBe(1.5);
+    expect(mockLocalStorage['ds_sound_volume']).toBe('1.5');
+
+    // Clamps to max 2.5
+    soundEngine.setVolume(4.0);
+    expect(soundEngine.getVolume()).toBe(2.5);
+
+    // Clamps to min 0.0
+    soundEngine.setVolume(-1.0);
+    expect(soundEngine.getVolume()).toBe(0.0);
+
+    // Restore to 1.2
+    soundEngine.setVolume(1.2);
+    expect(soundEngine.getVolume()).toBe(1.2);
+  });
+
+  it('14. Mobile Silent Buffer Prime: unlockAudioContext() creates and starts 1-sample silent buffer to unlock hardware mixer', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    mockContext.state = 'suspended';
+    soundEngine.unlockAudioContext();
+
+    expect(mockContext.createBuffer).toHaveBeenCalledWith(1, 1, 22050);
+    expect(mockContext.createBufferSource).toHaveBeenCalled();
+  });
+
+  it('15. Audio Diagnostics & Test Sound API: provides accurate status and preview triggers', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    const diag = soundEngine.getAudioDiagnostics();
+    expect(diag).toHaveProperty('volume');
+    expect(diag).toHaveProperty('state');
+    expect(diag).toHaveProperty('enabled');
+    expect(diag.hasCompressor).toBe(true);
+
+    const playSpy = vi.spyOn(soundEngine, 'playJobComplete');
+    soundEngine.testSound('jobComplete');
+    expect(playSpy).toHaveBeenCalled();
   });
 });
