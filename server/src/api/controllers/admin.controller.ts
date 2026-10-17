@@ -33,6 +33,11 @@ const testKeySchema = z.object({
   keyId: z.string().min(1, 'Key ID is required')
 });
 
+const toggleKeySchema = z.object({
+  id: z.string().optional(),
+  isActive: z.boolean().optional()
+});
+
 const getFailedJobsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(2000).default(50),
   type: z.string().optional()
@@ -123,6 +128,38 @@ export async function deleteAiKeyHandler(request: FastifyRequest, reply: Fastify
     success: true,
     message: result.message,
     data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/ai/keys/:id/toggle
+ * POST /api/v1/admin/ai/keys/toggle
+ * Toggles an AI agent key active state
+ */
+export async function toggleAiKeyHandler(request: FastifyRequest, reply: FastifyReply) {
+  const paramId = (request.params as any)?.id;
+  const bodyId = (request.body as any)?.id;
+  const keyId = paramId || bodyId;
+  const desiredActive = (request.body as any)?.isActive;
+
+  if (!keyId) {
+    throw new BadRequestError('Vui lòng cung cấp keyId cần bật/tắt');
+  }
+
+  const updatedKey = aiMetricsService.toggleKey(keyId, desiredActive);
+  return reply.send({
+    success: true,
+    message: updatedKey.isActive ? `Đã kích hoạt ${updatedKey.name}` : `Đã tắt ${updatedKey.name}`,
+    data: {
+      id: updatedKey.id,
+      name: updatedKey.name,
+      provider: updatedKey.provider,
+      baseUrl: updatedKey.baseUrl,
+      model: updatedKey.model,
+      priority: updatedKey.priority,
+      apiKeyMasked: aiMetricsService.maskKey(updatedKey.apiKey),
+      isActive: updatedKey.isActive
+    }
   });
 }
 

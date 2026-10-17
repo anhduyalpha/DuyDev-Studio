@@ -71,6 +71,7 @@ export class AiMetricsService {
   private constructor() {
     this.dataPath = path.resolve(process.cwd(), 'data', 'ai_metrics.json');
     this.metrics = this.loadMetrics();
+    this.syncActiveEnvironment();
   }
 
   public static getInstance(): AiMetricsService {
@@ -330,14 +331,53 @@ export class AiMetricsService {
       if (data.isActive !== undefined) key.isActive = data.isActive;
     }
 
-    // If updating primary agnes key, also sync process.env
-    if (data.id === 'agnes-primary' && data.apiKey) {
-      process.env.AGNES_AI_API_KEY = data.apiKey;
-      process.env.AGNES_API_KEY = data.apiKey;
-      if (data.baseUrl) process.env.AGNES_AI_BASE_URL = data.baseUrl;
-      if (data.model) process.env.AGNES_AI_MODEL = data.model;
-    }
+    this.syncActiveEnvironment();
+    this.saveMetrics();
+    return key;
+  }
 
+  /**
+   * Returns the highest-priority active AI key that has a non-empty API key.
+   */
+  public getPrimaryActiveKey(): AiKeyConfig | null {
+    const activeKeys = this.metrics.keys
+      .filter(k => k.isActive && Boolean(k.apiKey))
+      .sort((a, b) => (a.priority || 1) - (b.priority || 1));
+    return activeKeys[0] || null;
+  }
+
+  /**
+   * Synchronizes the currently active primary AI key into process.env so that
+   * subprocess engines (Python, Chromium) immediately adopt the active provider.
+   */
+  public syncActiveEnvironment(): void {
+    const primaryActive = this.getPrimaryActiveKey();
+    if (primaryActive) {
+      process.env.AGNES_AI_API_KEY = primaryActive.apiKey;
+      process.env.AGNES_API_KEY = primaryActive.apiKey;
+      process.env.AGNES_AI_BASE_URL = primaryActive.baseUrl;
+      process.env.AGNES_AI_MODEL = primaryActive.model;
+      logger.info(
+        { keyId: primaryActive.id, name: primaryActive.name, model: primaryActive.model, baseUrl: primaryActive.baseUrl },
+        'Synchronized active AI key to process.env'
+      );
+    } else {
+      process.env.AGNES_AI_API_KEY = '';
+      process.env.AGNES_API_KEY = '';
+      logger.warn('No active AI keys configured in aiMetricsService');
+    }
+  }
+
+  /**
+   * Toggles the active status of any key (including primary or fallback keys).
+   */
+  public toggleKey(id: string, desiredActive?: boolean): AiKeyConfig {
+    const key = this.metrics.keys.find(k => k.id === id);
+    if (!key) {
+      throw new Error(`Không tìm thấy API key với ID: ${id}`);
+    }
+    key.isActive = typeof desiredActive === 'boolean' ? desiredActive : !key.isActive;
+    this.syncActiveEnvironment();
     this.saveMetrics();
     return key;
   }
@@ -351,6 +391,7 @@ export class AiMetricsService {
       throw new Error(`Không tìm thấy API key với ID: ${id}`);
     }
     this.metrics.keys.splice(idx, 1);
+    this.syncActiveEnvironment();
     this.saveMetrics();
     return { success: true, message: `Đã xóa cấu hình API key ${id} thành công` };
   }

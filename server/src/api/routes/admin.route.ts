@@ -9,6 +9,7 @@ import {
   getAiMetricsHandler,
   updateAiKeyHandler,
   deleteAiKeyHandler,
+  toggleAiKeyHandler,
   testAiKeyHandler,
   cleanTempStorageHandler,
   cleanR2OrphansHandler,
@@ -84,6 +85,8 @@ export async function adminRoute(app: FastifyInstance) {
   app.post('/api/v1/admin/ai/keys', { preHandler: adminAuthGuard }, updateAiKeyHandler);
   app.delete('/api/v1/admin/ai/keys/:id', { preHandler: adminAuthGuard }, deleteAiKeyHandler);
   app.post('/api/v1/admin/ai/keys/delete', { preHandler: adminAuthGuard }, deleteAiKeyHandler);
+  app.post('/api/v1/admin/ai/keys/:id/toggle', { preHandler: adminAuthGuard }, toggleAiKeyHandler);
+  app.post('/api/v1/admin/ai/keys/toggle', { preHandler: adminAuthGuard }, toggleAiKeyHandler);
   app.post('/api/v1/admin/ai/test-key', { preHandler: adminAuthGuard }, testAiKeyHandler);
   app.post('/api/v1/admin/ai/classifier/action', { preHandler: adminAuthGuard }, controlQuizClassifierHandler);
 

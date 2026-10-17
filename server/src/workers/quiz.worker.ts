@@ -12,6 +12,7 @@ import { StorageManager } from '../storage/storage.manager.js';
 import { logger } from '../lib/logger.js';
 import { FileCorruptedError, NotFoundError } from '../lib/errors.js';
 import { adminTelemetryService } from '../services/admin-telemetry.service.js';
+import { aiMetricsService } from '../services/ai-metrics.service.js';
 import { fileURLToPath } from 'url';
 
 import { downloadGoogleDriveFile } from '../services/drive-download.service.js';
@@ -406,15 +407,18 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
       pyArgs.push('--detected-questions', effectiveDetected.join(','));
     }
 
-    const effectiveKey = (apiKey || process.env.AGNES_AI_API_KEY || '').trim();
+    const activeAiKey = aiMetricsService.getPrimaryActiveKey();
+    const effectiveKey = (apiKey || activeAiKey?.apiKey || process.env.AGNES_AI_API_KEY || '').trim();
     if (effectiveKey) {
       pyArgs.push('--api-key', effectiveKey);
     }
-    if (process.env.AGNES_AI_BASE_URL) {
-      pyArgs.push('--base-url', process.env.AGNES_AI_BASE_URL.trim());
+    const effectiveBaseUrl = (activeAiKey?.baseUrl || process.env.AGNES_AI_BASE_URL || '').trim();
+    if (effectiveBaseUrl) {
+      pyArgs.push('--base-url', effectiveBaseUrl);
     }
-    if (process.env.AGNES_AI_MODEL) {
-      pyArgs.push('--model', process.env.AGNES_AI_MODEL.trim());
+    const effectiveModel = (activeAiKey?.model || process.env.AGNES_AI_MODEL || '').trim();
+    if (effectiveModel) {
+      pyArgs.push('--model', effectiveModel);
     }
 
     const engineTimeouts = await adminTelemetryService.getEngineTimeouts().catch(() => ({

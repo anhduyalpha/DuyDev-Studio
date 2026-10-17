@@ -303,20 +303,21 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
   // 2. Direct semantic classifier result when no PDF is attached or inspection not applicable
   if (semanticResult && semanticResult.confidence >= 0.70) {
     logger.info({ prompt: text, result: semanticResult }, 'Quiz prompt parsed via local E5 semantic classifier');
+    const regexDefaults = extractWithRegex(text);
     return reply.send({
       success: true,
       data: {
-        pages: semanticResult.pages || '',
-        count: semanticResult.count || 20,
-        start: semanticResult.start || 1,
-        end: semanticResult.end,
-        title: semanticResult.title || 'BÀI TẬP TRẮC NGHIỆM',
-        prefix: semanticResult.prefix || '',
+        pages: semanticResult.pages || (regexDefaults.pages || ''),
+        count: semanticResult.count || (regexDefaults.count || 20),
+        start: semanticResult.start || (regexDefaults.start || 1),
+        end: semanticResult.end ?? regexDefaults.end,
+        title: semanticResult.title || (regexDefaults.title || 'BÀI TẬP TRẮC NGHIỆM'),
+        prefix: semanticResult.prefix || (regexDefaults.prefix || ''),
         confidence: semanticResult.confidence,
         warnings: [],
         source: 'ai',
         detected_questions: undefined,
-        is_page_bounded: semanticResult.is_page_bounded,
+        is_page_bounded: semanticResult.is_page_bounded ?? regexDefaults.is_page_bounded,
         parity_filter: semanticResult.parity_filter || 'all',
         section_filter: semanticResult.section_filter || 'all'
       }
@@ -406,6 +407,7 @@ export async function parsePromptIntent(request: FastifyRequest, reply: FastifyR
       pages,
       count,
       start,
+      end,
       title,
       prefix: sanitizedPrefix,
       confidence: 1.0,

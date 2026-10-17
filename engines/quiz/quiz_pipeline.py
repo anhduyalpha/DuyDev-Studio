@@ -64,8 +64,8 @@ def main() -> None:
         provider = MockAIProvider()
     else:
         api_key = args.api_key or os.getenv("AGNES_AI_API_KEY") or os.getenv("AGNES_API_KEY") or ""
-        base_url = os.getenv("AGNES_AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
-        model = os.getenv("AGNES_AI_MODEL", "agnes-3.0-flash")
+        base_url = args.base_url or os.getenv("AGNES_AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
+        model = args.model or os.getenv("AGNES_AI_MODEL", "agnes-3.0-flash")
         config = ProviderConfig(
             api_key=api_key,
             base_url=base_url,

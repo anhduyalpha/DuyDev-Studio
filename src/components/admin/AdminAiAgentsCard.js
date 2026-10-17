@@ -174,29 +174,44 @@ export function renderAiAgentsCard(aiData) {
               const priorityBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isPrimary ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'}">${priorityText}</span>`;
 
               const providerLabel = String(key.provider || 'custom').toUpperCase();
+              const isKeyActive = key.isActive !== false;
+              const activeBadge = isKeyActive
+                ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Đang Bật</span>`
+                : `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-white/5 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>Đã Tắt</span>`;
 
               return `
-                <div class="p-4 rounded-xl bg-zinc-950/60 border border-white/5 flex flex-wrap items-center justify-between gap-4 hover:border-white/10 transition">
+                <div class="p-4 rounded-xl ${isKeyActive ? 'bg-zinc-950/60 border-white/5 hover:border-white/10' : 'bg-zinc-950/30 border-white/5 opacity-70 hover:opacity-90'} border flex flex-wrap items-center justify-between gap-4 transition">
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold font-mono">
+                    <div class="w-9 h-9 rounded-xl ${isKeyActive ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-zinc-800/40 border-white/5 text-zinc-500'} border flex items-center justify-center text-xs font-bold font-mono">
                       ${providerLabel.slice(0, 3)}
                     </div>
                     <div>
                       <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-sm font-semibold text-zinc-100">${escapeHtml(key.name)}</span>
+                        <span class="text-sm font-semibold ${isKeyActive ? 'text-zinc-100' : 'text-zinc-400'}">${escapeHtml(key.name)}</span>
                         ${priorityBadge}
                         ${pingBadge}
-                        ${!key.isActive ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-500">Đã tắt</span>' : ''}
+                        ${activeBadge}
                       </div>
                       <div class="text-xs text-zinc-500 font-mono mt-0.5 flex flex-wrap items-center gap-3">
-                        <span>Model: <span class="text-zinc-300">${escapeHtml(key.model || 'agnes-3.0-flash')}</span></span>
-                        <span>Key: <span class="text-zinc-300 font-mono">${escapeHtml(key.apiKeyMasked || 'Chưa cấu hình')}</span></span>
+                        <span>Model: <span class="${isKeyActive ? 'text-zinc-300' : 'text-zinc-500'}">${escapeHtml(key.model || 'agnes-3.0-flash')}</span></span>
+                        <span>Key: <span class="${isKeyActive ? 'text-zinc-300' : 'text-zinc-500'} font-mono">${escapeHtml(key.apiKeyMasked || 'Chưa cấu hình')}</span></span>
                         <span class="truncate max-w-[200px]" title="${escapeHtml(key.baseUrl)}">${escapeHtml(key.baseUrl)}</span>
                       </div>
                     </div>
                   </div>
 
                   <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="btn-toggle-ai-key px-3 py-1.5 rounded-lg ${isKeyActive ? 'bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-300 border border-emerald-500/30' : 'bg-zinc-800/90 hover:bg-zinc-700 text-zinc-400 border border-white/10'} text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      data-key-id="${escapeHtml(key.id)}"
+                      data-key-name="${escapeHtml(key.name)}"
+                      data-key-active="${isKeyActive ? 'true' : 'false'}"
+                      title="${isKeyActive ? 'Nhấn để tắt key này' : 'Nhấn để bật key này'}"
+                    >
+                      <i data-lucide="${isKeyActive ? 'power' : 'power-off'}" class="w-3.5 h-3.5 ${isKeyActive ? 'text-emerald-400' : 'text-zinc-500'}"></i>
+                      <span>${isKeyActive ? 'Bật' : 'Tắt'}</span>
+                    </button>
                     <button
                       type="button"
                       class="btn-test-ai-key px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
@@ -215,7 +230,7 @@ export function renderAiAgentsCard(aiData) {
                       data-key-model="${escapeHtml(key.model || '')}"
                       data-key-baseurl="${escapeHtml(key.baseUrl || '')}"
                       data-key-priority="${key.priority || 1}"
-                      data-key-active="${key.isActive !== false ? 'true' : 'false'}"
+                      data-key-active="${isKeyActive ? 'true' : 'false'}"
                       title="Sửa cấu hình key"
                     >
                       <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
@@ -862,7 +877,47 @@ export function attachAiAgentsListeners(containerEl, onRefresh) {
     };
   }
 
-  // 3. Test Ping Buttons
+  // 3. Toggle Key Active State Buttons
+  const toggleButtons = containerEl.querySelectorAll('.btn-toggle-ai-key');
+  toggleButtons.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const keyId = btn.dataset.keyId;
+      const keyName = btn.dataset.keyName;
+      const currentActive = btn.dataset.keyActive === 'true';
+      if (!keyId) return;
+
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="inline-block animate-spin mr-1">⟳</span> ...`;
+
+      try {
+        const resp = await fetch('/api/v1/admin/ai/keys/toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getStorageAuthHeaders()
+          },
+          body: JSON.stringify({ id: keyId, isActive: !currentActive })
+        });
+
+        const json = await resp.json();
+        if (json.success) {
+          showToast(json.message || `Đã ${!currentActive ? 'kích hoạt' : 'tắt'} ${keyName}`, 'success');
+          if (onRefresh) onRefresh();
+        } else {
+          showToast(`Lỗi: ${json.message}`, 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      } catch (err) {
+        showToast(`Không thể kết nối đến máy chủ: ${err.message}`, 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    });
+  });
+
+  // 4. Test Ping Buttons
   const testButtons = containerEl.querySelectorAll('.btn-test-ai-key');
   testButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
