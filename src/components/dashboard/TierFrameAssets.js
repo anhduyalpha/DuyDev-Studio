@@ -596,6 +596,15 @@ export function renderTierStructuralLayers(tierCode) {
           </g>
         </svg>
 
+        <!-- Blinding Optical Flare & Anamorphic Shockwave on Mega Diagonal Strike -->
+        <div class="tier-lightning-blinding-flare pointer-events-none" aria-hidden="true">
+          <div class="lightning-screen-flash"></div>
+          <div class="lightning-glare-core"></div>
+          <div class="lightning-glare-star"></div>
+          <div class="lightning-glare-anamorphic"></div>
+          <div class="lightning-shockwave-ring"></div>
+        </div>
+
         <!-- Top Keystone Crest (Cosmic Nova Core) -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 100 20" class="keystone-svg" fill="none">
