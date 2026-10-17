@@ -797,6 +797,7 @@ html.dark .tier-watermark-seal-ex {
 }
 
 /* --- Tier UR: Continuous 360° Iridescent Dichroic Frame & Diamond Lens Flares --- */
+/* --- Tier UR: Continuous 360° Iridescent Dichroic Frame, Orbiting Satellites, Floating Starlight & Prismatic Light Blade --- */
 .tier-card.tier-ur .tier-prismatic-perimeter-ur {
   position: absolute;
   inset: 0;
@@ -816,10 +817,153 @@ html.dark .tier-watermark-seal-ex {
   left: -70%;
   width: 240%;
   height: 240%;
-  background: conic-gradient(from 0deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #F472B6);
-  animation: spin-clockwise 8s linear infinite;
+  background: conic-gradient(from 0deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #818CF8, #F472B6);
+  animation: spin-clockwise 4.5s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.4)) drop-shadow(0 0 14px rgba(56, 189, 248, 0.4));
 }
 
+/* Prismatic Crystalline Light Blade Sweep */
+.tier-card.tier-ur .tier-prismatic-beam-sweep {
+  position: absolute;
+  inset: -60%;
+  width: 220%;
+  height: 220%;
+  background: linear-gradient(135deg, 
+    transparent 42%, 
+    rgba(244, 114, 182, 0.20) 46%, 
+    rgba(255, 255, 255, 0.65) 50%, 
+    rgba(56, 189, 248, 0.30) 54%, 
+    rgba(250, 204, 21, 0.20) 58%, 
+    transparent 62%);
+  transform: rotate(28deg);
+  animation: ur-prismatic-sweep 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: screen;
+}
+@keyframes ur-prismatic-sweep {
+  0% { transform: translateY(-130%) rotate(28deg); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(130%) rotate(28deg); opacity: 0; }
+}
+
+/* Floating Prismatic Starlight Motes (Drifting Particles) */
+.tier-card.tier-ur .tier-starlight-particles-ur {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 4;
+}
+.tier-card.tier-ur .starlight-mote {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: ur-starlight-float 5s ease-in-out infinite;
+}
+.tier-card.tier-ur .mote-1 {
+  width: 4.5px; height: 4.5px; left: 24%; bottom: 12%;
+  background: #F472B6; box-shadow: 0 0 10px #F472B6, 0 0 20px #FFFFFF;
+  animation-duration: 4.2s; animation-delay: 0s;
+}
+.tier-card.tier-ur .mote-2 {
+  width: 5.5px; height: 5.5px; left: 74%; bottom: 22%;
+  background: #38BDF8; box-shadow: 0 0 12px #38BDF8, 0 0 22px #FFFFFF;
+  animation-duration: 5.0s; animation-delay: 1.1s;
+}
+.tier-card.tier-ur .mote-3 {
+  width: 4px; height: 4px; left: 44%; bottom: 8%;
+  background: #FACC15; box-shadow: 0 0 10px #FACC15, 0 0 18px #FFFFFF;
+  animation-duration: 4.6s; animation-delay: 2.2s;
+}
+.tier-card.tier-ur .mote-4 {
+  width: 5px; height: 5px; left: 86%; bottom: 42%;
+  background: #C084FC; box-shadow: 0 0 12px #C084FC, 0 0 20px #FFFFFF;
+  animation-duration: 5.4s; animation-delay: 0.7s;
+}
+.tier-card.tier-ur .mote-5 {
+  width: 3.5px; height: 3.5px; left: 16%; bottom: 48%;
+  background: #34D399; box-shadow: 0 0 8px #34D399, 0 0 16px #FFFFFF;
+  animation-duration: 4.4s; animation-delay: 1.8s;
+}
+.tier-card.tier-ur .mote-6 {
+  width: 5px; height: 5px; left: 58%; bottom: 62%;
+  background: #FB7185; box-shadow: 0 0 12px #FB7185, 0 0 24px #FFFFFF;
+  animation-duration: 5.8s; animation-delay: 3.0s;
+}
+@keyframes ur-starlight-float {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  20% { opacity: 0.95; transform: translateY(-30px) scale(1.15); }
+  50% { opacity: 1; transform: translateY(-75px) scale(1.35); }
+  80% { opacity: 0.85; transform: translateY(-120px) scale(0.9); }
+  100% { transform: translateY(-160px) scale(0.3); opacity: 0; }
+}
+
+/* Multi-Phase Dual-Rotating Mythic Mandala Seal */
+.tier-card.tier-ur .ur-mandala-outer {
+  transform-origin: 87px 87px;
+  animation: spin-clockwise 22s linear infinite;
+}
+.tier-card.tier-ur .ur-mandala-inner {
+  transform-origin: 87px 87px;
+  animation: spin-counter-clockwise 15s linear infinite;
+}
+.tier-card.tier-ur .ur-mandala-core {
+  transform-origin: 87px 87px;
+  animation: ur-mandala-pulse 3.6s ease-in-out infinite;
+}
+@keyframes ur-mandala-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  50% { transform: scale(1.18); opacity: 1; filter: drop-shadow(0 0 12px #EC4899); }
+}
+
+/* Orbiting Satellites & Holographic Halo Around Icon Medallion */
+.tier-card.tier-ur .ur-halo-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, rgba(56, 189, 248, 0.22) 50%, transparent 75%);
+  animation: ur-halo-breathing 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ur-halo-breathing {
+  0%, 100% { transform: scale(0.88); opacity: 0.45; }
+  50% { transform: scale(1.22); opacity: 0.95; filter: drop-shadow(0 0 14px rgba(236, 72, 153, 0.6)); }
+}
+.tier-card.tier-ur .ur-orbit-satellite {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 10px currentColor, 0 0 16px #FFFFFF;
+}
+.tier-card.tier-ur .sat-1 {
+  top: -4px; left: 50%;
+  background: #F472B6; color: #F472B6;
+  animation: ur-orbit-360 4.2s linear infinite;
+  transform-origin: 0 44px;
+}
+.tier-card.tier-ur .sat-2 {
+  bottom: -4px; left: 50%;
+  background: #38BDF8; color: #38BDF8;
+  animation: ur-orbit-360 5.6s linear infinite reverse;
+  transform-origin: 0 -44px;
+}
+.tier-card.tier-ur .sat-3 {
+  top: 50%; right: -4px;
+  background: #FACC15; color: #FACC15;
+  animation: ur-orbit-360 7.0s linear infinite;
+  transform-origin: -44px 0;
+}
+@keyframes ur-orbit-360 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 4 Supernova Diamond Lens Flare Glints */
 .tier-card.tier-ur .tier-diamond-glints-ur {
   position: absolute;
   inset: 0;
@@ -828,8 +972,8 @@ html.dark .tier-watermark-seal-ex {
 }
 .tier-card.tier-ur .diamond-flare {
   position: absolute;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   pointer-events: none;
   animation: diamond-glint-twinkle 3.2s ease-in-out infinite;
 }
@@ -841,13 +985,13 @@ html.dark .tier-watermark-seal-ex {
 @keyframes diamond-glint-twinkle {
   0%, 100% {
     transform: scale(0.35) rotate(0deg);
-    opacity: 0.3;
-    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
+    opacity: 0.35;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
   }
   50% {
-    transform: scale(1.25) rotate(90deg);
+    transform: scale(1.6) rotate(90deg);
     opacity: 1;
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 16px currentColor);
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 1)) drop-shadow(0 0 28px currentColor);
   }
 }
 
@@ -855,7 +999,8 @@ html.dark .tier-watermark-seal-ex {
 .tier-card.tier-ss .tier-hellfire-flames {
   position: absolute;
   bottom: 0;
-  inset-x: 0;
+  left: 0;
+  right: 0;
   height: 85px;
   pointer-events: none;
   z-index: 2;

@@ -333,13 +333,26 @@ export function renderTierStructuralLayers(tierCode) {
       `.trim();
 
     case 'UR':
-      // Tier 8: Ultra Rare / Thần Thoại Lăng Kính - Full inner frame + Keystones + Prismatic Starlight Waves
+      // Tier 8: Ultra Rare / Thần Thoại Lăng Kính - Mythic Prismatic Geometry, Orbiting Satellites & Starlight Motes
       return `
         <div class="tier-inner-frame tier-inner-frame-ur pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ur pointer-events-none" aria-hidden="true"></div>
         
         <!-- Seamless 360° Iridescent Dichroic Frame -->
         <div class="tier-prismatic-perimeter-ur pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Prismatic Crystalline Shimmer Beam Sweep -->
+        <div class="tier-prismatic-beam-sweep pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Floating Prismatic Starlight Motes (Drifting Particles) -->
+        <div class="tier-starlight-particles-ur pointer-events-none" aria-hidden="true">
+          <span class="starlight-mote mote-1"></span>
+          <span class="starlight-mote mote-2"></span>
+          <span class="starlight-mote mote-3"></span>
+          <span class="starlight-mote mote-4"></span>
+          <span class="starlight-mote mote-5"></span>
+          <span class="starlight-mote mote-6"></span>
+        </div>
 
         <!-- Top Keystone Crest -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
@@ -357,7 +370,7 @@ export function renderTierStructuralLayers(tierCode) {
           </svg>
         </div>
 
-        <!-- 4 Diamond Lens Flare Glints -->
+        <!-- 4 Supernova Diamond Lens Flare Glints -->
         <div class="tier-diamond-glints-ur pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="diamond-flare flare-tl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#F472B6"/></svg>
           <svg viewBox="0 0 24 24" class="diamond-flare flare-tr" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#38BDF8"/></svg>
@@ -393,21 +406,32 @@ export function renderTierStructuralLayers(tierCode) {
           </svg>
         </div>
 
-        <!-- Layer B: Giant Background Mythic Mandala Seal (175px) -->
+        <!-- Layer B: Multi-Phase Dual-Rotating Mythic Mandala Seal (175px) -->
         <div class="tier-watermark-seal tier-watermark-seal-ur pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 175 175" class="watermark-svg" fill="none">
-            <circle cx="87" cy="87" r="82" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="10 5"/>
-            <circle cx="87" cy="87" r="72" stroke="#38BDF8" stroke-width="1.2" stroke-dasharray="4 4"/>
-            <circle cx="87" cy="87" r="60" stroke="#FBBF24" stroke-width="1" stroke-dasharray="2 4"/>
-            <polygon points="87,15 100,74 159,87 100,100 87,159 74,100 15,87 74,74" stroke="#EC4899" stroke-width="1.5"/>
-            <polygon points="87,35 96,78 139,87 96,96 87,139 78,96 35,87 78,78" stroke="#38BDF8" stroke-width="1"/>
-            <circle cx="87" cy="87" r="30" stroke="#A855F7" stroke-width="1.5"/>
+            <g class="ur-mandala-outer">
+              <circle cx="87" cy="87" r="82" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="10 5"/>
+              <circle cx="87" cy="87" r="72" stroke="#38BDF8" stroke-width="1.2" stroke-dasharray="4 4"/>
+              <circle cx="87" cy="87" r="60" stroke="#FBBF24" stroke-width="1" stroke-dasharray="2 4"/>
+            </g>
+            <g class="ur-mandala-inner">
+              <polygon points="87,15 100,74 159,87 100,100 87,159 74,100 15,87 74,74" stroke="#EC4899" stroke-width="1.5"/>
+              <polygon points="87,35 96,78 139,87 96,96 87,139 78,96 35,87 78,78" stroke="#38BDF8" stroke-width="1"/>
+            </g>
+            <g class="ur-mandala-core">
+              <circle cx="87" cy="87" r="30" stroke="#A855F7" stroke-width="1.5"/>
+              <circle cx="87" cy="87" r="16" stroke="#EC4899" stroke-width="1" stroke-dasharray="3 3"/>
+            </g>
           </svg>
         </div>
 
-        <!-- Layer A: Glowing Rotating Holographic Ring (72px) -->
+        <!-- Layer A: Orbiting Prismatic Satellites & Holographic Halo -->
         <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
           <div class="ur-halo-ring"></div>
+          <div class="ur-halo-pulse"></div>
+          <div class="ur-orbit-satellite sat-1"></div>
+          <div class="ur-orbit-satellite sat-2"></div>
+          <div class="ur-orbit-satellite sat-3"></div>
         </div>
 
         <!-- Seamless Soft Holographic Foil Sheen (400% with feathered stops, zero cut lines) -->
