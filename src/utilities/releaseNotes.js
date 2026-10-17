@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.20': {
+    version: 'v23.20',
+    title: 'Bản cập nhật v23.20',
+    date: '17/10/2026',
+    features: [
+      'Dashboard Layout Refinement: Tối giản thanh tiêu đề danh mục công cụ, giữ không gian thoáng đãng cho giao diện chính'
+    ],
+    fixes: [
+      'Gỡ bỏ nút Dán link nhanh trên header Dashboard, giữ nguyên phím tắt dán nhanh Ctrl+V'
+    ]
+  },
+
   'v23.19': {
     version: 'v23.19',
     title: 'Bản cập nhật v23.19',

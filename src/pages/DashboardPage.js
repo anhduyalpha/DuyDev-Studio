@@ -59,21 +59,10 @@ export function renderDashboardPage() {
 
       <!-- Tools Grid -->
       <div>
-        <div class="flex items-center justify-between gap-3 mb-3.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+        <div class="flex items-center justify-between mb-3.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
           <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base font-mono tracking-tight">
             ${isAllDefault ? `Tất cả công cụ (${tools.length})` : `Kết quả (${tools.length})`}
           </span>
-
-          <button
-            type="button"
-            id="btnGlobalQuickPaste"
-            class="px-3 py-1.5 rounded-xl glass-pill text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white border border-zinc-200/80 dark:border-zinc-800 transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
-            title="Dán link nhanh từ bộ nhớ tạm (Scribd, TikTok...)"
-          >
-            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
-            <span>Dán link nhanh</span>
-            <kbd class="hidden sm:inline-block px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-white/[0.08] text-[10px] font-mono text-zinc-500 dark:text-zinc-400 border border-zinc-300/60 dark:border-white/10">Ctrl+V</kbd>
-          </button>
         </div>
 
         <div id="toolsGridContainer">
@@ -262,29 +251,6 @@ export function attachDashboardListeners(onReRender) {
     });
   }
 
-  // Quick Paste button click handler
-  const btnQuickPaste = document.getElementById('btnGlobalQuickPaste');
-  if (btnQuickPaste) {
-    btnQuickPaste.addEventListener('click', async () => {
-      let pastedText = '';
-      if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
-        try {
-          pastedText = await navigator.clipboard.readText();
-        } catch (err) {
-          console.warn('[Dashboard] Clipboard read access error:', err);
-        }
-      }
-      if (pastedText && pastedText.trim()) {
-        const smart = detectSmartRoute(pastedText);
-        if (smart) {
-          showToast(`Đã nhận diện link ${smart.toolId === 'scribd' ? 'Scribd' : 'TikTok'}. Đang chuyển tiếp...`, 'success');
-          handoffSmartUrl(smart);
-          return;
-        }
-      }
-      showToast('Không tìm thấy link Scribd hoặc TikTok hợp lệ trong bộ nhớ tạm', 'info');
-    });
-  }
 
   // Global Ctrl+V smart paste router (when not typing in an input/textarea)
   const handleGlobalPaste = (e) => {
