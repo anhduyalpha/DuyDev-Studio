@@ -121,9 +121,17 @@ export function openSoundVolumeModal() {
               <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-500"></i>
               <span>Báo lỗi</span>
             </button>
-            <button type="button" data-test="toggle" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer col-span-2 sm:col-span-1">
+            <button type="button" data-test="toggle" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
               <i data-lucide="toggle-right" class="w-3.5 h-3.5 text-amber-500"></i>
               <span>Micro-Click</span>
+            </button>
+            <button type="button" data-test="themeLight" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-amber-50 dark:bg-white/[0.05] dark:hover:bg-amber-500/10 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Theme Sáng</span>
+            </button>
+            <button type="button" data-test="themeDark" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-400 dark:hover:text-indigo-300 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="moon" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>Theme Tối</span>
             </button>
           </div>
         </div>

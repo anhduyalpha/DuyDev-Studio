@@ -344,4 +344,35 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     soundEngine.testSound('jobComplete');
     expect(playSpy).toHaveBeenCalled();
   });
+
+  it('16. Theme Switch Cues: playThemeSwitch dispatches playThemeToDark for dark and playThemeToLight for light', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    const darkSpy = vi.spyOn(soundEngine, 'playThemeToDark');
+    const lightSpy = vi.spyOn(soundEngine, 'playThemeToLight');
+
+    // Test switching to dark mode
+    soundEngine.playThemeSwitch(true);
+    expect(darkSpy).toHaveBeenCalledTimes(1);
+
+    // Test switching to light mode
+    soundEngine.playThemeSwitch(false);
+    expect(lightSpy).toHaveBeenCalledTimes(1);
+
+    // Test string parameter 'dark'
+    soundEngine.playThemeSwitch('dark');
+    expect(darkSpy).toHaveBeenCalledTimes(2);
+
+    // Test string parameter 'light'
+    soundEngine.playThemeSwitch('light');
+    expect(lightSpy).toHaveBeenCalledTimes(2);
+
+    // Test soundEngine.testSound preview triggers
+    soundEngine.testSound('themeLight');
+    expect(lightSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('themeDark');
+    expect(darkSpy).toHaveBeenCalledTimes(3);
+  });
 });
+

@@ -411,6 +411,14 @@ class SoundEngine {
       case 'snap':
         this.playToggle();
         break;
+      case 'themeLight':
+      case 'light':
+        this.playThemeToLight();
+        break;
+      case 'themeDark':
+      case 'dark':
+        this.playThemeToDark();
+        break;
       case 'jobComplete':
       case 'success':
       default:
@@ -769,6 +777,147 @@ class SoundEngine {
    */
   playSnap() {
     this.playToggle();
+  }
+
+  // =========================================================================
+  // Theme Switch Cues (Light Mode Dawn vs Dark Mode Velvety Dusk)
+  // =========================================================================
+
+  /**
+   * Cue 7: `playThemeSwitch(isDark)` (Theme Switch Transition Chimes)
+   * Dispatches tailored acoustic palettes for Light vs Dark theme changes.
+   * @param {boolean|string} isDark True if switching to dark mode, false if switching to light mode
+   */
+  playThemeSwitch(isDark) {
+    const targetDark = typeof isDark === 'boolean' ? isDark : isDark === 'dark';
+    if (targetDark) {
+      this.playThemeToDark();
+    } else {
+      this.playThemeToLight();
+    }
+  }
+
+  /**
+   * Cue 7A: `playThemeToLight()` (Morning Dawn / Uplifting Crystal Shimmer)
+   * Staggered ascending chime (C5 [523Hz] -> G5 [784Hz] -> C6 [1047Hz] sparkle):
+   * Pure airy sine with bright crystalline harmonics and silk 240ms decay.
+   */
+  playThemeToLight() {
+    const ctx = this._prepareForPlayback();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.240;
+    const stopTime = now + duration;
+
+    // Primary Ascending Shimmer Note (523.25Hz -> 783.99Hz)
+    const primaryGain = ctx.createGain();
+    primaryGain.gain.setValueAtTime(0.0001, now);
+    primaryGain.gain.linearRampToValueAtTime(0.24, now + 0.012);
+    primaryGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    primaryGain.connect(this.masterGain);
+
+    const primaryOsc = ctx.createOscillator();
+    primaryOsc.type = 'sine';
+    primaryOsc.frequency.setValueAtTime(523.25, now);
+    primaryOsc.frequency.exponentialRampToValueAtTime(783.99, now + 0.080);
+    primaryOsc.connect(primaryGain);
+
+    // Sparkle Crystalline Overtone (1046.5Hz C6 sliding toward 1318.5Hz E6)
+    const sparkleStart = now + 0.045;
+    const sparkleGain = ctx.createGain();
+    sparkleGain.gain.setValueAtTime(0.0001, sparkleStart);
+    sparkleGain.gain.linearRampToValueAtTime(0.16, sparkleStart + 0.010);
+    sparkleGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    sparkleGain.connect(this.masterGain);
+
+    const sparkleOsc = ctx.createOscillator();
+    sparkleOsc.type = 'sine';
+    sparkleOsc.frequency.setValueAtTime(1046.5, sparkleStart);
+    sparkleOsc.frequency.exponentialRampToValueAtTime(1318.51, sparkleStart + 0.090);
+    sparkleOsc.connect(sparkleGain);
+
+    primaryOsc.start(now);
+    sparkleOsc.start(sparkleStart);
+
+    primaryOsc.stop(stopTime);
+    sparkleOsc.stop(stopTime);
+
+    sparkleOsc.onended = () => {
+      try {
+        primaryOsc.disconnect();
+        sparkleOsc.disconnect();
+        primaryGain.disconnect();
+        sparkleGain.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
+  }
+
+  /**
+   * Cue 7B: `playThemeToDark()` (Velvety Dusk / Deep Warm Resonance)
+   * Descending warm glide from A4 (440Hz) down to C4 (261.6Hz) with a gentle C3 (130.8Hz) sub-tone:
+   * Warm triangle wave with cozy acoustic damping over 280ms.
+   */
+  playThemeToDark() {
+    const ctx = this._prepareForPlayback();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.280;
+    const stopTime = now + duration;
+
+    // Local warm lowpass filter (1100Hz -> 650Hz) to accentuate velvety depth
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1100, now);
+    filter.frequency.exponentialRampToValueAtTime(650, now + duration);
+    filter.Q.setValueAtTime(0.8, now);
+    filter.connect(this.masterGain);
+
+    // Primary Descending Body (440Hz -> 261.63Hz)
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, now);
+    bodyGain.gain.linearRampToValueAtTime(0.28, now + 0.010);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    bodyGain.connect(filter);
+
+    const bodyOsc = ctx.createOscillator();
+    bodyOsc.type = 'triangle';
+    bodyOsc.frequency.setValueAtTime(440, now);
+    bodyOsc.frequency.exponentialRampToValueAtTime(261.63, now + 0.140);
+    bodyOsc.connect(bodyGain);
+
+    // Warm Sub Undertone (130.81Hz C3) for cozy physical presence
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.linearRampToValueAtTime(0.12, now + 0.012);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    subGain.connect(filter);
+
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(130.81, now);
+    subOsc.connect(subGain);
+
+    bodyOsc.start(now);
+    subOsc.start(now);
+
+    bodyOsc.stop(stopTime);
+    subOsc.stop(stopTime);
+
+    bodyOsc.onended = () => {
+      try {
+        bodyOsc.disconnect();
+        subOsc.disconnect();
+        bodyGain.disconnect();
+        subGain.disconnect();
+        filter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
   }
 }
 

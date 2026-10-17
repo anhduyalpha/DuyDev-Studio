@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bản Mẫu 10 Cấp Độ Khung Viền Thẻ - DuyDev Studio</title>
+  <title>Bản Mẫu 10 Cấp Độ Khung Viền RPG Item Rarity - DuyDev Studio</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,14 +60,14 @@
     <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-white/85 dark:bg-zinc-900/85 backdrop-blur-xl border border-zinc-200/80 dark:border-white/10 shadow-xl transition">
       <div class="space-y-1">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono text-xs font-bold">
-          <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-          <span>ARCHITECTURAL 10-TIER PROGRESSION &bull; LIVE PREVIEW</span>
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>RPG ITEM RARITY ESCALATION &bull; LIVE PREVIEW</span>
         </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
-          Hệ Thống 10 Cấp Độ Khung Viền &amp; Thẻ Công Cụ
+          Hệ Thống 10 Cấp Độ Thẻ Phân Hạng Vật Phẩm RPG
         </h1>
         <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
-          Tiến hóa cấu trúc qua 4 giai đoạn: từ viền đơn phiến tối giản (E&bull;D&bull;C), rãnh kim loại kép CNC (B&bull;A&bull;S), phiến ép tán sắc quang học (SS&bull;UR) đến viền xoay đa chiều 360&deg; vũ trụ (LR&bull;EX). Chuẩn thiết kế Linear/Vercel, tối ưu 100% GPU. Bấm vào thẻ để sao chép lệnh gán.
+          Cấp càng cao thì khung viền càng nhiều lớp, giáp góc đính ngọc quý, vòng ấn chương xoay quanh Icon, tàn lửa bay lơ lửng và nền thẻ biến đổi sang trọng thành Hắc Kim Hoàng Gia (LR) &amp; Tinh Vân Vũ Trụ (EX). Bấm vào thẻ để sao chép lệnh gán.
         </p>
       </div>
 
@@ -84,17 +84,17 @@
       <button type="button" class="filter-btn active-filter px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="all">
         Tất cả (10 Tiers)
       </button>
-      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="basic">
-        Cơ bản (E &bull; D &bull; C)
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="starter">
+        Khởi đầu (E &bull; D &bull; C)
       </button>
-      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="metal">
-        Kim loại (B &bull; A &bull; S)
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="refined">
+        Tinh luyện (B &bull; A)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="master">
+        Bậc thầy (S &bull; SS)
       </button>
       <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="mythic">
-        Cao cấp (SS &bull; UR)
-      </button>
-      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="cosmic">
-        Tối thượng (LR &bull; EX)
+        Thần thoại &amp; Vũ trụ (UR &bull; LR &bull; EX)
       </button>
     </div>
 
@@ -102,44 +102,38 @@
     <main id="tiersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 pt-2">
       
       <!-- ==========================================
-           STAGE 1: FOUNDATION SERIES (E, D, C)
+           TẦNG 1: TRANG BỊ KHỞI ĐẦU (E, D, C)
            ========================================== -->
 
-      <!-- Tier 1: E (Matte Slate) -->
+      <!-- Tier 1: E (Matte Slate / Common) -->
       <div class="tier-card tier-e group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="basic"
+           data-group="starter"
            data-tier="E"
            data-tool-name="Mã Băm & Base64"
            style="--accent: #64748B; --accent-contrast: #334155;">
         
-        <!-- Top Precision Accent Beam -->
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
-
         <div class="relative z-10">
-          <!-- Header: Tool Icon & Tier Crest Badge -->
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
                  style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
               <i data-lucide="binary" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Matte Slate - Cơ bản thấp">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Matte Slate - Phổ thông">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">E &bull; BASIC</span>
             </div>
           </div>
 
-          <!-- Title & Subtitle -->
           <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
             Mã Băm &amp; Base64
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-zinc-400 dark:text-zinc-500">
-            Matte Slate &bull; Cơ bản thấp
+            Common &bull; Phổ thông
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.
           </p>
 
-          <!-- Specs -->
           <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
             <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">MD5</span>
             <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">SHA-256</span>
@@ -147,7 +141,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
         <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
           <span class="font-mono text-xs uppercase tracking-wider font-semibold text-zinc-400 dark:text-zinc-500">NÂNG CAO</span>
           <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
@@ -156,23 +149,20 @@
           </div>
         </div>
 
-        <!-- 1-Click Copy Prompt Bar -->
         <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
           <span class="truncate">Áp dụng tier E</span>
           <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
         </div>
       </div>
 
-      <!-- Tier 2: D (Frosted Quartz) -->
+      <!-- Tier 2: D (Frosted Quartz / Standard) -->
       <div class="tier-card tier-d group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="basic"
+           data-group="starter"
            data-tier="D"
            data-tool-name="Quét Mã QR"
            style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
         
-        <!-- Architectural Layer: Specular Hairline -->
         <div class="tier-inner-specular pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
@@ -190,7 +180,7 @@
             Quét Mã QR
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-sky-600 dark:text-sky-400">
-            Frosted Quartz &bull; Tiêu chuẩn
+            Standard &bull; Tiêu chuẩn
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Quét và giải mã barcode, QR Code thời gian thực từ camera hoặc ảnh.
@@ -217,21 +207,20 @@
         </div>
       </div>
 
-      <!-- Tier 3: C (Anodized Emerald) -->
+      <!-- Tier 3: C (Anodized Emerald / Uncommon) -->
       <div class="tier-card tier-c group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="basic"
+           data-group="starter"
            data-tier="C"
            data-tool-name="Nén Tệp ZIP"
            style="--accent: #10B981; --accent-contrast: #047857;">
         
-        <!-- Architectural Layer: Corner Micro-Ticks -->
-        <div class="tier-micro-ticks pointer-events-none" aria-hidden="true">
+        <div class="tier-corner-ticks pointer-events-none" aria-hidden="true">
           <span class="tick-tl"></span>
           <span class="tick-tr"></span>
           <span class="tick-bl"></span>
           <span class="tick-br"></span>
         </div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+        <div class="tier-emerald-mist pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
@@ -239,7 +228,7 @@
                  style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
               <i data-lucide="folder-archive" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Anodized Emerald - Khá">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Anodized Emerald - Lục Bảo">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">C &bull; UNCOMMON</span>
             </div>
@@ -249,7 +238,7 @@
             Nén Tệp ZIP
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-emerald-600 dark:text-emerald-400">
-            Anodized Emerald &bull; Khá
+            Uncommon &bull; Lục Bảo
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Nén tệp tin và thư mục thành định dạng ZIP với độ nén tối ưu.
@@ -276,27 +265,31 @@
       </div>
 
       <!-- ==========================================
-           STAGE 2: PRECISION MACHINED METAL (B, A, S)
+           TẦNG 2: TRANG BỊ TINH LUYỆN (B, A)
            ========================================== -->
 
-      <!-- Tier 4: B (Brushed Titanium) -->
+      <!-- Tier 4: B (Brushed Titanium / Rare) -->
       <div class="tier-card tier-b group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="metal"
+           data-group="refined"
            data-tier="B"
            data-tool-name="Soi Tệp Nén"
-           style="--accent: #94A3B8; --accent-contrast: #334155;">
+           style="--accent: #3B82F6; --accent-contrast: #1D4ED8;">
         
-        <!-- Architectural Layer: Recessed Double-Bezel Track -->
-        <div class="tier-double-bezel pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        <div class="tier-corner-clasps-b pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 28 28" class="clasp-svg clasp-tl" fill="none"><path d="M2 18V8a6 6 0 0 1 6-6h10" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"/><circle cx="8" cy="8" r="2.5" fill="#3B82F6" stroke="#93C5FD"/></svg>
+          <svg viewBox="0 0 28 28" class="clasp-svg clasp-tr" fill="none"><path d="M26 18V8a6 6 0 0 0-6-6H10" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="8" r="2.5" fill="#3B82F6" stroke="#93C5FD"/></svg>
+          <svg viewBox="0 0 28 28" class="clasp-svg clasp-bl" fill="none"><path d="M2 10v10a6 6 0 0 0 6 6h10" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"/><circle cx="8" cy="20" r="2.5" fill="#3B82F6" stroke="#93C5FD"/></svg>
+          <svg viewBox="0 0 28 28" class="clasp-svg clasp-br" fill="none"><path d="M26 10v10a6 6 0 0 1-6 6H10" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="20" r="2.5" fill="#3B82F6" stroke="#93C5FD"/></svg>
+        </div>
+        <div class="tier-metallic-shimmer pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 40%, transparent);">
+                 style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);">
               <i data-lucide="archive" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Brushed Titanium - Hiếm">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Brushed Titanium - Lam Ngọc Tinh Luyện">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">B &bull; RARE</span>
             </div>
@@ -305,8 +298,8 @@
           <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
             Soi Tệp Nén
           </h3>
-          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-slate-600 dark:text-slate-400">
-            Brushed Titanium &bull; Hiếm
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-blue-600 dark:text-blue-400">
+            Rare &bull; Lam Ngọc Tinh Luyện
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Duyệt cấu trúc thư mục và trích xuất không cần giải nén.
@@ -320,7 +313,7 @@
         </div>
 
         <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
-          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-slate-600 dark:text-slate-400">FILE NÉN</span>
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-blue-600 dark:text-blue-400">FILE NÉN</span>
           <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
             <span>Mở</span>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
@@ -333,25 +326,45 @@
         </div>
       </div>
 
-      <!-- Tier 5: A (Imperial Gold) -->
+      <!-- Tier 5: A (Imperial Gold / Epic) -->
       <div class="tier-card tier-a group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="metal"
+           data-group="refined"
            data-tier="A"
            data-tool-name="PDF Studio"
            style="--accent: #F59E0B; --accent-contrast: #B45309;">
         
-        <!-- Architectural Layers: Top Gold Laser Bar + Double Bezel -->
-        <div class="tier-top-laser-bar pointer-events-none" aria-hidden="true"></div>
-        <div class="tier-double-bezel pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none"></div>
+        <div class="tier-gold-filigree-a pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 34 34" class="filigree-svg fil-tl" fill="none">
+            <path d="M2 20V8a6 6 0 0 1 6-6h12" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="8,8 13,3 18,8 13,13" fill="#B45309" stroke="#FDE68A" stroke-width="1.2"/>
+            <circle cx="13" cy="8" r="2" fill="#FBBF24"/>
+          </svg>
+          <svg viewBox="0 0 34 34" class="filigree-svg fil-tr" fill="none">
+            <path d="M32 20V8a6 6 0 0 0-6-6H14" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="26,8 21,3 16,8 21,13" fill="#B45309" stroke="#FDE68A" stroke-width="1.2"/>
+            <circle cx="21" cy="8" r="2" fill="#FBBF24"/>
+          </svg>
+          <svg viewBox="0 0 34 34" class="filigree-svg fil-bl" fill="none">
+            <path d="M2 14v12a6 6 0 0 0 6 6h12" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="8,26 13,21 18,26 13,31" fill="#B45309" stroke="#FDE68A" stroke-width="1.2"/>
+            <circle cx="13" cy="26" r="2" fill="#FBBF24"/>
+          </svg>
+          <svg viewBox="0 0 34 34" class="filigree-svg fil-br" fill="none">
+            <path d="M32 14v12a6 6 0 0 1-6 6H14" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="26,26 21,21 16,26 21,31" fill="#B45309" stroke="#FDE68A" stroke-width="1.2"/>
+            <circle cx="21" cy="26" r="2" fill="#FBBF24"/>
+          </svg>
+        </div>
+        <div class="tier-top-gold-bar pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-inner-hairline pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);">
+                 style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent);">
               <i data-lucide="file-text" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Imperial Gold - Sử thi">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Imperial Gold - Sử Thi Hoàng Kim">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">A &bull; EPIC</span>
             </div>
@@ -361,7 +374,7 @@
             PDF Studio
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-amber-600 dark:text-amber-400">
-            Imperial Gold &bull; Sử thi
+            Epic &bull; Sử Thi Hoàng Kim
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector sắc nét.
@@ -388,25 +401,49 @@
         </div>
       </div>
 
-      <!-- Tier 6: S (Royal Amethyst) -->
+      <!-- ==========================================
+           TẦNG 3: TRANG BỊ BẬC THẦY (S, SS)
+           ========================================== -->
+
+      <!-- Tier 6: S (Royal Amethyst / Master) -->
       <div class="tier-card tier-s group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="metal"
+           data-group="master"
            data-tier="S"
            data-tool-name="File Converter"
-           style="--accent: #8B5CF6; --accent-contrast: #6D28D9;">
+           style="--accent: #9333EA; --accent-contrast: #7E22CE;">
         
-        <!-- Architectural Layers: Brushed Silk Texture + Double Bezel -->
-        <div class="tier-silk-texture pointer-events-none" aria-hidden="true"></div>
-        <div class="tier-double-bezel pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none"></div>
+        <div class="tier-corner-armor-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 36 36" class="armor-svg arm-tl" fill="none">
+            <path d="M2 22V8a6 6 0 0 1 6-6h14" stroke="#9333EA" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M6 22V10a4 4 0 0 1 4-4h12" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="8" cy="8" r="2.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 36 36" class="armor-svg arm-tr" fill="none">
+            <path d="M34 22V8a6 6 0 0 0-6-6H14" stroke="#9333EA" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M30 22V10a4 4 0 0 0-4-4H14" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="28" cy="8" r="2.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 36 36" class="armor-svg arm-bl" fill="none">
+            <path d="M2 14v14a6 6 0 0 0 6 6h14" stroke="#9333EA" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M6 14v12a4 4 0 0 0 4 4h12" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="8" cy="28" r="2.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 36 36" class="armor-svg arm-br" fill="none">
+            <path d="M34 14v14a6 6 0 0 1-6 6H14" stroke="#9333EA" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M30 14v12a4 4 0 0 1-4 4H14" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="28" cy="28" r="2.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+        </div>
+        <div class="tier-side-rails pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);">
+                 style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent);">
               <i data-lucide="refresh-cw" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Siêu việt">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Tử Kim Siêu Việt">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">S &bull; MASTER</span>
             </div>
@@ -416,7 +453,7 @@
             File Converter
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-purple-600 dark:text-purple-400">
-            Royal Amethyst &bull; Siêu việt
+            Master &bull; Tử Kim Siêu Việt
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng.
@@ -443,35 +480,67 @@
         </div>
       </div>
 
-      <!-- ==========================================
-           STAGE 3: PRESTIGE & HOLOGRAPHIC SLAB (SS, UR)
-           ========================================== -->
-
-      <!-- Tier 7: SS (Crimson Prestige) -->
+      <!-- Tier 7: SS (Crimson Prestige / Grandmaster) -->
       <div class="tier-card tier-ss group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="mythic"
+           data-group="master"
            data-tier="SS"
            data-tool-name="Tạo Bài Tập Trắc Nghiệm"
-           style="--accent: #F43F5E; --accent-contrast: #BE123C;">
+           style="--accent: #E11D48; --accent-contrast: #9F1239;">
         
-        <!-- Architectural Layers: CAD Brackets + Dot Matrix + Icon Spotlight -->
-        <div class="tier-cad-brackets pointer-events-none" aria-hidden="true">
-          <span class="cad-tl"></span>
-          <span class="cad-tr"></span>
-          <span class="cad-bl"></span>
-          <span class="cad-br"></span>
+        <div class="tier-bloodgem-armor-ss pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 40 40" class="blood-svg bld-tl" fill="none">
+            <path d="M2 26V10a8 8 0 0 1 8-8h16" stroke="#E11D48" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M2 10L10 2" stroke="#FB7185" stroke-width="2"/>
+            <polygon points="10,10 16,6 20,10 16,14" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
+            <circle cx="10" cy="10" r="2.5" fill="#F43F5E" filter="drop-shadow(0 0 4px #E11D48)"/>
+          </svg>
+          <svg viewBox="0 0 40 40" class="blood-svg bld-tr" fill="none">
+            <path d="M38 26V10a8 8 0 0 0-8-8H14" stroke="#E11D48" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M38 10L30 2" stroke="#FB7185" stroke-width="2"/>
+            <polygon points="30,10 24,6 20,10 24,14" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
+            <circle cx="30" cy="10" r="2.5" fill="#F43F5E" filter="drop-shadow(0 0 4px #E11D48)"/>
+          </svg>
+          <svg viewBox="0 0 40 40" class="blood-svg bld-bl" fill="none">
+            <path d="M2 14v16a8 8 0 0 0 8 8h16" stroke="#E11D48" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M2 30L10 38" stroke="#FB7185" stroke-width="2"/>
+            <polygon points="10,30 16,26 20,30 16,34" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
+            <circle cx="10" cy="30" r="2.5" fill="#F43F5E" filter="drop-shadow(0 0 4px #E11D48)"/>
+          </svg>
+          <svg viewBox="0 0 40 40" class="blood-svg bld-br" fill="none">
+            <path d="M38 14v16a8 8 0 0 1-8 8H14" stroke="#E11D48" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M38 30L30 38" stroke="#FB7185" stroke-width="2"/>
+            <polygon points="30,30 24,26 20,30 24,34" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
+            <circle cx="30" cy="30" r="2.5" fill="#F43F5E" filter="drop-shadow(0 0 4px #E11D48)"/>
+          </svg>
         </div>
-        <div class="tier-dot-matrix pointer-events-none" aria-hidden="true"></div>
-        <div class="tier-icon-spotlight pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Rotating Geometric Rune Ring behind Icon -->
+        <div class="tier-icon-rune-ss pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 80" class="rune-circle-svg" fill="none">
+            <circle cx="40" cy="40" r="35" stroke="#E11D48" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <polygon points="40,8 68,56 12,56" stroke="#FB7185" stroke-width="1" stroke-dasharray="2 3"/>
+            <polygon points="40,72 12,24 68,24" stroke="#FB7185" stroke-width="1" stroke-dasharray="2 3"/>
+            <circle cx="40" cy="40" r="22" stroke="#FDA4AF" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- Floating Crimson Embers -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle ember ember-1"></span>
+          <span class="particle ember ember-2"></span>
+          <span class="particle ember ember-3"></span>
+          <span class="particle ember ember-4"></span>
+        </div>
+
+        <div class="tier-energy-pulse-ss pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);">
+                 style="background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);">
               <i data-lucide="graduation-cap" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Crimson Prestige - Đại cao thủ">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Crimson Prestige - Huyết Ma Đại Cao Thủ">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">★ SS &bull; GRANDMASTER</span>
             </div>
@@ -481,7 +550,7 @@
             Tạo Bài Tập Trắc Nghiệm
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-rose-600 dark:text-rose-400">
-            Crimson Prestige &bull; Đại cao thủ
+            Grandmaster &bull; Huyết Ma Đại Cao Thủ
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.
@@ -508,30 +577,38 @@
         </div>
       </div>
 
-      <!-- Tier 8: UR (Prismatic Hologram) -->
+      <!-- ==========================================
+           TẦNG 4: TRANG BỊ THẦN THOẠI (UR)
+           ========================================== -->
+
+      <!-- Tier 8: UR (Prismatic Hologram / Mythic) -->
       <div class="tier-card tier-ur group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
            data-group="mythic"
            data-tier="UR"
            data-tool-name="Studocu Downloader"
            style="--accent: #EC4899; --accent-contrast: #BE185D;">
         
-        <!-- Architectural Layers: Corner Filigrees + Holographic Foil Sheen -->
-        <div class="tier-filigree-corners pointer-events-none" aria-hidden="true">
-          <span class="filigree-tl"></span>
-          <span class="filigree-tr"></span>
-          <span class="filigree-bl"></span>
-          <span class="filigree-br"></span>
+        <div class="tier-starbursts-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="star-svg star-tl" fill="none"><path d="M12 0L14 9L23 12L14 15L12 24L10 15L1 12L10 9Z" fill="#F472B6"/><circle cx="12" cy="12" r="2" fill="#FFFFFF"/></svg>
+          <svg viewBox="0 0 24 24" class="star-svg star-tr" fill="none"><path d="M12 0L14 9L23 12L14 15L12 24L10 15L1 12L10 9Z" fill="#38BDF8"/><circle cx="12" cy="12" r="2" fill="#FFFFFF"/></svg>
+          <svg viewBox="0 0 24 24" class="star-svg star-bl" fill="none"><path d="M12 0L14 9L23 12L14 15L12 24L10 15L1 12L10 9Z" fill="#FBBF24"/><circle cx="12" cy="12" r="2" fill="#FFFFFF"/></svg>
+          <svg viewBox="0 0 24 24" class="star-svg star-br" fill="none"><path d="M12 0L14 9L23 12L14 15L12 24L10 15L1 12L10 9Z" fill="#A855F7"/><circle cx="12" cy="12" r="2" fill="#FFFFFF"/></svg>
         </div>
-        <div class="tier-holo-sheen pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <!-- Rotating Holographic Halo behind Icon -->
+        <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
+          <div class="ur-halo-ring"></div>
+        </div>
+
+        <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);">
+                 style="background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);">
               <i data-lucide="file-down" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Prismatic Hologram - Thần thoại">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Prismatic Hologram - Thần Thoại Lăng Kính">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">✦ UR &bull; MYTHIC</span>
             </div>
@@ -541,7 +618,7 @@
             Studocu Downloader
           </h3>
           <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-pink-600 dark:text-pink-400">
-            Prismatic Hologram &bull; Thần thoại
+            Mythic &bull; Thần Thoại Lăng Kính
           </p>
           <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
             Tải giáo trình &amp; tài liệu Studocu sang PDF rõ nét không che.
@@ -568,126 +645,215 @@
       </div>
 
       <!-- ==========================================
-           STAGE 4: SIGNATURE CELESTIAL SERIES (LR, EX)
+           TẦNG 5: THẦN KHÍ CHÍ TÔN & VŨ TRỤ (LR, EX)
+           LỘT XÁC NỀN HOÀNG KIM & TINH VÂN VŨ TRỤ
            ========================================== -->
 
-      <!-- Tier 9: LR (Sovereign Flare) -->
+      <!-- Tier 9: LR (Sovereign Flare - Thần Khí Thái Dương) -->
       <div class="tier-card tier-lr group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="cosmic"
+           data-group="mythic"
            data-tier="LR"
            data-tool-name="ViewSplit So Sánh Ảnh"
-           style="--accent: #EAB308; --accent-contrast: #A16207;">
+           style="--accent: #FACC15; --accent-contrast: #CA8A04;">
         
-        <!-- Architectural Layers: Triple Frame + Corner Nodes + Horizon Beam + Holo Sheen -->
-        <div class="tier-triple-frame pointer-events-none" aria-hidden="true">
-          <span class="node-tl"></span>
-          <span class="node-tr"></span>
-          <span class="node-bl"></span>
-          <span class="node-br"></span>
+        <div class="tier-solar-filigree-lr pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 44 44" class="solar-corner-svg slr-tl" fill="none">
+            <path d="M2 30V10a8 8 0 0 1 8-8h20" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M4 14L14 4" stroke="#FEF08A" stroke-width="1.8"/>
+            <rect x="8" y="8" width="8" height="8" transform="rotate(45 12 12)" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="2" fill="#FEF08A"/>
+          </svg>
+          <svg viewBox="0 0 44 44" class="solar-corner-svg slr-tr" fill="none">
+            <path d="M42 30V10a8 8 0 0 0-8-8H14" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M40 14L30 4" stroke="#FEF08A" stroke-width="1.8"/>
+            <rect x="28" y="8" width="8" height="8" transform="rotate(45 32 12)" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="32" cy="12" r="2" fill="#FEF08A"/>
+          </svg>
+          <svg viewBox="0 0 44 44" class="solar-corner-svg slr-bl" fill="none">
+            <path d="M2 14v20a8 8 0 0 0 8 8h20" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M4 30L14 40" stroke="#FEF08A" stroke-width="1.8"/>
+            <rect x="8" y="28" width="8" height="8" transform="rotate(45 12 32)" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="12" cy="32" r="2" fill="#FEF08A"/>
+          </svg>
+          <svg viewBox="0 0 44 44" class="solar-corner-svg slr-br" fill="none">
+            <path d="M42 14v20a8 8 0 0 1-8 8H14" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M40 30L30 40" stroke="#FEF08A" stroke-width="1.8"/>
+            <rect x="28" y="28" width="8" height="8" transform="rotate(45 32 32)" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="32" cy="32" r="2" fill="#FEF08A"/>
+          </svg>
         </div>
-        <div class="tier-horizon-beam pointer-events-none" aria-hidden="true"></div>
-        <div class="tier-holo-sheen pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <!-- Rotating Solar Halo behind Icon -->
+        <div class="tier-icon-solar-lr pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 88 88" class="solar-ring-svg" fill="none">
+            <circle cx="44" cy="44" r="38" stroke="#EAB308" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <circle cx="44" cy="44" r="28" stroke="#CA8A04" stroke-width="1" stroke-dasharray="2 4"/>
+            <path d="M44 2V10M44 78V86M2 44H10M78 44H86M14 14L20 20M68 68L74 74M14 74L20 68M68 20L74 14" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <!-- Floating Golden Sparks -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle spark spark-1"></span>
+          <span class="particle spark spark-2"></span>
+          <span class="particle spark spark-3"></span>
+          <span class="particle spark spark-4"></span>
+          <span class="particle spark spark-5"></span>
+        </div>
+
+        <div class="tier-molten-plasma pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);">
+                 style="background: rgba(250, 204, 21, 0.25); color: #FEF08A; border: 1.5px solid #FACC15;">
               <i data-lucide="columns-2" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Sovereign Flare - Huyền thoại tối thượng">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Sovereign Flare - Thần Khí Thái Dương">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">❖ LR &bull; SOVEREIGN</span>
             </div>
           </div>
 
-          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+          <h3 class="font-bold text-white text-base sm:text-lg group-hover:text-yellow-300 transition tracking-tight">
             ViewSplit So Sánh Ảnh
           </h3>
-          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-yellow-600 dark:text-yellow-400">
-            Sovereign Flare &bull; Huyền thoại
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-yellow-400">
+            Sovereign &bull; Thần Khí Thái Dương
           </p>
-          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-300">
             So sánh chi tiết 2 hình ảnh theo thanh trượt tương tác &amp; chế độ Diff.
           </p>
 
           <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Slider Wipe</span>
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Diff View</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-yellow-400/10 text-yellow-300 border border-yellow-400/30">Slider Wipe</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-yellow-400/10 text-yellow-300 border border-yellow-400/30">Diff View</span>
           </div>
         </div>
 
-        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
-          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-yellow-600 dark:text-yellow-400">TIỆN ÍCH</span>
-          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-yellow-400/30 flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-yellow-400">TIỆN ÍCH</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-yellow-200 group-hover:text-white transition">
             <span>Mở</span>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
           </div>
         </div>
 
-        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-yellow-400/25 flex items-center justify-between text-[11px] font-mono text-yellow-300/80 group-hover:text-yellow-200 transition">
           <span class="truncate">Áp dụng tier LR</span>
           <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
         </div>
       </div>
 
-      <!-- Tier 10: EX (Astral Singularity) -->
+      <!-- Tier 10: EX (Astral Singularity - Đẳng Cấp Vũ Trụ) -->
       <div class="tier-card tier-ex group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
-           data-group="cosmic"
+           data-group="mythic"
            data-tier="EX"
            data-tool-name="TikTok Downloader"
-           style="--accent: #06B6D4; --accent-contrast: #0E7490;">
+           style="--accent: #06B6D4; --accent-contrast: #0891B2;">
         
-        <!-- Architectural Layers: 360° Rotating Conic Perimeter + Astral Glow + Laser Sightlines + Holo Sheen -->
-        <div class="tier-conic-perimeter pointer-events-none" aria-hidden="true"></div>
-        <div class="tier-astral-glow pointer-events-none" aria-hidden="true"></div>
-        <div class="tier-laser-sightlines pointer-events-none" aria-hidden="true">
-          <span class="sight-tl"></span>
-          <span class="sight-tr"></span>
-          <span class="sight-bl"></span>
-          <span class="sight-br"></span>
+        <!-- 360° Conic Aurora Plasma Border -->
+        <div class="tier-plasma-perimeter-ex pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Crystalline Winged Corner Frames -->
+        <div class="tier-crystal-corners-ex pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 48 48" class="crystal-corner-svg cry-tl" fill="none">
+            <path d="M2 34V12a10 10 0 0 1 10-10h22" stroke="#22D3EE" stroke-width="3" stroke-linecap="round"/>
+            <path d="M2 18L18 2" stroke="#67E8F9" stroke-width="2"/>
+            <path d="M8 26L26 8" stroke="#A855F7" stroke-width="1.5"/>
+            <polygon points="12,12 18,6 24,12 18,18" fill="#0891B2" stroke="#22D3EE" stroke-width="1.5"/>
+            <circle cx="18" cy="12" r="2.5" fill="#E0F2FE" filter="drop-shadow(0 0 6px #06B6D4)"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="crystal-corner-svg cry-tr" fill="none">
+            <path d="M46 34V12a10 10 0 0 0-10-10H14" stroke="#22D3EE" stroke-width="3" stroke-linecap="round"/>
+            <path d="M46 18L30 2" stroke="#67E8F9" stroke-width="2"/>
+            <path d="M40 26L22 8" stroke="#A855F7" stroke-width="1.5"/>
+            <polygon points="36,12 30,6 24,12 30,18" fill="#0891B2" stroke="#22D3EE" stroke-width="1.5"/>
+            <circle cx="30" cy="12" r="2.5" fill="#E0F2FE" filter="drop-shadow(0 0 6px #06B6D4)"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="crystal-corner-svg cry-bl" fill="none">
+            <path d="M2 14v22a10 10 0 0 0 10 10h22" stroke="#22D3EE" stroke-width="3" stroke-linecap="round"/>
+            <path d="M2 30L18 46" stroke="#67E8F9" stroke-width="2"/>
+            <path d="M8 22L26 40" stroke="#A855F7" stroke-width="1.5"/>
+            <polygon points="12,36 18,30 24,36 18,42" fill="#0891B2" stroke="#22D3EE" stroke-width="1.5"/>
+            <circle cx="18" cy="36" r="2.5" fill="#E0F2FE" filter="drop-shadow(0 0 6px #06B6D4)"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="crystal-corner-svg cry-br" fill="none">
+            <path d="M46 14v22a10 10 0 0 1-10 10H14" stroke="#22D3EE" stroke-width="3" stroke-linecap="round"/>
+            <path d="M46 30L30 46" stroke="#67E8F9" stroke-width="2"/>
+            <path d="M40 22L22 40" stroke="#A855F7" stroke-width="1.5"/>
+            <polygon points="36,36 30,30 24,36 30,42" fill="#0891B2" stroke="#22D3EE" stroke-width="1.5"/>
+            <circle cx="30" cy="36" r="2.5" fill="#E0F2FE" filter="drop-shadow(0 0 6px #06B6D4)"/>
+          </svg>
         </div>
-        <div class="tier-holo-sheen pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+
+        <!-- Dual Counter-Rotating Astrolabe Rings behind Icon -->
+        <div class="tier-astrolabe-ex pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 92 92" class="astrolabe-outer" fill="none">
+            <circle cx="46" cy="46" r="41" stroke="#22D3EE" stroke-width="1.5" stroke-dasharray="8 4 2 4"/>
+            <circle cx="46" cy="46" r="34" stroke="#818CF8" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="46" cy="5" r="2.5" fill="#67E8F9"/>
+            <circle cx="46" cy="87" r="2.5" fill="#67E8F9"/>
+            <circle cx="5" cy="46" r="2.5" fill="#67E8F9"/>
+            <circle cx="87" cy="46" r="2.5" fill="#67E8F9"/>
+          </svg>
+          <svg viewBox="0 0 92 92" class="astrolabe-inner" fill="none">
+            <circle cx="46" cy="46" r="26" stroke="#C084FC" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <polygon points="46,24 64,56 28,56" stroke="#38BDF8" stroke-width="1"/>
+            <polygon points="46,68 28,36 64,36" stroke="#38BDF8" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- Floating Cosmic Stardust -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle star star-1"></span>
+          <span class="particle star star-2"></span>
+          <span class="particle star star-3"></span>
+          <span class="particle star star-4"></span>
+          <span class="particle star star-5"></span>
+          <span class="particle star star-6"></span>
+        </div>
+
+        <div class="tier-cosmic-grid pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs shrink-0"
-                 style="background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 65%, transparent);">
+                 style="background: rgba(6, 182, 212, 0.28); color: #E0F2FE; border: 1.5px solid #22D3EE;">
               <i data-lucide="video" class="w-5 h-5 sm:w-6 sm:h-6"></i>
             </div>
-            <div class="tier-crest-badge shadow-xs shrink-0" title="Astral Singularity - Đẳng cấp vũ trụ đặc biệt">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Astral Singularity - Đẳng Cấp Vũ Trụ">
               <span class="tier-badge-indicator"></span>
               <span class="tier-badge-label">✦ EX &bull; CELESTIAL</span>
             </div>
           </div>
 
-          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+          <h3 class="font-bold text-white text-base sm:text-lg group-hover:text-cyan-300 transition tracking-tight">
             TikTok Downloader
           </h3>
-          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-cyan-600 dark:text-cyan-400">
-            Astral Singularity &bull; Đẳng cấp vũ trụ
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-cyan-400">
+            Celestial &bull; Đẳng Cấp Vũ Trụ
           </p>
-          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-300">
             Tải video &amp; slideshow ảnh TikTok không logo, âm thanh MP3 lưu Drive.
           </p>
 
           <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Không Logo</span>
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Lưu Drive</span>
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">MP3</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">Không Logo</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">Lưu Drive</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">MP3</span>
           </div>
         </div>
 
-        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
-          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-cyan-600 dark:text-cyan-400">TIỆN ÍCH</span>
-          <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-cyan-400/30 flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-cyan-300">TIỆN ÍCH</span>
+          <div class="flex items-center gap-1 text-xs font-semibold text-cyan-200 group-hover:text-white transition">
             <span>Mở</span>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
           </div>
         </div>
 
-        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition">
+        <div class="relative z-10 mt-2.5 pt-2 border-t border-dashed border-cyan-400/30 flex items-center justify-between text-[11px] font-mono text-cyan-300/80 group-hover:text-cyan-100 transition">
           <span class="truncate">Áp dụng tier EX</span>
           <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
         </div>

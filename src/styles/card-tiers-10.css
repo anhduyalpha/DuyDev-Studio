@@ -1,28 +1,28 @@
 /**
  * Card Tiers 10-Level System (Tool Card Tier List 10 Levels)
- * DuyDev Studio PWA - Razor-Sharp Architectural Luxury & True Structural Progression
+ * DuyDev Studio PWA - RPG Item Rarity Escalation Architecture
  *
- * 5-Stage Architectural Progression:
- *  Stage 1: Foundation Series (Clean Minimalist Architecture)
- *    - Tier 1: E  (Matte Slate)        - Pure 1px single-layer border, matte finish, zero glow.
- *    - Tier 2: D  (Frosted Quartz)     - Cool steel border, 1px top specular hairline highlight.
- *    - Tier 3: C  (Anodized Emerald)   - Emerald wash, 6px L-shaped micro-ticks inside 4 corners.
- *  Stage 2: Precision Machined Metal Series (Double-Bezel & Laser Hairlines)
- *    - Tier 4: B  (Brushed Titanium)   - Recessed double-bezel track, titanium sapphire badge.
- *    - Tier 5: A  (Imperial Gold)      - Precision gold double-bezel, flush 2px gold laser bar.
- *    - Tier 6: S  (Royal Amethyst)     - Rose-gold/violet metallic border, diagonal silk texture.
- *  Stage 3: Prestige & Holographic Slab Series (Architectural Inner Frame + Foil Refraction)
- *    - Tier 7: SS (Crimson Prestige)   - Graded collector's slab, 1px CAD corner brackets, dot matrix.
- *    - Tier 8: UR (Prismatic Hologram) - Iridescent dichroic border, inner filigrees, holo foil shimmer.
- *  Stage 4: Signature Celestial Series (Maximum Dimensional Craft)
- *    - Tier 9: LR (Sovereign Flare)    - Triple-layer frame, geometric corner nodes, horizon light-beam.
- *    - Tier 10: EX (Astral Singularity)- 360° rotating 1.5px conic perimeter mask, astral grid glow, laser sightlines.
+ * 5 Tiers / 10 Levels Progression:
+ *  Tầng 1: Trang Bị Khởi Đầu (Common & Uncommon)
+ *    - Tier 1: E  (Matte Slate)        - 1px viền xám mờ đơn giản, không góc trang trí, không phát sáng.
+ *    - Tier 2: D  (Frosted Quartz)     - 1.5px viền xanh thép, ánh specular đỉnh thẻ, hộp icon viền đơn.
+ *    - Tier 3: C  (Anodized Emerald)   - 2px viền kép ngọc lục bảo, 4 góc vát kim loại, sương xanh nhẹ.
+ *  Tầng 2: Trang Bị Tinh Luyện (Rare & Epic)
+ *    - Tier 4: B  (Brushed Titanium)   - 2px viền lam ngọc phát sáng, 4 góc giáp kim loại bạc-lam SVG, vệt sáng kim loại.
+ *    - Tier 5: A  (Imperial Gold)      - 2px viền vàng hoàng kim đúc nổi + viền phụ, giáp góc vàng đính đá hổ phách SVG.
+ *  Tầng 3: Trang Bị Bậc Thầy & Đại Cao Thủ (Master & Grandmaster)
+ *    - Tier 6: S  (Royal Amethyst)     - 2.5px viền tím hoàng gia pha vàng kim, luồng sáng sườn thẻ, hào quang kép sau icon.
+ *    - Tier 7: SS (Crimson Prestige)   - 2.5px viền năng lượng huyết ngọc, giáp góc huyết ma đính ngọc đỏ, ấn chương xoay + tàn lửa đỏ.
+ *  Tầng 4: Trang Bị Thần Thoại (Mythic)
+ *    - Tier 8: UR (Prismatic Hologram) - 3px viền lăng kính 7 màu, bề mặt holographic foil, sao 4 cánh lấp lánh, đài lăng kính xoay.
+ *  Tầng 5: Thần Khí Chí Tôn & Vũ Trụ (Sovereign & Celestial)
+ *    - Tier 9: LR (Sovereign Flare)    - LỘT XÁC TOÀN BỘ NỀN: Hắc Kim Hoàng Gia (Deep Royal Obsidian & Molten Gold), viền thần khí 3 lớp, cổ ngữ vàng kim, vòng thái dương tỏa tia sáng + bụi vàng.
+ *    - Tier 10: EX (Astral Singularity)- LỘT XÁC TOÀN BỘ NỀN: Tinh Vân Vũ Trụ Đa Chiều (Deep Cosmic Nebula), viền cực quang xoáy 360 độ, giáp cánh tinh thể, vòng tinh cầu đa quỹ đạo + bụi sao.
  *
  * Performance Compliance:
  *  - 100% GPU-composited animations (transform & opacity only).
  *  - Suspends immediately when `html.app-backgrounded` is present (KI-FIX-023).
  *  - Honors `prefers-reduced-motion: reduce`.
- *  - Full Light/Dark mode contrast compliance.
  */
 
 /* ==============================================================================
@@ -33,10 +33,14 @@
   isolation: isolate;
   border-radius: 1rem;
   overflow: hidden;
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.22s ease,
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s ease,
               border-color 0.2s ease,
-              background-color 0.2s ease;
+              background-color 0.25s ease;
+}
+
+.tier-card:hover {
+  transform: translateY(-4px);
 }
 
 /* Crest Badge Base */
@@ -44,7 +48,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
+  padding: 3.5px 10px;
   border-radius: 9999px;
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 10px;
@@ -52,8 +56,9 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   user-select: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   line-height: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 10;
 }
 
 .tier-crest-badge .tier-badge-indicator {
@@ -63,13 +68,41 @@
   flex-shrink: 0;
 }
 
+/* Common Corner SVG Base */
+.clasp-svg, .filigree-svg, .armor-svg, .blood-svg, .star-svg, .solar-corner-svg, .crystal-corner-svg {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.clasp-tl, .fil-tl, .arm-tl, .bld-tl, .star-tl, .slr-tl, .cry-tl { top: 0; left: 0; }
+.clasp-tr, .fil-tr, .arm-tr, .bld-tr, .star-tr, .slr-tr, .cry-tr { top: 0; right: 0; }
+.clasp-bl, .fil-bl, .arm-bl, .bld-bl, .star-bl, .slr-bl, .cry-bl { bottom: 0; left: 0; }
+.clasp-br, .fil-br, .arm-br, .bld-br, .star-br, .slr-br, .cry-br { bottom: 0; right: 0; }
+
+/* Particles Container */
+.tier-particles-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  animation: float-rpg-particle linear infinite;
+}
+
 /* ==============================================================================
-   2. STAGE 1 — FOUNDATION SERIES (Clean Minimalist Architecture)
+   2. TẦNG 1: TRANG BỊ KHỞI ĐẦU (Common & Uncommon)
    ============================================================================== */
 
 /* Tier 1: E (Matte Slate) */
 .tier-card.tier-e {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.10);
   background: #FFFFFF;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -94,560 +127,617 @@ html.dark .tier-card.tier-e .tier-crest-badge {
 
 /* Tier 2: D (Frosted Quartz) */
 .tier-card.tier-d {
-  border: 1px solid rgba(14, 165, 233, 0.28);
+  border: 1.5px solid rgba(14, 165, 233, 0.35);
   background: #FFFFFF;
-  box-shadow: 0 2px 8px -2px rgba(14, 165, 233, 0.06);
+  box-shadow: 0 2px 10px -2px rgba(14, 165, 233, 0.08);
 }
 html.dark .tier-card.tier-d {
-  border: 1px solid rgba(56, 189, 248, 0.22);
-  background: #131317;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.40);
+  border: 1.5px solid rgba(14, 165, 233, 0.40);
+  background: #131821;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.45);
 }
 .tier-card.tier-d .tier-inner-specular {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.85) 75%, transparent);
-  pointer-events: none;
-}
-html.dark .tier-card.tier-d .tier-inner-specular {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.20) 25%, rgba(255, 255, 255, 0.20) 75%, transparent);
+  inset-x: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.6), transparent);
+  z-index: 4;
 }
 .tier-card.tier-d .tier-crest-badge {
-  background: rgba(240, 249, 255, 0.95);
-  color: #0369A1;
+  background: rgba(14, 165, 233, 0.08);
+  color: #0284C7;
   border: 1px solid rgba(14, 165, 233, 0.30);
 }
 html.dark .tier-card.tier-d .tier-crest-badge {
-  background: rgba(8, 47, 73, 0.45);
+  background: rgba(14, 165, 233, 0.15);
   color: #38BDF8;
-  border: 1px solid rgba(56, 189, 248, 0.28);
+  border: 1px solid rgba(14, 165, 233, 0.35);
 }
 .tier-card.tier-d .tier-badge-indicator {
   background: #0EA5E9;
-  box-shadow: 0 0 5px rgba(14, 165, 233, 0.5);
+  box-shadow: 0 0 6px #0EA5E9;
 }
 
 /* Tier 3: C (Anodized Emerald) */
 .tier-card.tier-c {
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  border: 2px double #10B981;
   background: #FFFFFF;
-  background-image: radial-gradient(circle 180px at 0% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
-  box-shadow: 0 2px 10px -2px rgba(16, 185, 129, 0.08);
+  box-shadow: 0 3px 12px -2px rgba(16, 185, 129, 0.12);
 }
 html.dark .tier-card.tier-c {
-  border: 1px solid rgba(16, 185, 129, 0.30);
-  background: #131317;
-  background-image: radial-gradient(circle 180px at 0% 0%, rgba(16, 185, 129, 0.09) 0%, transparent 70%);
-  box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.45);
+  border: 2px double #10B981;
+  background: #111A16;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.50);
 }
-.tier-micro-ticks {
+.tier-card.tier-c .tier-emerald-mist {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
+  top: 0;
+  left: 0;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+  z-index: 1;
 }
-.tier-micro-ticks span {
+.tier-card.tier-c .tier-corner-ticks span {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-color: rgba(16, 185, 129, 0.5);
+  width: 8px;
+  height: 8px;
+  border-color: #10B981;
+  z-index: 4;
 }
-.tier-micro-ticks .tick-tl { top: 6px; left: 6px; border-top: 1px solid; border-left: 1px solid; }
-.tier-micro-ticks .tick-tr { top: 6px; right: 6px; border-top: 1px solid; border-right: 1px solid; }
-.tier-micro-ticks .tick-bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
-.tier-micro-ticks .tick-br { bottom: 6px; right: 6px; border-bottom: 1px solid; border-right: 1px solid; }
-
+.tier-card.tier-c .tick-tl { top: 4px; left: 4px; border-top: 1.5px solid; border-left: 1.5px solid; }
+.tier-card.tier-c .tick-tr { top: 4px; right: 4px; border-top: 1.5px solid; border-right: 1.5px solid; }
+.tier-card.tier-c .tick-bl { bottom: 4px; left: 4px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
+.tier-card.tier-c .tick-br { bottom: 4px; right: 4px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
 .tier-card.tier-c .tier-crest-badge {
-  background: rgba(236, 253, 245, 0.95);
-  color: #047857;
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
   border: 1px solid rgba(16, 185, 129, 0.35);
 }
 html.dark .tier-card.tier-c .tier-crest-badge {
-  background: rgba(6, 78, 59, 0.45);
+  background: rgba(16, 185, 129, 0.15);
   color: #34D399;
-  border: 1px solid rgba(52, 211, 153, 0.30);
+  border: 1px solid rgba(16, 185, 129, 0.40);
 }
 .tier-card.tier-c .tier-badge-indicator {
   background: #10B981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 6px #10B981;
 }
 
 /* ==============================================================================
-   3. STAGE 2 — PRECISION MACHINED METAL SERIES (Double-Bezel & Laser Hairlines)
+   3. TẦNG 2: TRANG BỊ TINH LUYỆN (Rare & Epic)
    ============================================================================== */
 
 /* Tier 4: B (Brushed Titanium / Sapphire) */
 .tier-card.tier-b {
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: linear-gradient(170deg, #FFFFFF 0%, #F8FAFC 100%);
-  box-shadow: 0 4px 16px -2px rgba(100, 116, 139, 0.10);
+  border: 2px solid #3B82F6;
+  background: #FFFFFF;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.22);
 }
 html.dark .tier-card.tier-b {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: linear-gradient(170deg, #181B26 0%, #11131B 100%);
-  box-shadow: 0 6px 22px -3px rgba(0, 0, 0, 0.50);
+  border: 2px solid #3B82F6;
+  background: #121826;
+  box-shadow: 0 0 22px rgba(59, 130, 246, 0.30);
 }
-.tier-double-bezel {
+.tier-card.tier-b .clasp-svg {
+  width: 26px;
+  height: 26px;
+}
+.tier-card.tier-b .tier-metallic-shimmer {
   position: absolute;
-  inset: 3px;
-  border-radius: calc(1rem - 3px);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  pointer-events: none;
-}
-html.dark .tier-double-bezel {
-  border-color: rgba(148, 163, 184, 0.16);
+  inset: -100%;
+  background: linear-gradient(115deg, transparent 40%, rgba(96, 165, 250, 0.15) 50%, transparent 60%);
+  animation: sweep-shimmer 7s infinite;
+  z-index: 2;
 }
 .tier-card.tier-b .tier-crest-badge {
-  background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
-  color: #334155;
-  border: 1px solid rgba(148, 163, 184, 0.50);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: rgba(59, 130, 246, 0.10);
+  color: #2563EB;
+  border: 1.5px solid rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
 }
 html.dark .tier-card.tier-b .tier-crest-badge {
-  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-  color: #E2E8F0;
-  border: 1px solid rgba(203, 213, 225, 0.25);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(59, 130, 246, 0.20);
+  color: #60A5FA;
+  border: 1.5px solid rgba(59, 130, 246, 0.50);
 }
 .tier-card.tier-b .tier-badge-indicator {
-  background: #38BDF8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.7);
+  background: #3B82F6;
+  box-shadow: 0 0 8px #3B82F6;
 }
 
-/* Tier 5: A (Imperial Amber Gold) */
+/* Tier 5: A (Imperial Gold) */
 .tier-card.tier-a {
-  border: 1px solid rgba(245, 158, 11, 0.55);
-  background: #FFFFFF;
-  box-shadow: 0 4px 18px -2px rgba(245, 158, 11, 0.14);
+  border: 2px solid #F59E0B;
+  background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 35%);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
 }
 html.dark .tier-card.tier-a {
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  background: linear-gradient(170deg, #1C1811 0%, #12100A 100%);
-  box-shadow: 0 6px 26px -3px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(245, 158, 11, 0.15);
+  border: 2px solid #F59E0B;
+  background: linear-gradient(180deg, #241A08 0%, #171410 40%);
+  box-shadow: 0 0 26px rgba(245, 158, 11, 0.35);
 }
-.tier-card.tier-a .tier-double-bezel {
-  border-color: rgba(245, 158, 11, 0.25);
+.tier-card.tier-a .filigree-svg {
+  width: 30px;
+  height: 30px;
 }
-.tier-top-laser-bar {
+.tier-card.tier-a .tier-top-gold-bar {
   position: absolute;
   top: 0;
-  left: 20px;
-  right: 20px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #F59E0B 20%, #FEF08A 50%, #F59E0B 80%, transparent);
-  box-shadow: 0 1px 8px rgba(245, 158, 11, 0.6);
-  pointer-events: none;
-  z-index: 5;
+  inset-x: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #D97706, #FDE68A, #D97706);
+  box-shadow: 0 1px 8px #F59E0B;
+  z-index: 4;
+}
+.tier-card.tier-a .tier-inner-hairline {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 0.75rem;
+  z-index: 2;
 }
 .tier-card.tier-a .tier-crest-badge {
-  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-  color: #92400E;
-  border: 1px solid rgba(245, 158, 11, 0.55);
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25));
+  color: #B45309;
+  border: 1.5px solid #F59E0B;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
 }
 html.dark .tier-card.tier-a .tier-crest-badge {
-  background: linear-gradient(135deg, #451A03 0%, #78350F 100%);
-  color: #FDE68A;
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35));
+  color: #FBBF24;
 }
 .tier-card.tier-a .tier-badge-indicator {
   background: #F59E0B;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.85);
-}
-
-/* Tier 6: S (Royal Amethyst & Rose-Gold Foil) */
-.tier-card.tier-s {
-  border: 1.5px solid rgba(139, 92, 246, 0.55);
-  background: #FFFFFF;
-  box-shadow: 0 4px 22px -2px rgba(139, 92, 246, 0.16);
-}
-html.dark .tier-card.tier-s {
-  border: 1.5px solid rgba(139, 92, 246, 0.48);
-  background: linear-gradient(170deg, #181324 0%, #0F0D17 100%);
-  box-shadow: 0 8px 30px -3px rgba(0, 0, 0, 0.60), 0 2px 12px rgba(139, 92, 246, 0.20);
-}
-.tier-card.tier-s .tier-double-bezel {
-  border-color: rgba(139, 92, 246, 0.25);
-}
-.tier-silk-texture {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(139, 92, 246, 0.035) 5px, rgba(139, 92, 246, 0.035) 10px);
-}
-.tier-card.tier-s .tier-crest-badge {
-  background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
-  color: #5B21B6;
-  border: 1px solid rgba(139, 92, 246, 0.55);
-  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-html.dark .tier-card.tier-s .tier-crest-badge {
-  background: linear-gradient(135deg, #3B0764 0%, #581C87 100%);
-  color: #DDD6FE;
-  border: 1px solid rgba(167, 139, 250, 0.45);
-  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-.tier-card.tier-s .tier-badge-indicator {
-  background: #A78BFA;
-  box-shadow: 0 0 8px rgba(167, 139, 250, 0.9);
+  box-shadow: 0 0 8px #F59E0B;
 }
 
 /* ==============================================================================
-   4. STAGE 3 — PRESTIGE & HOLOGRAPHIC SLAB SERIES (Architectural Inner Frame + Foil Refraction)
+   4. TẦNG 3: TRANG BỊ BẬC THẦY & ĐẠI CAO THỦ (Master & Grandmaster)
    ============================================================================== */
 
-/* Tier 7: SS (Crimson Obsidian Prestige) */
+/* Tier 6: S (Royal Amethyst) */
+.tier-card.tier-s {
+  border: 2.5px solid #9333EA;
+  background: linear-gradient(180deg, #FAF5FF 0%, #FFFFFF 35%);
+  box-shadow: 0 0 24px rgba(147, 51, 234, 0.30);
+}
+html.dark .tier-card.tier-s {
+  border: 2.5px solid #9333EA;
+  background: linear-gradient(180deg, #221233 0%, #14101A 40%);
+  box-shadow: 0 0 28px rgba(147, 51, 234, 0.40);
+}
+.tier-card.tier-s .armor-svg {
+  width: 32px;
+  height: 32px;
+}
+.tier-card.tier-s .tier-side-rails {
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, #F59E0B, #9333EA, transparent);
+  box-shadow: 0 0 8px #9333EA;
+  z-index: 4;
+}
+.tier-card.tier-s .tier-side-rails { left: 0; }
+.tier-card.tier-s .tier-side-rails::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -100%;
+  width: 2px;
+  background: inherit;
+  box-shadow: inherit;
+}
+.tier-card.tier-s .tier-icon-dual-halo {
+  position: absolute;
+  top: 42px;
+  left: 42px;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.25) 0%, rgba(245, 158, 11, 0.15) 50%, transparent 75%);
+  animation: pulse-halo 4s ease-in-out infinite;
+  z-index: 2;
+}
+.tier-card.tier-s .tier-crest-badge {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(245, 158, 11, 0.2));
+  color: #7E22CE;
+  border: 1.5px solid #9333EA;
+  box-shadow: 0 0 12px rgba(147, 51, 234, 0.35);
+}
+html.dark .tier-card.tier-s .tier-crest-badge {
+  color: #C084FC;
+}
+.tier-card.tier-s .tier-badge-indicator {
+  background: #A855F7;
+  box-shadow: 0 0 8px #C084FC;
+}
+
+/* Tier 7: SS (Crimson Prestige / Huyết Ma) */
 .tier-card.tier-ss {
-  border: 1.5px solid rgba(244, 63, 94, 0.65);
-  background: #FFFFFF;
-  box-shadow: 0 4px 24px -2px rgba(244, 63, 94, 0.18);
+  border: 2.5px solid #E11D48;
+  background: linear-gradient(180deg, #FFF1F2 0%, #FFFFFF 35%);
+  box-shadow: 0 0 28px rgba(225, 29, 72, 0.35);
 }
 html.dark .tier-card.tier-ss {
-  border: 1.5px solid rgba(244, 63, 94, 0.55);
-  background: linear-gradient(170deg, #1C0F14 0%, #10080B 100%);
-  box-shadow: 0 8px 32px -3px rgba(0, 0, 0, 0.68), 0 2px 14px rgba(244, 63, 94, 0.22);
+  border: 2.5px solid #E11D48;
+  background: linear-gradient(180deg, #2D0B14 0%, #160A0E 40%);
+  box-shadow: 0 0 35px rgba(225, 29, 72, 0.50);
 }
-/* CAD Corner Brackets (1px geometric internal reticle) */
-.tier-cad-brackets {
+.tier-card.tier-ss .blood-svg {
+  width: 36px;
+  height: 36px;
+}
+.tier-card.tier-ss .tier-icon-rune-ss {
+  position: absolute;
+  top: 42px;
+  left: 42px;
+  transform: translate(-50%, -50%);
+  width: 76px;
+  height: 76px;
+  z-index: 2;
+}
+.tier-card.tier-ss .rune-circle-svg {
+  width: 100%;
+  height: 100%;
+  animation: spin-clockwise 20s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(225, 29, 72, 0.6));
+}
+.tier-card.tier-ss .ember {
+  background: #F43F5E;
+}
+.tier-card.tier-ss .ember-1 { left: 20%; bottom: 15px; width: 4px; height: 4px; animation-duration: 4s; animation-delay: 0s; box-shadow: 0 0 6px #E11D48; }
+.tier-card.tier-ss .ember-2 { left: 55%; bottom: 10px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 1.2s; box-shadow: 0 0 5px #E11D48; }
+.tier-card.tier-ss .ember-3 { left: 80%; bottom: 25px; width: 4px; height: 4px; animation-duration: 4.8s; animation-delay: 2.5s; box-shadow: 0 0 6px #E11D48; }
+.tier-card.tier-ss .ember-4 { left: 35%; bottom: 5px; width: 3px; height: 3px; animation-duration: 6s; animation-delay: 3s; box-shadow: 0 0 5px #E11D48; }
+
+.tier-card.tier-ss .tier-energy-pulse-ss {
   position: absolute;
   inset: 0;
+  border-radius: 1rem;
+  border: 1px solid rgba(225, 29, 72, 0.35);
+  box-shadow: inset 0 0 15px rgba(225, 29, 72, 0.2);
   pointer-events: none;
-}
-.tier-cad-brackets span {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-color: rgba(244, 63, 94, 0.65);
-}
-.tier-cad-brackets .cad-tl { top: 8px; left: 8px; border-top: 1.5px solid; border-left: 1.5px solid; }
-.tier-cad-brackets .cad-tr { top: 8px; right: 8px; border-top: 1.5px solid; border-right: 1.5px solid; }
-.tier-cad-brackets .cad-bl { bottom: 8px; left: 8px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
-.tier-cad-brackets .cad-br { bottom: 8px; right: 8px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
-
-.tier-dot-matrix {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 36px;
-  height: 28px;
-  background-image: radial-gradient(rgba(244, 63, 94, 0.28) 1.2px, transparent 1.2px);
-  background-size: 8px 8px;
-  pointer-events: none;
-}
-.tier-icon-spotlight {
-  position: absolute;
-  top: -20px;
-  left: -20px;
-  width: 140px;
-  height: 140px;
-  background: radial-gradient(circle at 45% 45%, rgba(244, 63, 94, 0.14) 0%, transparent 70%);
-  pointer-events: none;
+  z-index: 2;
 }
 .tier-card.tier-ss .tier-crest-badge {
-  background: linear-gradient(135deg, #FFE4E6 0%, #FECDD3 100%);
-  color: #9F1239;
-  border: 1.2px solid rgba(244, 63, 94, 0.65);
-  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.2), rgba(159, 18, 57, 0.3));
+  color: #BE123C;
+  border: 1.5px solid #E11D48;
+  box-shadow: 0 0 14px rgba(225, 29, 72, 0.45);
 }
 html.dark .tier-card.tier-ss .tier-crest-badge {
-  background: linear-gradient(135deg, #4C0519 0%, #881337 100%);
-  color: #FECDD3;
-  border: 1.2px solid rgba(251, 113, 133, 0.55);
-  box-shadow: 0 2px 10px rgba(244, 63, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #FB7185;
 }
 .tier-card.tier-ss .tier-badge-indicator {
-  background: #FB7185;
-  box-shadow: 0 0 8px rgba(251, 113, 133, 1);
+  background: #F43F5E;
+  box-shadow: 0 0 10px #F43F5E;
 }
 
-/* Tier 8: UR (Prismatic Holographic Foil) */
+/* ==============================================================================
+   5. TẦNG 4: TRANG BỊ THẦN THOẠI (Mythic)
+   ============================================================================== */
+
+/* Tier 8: UR (Prismatic Hologram) */
 .tier-card.tier-ur {
-  border: 1.5px solid rgba(236, 72, 153, 0.60);
-  background: #FFFFFF;
-  box-shadow: 0 4px 26px -2px rgba(236, 72, 153, 0.20);
+  border: 3px solid #EC4899;
+  background: linear-gradient(180deg, #FDF2F8 0%, #FFFFFF 35%);
+  box-shadow: 0 0 32px rgba(236, 72, 153, 0.40);
 }
 html.dark .tier-card.tier-ur {
-  border: 1.5px solid rgba(236, 72, 153, 0.50);
-  background: linear-gradient(170deg, #1C0F1A 0%, #0F0811 100%);
-  box-shadow: 0 8px 34px -3px rgba(0, 0, 0, 0.72), 0 2px 14px rgba(236, 72, 153, 0.25);
+  border: 3px solid #EC4899;
+  background: linear-gradient(180deg, #2A1020 0%, #150F18 40%);
+  box-shadow: 0 0 38px rgba(236, 72, 153, 0.50);
 }
-/* Diagonal Holographic Foil Shimmer */
-.tier-holo-sheen {
+.tier-card.tier-ur .star-svg {
+  width: 22px;
+  height: 22px;
+  animation: star-twinkle 3s ease-in-out infinite;
+}
+.tier-card.tier-ur .star-tr { animation-delay: 0.75s; }
+.tier-card.tier-ur .star-bl { animation-delay: 1.5s; }
+.tier-card.tier-ur .star-br { animation-delay: 2.25s; }
+
+.tier-card.tier-ur .tier-icon-halo-ur {
   position: absolute;
-  inset: -100% -100%;
-  pointer-events: none;
-  z-index: 5;
-  opacity: 0.35;
-  background: linear-gradient(
-    115deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.25) 35%,
-    rgba(236, 72, 153, 0.20) 45%,
-    rgba(6, 182, 212, 0.20) 55%,
-    rgba(234, 179, 8, 0.18) 65%,
-    transparent 80%
-  );
-  transform: translate3d(0, 0, 0) rotate(-25deg);
-  transition: opacity 0.3s ease, transform 0.4s ease;
-  will-change: transform, opacity;
+  top: 42px;
+  left: 42px;
+  transform: translate(-50%, -50%);
+  width: 76px;
+  height: 76px;
+  z-index: 2;
 }
-.tier-card.tier-ur:hover .tier-holo-sheen,
-.tier-card.tier-lr:hover .tier-holo-sheen,
-.tier-card.tier-ex:hover .tier-holo-sheen {
-  opacity: 0.85;
-  transform: translate3d(0, 0, 0) rotate(-25deg) translateY(25%);
+.tier-card.tier-ur .ur-halo-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1.5px dashed #EC4899;
+  box-shadow: 0 0 14px rgba(236, 72, 153, 0.5), inset 0 0 10px rgba(56, 189, 248, 0.3);
+  animation: spin-clockwise 14s linear infinite;
 }
 
-.tier-filigree-corners {
+.tier-card.tier-ur .tier-holo-foil-sheen {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
+  inset: -50%;
+  background: linear-gradient(135deg, 
+    transparent 20%, 
+    rgba(236, 72, 153, 0.12) 35%, 
+    rgba(56, 189, 248, 0.15) 50%, 
+    rgba(250, 204, 21, 0.12) 65%, 
+    transparent 80%);
+  animation: sweep-holo-foil 6s linear infinite;
+  z-index: 2;
 }
-.tier-filigree-corners span {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: rgba(236, 72, 153, 0.6);
-}
-.tier-filigree-corners .filigree-tl { top: 7px; left: 7px; border-top: 1.5px solid; border-left: 1.5px solid; }
-.tier-filigree-corners .filigree-tr { top: 7px; right: 7px; border-top: 1.5px solid; border-right: 1.5px solid; }
-.tier-filigree-corners .filigree-bl { bottom: 7px; left: 7px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
-.tier-filigree-corners .filigree-br { bottom: 7px; right: 7px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
 
 .tier-card.tier-ur .tier-crest-badge {
-  background: linear-gradient(135deg, #FCE7F3 0%, #FBCFE8 100%);
-  color: #9D174D;
-  border: 1.2px solid rgba(236, 72, 153, 0.65);
-  box-shadow: 0 2px 10px rgba(236, 72, 153, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(56, 189, 248, 0.25));
+  color: #DB2777;
+  border: 1.5px solid #EC4899;
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.45);
 }
 html.dark .tier-card.tier-ur .tier-crest-badge {
-  background: linear-gradient(135deg, #500724 0%, #831843 100%);
-  color: #FBCFE8;
-  border: 1.2px solid rgba(244, 114, 182, 0.60);
-  box-shadow: 0 2px 12px rgba(236, 72, 153, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #F472B6;
 }
 .tier-card.tier-ur .tier-badge-indicator {
   background: #F472B6;
-  box-shadow: 0 0 10px rgba(244, 114, 182, 1);
+  box-shadow: 0 0 10px #F472B6, 0 0 14px #38BDF8;
 }
 
 /* ==============================================================================
-   5. STAGE 4 — SIGNATURE CELESTIAL SERIES (Maximum Dimensional Craft)
+   6. TẦNG 5: THẦN KHÍ CHÍ TÔN & VŨ TRỤ (Sovereign & Celestial)
+   LỘT XÁC TOÀN BỘ NỀN & CHASSIS THẺ
    ============================================================================== */
 
-/* Tier 9: LR (Solar Flare & Sovereign Gold) */
+/* Tier 9: LR (Sovereign Flare - Hắc Kim Hoàng Gia) */
 .tier-card.tier-lr {
-  border: 1.5px solid rgba(234, 179, 8, 0.75);
-  background: #FFFFFF;
-  box-shadow: 0 6px 30px -2px rgba(234, 179, 8, 0.25);
+  background: radial-gradient(ellipse at 50% 0%, #2D1D09 0%, #181108 55%, #0F0B06 100%) !important;
+  border: 2.5px solid #FACC15 !important;
+  box-shadow: 0 0 35px rgba(250, 204, 21, 0.40), inset 0 0 25px rgba(234, 179, 8, 0.20) !important;
 }
-html.dark .tier-card.tier-lr {
-  border: 1.5px solid rgba(234, 179, 8, 0.65);
-  background: linear-gradient(170deg, #1C1709 0%, #100C04 100%);
-  box-shadow: 0 10px 40px -3px rgba(0, 0, 0, 0.78), 0 2px 16px rgba(234, 179, 8, 0.30);
+.tier-card.tier-lr h3 {
+  color: #FFFFFF !important;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
 }
-.tier-triple-frame {
-  position: absolute;
-  inset: 4px;
-  border-radius: calc(1rem - 4px);
-  border: 1px solid rgba(234, 179, 8, 0.35);
-  pointer-events: none;
+.tier-card.tier-lr p.text-\[11px\] {
+  color: #FACC15 !important;
 }
-.tier-triple-frame span {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: #EAB308;
-  border-radius: 1px;
+.tier-card.tier-lr p.text-xs {
+  color: #D1D5DB !important;
 }
-.tier-triple-frame .node-tl { top: -2px; left: -2px; }
-.tier-triple-frame .node-tr { top: -2px; right: -2px; }
-.tier-triple-frame .node-bl { bottom: -2px; left: -2px; }
-.tier-triple-frame .node-br { bottom: -2px; right: -2px; }
+.tier-card.tier-lr .font-mono {
+  color: #FDE047 !important;
+}
+.tier-card.tier-lr .border-zinc-200\/60,
+.tier-card.tier-lr .dark\:border-white\/\[0\.08\] {
+  border-color: rgba(250, 204, 21, 0.25) !important;
+}
 
-.tier-horizon-beam {
+.tier-card.tier-lr .solar-corner-svg {
+  width: 40px;
+  height: 40px;
+}
+.tier-card.tier-lr .tier-icon-solar-lr {
+  position: absolute;
+  top: 42px;
+  left: 42px;
+  transform: translate(-50%, -50%);
+  width: 84px;
+  height: 84px;
+  z-index: 2;
+}
+.tier-card.tier-lr .solar-ring-svg {
+  width: 100%;
+  height: 100%;
+  animation: spin-clockwise 24s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.7));
+}
+
+.tier-card.tier-lr .spark {
+  background: #FEF08A;
+}
+.tier-card.tier-lr .spark-1 { left: 15%; bottom: 10px; width: 3px; height: 3px; animation-duration: 4.5s; animation-delay: 0.5s; box-shadow: 0 0 8px #FACC15; }
+.tier-card.tier-lr .spark-2 { left: 40%; bottom: 18px; width: 4px; height: 4px; animation-duration: 5s; animation-delay: 1.8s; box-shadow: 0 0 8px #FACC15; }
+.tier-card.tier-lr .spark-3 { left: 70%; bottom: 8px; width: 3px; height: 3px; animation-duration: 3.8s; animation-delay: 2.8s; box-shadow: 0 0 8px #FACC15; }
+.tier-card.tier-lr .spark-4 { left: 88%; bottom: 22px; width: 3.5px; height: 3.5px; animation-duration: 6s; animation-delay: 0s; box-shadow: 0 0 8px #FACC15; }
+.tier-card.tier-lr .spark-5 { left: 50%; bottom: 30px; width: 2.5px; height: 2.5px; animation-duration: 5.2s; animation-delay: 3.5s; box-shadow: 0 0 8px #FACC15; }
+
+.tier-card.tier-lr .tier-molten-plasma {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 54px;
-  background: radial-gradient(ellipse 160% 100% at 50% 0%, rgba(234, 179, 8, 0.18) 0%, transparent 80%);
-  pointer-events: none;
+  inset-x: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #FDE047, #F59E0B, transparent);
+  box-shadow: 0 0 10px #FACC15;
+  z-index: 4;
 }
+
 .tier-card.tier-lr .tier-crest-badge {
-  background: linear-gradient(135deg, #FEF9C3 0%, #FEF08A 100%);
-  color: #713F12;
-  border: 1.2px solid rgba(234, 179, 8, 0.75);
-  box-shadow: 0 2px 12px rgba(234, 179, 8, 0.35), inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-html.dark .tier-card.tier-lr .tier-crest-badge {
-  background: linear-gradient(135deg, #422006 0%, #713F12 100%);
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.3), rgba(180, 83, 9, 0.4));
   color: #FEF08A;
-  border: 1.2px solid rgba(250, 204, 21, 0.70);
-  box-shadow: 0 2px 14px rgba(234, 179, 8, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 1.5px solid #FACC15;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.5);
 }
 .tier-card.tier-lr .tier-badge-indicator {
   background: #FACC15;
-  box-shadow: 0 0 10px rgba(250, 204, 21, 1);
+  box-shadow: 0 0 10px #FACC15;
 }
 
-/* Tier 10: EX (Singularity / Astral Signature) */
+/* Tier 10: EX (Astral Singularity - Tinh Vân Vũ Trụ) */
 .tier-card.tier-ex {
-  border: 1.5px solid transparent;
-  background: #FFFFFF;
-  box-shadow: 0 8px 34px -2px rgba(6, 182, 212, 0.28);
+  background: radial-gradient(ellipse at 50% 0%, #0A2540 0%, #0F172A 50%, #05070F 100%) !important;
+  box-shadow: 0 0 45px rgba(6, 182, 212, 0.50), inset 0 0 30px rgba(139, 92, 246, 0.25) !important;
+  border: 2px solid transparent !important;
 }
-html.dark .tier-card.tier-ex {
-  border: 1.5px solid transparent;
-  background: #131317;
-  box-shadow: 0 12px 46px -3px rgba(0, 0, 0, 0.85), 0 2px 20px rgba(6, 182, 212, 0.35);
+.tier-card.tier-ex h3 {
+  color: #FFFFFF !important;
+  text-shadow: 0 0 14px rgba(34, 211, 238, 0.6);
+}
+.tier-card.tier-ex p.text-\[11px\] {
+  color: #22D3EE !important;
+}
+.tier-card.tier-ex p.text-xs {
+  color: #CBD5E1 !important;
+}
+.tier-card.tier-ex .font-mono {
+  color: #67E8F9 !important;
+}
+.tier-card.tier-ex .border-zinc-200\/60,
+.tier-card.tier-ex .dark\:border-white\/\[0\.08\] {
+  border-color: rgba(34, 211, 238, 0.30) !important;
 }
 
-/* 360° Rotating Conic Perimeter Mask (Razor-Sharp 1.5px line, 0% blur slop) */
-.tier-conic-perimeter {
+/* 360° Conic Aurora Plasma Border */
+.tier-card.tier-ex .tier-plasma-perimeter-ex {
   position: absolute;
-  inset: -1.5px;
+  inset: -2px;
   border-radius: 1rem;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-.tier-conic-perimeter::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    #06B6D4 45deg,
-    #3B82F6 90deg,
-    #8B5CF6 135deg,
-    #EC4899 180deg,
-    transparent 200deg,
-    #06B6D4 245deg,
-    #3B82F6 290deg,
-    #8B5CF6 335deg,
-    transparent 360deg
-  );
-  animation: conic-spin 4s linear infinite;
-  will-change: transform;
-}
-.tier-conic-perimeter::after {
-  content: '';
-  position: absolute;
-  inset: 1.5px;
-  border-radius: calc(1rem - 1px);
-  background: #FFFFFF;
-}
-html.dark .tier-conic-perimeter::after {
-  background: #131317;
+  padding: 2.5px;
+  background: conic-gradient(from 0deg, #06B6D4, #8B5CF6, #EC4899, #06B6D4);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-conic 8s linear infinite;
+  z-index: 1;
 }
 
-@keyframes conic-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.tier-card.tier-ex .crystal-corner-svg {
+  width: 44px;
+  height: 44px;
 }
 
-.tier-astral-glow {
+.tier-card.tier-ex .tier-astrolabe-ex {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background: radial-gradient(circle 180px at 50% -20%, rgba(6, 182, 212, 0.22) 0%, rgba(139, 92, 246, 0.12) 50%, transparent 80%);
+  top: 42px;
+  left: 42px;
+  transform: translate(-50%, -50%);
+  width: 88px;
+  height: 88px;
+  z-index: 2;
+}
+.tier-card.tier-ex .astrolabe-outer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: spin-clockwise 22s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7));
+}
+.tier-card.tier-ex .astrolabe-inner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: spin-counter 16s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.6));
+}
+
+.tier-card.tier-ex .star {
+  background: #E0F2FE;
+}
+.tier-card.tier-ex .star-1 { left: 25%; bottom: 15px; width: 3px; height: 3px; animation-duration: 5s; animation-delay: 0.2s; box-shadow: 0 0 8px #22D3EE; }
+.tier-card.tier-ex .star-2 { left: 60%; bottom: 25px; width: 4px; height: 4px; animation-duration: 6.5s; animation-delay: 1.5s; box-shadow: 0 0 10px #A855F7; }
+.tier-card.tier-ex .star-3 { left: 85%; bottom: 10px; width: 2.5px; height: 2.5px; animation-duration: 4.2s; animation-delay: 3s; box-shadow: 0 0 8px #38BDF8; }
+.tier-card.tier-ex .star-4 { left: 10%; bottom: 35px; width: 3.5px; height: 3.5px; animation-duration: 5.8s; animation-delay: 2s; box-shadow: 0 0 8px #EC4899; }
+.tier-card.tier-ex .star-5 { left: 45%; bottom: 8px; width: 3px; height: 3px; animation-duration: 4.8s; animation-delay: 4s; box-shadow: 0 0 8px #22D3EE; }
+.tier-card.tier-ex .star-6 { left: 75%; bottom: 40px; width: 2px; height: 2px; animation-duration: 6s; animation-delay: 1s; box-shadow: 0 0 6px #FFFFFF; }
+
+.tier-card.tier-ex .tier-cosmic-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(34, 211, 238, 0.15) 1px, transparent 1px);
+  background-size: 16px 16px;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Laser-etched corner sightlines */
-.tier-laser-sightlines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
-}
-.tier-laser-sightlines span {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-color: rgba(6, 182, 212, 0.7);
-}
-.tier-laser-sightlines .sight-tl { top: 6px; left: 6px; border-top: 1.5px solid; border-left: 1.5px solid; }
-.tier-laser-sightlines .sight-tr { top: 6px; right: 6px; border-top: 1.5px solid; border-right: 1.5px solid; }
-.tier-laser-sightlines .sight-bl { bottom: 6px; left: 6px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
-.tier-laser-sightlines .sight-br { bottom: 6px; right: 6px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
-
 .tier-card.tier-ex .tier-crest-badge {
-  background: linear-gradient(135deg, #CFFAFE 0%, #A5F3FC 100%);
-  color: #0E7490;
-  border: 1.2px solid rgba(6, 182, 212, 0.75);
-  box-shadow: 0 2px 14px rgba(6, 182, 212, 0.35), inset 0 1px 0 rgba(255, 255, 255, 1);
-  position: relative;
-  z-index: 10;
-}
-html.dark .tier-card.tier-ex .tier-crest-badge {
-  background: linear-gradient(135deg, #083344 0%, #164E63 100%);
-  color: #A5F3FC;
-  border: 1.2px solid rgba(34, 211, 238, 0.70);
-  box-shadow: 0 2px 16px rgba(6, 182, 212, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  position: relative;
-  z-index: 10;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.35), rgba(139, 92, 246, 0.35));
+  color: #E0F2FE;
+  border: 1.5px solid #22D3EE;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
 }
 .tier-card.tier-ex .tier-badge-indicator {
-  background: #22D3EE;
-  box-shadow: 0 0 12px rgba(34, 211, 238, 1);
-  animation: ex-pulse 2s infinite ease-in-out;
-}
-
-@keyframes ex-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.3); opacity: 1; }
+  background: #67E8F9;
+  box-shadow: 0 0 12px #22D3EE, 0 0 18px #A855F7;
 }
 
 /* ==============================================================================
-   6. Hover Elevation & Micro-Interactions
+   7. GPU Animations & Keyframes
    ============================================================================== */
-@media (hover: hover) and (pointer: fine) {
-  .tier-card:hover {
-    transform: translateY(-3px);
+@keyframes spin-clockwise {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spin-counter {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes spin-conic {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes float-rpg-particle {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
   }
-  .tier-card.tier-e:hover { border-color: rgba(0, 0, 0, 0.16); }
-  html.dark .tier-card.tier-e:hover { border-color: rgba(255, 255, 255, 0.18); }
-  
-  .tier-card.tier-d:hover { border-color: rgba(14, 165, 233, 0.5); }
-  .tier-card.tier-c:hover { border-color: rgba(16, 185, 129, 0.6); }
-  .tier-card.tier-b:hover { border-color: rgba(148, 163, 184, 0.8); }
-  .tier-card.tier-a:hover { border-color: rgba(245, 158, 11, 0.85); box-shadow: 0 10px 30px -4px rgba(245, 158, 11, 0.28); }
-  .tier-card.tier-s:hover { border-color: rgba(139, 92, 246, 0.85); box-shadow: 0 10px 32px -4px rgba(139, 92, 246, 0.30); }
-  .tier-card.tier-ss:hover { border-color: rgba(244, 63, 94, 0.9); box-shadow: 0 12px 36px -4px rgba(244, 63, 94, 0.35); }
-  .tier-card.tier-ur:hover { border-color: rgba(236, 72, 153, 0.9); box-shadow: 0 14px 40px -4px rgba(236, 72, 153, 0.40); }
-  .tier-card.tier-lr:hover { border-color: rgba(234, 179, 8, 0.95); box-shadow: 0 16px 46px -4px rgba(234, 179, 8, 0.45); }
-  .tier-card.tier-ex:hover { box-shadow: 0 18px 52px -4px rgba(6, 182, 212, 0.50); }
+  25% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-65px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes sweep-shimmer {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  30%, 100% { transform: translateX(200%) rotate(25deg); }
+}
+
+@keyframes sweep-holo-foil {
+  0% { transform: translateX(-60%) rotate(30deg); }
+  100% { transform: translateX(60%) rotate(30deg); }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { transform: scale(0.7) rotate(0deg); opacity: 0.4; }
+  50% { transform: scale(1.25) rotate(45deg); opacity: 1; }
+}
+
+@keyframes pulse-halo {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.85; }
 }
 
 /* ==============================================================================
-   7. Sleep Governor & Performance (KI-FIX-023)
+   8. Performance & Accessibility Compliance
    ============================================================================== */
-html.app-backgrounded .tier-card,
-html.app-backgrounded .tier-card *,
-html.app-backgrounded .tier-card *::before,
-html.app-backgrounded .tier-card *::after {
-  animation-play-state: paused !important;
-  transition: none !important;
-}
-
+html.app-backgrounded *,
 @media (prefers-reduced-motion: reduce) {
   .tier-card,
-  .tier-card *,
-  .tier-conic-perimeter::before,
-  .tier-holo-sheen,
-  .ex-pulse {
+  .rune-circle-svg,
+  .astrolabe-outer,
+  .astrolabe-inner,
+  .solar-ring-svg,
+  .ur-halo-ring,
+  .tier-plasma-perimeter-ex,
+  .star-svg,
+  .particle,
+  .tier-metallic-shimmer,
+  .tier-holo-foil-sheen {
     animation: none !important;
     transition: none !important;
   }

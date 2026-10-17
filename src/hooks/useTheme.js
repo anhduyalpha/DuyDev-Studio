@@ -72,7 +72,7 @@ export function initTheme() {
 export function toggleTheme() {
   const current = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   const next = current === 'dark' ? 'light' : 'dark';
-  soundEngine.playToggle();
+  soundEngine.playThemeSwitch(next === 'dark');
   applyTheme(next);
   return next;
 }
