@@ -45,8 +45,8 @@ export function renderHeroPasteCard(state) {
           </button>
         </div>
 
-        <!-- Centered Petite Pill Paste Button -->
-        <div class="flex justify-center items-center">
+        <!-- Centered Pill Paste Button (Balanced & Ergonomic) -->
+        <div class="flex justify-center items-center pt-1">
           <button
             type="button"
             id="studocuPasteBtn"
@@ -54,10 +54,10 @@ export function renderHeroPasteCard(state) {
             ${isDownloading ? 'disabled' : ''}
             title="Dán link & Tải"
           >
-            <div id="studocuPasteBtnIcon" class="w-4 h-4 flex items-center justify-center">
+            <div id="studocuPasteBtnIcon" class="w-4 h-4 flex items-center justify-center shrink-0">
               ${isDownloading
                 ? '<canvas id="thinkingOrbCanvas" width="20" height="20"></canvas>'
-                : '<i data-lucide="clipboard" class="w-3.5 h-3.5"></i>'}
+                : '<i data-lucide="clipboard" class="w-4 h-4"></i>'}
             </div>
             <span id="studocuPasteBtnTitle">
               ${isDownloading ? 'Đang tải...' : 'Dán link & Tải'}

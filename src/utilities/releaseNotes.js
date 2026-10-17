@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.17': {
+    version: 'v23.17',
+    title: 'Bản cập nhật v23.17',
+    date: '17/10/2026',
+    features: [
+      'Studocu Hero Ergonomics: Mở rộng kích thước nút Tải cân đối và hài hòa với ô nhập liên kết, tối ưu cảm giác chạm đạt chuẩn 44px'
+    ],
+    fixes: [
+      'Căn chỉnh khoảng cách thị giác và nâng cao kích cỡ icon nút tải tài liệu'
+    ]
+  },
+
   'v23.16': {
     version: 'v23.16',
     title: 'Bản cập nhật v23.16',

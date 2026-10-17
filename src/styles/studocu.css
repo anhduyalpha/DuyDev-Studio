@@ -267,22 +267,24 @@ html.dark .studocu-hero-card.is-processing::after,
   }
 }
 
-/* 2. Hero Petite Pill Paste Button */
+/* 2. Hero Pill Paste Button (Balanced & Ergonomic) */
 .btn-hero-paste {
   background: linear-gradient(180deg, #18181b 0%, #09090b 100%) !important;
   color: #ffffff !important;
   border: 1px solid rgba(0, 0, 0, 0.95) !important;
   border-radius: 9999px !important;
-  height: 38px !important;
-  padding: 0 16px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 28px !important;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.825rem;
+  justify-content: center;
+  gap: 9px;
+  font-size: 0.875rem !important;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.22);
   user-select: none;
 }
 
@@ -291,17 +293,17 @@ html.dark .btn-hero-paste,
   background: linear-gradient(180deg, #ffffff 0%, #ececef 100%) !important;
   color: #09090b !important;
   border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.35);
 }
 
 .btn-hero-paste:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
 }
 
 html.dark .btn-hero-paste:hover,
 .dark .btn-hero-paste:hover {
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.38);
 }
 
 .btn-hero-paste:active {
