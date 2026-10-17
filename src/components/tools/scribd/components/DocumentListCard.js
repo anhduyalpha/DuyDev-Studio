@@ -89,6 +89,18 @@ export function renderDocumentListCard(state) {
             <option value="size_asc" ${state.sortOption === 'size_asc' ? 'selected' : ''}>Dung lượng nhỏ</option>
           </select>
 
+          ${!isTrash && counts.pdf > 0 ? `
+            <button
+              type="button"
+              id="btnMoveAllScribdTrash"
+              class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition cursor-pointer min-h-[38px] min-w-[38px] touch-manipulation whitespace-nowrap"
+              title="Chuyển tất cả tài liệu vào thùng rác"
+            >
+              <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">Xóa tất cả</span>
+            </button>
+          ` : ''}
+
           ${isTrash && counts.trash > 0 ? `
             <button
               type="button"
@@ -97,7 +109,7 @@ export function renderDocumentListCard(state) {
               title="Dọn sạch thùng rác"
             >
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-              <span class="hidden md:inline">Dọn sạch</span>
+              <span class="hidden sm:inline">Xóa tất cả</span>
             </button>
           ` : ''}
 

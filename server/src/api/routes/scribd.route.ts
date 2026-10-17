@@ -154,11 +154,11 @@ export async function scribdRoute(app: FastifyInstance): Promise<void> {
     }
   });
 
-  // 8. Move file to trash (soft delete)
+  // 8. Move file to trash (soft delete / bulk move all to trash)
   const handleMoveToTrash = async (req: FastifyRequest<{ Params?: { '*'?: string }; Body?: { filename?: string; file?: string } }>, reply: FastifyReply) => {
     try {
       const rawName = (req.body as any)?.filename || (req.body as any)?.file || req.params?.['*'] || '';
-      const filename = encodeURIComponent(rawName);
+      const filename = rawName === 'all' || rawName === 'trash-all' ? 'all' : encodeURIComponent(rawName);
       const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/files/${filename}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -172,6 +172,8 @@ export async function scribdRoute(app: FastifyInstance): Promise<void> {
 
   app.delete('/api/v1/scribd/files/*', handleMoveToTrash);
   app.post('/api/v1/scribd/files/trash', handleMoveToTrash);
+  app.delete('/api/v1/scribd/files/all', handleMoveToTrash);
+  app.post('/api/v1/scribd/files/trash-all', handleMoveToTrash);
 
   // 9. Restore file from trash
   const handleRestore = async (req: FastifyRequest<{ Params?: { '*'?: string }; Body?: { filename?: string; file?: string } }>, reply: FastifyReply) => {

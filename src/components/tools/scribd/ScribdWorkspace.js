@@ -342,7 +342,34 @@ export function attachScribdListeners() {
 
     const btnEmptyTrash = document.getElementById('btnEmptyScribdTrash');
     if (btnEmptyTrash) {
-      btnEmptyTrash.onclick = () => openSlideConfirmModal(() => scribdManager.emptyTrash());
+      btnEmptyTrash.onclick = () => {
+        const state = scribdManager.getState();
+        const count = state.counts?.trash || state.trash?.length || 0;
+        openSlideConfirmModal({
+          title: 'Dọn sạch thùng rác',
+          description: `Xóa vĩnh viễn toàn bộ ${count} tài liệu trong thùng rác.`,
+          warningText: 'Hành động này không thể hoàn tác. Toàn bộ tệp sẽ bị xóa hoàn toàn khỏi máy chủ.',
+          actionText: 'Kéo sang phải để dọn sạch',
+          confirmingText: 'Đang dọn sạch...',
+          onConfirm: () => scribdManager.emptyTrash()
+        });
+      };
+    }
+
+    const btnMoveAllTrash = document.getElementById('btnMoveAllScribdTrash');
+    if (btnMoveAllTrash) {
+      btnMoveAllTrash.onclick = () => {
+        const state = scribdManager.getState();
+        const count = state.counts?.pdf || state.files?.length || 0;
+        openSlideConfirmModal({
+          title: 'Xóa toàn bộ lịch sử',
+          description: `Chuyển toàn bộ ${count} tài liệu trên kệ vào thùng rác.`,
+          warningText: 'Các tài liệu sẽ được chuyển vào thùng rác và có thể khôi phục lại bất kỳ lúc nào.',
+          actionText: 'Kéo sang phải để xóa tất cả',
+          confirmingText: 'Đang chuyển vào thùng rác...',
+          onConfirm: () => scribdManager.moveAllToTrash()
+        });
+      };
     }
 
     attachItemRowHandlers(document);

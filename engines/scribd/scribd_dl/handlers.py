@@ -529,6 +529,26 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
         # 1. Chuyển vào thùng rác: /api/files/<filename>
         if path.startswith("/api/files/"):
             raw_param = path.replace("/api/files/", "").strip()
+            # Hỗ trợ chuyển tất cả tài liệu vào thùng rác
+            if raw_param in ("all", "trash-all"):
+                TRASH_DIR.mkdir(parents=True, exist_ok=True)
+                trashed_count = 0
+                if DOWNLOADS_DIR.is_dir():
+                    for f in list(DOWNLOADS_DIR.glob("*.pdf")):
+                        try:
+                            dest = TRASH_DIR / f.name
+                            if dest.exists():
+                                dest.unlink()
+                            shutil.move(str(f), str(dest))
+                            trashed_count += 1
+                        except Exception:
+                            pass
+                self.send_response(HTTPStatus.OK)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "count": trashed_count, "message": "Đã chuyển tất cả vào thùng rác"}).encode("utf-8"))
+                return
+
             file_path = find_file_in_dir(DOWNLOADS_DIR, raw_param)
             if file_path and file_path.is_file():
                 TRASH_DIR.mkdir(parents=True, exist_ok=True)

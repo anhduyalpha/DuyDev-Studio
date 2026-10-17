@@ -15,15 +15,19 @@ export function renderSlideConfirmModal() {
   return renderCommonModal(MODAL_ID);
 }
 
-export function openSlideConfirmModal(onConfirm) {
+export function openSlideConfirmModal(optionsOrConfirm) {
+  const options = typeof optionsOrConfirm === 'function'
+    ? { onConfirm: optionsOrConfirm }
+    : (optionsOrConfirm || {});
+
   return openCommonModal({
     modalId: MODAL_ID,
-    title: 'Dọn sạch thùng rác',
-    description: 'Xóa vĩnh viễn toàn bộ tệp trong thùng rác.',
-    warningText: 'Hành động này không thể hoàn tác. Các tệp sẽ bị xóa hoàn toàn khỏi máy chủ.',
-    actionText: 'Kéo sang phải để xác nhận',
-    confirmingText: 'Đang dọn sạch...',
-    onConfirm
+    title: options.title || 'Dọn sạch thùng rác',
+    description: options.description || 'Xóa vĩnh viễn toàn bộ tệp trong thùng rác.',
+    warningText: options.warningText || 'Hành động này không thể hoàn tác. Các tệp sẽ bị xóa hoàn toàn khỏi máy chủ.',
+    actionText: options.actionText || 'Kéo sang phải để xác nhận',
+    confirmingText: options.confirmingText || 'Đang dọn sạch...',
+    onConfirm: options.onConfirm
   });
 }
 

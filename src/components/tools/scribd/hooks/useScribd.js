@@ -11,6 +11,7 @@ import {
   startDownloadApi,
   cancelJobApi,
   moveToTrashApi,
+  moveAllToTrashApi,
   restoreFromTrashApi,
   deletePermanentApi,
   emptyTrashApi,
@@ -655,6 +656,35 @@ class ScribdManager {
         this.trash = prevTrash;
         this.notify();
       }
+      showToast('Lỗi khi chuyển vào thùng rác', 'error');
+    }
+  }
+
+  async moveAllToTrash() {
+    if (this.files.length === 0) return;
+    const prevFiles = [...this.files];
+    const prevTrash = [...this.trash];
+
+    const newlyTrashed = this.files.map(f => ({ ...f, status: 'trashed' }));
+    this.trash = [...newlyTrashed, ...this.trash];
+    this.files = [];
+    this.notify();
+
+    try {
+      const ok = await moveAllToTrashApi();
+      if (ok) {
+        showToast('Đã chuyển tất cả tài liệu vào thùng rác', 'info');
+        await this.refreshFiles();
+      } else {
+        this.files = prevFiles;
+        this.trash = prevTrash;
+        this.notify();
+        showToast('Lỗi khi chuyển vào thùng rác', 'error');
+      }
+    } catch (_) {
+      this.files = prevFiles;
+      this.trash = prevTrash;
+      this.notify();
       showToast('Lỗi khi chuyển vào thùng rác', 'error');
     }
   }

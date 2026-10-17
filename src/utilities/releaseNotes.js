@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.18': {
+    version: 'v23.18',
+    title: 'Bản cập nhật v23.18',
+    date: '17/10/2026',
+    features: [
+      'Xóa tất cả với trượt xác nhận (Slide-to-Confirm): Tích hợp nút Xóa tất cả cho Kệ tài liệu (lịch sử) cũng như Thùng rác trong Scribd Archiver',
+      'Khiên chống xóa nhầm hai lớp: Hộp thoại trượt tương tác hiển thị rõ ràng số lượng tệp và hướng dẫn xác nhận an toàn'
+    ],
+    fixes: [
+      'Đồng bộ API backend xử lý chuyển tất cả tài liệu vào thùng rác (/api/files/all) và dọn sạch thùng rác tức thì'
+    ]
+  },
   'v23.17': {
     version: 'v23.17',
     title: 'Bản cập nhật v23.17',

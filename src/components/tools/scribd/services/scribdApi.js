@@ -83,6 +83,15 @@ export async function moveToTrashApi(filename) {
   return res?.ok;
 }
 
+export async function moveAllToTrashApi() {
+  const res = await fetch('/api/v1/scribd/files/all', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: 'all' })
+  }).catch(() => null);
+  return res?.ok;
+}
+
 export async function restoreFromTrashApi(filename) {
   if (!filename) return false;
   const res = await fetch(`/api/v1/scribd/trash/restore/${encodeURIComponent(filename)}`, {
