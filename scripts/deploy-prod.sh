@@ -20,7 +20,8 @@ echo "🔄 [PROD DEPLOY] Restarting dd-studio.service and companion Python daemo
 pkill -f 'engines/scribd/daemon.py' || true
 pkill -f 'engines/studocu/daemon.py' || true
 pkill -f 'node dist/app.js' || true
-sleep 3
+sleep 4
 
 echo "✅ [PROD DEPLOY] Complete! Service status:"
-systemctl status dd-studio.service --no-pager
+systemctl status dd-studio.service --no-pager || true
+
