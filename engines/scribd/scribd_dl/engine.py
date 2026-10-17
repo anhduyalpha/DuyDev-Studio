@@ -116,8 +116,11 @@ class ScribdArchiver:
 
     def find_cached_file(self) -> Optional[Path]:
         """Tìm file đã tải trước đó trong thư mục downloads theo doc_id."""
-        for p in self.output_dir.glob(f"*_{self.doc_id}.pdf"):
-            if p.is_file() and p.stat().st_size > 50000:
+        for p in self.output_dir.glob("*.pdf"):
+            if not p.is_file() or p.stat().st_size <= 50000:
+                continue
+            stem = p.stem
+            if stem.endswith(f"_{self.doc_id}") or stem.startswith(f"{self.doc_id}_") or f"_{self.doc_id}_" in stem or stem == str(self.doc_id):
                 return p
         return None
 
@@ -163,10 +166,15 @@ class ScribdArchiver:
         TRACKER_DOMAINS = [
             "google-analytics.com",
             "googletagmanager.com",
+            "googlesyndication.com",
             "doubleclick.net",
+            "googleads.g.doubleclick.net",
+            "adservice.google",
             "facebook.net",
+            "facebook.com",
             "branch.io",
             "segment.io",
+            "segment.com",
             "datadoghq.com",
             "sentry.io",
             "scorecardresearch.com",
@@ -179,7 +187,15 @@ class ScribdArchiver:
             "pubmatic.com",
             "amazon-adsystem.com",
             "advertising.com",
-            "adservice.google",
+            "onetrust.com",
+            "optimizely.com",
+            "cookielaw.org",
+            "chartbeat.com",
+            "newrelic.com",
+            "nr-data.net",
+            "clarity.ms",
+            "mouseflow.com",
+            "crazyegg.com",
         ]
 
         with sync_playwright() as p:
@@ -205,10 +221,25 @@ class ScribdArchiver:
             )
             page = context.new_page()
 
-            # Ad & Tracker Interception Shield: Loại bỏ 12+ tracker làm chậm kết nối
+            # Ad & Tracker Interception Shield: Loại bỏ 30+ tracker/ads làm chậm kết nối
             def handle_route(route):
                 req = route.request
                 url_lower = req.url.lower()
+
+                # Critical whitelist: NEVER block scribd core assets, fonts, absimg, or jsonp fragments
+                if req.resource_type == "font" or any(k in url_lower for k in [
+                    "scribd.com",
+                    "scribdassets.com",
+                    ".absimg",
+                    "jsonp",
+                    ".woff",
+                    ".woff2",
+                    ".ttf",
+                    ".otf",
+                ]):
+                    route.continue_()
+                    return
+
                 if req.resource_type in ["media", "beacon"] or any(domain in url_lower for domain in TRACKER_DOMAINS):
                     route.abort()
                 else:

@@ -12,6 +12,7 @@ import { renderSlideConfirmModal, openSlideConfirmModal } from './components/Sli
 import { scribdManager, validateScribdUrlOrId, extractScribdUrlOrId, isScribdSearchUrl } from './hooks/useScribd.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
+import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 
 export function renderScribdWorkspace() {
   const state = scribdManager.getState();
@@ -496,9 +497,35 @@ export function attachScribdListeners() {
   attachTerminalHandlers();
   attachListHandlers();
 
+  // Auto-Start Consumer: check if navigated here with a fresh pending Scribd URL
+  const pendingUrl = consumePendingAutoStart('scribd');
+  if (pendingUrl) {
+    const urlInput = document.getElementById('scribdUrlInput');
+    if (urlInput) {
+      urlInput.value = pendingUrl;
+      syncOmnibarState();
+    }
+    setTimeout(() => {
+      handleUrlCandidate(pendingUrl);
+    }, 50);
+  }
+
+  function handlePendingAutoStart(e) {
+    if (e.detail?.toolId === 'scribd' && e.detail.url) {
+      const urlInput = document.getElementById('scribdUrlInput');
+      if (urlInput) {
+        urlInput.value = e.detail.url;
+        syncOmnibarState();
+      }
+      handleUrlCandidate(e.detail.url);
+    }
+  }
+  window.addEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
+
   return () => {
     unsubscribe();
     window.removeEventListener('paste', handleGlobalPaste);
+    window.removeEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
     scribdManager.cleanupWorkspace();
   };
 }

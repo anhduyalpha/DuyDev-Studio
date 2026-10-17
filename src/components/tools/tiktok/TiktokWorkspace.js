@@ -10,6 +10,7 @@ import { tiktokApi } from './services/tiktokApi.js';
 import { showToast } from '../../../utilities/toast.js';
 import { StorageService } from '../../../services/storageService.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
+import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 
 function formatCompactNumber(num) {
   if (!num || isNaN(num)) return '0';
@@ -1284,7 +1285,34 @@ export function attachTiktokWorkspaceListeners() {
     };
   }
 
+  // Auto-Start Consumer: check if navigated here with a fresh pending TikTok URL
+  const pendingUrl = consumePendingAutoStart('tiktok');
+  if (pendingUrl) {
+    if (input) {
+      input.value = pendingUrl;
+      syncInputButtons(pendingUrl);
+    }
+    tiktokManager.setUrl(pendingUrl, false);
+    setTimeout(() => {
+      tiktokManager.resolve(pendingUrl);
+    }, 50);
+  }
+
+  function handlePendingAutoStart(e) {
+    if (e.detail?.toolId === 'tiktok' && e.detail.url) {
+      const clean = e.detail.url.trim();
+      if (input) {
+        input.value = clean;
+        syncInputButtons(clean);
+      }
+      tiktokManager.setUrl(clean, false);
+      tiktokManager.resolve(clean);
+    }
+  }
+  window.addEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
+
   return () => {
     unsubscribe();
+    window.removeEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
   };
 }

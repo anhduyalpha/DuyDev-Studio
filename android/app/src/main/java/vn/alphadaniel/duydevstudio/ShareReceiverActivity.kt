@@ -75,14 +75,32 @@ class ShareReceiverActivity : AppCompatActivity() {
             return
         }
 
+        // Fast-path: When sharing Scribd link, auto-launch Scribd Downloader directly
+        if (collectedUris.isEmpty() && isScribdContent(url, text)) {
+            val scribdUrl = extractScribdUrl(url, text)
+            forwardToMainActivity(ShareAction("Tải Tài Liệu Scribd", "#tool/scribd"), scribdUrl)
+            return
+        }
+
         // Fast-path: When sharing TikTok link, auto-launch TikTok Downloader directly
         if (collectedUris.isEmpty() && isTikTokContent(url, text)) {
             val tikTokUrl = extractTikTokUrl(url, text)
-            forwardToMainActivity(ShareAction("Tải Video TikTok", "#tool/tiktok-downloader"), tikTokUrl)
+            forwardToMainActivity(ShareAction("Tải Video TikTok", "#tool/tiktok"), tikTokUrl)
             return
         }
 
         showNativeShareDialog(collectedUris, text, url)
+    }
+
+    private fun isScribdContent(url: String, text: String): Boolean {
+        val combined = "$url $text".lowercase(Locale.ROOT)
+        return combined.contains("scribd.com")
+    }
+
+    private fun extractScribdUrl(url: String, text: String): String {
+        val combined = if (url.isNotBlank()) url else text
+        val match = Regex("""https?://(?:www\.)?scribd\.com/(?:document|doc|presentation|embeds)/\d+[^\s"']*""").find(combined)
+        return match?.value ?: (if (url.isNotBlank()) url else text)
     }
 
     private fun isTikTokContent(url: String, text: String): Boolean {
@@ -160,8 +178,11 @@ class ShareReceiverActivity : AppCompatActivity() {
             tvFileName.text = if (isLink) url else text
             tvFileMeta.text = if (isLink) "LIÊN KẾT WEB" else "VĂN BẢN THUẦN"
 
-            if (isTikTokContent(url, text)) {
-                actions.add(ShareAction("Tải Video TikTok Không Logo", "#tool/tiktok-downloader"))
+            if (isScribdContent(url, text)) {
+                actions.add(ShareAction("Tải tài liệu Scribd", "#tool/scribd"))
+                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
+            } else if (isTikTokContent(url, text)) {
+                actions.add(ShareAction("Tải Video TikTok Không Logo", "#tool/tiktok"))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
             } else if (url.contains("studocu.com") || url.contains("studocu.vn")) {
                 actions.add(ShareAction("Tải tài liệu Studocu", "#tool/studocu-dl"))

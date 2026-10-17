@@ -432,16 +432,26 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
             force_reload = bool(data.get("force_reload", False) or data.get("bypass_cache", False))
             user_name = data.get("user_name") or "Máy khách"
 
-            # Kiểm tra tài liệu đã tồn tại trong downloads
+            # Kiểm tra tài liệu đã tồn tại trong downloads (< 100ms instant cache hit)
             if not force_reload:
-                for p in DOWNLOADS_DIR.glob(f"*_{doc_id}.pdf"):
-                    if p.is_file() and p.stat().st_size > 50000:
+                for p in DOWNLOADS_DIR.glob("*.pdf"):
+                    if not p.is_file() or p.stat().st_size <= 50000:
+                        continue
+                    stem = p.stem
+                    if stem.endswith(f"_{doc_id}") or stem.startswith(f"{doc_id}_") or f"_{doc_id}_" in stem or stem == str(doc_id):
                         size_bytes = p.stat().st_size
+                        page_count = 1
+                        try:
+                            import pymupdf
+                            with pymupdf.open(p) as doc:
+                                page_count = doc.page_count
+                        except Exception:
+                            pass
                         cached_result = {
                             "id": doc_id,
                             "name": p.name,
                             "title": p.stem.replace(f"_{doc_id}", "").replace("_", " "),
-                            "pages": 1,
+                            "pages": page_count,
                             "size_bytes": size_bytes,
                             "size_mb": round(size_bytes / (1024 * 1024), 2),
                             "from_cache": True,
@@ -451,8 +461,8 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             "id": cached_job_id,
                             "status": "completed",
                             "progress": 100,
-                            "step_label": "Tài liệu đã có sẵn trên máy chủ",
-                            "logs": ["⚡ Tài liệu đã có sẵn trong kho lưu trữ"],
+                            "step_label": f"Tài liệu đã có sẵn trên máy chủ ({page_count} trang)",
+                            "logs": [f"⚡ Tài liệu đã có sẵn trong kho lưu trữ: {p.name}"],
                             "result": cached_result,
                         }
                         self.send_response(HTTPStatus.OK)

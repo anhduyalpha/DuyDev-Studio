@@ -6,12 +6,14 @@
 
 import { classifySharedPayload, SharePayloadType } from '../../utilities/shareTargetHelper.js';
 import { formatBytes } from '../../utilities/formatters.js';
+import { detectSmartRoute, handoffSmartUrl } from '../../utilities/smartUrlRouter.js';
 
 /** @type {(() => void)|null} */
 let cleanupFn = null;
 
 const TYPE_LABELS = {
   [SharePayloadType.TIKTOK_URL]: 'Video TikTok',
+  [SharePayloadType.SCRIBD_URL]: 'Tài liệu Scribd',
   [SharePayloadType.STUDOCU_URL]: 'Tài liệu Studocu',
   [SharePayloadType.IMAGE_URL]: 'Liên kết Hình ảnh / QR',
   [SharePayloadType.GENERIC_URL]: 'Liên kết Web',
@@ -24,6 +26,7 @@ const TYPE_LABELS = {
 
 const TYPE_ICONS = {
   [SharePayloadType.TIKTOK_URL]: 'video',
+  [SharePayloadType.SCRIBD_URL]: 'book-open',
   [SharePayloadType.STUDOCU_URL]: 'book-open',
   [SharePayloadType.IMAGE_URL]: 'image',
   [SharePayloadType.GENERIC_URL]: 'link',
@@ -156,6 +159,20 @@ export function openShareTargetModal(payload) {
   if (!container) return;
 
   window.__FAST_PATH_SHARE_ACTIVE = true;
+
+  // Fast-path: When sharing plain-text Scribd or TikTok URL, bypass manual modal friction
+  if (!payload.files || payload.files.length === 0) {
+    const smart = detectSmartRoute(payload.url || payload.text || '');
+    if (smart) {
+      document.documentElement.classList.remove('is-share-target');
+      if (window.location.hash.startsWith('#share-target')) {
+        history.replaceState(null, '', window.location.pathname);
+      }
+      window.__FAST_PATH_SHARE_ACTIVE = false;
+      handoffSmartUrl(smart);
+      return;
+    }
+  }
 
   const classification = classifySharedPayload(payload);
   if (!classification.recommendations || !classification.recommendations.length) {
@@ -377,12 +394,24 @@ async function dispatchSharedPayloadToTool(action, payload) {
 
   try {
     switch (action.route) {
+      case '#tool/tiktok':
       case '#tool/tiktok-downloader': {
         const { tiktokManager } = await import('../tools/tiktok/hooks/useTiktok.js');
         const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
         if (targetUrl) {
           tiktokManager.setUrl(targetUrl);
           tiktokManager.resolve(targetUrl);
+        }
+        break;
+      }
+      case '#tool/scribd':
+      case '#tool/scribd-archiver': {
+        const { scribdManager } = await import('../tools/scribd/hooks/useScribd.js');
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          const urlInput = document.getElementById('scribdUrlInput');
+          if (urlInput) urlInput.value = targetUrl;
+          scribdManager.startDownload(targetUrl, false);
         }
         break;
       }

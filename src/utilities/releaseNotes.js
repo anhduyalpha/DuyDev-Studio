@@ -6,6 +6,22 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.15': {
+    version: 'v23.15',
+    title: 'Bản cập nhật v23.15',
+    date: '17/10/2026',
+    features: [
+      'Scribd Tracker-Block Shield: Chặn hơn 30 mạng quảng cáo và bộ thu thập dữ liệu giúp tăng tốc độ nạp tài liệu Scribd đáng kể',
+      'Scribd Instant Cache Hit: Trả kết quả tải tài liệu Scribd tức thì (< 100ms) nếu tệp PDF đã có sẵn trên máy chủ',
+      'Global Smart Paste & URL Router: Nút Dán link nhanh trên Dashboard và phím tắt Ctrl+V tự động nhận diện liên kết Scribd và TikTok để chuyển tiếp',
+      'Seamless Android Share Routing: Chia sẻ liên kết từ Chrome/Zalo vào app tự động mở và tải ngay trong 0 chạm'
+    ],
+    fixes: [
+      'Bảo vệ 100% chất lượng render tài liệu Scribd với danh sách trắng tài nguyên vector font và hình ảnh',
+      'Triệt tiêu ma sát modal khi chia sẻ liên kết đơn thuần trên thiết bị Android',
+      'Tối ưu độ trễ chuyển hướng giữa các công cụ tải ngoại tuyến'
+    ]
+  },
   'v23.13': {
     version: 'v23.13',
     title: 'Bản cập nhật v23.13',

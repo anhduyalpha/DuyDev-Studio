@@ -843,9 +843,29 @@ class MainActivity : AppCompatActivity() {
 
             AndroidBridge.sharedPayloadJson = payload.toString()
 
+            val autoStartScript = if (uris.isEmpty() && !detectedUrl.isNullOrBlank()) {
+                val cleanUrl = detectedUrl.replace("\\", "\\\\").replace("'", "\\'")
+                when {
+                    cleanUrl.contains("scribd.com") -> """
+                        try {
+                            sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'scribd', url: '$cleanUrl', ts: Date.now() }));
+                            window.location.hash = '#tool/scribd';
+                        } catch (_) {}
+                    """.trimIndent()
+                    cleanUrl.contains("tiktok.com") || cleanUrl.contains("douyin.com") -> """
+                        try {
+                            sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'tiktok', url: '$cleanUrl', ts: Date.now() }));
+                            window.location.hash = '#tool/tiktok';
+                        } catch (_) {}
+                    """.trimIndent()
+                    else -> ""
+                }
+            } else ""
+
             // Notify web application if already loaded
             webView.evaluateJavascript("""
                 if (typeof window !== 'undefined') {
+                    $autoStartScript
                     window.dispatchEvent(new CustomEvent('ds:native-share-arrived'));
                 }
             """.trimIndent(), null)

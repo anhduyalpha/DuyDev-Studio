@@ -7,6 +7,7 @@
 /** @enum {string} Payload classification types */
 export const SharePayloadType = {
   TIKTOK_URL: 'TIKTOK_URL',
+  SCRIBD_URL: 'SCRIBD_URL',
   STUDOCU_URL: 'STUDOCU_URL',
   IMAGE_URL: 'IMAGE_URL',
   GENERIC_URL: 'GENERIC_URL',
@@ -34,6 +35,12 @@ function isTikTokHost(hostname) {
   if (!hostname) return false;
   const host = hostname.toLowerCase();
   return host === 'tiktok.com' || host.endsWith('.tiktok.com') || host === 'douyin.com' || host.endsWith('.douyin.com');
+}
+
+function isScribdHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'scribd.com' || host.endsWith('.scribd.com');
 }
 
 function isStudocuHost(hostname) {
@@ -474,6 +481,16 @@ export function classifySharedPayload(payload) {
           type: SharePayloadType.TIKTOK_URL,
           recommendations: [
             { label: isPhoto ? 'Tải Album Ảnh TikTok' : 'Tải Video / Album Ảnh TikTok Không Logo', route: '#tool/tiktok-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+          ],
+        };
+      }
+
+      if (isScribdHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.SCRIBD_URL,
+          recommendations: [
+            { label: 'Tải tài liệu Scribd', route: '#tool/scribd', isPrimary: true },
             { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
           ],
         };

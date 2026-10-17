@@ -25,6 +25,7 @@ import { renderServerPage, attachServerPageListeners } from './pages/ServerPage.
 import { renderAdminPage, attachAdminPageListeners, stopAdminPolling } from './pages/AdminPage.js';
 import { renderStoragePage, attachStoragePageListeners } from './pages/StoragePage.js';
 import { renderTermsPage, attachTermsPageListeners } from './pages/TermsPage.js';
+import { detectSmartRoute, handoffSmartUrl } from './utilities/smartUrlRouter.js';
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
 import { closeFileViewer } from './components/common/viewer/FileViewerCore.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
@@ -265,6 +266,18 @@ class App {
         return;
       }
 
+      // Fast-path: When sharing plain-text Scribd or TikTok URL, bypass manual modal friction
+      if (!payload.files || payload.files.length === 0) {
+        const smart = detectSmartRoute(payload.url || payload.text || '');
+        if (smart) {
+          if (window.location.hash.startsWith('#share-target')) {
+            history.replaceState(null, '', window.location.pathname);
+          }
+          handoffSmartUrl(smart);
+          return;
+        }
+      }
+
       if (!document.getElementById('shareTargetPanel')) {
         openShareTargetModal(payload);
       }
@@ -457,6 +470,8 @@ class App {
       dispatchTool('universal-converter');
     } else if (hash === '#studocu' || hash === '#studocu-dl') {
       dispatchTool('studocu-dl');
+    } else if (hash === '#scribd' || hash === '#scribd-archiver' || hash.startsWith('#scribd?') || hash.startsWith('#scribd-archiver?')) {
+      dispatchTool('scribd');
     } else if (hash === '#tiktok' || hash === '#tiktok-downloader' || hash.startsWith('#tiktok?') || hash.startsWith('#tiktok-downloader?')) {
       dispatchTool('tiktok-downloader');
       const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
