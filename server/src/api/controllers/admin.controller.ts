@@ -30,7 +30,18 @@ const deleteKeySchema = z.object({
 });
 
 const testKeySchema = z.object({
-  keyId: z.string().min(1, 'Key ID is required')
+  keyId: z.string().optional(),
+  apiKey: z.string().optional(),
+  baseUrl: z.string().optional(),
+  model: z.string().optional(),
+  provider: z.string().optional()
+});
+
+const getModelsQuerySchema = z.object({
+  keyId: z.string().optional(),
+  apiKey: z.string().optional(),
+  baseUrl: z.string().optional(),
+  provider: z.string().optional()
 });
 
 const toggleKeySchema = z.object({
@@ -170,11 +181,36 @@ export async function toggleAiKeyHandler(request: FastifyRequest, reply: Fastify
 export async function testAiKeyHandler(request: FastifyRequest, reply: FastifyReply) {
   const parseResult = testKeySchema.safeParse(request.body);
   if (!parseResult.success) {
-    const msg = parseResult.error.errors[0]?.message || 'Vui lòng cung cấp keyId để kiểm tra';
+    const msg = parseResult.error.errors[0]?.message || 'Dữ liệu kiểm tra key không hợp lệ';
     throw new BadRequestError(msg);
   }
 
-  const result = await aiMetricsService.testPingKey(parseResult.data.keyId);
+  const { keyId, apiKey, baseUrl, model, provider } = parseResult.data;
+  if (!keyId && !apiKey) {
+    throw new BadRequestError('Vui lòng cung cấp keyId hoặc API Key để kiểm tra');
+  }
+
+  const result = await aiMetricsService.testPingKey({
+    keyId,
+    apiKey,
+    baseUrl,
+    model,
+    provider
+  });
+  return reply.send({
+    success: result.success,
+    data: result
+  });
+}
+
+/**
+ * POST /api/v1/admin/ai/models
+ * Fetches available models from the AI provider API
+ */
+export async function getAvailableAiModelsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const parseResult = getModelsQuerySchema.safeParse(request.body);
+  const data = parseResult.success ? parseResult.data : {};
+  const result = await aiMetricsService.fetchAvailableModels(data);
   return reply.send({
     success: result.success,
     data: result

@@ -491,13 +491,21 @@ function openAiKeyModal({ key = null, onSaved = null }) {
     isActive: true
   };
 
+  // Auto-upgrade deprecated Gemini model & endpoint
+  if (existing.model === 'gemini-1.5-flash') {
+    existing.model = 'gemini-2.5-flash';
+  }
+  if ((existing.provider === 'gemini' || existing.baseUrl?.includes('generativelanguage.googleapis.com')) && (!existing.baseUrl || !existing.baseUrl.includes('/openai'))) {
+    existing.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+  }
+
   const modalId = 'modalAiKeyForm';
   const oldModal = document.getElementById(modalId);
   if (oldModal) oldModal.remove();
 
   const providerDefaults = {
     agnes: { baseUrl: 'https://apihub.agnes-ai.com/v1', model: 'agnes-3.0-flash' },
-    gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/', model: 'gemini-1.5-flash' },
+    gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/', model: 'gemini-2.5-flash' },
     openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
     custom: { baseUrl: 'https://api.example.com/v1', model: 'custom-model' }
   };
@@ -534,7 +542,7 @@ function openAiKeyModal({ key = null, onSaved = null }) {
               type="text"
               id="inputKeyName"
               required
-              placeholder="VD: Agnes Flash Dự Phòng 2, Gemini 1.5 Flash..."
+              placeholder="VD: Agnes Flash Dự Phòng 2, Gemini 2.5 Flash..."
               value="${escapeHtml(existing.name)}"
               class="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-orange-500"
             />
@@ -581,17 +589,33 @@ function openAiKeyModal({ key = null, onSaved = null }) {
             />
           </div>
 
-          <!-- Model -->
+          <!-- Model Identifier with Datalist & Auto Fetch -->
           <div>
-            <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tên Model (Model Identifier)</label>
-            <input
-              type="text"
-              id="inputKeyModel"
-              required
-              value="${escapeHtml(existing.model)}"
-              placeholder="agnes-3.0-flash"
-              class="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-orange-500 font-mono"
-            />
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-semibold text-zinc-700 dark:text-zinc-300">Tên Model (Model Identifier)</label>
+              <button
+                type="button"
+                id="btnFetchAiModels"
+                class="text-[11px] text-orange-600 dark:text-orange-400 hover:text-orange-500 font-medium flex items-center gap-1 cursor-pointer transition"
+                title="Tự động gọi API nhà cung cấp để quét danh sách model thực tế"
+              >
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                <span id="btnFetchAiModelsText">Quét Models từ API</span>
+              </button>
+            </div>
+            <div class="relative">
+              <input
+                type="text"
+                id="inputKeyModel"
+                list="listAiModels"
+                required
+                value="${escapeHtml(existing.model || 'gemini-2.5-flash')}"
+                placeholder="Chọn hoặc gõ tên model..."
+                class="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-orange-500 font-mono"
+              />
+              <datalist id="listAiModels"></datalist>
+            </div>
+            <div id="modelFetchStatus" class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center gap-1"></div>
           </div>
 
           <!-- API Key -->
@@ -604,13 +628,13 @@ function openAiKeyModal({ key = null, onSaved = null }) {
                 type="password"
                 id="inputKeySecret"
                 ${isEdit ? '' : 'required'}
-                placeholder="${isEdit ? 'Nhập khóa mới nếu muốn đổi...' : 'sk-...'}"
+                placeholder="${isEdit ? 'Nhập khóa mới nếu muốn đổi...' : 'sk-... hoặc AIzaSy...'}"
                 class="w-full px-3 py-2 pr-10 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-orange-500 font-mono"
               />
               <button
                 type="button"
                 id="btnToggleAiKeyVisibility"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 p-0.5"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 p-0.5 cursor-pointer"
                 title="Hiện/Ẩn API key"
               >
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
@@ -632,22 +656,33 @@ function openAiKeyModal({ key = null, onSaved = null }) {
           </div>
 
           <!-- Submit Buttons -->
-          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-100 dark:border-white/5">
+          <div class="flex items-center justify-between gap-2.5 pt-3 border-t border-zinc-100 dark:border-white/5">
             <button
               type="button"
-              id="btnCancelAiKeyModal"
-              class="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
+              id="btnTestModalAiKey"
+              class="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-semibold border border-zinc-200 dark:border-white/10 transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="Gửi thử ping kiểm tra kết nối với thông số hiện tại"
             >
-              Hủy
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-500"></i>
+              <span>Test Ping</span>
             </button>
-            <button
-              type="submit"
-              id="btnSubmitAiKeyModal"
-              class="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-            >
-              <i data-lucide="save" class="w-3.5 h-3.5"></i>
-              <span>Lưu Cấu Hình Key</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                id="btnCancelAiKeyModal"
+                class="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                id="btnSubmitAiKeyModal"
+                class="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                <span>Lưu Cấu Hình Key</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -673,6 +708,109 @@ function openAiKeyModal({ key = null, onSaved = null }) {
 
   // Provider auto-fill change
   const selectProv = modalEl.querySelector('#selectKeyProvider');
+  const inputModel = modalEl.querySelector('#inputKeyModel');
+  const dataListModels = modalEl.querySelector('#listAiModels');
+  const btnFetchModels = modalEl.querySelector('#btnFetchAiModels');
+  const statusEl = modalEl.querySelector('#modelFetchStatus');
+
+  const populateModels = (modelsList, autoSelectFirst = false) => {
+    if (!dataListModels) return;
+    dataListModels.innerHTML = modelsList.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name || m.id)}</option>`).join('');
+    if (autoSelectFirst && (!inputModel.value || inputModel.value === 'gemini-1.5-flash' || inputModel.value === 'custom-model')) {
+      inputModel.value = modelsList[0]?.id || '';
+    }
+  };
+
+  const fetchModels = async (silent = false) => {
+    const secretVal = secretInput.value.trim();
+    const prov = selectProv.value;
+    const base = modalEl.querySelector('#inputKeyBaseUrl').value.trim();
+
+    const reqBody = {
+      provider: prov,
+      baseUrl: base
+    };
+    if (secretVal) {
+      reqBody.apiKey = secretVal;
+    } else if (isEdit && existing.id) {
+      reqBody.keyId = existing.id;
+    }
+
+    if (btnFetchModels) {
+      btnFetchModels.disabled = true;
+      const textSpan = modalEl.querySelector('#btnFetchAiModelsText');
+      if (textSpan) textSpan.textContent = 'Đang quét...';
+    }
+    if (statusEl && !silent) {
+      statusEl.innerHTML = '<span class="inline-block animate-spin mr-1">⟳</span> Đang kết nối API quét danh sách models...';
+    }
+
+    try {
+      const resp = await fetch('/api/v1/admin/ai/models', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getStorageAuthHeaders()
+        },
+        body: JSON.stringify(reqBody)
+      });
+      const json = await resp.json();
+      if (json.success && json.data && Array.isArray(json.data.models) && json.data.models.length > 0) {
+        populateModels(json.data.models, false);
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="text-emerald-500 font-medium">✓ Đã tìm thấy ${json.data.models.length} model khả dụng từ ${escapeHtml(json.data.provider)}</span>`;
+        }
+      } else {
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="text-amber-500">${escapeHtml(json.data?.message || json.message || 'Không thể lấy models')}</span>`;
+        }
+      }
+    } catch (err) {
+      if (statusEl) {
+        statusEl.innerHTML = `<span class="text-zinc-500">Lỗi kết nối: ${escapeHtml(err.message)}</span>`;
+      }
+    } finally {
+      if (btnFetchModels) {
+        btnFetchModels.disabled = false;
+        const textSpan = modalEl.querySelector('#btnFetchAiModelsText');
+        if (textSpan) textSpan.textContent = 'Quét Models từ API';
+      }
+    }
+  };
+
+  if (btnFetchModels) {
+    btnFetchModels.onclick = () => fetchModels(false);
+  }
+
+  // Auto-detect provider and fetch models on typing key
+  let fetchTimer = null;
+  secretInput.addEventListener('input', () => {
+    const val = secretInput.value.trim();
+    if (val.startsWith('AIzaSy')) {
+      if (selectProv.value !== 'gemini') {
+        selectProv.value = 'gemini';
+        modalEl.querySelector('#inputKeyBaseUrl').value = providerDefaults.gemini.baseUrl;
+        modalEl.querySelector('#inputKeyModel').value = providerDefaults.gemini.model;
+        const nameInput = modalEl.querySelector('#inputKeyName');
+        if (!nameInput.value || nameInput.value === 'Agnes AI') {
+          nameInput.value = 'Google Gemini 2.5 Flash';
+        }
+      }
+    }
+
+    clearTimeout(fetchTimer);
+    if (val.length >= 25) {
+      fetchTimer = setTimeout(() => fetchModels(true), 600);
+    }
+  });
+
+  secretInput.addEventListener('blur', () => {
+    const val = secretInput.value.trim();
+    if (val.length >= 10) {
+      fetchModels(true);
+    }
+  });
+
   selectProv.onchange = () => {
     const prov = selectProv.value;
     const defaults = providerDefaults[prov];
@@ -680,7 +818,51 @@ function openAiKeyModal({ key = null, onSaved = null }) {
       modalEl.querySelector('#inputKeyBaseUrl').value = defaults.baseUrl;
       modalEl.querySelector('#inputKeyModel').value = defaults.model;
     }
+    fetchModels(true);
   };
+
+  // Immediate initial load of model list for convenience
+  fetchModels(true);
+
+  // In-modal Test Ping
+  const btnTestModal = modalEl.querySelector('#btnTestModalAiKey');
+  if (btnTestModal) {
+    btnTestModal.onclick = async () => {
+      const origHtml = btnTestModal.innerHTML;
+      btnTestModal.disabled = true;
+      btnTestModal.innerHTML = '<span class="inline-block animate-spin mr-1">⟳</span> Ping...';
+
+      const pingPayload = {
+        keyId: isEdit ? existing.id : undefined,
+        apiKey: secretInput.value.trim() || undefined,
+        provider: selectProv.value,
+        baseUrl: modalEl.querySelector('#inputKeyBaseUrl').value.trim(),
+        model: modalEl.querySelector('#inputKeyModel').value.trim()
+      };
+
+      try {
+        const resp = await fetch('/api/v1/admin/ai/test-key', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getStorageAuthHeaders()
+          },
+          body: JSON.stringify(pingPayload)
+        });
+        const json = await resp.json();
+        if (json.success) {
+          showToast(`Ping thành công: ${json.data.latencyMs}ms (${json.data.message})`, 'success');
+        } else {
+          showToast(`Ping thất bại: ${json.data?.message || json.message}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Không thể kết nối máy chủ: ${err.message}`, 'error');
+      } finally {
+        btnTestModal.disabled = false;
+        btnTestModal.innerHTML = origHtml;
+      }
+    };
+  }
 
   // Submit
   const form = modalEl.querySelector('#formAiKey');

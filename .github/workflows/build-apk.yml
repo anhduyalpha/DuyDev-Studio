@@ -70,12 +70,11 @@ jobs:
             ## DuyDev Studio Native Android Wrapper (${{ github.ref_name }})
 
             ### Điểm nổi bật phiên bản ${{ github.ref_name }}:
-            - **Tích hợp Tải TikTok & Audio MP3 Siêu Tốc**: Tải video TikTok gốc không watermark và trích xuất file âm thanh MP3 nhanh chóng.
-            - **Hỗ trợ Chia Sẻ Link TikTok Trực Tiếp (Android Share Sheet)**: Chia sẻ trực tiếp từ ứng dụng TikTok hoặc trình duyệt sang DuyDev Studio để tự động chuyển đến trang tải.
-            - **Thư Mục Drive TikTok Chuyên Biệt**: Tự động đồng bộ và quản lý toàn bộ tệp TikTok đã tải ngay trong tab `/tiktok` của DuyDev Studio Drive.
-            - **Triệt tiêu đơ giật khi dán liên kết**: Tối ưu cơ chế clipboard non-blocking, ngăn chặn tình trạng treo trình duyệt Chrome / WebView trên thiết bị Android.
-            - **Chuẩn hóa Giao diện Tối giản & Typography**: Cải tiến typography theo phong cách Apple, đồng bộ chế độ sáng / tối hoàn hảo và loại bỏ toàn bộ từ ngữ AI rườm rà.
-            - **Tối ưu hóa Pin & Bộ Nhớ**: Triệt tiêu hao pin radio wakelock, cách ly GPU compositing layer, bảo vệ vòng lặp render tự ngủ khi ẩn ứng dụng.
+            - **Converter Pro Progressive Disclosure & Mobile Ergonomics**: Tái cấu trúc giao diện theo giai đoạn xử lý, vùng thả tệp Stitch Dropzone tự động thu gọn thành thanh tác vụ nhỏ gọn, kích thước nút bấm tối thiểu 44px và khoảng đệm chân trang pb-36 chống đè thanh điều hướng di động.
+            - **Kiến trúc Tiết Kiệm Pin & Zero-Drain (KI-FIX-023)**: Tự động đưa WebView vào trạng thái ngủ khi ẩn ứng dụng (`pauseTimers`/`onPause`), triệt tiêu radio tail state wakelock và vô hiệu hóa vòng lặp render GPU khi màn hình tĩnh.
+            - **Bộ Công Cụ So Sánh Ảnh Đa Khung Nhìn ViewSplit**: Khung nhìn chia đôi / chia ba / chia tư, thanh trượt gạt Before/After, Pixel Inspector loupe HUD 9x9 và cơ chế tự động chuyển ô khi dán ảnh.
+            - **Scribd Ad & Tracker Blocking**: Tăng tốc độ tải tài liệu, chặn toàn bộ domain theo dõi/quảng cáo của bên thứ ba, trả kết quả cache tức thì `<100ms`.
+            - **Tích hợp Tải TikTok & Audio MP3 Siêu Tốc**: Tải video TikTok gốc không watermark, trích xuất âm thanh MP3 và đồng bộ thư mục Studio Drive.
             - **Khởi động siêu tốc (<80ms)**: Shell Native Kotlin siêu nhẹ (~3MB) loại bỏ hoàn toàn Splash Screen chờ đợi của Chromium WebAPK.
 
             ### Cài đặt:

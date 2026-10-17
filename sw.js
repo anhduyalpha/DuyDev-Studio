@@ -3,25 +3,25 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v23.21';
+const CACHE_NAME = 'duydev-studio-v23.22';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=23.21',
-  './src/styles/studocu.css?v=23.21',
-  './src/styles/scribd.css?v=23.21',
-  './src/styles/highlight-theme.css?v=23.21',
+  './src/styles/stitch-tokens.css?v=23.22',
+  './src/styles/studocu.css?v=23.22',
+  './src/styles/scribd.css?v=23.22',
+  './src/styles/highlight-theme.css?v=23.22',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=23.21',
-  './src/utilities/releaseNotes.js?v=23.21',
-  './src/utilities/smartUrlRouter.js?v=23.21',
+  './src/app.js?v=23.22',
+  './src/utilities/releaseNotes.js?v=23.22',
+  './src/utilities/smartUrlRouter.js?v=23.22',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/pages/DashboardPage.js',

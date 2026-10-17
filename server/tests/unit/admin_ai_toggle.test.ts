@@ -92,4 +92,31 @@ describe('AI Key Toggle & Active Environment Synchronization', () => {
       aiMetrics.toggleKey('non-existent-key-id-xyz');
     }).toThrow('Không tìm thấy API key với ID');
   });
+
+  it('should auto-upgrade gemini-1.5-flash to gemini-2.5-flash and normalize Gemini baseUrl', () => {
+    const key = aiMetrics.updateKey({
+      id: 'test-gemini-key',
+      name: 'Google Gemini Test',
+      provider: 'gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      model: 'gemini-1.5-flash',
+      apiKey: 'AIzaSyTest123',
+      priority: 2,
+      isActive: true
+    });
+
+    expect(key.model).toBe('gemini-2.5-flash');
+    expect(key.baseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai/');
+
+    // Cleanup
+    aiMetrics.deleteKey('test-gemini-key');
+  });
+
+  it('should return curated fallback models from fetchAvailableModels when apiKey is empty', async () => {
+    const res = await aiMetrics.fetchAvailableModels({ provider: 'gemini' });
+    expect(res.success).toBe(true);
+    expect(res.provider).toBe('gemini');
+    expect(res.models.some(m => m.id === 'gemini-2.5-flash')).toBe(true);
+    expect(res.models.some(m => m.id === 'gemini-2.5-pro')).toBe(true);
+  });
 });
