@@ -3,14 +3,14 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v23.40';
+const CACHE_NAME = 'duydev-studio-v23.41';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
   './src/styles/stitch-tokens.css?v=23.35',
-  './src/styles/card-tiers-10.css?v=23.40',
+  './src/styles/card-tiers-10.css?v=23.41',
   './src/styles/studocu.css?v=23.35',
   './src/styles/scribd.css?v=23.35',
   './src/styles/highlight-theme.css?v=23.35',

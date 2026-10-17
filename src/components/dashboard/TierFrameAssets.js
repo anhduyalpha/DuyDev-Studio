@@ -462,19 +462,35 @@ export function renderTierStructuralLayers(tierCode) {
         <!-- Sweeping Solar Light Beam (Blinding Specular Glare) -->
         <div class="tier-solar-beam-sweep pointer-events-none" aria-hidden="true"></div>
 
-        <!-- Real Golden Solar Strobe Lightning Arcs -->
+        <!-- Real Golden Solar Strobe Lightning Arcs (4-Perimeter High-Voltage Frame) -->
         <svg class="tier-solar-lightning-lr pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <!-- Bolt 1: Top Edge -->
           <g class="solar-bolt-top">
-            <path d="M 50 14 L 75 8 L 92 20 L 120 10 L 148 16 L 180 8 L 210 18 L 245 12" stroke="#FDE047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 50 14 L 75 8 L 92 20 L 120 10 L 148 16 L 180 8 L 210 18 L 245 12" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 92 20 L 105 34 L 118 32" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M 180 8 L 190 24 L 205 22" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 45 14 L 75 8 L 92 20 L 120 10 L 148 16 L 180 8 L 210 18 L 245 12" stroke="#FDE047" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 45 14 L 75 8 L 92 20 L 120 10 L 148 16 L 180 8 L 210 18 L 245 12" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 92 20 L 105 34 L 118 32" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 180 8 L 190 24 L 205 22" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
           </g>
-          <g class="solar-bolt-side">
-            <path d="M 292 65 L 282 100 L 290 135 L 280 170 L 288 210" stroke="#FDE047" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 292 65 L 282 100 L 290 135 L 280 170 L 288 210" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 282 100 L 268 112 L 260 108" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M 280 170 L 266 182 L 258 178" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
+          <!-- Bolt 2: Right Edge -->
+          <g class="solar-bolt-right">
+            <path d="M 292 65 L 282 100 L 290 135 L 280 170 L 288 215" stroke="#FDE047" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 292 65 L 282 100 L 290 135 L 280 170 L 288 215" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 282 100 L 268 112 L 260 108" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 280 170 L 266 182 L 258 178" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+          <!-- Bolt 3: Bottom Edge -->
+          <g class="solar-bolt-bottom">
+            <path d="M 255 346 L 225 340 L 190 350 L 152 342 L 120 348 L 82 340 L 45 346" stroke="#FDE047" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 255 346 L 225 340 L 190 350 L 152 342 L 120 348 L 82 340 L 45 346" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 190 350 L 178 334 L 164 336" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 120 348 L 108 332 L 94 334" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+          <!-- Bolt 4: Left Edge -->
+          <g class="solar-bolt-left">
+            <path d="M 8 215 L 18 170 L 10 135 L 20 100 L 10 65" stroke="#FDE047" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 8 215 L 18 170 L 10 135 L 20 100 L 10 65" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 18 170 L 32 158 L 40 162" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 20 100 L 34 88 L 42 92" stroke="#FEF08A" stroke-width="1.6" stroke-linecap="round"/>
           </g>
         </svg>
 

@@ -599,48 +599,111 @@ html.dark .tier-watermark-seal-ex {
   95%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(4.0); }
 }
 
-/* --- Tier LR: Golden Solar Thunder Strobe & Blinding Lens Flare --- */
+/* --- Tier LR: Golden Solar Thunder Strobe (4-Perimeter High-Voltage Lightning Frame) --- */
 .tier-card.tier-lr .tier-solar-lightning-lr {
   position: absolute;
   inset: -1px;
   width: calc(100% + 2px);
   height: calc(100% + 2px);
   pointer-events: none;
-  z-index: 4;
+  z-index: 11;
   overflow: visible;
 }
 
+/* Light Mode: High-Contrast Fiery Golden Amber Electricity Arcs */
+.tier-card.tier-lr .solar-bolt-top path,
+.tier-card.tier-lr .solar-bolt-right path,
+.tier-card.tier-lr .solar-bolt-bottom path,
+.tier-card.tier-lr .solar-bolt-left path {
+  stroke: #D97706 !important;
+}
+.tier-card.tier-lr .solar-bolt-top path:nth-child(2),
+.tier-card.tier-lr .solar-bolt-right path:nth-child(2),
+.tier-card.tier-lr .solar-bolt-bottom path:nth-child(2),
+.tier-card.tier-lr .solar-bolt-left path:nth-child(2) {
+  stroke: #F59E0B !important;
+}
+.tier-card.tier-lr .solar-bolt-top,
+.tier-card.tier-lr .solar-bolt-right,
+.tier-card.tier-lr .solar-bolt-bottom,
+.tier-card.tier-lr .solar-bolt-left {
+  opacity: 0.85;
+  filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B);
+}
+
+/* Dark Mode: Electric Yellow-Gold & Blinding White Arcs */
+html.dark .tier-card.tier-lr .solar-bolt-top path,
+html.dark .tier-card.tier-lr .solar-bolt-right path,
+html.dark .tier-card.tier-lr .solar-bolt-bottom path,
+html.dark .tier-card.tier-lr .solar-bolt-left path {
+  stroke: #FDE047 !important;
+}
+html.dark .tier-card.tier-lr .solar-bolt-top path:nth-child(2),
+html.dark .tier-card.tier-lr .solar-bolt-right path:nth-child(2),
+html.dark .tier-card.tier-lr .solar-bolt-bottom path:nth-child(2),
+html.dark .tier-card.tier-lr .solar-bolt-left path:nth-child(2) {
+  stroke: #FFFFFF !important;
+}
+html.dark .tier-card.tier-lr .solar-bolt-top,
+html.dark .tier-card.tier-lr .solar-bolt-right,
+html.dark .tier-card.tier-lr .solar-bolt-bottom,
+html.dark .tier-card.tier-lr .solar-bolt-left {
+  opacity: 0.65;
+  filter: drop-shadow(0 0 8px #FACC15) drop-shadow(0 0 16px #FEF08A);
+}
+
+/* 4-Stage Sequential Chained Strobe Timing (4.0s Cycle) */
 .tier-card.tier-lr .solar-bolt-top {
-  opacity: 0.45;
-  animation: solar-thunder-top 3.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px #FACC15);
+  animation: solar-thunder-1 4.0s ease-in-out infinite;
+}
+.tier-card.tier-lr .solar-bolt-right {
+  animation: solar-thunder-2 4.0s ease-in-out infinite;
+}
+.tier-card.tier-lr .solar-bolt-bottom {
+  animation: solar-thunder-3 4.0s ease-in-out infinite;
+}
+.tier-card.tier-lr .solar-bolt-left {
+  animation: solar-thunder-4 4.0s ease-in-out infinite;
 }
 
-.tier-card.tier-lr .solar-bolt-side {
-  opacity: 0.45;
-  animation: solar-thunder-side 3.6s ease-in-out infinite;
-  animation-delay: 1.8s;
-  filter: drop-shadow(0 0 10px #F59E0B);
+@keyframes solar-thunder-1 {
+  0%, 18% { opacity: 0.80; }
+  4% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
+  6% { opacity: 0.40; }
+  8% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
+  12% { opacity: 0.70; }
+  14% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
+  19%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
 }
 
-@keyframes solar-thunder-top {
-  0%, 65% { opacity: 0.45; filter: drop-shadow(0 0 8px #FACC15); }
-  66% { opacity: 1; filter: drop-shadow(0 0 20px #FDE047) drop-shadow(0 0 35px #FFFFFF); }
-  68% { opacity: 0.35; }
-  69% { opacity: 1; filter: drop-shadow(0 0 26px #FACC15) drop-shadow(0 0 40px #FFFFFF); }
-  72% { opacity: 0.65; }
-  74% { opacity: 1; filter: drop-shadow(0 0 18px #FDE047); }
-  77%, 100% { opacity: 0.45; filter: drop-shadow(0 0 8px #FACC15); }
+@keyframes solar-thunder-2 {
+  0%, 24% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  28% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
+  30% { opacity: 0.40; }
+  32% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
+  36% { opacity: 0.70; }
+  38% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
+  43%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
 }
 
-@keyframes solar-thunder-side {
-  0%, 60% { opacity: 0.45; filter: drop-shadow(0 0 8px #F59E0B); }
-  61% { opacity: 1; filter: drop-shadow(0 0 20px #FDE047) drop-shadow(0 0 35px #FFFFFF); }
-  63% { opacity: 0.35; }
-  64% { opacity: 1; filter: drop-shadow(0 0 26px #FACC15) drop-shadow(0 0 40px #FFFFFF); }
-  67% { opacity: 0.65; }
-  69% { opacity: 1; filter: drop-shadow(0 0 18px #FDE047); }
-  72%, 100% { opacity: 0.45; filter: drop-shadow(0 0 8px #F59E0B); }
+@keyframes solar-thunder-3 {
+  0%, 49% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  53% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
+  55% { opacity: 0.40; }
+  57% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
+  61% { opacity: 0.70; }
+  63% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
+  68%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+}
+
+@keyframes solar-thunder-4 {
+  0%, 74% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  78% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
+  80% { opacity: 0.40; }
+  82% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
+  86% { opacity: 0.70; }
+  88% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
+  93%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
 }
 
 /* Blinding Solar Flare & Anamorphic Beam */
@@ -1680,6 +1743,18 @@ html.dark .tier-card.tier-lr .flex.flex-wrap span {
   filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.75));
   opacity: 0.9;
 }
+.tier-card.tier-lr .solar-ring-svg path {
+  stroke: #B45309 !important;
+}
+.tier-card.tier-lr .solar-ring-svg circle {
+  stroke: #D97706 !important;
+}
+html.dark .tier-card.tier-lr .solar-ring-svg path {
+  stroke: #FEF08A !important;
+}
+html.dark .tier-card.tier-lr .solar-ring-svg circle {
+  stroke: #FACC15 !important;
+}
 
 /* Icon Box - Light Mode: Radiant Amber-Gold Medallion */
 .tier-card.tier-lr .tool-accent-box {
@@ -1703,28 +1778,52 @@ html.dark .tier-card.tier-lr .tool-accent-box svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
-.tier-card.tier-lr .spark {
-  background: #FEF08A;
+/* Floating Golden Solar Sparks Emitter */
+.tier-card.tier-lr .tier-particles-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 12;
 }
-.tier-card.tier-lr .spark-1 { left: 12%; bottom: 10px; width: 3px; height: 3px; animation-duration: 4.5s; animation-delay: 0.5s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-2 { left: 30%; bottom: 18px; width: 4px; height: 4px; animation-duration: 5s; animation-delay: 1.8s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-3 { left: 52%; bottom: 8px; width: 3px; height: 3px; animation-duration: 3.8s; animation-delay: 2.8s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-4 { left: 72%; bottom: 22px; width: 3.5px; height: 3.5px; animation-duration: 6s; animation-delay: 0s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-5 { left: 88%; bottom: 14px; width: 3px; height: 3px; animation-duration: 5.2s; animation-delay: 3.5s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-6 { left: 22%; bottom: 32px; width: 2.5px; height: 2.5px; animation-duration: 4.8s; animation-delay: 1.2s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-7 { left: 42%; bottom: 26px; width: 3.5px; height: 3.5px; animation-duration: 5.6s; animation-delay: 2.1s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-8 { left: 62%; bottom: 38px; width: 3px; height: 3px; animation-duration: 4.2s; animation-delay: 0.7s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-9 { left: 80%; bottom: 30px; width: 4px; height: 4px; animation-duration: 5.4s; animation-delay: 3.1s; box-shadow: 0 0 8px #FACC15; }
-.tier-card.tier-lr .spark-10 { left: 95%; bottom: 25px; width: 2.5px; height: 2.5px; animation-duration: 6.2s; animation-delay: 1.6s; box-shadow: 0 0 8px #FACC15; }
 
+/* Sparks - Light Mode: High-Contrast Fiery Golden Amber Embers */
+.tier-card.tier-lr .spark {
+  background: #D97706 !important;
+  box-shadow: 0 0 6px #F59E0B, 0 0 12px rgba(217, 119, 6, 0.75) !important;
+}
+
+/* Sparks - Dark Mode: Radiant Solar Gold Embers */
+html.dark .tier-card.tier-lr .spark {
+  background: #FEF08A !important;
+  box-shadow: 0 0 8px #FACC15, 0 0 16px #EAB308 !important;
+}
+
+.tier-card.tier-lr .spark-1 { left: 10%; bottom: 8px; width: 4.5px; height: 4.5px; animation-duration: 4.0s; animation-delay: 0.2s; }
+.tier-card.tier-lr .spark-2 { left: 24%; bottom: 14px; width: 5.5px; height: 5.5px; animation-duration: 4.6s; animation-delay: 1.2s; }
+.tier-card.tier-lr .spark-3 { left: 38%; bottom: 6px; width: 4.0px; height: 4.0px; animation-duration: 3.6s; animation-delay: 2.1s; }
+.tier-card.tier-lr .spark-4 { left: 52%; bottom: 18px; width: 5.0px; height: 5.0px; animation-duration: 5.2s; animation-delay: 0s; }
+.tier-card.tier-lr .spark-5 { left: 66%; bottom: 12px; width: 4.5px; height: 4.5px; animation-duration: 4.4s; animation-delay: 2.8s; }
+.tier-card.tier-lr .spark-6 { left: 80%; bottom: 20px; width: 5.0px; height: 5.0px; animation-duration: 4.8s; animation-delay: 0.8s; }
+.tier-card.tier-lr .spark-7 { left: 90%; bottom: 10px; width: 4.0px; height: 4.0px; animation-duration: 4.2s; animation-delay: 2.4s; }
+.tier-card.tier-lr .spark-8 { left: 18%; bottom: 26px; width: 4.5px; height: 4.5px; animation-duration: 3.8s; animation-delay: 0.5s; }
+.tier-card.tier-lr .spark-9 { left: 45%; bottom: 22px; width: 5.0px; height: 5.0px; animation-duration: 5.0s; animation-delay: 1.6s; }
+.tier-card.tier-lr .spark-10 { left: 74%; bottom: 20px; width: 4.5px; height: 4.5px; animation-duration: 5.6s; animation-delay: 3.2s; }
+
+/* Molten Plasma Top Rail - Light Mode */
 .tier-card.tier-lr .tier-molten-plasma {
   position: absolute;
   top: 0;
   inset-x: 0;
-  height: 2px;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #F59E0B 20%, #FDE047 50%, #D97706 80%, transparent);
+  box-shadow: 0 0 8px #F59E0B, 0 0 14px #D97706;
+  z-index: 10;
+}
+/* Molten Plasma Top Rail - Dark Mode */
+html.dark .tier-card.tier-lr .tier-molten-plasma {
   background: linear-gradient(90deg, transparent, #FDE047, #F59E0B, transparent);
   box-shadow: 0 0 10px #FACC15;
-  z-index: 4;
 }
 
 /* Crest Badge - Light Mode */
