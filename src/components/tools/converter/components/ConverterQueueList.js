@@ -10,6 +10,9 @@ export function renderConverterQueueList(state) {
   const items = state.items || [];
   if (items.length === 0) return '';
 
+  const allDone = items.length > 0 && items.every(it => it.status === 'completed' || it.status === 'error');
+  if (allDone) return '';
+
   const isUploading = items.some(
     (it) => it.uploadStatus === 'uploading' || it.status === 'uploading'
   );

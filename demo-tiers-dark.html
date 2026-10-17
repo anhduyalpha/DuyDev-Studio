@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Mẫu 10 Cấp Độ Khung Viền RPG Item Rarity - DuyDev Studio</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css">
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background-color: #F4F4F6;
+      background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+    html.dark body {
+      background-color: #09090B;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    }
+    .active-filter {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      border-color: rgba(99, 102, 241, 0.5) !important;
+      color: #6366F1 !important;
+      font-weight: 700 !important;
+    }
+    html.dark .active-filter {
+      background-color: rgba(99, 102, 241, 0.2) !important;
+      color: #818CF8 !important;
+    }
+  </style>
+</head>
+<body class="text-zinc-900 dark:text-zinc-100 min-h-screen p-4 sm:p-8 lg:p-12 pb-24">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-white/85 dark:bg-zinc-900/85 backdrop-blur-xl border border-zinc-200/80 dark:border-white/10 shadow-xl transition">
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono text-xs font-bold">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>RPG ITEM RARITY ESCALATION &bull; ELEMENTAL EDGES &amp; PERIMETER ARCS</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          Hệ Thống 10 Cấp Độ Thẻ Phân Hạng Vật Phẩm RPG
+        </h1>
+        <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
+          Nâng cấp nguyên tố bọc quanh 4 cạnh viền: Tia sét cực quang cao áp (Tier EX &amp; B), Bão nắng thái dương &amp; lôi kim (Tier LR &amp; A), Huyết hỏa &amp; xích lôi (Tier SS), Lôi điện tử kim (Tier S), Sóng lăng kính cầu vồng (Tier UR). Đã sửa lỗi icon Tier SS và canh chỉnh lề nút copy không chạm góc.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0">
+        <button id="btnToggleTheme" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white text-xs font-bold transition cursor-pointer select-none border border-zinc-200 dark:border-white/10 shadow-xs">
+          <i id="themeIcon" data-lucide="moon" class="w-4 h-4 text-indigo-600 dark:text-amber-400"></i>
+          <span id="themeText">Chế độ Tối</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Filter Buttons -->
+    <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
+      <button type="button" class="filter-btn active-filter px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="all">
+        Tất cả (10 Tiers)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="starter">
+        Khởi đầu (E &bull; D &bull; C)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="refined">
+        Tinh luyện (B &bull; A)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="master">
+        Bậc thầy (S &bull; SS)
+      </button>
+      <button type="button" class="filter-btn px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 transition cursor-pointer shadow-2xs" data-filter="mythic">
+        Thần thoại &amp; Vũ trụ (UR &bull; LR &bull; EX)
+      </button>
+    </div>
+
+    <!-- 10 Tiers Showcase Grid -->
+    <main class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Tier E: Đếm Ký Tự & Từ -->
+      <div class="tier-card tier-e group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="starter"
+           data-tier="E"
+           data-tool-name="Đếm Ký Tự & Từ"
+           style="--accent: #71717A; --accent-contrast: #52525B;">
+        
+        
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0" style="background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);">
+              <i data-lucide="file-text" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Matte Slate - Khởi Đầu Phổ Thông">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">E &bull; COMMON</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Đếm Ký Tự &amp; Từ
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-zinc-500 dark:text-zinc-400">
+            Common &bull; Khởi Đầu Phổ Thông
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Thống kê số ký tự, từ, đoạn văn và thời gian đọc văn bản tức thì.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Văn bản</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Thống kê</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400">TIỆN ÍCH</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier E</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier D: Tạo Mã QR Nhanh -->
+      <div class="tier-card tier-d group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="starter"
+           data-tier="D"
+           data-tool-name="Tạo Mã QR Nhanh"
+           style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
+        
+        <div class="tier-inner-specular pointer-events-none" aria-hidden="true"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0" style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
+              <i data-lucide="qr-code" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Frosted Quartz - Tiêu Chuẩn Thạch Anh">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">D &bull; STANDARD</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Tạo Mã QR Nhanh
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-sky-600 dark:text-sky-400">
+            Standard &bull; Tiêu Chuẩn Thạch Anh
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Tạo mã QR từ đường dẫn, văn bản, thông tin wifi hoặc danh bạ dễ dàng.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Mã vạch</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Vector SVG</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-sky-600 dark:text-sky-400">HÌNH ẢNH</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier D</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier C: Nén Tệp ZIP -->
+      <div class="tier-card tier-c group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="starter"
+           data-tier="C"
+           data-tool-name="Nén Tệp ZIP"
+           style="--accent: #10B981; --accent-contrast: #047857;">
+        
+        <div class="tier-inner-frame tier-inner-frame-c pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-corner-ticks pointer-events-none" aria-hidden="true">
+          <span class="tick-tl"></span>
+          <span class="tick-tr"></span>
+          <span class="tick-bl"></span>
+          <span class="tick-br"></span>
+        </div>
+        <div class="tier-emerald-mist pointer-events-none" aria-hidden="true"></div>
+        <!-- Elemental Edge: Emerald Pulse Track -->
+        <svg class="tier-elemental-edges tier-edges-c pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <rect x="6" y="6" width="288" height="348" rx="14" stroke="#10B981" stroke-width="1.2" stroke-dasharray="16 32" class="emerald-pulse-track"/>
+        </svg>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0" style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">
+              <i data-lucide="folder-archive" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Anodized Emerald - Lục Bảo">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">C &bull; UNCOMMON</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Nén Tệp ZIP
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-emerald-600 dark:text-emerald-400">
+            Uncommon &bull; Lục Bảo
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Nén tệp tin và thư mục thành định dạng ZIP với độ nén tối ưu.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">ZIP</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Bảo mật</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400">FILE NÉN</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier C</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier B: Soi Tệp Nén -->
+      <div class="tier-card tier-b group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="refined"
+           data-tier="B"
+           data-tool-name="Soi Tệp Nén"
+           style="--accent: #3B82F6; --accent-contrast: #1D4ED8;">
+        
+        <div class="tier-inner-frame tier-inner-frame-b pointer-events-none" aria-hidden="true"></div>
+        <!-- Elemental Edge: Sapphire Electric Arcs -->
+        <svg class="tier-elemental-edges tier-edges-b pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <path d="M 44 5 L 85 2 L 125 6 L 165 2 L 205 6 L 256 5" stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
+          <path d="M 295 44 L 298 105 L 294 175 L 298 245 L 295 316" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
+          <path d="M 5 44 L 2 105 L 6 175 L 2 245 L 5 316" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
+          <path d="M 44 355 L 85 358 L 125 354 L 165 358 L 205 354 L 256 355" stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
+        </svg>
+        <div class="tier-corner-armor tier-corner-armor-b pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 48 48" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 36 V 16 A 12 12 0 0 1 16 4 H 36" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 6 28 V 16 A 10 10 0 0 1 16 6 H 28" stroke="#93C5FD" stroke-width="1.2"/>
+            <polygon points="16,8 24,16 16,24 8,16" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3.5" fill="#93C5FD"/>
+            <circle cx="16" cy="16" r="1.5" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="corner-plate cp-tr" fill="none">
+            <path d="M 44 36 V 16 A 12 12 0 0 0 32 4 H 12" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 42 28 V 16 A 10 10 0 0 0 32 6 H 20" stroke="#93C5FD" stroke-width="1.2"/>
+            <polygon points="32,8 40,16 32,24 24,16" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="32" cy="16" r="3.5" fill="#93C5FD"/>
+            <circle cx="32" cy="16" r="1.5" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 32 A 12 12 0 0 0 16 44 H 36" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 6 20 V 32 A 10 10 0 0 0 16 42 H 28" stroke="#93C5FD" stroke-width="1.2"/>
+            <polygon points="16,24 24,32 16,40 8,32" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="16" cy="32" r="3.5" fill="#93C5FD"/>
+            <circle cx="16" cy="32" r="1.5" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="corner-plate cp-br" fill="none">
+            <path d="M 44 12 V 32 A 12 12 0 0 1 32 44 H 12" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 42 20 V 32 A 10 10 0 0 1 32 42 H 20" stroke="#93C5FD" stroke-width="1.2"/>
+            <polygon points="32,24 40,32 32,40 24,32" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="32" cy="32" r="3.5" fill="#93C5FD"/>
+            <circle cx="32" cy="32" r="1.5" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div class="tier-metallic-shimmer pointer-events-none" aria-hidden="true"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0" style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);">
+              <i data-lucide="archive" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Brushed Titanium - Lam Ngọc Tinh Luyện">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">B &bull; RARE</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Soi Tệp Nén
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-blue-600 dark:text-blue-400">
+            Rare &bull; Lam Ngọc Tinh Luyện
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Duyệt cấu trúc thư mục và trích xuất không cần giải nén.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">.ZIP</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">.RAR</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Trích xuất</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-blue-600 dark:text-blue-400">FILE NÉN</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier B</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier A: PDF Studio -->
+      <div class="tier-card tier-a group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="refined"
+           data-tier="A"
+           data-tool-name="PDF Studio"
+           style="--accent: #F59E0B; --accent-contrast: #B45309;">
+        
+        <div class="tier-inner-frame tier-inner-frame-a pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-top-gold-bar pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Elemental Edge: Golden Sunbeams & Amber Sparks -->
+        <svg class="tier-elemental-edges tier-edges-a pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <g class="golden-sunbeams">
+            <path d="M 60 5 L 60 0 M 80 5 L 80 1 M 100 5 L 100 -1 M 120 5 L 120 1 M 140 5 L 140 0 M 160 5 L 160 0 M 180 5 L 180 1 M 200 5 L 200 -1 M 220 5 L 220 1 M 240 5 L 240 0" stroke="#FDE68A" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+          <path d="M 5 44 L 2 110 L 6 180 L 2 250 L 5 316" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" class="amber-lightning"/>
+          <path d="M 295 44 L 298 110 L 294 180 L 298 250 L 295 316" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" class="amber-lightning"/>
+          <path d="M 44 355 L 90 357 L 150 354 L 210 357 L 256 355" stroke="#FDE047" stroke-width="1.4" stroke-linecap="round" class="amber-lightning"/>
+        </svg>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
+            <path d="M 6 9 Q 36 15 48 15 Q 60 15 90 9" stroke="#F59E0B" stroke-width="1.5"/>
+            <path d="M 28 4 L 48 14 L 68 4" stroke="#FDE68A" stroke-width="1.2"/>
+            <polygon points="48,2 55,9 48,16 41,9" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" fill="#FEF08A"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
+            <path d="M 4 9 Q 26 3 36 3 Q 46 3 68 9" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="36,1 42,7 36,13 30,7" fill="#B45309" stroke="#FDE047" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 48px Filled Golden Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-a pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 48 48" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 36 V 16 A 12 12 0 0 1 16 4 H 36" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 8 28 V 16 A 8 8 0 0 1 16 8 H 28" stroke="#FDE68A" stroke-width="1.2"/>
+            <polygon points="16,8 24,16 16,24 8,16" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3.5" fill="#FBBF24"/>
+            <circle cx="16" cy="16" r="1.5" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="corner-plate cp-tr" fill="none">
+            <path d="M 44 36 V 16 A 12 12 0 0 0 32 4 H 12" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 40 28 V 16 A 8 8 0 0 0 32 8 H 20" stroke="#FDE68A" stroke-width="1.2"/>
+            <polygon points="32,8 40,16 32,24 24,16" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="32" cy="16" r="3.5" fill="#FBBF24"/>
+            <circle cx="32" cy="16" r="1.5" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 32 A 12 12 0 0 0 16 44 H 36" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 8 20 V 32 A 8 8 0 0 0 16 40 H 28" stroke="#FDE68A" stroke-width="1.2"/>
+            <polygon points="16,24 24,32 16,40 8,32" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="16" cy="32" r="3.5" fill="#FBBF24"/>
+            <circle cx="16" cy="32" r="1.5" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 48 48" class="corner-plate cp-br" fill="none">
+            <path d="M 44 12 V 32 A 12 12 0 0 1 32 44 H 12" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 40 20 V 32 A 8 8 0 0 1 32 40 H 20" stroke="#FDE68A" stroke-width="1.2"/>
+            <polygon points="32,24 40,32 32,40 24,32" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="32" cy="32" r="3.5" fill="#FBBF24"/>
+            <circle cx="32" cy="32" r="1.5" fill="#FFFFFF"/>
+          </svg>
+        </div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="layers" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Imperial Gold - Sử Thi Hoàng Kim">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">A &bull; EPIC</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            PDF Studio
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-amber-600 dark:text-amber-400">
+            Epic &bull; Sử Thi Hoàng Kim
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Hợp nhất, chia tách, nén dung lượng, xoay trang và bảo mật tệp PDF.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Vector</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">OCR AI</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-amber-600 dark:text-amber-400">TÀI LIỆU</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier A</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier S: Tách Quiz Trắc Nghiệm -->
+      <div class="tier-card tier-s group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="master"
+           data-tier="S"
+           data-tool-name="Tách Quiz Trắc Nghiệm"
+           style="--accent: #9333EA; --accent-contrast: #6B21A8;">
+        
+        <div class="tier-inner-frame tier-inner-frame-s pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Elemental Edge: Amethyst Arcane Thunder Streams -->
+        <svg class="tier-elemental-edges tier-edges-s pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <path d="M 45 5 Q 85 1 120 6 Q 160 9 190 3 Q 225 1 255 5" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
+          <path d="M 295 45 Q 299 100 294 150 Q 289 200 296 250 Q 300 290 295 315" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
+          <path d="M 255 355 Q 220 359 185 353 Q 145 351 110 356 Q 75 359 45 355" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
+          <path d="M 5 315 Q 1 270 6 220 Q 10 170 4 120 Q 1 80 5 45" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
+          <path d="M 50 4 L 85 7 L 130 3 L 175 7 L 220 3 L 250 5" stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" class="amethyst-thunder-gold"/>
+          <path d="M 296 50 L 293 110 L 297 180 L 292 245 L 296 310" stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" class="amethyst-thunder-gold"/>
+          <path d="M 4 50 L 7 110 L 3 180 L 8 245 L 4 310" stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" class="amethyst-thunder-gold"/>
+        </svg>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
+            <path d="M 8 8 Q 36 15 48 15 Q 60 15 88 8" stroke="#9333EA" stroke-width="1.8"/>
+            <polygon points="48,2 56,9 48,16 40,9" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" fill="#E9D5FF"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
+            <path d="M 6 9 Q 26 3 36 3 Q 46 3 66 9" stroke="#9333EA" stroke-width="1.5"/>
+            <polygon points="36,1 42,7 36,13 30,7" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 50px Filled Royal Amethyst & Gold Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 38 V 16 A 12 12 0 0 1 16 4 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 30 V 17 A 8 8 0 0 1 17 9 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,9 25,17 17,25 9,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tr" fill="none">
+            <path d="M 46 38 V 16 A 12 12 0 0 0 34 4 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 30 V 17 A 8 8 0 0 0 33 9 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,9 41,17 33,25 25,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 34 A 12 12 0 0 0 16 46 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 20 V 33 A 8 8 0 0 0 17 41 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,25 25,33 17,41 9,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-br" fill="none">
+            <path d="M 46 12 V 34 A 12 12 0 0 1 34 46 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 20 V 33 A 8 8 0 0 1 33 41 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,25 41,33 33,41 25,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Arcane Seal (170px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 170 170" class="watermark-svg" fill="none">
+            <circle cx="85" cy="85" r="80" stroke="#9333EA" stroke-width="1.5" stroke-dasharray="10 5"/>
+            <circle cx="85" cy="85" r="68" stroke="#F59E0B" stroke-width="1" stroke-dasharray="4 4"/>
+            <polygon points="85,15 145,120 25,120" stroke="#9333EA" stroke-width="1.2"/>
+            <polygon points="85,155 25,50 145,50" stroke="#9333EA" stroke-width="1.2"/>
+            <circle cx="85" cy="85" r="42" stroke="#C084FC" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- Layer A: Glowing Icon Socket Ring (72px) -->
+        <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true">
+          <div class="halo-pulsing-core"></div>
+        </div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="book-open" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Tử Kim Siêu Việt">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">S &bull; MASTER</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Tách Quiz Trắc Nghiệm
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-purple-600 dark:text-purple-400">
+            Master &bull; Tử Kim Siêu Việt
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Phân tích tài liệu PDF, bóc tách đề trắc nghiệm và đáp án tự động bằng AI.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">AI Engine</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Bóc đề thi</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-purple-600 dark:text-purple-400">HỌC TẬP</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier S</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier SS: YouTube Downloader -->
+      <div class="tier-card tier-ss group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="master"
+           data-tier="SS"
+           data-tool-name="YouTube Downloader"
+           style="--accent: #E11D48; --accent-contrast: #9F1239;">
+        
+        <div class="tier-inner-frame tier-inner-frame-ss pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings tier-side-wings-ss pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Elemental Edge: Blood Flames & Crimson Lightning -->
+        <svg class="tier-elemental-edges tier-edges-ss pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="ssFlameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#E11D48"/>
+              <stop offset="50%" stop-color="#FB7185"/>
+              <stop offset="100%" stop-color="#FDA4AF"/>
+            </linearGradient>
+          </defs>
+          <path d="M 5 310 Q 10 295 5 280 Q 1 265 6 250 Q 10 235 5 220 Q 1 205 6 190 Q 10 175 5 160 Q 1 145 6 130 Q 10 115 5 100 Q 1 85 5 70 Q 9 55 5 45" stroke="url(#ssFlameGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" class="blood-flame-path"/>
+          <path d="M 295 310 Q 290 295 295 280 Q 299 265 294 250 Q 290 235 295 220 Q 299 205 294 190 Q 290 175 295 160 Q 299 145 294 130 Q 290 115 295 100 Q 299 85 295 70 Q 291 55 295 45" stroke="url(#ssFlameGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" class="blood-flame-path"/>
+          <path d="M 50 355 Q 70 349 90 355 Q 110 347 130 355 Q 150 348 170 355 Q 190 347 210 355 Q 230 349 250 355" stroke="url(#ssFlameGrad)" stroke-width="2.2" fill="none" class="blood-flame-path"/>
+          <path d="M 45 4 L 80 1 L 105 5 L 140 2 L 165 6 L 205 1 L 225 5 L 255 4" stroke="#FDA4AF" stroke-width="1.6" stroke-linecap="round" class="crimson-bolt"/>
+        </svg>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 100 18" class="keystone-svg" fill="none">
+            <path d="M 6 8 Q 36 16 50 16 Q 64 16 94 8" stroke="#E11D48" stroke-width="2"/>
+            <polygon points="50,2 58,9 50,16 42,9" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.5"/>
+            <circle cx="50" cy="9" r="2.5" fill="#FB7185" filter="drop-shadow(0 0 6px #E11D48)"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#E11D48" stroke-width="1.8"/>
+            <polygon points="40,1 46,7 40,13 34,7" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 52px Filled Blood-Gem Winged Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-ss pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 40 V 16 A 12 12 0 0 1 16 4 H 40" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 5 15 L 15 5" stroke="#FDA4AF" stroke-width="2"/>
+            <polygon points="16,8 24,16 16,24 8,16" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="16" cy="16" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <circle cx="16" cy="16" r="1.5" fill="#FFF1F2"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tr" fill="none">
+            <path d="M 48 40 V 16 A 12 12 0 0 0 36 4 H 12" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 47 15 L 37 5" stroke="#FDA4AF" stroke-width="2"/>
+            <polygon points="36,8 44,16 36,24 28,16" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="36" cy="16" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <circle cx="36" cy="16" r="1.5" fill="#FFF1F2"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 36 A 12 12 0 0 0 16 48 H 40" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 5 37 L 15 47" stroke="#FDA4AF" stroke-width="2"/>
+            <polygon points="16,28 24,36 16,44 8,36" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="16" cy="36" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <circle cx="16" cy="36" r="1.5" fill="#FFF1F2"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-br" fill="none">
+            <path d="M 48 12 V 36 A 12 12 0 0 1 36 48 H 12" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 47 37 L 37 47" stroke="#FDA4AF" stroke-width="2"/>
+            <polygon points="36,28 44,36 36,44 28,36" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="36" cy="36" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <circle cx="36" cy="36" r="1.5" fill="#FFF1F2"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Demonic Rune Watermark (175px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-ss pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 175 175" class="watermark-svg" fill="none">
+            <circle cx="87" cy="87" r="82" stroke="#E11D48" stroke-width="1.5" stroke-dasharray="8 4"/>
+            <circle cx="87" cy="87" r="70" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 3"/>
+            <polygon points="87,15 150,125 24,125" stroke="#E11D48" stroke-width="1.5"/>
+            <polygon points="87,160 24,50 150,50" stroke="#E11D48" stroke-width="1.5"/>
+            <circle cx="87" cy="87" r="45" stroke="#FDA4AF" stroke-width="1"/>
+            <circle cx="87" cy="87" r="28" stroke="#E11D48" stroke-width="1.5" stroke-dasharray="6 3"/>
+          </svg>
+        </div>
+
+        <!-- Layer A: High-Contrast Rotating Geometric Rune Ring (72px) -->
+        <div class="tier-icon-rune-ss pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 72 72" class="rune-circle-svg" fill="none">
+            <circle cx="36" cy="36" r="32" stroke="#E11D48" stroke-width="1.8" stroke-dasharray="5 3"/>
+            <polygon points="36,8 60,50 12,50" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
+            <polygon points="36,64 12,22 60,22" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
+            <circle cx="36" cy="36" r="20" stroke="#FDA4AF" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- 10 Floating Crimson Embers -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle ember ember-1"></span>
+          <span class="particle ember ember-2"></span>
+          <span class="particle ember ember-3"></span>
+          <span class="particle ember ember-4"></span>
+          <span class="particle ember ember-5"></span>
+          <span class="particle ember ember-6"></span>
+          <span class="particle ember ember-7"></span>
+          <span class="particle ember ember-8"></span>
+          <span class="particle ember ember-9"></span>
+          <span class="particle ember ember-10"></span>
+        </div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="play" class="w-5 h-5 sm:w-6 sm:h-6 fill-current text-white"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Crimson Prestige - Huyết Ma Đại Cao Thủ">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">SS &bull; GRANDMASTER</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            YouTube Downloader
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-rose-600 dark:text-rose-400">
+            Grandmaster &bull; Huyết Ma Đại Cao Thủ
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Tải video chất lượng 4K/1080p, tách nhạc MP3 320kbps với tốc độ đa luồng.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">4K HDR</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">MP3 320k</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-rose-600 dark:text-rose-400">MEDIA</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier SS</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier UR: Studocu Downloader -->
+      <div class="tier-card tier-ur group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="mythic"
+           data-tier="UR"
+           data-tool-name="Studocu Downloader"
+           style="--accent: #EC4899; --accent-contrast: #BE185D;">
+        
+        <div class="tier-inner-frame tier-inner-frame-ur pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings tier-side-wings-ur pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Elemental Edge: Prismatic Starlight Waves & Twinkling Sparks -->
+        <svg class="tier-elemental-edges tier-edges-ur pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="urWaveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F472B6"/>
+              <stop offset="25%" stop-color="#C084FC"/>
+              <stop offset="50%" stop-color="#38BDF8"/>
+              <stop offset="75%" stop-color="#34D399"/>
+              <stop offset="100%" stop-color="#FACC15"/>
+            </linearGradient>
+          </defs>
+          <path d="M 48 5 Q 85 1 125 5 Q 165 9 205 4 Q 230 2 252 5" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
+          <path d="M 295 48 Q 299 105 294 165 Q 289 225 296 280 Q 298 300 295 312" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
+          <path d="M 252 355 Q 215 359 175 354 Q 135 351 95 356 Q 70 358 48 355" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
+          <path d="M 5 312 Q 1 260 6 200 Q 10 140 4 80 Q 2 60 5 48" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
+          <g class="prismatic-sparks">
+            <path d="M 85 5 L 85 0 M 83 2.5 L 87 2.5" stroke="#FFFFFF" stroke-width="1.5"/>
+            <path d="M 215 5 L 215 0 M 213 2.5 L 217 2.5" stroke="#FFFFFF" stroke-width="1.5"/>
+            <path d="M 295 140 L 300 140 M 297.5 138 L 297.5 142" stroke="#FFFFFF" stroke-width="1.5"/>
+            <path d="M 295 220 L 300 220 M 297.5 218 L 297.5 222" stroke="#FFFFFF" stroke-width="1.5"/>
+            <path d="M 150 355 L 150 360 M 147.5 357.5 L 152.5 357.5" stroke="#FFFFFF" stroke-width="1.5"/>
+            <path d="M 5 140 L 0 140 M 2.5 138 L 2.5 142" stroke="#FFFFFF" stroke-width="1.5"/>
+            <path d="M 5 220 L 0 220 M 2.5 218 L 2.5 222" stroke="#FFFFFF" stroke-width="1.5"/>
+          </g>
+        </svg>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 100 18" class="keystone-svg" fill="none">
+            <path d="M 6 8 Q 36 16 50 16 Q 64 16 94 8" stroke="#EC4899" stroke-width="2"/>
+            <polygon points="50,2 58,9 50,16 42,9" fill="#DB2777" stroke="#38BDF8" stroke-width="1.5"/>
+            <circle cx="50" cy="9" r="2.5" fill="#FFFFFF" filter="drop-shadow(0 0 6px #EC4899)"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#EC4899" stroke-width="1.8"/>
+            <polygon points="40,1 46,7 40,13 34,7" fill="#DB2777" stroke="#38BDF8" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- Inset Twinkling Starbursts -->
+        <div class="tier-starbursts-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 20 20" class="star-svg star-tl" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#F472B6"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
+          <svg viewBox="0 0 20 20" class="star-svg star-tr" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#38BDF8"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
+          <svg viewBox="0 0 20 20" class="star-svg star-bl" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#FBBF24"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
+          <svg viewBox="0 0 20 20" class="star-svg star-br" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#A855F7"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
+        </div>
+
+        <!-- 52px Crystalline Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 40 V 16 A 12 12 0 0 1 16 4 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 6 16 L 16 6" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="16" cy="16" r="4.5" fill="#F472B6" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #EC4899)"/>
+            <circle cx="16" cy="16" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tr" fill="none">
+            <path d="M 48 40 V 16 A 12 12 0 0 0 36 4 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 46 16 L 36 6" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="36" cy="16" r="4.5" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #38BDF8)"/>
+            <circle cx="36" cy="16" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 36 A 12 12 0 0 0 16 48 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 6 36 L 16 46" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="16" cy="36" r="4.5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #FBBF24)"/>
+            <circle cx="16" cy="36" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-br" fill="none">
+            <path d="M 48 12 V 36 A 12 12 0 0 1 36 48 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 46 36 L 36 46" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="36" cy="36" r="4.5" fill="#A855F7" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #A855F7)"/>
+            <circle cx="36" cy="36" r="1.8" fill="#FFFFFF"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Mythic Mandala Seal (175px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 175 175" class="watermark-svg" fill="none">
+            <circle cx="87" cy="87" r="82" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="10 5"/>
+            <circle cx="87" cy="87" r="72" stroke="#38BDF8" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <circle cx="87" cy="87" r="60" stroke="#FBBF24" stroke-width="1" stroke-dasharray="2 4"/>
+            <polygon points="87,15 100,74 159,87 100,100 87,159 74,100 15,87 74,74" stroke="#EC4899" stroke-width="1.5"/>
+            <polygon points="87,35 96,78 139,87 96,96 87,139 78,96 35,87 78,78" stroke="#38BDF8" stroke-width="1"/>
+            <circle cx="87" cy="87" r="30" stroke="#A855F7" stroke-width="1.5"/>
+          </svg>
+        </div>
+
+        <!-- Layer A: Glowing Rotating Holographic Ring (72px) -->
+        <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
+          <div class="ur-halo-ring"></div>
+        </div>
+
+        <!-- Seamless Soft Holographic Foil Sheen (400% with feathered stops, zero cut lines) -->
+        <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="sparkles" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Prismatic Hologram - Thần Thoại Lăng Kính">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">★ UR &bull; MYTHIC</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+            Studocu Downloader
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-pink-600 dark:text-pink-400">
+            Mythic &bull; Thần Thoại Lăng Kính
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-500 dark:text-zinc-400">
+            Tải tài liệu Studocu chất lượng cao, giữ nguyên định dạng vector và hình ảnh sắc nét.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Vector PDF</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">Mở khoá</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-pink-600 dark:text-pink-400">TÀI LIỆU</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier UR</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier LR: Tải Nhạc Zing MP3 -->
+      <div class="tier-card tier-lr group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="mythic"
+           data-tier="LR"
+           data-tool-name="Tải Nhạc Zing MP3"
+           style="--accent: #FACC15; --accent-contrast: #A16207;">
+        
+        <div class="tier-inner-frame tier-inner-frame-lr pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings tier-side-wings-lr pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Elemental Edge: Solar Corona Sunbeams & Golden Thunder -->
+        <svg class="tier-elemental-edges tier-edges-lr pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <g class="solar-sunbeams">
+            <path d="M 55 5 L 55 0 M 75 5 L 75 -2 M 95 5 L 95 0 M 115 5 L 115 -3 M 135 5 L 135 0 M 150 6 L 150 -4 M 165 5 L 165 0 M 185 5 L 185 -3 M 205 5 L 205 0 M 225 5 L 225 -2 M 245 5 L 245 0" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 5 60 L 0 60 M 5 90 L -2 90 M 5 120 L 0 120 M 5 150 L -3 150 M 5 180 L -1 180 M 5 210 L -3 210 M 5 240 L 0 240 M 5 270 L -2 270 M 5 300 L 0 300" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 295 60 L 300 60 M 295 90 L 302 90 M 295 120 L 300 120 M 295 150 L 303 150 M 295 180 L 301 180 M 295 210 L 303 210 M 295 240 L 300 240 M 295 270 L 302 270 M 295 300 L 300 300" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 70 355 L 70 360 M 110 355 L 110 362 M 150 354 L 150 364 M 190 355 L 190 362 M 230 355 L 230 360" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <path d="M 50 4 L 90 1 L 120 5 L 165 2 L 200 6 L 235 1 L 250 4" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
+          <path d="M 296 50 L 299 95 L 294 140 L 298 185 L 293 230 L 297 275 L 295 310" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
+          <path d="M 4 310 L 1 275 L 6 230 L 2 185 L 7 140 L 2 95 L 5 50" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
+          <path d="M 250 356 L 210 359 L 175 354 L 135 358 L 95 354 L 50 356" stroke="#FEF08A" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
+        </svg>
+
+        <!-- Top Keystone Crest (Solar Crown) -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 100 20" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 36 18 50 18 Q 64 18 94 10" stroke="#FACC15" stroke-width="2.2"/>
+            <circle cx="50" cy="10" r="6" fill="#B45309" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="50" cy="10" r="3" fill="#FEF08A" filter="drop-shadow(0 0 8px #FACC15)"/>
+            <path d="M 50 2 V 6M 42 4 L 45 7M 58 4 L 55 7" stroke="#FEF08A" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#FACC15" stroke-width="2"/>
+            <polygon points="40,1 46,7 40,13 34,7" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+          </svg>
+        </div>
+
+        <!-- 54px Filled Sovereign Gold Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-lr pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 54 54" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 42 V 16 A 12 12 0 0 1 16 4 H 42" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 6 16 L 16 6" stroke="#FEF08A" stroke-width="2.2"/>
+            <polygon points="16,8 24,16 16,24 8,16" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="16" cy="16" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <circle cx="16" cy="16" r="2" fill="#FEF08A"/>
+          </svg>
+          <svg viewBox="0 0 54 54" class="corner-plate cp-tr" fill="none">
+            <path d="M 50 42 V 16 A 12 12 0 0 0 38 4 H 12" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 48 16 L 38 6" stroke="#FEF08A" stroke-width="2.2"/>
+            <polygon points="38,8 46,16 38,24 30,16" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="38" cy="16" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <circle cx="38" cy="16" r="2" fill="#FEF08A"/>
+          </svg>
+          <svg viewBox="0 0 54 54" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 38 A 12 12 0 0 0 16 50 H 42" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 6 38 L 16 48" stroke="#FEF08A" stroke-width="2.2"/>
+            <polygon points="16,30 24,38 16,46 8,38" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="16" cy="38" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <circle cx="16" cy="38" r="2" fill="#FEF08A"/>
+          </svg>
+          <svg viewBox="0 0 54 54" class="corner-plate cp-br" fill="none">
+            <path d="M 50 12 V 38 A 12 12 0 0 1 38 50 H 12" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 48 38 L 38 48" stroke="#FEF08A" stroke-width="2.2"/>
+            <polygon points="38,30 46,38 38,46 30,38" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="38" cy="38" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <circle cx="38" cy="38" r="2" fill="#FEF08A"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Sovereign Solar Astrolabe (180px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-lr pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 180 180" class="watermark-svg" fill="none">
+            <circle cx="90" cy="90" r="85" stroke="#FACC15" stroke-width="1.8" stroke-dasharray="12 6"/>
+            <circle cx="90" cy="90" r="74" stroke="#FDE047" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <circle cx="90" cy="90" r="60" stroke="#CA8A04" stroke-width="1.5"/>
+            <path d="M 90 5 V 175M 5 90 H 175M 30 30 L 150 150M 30 150 L 150 30" stroke="#FACC15" stroke-width="1" stroke-dasharray="6 4"/>
+            <circle cx="90" cy="90" r="38" stroke="#FEF08A" stroke-width="1.5" stroke-dasharray="8 4"/>
+            <circle cx="90" cy="90" r="20" stroke="#FACC15" stroke-width="2"/>
+          </svg>
+        </div>
+
+        <!-- Layer A: High-Contrast Rotating Solar Halo (74px) -->
+        <div class="tier-icon-solar-lr pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 74 74" class="solar-ring-svg" fill="none">
+            <circle cx="37" cy="37" r="33" stroke="#FACC15" stroke-width="2" stroke-dasharray="6 3"/>
+            <circle cx="37" cy="37" r="24" stroke="#CA8A04" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M37 2V8M37 66V72M2 37H8M66 37H72M12 12L17 17M57 57L62 62M12 62L17 57M57 17L62 12" stroke="#FEF08A" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <!-- 10 Floating Golden Sparks -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle spark spark-1"></span>
+          <span class="particle spark spark-2"></span>
+          <span class="particle spark spark-3"></span>
+          <span class="particle spark spark-4"></span>
+          <span class="particle spark spark-5"></span>
+          <span class="particle spark spark-6"></span>
+          <span class="particle spark spark-7"></span>
+          <span class="particle spark spark-8"></span>
+          <span class="particle spark spark-9"></span>
+          <span class="particle spark spark-10"></span>
+        </div>
+        <div class="tier-molten-plasma pointer-events-none" aria-hidden="true"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="music" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Sovereign Flare - Thần Khí Thái Dương Chí Tôn">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">✦ LR &bull; SOVEREIGN</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-white text-base sm:text-lg group-hover:text-amber-300 transition tracking-tight">
+            Tải Nhạc Zing MP3
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-amber-400">
+            Sovereign &bull; Thần Khí Thái Dương Chí Tôn
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-300">
+            Tải bài hát chất lượng lossless FLAC &amp; 320kbps kèm lời bài hát LRC và ảnh bìa gốc.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">Lossless FLAC</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">Lời bài hát LRC</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-cyan-400/30 flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-amber-300">ÂM NHẠC</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-cyan-200 group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-cyan-400/30 text-cyan-300/80 group-hover:text-cyan-100 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier LR</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+
+<!-- Tier EX: TikTok Downloader -->
+      <div class="tier-card tier-ex group relative p-5 rounded-2xl flex flex-col justify-between select-none cursor-pointer"
+           data-group="mythic"
+           data-tier="EX"
+           data-tool-name="TikTok Downloader"
+           style="--accent: #06B6D4; --accent-contrast: #0891B2;">
+        
+        <!-- Supercharged 360° Conic Plasma Border (Stationary Masked Container) -->
+        <div class="tier-plasma-perimeter-ex pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-inner-frame tier-inner-frame-ex pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings tier-side-wings-ex pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Elemental Edge: High-Voltage Aurora Lightning Arcs -->
+        <svg class="tier-elemental-edges tier-edges-ex pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="exLightningGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#06B6D4"/>
+              <stop offset="35%" stop-color="#38BDF8"/>
+              <stop offset="70%" stop-color="#8B5CF6"/>
+              <stop offset="100%" stop-color="#EC4899"/>
+            </linearGradient>
+          </defs>
+          <g class="lightning-glow">
+            <path d="M 45 4 L 80 1 L 100 6 L 135 2 L 155 7 L 185 2 L 210 6 L 240 1 L 255 4" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 296 45 L 299 90 L 294 115 L 298 160 L 293 190 L 298 235 L 294 275 L 297 315" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 255 356 L 220 359 L 195 354 L 160 358 L 135 353 L 105 358 L 80 354 L 45 356" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 4 315 L 1 275 L 6 235 L 2 190 L 7 160 L 2 115 L 6 90 L 4 45" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
+          </g>
+          <g class="lightning-core">
+            <path d="M 45 4 L 80 1 L 100 6 L 135 2 L 155 7 L 185 2 L 210 6 L 240 1 L 255 4" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 296 45 L 299 90 L 294 115 L 298 160 L 293 190 L 298 235 L 294 275 L 297 315" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 255 356 L 220 359 L 195 354 L 160 358 L 135 353 L 105 358 L 80 354 L 45 356" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 4 315 L 1 275 L 6 235 L 2 190 L 7 160 L 2 115 L 6 90 L 4 45" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 135 2 L 140 9 M 210 6 L 216 -1 M 298 160 L 289 166 M 160 358 L 154 351 M 2 190 L 11 183" stroke="#E0F2FE" stroke-width="1.2" stroke-linecap="round"/>
+          </g>
+        </svg>
+
+        <!-- Top Keystone Crest (Cosmic Nova Core) -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 100 20" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 36 18 50 18 Q 64 18 94 10" stroke="#22D3EE" stroke-width="2.2"/>
+            <polygon points="50,2 60,10 50,18 40,10" fill="#0891B2" stroke="#67E8F9" stroke-width="1.8"/>
+            <circle cx="50" cy="10" r="3.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <circle cx="50" cy="10" r="1.5" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#22D3EE" stroke-width="2"/>
+            <polygon points="40,1 46,7 40,13 34,7" fill="#0891B2" stroke="#67E8F9" stroke-width="1.5"/>
+          </svg>
+        </div>
+
+        <!-- 56px Crystalline Winged Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-ex pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 56 56" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 44 V 16 A 12 12 0 0 1 16 4 H 44" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M 6 16 L 16 6" stroke="#67E8F9" stroke-width="2.5"/>
+            <path d="M 10 24 L 24 10" stroke="#C084FC" stroke-width="1.8"/>
+            <polygon points="16,8 24,16 16,24 8,16" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="16" cy="16" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <circle cx="16" cy="16" r="2" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 56 56" class="corner-plate cp-tr" fill="none">
+            <path d="M 52 44 V 16 A 12 12 0 0 0 40 4 H 12" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M 50 16 L 40 6" stroke="#67E8F9" stroke-width="2.5"/>
+            <path d="M 46 24 L 32 10" stroke="#C084FC" stroke-width="1.8"/>
+            <polygon points="40,8 48,16 40,24 32,16" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="40" cy="16" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <circle cx="40" cy="16" r="2" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 56 56" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 40 A 12 12 0 0 0 16 52 H 44" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M 6 40 L 16 50" stroke="#67E8F9" stroke-width="2.5"/>
+            <path d="M 10 32 L 24 46" stroke="#C084FC" stroke-width="1.8"/>
+            <polygon points="16,32 24,40 16,48 8,40" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="16" cy="40" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <circle cx="16" cy="40" r="2" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 56 56" class="corner-plate cp-br" fill="none">
+            <path d="M 52 12 V 40 A 12 12 0 0 1 40 52 H 12" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M 50 40 L 40 50" stroke="#67E8F9" stroke-width="2.5"/>
+            <path d="M 46 32 L 32 46" stroke="#C084FC" stroke-width="1.8"/>
+            <polygon points="40,32 48,40 40,48 32,40" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="40" cy="40" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <circle cx="40" cy="40" r="2" fill="#FFFFFF"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Celestial Galaxy Astrolabe (180px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-ex pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 180 180" class="watermark-svg" fill="none">
+            <circle cx="90" cy="90" r="85" stroke="#22D3EE" stroke-width="1.8" stroke-dasharray="14 7"/>
+            <circle cx="90" cy="90" r="74" stroke="#818CF8" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <circle cx="90" cy="90" r="58" stroke="#C084FC" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <path d="M 90 5 V 175M 5 90 H 175M 30 30 L 150 150M 30 150 L 150 30" stroke="#22D3EE" stroke-width="1" stroke-dasharray="4 4"/>
+            <circle cx="90" cy="90" r="38" stroke="#67E8F9" stroke-width="1.8"/>
+            <circle cx="90" cy="90" r="22" stroke="#C084FC" stroke-width="2"/>
+            <circle cx="90" cy="90" r="8" fill="#E0F2FE"/>
+          </svg>
+        </div>
+
+        <!-- Layer A: High-Contrast Rotating Dual Astrolabe Rings (74px) -->
+        <div class="tier-astrolabe-ex pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 74 74" class="astrolabe-outer" fill="none">
+            <circle cx="37" cy="37" r="33" stroke="#22D3EE" stroke-width="2" stroke-dasharray="7 4 2 4"/>
+            <circle cx="37" cy="37" r="26" stroke="#818CF8" stroke-width="1.2" stroke-dasharray="3 3"/>
+            <circle cx="37" cy="4" r="2.2" fill="#67E8F9"/>
+            <circle cx="37" cy="70" r="2.2" fill="#67E8F9"/>
+            <circle cx="4" cy="37" r="2.2" fill="#67E8F9"/>
+            <circle cx="70" cy="37" r="2.2" fill="#67E8F9"/>
+          </svg>
+          <svg viewBox="0 0 74 74" class="astrolabe-inner" fill="none">
+            <circle cx="37" cy="37" r="20" stroke="#C084FC" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <polygon points="37,18 52,44 22,44" stroke="#38BDF8" stroke-width="1"/>
+            <polygon points="37,56 22,30 52,30" stroke="#38BDF8" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- 12 Floating Cosmic Stardust -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle star star-1"></span>
+          <span class="particle star star-2"></span>
+          <span class="particle star star-3"></span>
+          <span class="particle star star-4"></span>
+          <span class="particle star star-5"></span>
+          <span class="particle star star-6"></span>
+          <span class="particle star star-7"></span>
+          <span class="particle star star-8"></span>
+          <span class="particle star star-9"></span>
+          <span class="particle star star-10"></span>
+          <span class="particle star star-11"></span>
+          <span class="particle star star-12"></span>
+        </div>
+
+        <div class="tier-cosmic-grid pointer-events-none" aria-hidden="true"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="video" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Astral Singularity - Đẳng Cấp Vũ Trụ">
+              <span class="tier-badge-indicator"></span>
+              <span class="tier-badge-label">✦ EX &bull; CELESTIAL</span>
+            </div>
+          </div>
+
+          <h3 class="font-bold text-white text-base sm:text-lg group-hover:text-amber-300 transition tracking-tight">
+            TikTok Downloader
+          </h3>
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-cyan-400">
+            Celestial &bull; Đẳng Cấp Vũ Trụ
+          </p>
+          <p class="text-xs mt-1.5 leading-relaxed line-clamp-2 min-h-[2.25rem] text-zinc-300">
+            Tải video &amp; slideshow ảnh TikTok không logo, âm thanh MP3 lưu Drive.
+          </p>
+
+          <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">Không Logo</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">Lưu Drive</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-cyan-400/15 text-cyan-300 border border-cyan-400/35">MP3</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 mt-4 pt-3.5 border-t border-cyan-400/30 flex items-center justify-between text-xs">
+          <span class="font-mono text-xs uppercase tracking-wider font-semibold text-cyan-300">TIỆN ÍCH</span>
+          <div class="tier-cta-btn flex items-center gap-1 text-xs text-cyan-200 group-hover:text-white transition">
+            <span>Mở</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+          </div>
+        </div>
+
+        <div class="tier-copy-row relative z-10 mt-2.5 pt-2 border-t border-dashed border-cyan-400/30 text-cyan-300/80 group-hover:text-cyan-100 flex items-center justify-between text-[11px] font-mono transition">
+          <span class="truncate">Áp dụng tier EX</span>
+          <i data-lucide="copy" class="w-3.5 h-3.5 shrink-0 ml-1"></i>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Interactive Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-2xl border border-white/10 text-xs font-semibold">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
+    <span id="toastMsg">Đã sao chép cú pháp!</span>
+  </div>
+
+  <script>
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+
+    const btnToggleTheme = document.getElementById('btnToggleTheme');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    btnToggleTheme.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      if (isDark) {
+        themeText.textContent = 'Chế độ Sáng';
+        themeIcon.setAttribute('data-lucide', 'sun');
+        themeIcon.className = 'w-4 h-4 text-amber-500';
+      } else {
+        themeText.textContent = 'Chế độ Tối';
+        themeIcon.setAttribute('data-lucide', 'moon');
+        themeIcon.className = 'w-4 h-4 text-indigo-600';
+      }
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.tier-card');
+
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
+        const filter = btn.getAttribute('data-filter');
+
+        cards.forEach(card => {
+          if (filter === 'all' || card.getAttribute('data-group') === filter) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    const toast = document.getElementById('toastNotification');
+    const toastMsg = document.getElementById('toastMsg');
+    let toastTimeout;
+
+    function showToast(message) {
+      toastMsg.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('click', () => {
+        const tier = card.getAttribute('data-tier');
+        const toolName = card.getAttribute('data-tool-name');
+        const command = `Áp dụng box tier ${tier} cho card ${toolName}`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(command).then(() => {
+            showToast(`Đã sao chép: "${command}"`);
+          }).catch(() => {
+            showToast(`Lệnh: "${command}"`);
+          });
+        } else {
+          showToast(`Lệnh: "${command}"`);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.30': {
+    version: 'v23.30',
+    title: 'Bản cập nhật v23.30',
+    date: '17/10/2026',
+    features: [
+      'Converter Pro Streamlined Results: Hộp thoại Đã Xử Lý hiển thị danh sách từng tệp hoàn tất rõ ràng, cho phép tải riêng từng tệp hoặc tải trọn bộ dạng .ZIP',
+      'Completed Ambient Emerald Glow: Hiệu ứng đóng viền xanh lá mờ tinh tế khi toàn bộ hàng đợi chuyển đổi xong, giúp người dùng nhận biết ngay lập tức'
+    ],
+    fixes: [
+      'Ẩn hoàn toàn khung hàng đợi và thanh tùy chọn thừa sau khi chuyển đổi xong, tối ưu hóa không gian hiển thị cho kết quả tệp',
+      'Hỗ trợ xem trước (preview) và tải trực tiếp từng tệp chuyển đổi độc lập'
+    ]
+  },
+
   'v23.25': {
     version: 'v23.25',
     title: 'Bản cập nhật v23.25',

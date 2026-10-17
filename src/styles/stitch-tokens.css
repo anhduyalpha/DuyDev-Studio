@@ -813,4 +813,22 @@ button:not(:disabled):active,
   transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
+/* ==============================================================================
+   Converter Pro: Completed State Ambient Emerald Glow Frame
+   ============================================================================== */
+.converter-result-completed-glow {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.15), 0 8px 24px -4px rgba(16, 185, 129, 0.10) !important;
+  outline: 2px solid rgba(16, 185, 129, 0.25) !important;
+  outline-offset: -1px;
+}
+
+html.dark .converter-result-completed-glow,
+:root.dark .converter-result-completed-glow {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 35px rgba(16, 185, 129, 0.22), 0 8px 28px -4px rgba(16, 185, 129, 0.15) !important;
+  outline: 2px solid rgba(16, 185, 129, 0.3) !important;
+  outline-offset: -1px;
+}
+
 

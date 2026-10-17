@@ -160,17 +160,26 @@ export function updateBatchButton(manager) {
  */
 export function setupConverterObserver(manager) {
   const refreshDynamicSections = () => {
-    const hasItems = (manager.items || []).length > 0;
+    const items = manager.items || [];
+    const hasItems = items.length > 0;
+    const allDone = hasItems && items.every((it) => it.status === 'completed' || it.status === 'error');
+    const hasCompleted = items.some((it) => it.status === 'completed');
+    const showQueue = hasItems && !allDone;
 
     const mainGrid = document.getElementById('converterMainGrid');
     const leftCol = document.getElementById('converterLeftCol');
     const rightCol = document.getElementById('converterRightCol');
 
     if (mainGrid && leftCol && rightCol) {
-      if (hasItems) {
+      if (hasItems && !allDone) {
         mainGrid.className = 'grid grid-cols-1 lg:grid-cols-12 gap-6';
         leftCol.className = 'lg:col-span-7 space-y-4';
         rightCol.className = 'lg:col-span-5 space-y-4 lg:sticky lg:top-6 lg:self-start';
+        rightCol.classList.remove('hidden');
+      } else if (hasItems && allDone) {
+        mainGrid.className = 'max-w-4xl mx-auto space-y-4';
+        leftCol.className = 'space-y-4 w-full';
+        rightCol.className = 'hidden';
       } else {
         mainGrid.className = 'max-w-2xl mx-auto space-y-4';
         leftCol.className = 'space-y-4';
@@ -180,22 +189,24 @@ export function setupConverterObserver(manager) {
 
     const formatElement = document.getElementById('converterFormatContainer');
     if (formatElement) {
-      formatElement.classList.toggle('hidden', !hasItems);
-      formatElement.innerHTML = renderFormatSelector(manager);
-      refreshLucide(formatElement);
+      formatElement.classList.toggle('hidden', !showQueue);
+      if (showQueue) {
+        formatElement.innerHTML = renderFormatSelector(manager);
+        refreshLucide(formatElement);
+      }
     }
 
     const queueElement = document.getElementById('converterQueueContainer');
     if (queueElement) {
-      queueElement.classList.toggle('hidden', !hasItems);
-      queueElement.innerHTML = renderConverterQueueList(manager);
+      queueElement.classList.toggle('hidden', !showQueue);
+      queueElement.innerHTML = showQueue ? renderConverterQueueList(manager) : '';
       refreshLucide(queueElement);
     }
 
     const resultElement = document.getElementById('converterResultContainer');
     if (resultElement) {
-      resultElement.classList.toggle('hidden', !hasItems);
-      resultElement.innerHTML = renderConverterResult(manager);
+      resultElement.classList.toggle('hidden', !hasCompleted);
+      resultElement.innerHTML = hasCompleted ? renderConverterResult(manager) : '';
       refreshLucide(resultElement);
     }
 
@@ -519,9 +530,9 @@ export function attachConverterListeners(manager) {
   const resultContainer = document.getElementById('converterResultContainer');
   if (resultContainer) {
     resultContainer.onclick = (e) => {
-      const previewSingleBtn = e.target.closest('#btnPreviewSingleConverterResult');
-      if (previewSingleBtn) {
-        const itemId = previewSingleBtn.dataset.itemId;
+      const previewBtn = e.target.closest('.btn-preview-converter-result, #btnPreviewSingleConverterResult');
+      if (previewBtn) {
+        const itemId = previewBtn.dataset.itemId;
         const it = manager.items?.find((x) => x.id === itemId) || manager.items?.find((x) => x.status === 'completed' && x.result);
         if (it?.result) {
           ViewerConnector.preview({
@@ -531,6 +542,13 @@ export function attachConverterListeners(manager) {
             resultSize: it.result.resultSize
           });
         }
+        return;
+      }
+
+      const retryBtn = e.target.closest('.btn-retry-converter-result');
+      if (retryBtn) {
+        const itemId = retryBtn.dataset.itemId;
+        manager.retryItem(itemId);
         return;
       }
 

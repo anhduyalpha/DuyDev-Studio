@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getItemGroupMap, renderFormatSelector } from '../../../src/components/tools/converter/components/FormatSelector.js';
 import { renderConverterQueueList } from '../../../src/components/tools/converter/components/ConverterQueueList.js';
+import { renderConverterResult } from '../../../src/components/tools/converter/components/ConverterResult.js';
+import { renderConverterWorkspace } from '../../../src/components/tools/converter/ConverterWorkspace.js';
 import { getOptimalChunkSize } from '../../../src/utilities/resumableUploader.js';
 import fs from 'fs';
 import path from 'path';
@@ -241,6 +243,106 @@ describe('Converter Group Boxes & Upload Speed Acceleration Suite', () => {
 
       const controllerFile = fs.readFileSync(path.resolve(__dirname, '../../src/api/controllers/files.controller.ts'), 'utf-8');
       expect(controllerFile).toContain('createWriteStream(targetPath, { highWaterMark: 4 * 1024 * 1024 })');
+    });
+  });
+
+  describe('6. Converter Result Box & Completed State Glow', () => {
+    it('should hide ConverterQueueList completely when all items are done', () => {
+      const state = {
+        isConverting: false,
+        items: [
+          { id: '1', status: 'completed', result: { fileName: 'test1.webp', downloadUrl: '/dl/1' } },
+          { id: '2', status: 'completed', result: { fileName: 'test2.webp', downloadUrl: '/dl/2' } },
+        ]
+      };
+      const html = renderConverterQueueList(state);
+      expect(html).toBe('');
+    });
+
+    it('should render individual download buttons and preview buttons for each converted file in ConverterResult', () => {
+      const state = {
+        items: [
+          {
+            id: 'item_1',
+            targetFormat: 'webp',
+            detectedMeta: { extension: 'png', size: 500000 },
+            status: 'completed',
+            result: {
+              fileName: 'photo_converted.webp',
+              originalSize: 500000,
+              resultSize: 120000,
+              downloadUrl: '/api/v1/files/download/res_1'
+            }
+          },
+          {
+            id: 'item_2',
+            targetFormat: 'pdf',
+            detectedMeta: { extension: 'docx', size: 1000000 },
+            status: 'completed',
+            result: {
+              fileName: 'doc_converted.pdf',
+              originalSize: 1000000,
+              resultSize: 450000,
+              downloadUrl: '/api/v1/files/download/res_2'
+            }
+          }
+        ]
+      };
+
+      const html = renderConverterResult(state);
+
+      // Verify individual download links exist with direct URLs and download attributes
+      expect(html).toContain('href="/api/v1/files/download/res_1"');
+      expect(html).toContain('download="photo_converted.webp"');
+      expect(html).toContain('href="/api/v1/files/download/res_2"');
+      expect(html).toContain('download="doc_converted.pdf"');
+
+      // Verify individual preview buttons exist
+      expect(html).toContain('data-item-id="item_1"');
+      expect(html).toContain('data-item-id="item_2"');
+      expect(html).toContain('btn-preview-converter-result');
+
+      // Verify ZIP bundle button exists
+      expect(html).toContain('id="btnDownloadAllZip"');
+      expect(html).toContain('Tải tất cả dạng .ZIP (2 tệp)');
+
+      // Verify soft green ambient glow frame is applied when all files completed
+      expect(html).toContain('converter-result-completed-glow');
+      expect(html).toContain('Hoàn tất 100%');
+    });
+
+    it('should NOT apply green glow when some items are still converting or pending', () => {
+      const state = {
+        items: [
+          {
+            id: 'item_1',
+            status: 'completed',
+            result: { fileName: 'done.webp', resultSize: 100, downloadUrl: '/dl/1' }
+          },
+          {
+            id: 'item_2',
+            status: 'converting'
+          }
+        ]
+      };
+
+      const html = renderConverterResult(state);
+      expect(html).not.toContain('converter-result-completed-glow');
+      expect(html).not.toContain('Hoàn tất 100%');
+    });
+
+    it('should hide queue container and format container in ConverterWorkspace when all items are done', () => {
+      const state = {
+        items: [
+          { id: '1', status: 'completed', result: { fileName: 'test1.webp', downloadUrl: '/dl/1' } }
+        ]
+      };
+
+      const html = renderConverterWorkspace(state);
+      expect(html).toContain('id="converterQueueContainer" class="hidden"');
+      expect(html).toContain('id="converterFormatContainer" class="hidden"');
+      expect(html).toContain('id="converterResultContainer" class=""');
+      expect(html).toContain('max-w-4xl mx-auto');
     });
   });
 });

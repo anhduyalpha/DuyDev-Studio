@@ -97,7 +97,7 @@ export function renderToolCard(tool) {
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           ${categoryLabel}
         </span>
-        <div class="flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
