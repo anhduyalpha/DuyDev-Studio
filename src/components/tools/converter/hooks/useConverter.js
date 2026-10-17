@@ -18,6 +18,7 @@ import { runConcurrentQueue, processSingleItem, createZipBundleFromCompleted, st
 import { canConvertClientSide } from '../services/clientConverterEngine.js';
 import { batchPresignFiles } from '../../../../utilities/resumableUploader.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 /**
  * @typedef {Object} ConverterDetectedMeta
@@ -410,6 +411,7 @@ export class ConverterManager {
       return showToast('Không có tệp nào trong hàng đợi cần chuyển đổi', 'warning');
     }
 
+    soundEngine.playStart();
     await runConcurrentQueue(this, 3);
 
     this.items

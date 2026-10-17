@@ -4,6 +4,8 @@
  * insecure HTTP LAN environments (document.execCommand).
  */
 
+import { soundEngine } from './soundEngine.js';
+
 export async function copyText(text) {
   if (!text) return false;
 
@@ -11,6 +13,7 @@ export async function copyText(text) {
   if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
     try {
       await navigator.clipboard.writeText(text);
+      soundEngine.playToggle();
       return true;
     } catch {
       // Insecure context or focus error; fall back to execCommand
@@ -34,6 +37,7 @@ export async function copyText(text) {
 
     const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
+    if (successful) soundEngine.playToggle();
     return successful;
   } catch {
     return false;
@@ -111,6 +115,7 @@ export async function copyQrImageOrFallback({ blob, dataUrl, text }) {
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': targetBlob })
       ]);
+      soundEngine.playToggle();
       return { success: true, mode: 'image' };
     } catch (err) {
       console.warn('[Clipboard] Image copy failed, falling back to text:', err);

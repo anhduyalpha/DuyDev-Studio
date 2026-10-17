@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.25': {
+    version: 'v23.25',
+    title: 'Bản cập nhật v23.25',
+    date: '17/10/2026',
+    features: [
+      'Procedural Acoustic Sound Engine: Tích hợp hệ thống âm thanh thủ tục Web Audio Apple/Linear-grade với zero-asset, lọc thông thấp ấm áp 2200Hz và tự động ngắt tiết kiệm pin (0% idle battery)',
+      'Health Check Timeout Protection: Chuẩn hóa kiểm tra sức khỏe hệ thống với curl.exe --connect-timeout 3 --max-time 5, triệt tiêu hoàn toàn lỗi đơ tác vụ nền'
+    ],
+    fixes: [
+      'Khắc phục lỗi treo lệnh curl trên Windows PowerShell do alias Invoke-WebRequest',
+      'Đồng bộ toàn diện phiên bản Service Worker và PWA Cache Storage v23.25'
+    ]
+  },
+
   'v23.24': {
     version: 'v23.24',
     title: 'Bản cập nhật v23.24',

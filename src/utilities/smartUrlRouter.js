@@ -6,6 +6,8 @@
  * NOTE: Studocu is under strict quarantine and is NOT handled here.
  */
 
+import { soundEngine } from './soundEngine.js';
+
 export const PENDING_AUTOSTART_KEY = 'dd_pending_autostart_url';
 export const AUTOSTART_TTL_MS = 15000;
 
@@ -65,6 +67,7 @@ export function detectSmartRoute(raw) {
  */
 export function handoffSmartUrl(smartResult) {
   if (!smartResult || !smartResult.toolId || !smartResult.url) return;
+  soundEngine.playStart();
   try {
     sessionStorage.setItem(
       PENDING_AUTOSTART_KEY,

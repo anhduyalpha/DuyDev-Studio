@@ -43,10 +43,12 @@ Every response modifying or checking code MUST end with:
 | **Unit tests** | `rtk vitest run [test_path]` |
 | **Python check** | `rtk err python -m py_compile <path_to_engine.py>` |
 | **Deploy HTTPS** | `.\scripts\deploy-prod.ps1` |
+| **Health Check** | `curl.exe --connect-timeout 3 --max-time 5 -s http://192.168.2.171:3000/api/v1/health` (or `.\scripts\check-health.ps1`) |
 
 **Forbidden**:
 - DO NOT run `node server.cjs` (obsolete mock prototype).
 - DO NOT run `vite build` or `webpack` (zero-build native ES modules).
+- DO NOT run unadorned `curl` without `.exe` or timeouts (`--connect-timeout 3 --max-time 5`) on Windows PowerShell (aliases to `Invoke-WebRequest` and hangs background jobs).
 - DO NOT run full test suites blindly; use `codegraph affected`.
 
 ---

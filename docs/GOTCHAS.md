@@ -225,5 +225,11 @@ These file groups must be changed together:
 - **What**: Combining `allow-same-origin` and `allow-scripts` on an iframe previewing untrusted HTML files allows embedded scripts to break out of the sandbox and access the parent origin's `localStorage`, cookies, and auth credentials. Furthermore, listening to the `error` event on `<audio>`/`<video>` elements to attempt an automated blob fetch fallback without a one-shot retry guard causes an infinite loop when media files are corrupted or unsupported, freezing the browser tab at 100% CPU.
 - **Action**: Never combine `allow-same-origin` with `allow-scripts` in user file preview iframes. Always guard media retry fallbacks with a `hasRetried` boolean flag and display an explicit error state on failure.
 
+### [CONFIRMED] Raw 'curl' Hangs on Windows PowerShell (Aliases & Missing Timeout)
+- **Location**: Terminal commands, Antigravity background tasks, deploy/health scripts
+- **What**: In Windows PowerShell, `curl` is aliased to `Invoke-WebRequest` rather than native `curl.exe`. It does not handle curl flags like `-s` natively, buffers HTML streams indefinitely, and hangs background task runners without completing. Furthermore, executing `curl` or `curl.exe` without `--connect-timeout <seconds>` and `--max-time <seconds>` hangs permanently if a connection stalls or keep-alive sockets remain open.
+- **Action**: Never run unadorned `curl` on Windows. Always use `curl.exe --connect-timeout 3 --max-time 5 -s <url>` or run `.\scripts\check-health.ps1`.
+
+
 
 

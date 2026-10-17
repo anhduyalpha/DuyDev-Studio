@@ -13,6 +13,7 @@ import { scribdManager, validateScribdUrlOrId, extractScribdUrlOrId, isScribdSea
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
+import { soundEngine } from '../../../utilities/soundEngine.js';
 
 export function renderScribdWorkspace() {
   const state = scribdManager.getState();
@@ -68,6 +69,7 @@ function handleUrlCandidate(raw) {
     return;
   }
   const forceReload = Boolean(document.getElementById('chkScribdForceReload')?.checked);
+  soundEngine.playStart();
   scribdManager.startDownload(check.candidate, forceReload);
 }
 

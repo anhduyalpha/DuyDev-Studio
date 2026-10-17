@@ -7,6 +7,7 @@
 import { tiktokApi } from '../services/tiktokApi.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 const STORAGE_KEY = 'ds_tiktok_history_v1';
 
@@ -207,6 +208,7 @@ export class TiktokManager {
     this.state.savedDriveResult = null;
     this.state.existingInDrive = null;
     this.state.isForceResave = false;
+    soundEngine.playStart();
     this.notify({ type: 'loading' });
 
     try {
@@ -315,6 +317,7 @@ export class TiktokManager {
       isCancelled: false
     };
 
+    soundEngine.playStart();
     showToast(`Bắt đầu xử lý hàng đợi ${uniqueUrls.length} video TikTok vào Studio Drive...`, 'info');
     this.notify({ type: 'batch-started' });
 

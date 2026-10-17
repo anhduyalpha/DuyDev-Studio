@@ -4,6 +4,8 @@
  * Completely prevents screen overflow and UI blocking when rapid actions are performed.
  */
 
+import { soundEngine } from './soundEngine.js';
+
 const MAX_ACTIVE_TOASTS = 3;
 const DEFAULT_DURATION = 2500;
 
@@ -97,12 +99,22 @@ function createToastRecord(toast, cleanMessage, type, textSpan = null) {
  * @param {'info' | 'success' | 'error' | 'warning'} [type='info'] - Semantic variant
  * @param {number} [duration=2500] - Lifespan in milliseconds
  */
-export function showToast(message, type = 'info', duration = DEFAULT_DURATION) {
+export function showToast(message, type = 'info', duration = DEFAULT_DURATION, options = {}) {
   const container = getToastContainer();
   if (!container) return;
 
   const cleanMessage = String(message || '').trim();
   if (!cleanMessage) return;
+
+  if (!options?.silent) {
+    if (type === 'error') {
+      soundEngine.playError();
+    } else if (type === 'warning') {
+      soundEngine.playWarning();
+    } else {
+      soundEngine.playNotification();
+    }
+  }
 
   // 1. Deduplication / Coalescing: Check if identical active toast exists
   const existing = activeToasts.find((t) => t.message === cleanMessage && t.type === type);
@@ -185,12 +197,22 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION) {
  * @param {() => void} [options.onAction]
  * @param {number} [options.duration=6000]
  */
-export function showActionableToast(message, { type = 'success', actionText = 'Mở ngay', onAction, duration = 6000 } = {}) {
+export function showActionableToast(message, { type = 'success', actionText = 'Mở ngay', onAction, duration = 6000, silent = false } = {}) {
   const container = getToastContainer();
   if (!container) return;
 
   const cleanMessage = String(message || '').trim();
   if (!cleanMessage) return;
+
+  if (!silent) {
+    if (type === 'error') {
+      soundEngine.playError();
+    } else if (type === 'warning') {
+      soundEngine.playWarning();
+    } else {
+      soundEngine.playNotification();
+    }
+  }
 
   evictOldestIfFull();
 

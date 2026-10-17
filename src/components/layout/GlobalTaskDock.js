@@ -12,8 +12,8 @@ import { soundEngine } from '../../utilities/soundEngine.js';
 
 let isMinimized = false;
 
-export const completedTaskIds = new Set();
-export const failedTaskIds = new Set();
+export const completedTaskIds = soundEngine.completedTaskIds;
+export const failedTaskIds = soundEngine.failedTaskIds;
 const previousTaskStates = new Map();
 
 /**
@@ -33,14 +33,12 @@ export function trackTaskTransitions(tasks = []) {
     const isCompleted = task.status === 'completed' || task.status === 'done' || (typeof task.progress === 'number' && task.progress >= 100);
     const isFailed = task.status === 'error' || task.status === 'failed';
 
-    if (isCompleted && !completedTaskIds.has(task.id)) {
+    if (isCompleted && !soundEngine.completedTaskIds.has(task.id)) {
       if (!prev || (prev.progress !== undefined && prev.progress < 100) || prev.status === 'running') {
-        completedTaskIds.add(task.id);
-        soundEngine.playJobComplete();
+        soundEngine.playJobCompleteOnce(task.id);
       }
-    } else if (isFailed && !failedTaskIds.has(task.id)) {
-      failedTaskIds.add(task.id);
-      soundEngine.playError();
+    } else if (isFailed && !soundEngine.failedTaskIds.has(task.id)) {
+      soundEngine.playErrorOnce(task.id);
     }
 
     previousTaskStates.set(task.id, {

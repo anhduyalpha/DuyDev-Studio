@@ -5,6 +5,7 @@
  */
 
 import { showActionableToast } from './toast.js';
+import { soundEngine } from './soundEngine.js';
 
 /**
  * @typedef {Object} ActiveTask
@@ -265,8 +266,14 @@ class TaskCoordinator {
    * @param {ActiveTask} task
    */
   notifyCompletion(task) {
+    if (task?.id) {
+      soundEngine.playJobCompleteOnce(task.id);
+    } else {
+      soundEngine.playJobComplete();
+    }
     showActionableToast(`${task.moduleTitle}: "${task.title}" đã hoàn tất`, {
       type: 'success',
+      silent: true,
       actionText: 'Mở ngay',
       onAction: () => {
         if (task.route) {

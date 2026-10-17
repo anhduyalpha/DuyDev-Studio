@@ -4,6 +4,7 @@
 
 import { toggleTheme, getStoredTheme, updateThemeUI } from '../../hooks/useTheme.js';
 import { storage } from '../../utilities/storage.js';
+import { soundEngine } from '../../utilities/soundEngine.js';
 
 export function updateHeaderTrashIndicator() {
   const dot = document.getElementById('headerTrashDot');
@@ -15,6 +16,7 @@ export function updateHeaderTrashIndicator() {
 
 export function renderHeader() {
   const isDark = getStoredTheme() === 'dark';
+  const isSoundEnabled = soundEngine.isEnabled();
   const trashCount = storage.getLocalTrash().length;
 
   return `
@@ -70,6 +72,14 @@ export function renderHeader() {
                class="inline-flex items-center justify-center w-6 h-6 select-none">
             <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
           </div>
+
+          <!-- Sound Toggle Button -->
+          <button id="btnSoundToggle" 
+                  title="${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}" 
+                  aria-label="${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}" 
+                  class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+          </button>
 
           <!-- Theme Toggle Button -->
           <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
@@ -144,6 +154,33 @@ export function attachHeaderListeners(onSearch) {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => onSearch(e.target.value));
   }
+
+  // Sound toggle listener
+  const btnSound = document.getElementById('btnSoundToggle');
+  const updateSoundUI = (enabled) => {
+    if (!btnSound) return;
+    btnSound.title = enabled ? 'Tắt âm thanh' : 'Bật âm thanh';
+    btnSound.setAttribute('aria-label', btnSound.title);
+    btnSound.innerHTML = `<i data-lucide="${enabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>`;
+    if (window.lucide) window.lucide.createIcons({ root: btnSound });
+  };
+
+  if (btnSound) {
+    btnSound.addEventListener('click', () => {
+      const newEnabled = soundEngine.toggleMute();
+      if (newEnabled) {
+        soundEngine.playToggle();
+      }
+      updateSoundUI(newEnabled);
+    });
+  }
+
+  // Sync sound state change if toggled elsewhere
+  window.addEventListener('ds:sound-state-change', (e) => {
+    if (e.detail?.enabled !== undefined) {
+      updateSoundUI(e.detail.enabled);
+    }
+  });
 
   // Theme toggle listener
   const btnTheme = document.getElementById('btnThemeToggle');
