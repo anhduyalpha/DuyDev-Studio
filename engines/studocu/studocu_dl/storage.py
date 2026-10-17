@@ -74,6 +74,18 @@ def parse_device_info(user_agent: str) -> str:
     return f"{os_name} • {browser_name}"
 
 
+def normalize_downloader(meta: Dict[str, Any], fallback_seed: str = "") -> Dict[str, str]:
+    """Chuẩn hóa danh tính người tải từ metadata, thay thế IP Docker ảo bằng Visitor Tag Admin."""
+    dl = dict(meta.get("downloaded_by") or {})
+    name = (dl.get("name") or "").strip()
+    if not name or name in ("172.18.0.1", "127.0.0.1", "localhost") or name.startswith("172.18."):
+        seed = meta.get("id") or fallback_seed or "visitor"
+        import hashlib
+        h = hashlib.md5(seed.encode("utf-8")).hexdigest()[:6]
+        dl["name"] = f"Khách #{h}"
+    return dl
+
+
 class DocumentStore:
     """Lớp quản lý lưu trữ và siêu dữ liệu tài liệu."""
 
@@ -246,6 +258,7 @@ class DocumentStore:
                 viewer_url = f"/pdfjs/web/viewer.html?file={urllib.parse.quote(stream_url, safe='')}"
 
                 doc_copy = dict(meta)
+                doc_copy["downloaded_by"] = normalize_downloader(meta, fname)
                 sb = doc_copy.get("size_bytes", 0)
                 orig_url = meta.get("url", "")
                 doc_copy.update({
@@ -411,7 +424,7 @@ class DocumentStore:
                         "size_mb": round(size_bytes / (1024 * 1024), 2),
                         "mtime": meta.get("trashed_at") or stat.st_mtime,
                         "time": meta.get("trashed_time") or time.strftime("%d/%m/%Y %H:%M", time.localtime(stat.st_mtime)),
-                        "downloaded_by": meta.get("downloaded_by", {"name": "Không rõ", "ip": "", "device": ""}),
+                        "downloaded_by": normalize_downloader(meta, item.name),
                         "is_pdf": is_pdf,
                     })
 

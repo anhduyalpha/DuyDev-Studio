@@ -18,6 +18,7 @@ import {
   cancelJobApi
 } from './studocuApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
+import { getDeviceId } from '../../../../utilities/deviceId.js';
 
 class StudocuManager {
   constructor() {
@@ -193,10 +194,14 @@ class StudocuManager {
     this.startThinkingOrbs();
 
     try {
-      const payload = { url, cookie: cookie || undefined };
+      const deviceId = getDeviceId();
+      const payload = { url, cookie: cookie || undefined, deviceId };
       const data = await safeFetchJson('/api/v1/studocu/download', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-Id': deviceId
+        },
         body: JSON.stringify(payload)
       });
 

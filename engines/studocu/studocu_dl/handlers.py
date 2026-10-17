@@ -455,17 +455,32 @@ class StudocuHTTPRequestHandler(SimpleHTTPRequestHandler):
             raw_cookie = data.get("cookie") or None
             force_reload = bool(data.get("force_reload", False) or data.get("bypass_cache", False))
 
-            # Rút trích thông tin người tải (IP, Thiết bị, Tên tuỳ chọn)
+            # Rút trích thông tin người tải (IP, Thiết bị, Tên tuỳ chọn từ Admin Visitor Registry)
             client_ip = self.headers.get("X-Forwarded-For", "").split(",")[0].strip()
             if not client_ip:
                 client_ip = self.client_address[0] if self.client_address else "127.0.0.1"
             user_agent = self.headers.get("User-Agent", "")
             device_summary = parse_device_info(user_agent)
-            raw_user_name = (data.get("user_name") or data.get("downloaded_by") or "").strip()
-            if not raw_user_name:
-                display_name = "Máy khách" if client_ip in ("127.0.0.1", "localhost", "::1") else client_ip
+
+            downloader_data = data.get("downloaded_by")
+            if isinstance(downloader_data, dict):
+                raw_user_name = (data.get("user_name") or downloader_data.get("name") or "").strip()
+                device_summary = downloader_data.get("device") or device_summary
+                if downloader_data.get("ip"):
+                    client_ip = downloader_data["ip"]
             else:
+                raw_user_name = (data.get("user_name") or str(downloader_data or "")).strip()
+
+            device_id = (data.get("deviceId") or data.get("device_id") or self.headers.get("X-Device-Id") or "").strip()
+
+            if raw_user_name and raw_user_name not in ("172.18.0.1", "127.0.0.1"):
                 display_name = raw_user_name
+            elif device_id:
+                display_name = f"Khách #{device_id[-6:]}"
+            elif client_ip and client_ip not in ("127.0.0.1", "localhost", "::1", "172.18.0.1"):
+                display_name = client_ip
+            else:
+                display_name = "👑 Máy của Duy" if client_ip in ("127.0.0.1", "localhost", "::1") else "Khách #m1a2b3"
 
             downloaded_by = {
                 "name": display_name,

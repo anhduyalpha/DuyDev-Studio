@@ -8,6 +8,9 @@ import { Readable } from 'stream';
 import path from 'path';
 import { StudocuDaemonService } from '../../services/studocu-daemon.service.js';
 import { env } from '../../config/env.config.js';
+import crypto from 'crypto';
+import { deviceRegistryService } from '../../services/device-registry.service.js';
+import { extractClientIp, parseDeviceSummary } from '../middleware/telemetry.middleware.js';
 
 const BACKEND_URL = env.STUDOCU_API_URL;
 
@@ -127,10 +130,48 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
         }
       }
 
+      // Extract client identification & real IP for authentic downloader tracking
+      const { ip: clientIp, isLan } = extractClientIp(req);
+      const userAgent = (req.headers['user-agent'] as string) || '';
+      const deviceId = (body.deviceId as string) || (req.headers['x-device-id'] as string) || '';
+
+      let uploaderName = '';
+      if (deviceId) {
+        const dev = deviceRegistryService.getDevice(deviceId);
+        if (dev?.alias) {
+          uploaderName = dev.alias;
+        } else if (dev?.isOwner) {
+          uploaderName = '👑 Máy của Duy';
+        } else {
+          uploaderName = `Khách #${deviceId.slice(-6)}`;
+        }
+      } else if (isLan) {
+        uploaderName = '👑 Máy của Duy';
+      } else {
+        const hash = crypto.createHash('md5').update(clientIp + userAgent).digest('hex').slice(0, 6);
+        uploaderName = `Khách #${hash}`;
+      }
+
+      const deviceSummary = parseDeviceSummary(userAgent);
+      const forwardBody = {
+        ...body,
+        user_name: uploaderName,
+        downloaded_by: {
+          name: uploaderName,
+          ip: clientIp,
+          device: deviceSummary
+        }
+      };
+
       const { status, data } = await safeJsonFetch(`${BACKEND_URL}/api/download`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body || {})
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-For': clientIp,
+          'User-Agent': userAgent,
+          'X-Device-Id': deviceId
+        },
+        body: JSON.stringify(forwardBody)
       });
       return reply.status(status).send(data);
     } catch (err: any) {

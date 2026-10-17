@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.19': {
+    version: 'v23.19',
+    title: 'Bản cập nhật v23.19',
+    date: '17/10/2026',
+    features: [
+      'Authentic Downloader Identity: Tích hợp cơ chế định danh thiết bị Admin (Khách #xxxxxx / Chủ nhà / Alias) vào toàn bộ lịch sử tải Studocu',
+      'Anti-Docker Bridge Masking: Triệt tiêu hoàn toàn địa chỉ IP nội bộ 172.18.0.1, hiển thị thẻ danh tính người dùng đa dạng và scannable'
+    ],
+    fixes: [
+      'Chuyển tiếp IP thật qua Fastify Gateway sang Python Engine và tự động chuyển đổi danh tính cho dữ liệu cũ'
+    ]
+  },
+
   'v23.18': {
     version: 'v23.18',
     title: 'Bản cập nhật v23.18',

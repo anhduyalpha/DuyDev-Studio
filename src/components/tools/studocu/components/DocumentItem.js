@@ -18,7 +18,17 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
   const docName = doc.name || 'Tài liệu không tên';
   const docSize = doc.size || (doc.size_mb ? `${doc.size_mb} MB` : (doc.size_bytes ? `${(doc.size_bytes / (1024 * 1024)).toFixed(2)} MB` : ''));
   const timeStr = doc.time || '';
-  const uploader = doc.downloaded_by?.name || doc.downloaded_by?.device || doc.uploader || 'Web';
+  let uploader = doc.downloaded_by?.name || doc.downloaded_by?.device || doc.uploader || 'Web';
+  if (uploader === '172.18.0.1' || uploader === '127.0.0.1' || /^172\.(1[6-9]|2\d|3[01])\./.test(uploader)) {
+    const seed = doc.id || docName || 'guest';
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const hex = Math.abs(hash).toString(16).padStart(6, '0').slice(-6);
+    uploader = `Khách #${hex}`;
+  }
   const streamUrl = hasHexId
     ? `/api/v1/studocu/stream?id=${encodeURIComponent(doc.id)}`
     : `/api/v1/studocu/stream?file=${encodeURIComponent(docName)}`;
