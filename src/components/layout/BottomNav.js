@@ -10,7 +10,7 @@ export function renderBottomNav(activeRoute = '') {
   const isQr = activeRoute.startsWith('#tool/qr');
 
   const navItem = (href, icon, label, isActive) => `
-    <a href="${href}" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 ${
+    <a href="${href}" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 ${
       isActive 
         ? 'text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/90 dark:bg-white/[0.08] shadow-2xs' 
         : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium'

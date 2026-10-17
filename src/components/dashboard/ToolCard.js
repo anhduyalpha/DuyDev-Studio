@@ -4,6 +4,7 @@
 
 
 import { renderToolIcon } from '../common/ToolIcons.js';
+import { getCardTierConfig } from '../../hooks/useToolRegistry.js';
 
 const CATEGORY_LABELS = {
   all: 'Tất cả',
@@ -30,13 +31,33 @@ export function renderToolCard(tool) {
   };
   const contrastColor = contrastMap[accent] || accent;
 
+  const tierConfig = tool.tier ? getCardTierConfig(tool.tier) : null;
+  const tierCardClass = tierConfig ? ` tier-card ${tierConfig.className}` : '';
+  const tierBadgeHtml = tierConfig ? `
+    <div class="tier-crest-badge shadow-xs shrink-0" title="${tierConfig.name} - ${tierConfig.titleVi}">
+      <span class="tier-badge-indicator"></span>
+      <span>${tierConfig.badgeText}</span>
+    </div>
+  `.trim() : '';
+
+  const tierOrnamentsHtml = tierConfig ? `
+    <div class="tier-corner corner-tl"></div>
+    <div class="tier-corner corner-tr"></div>
+    <div class="tier-corner corner-bl"></div>
+    <div class="tier-corner corner-br"></div>
+    ${['UR', 'LR', 'EX'].includes(tierConfig.code) ? '<div class="tier-holo-sheen pointer-events-none"></div>' : ''}
+    ${['LR', 'EX'].includes(tierConfig.code) ? '<div class="tier-radial-aura pointer-events-none"></div>' : ''}
+  `.trim() : '';
+
   return `
     <a href="${tool.route}"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card${tierCardClass} group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="${tool.id}"
        aria-label="${tool.title} - ${tool.description}"
        style="--accent: ${accent}; --accent-contrast: ${contrastColor};">
       
+      ${tierOrnamentsHtml}
+
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
       <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
       
@@ -47,11 +68,12 @@ export function renderToolCard(tool) {
       <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
 
       <div class="relative z-10">
-        <!-- Header: Icon -->
-        <div class="flex items-center mb-3.5 min-h-[44px]">
+        <!-- Header: Icon & Tier Badge -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
             ${renderToolIcon(tool.id, tool.icon, 'w-6 h-6 sm:w-6.5 sm:h-6.5')}
           </div>
+          ${tierBadgeHtml}
         </div>
 
         <!-- Title & Description -->

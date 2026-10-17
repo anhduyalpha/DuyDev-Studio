@@ -185,6 +185,128 @@ const DEFAULT_TOOLS = [
   }
 ];
 
+/**
+ * 10 Cấp Độ Phân Hạng Thẻ Công Cụ (Tool Card Tier List 10 Levels)
+ * Thứ tự phân hạng từ thấp đến cao: E -> D -> C -> B -> A -> S -> SS -> UR -> LR -> EX
+ */
+export const CARD_TIERS = Object.freeze({
+  E: {
+    id: 'E',
+    code: 'E',
+    name: 'Common',
+    titleVi: 'Cơ bản thấp',
+    level: 1,
+    className: 'tier-e',
+    badgeText: 'TIER E',
+    color: '#71717A',
+    description: 'Viền tối giản, màu xám trung tính, bo góc gọn gàng.'
+  },
+  D: {
+    id: 'D',
+    code: 'D',
+    name: 'Standard',
+    titleVi: 'Tiêu chuẩn',
+    level: 2,
+    className: 'tier-d',
+    badgeText: 'TIER D',
+    color: '#0EA5E9',
+    description: 'Viền xanh thanh lịch, bóng kính tối giản, bo góc trang nhã.'
+  },
+  C: {
+    id: 'C',
+    code: 'C',
+    name: 'Uncommon',
+    titleVi: 'Khá',
+    level: 3,
+    className: 'tier-c',
+    badgeText: 'TIER C',
+    color: '#10B981',
+    description: 'Viền xanh ngọc / xanh lá mạ tươi mới, corner notches gọn gàng.'
+  },
+  B: {
+    id: 'B',
+    code: 'B',
+    name: 'Rare',
+    titleVi: 'Hiếm',
+    level: 4,
+    className: 'tier-b',
+    badgeText: 'TIER B',
+    color: '#94A3B8',
+    description: 'Viền kim loại bạc nổi khối, bóng kính đa tầng, huy hiệu Bạc.'
+  },
+  A: {
+    id: 'A',
+    code: 'A',
+    name: 'Epic',
+    titleVi: 'Sử thi',
+    level: 5,
+    className: 'tier-a',
+    badgeText: 'TIER A',
+    color: '#F59E0B',
+    description: 'Viền vàng đồng quý tộc, ánh kim đa tầng, ngạnh góc vát 45 độ, huy hiệu Vàng đồng.'
+  },
+  S: {
+    id: 'S',
+    code: 'S',
+    name: 'Master',
+    titleVi: 'Siêu việt',
+    level: 6,
+    className: 'tier-s',
+    badgeText: 'TIER S',
+    color: '#8B5CF6',
+    description: 'Viền tím hoàng gia siêu việt, huy hiệu Master rực rỡ, ngạnh góc kép tinh tế.'
+  },
+  SS: {
+    id: 'SS',
+    code: 'SS',
+    name: 'Grandmaster',
+    titleVi: 'Đại cao thủ',
+    level: 7,
+    className: 'tier-ss',
+    badgeText: 'TIER SS',
+    color: '#F43F5E',
+    description: 'Viền năng lượng chuyển sắc Crimson-Violet rực lửa, ngạnh góc sắc bén, huy hiệu Đại cao thủ.'
+  },
+  UR: {
+    id: 'UR',
+    code: 'UR',
+    name: 'Ultra Rare',
+    titleVi: 'Thần thoại',
+    level: 8,
+    className: 'tier-ur',
+    badgeText: 'TIER UR',
+    color: '#EC4899',
+    description: 'Viền quang phổ Holographic Prismatic, ngạnh góc 4 góc, hiệu ứng quét sáng mặt kính Holo Foil Sheen.'
+  },
+  LR: {
+    id: 'LR',
+    code: 'LR',
+    name: 'Legend Rare',
+    titleVi: 'Huyền thoại tối thượng',
+    level: 9,
+    className: 'tier-lr',
+    badgeText: 'TIER LR',
+    color: '#EAB308',
+    description: 'Viền hiệu ứng động đa sắc rực rỡ, vầng hào quang tỏa sáng Radial Aura, ngạnh vương miện 4 góc tinh xảo, 100% GPU.'
+  },
+  EX: {
+    id: 'EX',
+    code: 'EX',
+    name: 'Extra',
+    titleVi: 'Đẳng cấp vũ trụ đặc biệt',
+    level: 10,
+    className: 'tier-ex',
+    badgeText: 'TIER EX',
+    color: '#06B6D4',
+    description: 'Cấp độ vũ trụ lượng tử tinh vân, vầng hào quang tinh tú breathing quang phổ, quét ánh sao lấp lánh, 100% GPU.'
+  }
+});
+
+export function getCardTierConfig(tierKey) {
+  if (!tierKey) return null;
+  const key = String(tierKey).trim().toUpperCase();
+  return CARD_TIERS[key] || null;
+}
 
 class ToolRegistry {
   constructor() {
@@ -237,6 +359,25 @@ class ToolRegistry {
     }
     return this.tools.find(t => t.id === id) || this.tools[0];
   }
+
+  setToolTier(toolId, tierKey) {
+    const tool = this.tools.find(t => t.id === toolId);
+    if (!tool) return false;
+    const tierConfig = getCardTierConfig(tierKey);
+    if (tierConfig) {
+      tool.tier = tierConfig.code;
+    } else {
+      delete tool.tier;
+    }
+    this.notify();
+    return true;
+  }
+
+  getToolTier(toolId) {
+    const tool = this.tools.find(t => t.id === toolId);
+    return tool ? tool.tier || null : null;
+  }
 }
 
 export const toolRegistry = new ToolRegistry();
+

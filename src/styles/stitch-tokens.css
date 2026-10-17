@@ -3,6 +3,8 @@
  * DuyDev Studio PWA
  */
 
+@import './card-tiers-10.css';
+
 :root {
   color-scheme: light;
   /* Light Mode Palette - High Contrast */

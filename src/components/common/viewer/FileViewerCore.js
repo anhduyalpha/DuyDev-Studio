@@ -32,6 +32,7 @@ import { renderFallbackViewer, attachFallbackListeners } from './renderers/Fallb
 import { formatBytes } from '../../../utilities/formatters.js';
 import { copyText } from '../../../utilities/clipboard.js';
 import { showToast } from '../../../utilities/toast.js';
+import { soundEngine } from '../../../utilities/soundEngine.js';
 
 let currentSessionId = 0;
 let currentAbortController = null;
@@ -81,6 +82,7 @@ export function cleanupCurrentView() {
 }
 
 export function closeFileViewer() {
+  soundEngine.playToggle();
   currentSessionId++;
   cleanupCurrentView();
 
@@ -237,6 +239,7 @@ function attachCategoryListeners(state, registerCleanup) {
 }
 
 export function openFileViewer(state) {
+  soundEngine.playToggle();
   const existingModal = document.getElementById('fileViewerCoreModal');
   if (existingModal && state.direction) {
     cleanupCurrentView();

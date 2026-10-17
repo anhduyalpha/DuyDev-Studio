@@ -22,5 +22,27 @@ description: Autonomous Impeccable UI/UX Protocol for DuyDev-Studio
 - Complete states: Empty, Loading, Error, Success.
 - DOM hygiene: Run `window.lucide?.createIcons()` on dynamic HTML; prevent duplicate listeners.
 
+## 4. 10-Tier Tool Card List System & Command Protocol
+- **10 Cấp Độ Phân Hạng Thẻ (Tool Card Tiers):**
+  - Tier 1: `E` (Common - Cơ bản thấp, viền xám tối giản)
+  - Tier 2: `D` (Standard - Tiêu chuẩn, viền xanh thanh lịch)
+  - Tier 3: `C` (Uncommon - Khá, viền xanh ngọc / lá mạ)
+  - Tier 4: `B` (Rare - Hiếm, viền kim loại bạc, bóng kính đa tầng)
+  - Tier 5: `A` (Epic - Sử thi, viền vàng đồng quý tộc, vát 45 độ)
+  - Tier 6: `S` (Master - Siêu việt, viền tím hoàng gia, ngạnh góc kép)
+  - Tier 7: `SS` (Grandmaster - Đại cao thủ, viền năng lượng Crimson-Violet)
+  - Tier 8: `UR` (Ultra Rare - Thần thoại, viền quang phổ Holographic, Holo Foil Sheen)
+  - Tier 9: `LR` (Legend Rare - Huyền thoại tối thượng, viền đa sắc, ngạnh vương miện, Radial Aura)
+  - Tier 10: `EX` (Extra - Đẳng cấp vũ trụ đặc biệt, vầng hào quang tinh tú breathing, 100% GPU)
+- **Cú pháp Lệnh Người Dùng:**
+  `"Áp dụng box tier [tên_tier] cho card [tên_tool]"`
+  *(Ví dụ: "Áp dụng box tier UR cho card Studocu downloader" hoặc "Áp dụng box tier EX cho card TikTok downloader")*
+- **Quy trình Thực thi Tự Động của Agent:**
+  1. Tra cứu `id` của tool trong `DEFAULT_TOOLS` tại `src/hooks/useToolRegistry.js` (ví dụ: `studocu-dl` hoặc `tiktok-downloader`).
+  2. Chuẩn hóa mã tier sang chữ hoa (`E`, `D`, `C`, `B`, `A`, `S`, `SS`, `UR`, `LR`, `EX`).
+  3. Gán hoặc cập nhật trường `tier: '[MÃ_TIER]'` vào đúng object của tool trong `DEFAULT_TOOLS`.
+  4. Xác thực cú pháp bằng `rtk err node --check src/hooks/useToolRegistry.js`.
+  5. Tuyệt đối không chỉnh sửa cấu trúc logic module nội bộ của tool (đặc biệt tuân thủ lệnh cấm đụng chạm module `Studocu`).
+
 ## Micro-Receipt
 Include UI status in: `✅ [Verify: <cmd->0> | UI: ok | KI: <ID/none>]`

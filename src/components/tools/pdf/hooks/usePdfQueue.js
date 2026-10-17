@@ -9,6 +9,7 @@ import { loadModuleState, saveModuleState } from '../../../../utilities/moduleSt
 import { uploadPdfFiles, dispatchPdfJob, buildPdfResult } from './pdfApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 import { smartUploadFile, batchPresignFiles } from '../../../../utilities/resumableUploader.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 const ALLOWED_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'tiff', 'tif', 'svg']);
 
@@ -215,6 +216,7 @@ export class PdfQueueManager {
       this.activeJobWatcherCleanup = null;
     }
     if (this.mode === mode) return;
+    if (!silent) soundEngine.playToggle();
     const prevMode = this.mode;
     this.mode = mode;
     this.thumbnailPage = 0;
@@ -991,6 +993,7 @@ export class PdfQueueManager {
     this.stage = 'Đang tải tệp lên...';
     this.error = null;
     this.result = null;
+    soundEngine.playStart();
     this.notify('process-start');
     taskCoordinator.syncTasks(true);
 

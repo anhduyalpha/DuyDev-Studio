@@ -99,3 +99,4 @@ Storage: /data/storage/ (uploads/, processed/, temp/, drive/)
 - **SW Cache Stale Trap**: When updating `src/**`, bump version in `sw.js` (e.g. `v19.2`) to prevent serving stale code.
 - **CWD Resolution**: Paths resolve to `data/storage/` or `server/data/storage/` depending on process CWD.
 - **No JS Re-implementation**: Never rewrite conversion/vector logic in JS when Python engines exist.
+- **10-Tier Tool Card Command Protocol**: Khi nhận lệnh `"Áp dụng box tier [tên_tier] cho card [tên_tool]"`, map tier (`E`, `D`, `C`, `B`, `A`, `S`, `SS`, `UR`, `LR`, `EX`) vào trường `tier` của tool trong `src/hooks/useToolRegistry.js` mà không sửa logic tool hay chạm vào module `Studocu`.

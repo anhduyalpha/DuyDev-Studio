@@ -12,6 +12,7 @@ import { isAdminAuthenticated, verifyAdminPassword, lockAdminSession } from '../
 import { formatBytes, formatRelativeTime } from '../utilities/formatters.js';
 import { showToast } from '../utilities/toast.js';
 import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
+import { soundEngine } from '../utilities/soundEngine.js';
 
 /**
  * Escapes unsafe HTML characters to prevent XSS in user filenames
@@ -960,6 +961,7 @@ export function attachStoragePageListeners(onSoftReRender) {
   };
 
   const navigateToPath = (targetPath) => {
+    soundEngine.playToggle();
     const cleanPath = targetPath || '/';
     const targetHash = cleanPath === '/' ? '#storage' : `#storage?path=${encodeURIComponent(cleanPath)}`;
     if (window.location.hash !== targetHash) {
@@ -1043,6 +1045,7 @@ export function attachStoragePageListeners(onSoftReRender) {
   const btnList = document.getElementById('btnStorageViewList');
   if (btnGrid && btnList) {
     btnGrid.onclick = () => {
+      soundEngine.playToggle();
       state.viewMode = 'grid';
       if (typeof localStorage !== 'undefined') localStorage.setItem('ds_storage_view_mode', 'grid');
       btnGrid.className = 'p-1.5 rounded-lg transition cursor-pointer bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs';
@@ -1051,6 +1054,7 @@ export function attachStoragePageListeners(onSoftReRender) {
     };
 
     btnList.onclick = () => {
+      soundEngine.playToggle();
       state.viewMode = 'list';
       if (typeof localStorage !== 'undefined') localStorage.setItem('ds_storage_view_mode', 'list');
       btnList.className = 'p-1.5 rounded-lg transition cursor-pointer bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs';
@@ -1422,6 +1426,7 @@ export function attachStoragePageListeners(onSoftReRender) {
  * Handles Upload Flow with Progress Visualization
  */
 async function handleUploadFiles(files, onComplete) {
+  soundEngine.playStart();
   const dock = document.getElementById('storageUploadDock');
   const bar = document.getElementById('storageProgressBar');
   const txt = document.getElementById('storageUploadText');

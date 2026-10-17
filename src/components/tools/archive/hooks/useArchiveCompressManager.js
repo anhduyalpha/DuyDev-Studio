@@ -9,6 +9,7 @@ import { loadModuleState, saveModuleState } from '../../../../utilities/moduleSt
 import { showToast } from '../../../../utilities/toast.js';
 import { storage } from '../../../../utilities/storage.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 export class ArchiveCompressManager {
   constructor() {
@@ -148,6 +149,7 @@ export class ArchiveCompressManager {
     this.stage = 'Đang truyền các tệp lên server...';
     this.progress = 10;
     this.error = null;
+    soundEngine.playStart();
     this.notify('compress-start');
 
     try {

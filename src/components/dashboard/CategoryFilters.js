@@ -1,6 +1,4 @@
-/**
- * Category Filter Bar Component (Dark Professional Minimalism with Soft Accents)
- */
+import { soundEngine } from '../../utilities/soundEngine.js';
 
 const CATEGORIES = [
   { id: 'all', label: 'Tất cả', color: '#A1A1AA' },
@@ -43,6 +41,7 @@ export function attachCategoryFilterListeners(onSelect) {
   const pills = Array.from(document.querySelectorAll('.filter-pill'));
   pills.forEach((btn, idx) => {
     btn.addEventListener('click', () => {
+      soundEngine.playToggle();
       const cat = btn.getAttribute('data-category');
       onSelect(cat, btn);
     });

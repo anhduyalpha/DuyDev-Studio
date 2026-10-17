@@ -7,6 +7,7 @@ import { uploadQuizFile, parsePromptApi, generateQuizJob, connectJobEvents } fro
 import { showToast } from '../../../../utilities/toast.js';
 import { storage } from '../../../../utilities/storage.js';
 import { saveQuizHistoryPair } from '../utilities/quizHistoryHelper.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 export function isValidDriveUrl(url) {
   if (!url || typeof url !== 'string') return false;
@@ -465,6 +466,7 @@ class QuizManager {
     this.state.stage = '🌱 Đang gieo mầm ý tưởng, chuẩn bị đề thi thật xịn sò... ✨';
     this.state.result = null;
     this.state.error = null;
+    soundEngine.playStart();
     this.notify('job-started');
 
     try {

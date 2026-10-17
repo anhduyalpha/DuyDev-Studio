@@ -1,6 +1,4 @@
-/**
- * useTheme Hook - Dynamic Light & Dark Theme Controller
- */
+import { soundEngine } from '../utilities/soundEngine.js';
 
 export function getStoredTheme() {
   const saved = localStorage.getItem('ds_theme');
@@ -74,6 +72,7 @@ export function initTheme() {
 export function toggleTheme() {
   const current = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   const next = current === 'dark' ? 'light' : 'dark';
+  soundEngine.playToggle();
   applyTheme(next);
   return next;
 }
