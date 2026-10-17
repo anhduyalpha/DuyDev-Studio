@@ -341,9 +341,18 @@ html.dark .tier-watermark-seal-ex {
 .tier-card.tier-ex .chain-bolt-2,
 .tier-card.tier-ex .chain-bolt-3,
 .tier-card.tier-ex .chain-bolt-4 {
-  opacity: 0.50;
-  filter: drop-shadow(0 0 10px #22D3EE);
-  animation-duration: 3.2s;
+  opacity: 0.10;
+  filter: drop-shadow(0 0 6px #22D3EE);
+  animation-duration: 3.6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+.tier-card.tier-ex .chain-bolt-diagonal {
+  opacity: 0;
+  filter: drop-shadow(0 0 20px #22D3EE);
+  animation-name: lightning-chain-diagonal;
+  animation-duration: 3.6s;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
 }
@@ -364,62 +373,96 @@ html.dark .tier-watermark-seal-ex {
   animation-name: lightning-chain-4;
 }
 
-/* --- Organic Asymmetrical Chain: 1 -> 4 -> 2 -> 3 --- */
+/* --- Organic Sequence: 1 -> 4 -> 2 -> 3 -> MEGA DIAGONAL STRIKE --- */
 
-/* Bolt 1 (Top-Left): Active 0% -> 22% (~0.70s) - Explosive Sharp Twin Strike */
+/* Bolt 1 (Top-Left): Active 0% -> 18% (~0.65s) - Explosive Sharp Twin Strike */
 @keyframes lightning-chain-1 {
-  0% { opacity: 0.50; filter: drop-shadow(0 0 8px #22D3EE); }
+  0% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
   1.5% { opacity: 1; filter: drop-shadow(0 0 20px #22D3EE) drop-shadow(0 0 35px #FFFFFF); }
-  3.5% { opacity: 0.40; }
+  3.5% { opacity: 0.20; }
   5.5% { opacity: 1; filter: drop-shadow(0 0 24px #67E8F9) drop-shadow(0 0 40px #FFFFFF); }
-  8% { opacity: 0.65; }
-  11% { opacity: 0.95; filter: drop-shadow(0 0 18px #22D3EE) drop-shadow(0 0 30px #FFFFFF); }
-  15% { opacity: 0.55; }
-  18% { opacity: 0.85; }
-  22%, 100% { opacity: 0.45; filter: drop-shadow(0 0 8px #22D3EE); }
+  8% { opacity: 0.45; }
+  11% { opacity: 0.90; filter: drop-shadow(0 0 16px #22D3EE) drop-shadow(0 0 28px #FFFFFF); }
+  14% { opacity: 0.30; }
+  18%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
 }
 
-/* Bolt 4 (Bottom-Left / Left Rail): Active 19% -> 50% (~0.99s) - Deep Rolling Rumbling Surge */
+/* Bolt 4 (Bottom-Left): Active 16% -> 38% (~0.80s) - Deep Rolling Rumbling Surge */
 @keyframes lightning-chain-4 {
-  0%, 19% { opacity: 0.45; filter: drop-shadow(0 0 8px #38BDF8); }
-  21% { opacity: 0.85; }
-  23% { opacity: 1; filter: drop-shadow(0 0 22px #38BDF8) drop-shadow(0 0 38px #FFFFFF); }
-  26% { opacity: 0.45; }
-  29% { opacity: 1; filter: drop-shadow(0 0 25px #67E8F9) drop-shadow(0 0 42px #FFFFFF); }
-  33% { opacity: 0.65; }
-  36% { opacity: 0.45; }
-  39% { opacity: 0.95; filter: drop-shadow(0 0 20px #38BDF8) drop-shadow(0 0 32px #FFFFFF); }
-  43% { opacity: 0.60; }
-  46% { opacity: 0.85; }
-  50%, 100% { opacity: 0.45; filter: drop-shadow(0 0 8px #38BDF8); }
+  0%, 15% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
+  17% { opacity: 0.70; }
+  19% { opacity: 1; filter: drop-shadow(0 0 22px #38BDF8) drop-shadow(0 0 38px #FFFFFF); }
+  22% { opacity: 0.20; }
+  25% { opacity: 1; filter: drop-shadow(0 0 25px #67E8F9) drop-shadow(0 0 42px #FFFFFF); }
+  28% { opacity: 0.45; }
+  31% { opacity: 0.90; filter: drop-shadow(0 0 18px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
+  35% { opacity: 0.40; }
+  38%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
 }
 
-/* Bolt 2 (Upper / Right Rail): Active 49% -> 68% (~0.60s) - Ultra-Rapid High-Frequency Jitter Snap */
+/* Bolt 2 (Top-Right): Active 37% -> 54% (~0.60s) - Ultra-Rapid High-Frequency Jitter Snap */
 @keyframes lightning-chain-2 {
-  0%, 48% { opacity: 0.45; filter: drop-shadow(0 0 8px #38BDF8); }
-  50% { opacity: 1; filter: drop-shadow(0 0 22px #38BDF8) drop-shadow(0 0 38px #FFFFFF); }
-  52% { opacity: 0.35; }
-  54% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 35px #FFFFFF); }
-  56% { opacity: 0.50; }
-  58% { opacity: 0.95; filter: drop-shadow(0 0 18px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
-  61% { opacity: 0.60; }
-  64% { opacity: 0.90; }
-  68%, 100% { opacity: 0.45; filter: drop-shadow(0 0 8px #38BDF8); }
+  0%, 36% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
+  38% { opacity: 1; filter: drop-shadow(0 0 22px #38BDF8) drop-shadow(0 0 38px #FFFFFF); }
+  40% { opacity: 0.20; }
+  42% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 35px #FFFFFF); }
+  45% { opacity: 0.40; }
+  48% { opacity: 0.95; filter: drop-shadow(0 0 18px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
+  51% { opacity: 0.35; }
+  54%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
 }
 
-/* Bolt 3 (Bottom-Right / Lower Rail): Active 67% -> 100% (~1.05s) - Rolling Crescendo Discharge Into Bolt 1 */
+/* Bolt 3 (Bottom-Right): Active 53% -> 74% (~0.75s) - Rolling Crescendo Discharge Before Climax */
 @keyframes lightning-chain-3 {
-  0%, 66% { opacity: 0.45; filter: drop-shadow(0 0 8px #22D3EE); }
-  68% { opacity: 0.75; }
-  71% { opacity: 1; filter: drop-shadow(0 0 20px #22D3EE) drop-shadow(0 0 35px #FFFFFF); }
-  74% { opacity: 0.50; }
-  78% { opacity: 0.90; filter: drop-shadow(0 0 18px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
-  82% { opacity: 0.60; }
-  86% { opacity: 1; filter: drop-shadow(0 0 24px #22D3EE) drop-shadow(0 0 40px #FFFFFF); }
-  90% { opacity: 0.70; }
-  93% { opacity: 0.95; }
-  97% { opacity: 0.60; }
-  100% { opacity: 0.50; filter: drop-shadow(0 0 8px #22D3EE); }
+  0%, 52% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
+  54% { opacity: 0.65; }
+  56% { opacity: 1; filter: drop-shadow(0 0 20px #22D3EE) drop-shadow(0 0 35px #FFFFFF); }
+  59% { opacity: 0.20; }
+  62% { opacity: 0.90; filter: drop-shadow(0 0 18px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
+  66% { opacity: 0.45; }
+  69% { opacity: 1; filter: drop-shadow(0 0 24px #22D3EE) drop-shadow(0 0 40px #FFFFFF); }
+  72% { opacity: 0.40; }
+  74%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
+}
+
+/* Grand Climax: Massive Diagonal Lightning Bolt Across Card (Active 76% -> 96%, ~0.72s) */
+@keyframes lightning-chain-diagonal {
+  0%, 75% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  76% {
+    opacity: 0.40;
+    filter: drop-shadow(0 0 15px #22D3EE);
+  }
+  78% {
+    opacity: 1;
+    filter: drop-shadow(0 0 30px #22D3EE) drop-shadow(0 0 55px #FFFFFF) drop-shadow(0 0 80px #06B6D4);
+  }
+  81% {
+    opacity: 0.25;
+  }
+  83% {
+    opacity: 1;
+    filter: drop-shadow(0 0 35px #67E8F9) drop-shadow(0 0 60px #FFFFFF) drop-shadow(0 0 90px #22D3EE);
+  }
+  86% {
+    opacity: 0.60;
+  }
+  89% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 25px #22D3EE) drop-shadow(0 0 45px #FFFFFF);
+  }
+  92% {
+    opacity: 0.40;
+  }
+  95% {
+    opacity: 0.15;
+  }
+  97%, 100% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
 }
 
 /* --- Tier LR: Golden Solar Thunder Strobe & Blinding Lens Flare --- */

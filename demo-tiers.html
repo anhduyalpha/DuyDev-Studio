@@ -1035,39 +1035,51 @@
         <div class="tier-inner-frame tier-inner-frame-ex pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ex pointer-events-none" aria-hidden="true"></div>
 
-        <!-- Sequential Chained High-Voltage Lightning Bolts (Continuous Hand-Off, Zero Dead Time) -->
+        <!-- Sequential Chained High-Voltage Lightning Bolts with Separate Non-Enclosing Branches -->
         <svg class="tier-strobe-lightning-ex pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <!-- Bolt 1: Top-Left to Upper Rail -->
+          <!-- Bolt 1: Top-Left Branch (Isolated Corner Arc) -->
           <g class="chain-bolt-1">
-            <path d="M 10 130 L 24 95 L 14 70 L 38 42 L 62 34 L 88 16 L 122 12 L 152 20 L 180 10" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 10 130 L 24 95 L 14 70 L 38 42 L 62 34 L 88 16 L 122 12 L 152 20 L 180 10" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 38 42 L 50 62 L 66 65" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 88 16 L 100 30 L 115 28" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 152 20 L 162 36 L 178 38" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 12 110 L 26 82 L 16 60 L 40 38 L 65 30 L 92 16 L 120 12" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 12 110 L 26 82 L 16 60 L 40 38 L 65 30 L 92 16 L 120 12" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 40 38 L 54 55" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 92 16 L 102 32" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
           </g>
-          <!-- Bolt 2: Upper Rail to Right Rail -->
+          <!-- Bolt 2: Top-Right Branch (Isolated Corner Arc with 60px Top Gap & 90px Right Gap) -->
           <g class="chain-bolt-2">
-            <path d="M 145 10 L 175 16 L 210 12 L 248 18 L 274 38 L 264 70 L 288 110 L 276 155 L 290 190" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 145 10 L 175 16 L 210 12 L 248 18 L 274 38 L 264 70 L 288 110 L 276 155 L 290 190" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 210 12 L 218 28 L 232 26" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 274 38 L 258 50 L 254 65" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 288 110 L 270 122 L 266 138" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 180 12 L 210 16 L 245 18 L 272 38 L 264 68 L 286 102 L 278 135" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 180 12 L 210 16 L 245 18 L 272 38 L 264 68 L 286 102 L 278 135" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 245 18 L 252 34" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 272 38 L 256 52" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
           </g>
-          <!-- Bolt 3: Bottom-Right to Lower Rail -->
+          <!-- Bolt 3: Bottom-Right Branch (Isolated Corner Arc with 90px Right Gap & 50px Bottom Gap) -->
           <g class="chain-bolt-3">
-            <path d="M 290 215 L 276 250 L 288 280 L 266 322 L 238 332 L 208 346 L 172 348 L 138 340 L 105 350" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 290 215 L 276 250 L 288 280 L 266 322 L 238 332 L 208 346 L 172 348 L 138 340 L 105 350" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 266 322 L 252 302 L 238 298" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 208 346 L 198 332 L 182 334" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 138 340 L 128 324 L 114 322" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 286 225 L 274 255 L 286 285 L 264 322 L 235 332 L 202 346 L 175 348" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 286 225 L 274 255 L 286 285 L 264 322 L 235 332 L 202 346 L 175 348" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 264 322 L 250 304" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 202 346 L 192 330" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
           </g>
-          <!-- Bolt 4: Lower Rail to Left Rail -->
+          <!-- Bolt 4: Bottom-Left Branch (Isolated Corner Arc with 50px Bottom Gap & 75px Left Gap) -->
           <g class="chain-bolt-4">
-            <path d="M 140 348 L 100 344 L 62 348 L 32 328 L 40 295 L 14 255 L 26 210 L 12 165 L 24 125" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 140 348 L 100 344 L 62 348 L 32 328 L 40 295 L 14 255 L 26 210 L 12 165 L 24 125" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 62 348 L 72 332 L 88 334" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 32 328 L 48 312 L 52 298" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 14 255 L 32 242 L 36 226" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 125 348 L 95 344 L 60 348 L 30 326 L 38 295 L 14 258 L 26 220 L 14 185" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 125 348 L 95 344 L 60 348 L 30 326 L 38 295 L 14 258 L 26 220 L 14 185" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 60 348 L 70 332" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 30 326 L 46 310" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+
+          <!-- Grand Climax: Massive Brilliant Diagonal Lightning Bolt Across Card -->
+          <g class="chain-bolt-diagonal">
+            <!-- Outer Plasma Glow Aura -->
+            <path d="M 16 16 L 52 46 L 40 72 L 82 110 L 70 134 L 122 176 L 108 202 L 160 238 L 146 262 L 202 300 L 190 318 L 248 344 L 284 350" stroke="#06B6D4" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Bright Cyan Electric Lightning Trunk -->
+            <path d="M 16 16 L 52 46 L 40 72 L 82 110 L 70 134 L 122 176 L 108 202 L 160 238 L 146 262 L 202 300 L 190 318 L 248 344 L 284 350" stroke="#22D3EE" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Blinding Pure White Hot Core -->
+            <path d="M 16 16 L 52 46 L 40 72 L 82 110 L 70 134 L 122 176 L 108 202 L 160 238 L 146 262 L 202 300 L 190 318 L 248 344 L 284 350" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Electric Forks & Branching Tenders -->
+            <path d="M 82 110 L 118 100 L 142 114" stroke="#67E8F9" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 122 176 L 96 204 L 70 212" stroke="#67E8F9" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 160 238 L 196 230 L 226 244" stroke="#67E8F9" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 202 300 L 228 284 L 252 292" stroke="#67E8F9" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 52 46 L 80 40 L 98 50" stroke="#67E8F9" stroke-width="2" stroke-linecap="round"/>
           </g>
         </svg>
 
