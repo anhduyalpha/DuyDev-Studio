@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.16': {
+    version: 'v23.16',
+    title: 'Bản cập nhật v23.16',
+    date: '17/10/2026',
+    features: [
+      'Studocu Direct URL Input: Bổ sung ô nhập/dán liên kết trực quan ngay phía trên nút tải, hỗ trợ phím Enter để tải nhanh'
+    ],
+    fixes: [
+      'Lược bỏ tuỳ chọn Cookie rườm rà, tối giản giao diện Studocu Downloader gọn gàng'
+    ]
+  },
+
   'v23.15': {
     version: 'v23.15',
     title: 'Bản cập nhật v23.15',

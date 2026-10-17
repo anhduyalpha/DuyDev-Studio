@@ -19,8 +19,31 @@ export function renderHeroPasteCard(state) {
         </p>
       </div>
 
-      <form id="studocuDownloadForm" class="pt-1" onsubmit="event.preventDefault(); return false;">
-        <input type="hidden" id="studocuUrlInput" name="url" value="" />
+      <form id="studocuDownloadForm" class="pt-1 space-y-3 max-w-lg mx-auto" onsubmit="event.preventDefault(); return false;">
+        <!-- URL Input Text Box -->
+        <div class="relative w-full text-left">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400 dark:text-zinc-500">
+            <i data-lucide="link" class="w-4 h-4"></i>
+          </div>
+          <input
+            type="url"
+            id="studocuUrlInput"
+            name="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Dán hoặc nhập liên kết Studocu (https://www.studocu.com/...)"
+            ${isDownloading ? 'disabled' : ''}
+            class="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm font-sans bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-sky-500 dark:focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-2xs"
+          />
+          <button
+            type="button"
+            id="btnClearStudocuUrl"
+            class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md transition cursor-pointer"
+            title="Xóa link"
+          >
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
 
         <!-- Centered Petite Pill Paste Button -->
         <div class="flex justify-center items-center">
@@ -29,7 +52,7 @@ export function renderHeroPasteCard(state) {
             id="studocuPasteBtn"
             class="btn-hero-paste ${isDownloading ? 'btn-hero-downloading' : ''}"
             ${isDownloading ? 'disabled' : ''}
-            title="Dán link"
+            title="Dán link & Tải"
           >
             <div id="studocuPasteBtnIcon" class="w-4 h-4 flex items-center justify-center">
               ${isDownloading
@@ -44,7 +67,7 @@ export function renderHeroPasteCard(state) {
 
         <!-- Cancel button when downloading -->
         ${isDownloading ? `
-          <div class="flex justify-center pt-2.5 animate-fadeIn" id="studocuHeroCancelContainer">
+          <div class="flex justify-center pt-1 animate-fadeIn" id="studocuHeroCancelContainer">
             <button
               type="button"
               id="studocuHeroCancelBtn"
@@ -56,44 +79,6 @@ export function renderHeroPasteCard(state) {
             </button>
           </div>
         ` : ''}
-
-        <!-- Advanced Collapsible Cookie Options -->
-        <div class="pt-2 max-w-md mx-auto">
-          <button
-            type="button"
-            id="studocuToggleCookieBtn"
-            class="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition flex items-center justify-center gap-1.5 mx-auto py-1 cursor-pointer"
-          >
-            <i data-lucide="chevron-down" id="studocuCookieChevron" class="w-3 h-3 transition-transform duration-200"></i>
-            <span>Tùy chọn Cookie</span>
-          </button>
-
-          <div id="studocuCookieDrawer" class="hidden text-left mt-2.5 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-            <div class="text-xs text-zinc-600 dark:text-zinc-400">
-              <span class="text-sky-600 dark:text-sky-400 font-medium">Bypass Turnstile:</span> Hệ thống tự động giải mã Cloudflare trong 3-5s. Chỉ cần nhập cookie khi tài liệu yêu cầu Premium.
-            </div>
-            <div>
-              <label class="block text-xs font-mono text-zinc-700 dark:text-zinc-300 mb-1">Chuỗi Cookie</label>
-              <textarea
-                id="studocuCookieInput"
-                rows="2"
-                placeholder="studocu_session=...; cf_clearance=..."
-                class="w-full text-xs font-mono bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/60 rounded-lg p-2 text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-sky-500 transition resize-none"
-              ></textarea>
-            </div>
-            <div class="flex items-center justify-between pt-1">
-              <button
-                type="button"
-                id="btnResetStudocuSession"
-                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer"
-              >
-                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-                <span>Xóa session</span>
-              </button>
-              <span id="studocuResetStatus" class="text-xs font-mono text-emerald-500 dark:text-emerald-400"></span>
-            </div>
-          </div>
-        </div>
       </form>
     </div>
   `.trim();

@@ -45,13 +45,20 @@ function isValidStudocuUrl(str) {
 
 function handleUrlCandidate(raw) {
   const clean = String(raw || '').trim();
+  const urlInput = document.getElementById('studocuUrlInput');
+  const clearBtn = document.getElementById('btnClearStudocuUrl');
+  if (urlInput && urlInput.value !== clean) {
+    urlInput.value = clean;
+  }
+  if (clearBtn) clearBtn.classList.toggle('hidden', !clean);
+
   if (!isValidStudocuUrl(clean)) {
     showToast('Link studocu không hợp lệ', 'error');
     const t = document.getElementById('studocuPasteBtnTitle');
     if (t) { const old = t.textContent; t.textContent = 'Liên kết không hợp lệ'; setTimeout(() => { if (t) t.textContent = old; }, 2000); }
     return;
   }
-  studocuManager.startDownload(clean, document.getElementById('studocuCookieInput')?.value.trim() || null);
+  studocuManager.startDownload(clean, null);
 }
 
 export function attachStudocuListeners() {
@@ -63,37 +70,60 @@ export function attachStudocuListeners() {
   let prevSearchQuery = '';
 
   function attachHeroHandlers() {
-    const toggle = document.getElementById('studocuToggleCookieBtn');
-    const drawer = document.getElementById('studocuCookieDrawer');
-    const chevron = document.getElementById('studocuCookieChevron');
-    if (toggle && drawer) {
-      toggle.onclick = () => {
-        const isHidden = drawer.classList.toggle('hidden');
-        if (chevron) chevron.style.transform = isHidden ? '' : 'rotate(180deg)';
-      };
-    }
-
-    const btnReset = document.getElementById('btnResetStudocuSession');
-    if (btnReset) {
-      btnReset.onclick = async () => {
-        btnReset.disabled = true;
-        const res = await fetch('/api/v1/studocu/reset-session', { method: 'POST' }).catch(() => null);
-        const el = document.getElementById('studocuResetStatus');
-        if (el) el.textContent = res?.ok ? 'Đã xóa session' : 'Lỗi xóa session';
-        setTimeout(() => { if (el) el.textContent = ''; btnReset.disabled = false; }, 2500);
-      };
-    }
-
     const heroCancel = document.getElementById('studocuHeroCancelBtn');
     if (heroCancel) heroCancel.onclick = () => studocuManager.cancelJob();
 
     const form = document.getElementById('studocuDownloadForm');
-    if (form) form.onsubmit = (e) => { e.preventDefault(); return false; };
+    const urlInput = document.getElementById('studocuUrlInput');
+    const clearBtn = document.getElementById('btnClearStudocuUrl');
+
+    const submitDownload = () => {
+      if (studocuManager.getState().isDownloading) return;
+      const val = urlInput?.value?.trim();
+      if (val) {
+        handleUrlCandidate(val);
+      }
+    };
+
+    if (urlInput) {
+      urlInput.oninput = () => {
+        if (clearBtn) clearBtn.classList.toggle('hidden', !urlInput.value.trim());
+      };
+      urlInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitDownload();
+        }
+      };
+      urlInput.onpaste = (e) => {
+        const text = (e.clipboardData || window.clipboardData)?.getData('text');
+        if (text && isValidStudocuUrl(text.trim())) {
+          setTimeout(() => handleUrlCandidate(text.trim()), 50);
+        }
+      };
+    }
+
+    if (clearBtn) {
+      clearBtn.onclick = () => {
+        if (urlInput) {
+          urlInput.value = '';
+          urlInput.focus();
+        }
+        clearBtn.classList.add('hidden');
+      };
+    }
+
+    if (form) form.onsubmit = (e) => { e.preventDefault(); submitDownload(); return false; };
 
     const pasteBtn = document.getElementById('studocuPasteBtn');
     if (pasteBtn && !pasteBtn.disabled) {
       pasteBtn.onclick = async () => {
         if (studocuManager.getState().isDownloading) return;
+        const currentInput = urlInput?.value?.trim();
+        if (currentInput) {
+          handleUrlCandidate(currentInput);
+          return;
+        }
         if (navigator.clipboard?.readText) {
           try {
             const text = await navigator.clipboard.readText();
@@ -102,7 +132,8 @@ export function attachStudocuListeners() {
             return;
           } catch (_) {}
         }
-        showToast('Nhấn Ctrl + V để dán link', 'info');
+        showToast('Nhập liên kết hoặc nhấn Ctrl + V', 'info');
+        urlInput?.focus();
       };
     }
   }
