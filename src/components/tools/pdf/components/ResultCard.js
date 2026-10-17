@@ -87,11 +87,6 @@ export function renderResultCard(result) {
           </div>
         ` : ''}
 
-        <button id="btnCopyDownloadLink" data-url="${result.downloadUrl}" type="button"
-          class="min-h-[40px] px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300 dark:hover:text-white text-xs sm:text-sm font-medium border border-zinc-200 dark:border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
-          <i data-lucide="link" class="w-4 h-4"></i> Sao chép link
-        </button>
-
         <button id="btnTrashPdfResult" type="button"
           class="min-h-[40px] px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-red-50 text-zinc-700 hover:text-red-600 dark:bg-white/[0.05] dark:hover:bg-red-500/10 dark:text-zinc-300 dark:hover:text-red-400 text-xs sm:text-sm font-medium border border-zinc-200 dark:border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa

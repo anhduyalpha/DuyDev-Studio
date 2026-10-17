@@ -374,5 +374,29 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     soundEngine.testSound('themeDark');
     expect(darkSpy).toHaveBeenCalledTimes(3);
   });
+
+  it('17. Web Update Fanfare Cue: playAppUpdate produces crystalline multi-oscillator fanfare and triggers via testSound', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    const updateSpy = vi.spyOn(soundEngine, 'playAppUpdate');
+
+    mockContext.createOscillator.mockClear();
+    soundEngine.playAppUpdate();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    // playAppUpdate creates 7 oscillators (subOsc + oscA4 + oscD5 + 3 cascade + shimmerOsc)
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(7);
+
+    // Test alias playUpdate
+    soundEngine.playUpdate();
+    expect(updateSpy).toHaveBeenCalledTimes(2);
+
+    // Test testSound preview routing
+    soundEngine.testSound('appUpdate');
+    expect(updateSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('update');
+    expect(updateSpy).toHaveBeenCalledTimes(4);
+  });
 });
 

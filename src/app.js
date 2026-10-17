@@ -4,7 +4,8 @@
  */
 
 import { initTheme, updateThemeUI, getStoredTheme } from './hooks/useTheme.js';
-import { registerServiceWorker } from './utilities/pwa.js';
+import { registerServiceWorker, CURRENT_PWA_VERSION } from './utilities/pwa.js';
+import { soundEngine } from './utilities/soundEngine.js';
 import { toolRegistry } from './hooks/useToolRegistry.js';
 import { clearModuleState, clearAllModuleStates } from './utilities/moduleState.js';
 
@@ -108,13 +109,21 @@ class App {
       }
     } catch {}
 
-    // Check if we just completed a Triple-Lock Hard Purge update
+    // Check if we just completed a Triple-Lock Hard Purge update or launched a newly updated version
     try {
-      if (sessionStorage.getItem('ds_hard_purged') === 'true') {
-        sessionStorage.removeItem('ds_hard_purged');
+      const isHardPurged = sessionStorage.getItem('ds_hard_purged') === 'true';
+      const lastSeenVersion = localStorage.getItem('ds_last_seen_version');
+
+      if (isHardPurged || (lastSeenVersion && lastSeenVersion !== CURRENT_PWA_VERSION)) {
+        if (isHardPurged) sessionStorage.removeItem('ds_hard_purged');
+        localStorage.setItem('ds_last_seen_version', CURRENT_PWA_VERSION);
         setTimeout(() => {
-          showToast('Đã cập nhật lên phiên bản mới thành công', 'success');
+          soundEngine.playAppUpdate();
+          const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '');
+          showToast(`Đã cập nhật lên phiên bản ${displayVer} thành công`, 'success');
         }, 500);
+      } else if (!lastSeenVersion) {
+        localStorage.setItem('ds_last_seen_version', CURRENT_PWA_VERSION);
       }
     } catch {}
 

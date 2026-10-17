@@ -120,21 +120,35 @@ async function renderLightboxPage({ file, pageIndex, rotation = 0 }) {
 /**
  * Opens a full-screen high-resolution lightbox for a given PDF page.
  */
-export function openPdfPageLightbox({
-  file,
-  pageIndex = 0,
-  rotation = 0,
-  totalPages = 0,
-  onRotateChange = null,
-  onPageChange = null,
-  getRotation = null
-}) {
+export function openPdfPageLightbox(optionsOrFile, maybePageIndex = 0) {
+  let opts = {};
+  if (optionsOrFile && (optionsOrFile.file || typeof optionsOrFile.pageIndex === 'number' || typeof optionsOrFile.totalPages === 'number')) {
+    opts = optionsOrFile;
+  } else if (optionsOrFile) {
+    opts = {
+      file: optionsOrFile,
+      pageIndex: typeof maybePageIndex === 'number' ? maybePageIndex : 0
+    };
+  }
+
+  const {
+    file,
+    pageIndex = 0,
+    rotation = 0,
+    totalPages = 0,
+    onRotateChange = null,
+    onPageChange = null,
+    getRotation = null
+  } = opts;
+
+  if (!file) return;
+
   closePdfPageLightbox();
 
   prevBodyOverflow = document.body.style.overflow;
   document.body.style.overflow = 'hidden';
 
-  let currentPage = Number(pageIndex);
+  let currentPage = Number(pageIndex) || 0;
   const total = totalPages || file.pages || 1;
 
   let currentRot = Number(rotation) || resolveLightboxRotation(currentPage, undefined, getRotation);

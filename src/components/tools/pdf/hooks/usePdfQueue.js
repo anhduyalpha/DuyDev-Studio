@@ -319,6 +319,7 @@ export class PdfQueueManager {
     if (this.isProcessing) return;
     this.watermarkText = txt;
     this.persist();
+    this.notify('config-button-sync');
   }
 
   setWatermarkPosition(pos) {
@@ -344,6 +345,7 @@ export class PdfQueueManager {
     if (this.isProcessing) return;
     this.pageNumbers = Boolean(val);
     this.persist();
+    this.notify('config-button-sync');
   }
 
   setStripMetadata(val) {
@@ -355,6 +357,7 @@ export class PdfQueueManager {
   setPassword(pwd) {
     if (this.isProcessing) return;
     this.password = pwd;
+    this.notify('config-button-sync');
   }
 
   setTotalPages(count) {

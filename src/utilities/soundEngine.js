@@ -419,6 +419,10 @@ class SoundEngine {
       case 'dark':
         this.playThemeToDark();
         break;
+      case 'appUpdate':
+      case 'update':
+        this.playAppUpdate();
+        break;
       case 'jobComplete':
       case 'success':
       default:
@@ -918,6 +922,145 @@ class SoundEngine {
     };
 
     this._scheduleIdleSuspend(duration);
+  }
+
+  // =========================================================================
+  // Web Application Update Cues (Triumphant Prismatic Fanfare & Sparkle)
+  // =========================================================================
+
+  /**
+   * Cue 8: `playAppUpdate()` / `playUpdate()` (Web Update Fanfare & Crystalline Shimmer)
+   * A modern, triumphant, sparkling system upgrade sound:
+   * 1. Warm Analog Sub-Base: D3 [146.83Hz] anchor sine with 10ms attack and 380ms decay.
+   * 2. Resonant Dual Foundation Chime: A4 [440Hz] + D5 [587.33Hz] twin glass chime.
+   * 3. Ascending Prismatic Cascade: F#5 [739.99Hz] (+65ms) -> A5 [880Hz] (+130ms) -> D6 [1174.66Hz] (+195ms).
+   * 4. Silky Ethereal Shimmer: F#6 [1479.98Hz] (+240ms) with airy overtone and 720ms silk decay.
+   */
+  playAppUpdate() {
+    const ctx = this._prepareForPlayback();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.720;
+    const stopTime = now + duration;
+
+    // Filter to keep the high sparkle smooth and silky, zero harshness
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3200, now);
+    filter.Q.setValueAtTime(0.7, now);
+    filter.connect(this.masterGain);
+
+    // 1. Deep Analog Sub-Anchor (D3: 146.83Hz)
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.linearRampToValueAtTime(0.20, now + 0.012);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.400);
+    subGain.connect(filter);
+
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(146.83, now);
+    subOsc.connect(subGain);
+
+    // 2. Twin Foundation Chime (A4: 440Hz + D5: 587.33Hz)
+    const chimeGain = ctx.createGain();
+    chimeGain.gain.setValueAtTime(0.0001, now);
+    chimeGain.gain.linearRampToValueAtTime(0.24, now + 0.010);
+    chimeGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    chimeGain.connect(filter);
+
+    const oscA4 = ctx.createOscillator();
+    oscA4.type = 'sine';
+    oscA4.frequency.setValueAtTime(440.00, now);
+    oscA4.connect(chimeGain);
+
+    const oscD5 = ctx.createOscillator();
+    oscD5.type = 'triangle';
+    oscD5.frequency.setValueAtTime(587.33, now);
+    oscD5.connect(chimeGain);
+
+    // 3. Ascending Prismatic Cascade (F#5: 739.99Hz, A5: 880Hz, D6: 1174.66Hz)
+    const cascadeNotes = [
+      { freq: 739.99, delay: 0.065, gain: 0.22 },  // F#5
+      { freq: 880.00, delay: 0.130, gain: 0.22 },  // A5
+      { freq: 1174.66, delay: 0.195, gain: 0.20 }  // D6
+    ];
+
+    const cascadeOscs = [];
+    const cascadeGains = [];
+
+    cascadeNotes.forEach(note => {
+      const noteStart = now + note.delay;
+      const cGain = ctx.createGain();
+      cGain.gain.setValueAtTime(0.0001, noteStart);
+      cGain.gain.linearRampToValueAtTime(note.gain, noteStart + 0.010);
+      cGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+      cGain.connect(filter);
+
+      const cOsc = ctx.createOscillator();
+      cOsc.type = 'sine';
+      cOsc.frequency.setValueAtTime(note.freq, noteStart);
+      cOsc.connect(cGain);
+
+      cascadeOscs.push(cOsc);
+      cascadeGains.push(cGain);
+    });
+
+    // 4. Silky Ethereal Shimmer (F#6: 1479.98Hz)
+    const shimmerStart = now + 0.240;
+    const shimmerGain = ctx.createGain();
+    shimmerGain.gain.setValueAtTime(0.0001, shimmerStart);
+    shimmerGain.gain.linearRampToValueAtTime(0.16, shimmerStart + 0.012);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    shimmerGain.connect(filter);
+
+    const shimmerOsc = ctx.createOscillator();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.setValueAtTime(1479.98, shimmerStart);
+    shimmerOsc.connect(shimmerGain);
+
+    // Start all oscillators
+    subOsc.start(now);
+    oscA4.start(now);
+    oscD5.start(now);
+    cascadeOscs[0].start(now + 0.065);
+    cascadeOscs[1].start(now + 0.130);
+    cascadeOscs[2].start(now + 0.195);
+    shimmerOsc.start(shimmerStart);
+
+    // Stop all oscillators
+    subOsc.stop(now + 0.400);
+    oscA4.stop(stopTime);
+    oscD5.stop(stopTime);
+    cascadeOscs.forEach(o => o.stop(stopTime));
+    shimmerOsc.stop(stopTime);
+
+    // Cleanup nodes
+    shimmerOsc.onended = () => {
+      try {
+        subOsc.disconnect();
+        oscA4.disconnect();
+        oscD5.disconnect();
+        cascadeOscs.forEach(o => o.disconnect());
+        shimmerOsc.disconnect();
+
+        subGain.disconnect();
+        chimeGain.disconnect();
+        cascadeGains.forEach(g => g.disconnect());
+        shimmerGain.disconnect();
+        filter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
+  }
+
+  /**
+   * Alias for `playAppUpdate()`
+   */
+  playUpdate() {
+    this.playAppUpdate();
   }
 }
 

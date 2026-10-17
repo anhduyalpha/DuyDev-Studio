@@ -133,6 +133,10 @@ export function openSoundVolumeModal() {
               <i data-lucide="moon" class="w-3.5 h-3.5 text-indigo-400"></i>
               <span>Theme Tối</span>
             </button>
+            <button type="button" data-test="appUpdate" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-cyan-50 dark:bg-white/[0.05] dark:hover:bg-cyan-500/10 text-zinc-800 dark:text-zinc-200 hover:text-cyan-600 dark:hover:text-cyan-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer col-span-2 sm:col-span-1">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-500"></i>
+              <span>Cập nhật Web</span>
+            </button>
           </div>
         </div>
 

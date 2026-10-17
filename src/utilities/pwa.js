@@ -23,7 +23,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v23.33';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v23.35';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -513,6 +513,13 @@ export function showUpdateNotificationCenter(waitingWorker, options = {}) {
   `;
 
   document.body.appendChild(capsule);
+
+  // Trigger web update alert sound
+  try {
+    import('./soundEngine.js').then(({ soundEngine }) => {
+      soundEngine.playAppUpdate();
+    }).catch(() => {});
+  } catch {}
 
   // Sync theme changes in real-time if toggled while modal is open
   const handleThemeChange = (e) => {

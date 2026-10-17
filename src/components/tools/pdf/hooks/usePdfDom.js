@@ -808,7 +808,14 @@ function bindDropzone(qm) {
       btn.onclick = (e) => {
         e.stopPropagation();
         const pIdx = Number(btn.dataset.previewPage || 0);
-        openPdfPageLightbox(qm.files[0], pIdx);
+        if (qm.files[0]) {
+          openPdfPageLightbox({
+            file: qm.files[0],
+            pageIndex: pIdx,
+            rotation: 0,
+            totalPages: qm.totalPages || qm.files[0].pages || 1
+          });
+        }
       };
     });
   }
