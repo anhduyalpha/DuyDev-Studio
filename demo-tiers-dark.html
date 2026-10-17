@@ -584,22 +584,22 @@
         <div class="tier-inner-frame tier-inner-frame-ss pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ss pointer-events-none" aria-hidden="true"></div>
         
-        <!-- Bottom-Up Rising Hellfire Flame Crown -->
-        <svg class="tier-hellfire-flames pointer-events-none" viewBox="0 0 300 110" preserveAspectRatio="none" fill="none" aria-hidden="true">
+        <!-- Bottom-Up Rising Hellfire Flame Crown (Full-Width, Chassis-Clipped) -->
+        <svg class="tier-hellfire-flames pointer-events-none" viewBox="0 0 300 110" preserveAspectRatio="none" fill="none" style="left: 0; right: 0; width: 100%; border-radius: 0 0 calc(1rem - 2px) calc(1rem - 2px);" aria-hidden="true">
           <defs>
-            <linearGradient id="flameLayer1" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stop-color="#881337" stop-opacity="0.8"/>
-              <stop offset="60%" stop-color="#E11D48" stop-opacity="0.45"/>
+            <linearGradient id="flameLayerSS1" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#881337" stop-opacity="0.85"/>
+              <stop offset="55%" stop-color="#E11D48" stop-opacity="0.5"/>
               <stop offset="100%" stop-color="#F43F5E" stop-opacity="0"/>
             </linearGradient>
-            <linearGradient id="flameLayer2" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stop-color="#9F1239" stop-opacity="0.85"/>
-              <stop offset="50%" stop-color="#FB7185" stop-opacity="0.5"/>
+            <linearGradient id="flameLayerSS2" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#9F1239" stop-opacity="0.9"/>
+              <stop offset="50%" stop-color="#FB7185" stop-opacity="0.55"/>
               <stop offset="100%" stop-color="#FDA4AF" stop-opacity="0"/>
             </linearGradient>
           </defs>
-          <path class="flame-tongue flame-back" d="M 0 110 L 0 50 Q 20 20 40 55 Q 60 10 80 60 Q 105 5 130 50 Q 155 15 180 55 Q 205 10 230 60 Q 255 20 275 55 Q 290 30 300 50 L 300 110 Z" fill="url(#flameLayer1)"/>
-          <path class="flame-tongue flame-front" d="M 0 110 L 0 65 Q 25 40 50 70 Q 75 35 100 70 Q 125 30 150 65 Q 175 40 200 70 Q 225 35 250 70 Q 275 45 300 65 L 300 110 Z" fill="url(#flameLayer2)"/>
+          <path class="flame-tongue flame-back" d="M 0 110 L 0 52 Q 18 18 38 55 Q 58 12 78 58 Q 102 6 128 48 Q 152 14 176 54 Q 200 8 224 58 Q 248 18 270 54 Q 288 28 300 48 L 300 110 Z" fill="url(#flameLayerSS1)"/>
+          <path class="flame-tongue flame-front" d="M 0 110 L 0 68 Q 24 38 48 72 Q 72 32 96 72 Q 120 28 145 68 Q 170 38 195 72 Q 220 32 245 72 Q 270 42 300 68 L 300 110 Z" fill="url(#flameLayerSS2)"/>
         </svg>
 
         <!-- Top Keystone Crest -->
@@ -867,6 +867,29 @@
         <div class="tier-solar-sunburst pointer-events-none" aria-hidden="true"></div>
         <div class="tier-solar-pillars pointer-events-none" aria-hidden="true"></div>
 
+        <!-- Blinding Solar Lens Flare & Anamorphic Core -->
+        <div class="tier-solar-blinding-flare pointer-events-none" aria-hidden="true">
+          <div class="solar-flare-core"></div>
+          <div class="solar-flare-anamorphic"></div>
+          <div class="solar-flare-ring"></div>
+        </div>
+
+        <!-- Real Golden Solar Strobe Lightning Arcs -->
+        <svg class="tier-solar-lightning-lr pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <g class="solar-bolt-top">
+            <path d="M 50 14 L 75 8 L 92 20 L 120 10 L 148 16 L 180 8 L 210 18 L 245 12" stroke="#FDE047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 50 14 L 75 8 L 92 20 L 120 10 L 148 16 L 180 8 L 210 18 L 245 12" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 92 20 L 105 34 L 118 32" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 180 8 L 190 24 L 205 22" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
+          </g>
+          <g class="solar-bolt-side">
+            <path d="M 292 65 L 282 100 L 290 135 L 280 170 L 288 210" stroke="#FDE047" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 292 65 L 282 100 L 290 135 L 280 170 L 288 210" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 282 100 L 268 112 L 260 108" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 280 170 L 266 182 L 258 178" stroke="#FEF08A" stroke-width="1.4" stroke-linecap="round"/>
+          </g>
+        </svg>
+
         <!-- Top Keystone Crest (Solar Crown) -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 100 20" class="keystone-svg" fill="none">
@@ -1005,25 +1028,39 @@
         <div class="tier-inner-frame tier-inner-frame-ex pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ex pointer-events-none" aria-hidden="true"></div>
 
-        <!-- Real Strobe-Flash Branched High-Voltage Lightning Bolts (Instantaneous Snap) -->
+        <!-- Sequential Chained High-Voltage Lightning Bolts (Continuous Hand-Off, Zero Dead Time) -->
         <svg class="tier-strobe-lightning-ex pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <g class="strobe-lightning-tl">
-            <!-- Main jagged bolt -->
-            <path d="M 10 115 L 24 80 L 14 60 L 36 38 L 58 32 L 80 16 L 115 12 L 145 20 L 180 10" stroke="#67E8F9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 10 115 L 24 80 L 14 60 L 36 38 L 58 32 L 80 16 L 115 12 L 145 20 L 180 10" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- Branches -->
-            <path d="M 36 38 L 48 58 L 62 62" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M 80 16 L 90 28 L 104 26" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M 145 20 L 154 34 L 168 36" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
+          <!-- Bolt 1: Top-Left to Upper Rail -->
+          <g class="chain-bolt-1">
+            <path d="M 10 130 L 24 95 L 14 70 L 38 42 L 62 34 L 88 16 L 122 12 L 152 20 L 180 10" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 10 130 L 24 95 L 14 70 L 38 42 L 62 34 L 88 16 L 122 12 L 152 20 L 180 10" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 38 42 L 50 62 L 66 65" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 88 16 L 100 30 L 115 28" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 152 20 L 162 36 L 178 38" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
           </g>
-          <g class="strobe-lightning-br">
-            <!-- Main jagged bolt -->
-            <path d="M 290 245 L 276 280 L 286 300 L 264 322 L 242 328 L 220 344 L 185 348 L 155 340 L 120 350" stroke="#67E8F9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 290 245 L 276 280 L 286 300 L 264 322 L 242 328 L 220 344 L 185 348 L 155 340 L 120 350" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- Branches -->
-            <path d="M 264 322 L 252 302 L 238 298" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M 220 344 L 210 332 L 196 334" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M 155 340 L 146 326 L 132 324" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
+          <!-- Bolt 2: Upper Rail to Right Rail -->
+          <g class="chain-bolt-2">
+            <path d="M 145 10 L 175 16 L 210 12 L 248 18 L 274 38 L 264 70 L 288 110 L 276 155 L 290 190" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 145 10 L 175 16 L 210 12 L 248 18 L 274 38 L 264 70 L 288 110 L 276 155 L 290 190" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 210 12 L 218 28 L 232 26" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 274 38 L 258 50 L 254 65" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 288 110 L 270 122 L 266 138" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+          <!-- Bolt 3: Bottom-Right to Lower Rail -->
+          <g class="chain-bolt-3">
+            <path d="M 290 215 L 276 250 L 288 280 L 266 322 L 238 332 L 208 346 L 172 348 L 138 340 L 105 350" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 290 215 L 276 250 L 288 280 L 266 322 L 238 332 L 208 346 L 172 348 L 138 340 L 105 350" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 266 322 L 252 302 L 238 298" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 208 346 L 198 332 L 182 334" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 138 340 L 128 324 L 114 322" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+          <!-- Bolt 4: Lower Rail to Left Rail -->
+          <g class="chain-bolt-4">
+            <path d="M 140 348 L 100 344 L 62 348 L 32 328 L 40 295 L 14 255 L 26 210 L 12 165 L 24 125" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 140 348 L 100 344 L 62 348 L 32 328 L 40 295 L 14 255 L 26 210 L 12 165 L 24 125" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 62 348 L 72 332 L 88 334" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 32 328 L 48 312 L 52 298" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M 14 255 L 32 242 L 36 226" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round"/>
           </g>
         </svg>
 

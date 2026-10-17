@@ -212,6 +212,7 @@ export function setupConverterObserver(manager) {
 
     const dropzoneElement = document.getElementById('converterDropzoneContainer');
     if (dropzoneElement) {
+      dropzoneElement.classList.toggle('hidden', allDone);
       dropzoneElement.innerHTML = renderConverterDropzone(manager);
       refreshLucide(dropzoneElement);
     }
@@ -557,17 +558,9 @@ export function attachConverterListeners(manager) {
         return;
       }
       if (e.target.closest('#btnClearAllConverterResults')) {
-        openSlideConfirmModal({
-          title: 'Xóa danh sách kết quả',
-          description: 'Xóa toàn bộ các tệp kết quả trong danh sách hiện tại.',
-          warningText: 'Các tệp đã lưu trong lịch sử vẫn được giữ nguyên.',
-          actionText: 'Kéo sang phải để xóa tất cả',
-          confirmingText: 'Đang xóa...',
-          onConfirm: () => {
-            manager.clearQueue();
-            updateConverterHistoryDom(manager);
-          }
-        });
+        manager.clearQueue();
+        updateConverterHistoryDom(manager);
+        document.getElementById('converterWorkspaceRoot')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
     };

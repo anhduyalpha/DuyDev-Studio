@@ -337,37 +337,190 @@ html.dark .tier-watermark-seal-ex {
   overflow: visible;
 }
 
-.tier-card.tier-ex .strobe-lightning-tl {
-  opacity: 0.35;
-  animation: lightning-strobe-tl 4.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px #22D3EE);
+.tier-card.tier-ex .chain-bolt-1,
+.tier-card.tier-ex .chain-bolt-2,
+.tier-card.tier-ex .chain-bolt-3,
+.tier-card.tier-ex .chain-bolt-4 {
+  opacity: 0.08;
+  filter: drop-shadow(0 0 6px #22D3EE);
+  animation-duration: 2.8s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
 }
 
-.tier-card.tier-ex .strobe-lightning-br {
-  opacity: 0.35;
-  animation: lightning-strobe-br 4.5s ease-in-out infinite;
-  animation-delay: 2s;
-  filter: drop-shadow(0 0 8px #38BDF8);
+.tier-card.tier-ex .chain-bolt-1 {
+  animation-name: lightning-chain-1;
 }
 
-@keyframes lightning-strobe-tl {
-  0%, 65% { opacity: 0.35; filter: drop-shadow(0 0 8px #22D3EE); }
-  66% { opacity: 1; filter: drop-shadow(0 0 16px #67E8F9) drop-shadow(0 0 26px #FFFFFF); }
-  67.5% { opacity: 0.2; }
-  68.5% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 30px #FFFFFF); }
-  71% { opacity: 0.4; }
-  72% { opacity: 0.95; filter: drop-shadow(0 0 14px #22D3EE); }
-  74%, 100% { opacity: 0.35; filter: drop-shadow(0 0 8px #22D3EE); }
+.tier-card.tier-ex .chain-bolt-2 {
+  animation-name: lightning-chain-2;
 }
 
-@keyframes lightning-strobe-br {
-  0%, 60% { opacity: 0.35; filter: drop-shadow(0 0 8px #38BDF8); }
-  61% { opacity: 1; filter: drop-shadow(0 0 16px #38BDF8) drop-shadow(0 0 26px #FFFFFF); }
-  62.5% { opacity: 0.2; }
-  63.5% { opacity: 1; filter: drop-shadow(0 0 20px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
-  66% { opacity: 0.4; }
-  67% { opacity: 0.9; filter: drop-shadow(0 0 14px #38BDF8); }
-  69%, 100% { opacity: 0.35; filter: drop-shadow(0 0 8px #38BDF8); }
+.tier-card.tier-ex .chain-bolt-3 {
+  animation-name: lightning-chain-3;
+}
+
+.tier-card.tier-ex .chain-bolt-4 {
+  animation-name: lightning-chain-4;
+}
+
+/* Bolt 1: Active 0% -> 28% */
+@keyframes lightning-chain-1 {
+  0% { opacity: 0.1; filter: drop-shadow(0 0 4px #22D3EE); }
+  2% { opacity: 1; filter: drop-shadow(0 0 16px #22D3EE) drop-shadow(0 0 28px #FFFFFF); }
+  4% { opacity: 0.25; }
+  6% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
+  10% { opacity: 0.55; }
+  13% { opacity: 1; filter: drop-shadow(0 0 16px #22D3EE) drop-shadow(0 0 26px #FFFFFF); }
+  18% { opacity: 0.35; }
+  22% { opacity: 0.9; }
+  28%, 100% { opacity: 0.08; filter: drop-shadow(0 0 4px #22D3EE); }
+}
+
+/* Bolt 2: Active 22% -> 52% (Seamless Handoff from Bolt 1) */
+@keyframes lightning-chain-2 {
+  0%, 20% { opacity: 0.08; filter: drop-shadow(0 0 4px #38BDF8); }
+  22% { opacity: 0.35; }
+  24% { opacity: 1; filter: drop-shadow(0 0 16px #38BDF8) drop-shadow(0 0 28px #FFFFFF); }
+  26% { opacity: 0.2; }
+  28% { opacity: 1; filter: drop-shadow(0 0 22px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
+  34% { opacity: 0.5; }
+  37% { opacity: 0.95; filter: drop-shadow(0 0 16px #38BDF8) drop-shadow(0 0 26px #FFFFFF); }
+  43% { opacity: 0.3; }
+  48% { opacity: 0.85; }
+  52%, 100% { opacity: 0.08; filter: drop-shadow(0 0 4px #38BDF8); }
+}
+
+/* Bolt 3: Active 46% -> 76% (Seamless Handoff from Bolt 2) */
+@keyframes lightning-chain-3 {
+  0%, 44% { opacity: 0.08; filter: drop-shadow(0 0 4px #22D3EE); }
+  46% { opacity: 0.35; }
+  48% { opacity: 1; filter: drop-shadow(0 0 16px #22D3EE) drop-shadow(0 0 28px #FFFFFF); }
+  50% { opacity: 0.25; }
+  52% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
+  58% { opacity: 0.5; }
+  62% { opacity: 0.95; filter: drop-shadow(0 0 16px #22D3EE) drop-shadow(0 0 26px #FFFFFF); }
+  68% { opacity: 0.35; }
+  72% { opacity: 0.85; }
+  76%, 100% { opacity: 0.08; filter: drop-shadow(0 0 4px #22D3EE); }
+}
+
+/* Bolt 4: Active 70% -> 100% (Seamless Handoff into Bolt 1 at 0%) */
+@keyframes lightning-chain-4 {
+  0%, 68% { opacity: 0.08; filter: drop-shadow(0 0 4px #38BDF8); }
+  70% { opacity: 0.35; }
+  72% { opacity: 1; filter: drop-shadow(0 0 16px #38BDF8) drop-shadow(0 0 28px #FFFFFF); }
+  74% { opacity: 0.2; }
+  76% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
+  82% { opacity: 0.45; }
+  86% { opacity: 0.95; filter: drop-shadow(0 0 16px #38BDF8) drop-shadow(0 0 26px #FFFFFF); }
+  92% { opacity: 0.3; }
+  96% { opacity: 0.85; }
+  100% { opacity: 0.1; filter: drop-shadow(0 0 4px #38BDF8); }
+}
+
+/* --- Tier LR: Golden Solar Thunder Strobe & Blinding Lens Flare --- */
+.tier-card.tier-lr .tier-solar-lightning-lr {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  pointer-events: none;
+  z-index: 4;
+  overflow: visible;
+}
+
+.tier-card.tier-lr .solar-bolt-top {
+  opacity: 0.15;
+  animation: solar-thunder-top 3.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px #FACC15);
+}
+
+.tier-card.tier-lr .solar-bolt-side {
+  opacity: 0.15;
+  animation: solar-thunder-side 3.6s ease-in-out infinite;
+  animation-delay: 1.8s;
+  filter: drop-shadow(0 0 8px #F59E0B);
+}
+
+@keyframes solar-thunder-top {
+  0%, 65% { opacity: 0.15; filter: drop-shadow(0 0 6px #FACC15); }
+  66% { opacity: 1; filter: drop-shadow(0 0 18px #FDE047) drop-shadow(0 0 30px #FFFFFF); }
+  68% { opacity: 0.25; }
+  69% { opacity: 1; filter: drop-shadow(0 0 24px #FACC15) drop-shadow(0 0 36px #FFFFFF); }
+  72% { opacity: 0.45; }
+  74% { opacity: 0.95; filter: drop-shadow(0 0 16px #FDE047); }
+  77%, 100% { opacity: 0.15; filter: drop-shadow(0 0 6px #FACC15); }
+}
+
+@keyframes solar-thunder-side {
+  0%, 60% { opacity: 0.15; filter: drop-shadow(0 0 6px #F59E0B); }
+  61% { opacity: 1; filter: drop-shadow(0 0 18px #FDE047) drop-shadow(0 0 30px #FFFFFF); }
+  63% { opacity: 0.25; }
+  64% { opacity: 1; filter: drop-shadow(0 0 24px #FACC15) drop-shadow(0 0 36px #FFFFFF); }
+  67% { opacity: 0.45; }
+  69% { opacity: 0.95; filter: drop-shadow(0 0 16px #FDE047); }
+  72%, 100% { opacity: 0.15; filter: drop-shadow(0 0 6px #F59E0B); }
+}
+
+/* Blinding Solar Flare & Anamorphic Beam */
+.tier-card.tier-lr .tier-solar-blinding-flare {
+  position: absolute;
+  top: 42px;
+  left: 42px;
+  width: 90px;
+  height: 90px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tier-card.tier-lr .solar-flare-core {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFFFFF 0%, #FEF08A 45%, #FACC15 75%, transparent 100%);
+  filter: drop-shadow(0 0 14px #FACC15) drop-shadow(0 0 26px #FEF08A);
+  animation: solar-flare-blinding 3.2s ease-in-out infinite;
+}
+
+.tier-card.tier-lr .solar-flare-anamorphic {
+  position: absolute;
+  width: 240px;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, rgba(254, 240, 138, 0.9) 35%, #FFFFFF 50%, rgba(254, 240, 138, 0.9) 65%, transparent);
+  filter: drop-shadow(0 0 8px #FDE047) drop-shadow(0 0 16px #FFFFFF);
+  transform: rotate(-15deg);
+  animation: solar-anamorphic-pulse 3.2s ease-in-out infinite;
+}
+
+.tier-card.tier-lr .solar-flare-ring {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 1px solid rgba(254, 240, 138, 0.6);
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.4), inset 0 0 10px rgba(254, 240, 138, 0.3);
+  animation: solar-flare-ring-expand 3.2s ease-in-out infinite;
+}
+
+@keyframes solar-flare-blinding {
+  0%, 100% { transform: scale(0.7); opacity: 0.4; }
+  50% { transform: scale(1.35); opacity: 1; filter: drop-shadow(0 0 25px #FACC15) drop-shadow(0 0 45px #FEF08A); }
+}
+
+@keyframes solar-anamorphic-pulse {
+  0%, 100% { transform: rotate(-15deg) scaleX(0.7); opacity: 0.35; }
+  50% { transform: rotate(-15deg) scaleX(1.3); opacity: 1; }
+}
+
+@keyframes solar-flare-ring-expand {
+  0%, 100% { transform: scale(0.8); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.85; }
 }
 
 /* --- Tier LR: Radiating Sunburst Corona God-Rays & Rising Light Pillars --- */

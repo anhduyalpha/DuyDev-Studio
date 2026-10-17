@@ -331,7 +331,7 @@ describe('Converter Group Boxes & Upload Speed Acceleration Suite', () => {
       expect(html).not.toContain('Hoàn tất 100%');
     });
 
-    it('should hide queue container and format container in ConverterWorkspace when all items are done', () => {
+    it('should hide queue container, format container, and dropzone container in ConverterWorkspace when all items are done', () => {
       const state = {
         items: [
           { id: '1', status: 'completed', result: { fileName: 'test1.webp', downloadUrl: '/dl/1' } }
@@ -339,10 +339,25 @@ describe('Converter Group Boxes & Upload Speed Acceleration Suite', () => {
       };
 
       const html = renderConverterWorkspace(state);
+      expect(html).toContain('id="converterDropzoneContainer" class="hidden"');
       expect(html).toContain('id="converterQueueContainer" class="hidden"');
       expect(html).toContain('id="converterFormatContainer" class="hidden"');
       expect(html).toContain('id="converterResultContainer" class=""');
       expect(html).toContain('max-w-4xl mx-auto');
+    });
+
+    it('should show dropzone container when queue is empty or after clearing queue', () => {
+      const state = {
+        items: []
+      };
+
+      const html = renderConverterWorkspace(state);
+      expect(html).toContain('id="converterDropzoneContainer" class=""');
+      expect(html).toContain('id="dropzoneIdleView"');
+      expect(html).not.toContain('id="dropzoneIdleView" class="hidden"');
+      expect(html).toContain('id="dropzoneCompactView" class="hidden');
+      expect(html).toContain('id="converterResultContainer" class="hidden"');
+      expect(html).toContain('max-w-2xl mx-auto');
     });
   });
 });

@@ -300,7 +300,7 @@ export class ConverterManager {
     this.error = null;
     this.persist();
     this.notify('queue-changed');
-    showToast('Đã làm mới hàng đợi', 'info');
+    showToast('Sẵn sàng cho đợt chuyển đổi mới', 'info');
   }
 
   setFormatForExtension(extension, targetFormat) {

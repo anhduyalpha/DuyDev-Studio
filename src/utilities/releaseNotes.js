@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.33': {
+    version: 'v23.33',
+    title: 'Bản cập nhật v23.33',
+    date: '17/10/2026',
+    features: [
+      'Converter Pro Streamlined Post-Conversion: Ẩn thanh hàng đợi/thêm tệp sau khi chuyển đổi xong, giữ giao diện kết quả tập trung và tối giản',
+      'Instant One-Click Next Batch: Nút "Chuyển đổi tiếp" tự động dọn sạch hàng đợi cũ và sẵn sàng nạp đợt tệp mới tức thì mà không cần kéo xác nhận'
+    ],
+    fixes: [
+      'Ẩn thanh dropzone compact thừa trên giao diện kết quả chuyển đổi',
+      'Đồng bộ PWA cache storage và Service Worker v23.33'
+    ]
+  },
+
   'v23.31': {
     version: 'v23.31',
     title: 'Bản cập nhật v23.31',

@@ -49,7 +49,7 @@ export function renderConverterWorkspace(state) {
       <div id="converterMainGrid" class="${hasItems && !allDone ? 'grid grid-cols-1 lg:grid-cols-12 gap-6' : hasItems && allDone ? 'max-w-4xl mx-auto space-y-4' : 'max-w-2xl mx-auto space-y-4'}">
         <!-- Left Column / Center Dropzone: Dropzone, Batch Format Selector, Queue List, Result/ZIP -->
         <div id="converterLeftCol" class="${hasItems && !allDone ? 'lg:col-span-7 space-y-4' : 'space-y-4 w-full'}">
-          <div id="converterDropzoneContainer">${renderConverterDropzone(state)}</div>
+          <div id="converterDropzoneContainer" class="${allDone ? 'hidden' : ''}">${renderConverterDropzone(state)}</div>
           <div id="converterFormatContainer" class="${showQueue ? '' : 'hidden'}">${renderFormatSelector(state)}</div>
           <div id="converterQueueContainer" class="${showQueue ? '' : 'hidden'}">${renderConverterQueueList(state)}</div>
           <div id="converterResultContainer" class="${hasCompleted ? '' : 'hidden'}">${renderConverterResult(state)}</div>
