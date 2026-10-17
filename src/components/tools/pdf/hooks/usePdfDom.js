@@ -126,6 +126,42 @@ function setVisualWorkspaceProcessingState(isProcessing) {
 }
 
 /**
+ * Synchronizes the process button state (enabled/disabled and styling) in real-time.
+ */
+export function syncPdfProcessButton(qm) {
+  const btn = document.getElementById('btnStartProcess');
+  if (!btn || qm.isProcessing) return;
+
+  const mode = qm.mode;
+  const files = qm.files || [];
+  let startDisabled = files.length === 0;
+
+  if (mode === 'merge') {
+    startDisabled = startDisabled || files.length < 2;
+  } else if (mode === 'split') {
+    startDisabled = startDisabled || (qm.selectedSplitPages?.size || 0) === 0;
+  } else if (mode === 'rotate') {
+    const rotatedCount = Object.values(qm.pageRotations || {}).filter((deg) => (deg % 360) !== 0).length;
+    startDisabled = startDisabled || rotatedCount === 0;
+  } else if (mode === 'organize') {
+    const activeRemaining = (qm.organizeOrder?.length || (files[0]?.pages || 1)) - (qm.organizeDeleted?.size || 0);
+    startDisabled = startDisabled || activeRemaining <= 0;
+  } else if (mode === 'security') {
+    startDisabled = startDisabled || !qm.password;
+  } else if (mode === 'watermark') {
+    startDisabled = startDisabled || (!qm.watermarkText?.trim() && !qm.pageNumbers);
+  }
+
+  const theme = getToolTheme(mode);
+  btn.disabled = startDisabled;
+  btn.className = `btn-process-pdf w-full py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+    startDisabled
+      ? 'bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-white/[0.06] cursor-not-allowed'
+      : `${theme.ctaGradient} active:scale-[0.98] cursor-pointer`
+  }`;
+}
+
+/**
  * Helper to validate Google Drive URL or File ID
  */
 function isValidGoogleDriveUrl(url) {
@@ -856,7 +892,12 @@ function bindConfig(qm) {
   });
 
   const wmInput = cfgEl.querySelector('#inputPdfWatermark');
-  if (wmInput) wmInput.oninput = (e) => qm.setWatermarkText(e.target.value);
+  if (wmInput) {
+    wmInput.oninput = (e) => {
+      qm.setWatermarkText(e.target.value);
+      syncPdfProcessButton(qm);
+    };
+  }
 
   cfgEl.querySelectorAll('.btn-watermark-pos').forEach((btn) => {
     btn.onclick = () => {
@@ -877,13 +918,28 @@ function bindConfig(qm) {
   }
 
   const chkPageNum = cfgEl.querySelector('#chkPdfPageNumbers');
-  if (chkPageNum) chkPageNum.onchange = (e) => qm.setPageNumbers(e.target.checked);
+  if (chkPageNum) {
+    chkPageNum.onchange = (e) => {
+      qm.setPageNumbers(e.target.checked);
+      syncPdfProcessButton(qm);
+    };
+  }
 
   const passwordInput = cfgEl.querySelector('#inputPdfPassword');
-  if (passwordInput) passwordInput.oninput = (e) => qm.setPassword(e.target.value);
+  if (passwordInput) {
+    passwordInput.oninput = (e) => {
+      qm.setPassword(e.target.value);
+      syncPdfProcessButton(qm);
+    };
+  }
 
   const docxPagesInput = cfgEl.querySelector('#inputPdfDocxPages');
-  if (docxPagesInput) docxPagesInput.oninput = (e) => qm.setPages(e.target.value);
+  if (docxPagesInput) {
+    docxPagesInput.oninput = (e) => {
+      qm.setPages(e.target.value);
+      syncPdfProcessButton(qm);
+    };
+  }
 
   const btnStart = cfgEl.querySelector('#btnStartProcess');
   if (btnStart) {
@@ -1222,12 +1278,23 @@ export function attachPdfConverterListeners(queueManager) {
       return;
     }
 
+    if (eventType === 'config-button-sync') {
+      syncPdfProcessButton(queueManager);
+      return;
+    }
+
     if (eventType === 'config-change') {
       const cfgEl = document.getElementById('pdfConfigContainer');
       if (cfgEl) {
-        cfgEl.innerHTML = renderConfigPanel(state);
-        bindConfig(queueManager);
-        refreshIcons(cfgEl);
+        const activeEl = document.activeElement;
+        const isTyping = activeEl && cfgEl.contains(activeEl) && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+        if (!isTyping) {
+          cfgEl.innerHTML = renderConfigPanel(state);
+          bindConfig(queueManager);
+          refreshIcons(cfgEl);
+        } else {
+          syncPdfProcessButton(queueManager);
+        }
       }
       return;
     }

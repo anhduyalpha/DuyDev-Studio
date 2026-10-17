@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.35': {
+    version: 'v23.35',
+    title: 'Bản cập nhật v23.35',
+    date: '17/10/2026',
+    features: [
+      'PDF Studio Instant Input-to-CTA Synchronization: Nút hành động chính tự động sáng và kích hoạt tức thì khi người dùng nhập dữ liệu cấu hình mà không cần chuyển tab hay nhấp chuột ngoài',
+      'Defensive Cover Lightbox Preview: Xem chi tiết ảnh bìa tài liệu phóng to toàn màn hình sắc nét và mượt mà trên mọi tab đơn tệp'
+    ],
+    fixes: [
+      'Sửa lỗi mở hộp thoại xem ảnh bìa tài liệu (polymorphic parameter handling cho openPdfPageLightbox)',
+      'Gỡ bỏ nút sao chép link không cần thiết trên thanh kết quả hoàn tất PDF Studio'
+    ]
+  },
+
   'v23.33': {
     version: 'v23.33',
     title: 'Bản cập nhật v23.33',
