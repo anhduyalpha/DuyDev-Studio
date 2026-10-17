@@ -120,12 +120,24 @@ export class AiMetricsService {
         if (!parsed.keys || parsed.keys.length === 0) {
           parsed.keys = defaultData.keys;
         } else {
-          // Normalize existing keys with priority
-          parsed.keys = parsed.keys.map((k: AiKeyConfig, idx: number) => ({
-            ...k,
-            priority: typeof k.priority === 'number' ? k.priority : idx + 1,
-            provider: k.provider || (k.id === 'agnes-primary' ? 'agnes' : 'custom')
-          }));
+          // Normalize existing keys with priority & upgrade deprecated models
+          parsed.keys = parsed.keys.map((k: AiKeyConfig, idx: number) => {
+            let model = k.model;
+            let baseUrl = k.baseUrl;
+            if (model === 'gemini-1.5-flash') {
+              model = 'gemini-2.5-flash';
+            }
+            if ((k.provider === 'gemini' || baseUrl?.includes('generativelanguage.googleapis.com') || k.apiKey?.startsWith('AIzaSy')) && baseUrl && !baseUrl.includes('/openai')) {
+              baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+            }
+            return {
+              ...k,
+              model,
+              baseUrl,
+              priority: typeof k.priority === 'number' ? k.priority : idx + 1,
+              provider: k.provider || (k.id === 'agnes-primary' ? 'agnes' : 'custom')
+            };
+          });
 
           // Sync env key if empty in file
           const agnesKey = parsed.keys.find((k: AiKeyConfig) => k.id === 'agnes-primary');
@@ -309,13 +321,25 @@ export class AiMetricsService {
     isActive?: boolean;
   }) {
     let key = this.metrics.keys.find(k => k.id === data.id);
+    let model = data.model;
+    let baseUrl = data.baseUrl;
+    const prov = data.provider || (key ? key.provider : 'custom');
+    const keyVal = data.apiKey !== undefined && data.apiKey !== '' ? data.apiKey : (key ? key.apiKey : '');
+    
+    if (model === 'gemini-1.5-flash') {
+      model = 'gemini-2.5-flash';
+    }
+    if ((prov === 'gemini' || baseUrl?.includes('generativelanguage.googleapis.com') || keyVal?.startsWith('AIzaSy')) && baseUrl && !baseUrl.includes('/openai')) {
+      baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+    }
+
     if (!key) {
       key = {
         id: data.id,
         name: data.name || data.id,
         provider: data.provider || 'custom',
-        baseUrl: data.baseUrl || 'https://apihub.agnes-ai.com/v1',
-        model: data.model || 'agnes-3.0-flash',
+        baseUrl: baseUrl || 'https://apihub.agnes-ai.com/v1',
+        model: model || 'agnes-3.0-flash',
         apiKey: data.apiKey || '',
         priority: typeof data.priority === 'number' ? data.priority : this.metrics.keys.length + 1,
         isActive: data.isActive !== false
@@ -324,8 +348,8 @@ export class AiMetricsService {
     } else {
       if (data.name !== undefined) key.name = data.name;
       if (data.provider !== undefined) key.provider = data.provider;
-      if (data.baseUrl !== undefined) key.baseUrl = data.baseUrl;
-      if (data.model !== undefined) key.model = data.model;
+      if (baseUrl !== undefined) key.baseUrl = baseUrl;
+      if (model !== undefined) key.model = model;
       if (data.apiKey !== undefined && data.apiKey !== '') key.apiKey = data.apiKey;
       if (data.priority !== undefined) key.priority = data.priority;
       if (data.isActive !== undefined) key.isActive = data.isActive;
@@ -476,19 +500,49 @@ export class AiMetricsService {
     throw lastError || new Error('Tất cả API key dự phòng đều thất bại');
   }
 
-  public async testPingKey(keyId: string): Promise<{
+  public async testPingKey(target: string | {
+    keyId?: string;
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+    provider?: string;
+  }): Promise<{
     success: boolean;
     latencyMs: number;
     statusCode: number;
     statusText: string;
     message: string;
   }> {
-    const key = this.metrics.keys.find(k => k.id === keyId);
-    if (!key) {
-      throw new Error(`Key with ID ${keyId} not found`);
+    let keyId = typeof target === 'string' ? target : target.keyId;
+    let key = keyId ? this.metrics.keys.find(k => k.id === keyId) : null;
+
+    let apiKey = typeof target === 'object' && target.apiKey ? target.apiKey : (key ? key.apiKey : '');
+    let baseUrl = typeof target === 'object' && target.baseUrl ? target.baseUrl : (key ? key.baseUrl : '');
+    let model = typeof target === 'object' && target.model ? target.model : (key ? key.model : '');
+    let provider = typeof target === 'object' && target.provider ? target.provider : (key ? key.provider : 'custom');
+
+    // Auto-detect provider if missing
+    if (apiKey?.startsWith('AIzaSy')) provider = 'gemini';
+
+    // Upgrade deprecated Gemini 1.5 Flash
+    if (model === 'gemini-1.5-flash' || (!model && provider === 'gemini')) {
+      model = 'gemini-2.5-flash';
+      if (key) key.model = model;
     }
 
-    if (!key.apiKey) {
+    // Normalize Gemini OpenAI base URL
+    if ((provider === 'gemini' || baseUrl?.includes('generativelanguage.googleapis.com') || apiKey?.startsWith('AIzaSy')) && (!baseUrl || !baseUrl.includes('/openai'))) {
+      baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+      if (key) key.baseUrl = baseUrl;
+    }
+
+    if (!baseUrl) {
+      baseUrl = provider === 'gemini'
+        ? 'https://generativelanguage.googleapis.com/v1beta/openai/'
+        : 'https://apihub.agnes-ai.com/v1';
+    }
+
+    if (!apiKey) {
       return {
         success: false,
         latencyMs: 0,
@@ -500,7 +554,7 @@ export class AiMetricsService {
 
     const start = Date.now();
     try {
-      const endpoint = `${key.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+      const endpoint = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -508,10 +562,10 @@ export class AiMetricsService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key.apiKey}`
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: key.model,
+          model: model || 'gemini-2.5-flash',
           messages: [{ role: 'user', content: 'ping' }],
           max_tokens: 1
         }),
@@ -522,10 +576,12 @@ export class AiMetricsService {
       const latency = Date.now() - start;
       const ok = resp.ok;
 
-      key.lastPingMs = latency;
-      key.lastPingStatus = ok ? 'ok' : resp.status === 429 ? 'rate_limited' : 'error';
-      key.lastPingAt = new Date().toISOString();
-      this.saveMetrics();
+      if (key) {
+        key.lastPingMs = latency;
+        key.lastPingStatus = ok ? 'ok' : resp.status === 429 ? 'rate_limited' : 'error';
+        key.lastPingAt = new Date().toISOString();
+        this.saveMetrics();
+      }
 
       if (ok) {
         return {
@@ -540,13 +596,14 @@ export class AiMetricsService {
         let errMsg = `Lỗi HTTP ${resp.status}`;
         if (resp.status === 429) errMsg = 'Đã chạm hạn ngạch (Rate Limit Exceeded - 429)';
         else if (resp.status === 401 || resp.status === 403) errMsg = 'API Key không hợp lệ hoặc đã hết hạn';
+        else if (resp.status === 404) errMsg = 'Không tìm thấy model hoặc endpoint (404 - Hãy kiểm tra tên Model)';
 
         return {
           success: false,
           latencyMs: latency,
           statusCode: resp.status,
           statusText: resp.statusText || 'Error',
-          message: `${errMsg}: ${errorBody.slice(0, 100)}`
+          message: `${errMsg}: ${errorBody.slice(0, 120)}`
         };
       }
     } catch (err: any) {
@@ -554,10 +611,12 @@ export class AiMetricsService {
       const isTimeout = err?.name === 'AbortError';
       const msg = isTimeout ? 'Hết thời gian chờ (Timeout > 8s)' : (err?.message || 'Không thể kết nối máy chủ AI');
 
-      key.lastPingMs = latency;
-      key.lastPingStatus = 'error';
-      key.lastPingAt = new Date().toISOString();
-      this.saveMetrics();
+      if (key) {
+        key.lastPingMs = latency;
+        key.lastPingStatus = 'error';
+        key.lastPingAt = new Date().toISOString();
+        this.saveMetrics();
+      }
 
       return {
         success: false,
@@ -565,6 +624,205 @@ export class AiMetricsService {
         statusCode: 504,
         statusText: isTimeout ? 'Timeout' : 'Network Error',
         message: msg
+      };
+    }
+  }
+
+  /**
+   * Fetches list of available models from the provider via /models endpoint.
+   * Cleans IDs and falls back to curated models on failure.
+   */
+  public async fetchAvailableModels(params: {
+    keyId?: string;
+    apiKey?: string;
+    baseUrl?: string;
+    provider?: string;
+  }): Promise<{
+    success: boolean;
+    provider: string;
+    models: Array<{ id: string; name: string }>;
+    message?: string;
+  }> {
+    let key = params.keyId ? this.metrics.keys.find(k => k.id === params.keyId) : null;
+
+    let apiKey = params.apiKey || (key ? key.apiKey : '');
+    let baseUrl = params.baseUrl || (key ? key.baseUrl : '');
+    let provider = params.provider || (key ? key.provider : 'custom');
+
+    // Auto-detect provider if missing
+    if (apiKey?.startsWith('AIzaSy')) provider = 'gemini';
+
+    // Normalize Gemini OpenAI base URL
+    if ((provider === 'gemini' || baseUrl?.includes('generativelanguage.googleapis.com') || apiKey?.startsWith('AIzaSy')) && (!baseUrl || !baseUrl.includes('/openai'))) {
+      baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+    }
+
+    if (!baseUrl) {
+      if (provider === 'gemini') baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+      else if (provider === 'openai') baseUrl = 'https://api.openai.com/v1';
+      else if (provider === 'agnes') baseUrl = 'https://apihub.agnes-ai.com/v1';
+      else baseUrl = 'https://api.openai.com/v1';
+    }
+
+    // Curated models fallback
+    const curatedModels: Record<string, Array<{ id: string; name: string }>> = {
+      gemini: [
+        { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash (Khuyên dùng - Nhanh & Mới nhất)' },
+        { id: 'gemini-2.5-pro', name: 'gemini-2.5-pro (Tư duy sâu)' },
+        { id: 'gemini-flash-latest', name: 'gemini-flash-latest (Bản Flash ổn định)' },
+        { id: 'gemini-pro-latest', name: 'gemini-pro-latest (Bản Pro ổn định)' },
+        { id: 'gemini-2.0-flash', name: 'gemini-2.0-flash' },
+        { id: 'gemini-2.0-flash-lite', name: 'gemini-2.0-flash-lite' }
+      ],
+      agnes: [
+        { id: 'agnes-3.0-flash', name: 'agnes-3.0-flash (Khuyên dùng)' },
+        { id: 'agnes-3.0-pro', name: 'agnes-3.0-pro' },
+        { id: 'agnes-2.5-flash', name: 'agnes-2.5-flash' }
+      ],
+      openai: [
+        { id: 'gpt-4o-mini', name: 'gpt-4o-mini (Khuyên dùng - Nhanh & Tiết kiệm)' },
+        { id: 'gpt-4o', name: 'gpt-4o (Đa năng mạnh mẽ)' },
+        { id: 'o3-mini', name: 'o3-mini (Lý luận cao cấp)' },
+        { id: 'gpt-4-turbo', name: 'gpt-4-turbo' }
+      ],
+      custom: [
+        { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash' },
+        { id: 'gpt-4o-mini', name: 'gpt-4o-mini' },
+        { id: 'custom-model', name: 'custom-model' }
+      ]
+    };
+
+    const fallbackList = curatedModels[provider] || curatedModels.custom;
+
+    if (!apiKey) {
+      return {
+        success: true,
+        provider,
+        models: fallbackList,
+        message: 'Chưa có API key, hiển thị danh sách model gợi ý'
+      };
+    }
+
+    try {
+      const endpoint = `${baseUrl.replace(/\/+$/, '')}/models`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const resp = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        return {
+          success: false,
+          provider,
+          models: fallbackList,
+          message: `Không thể lấy danh sách từ máy chủ (${resp.status} ${resp.statusText}). Đã tải model mặc định.`
+        };
+      }
+
+      const json: any = await resp.json();
+      let rawList: any[] = [];
+      if (Array.isArray(json?.data)) rawList = json.data;
+      else if (Array.isArray(json?.models)) rawList = json.models;
+
+      if (!rawList || rawList.length === 0) {
+        return {
+          success: true,
+          provider,
+          models: fallbackList,
+          message: 'Không tìm thấy model nào từ phản hồi, sử dụng danh sách gợi ý'
+        };
+      }
+
+      // Filter and clean IDs
+      const filtered: Array<{ id: string; name: string }> = [];
+      const seen = new Set<string>();
+
+      for (const item of rawList) {
+        let id = String(item.id || item.name || '').trim();
+        if (!id) continue;
+        if (id.startsWith('models/')) {
+          id = id.replace(/^models\//, '');
+        }
+
+        const lower = id.toLowerCase();
+        // Skip non-chat utilities
+        if (
+          lower.includes('embed') ||
+          lower.includes('tts') ||
+          lower.includes('audio') ||
+          lower.includes('whisper') ||
+          lower.includes('dall-e') ||
+          lower.includes('imagen') ||
+          lower.includes('babbage') ||
+          lower.includes('davinci') ||
+          lower.includes('curie') ||
+          lower.includes('realtime') ||
+          lower.includes('moderation') ||
+          lower.includes('robotics') ||
+          lower.includes('aqa') ||
+          lower.includes('computer-use')
+        ) {
+          continue;
+        }
+
+        // For Gemini, only include gemini models
+        if (provider === 'gemini' && !lower.startsWith('gemini')) {
+          continue;
+        }
+
+        if (!seen.has(id)) {
+          seen.add(id);
+          filtered.push({ id, name: id });
+        }
+      }
+
+      // Sort models: prioritize flash and latest
+      filtered.sort((a, b) => {
+        const aId = a.id.toLowerCase();
+        const bId = b.id.toLowerCase();
+        // Priority 1: gemini-2.5-flash / gpt-4o-mini
+        const aTop = aId.includes('2.5-flash') || aId.includes('4o-mini');
+        const bTop = bId.includes('2.5-flash') || bId.includes('4o-mini');
+        if (aTop && !bTop) return -1;
+        if (!aTop && bTop) return 1;
+
+        // Priority 2: 2.5-pro or 4o
+        const aMid = aId.includes('2.5-pro') || aId === 'gpt-4o';
+        const bMid = bId.includes('2.5-pro') || bId === 'gpt-4o';
+        if (aMid && !bMid) return -1;
+        if (!aMid && bMid) return 1;
+
+        // Priority 3: latest
+        const aLat = aId.includes('latest');
+        const bLat = bId.includes('latest');
+        if (aLat && !bLat) return -1;
+        if (!aLat && bLat) return 1;
+
+        return aId.localeCompare(bId);
+      });
+
+      const finalModels = filtered.length > 0 ? filtered : fallbackList;
+
+      return {
+        success: true,
+        provider,
+        models: finalModels,
+        message: `Đã tìm thấy ${finalModels.length} model khả dụng từ ${provider}`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        provider,
+        models: fallbackList,
+        message: `Lỗi kết nối khi quét models (${err?.message || 'Timeout'}). Đã tải danh sách mặc định.`
       };
     }
   }
