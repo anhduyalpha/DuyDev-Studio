@@ -2,22 +2,21 @@
  * Card Tiers 10-Level System (Tool Card Tier List 10 Levels)
  * DuyDev Studio PWA - Supercharged Full-Perimeter RPG Item Rarity Architecture
  *
- * Elemental Perimeter Edge Systems:
- *  - Tier EX: High-Voltage Aurora Lightning Arcs (Dual-layer jagged arcs with electric discharge)
- *  - Tier LR: Solar Corona Sunbeams & Golden Thunder (Radiating sunbeams + golden lightning)
- *  - Tier SS: Blood Flames & Crimson Lightning (Licking flame tongues + crimson bolts)
- *  - Tier S:  Amethyst Arcane Thunder (Intertwined amethyst & golden arcane thunder streams)
- *  - Tier UR: Prismatic Starlight Waves (7-color rainbow waves + twinkling starlight sparks)
- *  - Tier A:  Golden Sunbeams & Amber Sparks (Warm solar rays + amber lightning)
- *  - Tier B:  Electric Sapphire Arcs (Fine electric arcs connecting 4 corners)
- *  - Tier C:  Emerald Pulse Track (Smooth rhythmic green pulse around perimeter)
- *
- * Layout & Alignment Bug Fixes:
- *  - Tier SS Icon Fix: Full opacity white vector icon on 3D crimson ruby medallion (z-index: 10).
- *  - Bottom Copy Row Clearance: .tier-copy-row with margin-inline prevents collision with 52px corner plates.
+ * Distinct Elemental Physics Archetypes (Zero Crawling Worms / Zero stroke-dashoffset):
+ *  - Tier EX: High-Voltage Branched Lightning (Instantaneous steps(1) strobe flash bursts + Liquid Aurora Border)
+ *  - Tier LR: Sovereign Solar Eclipse (Radiating 360° sunburst corona god-rays + rising light pillars + breathing molten gold)
+ *  - Tier UR: Prismatic Diamond & Hologram (Seamless 360° dichroic color-wheel border + 4 diamond lens flares + holographic sheen)
+ *  - Tier SS: Crimson Hellfire & Blood Heartbeat (Bottom-up vertical rising flame crown + demonic double-heartbeat pulse)
+ *  - Tier S:  Royal Amethyst Arcane Sigil (4 harmonic midpoint rune nodes with expanding rings + top-down spotlight + rotating seal)
+ *  - Tier A:  Imperial Gold (Diagonal razor-sharp gold metallic blade sheen + solid burnished gold frame)
+ *  - Tier B:  Sapphire Titanium (Diagonal cold sapphire blade sheen + solid sapphire-steel frame)
+ *  - Tier C:  Anodized Emerald (Solid double-emerald frame + soft corner emerald glow dots)
+ *  - Tier D:  Frosted Quartz (Top specular highlight line + clean cyan border)
+ *  - Tier E:  Matte Slate (Clean architectural common base)
  *
  * Performance Compliance:
- *  - 100% GPU-composited animations (transform, opacity, stroke-dashoffset).
+ *  - 100% GPU-composited animations (transform, opacity, conic-gradient).
+ *  - Zero crawling worm / stroke-dasharray animations.
  *  - Suspends immediately when `html.app-backgrounded` is present (KI-FIX-023).
  *  - Honors `prefers-reduced-motion: reduce`.
  */
@@ -74,8 +73,16 @@
 
 /* Bottom Copy Row Clearance: Inset to avoid overlapping 52px corner armor plates */
 .tier-copy-row {
+  position: relative;
+  z-index: 10;
   margin-inline: 14px;
   padding-inline: 4px;
+}
+.tier-card.tier-ss .tier-copy-row {
+  color: #9F1239;
+}
+html.dark .tier-card.tier-ss .tier-copy-row {
+  color: #FDA4AF;
 }
 
 /* ==============================================================================
@@ -316,9 +323,11 @@ html.dark .tier-watermark-seal-ex {
 }
 
 /* ==============================================================================
-   1.7 Elemental Perimeter Edge Systems (SVG hugging all 4 card edges)
+   1.7 Distinct Elemental Physics Archetypes (Zero Crawling Worms)
    ============================================================================== */
-.tier-elemental-edges {
+
+/* --- Tier EX: Real Strobe-Flash High-Voltage Branched Lightning --- */
+.tier-card.tier-ex .tier-strobe-lightning-ex {
   position: absolute;
   inset: -1px;
   width: calc(100% + 2px);
@@ -328,138 +337,298 @@ html.dark .tier-watermark-seal-ex {
   overflow: visible;
 }
 
-/* Tier EX: High-Voltage Aurora Lightning Arcs */
-.tier-card.tier-ex .lightning-glow {
-  stroke-dasharray: 40 80;
-  animation: lightning-arc-surge 3.2s linear infinite;
-  filter: drop-shadow(0 0 6px #06B6D4) drop-shadow(0 0 10px #38BDF8);
-}
-.tier-card.tier-ex .lightning-core {
-  stroke-dasharray: 25 65;
-  animation: lightning-arc-surge 3.2s linear infinite reverse;
+.tier-card.tier-ex .strobe-lightning-tl {
+  opacity: 0.35;
+  animation: lightning-strobe-tl 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px #22D3EE);
 }
 
-@keyframes lightning-arc-surge {
-  0% { stroke-dashoffset: 0; opacity: 0.85; }
-  15% { opacity: 1; filter: drop-shadow(0 0 8px #22D3EE); }
-  18% { opacity: 0.3; }
-  22% { opacity: 1; filter: drop-shadow(0 0 12px #67E8F9); }
-  50% { stroke-dashoffset: 240; opacity: 0.9; }
-  68% { opacity: 0.4; }
-  72% { opacity: 1; filter: drop-shadow(0 0 10px #A855F7); }
-  100% { stroke-dashoffset: 480; opacity: 0.85; }
+.tier-card.tier-ex .strobe-lightning-br {
+  opacity: 0.35;
+  animation: lightning-strobe-br 4.5s ease-in-out infinite;
+  animation-delay: 2s;
+  filter: drop-shadow(0 0 8px #38BDF8);
 }
 
-/* Tier LR: Solar Corona Sunbeams & Golden Thunder */
-.tier-card.tier-lr .solar-sunbeams {
-  animation: solar-corona-flare 3.8s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px #FACC15);
-}
-.tier-card.tier-lr .solar-lightning {
-  stroke-dasharray: 45 65;
-  animation: golden-thunder-surge 4.2s linear infinite;
-  filter: drop-shadow(0 0 6px #FDE047);
-}
-
-@keyframes solar-corona-flare {
-  0%, 100% { opacity: 0.75; transform: scale(1); filter: drop-shadow(0 0 6px #FACC15); }
-  50% { opacity: 1; transform: scale(1.008); filter: drop-shadow(0 0 12px #FEF08A); }
+@keyframes lightning-strobe-tl {
+  0%, 65% { opacity: 0.35; filter: drop-shadow(0 0 8px #22D3EE); }
+  66% { opacity: 1; filter: drop-shadow(0 0 16px #67E8F9) drop-shadow(0 0 26px #FFFFFF); }
+  67.5% { opacity: 0.2; }
+  68.5% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 30px #FFFFFF); }
+  71% { opacity: 0.4; }
+  72% { opacity: 0.95; filter: drop-shadow(0 0 14px #22D3EE); }
+  74%, 100% { opacity: 0.35; filter: drop-shadow(0 0 8px #22D3EE); }
 }
 
-@keyframes golden-thunder-surge {
-  0% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: 360; }
+@keyframes lightning-strobe-br {
+  0%, 60% { opacity: 0.35; filter: drop-shadow(0 0 8px #38BDF8); }
+  61% { opacity: 1; filter: drop-shadow(0 0 16px #38BDF8) drop-shadow(0 0 26px #FFFFFF); }
+  62.5% { opacity: 0.2; }
+  63.5% { opacity: 1; filter: drop-shadow(0 0 20px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
+  66% { opacity: 0.4; }
+  67% { opacity: 0.9; filter: drop-shadow(0 0 14px #38BDF8); }
+  69%, 100% { opacity: 0.35; filter: drop-shadow(0 0 8px #38BDF8); }
 }
 
-/* Tier SS: Blood Flames & Crimson Lightning */
-.tier-card.tier-ss .blood-flame-path {
-  stroke-dasharray: 55 45;
-  animation: crimson-flame-surge 3.8s linear infinite;
-  filter: drop-shadow(0 0 8px #E11D48);
-}
-.tier-card.tier-ss .crimson-bolt {
-  stroke-dasharray: 30 60;
-  animation: crimson-flame-surge 3s linear infinite reverse;
-  filter: drop-shadow(0 0 6px #FDA4AF);
-}
-
-@keyframes crimson-flame-surge {
-  0% { stroke-dashoffset: 0; opacity: 0.8; }
-  50% { stroke-dashoffset: 150; opacity: 1; filter: drop-shadow(0 0 12px #F43F5E); }
-  100% { stroke-dashoffset: 300; opacity: 0.8; }
+/* --- Tier LR: Radiating Sunburst Corona God-Rays & Rising Light Pillars --- */
+.tier-card.tier-lr .tier-solar-sunburst {
+  position: absolute;
+  top: 44px;
+  left: 44px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(250, 204, 21, 0.45) 0deg 8deg, transparent 8deg 24deg);
+  -webkit-mask: radial-gradient(circle at center, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 70%);
+  mask: radial-gradient(circle at center, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 70%);
+  animation: spin-sunburst 24s linear infinite;
+  pointer-events: none;
+  z-index: 2;
 }
 
-/* Tier S: Amethyst Arcane Thunder */
-.tier-card.tier-s .amethyst-thunder-purple {
-  stroke-dasharray: 45 55;
-  animation: amethyst-thunder-flow 4s linear infinite;
-  filter: drop-shadow(0 0 6px #9333EA);
-}
-.tier-card.tier-s .amethyst-thunder-gold {
-  stroke-dasharray: 30 70;
-  animation: amethyst-thunder-flow 3.5s linear infinite reverse;
-  filter: drop-shadow(0 0 6px #F59E0B);
+@keyframes spin-sunburst {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-@keyframes amethyst-thunder-flow {
-  0% { stroke-dashoffset: 0; opacity: 0.75; }
-  50% { stroke-dashoffset: 200; opacity: 1; filter: drop-shadow(0 0 10px #C084FC); }
-  100% { stroke-dashoffset: 400; opacity: 0.75; }
+.tier-card.tier-lr .tier-solar-pillars {
+  position: absolute;
+  bottom: 0;
+  inset-x: 0;
+  height: 80px;
+  background: linear-gradient(180deg, transparent, rgba(250, 204, 21, 0.16));
+  -webkit-mask: repeating-linear-gradient(90deg, #fff 0px 8px, transparent 8px 24px);
+  mask: repeating-linear-gradient(90deg, #fff 0px 8px, transparent 8px 24px);
+  animation: solar-pillar-rise 3.8s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 2;
 }
 
-/* Tier UR: Prismatic Starlight Waves & Twinkling Sparks */
-.tier-card.tier-ur .prismatic-wave {
-  stroke-dasharray: 70 40;
-  animation: prismatic-wave-sweep 4.8s linear infinite;
-  filter: drop-shadow(0 0 6px #EC4899) drop-shadow(0 0 8px #38BDF8);
-}
-.tier-card.tier-ur .prismatic-sparks path {
-  animation: star-twinkle 2.5s ease-in-out infinite;
+@keyframes solar-pillar-rise {
+  0% { transform: translateY(8px); opacity: 0.6; }
+  100% { transform: translateY(-4px); opacity: 1; }
 }
 
-@keyframes prismatic-wave-sweep {
-  0% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: 360; }
+@keyframes solar-corona-pulse {
+  0%, 100% {
+    box-shadow: 0 0 35px rgba(250, 204, 21, 0.40), inset 0 0 20px rgba(234, 179, 8, 0.20);
+  }
+  50% {
+    box-shadow: 0 0 52px rgba(250, 204, 21, 0.65), inset 0 0 30px rgba(234, 179, 8, 0.35);
+  }
 }
 
-/* Tier A: Golden Sunbeams & Amber Sparks */
-.tier-card.tier-a .golden-sunbeams {
-  animation: golden-sun-pulse 3.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px #F59E0B);
+/* --- Tier UR: Continuous 360° Iridescent Dichroic Frame & Diamond Lens Flares --- */
+.tier-card.tier-ur .tier-prismatic-perimeter-ur {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 3px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
 }
-.tier-card.tier-a .amber-lightning {
-  stroke-dasharray: 35 65;
-  animation: golden-thunder-surge 4.8s linear infinite;
-}
-
-@keyframes golden-sun-pulse {
-  0%, 100% { opacity: 0.7; filter: drop-shadow(0 0 4px #F59E0B); }
-  50% { opacity: 1; filter: drop-shadow(0 0 8px #FDE68A); }
-}
-
-/* Tier B: Sapphire Electric Arcs */
-.tier-card.tier-b .sapphire-arc {
-  stroke-dasharray: 30 50;
-  animation: sapphire-arc-pulse 3.8s linear infinite;
-  filter: drop-shadow(0 0 6px #3B82F6);
-}
-
-@keyframes sapphire-arc-pulse {
-  0%, 100% { stroke-dashoffset: 0; opacity: 0.65; }
-  50% { stroke-dashoffset: 160; opacity: 1; filter: drop-shadow(0 0 10px #60A5FA); }
-  100% { stroke-dashoffset: 320; opacity: 0.65; }
+.tier-card.tier-ur .tier-prismatic-perimeter-ur::before {
+  content: '';
+  position: absolute;
+  top: -70%;
+  left: -70%;
+  width: 240%;
+  height: 240%;
+  background: conic-gradient(from 0deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #F472B6);
+  animation: spin-clockwise 8s linear infinite;
 }
 
-/* Tier C: Emerald Pulse Track */
-.tier-card.tier-c .emerald-pulse-track {
-  animation: emerald-pulse-sweep 5.5s linear infinite;
-  filter: drop-shadow(0 0 4px #10B981);
+.tier-card.tier-ur .tier-diamond-glints-ur {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.tier-card.tier-ur .diamond-flare {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  animation: diamond-glint-twinkle 3.2s ease-in-out infinite;
+}
+.tier-card.tier-ur .flare-tl { top: 6px; left: 6px; }
+.tier-card.tier-ur .flare-tr { top: 6px; right: 6px; animation-delay: 0.8s; }
+.tier-card.tier-ur .flare-bl { bottom: 6px; left: 6px; animation-delay: 1.6s; }
+.tier-card.tier-ur .flare-br { bottom: 6px; right: 6px; animation-delay: 2.4s; }
+
+@keyframes diamond-glint-twinkle {
+  0%, 100% {
+    transform: scale(0.35) rotate(0deg);
+    opacity: 0.3;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
+  }
+  50% {
+    transform: scale(1.25) rotate(90deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 16px currentColor);
+  }
 }
 
-@keyframes emerald-pulse-sweep {
-  0% { stroke-dashoffset: 0; opacity: 0.5; }
-  50% { stroke-dashoffset: 96; opacity: 0.9; }
-  100% { stroke-dashoffset: 192; opacity: 0.5; }
+/* --- Tier SS: Bottom-Up Rising Hellfire Flames & Demonic Heartbeat Pulse --- */
+.tier-card.tier-ss .tier-hellfire-flames {
+  position: absolute;
+  bottom: 0;
+  inset-x: 0;
+  height: 85px;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0.85;
+}
+.tier-card.tier-ss .flame-back {
+  transform-origin: bottom center;
+  animation: hellfire-surge 3.2s ease-in-out infinite alternate;
+}
+.tier-card.tier-ss .flame-front {
+  transform-origin: bottom center;
+  animation: hellfire-surge 2.4s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes hellfire-surge {
+  0% { transform: scaleY(0.92) translateY(3px); opacity: 0.75; }
+  100% { transform: scaleY(1.15) translateY(-4px); opacity: 1; }
+}
+
+@keyframes blood-heartbeat {
+  0%, 100% {
+    box-shadow: 0 0 28px rgba(225, 29, 72, 0.38);
+    border-color: rgba(225, 29, 72, 0.85);
+  }
+  12% {
+    box-shadow: 0 0 46px rgba(225, 29, 72, 0.75), inset 0 0 16px rgba(244, 63, 94, 0.35);
+    border-color: rgba(253, 164, 175, 1);
+  }
+  22% {
+    box-shadow: 0 0 30px rgba(225, 29, 72, 0.42);
+    border-color: rgba(225, 29, 72, 0.85);
+  }
+  34% {
+    box-shadow: 0 0 54px rgba(244, 63, 94, 0.85), inset 0 0 22px rgba(244, 63, 94, 0.45);
+    border-color: rgba(255, 228, 230, 1);
+  }
+  48% {
+    box-shadow: 0 0 28px rgba(225, 29, 72, 0.38);
+    border-color: rgba(225, 29, 72, 0.85);
+  }
+}
+
+/* --- Tier S: 4 Harmonic Arcane Rune Nodes & Top-Down Amethyst Spotlight --- */
+.tier-card.tier-s .tier-amethyst-spotlight {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 190px;
+  height: 130px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(147, 51, 234, 0.24) 0%, transparent 75%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tier-card.tier-s .tier-rune-nodes-s {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.tier-card.tier-s .rune-node {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: rune-node-pulse 3.6s ease-in-out infinite;
+}
+.tier-card.tier-s .node-top { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.tier-card.tier-s .node-bottom { bottom: 0; left: 50%; transform: translate(-50%, 50%); animation-delay: 1.8s; }
+.tier-card.tier-s .node-left { left: 0; top: 50%; transform: translate(-50%, -50%); animation-delay: 0.9s; }
+.tier-card.tier-s .node-right { right: 0; top: 50%; transform: translate(50%, -50%); animation-delay: 2.7s; }
+
+@keyframes rune-node-pulse {
+  0%, 100% {
+    transform: scale(0.92);
+    filter: drop-shadow(0 0 4px #9333EA);
+  }
+  50% {
+    transform: scale(1.22);
+    filter: drop-shadow(0 0 12px #C084FC) drop-shadow(0 0 16px #F59E0B);
+  }
+}
+
+/* --- Tier A & B: Razor-Sharp Diagonal Metallic Blade Sheen --- */
+.tier-blade-sheen {
+  position: absolute;
+  inset: -150%;
+  width: 400%;
+  height: 400%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.tier-card.tier-b .tier-blade-sheen {
+  background: linear-gradient(125deg,
+    transparent 42%,
+    rgba(147, 197, 253, 0.25) 48%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(96, 165, 250, 0.25) 52%,
+    transparent 58%);
+  animation: blade-sheen-sweep 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.tier-card.tier-a .tier-blade-sheen {
+  background: linear-gradient(125deg,
+    transparent 42%,
+    rgba(253, 230, 138, 0.30) 48%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(245, 158, 11, 0.30) 52%,
+    transparent 58%);
+  animation: blade-sheen-sweep 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 1.5s;
+}
+
+@keyframes blade-sheen-sweep {
+  0% {
+    transform: translate(-65%, -65%) rotate(0deg);
+  }
+  28%, 100% {
+    transform: translate(65%, 65%) rotate(0deg);
+  }
+}
+
+/* --- Tier C: Soft Corner Emerald Glow --- */
+.tier-card.tier-c .tier-emerald-corner-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.tier-card.tier-c .glow-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981, 0 0 12px rgba(16, 185, 129, 0.4);
+  animation: emerald-glow-breathe 4s ease-in-out infinite;
+}
+.tier-card.tier-c .glow-tl { top: 6px; left: 6px; }
+.tier-card.tier-c .glow-tr { top: 6px; right: 6px; }
+.tier-card.tier-c .glow-bl { bottom: 6px; left: 6px; }
+.tier-card.tier-c .glow-br { bottom: 6px; right: 6px; }
+
+@keyframes emerald-glow-breathe {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
 /* ==============================================================================
@@ -1195,25 +1364,23 @@ html.app-backgrounded * {
   .solar-ring-svg,
   .ur-halo-ring,
   .tier-plasma-perimeter-ex::before,
+  .tier-prismatic-perimeter-ur::before,
   .tier-watermark-seal,
   .star-svg,
   .particle,
-  .tier-metallic-shimmer,
+  .tier-blade-sheen,
   .tier-holo-foil-sheen,
-  .tier-elemental-edges *,
-  .lightning-glow,
-  .lightning-core,
-  .solar-sunbeams,
-  .solar-lightning,
-  .blood-flame-path,
-  .crimson-bolt,
-  .amethyst-thunder-purple,
-  .amethyst-thunder-gold,
-  .prismatic-wave,
-  .golden-sunbeams,
-  .amber-lightning,
-  .sapphire-arc,
-  .emerald-pulse-track {
+  .strobe-lightning-tl,
+  .strobe-lightning-br,
+  .tier-strobe-lightning-ex *,
+  .tier-solar-sunburst,
+  .tier-solar-pillars,
+  .flame-tongue,
+  .flame-back,
+  .flame-front,
+  .rune-node,
+  .glow-dot,
+  .diamond-flare {
     animation: none !important;
     transition: none !important;
   }

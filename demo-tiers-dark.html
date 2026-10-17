@@ -61,13 +61,13 @@
       <div class="space-y-1">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono text-xs font-bold">
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-          <span>RPG ITEM RARITY ESCALATION &bull; ELEMENTAL EDGES &amp; PERIMETER ARCS</span>
+          <span>RPG ITEM RARITY ESCALATION &bull; DISTINCT ELEMENTAL PHYSICS ARCHETYPES</span>
         </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
           Hệ Thống 10 Cấp Độ Thẻ Phân Hạng Vật Phẩm RPG
         </h1>
         <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
-          Nâng cấp nguyên tố bọc quanh 4 cạnh viền: Tia sét cực quang cao áp (Tier EX &amp; B), Bão nắng thái dương &amp; lôi kim (Tier LR &amp; A), Huyết hỏa &amp; xích lôi (Tier SS), Lôi điện tử kim (Tier S), Sóng lăng kính cầu vồng (Tier UR). Đã sửa lỗi icon Tier SS và canh chỉnh lề nút copy không chạm góc.
+          Đặc trưng vật lý nguyên tố độc bản (Xóa sổ 100% viền sâu bò): Sét nhánh cực quang chớp giật tức thì steps(1) (Tier EX), Bão nắng thái dương bức xạ 360° &amp; cột sáng (Tier LR), Khung lăng kính ngũ sắc 360° &amp; tia sáng kim cương (Tier UR), Huyết hỏa bùng cháy từ đáy lên &amp; nhịp đập ma vương (Tier SS), 4 Tinh thể ấn chú phát xung &amp; luồng sáng tử kim (Tier S), Nhát chém phản quang kim loại sắc bén (Tier A &amp; B).
         </p>
       </div>
 
@@ -215,10 +215,12 @@
           <span class="tick-br"></span>
         </div>
         <div class="tier-emerald-mist pointer-events-none" aria-hidden="true"></div>
-        <!-- Elemental Edge: Emerald Pulse Track -->
-        <svg class="tier-elemental-edges tier-edges-c pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <rect x="6" y="6" width="288" height="348" rx="14" stroke="#10B981" stroke-width="1.2" stroke-dasharray="16 32" class="emerald-pulse-track"/>
-        </svg>
+        <div class="tier-emerald-corner-glow pointer-events-none" aria-hidden="true">
+          <span class="glow-dot glow-tl"></span>
+          <span class="glow-dot glow-tr"></span>
+          <span class="glow-dot glow-bl"></span>
+          <span class="glow-dot glow-br"></span>
+        </div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
@@ -269,13 +271,7 @@
            style="--accent: #3B82F6; --accent-contrast: #1D4ED8;">
         
         <div class="tier-inner-frame tier-inner-frame-b pointer-events-none" aria-hidden="true"></div>
-        <!-- Elemental Edge: Sapphire Electric Arcs -->
-        <svg class="tier-elemental-edges tier-edges-b pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <path d="M 44 5 L 85 2 L 125 6 L 165 2 L 205 6 L 256 5" stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
-          <path d="M 295 44 L 298 105 L 294 175 L 298 245 L 295 316" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
-          <path d="M 5 44 L 2 105 L 6 175 L 2 245 L 5 316" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
-          <path d="M 44 355 L 85 358 L 125 354 L 165 358 L 205 354 L 256 355" stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" class="sapphire-arc"/>
-        </svg>
+        <div class="tier-blade-sheen pointer-events-none" aria-hidden="true"></div>
         <div class="tier-corner-armor tier-corner-armor-b pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 48 48" class="corner-plate cp-tl" fill="none">
             <path d="M 4 36 V 16 A 12 12 0 0 1 16 4 H 36" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
@@ -306,7 +302,6 @@
             <circle cx="32" cy="32" r="1.5" fill="#FFFFFF"/>
           </svg>
         </div>
-        <div class="tier-metallic-shimmer pointer-events-none" aria-hidden="true"></div>
 
         <div class="relative z-10">
           <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
@@ -359,16 +354,7 @@
         
         <div class="tier-inner-frame tier-inner-frame-a pointer-events-none" aria-hidden="true"></div>
         <div class="tier-top-gold-bar pointer-events-none" aria-hidden="true"></div>
-        
-        <!-- Elemental Edge: Golden Sunbeams & Amber Sparks -->
-        <svg class="tier-elemental-edges tier-edges-a pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <g class="golden-sunbeams">
-            <path d="M 60 5 L 60 0 M 80 5 L 80 1 M 100 5 L 100 -1 M 120 5 L 120 1 M 140 5 L 140 0 M 160 5 L 160 0 M 180 5 L 180 1 M 200 5 L 200 -1 M 220 5 L 220 1 M 240 5 L 240 0" stroke="#FDE68A" stroke-width="1.6" stroke-linecap="round"/>
-          </g>
-          <path d="M 5 44 L 2 110 L 6 180 L 2 250 L 5 316" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" class="amber-lightning"/>
-          <path d="M 295 44 L 298 110 L 294 180 L 298 250 L 295 316" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round" class="amber-lightning"/>
-          <path d="M 44 355 L 90 357 L 150 354 L 210 357 L 256 355" stroke="#FDE047" stroke-width="1.4" stroke-linecap="round" class="amber-lightning"/>
-        </svg>
+        <div class="tier-blade-sheen pointer-events-none" aria-hidden="true"></div>
 
         <!-- Top Keystone Crest -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
@@ -469,17 +455,23 @@
         
         <div class="tier-inner-frame tier-inner-frame-s pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-amethyst-spotlight pointer-events-none" aria-hidden="true"></div>
         
-        <!-- Elemental Edge: Amethyst Arcane Thunder Streams -->
-        <svg class="tier-elemental-edges tier-edges-s pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <path d="M 45 5 Q 85 1 120 6 Q 160 9 190 3 Q 225 1 255 5" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
-          <path d="M 295 45 Q 299 100 294 150 Q 289 200 296 250 Q 300 290 295 315" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
-          <path d="M 255 355 Q 220 359 185 353 Q 145 351 110 356 Q 75 359 45 355" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
-          <path d="M 5 315 Q 1 270 6 220 Q 10 170 4 120 Q 1 80 5 45" stroke="#C084FC" stroke-width="2" stroke-linecap="round" class="amethyst-thunder-purple"/>
-          <path d="M 50 4 L 85 7 L 130 3 L 175 7 L 220 3 L 250 5" stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" class="amethyst-thunder-gold"/>
-          <path d="M 296 50 L 293 110 L 297 180 L 292 245 L 296 310" stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" class="amethyst-thunder-gold"/>
-          <path d="M 4 50 L 7 110 L 3 180 L 8 245 L 4 310" stroke="#FBBF24" stroke-width="1.4" stroke-linecap="round" class="amethyst-thunder-gold"/>
-        </svg>
+        <!-- 4 Harmonic Arcane Rune Nodes at midpoints -->
+        <div class="tier-rune-nodes-s pointer-events-none" aria-hidden="true">
+          <div class="rune-node node-top">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-bottom">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-left">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-right">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+        </div>
 
         <!-- Top Keystone Crest -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
@@ -592,19 +584,22 @@
         <div class="tier-inner-frame tier-inner-frame-ss pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ss pointer-events-none" aria-hidden="true"></div>
         
-        <!-- Elemental Edge: Blood Flames & Crimson Lightning -->
-        <svg class="tier-elemental-edges tier-edges-ss pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+        <!-- Bottom-Up Rising Hellfire Flame Crown -->
+        <svg class="tier-hellfire-flames pointer-events-none" viewBox="0 0 300 110" preserveAspectRatio="none" fill="none" aria-hidden="true">
           <defs>
-            <linearGradient id="ssFlameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stop-color="#E11D48"/>
-              <stop offset="50%" stop-color="#FB7185"/>
-              <stop offset="100%" stop-color="#FDA4AF"/>
+            <linearGradient id="flameLayer1" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#881337" stop-opacity="0.8"/>
+              <stop offset="60%" stop-color="#E11D48" stop-opacity="0.45"/>
+              <stop offset="100%" stop-color="#F43F5E" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="flameLayer2" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#9F1239" stop-opacity="0.85"/>
+              <stop offset="50%" stop-color="#FB7185" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#FDA4AF" stop-opacity="0"/>
             </linearGradient>
           </defs>
-          <path d="M 5 310 Q 10 295 5 280 Q 1 265 6 250 Q 10 235 5 220 Q 1 205 6 190 Q 10 175 5 160 Q 1 145 6 130 Q 10 115 5 100 Q 1 85 5 70 Q 9 55 5 45" stroke="url(#ssFlameGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" class="blood-flame-path"/>
-          <path d="M 295 310 Q 290 295 295 280 Q 299 265 294 250 Q 290 235 295 220 Q 299 205 294 190 Q 290 175 295 160 Q 299 145 294 130 Q 290 115 295 100 Q 299 85 295 70 Q 291 55 295 45" stroke="url(#ssFlameGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" class="blood-flame-path"/>
-          <path d="M 50 355 Q 70 349 90 355 Q 110 347 130 355 Q 150 348 170 355 Q 190 347 210 355 Q 230 349 250 355" stroke="url(#ssFlameGrad)" stroke-width="2.2" fill="none" class="blood-flame-path"/>
-          <path d="M 45 4 L 80 1 L 105 5 L 140 2 L 165 6 L 205 1 L 225 5 L 255 4" stroke="#FDA4AF" stroke-width="1.6" stroke-linecap="round" class="crimson-bolt"/>
+          <path class="flame-tongue flame-back" d="M 0 110 L 0 50 Q 20 20 40 55 Q 60 10 80 60 Q 105 5 130 50 Q 155 15 180 55 Q 205 10 230 60 Q 255 20 275 55 Q 290 30 300 50 L 300 110 Z" fill="url(#flameLayer1)"/>
+          <path class="flame-tongue flame-front" d="M 0 110 L 0 65 Q 25 40 50 70 Q 75 35 100 70 Q 125 30 150 65 Q 175 40 200 70 Q 225 35 250 70 Q 275 45 300 65 L 300 110 Z" fill="url(#flameLayer2)"/>
         </svg>
 
         <!-- Top Keystone Crest -->
@@ -742,31 +737,8 @@
         <div class="tier-inner-frame tier-inner-frame-ur pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ur pointer-events-none" aria-hidden="true"></div>
         
-        <!-- Elemental Edge: Prismatic Starlight Waves & Twinkling Sparks -->
-        <svg class="tier-elemental-edges tier-edges-ur pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="urWaveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#F472B6"/>
-              <stop offset="25%" stop-color="#C084FC"/>
-              <stop offset="50%" stop-color="#38BDF8"/>
-              <stop offset="75%" stop-color="#34D399"/>
-              <stop offset="100%" stop-color="#FACC15"/>
-            </linearGradient>
-          </defs>
-          <path d="M 48 5 Q 85 1 125 5 Q 165 9 205 4 Q 230 2 252 5" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
-          <path d="M 295 48 Q 299 105 294 165 Q 289 225 296 280 Q 298 300 295 312" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
-          <path d="M 252 355 Q 215 359 175 354 Q 135 351 95 356 Q 70 358 48 355" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
-          <path d="M 5 312 Q 1 260 6 200 Q 10 140 4 80 Q 2 60 5 48" stroke="url(#urWaveGrad)" stroke-width="2" stroke-linecap="round" class="prismatic-wave"/>
-          <g class="prismatic-sparks">
-            <path d="M 85 5 L 85 0 M 83 2.5 L 87 2.5" stroke="#FFFFFF" stroke-width="1.5"/>
-            <path d="M 215 5 L 215 0 M 213 2.5 L 217 2.5" stroke="#FFFFFF" stroke-width="1.5"/>
-            <path d="M 295 140 L 300 140 M 297.5 138 L 297.5 142" stroke="#FFFFFF" stroke-width="1.5"/>
-            <path d="M 295 220 L 300 220 M 297.5 218 L 297.5 222" stroke="#FFFFFF" stroke-width="1.5"/>
-            <path d="M 150 355 L 150 360 M 147.5 357.5 L 152.5 357.5" stroke="#FFFFFF" stroke-width="1.5"/>
-            <path d="M 5 140 L 0 140 M 2.5 138 L 2.5 142" stroke="#FFFFFF" stroke-width="1.5"/>
-            <path d="M 5 220 L 0 220 M 2.5 218 L 2.5 222" stroke="#FFFFFF" stroke-width="1.5"/>
-          </g>
-        </svg>
+        <!-- Seamless 360° Iridescent Dichroic Frame -->
+        <div class="tier-prismatic-perimeter-ur pointer-events-none" aria-hidden="true"></div>
 
         <!-- Top Keystone Crest -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
@@ -784,12 +756,12 @@
           </svg>
         </div>
 
-        <!-- Inset Twinkling Starbursts -->
-        <div class="tier-starbursts-ur pointer-events-none" aria-hidden="true">
-          <svg viewBox="0 0 20 20" class="star-svg star-tl" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#F472B6"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
-          <svg viewBox="0 0 20 20" class="star-svg star-tr" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#38BDF8"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
-          <svg viewBox="0 0 20 20" class="star-svg star-bl" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#FBBF24"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
-          <svg viewBox="0 0 20 20" class="star-svg star-br" fill="none"><path d="M10 0L12 7.5L19.5 10L12 12.5L10 20L8 12.5L0.5 10L8 7.5Z" fill="#A855F7"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/></svg>
+        <!-- 4 Diamond Lens Flare Glints -->
+        <div class="tier-diamond-glints-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-tl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#F472B6"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-tr" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#38BDF8"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-bl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#FBBF24"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-br" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#A855F7"/></svg>
         </div>
 
         <!-- 52px Crystalline Corner Plates -->
@@ -891,19 +863,9 @@
         <div class="tier-inner-frame tier-inner-frame-lr pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-lr pointer-events-none" aria-hidden="true"></div>
         
-        <!-- Elemental Edge: Solar Corona Sunbeams & Golden Thunder -->
-        <svg class="tier-elemental-edges tier-edges-lr pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <g class="solar-sunbeams">
-            <path d="M 55 5 L 55 0 M 75 5 L 75 -2 M 95 5 L 95 0 M 115 5 L 115 -3 M 135 5 L 135 0 M 150 6 L 150 -4 M 165 5 L 165 0 M 185 5 L 185 -3 M 205 5 L 205 0 M 225 5 L 225 -2 M 245 5 L 245 0" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
-            <path d="M 5 60 L 0 60 M 5 90 L -2 90 M 5 120 L 0 120 M 5 150 L -3 150 M 5 180 L -1 180 M 5 210 L -3 210 M 5 240 L 0 240 M 5 270 L -2 270 M 5 300 L 0 300" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
-            <path d="M 295 60 L 300 60 M 295 90 L 302 90 M 295 120 L 300 120 M 295 150 L 303 150 M 295 180 L 301 180 M 295 210 L 303 210 M 295 240 L 300 240 M 295 270 L 302 270 M 295 300 L 300 300" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
-            <path d="M 70 355 L 70 360 M 110 355 L 110 362 M 150 354 L 150 364 M 190 355 L 190 362 M 230 355 L 230 360" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
-          </g>
-          <path d="M 50 4 L 90 1 L 120 5 L 165 2 L 200 6 L 235 1 L 250 4" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
-          <path d="M 296 50 L 299 95 L 294 140 L 298 185 L 293 230 L 297 275 L 295 310" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
-          <path d="M 4 310 L 1 275 L 6 230 L 2 185 L 7 140 L 2 95 L 5 50" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
-          <path d="M 250 356 L 210 359 L 175 354 L 135 358 L 95 354 L 50 356" stroke="#FEF08A" stroke-width="1.8" stroke-linecap="round" class="solar-lightning"/>
-        </svg>
+        <!-- Radiating Sunburst Corona God-Rays & Rising Light Pillars -->
+        <div class="tier-solar-sunburst pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-solar-pillars pointer-events-none" aria-hidden="true"></div>
 
         <!-- Top Keystone Crest (Solar Crown) -->
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
@@ -1043,28 +1005,25 @@
         <div class="tier-inner-frame tier-inner-frame-ex pointer-events-none" aria-hidden="true"></div>
         <div class="tier-side-wings tier-side-wings-ex pointer-events-none" aria-hidden="true"></div>
 
-        <!-- Elemental Edge: High-Voltage Aurora Lightning Arcs -->
-        <svg class="tier-elemental-edges tier-edges-ex pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="exLightningGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#06B6D4"/>
-              <stop offset="35%" stop-color="#38BDF8"/>
-              <stop offset="70%" stop-color="#8B5CF6"/>
-              <stop offset="100%" stop-color="#EC4899"/>
-            </linearGradient>
-          </defs>
-          <g class="lightning-glow">
-            <path d="M 45 4 L 80 1 L 100 6 L 135 2 L 155 7 L 185 2 L 210 6 L 240 1 L 255 4" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
-            <path d="M 296 45 L 299 90 L 294 115 L 298 160 L 293 190 L 298 235 L 294 275 L 297 315" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
-            <path d="M 255 356 L 220 359 L 195 354 L 160 358 L 135 353 L 105 358 L 80 354 L 45 356" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
-            <path d="M 4 315 L 1 275 L 6 235 L 2 190 L 7 160 L 2 115 L 6 90 L 4 45" stroke="url(#exLightningGlow)" stroke-width="3" stroke-linecap="round"/>
+        <!-- Real Strobe-Flash Branched High-Voltage Lightning Bolts (Instantaneous Snap) -->
+        <svg class="tier-strobe-lightning-ex pointer-events-none" viewBox="0 0 300 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <g class="strobe-lightning-tl">
+            <!-- Main jagged bolt -->
+            <path d="M 10 115 L 24 80 L 14 60 L 36 38 L 58 32 L 80 16 L 115 12 L 145 20 L 180 10" stroke="#67E8F9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 10 115 L 24 80 L 14 60 L 36 38 L 58 32 L 80 16 L 115 12 L 145 20 L 180 10" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Branches -->
+            <path d="M 36 38 L 48 58 L 62 62" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 80 16 L 90 28 L 104 26" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 145 20 L 154 34 L 168 36" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
           </g>
-          <g class="lightning-core">
-            <path d="M 45 4 L 80 1 L 100 6 L 135 2 L 155 7 L 185 2 L 210 6 L 240 1 L 255 4" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 296 45 L 299 90 L 294 115 L 298 160 L 293 190 L 298 235 L 294 275 L 297 315" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 255 356 L 220 359 L 195 354 L 160 358 L 135 353 L 105 358 L 80 354 L 45 356" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 4 315 L 1 275 L 6 235 L 2 190 L 7 160 L 2 115 L 6 90 L 4 45" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M 135 2 L 140 9 M 210 6 L 216 -1 M 298 160 L 289 166 M 160 358 L 154 351 M 2 190 L 11 183" stroke="#E0F2FE" stroke-width="1.2" stroke-linecap="round"/>
+          <g class="strobe-lightning-br">
+            <!-- Main jagged bolt -->
+            <path d="M 290 245 L 276 280 L 286 300 L 264 322 L 242 328 L 220 344 L 185 348 L 155 340 L 120 350" stroke="#67E8F9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 290 245 L 276 280 L 286 300 L 264 322 L 242 328 L 220 344 L 185 348 L 155 340 L 120 350" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Branches -->
+            <path d="M 264 322 L 252 302 L 238 298" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 220 344 L 210 332 L 196 334" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M 155 340 L 146 326 L 132 324" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round"/>
           </g>
         </svg>
 
