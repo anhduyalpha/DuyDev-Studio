@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.22': {
+    version: 'v23.22',
+    title: 'Bản cập nhật v23.22 (Android APK v23.21.0)',
+    date: '17/10/2026',
+    features: [
+      'Android Native APK Release v23.21.0: Build và release chính thức trên GitHub với kiến trúc Zero-Drain, tiết kiệm pin thông minh và khởi động siêu tốc',
+      'Dynamic AI Model Scanner: Quét và tự động gợi ý danh sách models khả dụng từ Google Gemini 2.5 Flash, Agnes, OpenAI và Custom Providers',
+      'In-Modal Test Ping: Kiểm tra trực tiếp độ trễ và khả năng kết nối của API Key ngay trong hộp thoại cấu hình Admin'
+    ],
+    fixes: [
+      'Chuẩn hóa base URL OpenAI của Google Gemini v1beta',
+      'Đồng bộ toàn diện phiên bản Service Worker và PWA Cache Storage v23.22'
+    ]
+  },
+
   'v23.21': {
     version: 'v23.21',
     title: 'Bản cập nhật v23.21',
