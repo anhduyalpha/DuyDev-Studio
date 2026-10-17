@@ -128,6 +128,7 @@ const DEFAULT_TOOLS = [
     category: 'system',
     icon: 'file-down',
     featured: false,
+    tier: 'LR',
     specs: ['PDF', 'Tài liệu học tập'],
     color: '#6366F1',
     route: '#tool/studocu-dl',
