@@ -10,7 +10,7 @@ const ASSETS_TO_PRECACHE = [
   './index.html',
   './manifest.webmanifest',
   './src/styles/stitch-tokens.css?v=23.35',
-  './src/styles/card-tiers-10.css?v=23.35',
+  './src/styles/card-tiers-10.css?v=23.39',
   './src/styles/studocu.css?v=23.35',
   './src/styles/scribd.css?v=23.35',
   './src/styles/highlight-theme.css?v=23.35',
