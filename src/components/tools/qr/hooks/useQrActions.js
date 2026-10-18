@@ -5,6 +5,7 @@
  */
 
 import { qrState, getApiBase, persistQrState, POPULAR_BANKS } from './useQrState.js';
+import { validateTargetUrlForPreset } from './useQrValidation.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { copyQrImageOrFallback } from '../../../../utilities/clipboard.js';
 import { storage } from '../../../../utilities/storage.js';
@@ -99,21 +100,26 @@ export async function handleCreateDynamicQr(onReRender) {
   if (getVal('dynamicTitle') !== undefined) {
     qrState.dynamic.title = getVal('dynamicTitle');
   }
-  if (getVal('dynamicCustomSlug') !== undefined) {
-    qrState.dynamic.customSlug = getVal('dynamicCustomSlug');
-  }
+  // Slug field removed from UI: clear slug to let backend auto-generate
+  qrState.dynamic.customSlug = undefined;
 
-  let target = (qrState.dynamic.targetUrl || '').trim();
-  if (!target) {
+  const rawTarget = (qrState.dynamic.targetUrl || '').trim();
+  if (!rawTarget) {
     qrState.error = 'Vui lòng nhập địa chỉ liên kết trang web (URL Đích)';
     if (onReRender) onReRender();
     return;
   }
 
-  if (!/^https?:\/\//i.test(target)) {
-    target = `https://${target}`;
-    qrState.dynamic.targetUrl = target;
+  const validation = validateTargetUrlForPreset(rawTarget, qrState.dynamic.preset || 'custom');
+  if (!validation.valid) {
+    qrState.error = validation.message;
+    showToast(validation.message, 'error');
+    if (onReRender) onReRender();
+    return;
   }
+
+  const target = validation.normalizedUrl;
+  qrState.dynamic.targetUrl = target;
 
   qrState.dynamic.isCreating = true;
   qrState.error = null;
@@ -130,8 +136,7 @@ export async function handleCreateDynamicQr(onReRender) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetUrl: target,
-          title: qrState.dynamic.title || undefined,
-          customSlug: qrState.dynamic.customSlug || undefined
+          title: qrState.dynamic.title || undefined
         })
       });
     } catch (networkErr) {
@@ -197,14 +202,19 @@ export async function handleCreateDynamicQr(onReRender) {
  */
 export async function handleSaveDestination(newTargetUrl, onReRender) {
   if (!qrState.dynamic.createdQr) return;
-  let target = (newTargetUrl || '').trim();
-  if (!target) {
+  const rawTarget = (newTargetUrl || '').trim();
+  if (!rawTarget) {
     showToast('Vui lòng nhập URL đích mới', 'error');
     return;
   }
-  if (!/^https?:\/\//i.test(target)) {
-    target = `https://${target}`;
+
+  const validation = validateTargetUrlForPreset(rawTarget, qrState.dynamic.preset || 'custom');
+  if (!validation.valid) {
+    showToast(validation.message, 'error');
+    return;
   }
+
+  const target = validation.normalizedUrl;
 
   if (qrState.dynamic.createdQr.isFallback) {
     qrState.dynamic.createdQr.targetUrl = target;

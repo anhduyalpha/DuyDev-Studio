@@ -1050,13 +1050,13 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, rgba(56, 189, 248, 0.22) 50%, transparent 75%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 60%, rgba(236, 72, 153, 0.35)) 0%, color-mix(in srgb, var(--accent) 40%, rgba(56, 189, 248, 0.22)) 50%, transparent 75%);
   animation: ur-halo-breathing 3.2s ease-in-out infinite;
   pointer-events: none;
 }
 @keyframes ur-halo-breathing {
   0%, 100% { transform: scale(0.88); opacity: 0.45; }
-  50% { transform: scale(1.22); opacity: 0.95; filter: drop-shadow(0 0 14px rgba(236, 72, 153, 0.6)); }
+  50% { transform: scale(1.22); opacity: 0.95; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 60%, rgba(236, 72, 153, 0.6))); }
 }
 .tier-card.tier-ur .ur-orbit-satellite {
   position: absolute;
@@ -1650,15 +1650,15 @@ html.dark .tier-card.tier-ss .tier-crest-badge {
 
 /* Tier 8: UR (Prismatic Hologram - Ultra Rare) */
 .tier-card.tier-ur {
-  border: 3px solid transparent;
+  border: 3px solid transparent !important;
   background: linear-gradient(180deg, #FDF2F8 0%, #FCE7F3 30%, #F0F9FF 65%, #FFFFFF 100%) padding-box,
-              linear-gradient(135deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #818CF8) border-box;
-  box-shadow: 0 0 35px rgba(236, 72, 153, 0.45);
+              linear-gradient(135deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #818CF8) border-box !important;
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.45) !important;
 }
 html.dark .tier-card.tier-ur {
   background: linear-gradient(180deg, #2D0F25 0%, #18091E 40%, #0F0614 100%) padding-box,
-              linear-gradient(135deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #818CF8) border-box;
-  box-shadow: 0 0 42px rgba(236, 72, 153, 0.55);
+              linear-gradient(135deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #818CF8) border-box !important;
+  box-shadow: 0 0 42px rgba(236, 72, 153, 0.55) !important;
 }
 
 .tier-card.tier-ur .ur-halo-ring {
@@ -1741,6 +1741,13 @@ html.dark .tier-card.tier-ur .tier-crest-badge {
   color: #FFFFFF !important;
   box-shadow: 0 2px 14px color-mix(in srgb, var(--accent) 45%, rgba(236, 72, 153, 0.45)) !important;
   font-weight: 700;
+}
+
+.tier-card.tier-ur .tool-accent-text {
+  color: var(--accent-contrast, var(--accent)) !important;
+}
+html.dark .tier-card.tier-ur .tool-accent-text {
+  color: var(--accent) !important;
 }
 
 /* ==============================================================================

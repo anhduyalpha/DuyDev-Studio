@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.45': {
+    version: 'v23.45',
+    title: 'Bản cập nhật v23.45',
+    date: '18/10/2026',
+    features: [
+      'QR Studio Platform-Specific URL Validation: Tự động kiểm tra tính hợp lệ của liên kết theo từng dịch vụ được chọn (YouTube, Facebook, TikTok, Google Workspace...), cảnh báo ngay khi dán sai nền tảng'
+    ],
+    fixes: [
+      'Loại bỏ trường nhập mã slug thủ công trong form tạo mã QR Link Web để tinh giản giao diện và tự động hóa mã định danh'
+    ]
+  },
+
   'v23.44': {
     version: 'v23.44',
     title: 'Bản cập nhật v23.44',

@@ -3,6 +3,7 @@
  */
 
 import { qrState, URL_PRESETS, persistQrState } from './useQrState.js';
+import { validateTargetUrlForPreset } from './useQrValidation.js';
 import {
   renderStyledQrToContainer,
   handleCreateDynamicQr,
@@ -101,6 +102,42 @@ export function attachQrStudioListeners(onReRender) {
  * @param {() => void} [onReRender]
  */
 function bindDynamicEvents(onReRender) {
+  function validateTargetInputUI() {
+    const input = document.getElementById('dynamicTargetUrl');
+    const errBox = document.getElementById('dynamicUrlValidationError');
+    const errMsg = document.getElementById('dynamicUrlValidationMsg');
+    if (!input || !errBox || !errMsg) return;
+
+    const val = input.value.trim();
+    if (!val) {
+      errBox.classList.add('hidden');
+      input.classList.remove('border-rose-500', 'focus:ring-rose-500');
+      input.classList.add('border-zinc-200', 'dark:border-zinc-700/60');
+      qrState.error = null;
+      return;
+    }
+
+    const validation = validateTargetUrlForPreset(val, qrState.dynamic.preset || 'custom');
+    if (!validation.valid) {
+      errMsg.textContent = validation.message;
+      errBox.classList.remove('hidden');
+      input.classList.remove('border-zinc-200', 'dark:border-zinc-700/60');
+      input.classList.add('border-rose-500', 'focus:ring-rose-500');
+    } else {
+      errBox.classList.add('hidden');
+      input.classList.remove('border-rose-500', 'focus:ring-rose-500');
+      input.classList.add('border-zinc-200', 'dark:border-zinc-700/60');
+      if (qrState.error) {
+        qrState.error = null;
+        const globalErr = document.getElementById('btnDismissQrError');
+        if (globalErr) globalErr.closest('div')?.remove();
+      }
+    }
+    if (window.lucide && errBox) {
+      window.lucide.createIcons({ root: errBox });
+    }
+  }
+
   // Preset selector
   on('dynamicPresetSelect', 'change', (e) => {
     qrState.dynamic.preset = e.target.value;
@@ -109,11 +146,19 @@ function bindDynamicEvents(onReRender) {
     if (targetInput && found) {
       targetInput.placeholder = found.placeholder;
     }
+    persistQrState();
+    validateTargetInputUI();
+    if (onReRender) onReRender();
   });
 
   on('dynamicTargetUrl', 'input', (e) => {
     qrState.dynamic.targetUrl = e.target.value.trim();
     persistQrState();
+    validateTargetInputUI();
+  });
+
+  on('dynamicTargetUrl', 'blur', () => {
+    validateTargetInputUI();
   });
 
   on('dynamicTargetUrl', 'keydown', (e) => {
@@ -125,11 +170,6 @@ function bindDynamicEvents(onReRender) {
 
   on('dynamicTitle', 'input', (e) => {
     qrState.dynamic.title = e.target.value;
-    persistQrState();
-  });
-
-  on('dynamicCustomSlug', 'input', (e) => {
-    qrState.dynamic.customSlug = e.target.value.trim();
     persistQrState();
   });
 

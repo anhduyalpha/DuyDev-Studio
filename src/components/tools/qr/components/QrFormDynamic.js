@@ -25,7 +25,10 @@ export function renderQrFormDynamic(dynamic) {
 
       <!-- Target URL Input -->
       <div>
-        <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Địa Chỉ Web</label>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Địa Chỉ Web</label>
+          ${currentPreset !== 'custom' ? `<span class="text-[11px] text-indigo-500 dark:text-indigo-400 font-medium">Yêu cầu liên kết ${selectedPresetObj.label}</span>` : ''}
+        </div>
         <input 
           type="url" 
           id="dynamicTargetUrl" 
@@ -34,30 +37,22 @@ export function renderQrFormDynamic(dynamic) {
           class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
           autocomplete="off"
         >
+        <p id="dynamicUrlValidationError" class="hidden text-[11px] text-rose-500 font-medium mt-1.5 flex items-center gap-1.5 animate-fadeIn">
+          <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
+          <span id="dynamicUrlValidationMsg"></span>
+        </p>
       </div>
 
-      <!-- Optional Title & Slug -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Tên Gợi Nhớ</label>
-          <input 
-            type="text" 
-            id="dynamicTitle" 
-            value="${dynamic.title || ''}" 
-            placeholder="Ví dụ: Bảng Báo Giá 2026" 
-            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-          >
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Mã Slug</label>
-          <input 
-            type="text" 
-            id="dynamicCustomSlug" 
-            value="${dynamic.customSlug || ''}" 
-            placeholder="Ví dụ: baogia" 
-            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-          >
-        </div>
+      <!-- Optional Title -->
+      <div>
+        <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Tên Gợi Nhớ (Không bắt buộc)</label>
+        <input 
+          type="text" 
+          id="dynamicTitle" 
+          value="${dynamic.title || ''}" 
+          placeholder="Ví dụ: Bảng Báo Giá 2026" 
+          class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-700/60 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        >
       </div>
 
       <!-- Submit Trigger Button -->
