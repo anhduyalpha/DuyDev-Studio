@@ -45,6 +45,64 @@
   z-index: 10;
 }
 
+/* Giant Tool-Specific Icon Silhouette Watermark (0.1s instant visual identification) */
+.tier-tool-watermark {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 110px;
+  height: 110px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.08;
+  transform: rotate(-12deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  transition: opacity 0.3s ease, transform 0.4s ease;
+}
+html.dark .tier-tool-watermark {
+  opacity: 0.14;
+}
+.tier-card:hover .tier-tool-watermark {
+  opacity: 0.16;
+  transform: rotate(-8deg) scale(1.06);
+}
+html.dark .tier-card:hover .tier-tool-watermark {
+  opacity: 0.22;
+  transform: rotate(-8deg) scale(1.06);
+}
+.tier-tool-watermark svg,
+.tier-tool-watermark i {
+  width: 100%;
+  height: 100%;
+  color: var(--accent) !important;
+  stroke: var(--accent) !important;
+}
+
+/* Socket Gemstone Color Injection (Adapts to tool's --accent while preserving tier metal bezel) */
+.tier-card .gem-core {
+  fill: var(--accent) !important;
+  filter: drop-shadow(0 0 6px var(--accent)) !important;
+  transition: fill 0.3s ease, filter 0.3s ease;
+}
+.tier-card .gem-facet {
+  fill: color-mix(in srgb, var(--accent) 55%, #000000) !important;
+  stroke: color-mix(in srgb, var(--accent) 70%, #FFFFFF) !important;
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+.tier-card .keystone-gem {
+  fill: var(--accent) !important;
+  filter: drop-shadow(0 0 8px var(--accent)) !important;
+  transition: fill 0.3s ease, filter 0.3s ease;
+}
+.tier-card .keystone-facet {
+  fill: color-mix(in srgb, var(--accent) 50%, #000000) !important;
+  stroke: color-mix(in srgb, var(--accent) 65%, #FFFFFF) !important;
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+
 /* Crest Badge Base */
 .tier-crest-badge {
   display: inline-flex;
@@ -1390,6 +1448,18 @@ html.dark .tier-card.tier-b .tier-crest-badge {
   box-shadow: 0 0 8px #3B82F6;
 }
 
+.tier-card.tier-b .tool-accent-box {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #2563EB), color-mix(in srgb, var(--accent) 70%, #1D4ED8)) !important;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, #93C5FD) !important;
+  color: #FFFFFF !important;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 12px color-mix(in srgb, var(--accent) 40%, rgba(59, 130, 246, 0.40)) !important;
+}
+.tier-card.tier-b .tool-accent-box i,
+.tier-card.tier-b .tool-accent-box svg {
+  color: #FFFFFF !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
 /* Tier 5: A (Imperial Gold - Epic) - Royal Ivory Gold Tint & 3D Gold Medallion */
 .tier-card.tier-a {
   border: 2px solid transparent;
@@ -1412,10 +1482,10 @@ html.dark .tier-card.tier-a {
   z-index: 4;
 }
 .tier-card.tier-a .tool-accent-box {
-  background: linear-gradient(135deg, #D97706, #B45309) !important;
-  border: 2px solid #FDE047 !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #D97706), color-mix(in srgb, var(--accent) 70%, #B45309)) !important;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, #FDE047) !important;
   color: #FFFFFF !important;
-  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 12px rgba(245, 158, 11, 0.40) !important;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 12px color-mix(in srgb, var(--accent) 40%, rgba(245, 158, 11, 0.40)) !important;
 }
 .tier-card.tier-a .tool-accent-box i,
 .tier-card.tier-a .tool-accent-box svg {
@@ -1459,15 +1529,15 @@ html.dark .tier-card.tier-s {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(147, 51, 234, 0.32) 0%, rgba(245, 158, 11, 0.20) 55%, transparent 75%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, rgba(147, 51, 234, 0.32)) 0%, color-mix(in srgb, var(--accent) 30%, rgba(245, 158, 11, 0.20)) 55%, transparent 75%);
   animation: pulse-halo 4s ease-in-out infinite;
 }
 
 .tier-card.tier-s .tool-accent-box {
-  background: linear-gradient(135deg, #9333EA, #581C87) !important;
-  border: 2px solid #F59E0B !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 65%, #9333EA), color-mix(in srgb, var(--accent) 65%, #581C87)) !important;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, #F59E0B) !important;
   color: #FFFFFF !important;
-  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 14px rgba(147, 51, 234, 0.45) !important;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 14px color-mix(in srgb, var(--accent) 40%, rgba(147, 51, 234, 0.45)) !important;
 }
 .tier-card.tier-s .tool-accent-box i,
 .tier-card.tier-s .tool-accent-box svg {
@@ -1492,10 +1562,10 @@ html.dark .tier-card.tier-s .tier-crest-badge {
 .tier-card.tier-s .tier-cta-btn {
   padding: 4px 12px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #9333EA, #7E22CE) !important;
-  border: 1px solid #C084FC;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #7E22CE)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, #C084FC) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 10px rgba(147, 51, 234, 0.35);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 40%, rgba(147, 51, 234, 0.35)) !important;
   font-weight: 700;
 }
 
@@ -1521,10 +1591,10 @@ html.dark .tier-card.tier-ss {
 }
 
 .tier-card.tier-ss .tool-accent-box {
-  background: linear-gradient(135deg, #E11D48, #881337) !important;
-  border: 2px solid #FDA4AF !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 65%, #E11D48), color-mix(in srgb, var(--accent) 65%, #881337)) !important;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, #FDA4AF) !important;
   color: #FFFFFF !important;
-  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 16px rgba(225, 29, 72, 0.50) !important;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 4px 16px color-mix(in srgb, var(--accent) 40%, rgba(225, 29, 72, 0.50)) !important;
   position: relative;
   z-index: 10;
 }
@@ -1536,18 +1606,18 @@ html.dark .tier-card.tier-ss {
 }
 
 .tier-card.tier-ss .ember {
-  background: #F43F5E;
+  background: color-mix(in srgb, var(--accent) 70%, #F43F5E);
 }
-.tier-card.tier-ss .ember-1 { left: 15%; bottom: 15px; width: 4px; height: 4px; animation-duration: 4s; animation-delay: 0s; box-shadow: 0 0 6px #E11D48; }
-.tier-card.tier-ss .ember-2 { left: 35%; bottom: 10px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 1.2s; box-shadow: 0 0 5px #E11D48; }
-.tier-card.tier-ss .ember-3 { left: 55%; bottom: 25px; width: 4px; height: 4px; animation-duration: 4.8s; animation-delay: 2.5s; box-shadow: 0 0 6px #E11D48; }
-.tier-card.tier-ss .ember-4 { left: 75%; bottom: 8px; width: 3px; height: 3px; animation-duration: 6s; animation-delay: 3s; box-shadow: 0 0 5px #E11D48; }
-.tier-card.tier-ss .ember-5 { left: 90%; bottom: 20px; width: 3.5px; height: 3.5px; animation-duration: 4.5s; animation-delay: 1.5s; box-shadow: 0 0 6px #E11D48; }
-.tier-card.tier-ss .ember-6 { left: 25%; bottom: 35px; width: 2.5px; height: 2.5px; animation-duration: 5.2s; animation-delay: 0.8s; box-shadow: 0 0 5px #E11D48; }
-.tier-card.tier-ss .ember-7 { left: 45%; bottom: 18px; width: 4px; height: 4px; animation-duration: 4.2s; animation-delay: 2.2s; box-shadow: 0 0 6px #E11D48; }
-.tier-card.tier-ss .ember-8 { left: 65%; bottom: 30px; width: 3px; height: 3px; animation-duration: 5.8s; animation-delay: 3.5s; box-shadow: 0 0 5px #E11D48; }
-.tier-card.tier-ss .ember-9 { left: 80%; bottom: 40px; width: 2.5px; height: 2.5px; animation-duration: 4.6s; animation-delay: 1.9s; box-shadow: 0 0 5px #E11D48; }
-.tier-card.tier-ss .ember-10 { left: 10%; bottom: 28px; width: 3px; height: 3px; animation-duration: 6.2s; animation-delay: 2.8s; box-shadow: 0 0 6px #E11D48; }
+.tier-card.tier-ss .ember-1 { left: 15%; bottom: 15px; width: 4px; height: 4px; animation-duration: 4s; animation-delay: 0s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-2 { left: 35%; bottom: 10px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 1.2s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-3 { left: 55%; bottom: 25px; width: 4px; height: 4px; animation-duration: 4.8s; animation-delay: 2.5s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-4 { left: 75%; bottom: 8px; width: 3px; height: 3px; animation-duration: 6s; animation-delay: 3s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-5 { left: 90%; bottom: 20px; width: 3.5px; height: 3.5px; animation-duration: 4.5s; animation-delay: 1.5s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-6 { left: 25%; bottom: 35px; width: 2.5px; height: 2.5px; animation-duration: 5.2s; animation-delay: 0.8s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-7 { left: 45%; bottom: 18px; width: 4px; height: 4px; animation-duration: 4.2s; animation-delay: 2.2s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-8 { left: 65%; bottom: 30px; width: 3px; height: 3px; animation-duration: 5.8s; animation-delay: 3.5s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-9 { left: 80%; bottom: 40px; width: 2.5px; height: 2.5px; animation-duration: 4.6s; animation-delay: 1.9s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-10 { left: 10%; bottom: 28px; width: 3px; height: 3px; animation-duration: 6.2s; animation-delay: 2.8s; box-shadow: 0 0 6px var(--accent); }
 
 .tier-card.tier-ss .tier-crest-badge {
   background: linear-gradient(135deg, rgba(225, 29, 72, 0.22), rgba(159, 18, 57, 0.32));
@@ -1566,10 +1636,10 @@ html.dark .tier-card.tier-ss .tier-crest-badge {
 .tier-card.tier-ss .tier-cta-btn {
   padding: 4px 12px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #E11D48, #BE123C) !important;
-  border: 1px solid #FDA4AF;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #BE123C)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, #FDA4AF) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 12px rgba(225, 29, 72, 0.40);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 40%, rgba(225, 29, 72, 0.40)) !important;
   font-weight: 700;
 }
 
@@ -1595,17 +1665,22 @@ html.dark .tier-card.tier-ur {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 1.5px dashed #EC4899;
-  box-shadow: 0 0 12px rgba(236, 72, 153, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.4);
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 70%, #EC4899);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, rgba(236, 72, 153, 0.6)), inset 0 0 10px color-mix(in srgb, var(--accent) 50%, rgba(56, 189, 248, 0.4));
   animation: spin-clockwise 14s linear infinite;
   opacity: 0.9;
 }
 
+.tier-card.tier-ur .ur-orbit-satellite {
+  background: var(--accent) !important;
+  box-shadow: 0 0 8px var(--accent) !important;
+}
+
 .tier-card.tier-ur .tool-accent-box {
-  background: linear-gradient(135deg, #EC4899, #8B5CF6, #38BDF8) !important;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #8B5CF6), color-mix(in srgb, var(--accent) 50%, #38BDF8)) !important;
   border: 2px solid #FFFFFF !important;
   color: #FFFFFF !important;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.7), 0 4px 18px rgba(236, 72, 153, 0.55) !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.7), 0 4px 18px color-mix(in srgb, var(--accent) 50%, rgba(236, 72, 153, 0.55)) !important;
 }
 .tier-card.tier-ur .tool-accent-box i,
 .tier-card.tier-ur .tool-accent-box svg {
@@ -1661,10 +1736,10 @@ html.dark .tier-card.tier-ur .tier-crest-badge {
 .tier-card.tier-ur .tier-cta-btn {
   padding: 4px 12px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #EC4899, #8B5CF6) !important;
-  border: 1px solid #F472B6;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #8B5CF6)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, #FFFFFF) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 14px rgba(236, 72, 153, 0.45);
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--accent) 45%, rgba(236, 72, 153, 0.45)) !important;
   font-weight: 700;
 }
 
@@ -1756,23 +1831,23 @@ html.dark .tier-card.tier-lr .solar-ring-svg circle {
   stroke: #FACC15 !important;
 }
 
-/* Icon Box - Light Mode: Radiant Amber-Gold Medallion */
+/* Icon Box - Light Mode: Radiant Amber-Gold Medallion with Tool Accent Tint */
 .tier-card.tier-lr .tool-accent-box {
-  background: linear-gradient(135deg, #FEF08A 0%, #FBBF24 50%, #F59E0B 100%) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, #FEF08A) 0%, color-mix(in srgb, var(--accent) 70%, #FBBF24) 50%, color-mix(in srgb, var(--accent) 65%, #F59E0B) 100%) !important;
   border: 2px solid #FFFFFF !important;
-  color: #78350F !important;
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35), inset 0 1px 2px #FFFFFF !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 40%, rgba(245, 158, 11, 0.35)), inset 0 1px 2px #FFFFFF !important;
 }
 .tier-card.tier-lr .tool-accent-box svg {
   filter: drop-shadow(0 1px 2px rgba(120, 53, 15, 0.25));
 }
 
-/* Icon Box - Dark Mode: Sovereign Deep Gold Medallion */
+/* Icon Box - Dark Mode: Sovereign Deep Gold Medallion with Tool Accent Tint */
 html.dark .tier-card.tier-lr .tool-accent-box {
-  background: linear-gradient(135deg, #B45309 0%, #D97706 50%, #F59E0B 100%) !important;
-  border: 2px solid #FDE047 !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, #B45309) 0%, color-mix(in srgb, var(--accent) 65%, #D97706) 50%, color-mix(in srgb, var(--accent) 60%, #F59E0B) 100%) !important;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, #FDE047) !important;
   color: #FFFFFF !important;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), 0 4px 20px rgba(250, 204, 21, 0.60) !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), 0 4px 20px color-mix(in srgb, var(--accent) 50%, rgba(250, 204, 21, 0.60)) !important;
 }
 html.dark .tier-card.tier-lr .tool-accent-box svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
@@ -1787,16 +1862,16 @@ html.dark .tier-card.tier-lr .tool-accent-box svg {
   z-index: 12;
 }
 
-/* Sparks - Light Mode: High-Contrast Fiery Golden Amber Embers */
+/* Sparks - Light Mode: High-Contrast Fiery Golden Amber Embers with Tool Tint */
 .tier-card.tier-lr .spark {
-  background: #D97706 !important;
-  box-shadow: 0 0 6px #F59E0B, 0 0 12px rgba(217, 119, 6, 0.75) !important;
+  background: color-mix(in srgb, var(--accent) 75%, #D97706) !important;
+  box-shadow: 0 0 6px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 60%, #F59E0B) !important;
 }
 
-/* Sparks - Dark Mode: Radiant Solar Gold Embers */
+/* Sparks - Dark Mode: Radiant Solar Gold Embers with Tool Tint */
 html.dark .tier-card.tier-lr .spark {
-  background: #FEF08A !important;
-  box-shadow: 0 0 8px #FACC15, 0 0 16px #EAB308 !important;
+  background: color-mix(in srgb, var(--accent) 60%, #FEF08A) !important;
+  box-shadow: 0 0 8px var(--accent), 0 0 16px color-mix(in srgb, var(--accent) 60%, #FACC15) !important;
 }
 
 .tier-card.tier-lr .spark-1 { left: 10%; bottom: 8px; width: 4.5px; height: 4.5px; animation-duration: 4.0s; animation-delay: 0.2s; }
@@ -1816,14 +1891,14 @@ html.dark .tier-card.tier-lr .spark {
   top: 0;
   inset-x: 0;
   height: 2.5px;
-  background: linear-gradient(90deg, transparent, #F59E0B 20%, #FDE047 50%, #D97706 80%, transparent);
-  box-shadow: 0 0 8px #F59E0B, 0 0 14px #D97706;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, #F59E0B) 20%, #FDE047 50%, color-mix(in srgb, var(--accent) 40%, #D97706) 80%, transparent);
+  box-shadow: 0 0 8px var(--accent), 0 0 14px #D97706;
   z-index: 10;
 }
 /* Molten Plasma Top Rail - Dark Mode */
 html.dark .tier-card.tier-lr .tier-molten-plasma {
-  background: linear-gradient(90deg, transparent, #FDE047, #F59E0B, transparent);
-  box-shadow: 0 0 10px #FACC15;
+  background: linear-gradient(90deg, transparent, #FDE047, var(--accent), transparent);
+  box-shadow: 0 0 10px var(--accent);
 }
 
 /* Crest Badge - Light Mode */
@@ -1850,18 +1925,18 @@ html.dark .tier-card.tier-lr .tier-crest-badge {
 .tier-card.tier-lr .tier-cta-btn {
   padding: 4px 12px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
-  border: 1px solid #FDE047;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #D97706)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, #FDE047) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 14px rgba(245, 158, 11, 0.40);
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--accent) 40%, rgba(245, 158, 11, 0.40)) !important;
   font-weight: 700;
 }
 /* CTA Button - Dark Mode */
 html.dark .tier-card.tier-lr .tier-cta-btn {
-  background: linear-gradient(135deg, #EAB308, #B45309) !important;
-  border: 1px solid #FDE047;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #B45309)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, #FDE047) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 16px rgba(250, 204, 21, 0.50);
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--accent) 45%, rgba(250, 204, 21, 0.50)) !important;
 }
 
 /* Tier 10: EX (Astral Singularity - Tinh Vân Vũ Trụ - Extra / Celestial) */
@@ -1933,10 +2008,10 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 }
 
 .tier-card.tier-ex .tool-accent-box {
-  background: linear-gradient(135deg, #0891B2, #4F46E5, #9333EA) !important;
-  border: 2px solid #67E8F9 !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #0891B2), color-mix(in srgb, var(--accent) 65%, #4F46E5), color-mix(in srgb, var(--accent) 60%, #9333EA)) !important;
+  border: 2px solid color-mix(in srgb, var(--accent) 50%, #67E8F9) !important;
   color: #FFFFFF !important;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.7), 0 4px 22px rgba(34, 211, 238, 0.70) !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.7), 0 4px 22px color-mix(in srgb, var(--accent) 50%, rgba(34, 211, 238, 0.70)) !important;
 }
 .tier-card.tier-ex .tool-accent-box i,
 .tier-card.tier-ex .tool-accent-box svg {
@@ -1945,19 +2020,19 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 }
 
 .tier-card.tier-ex .star {
-  background: #E0F2FE;
+  background: color-mix(in srgb, var(--accent) 60%, #FFFFFF) !important;
 }
-.tier-card.tier-ex .star-1 { left: 15%; bottom: 15px; width: 3px; height: 3px; animation-duration: 5s; animation-delay: 0.2s; box-shadow: 0 0 8px #22D3EE; }
+.tier-card.tier-ex .star-1 { left: 15%; bottom: 15px; width: 3px; height: 3px; animation-duration: 5s; animation-delay: 0.2s; box-shadow: 0 0 8px var(--accent); }
 .tier-card.tier-ex .star-2 { left: 35%; bottom: 25px; width: 4px; height: 4px; animation-duration: 6.5s; animation-delay: 1.5s; box-shadow: 0 0 10px #A855F7; }
-.tier-card.tier-ex .star-3 { left: 55%; bottom: 10px; width: 2.5px; height: 2.5px; animation-duration: 4.2s; animation-delay: 3s; box-shadow: 0 0 8px #38BDF8; }
+.tier-card.tier-ex .star-3 { left: 55%; bottom: 10px; width: 2.5px; height: 2.5px; animation-duration: 4.2s; animation-delay: 3s; box-shadow: 0 0 8px var(--accent); }
 .tier-card.tier-ex .star-4 { left: 75%; bottom: 35px; width: 3.5px; height: 3.5px; animation-duration: 5.8s; animation-delay: 2s; box-shadow: 0 0 8px #EC4899; }
-.tier-card.tier-ex .star-5 { left: 90%; bottom: 8px; width: 3px; height: 3px; animation-duration: 4.8s; animation-delay: 4s; box-shadow: 0 0 8px #22D3EE; }
+.tier-card.tier-ex .star-5 { left: 90%; bottom: 8px; width: 3px; height: 3px; animation-duration: 4.8s; animation-delay: 4s; box-shadow: 0 0 8px var(--accent); }
 .tier-card.tier-ex .star-6 { left: 25%; bottom: 40px; width: 2px; height: 2px; animation-duration: 6s; animation-delay: 1s; box-shadow: 0 0 6px #FFFFFF; }
-.tier-card.tier-ex .star-7 { left: 45%; bottom: 18px; width: 3.5px; height: 3.5px; animation-duration: 4.4s; animation-delay: 2.5s; box-shadow: 0 0 8px #67E8F9; }
+.tier-card.tier-ex .star-7 { left: 45%; bottom: 18px; width: 3.5px; height: 3.5px; animation-duration: 4.4s; animation-delay: 2.5s; box-shadow: 0 0 8px var(--accent); }
 .tier-card.tier-ex .star-8 { left: 65%; bottom: 28px; width: 3px; height: 3px; animation-duration: 5.2s; animation-delay: 0.5s; box-shadow: 0 0 10px #C084FC; }
-.tier-card.tier-ex .star-9 { left: 82%; bottom: 42px; width: 2.5px; height: 2.5px; animation-duration: 6.1s; animation-delay: 3.3s; box-shadow: 0 0 8px #38BDF8; }
+.tier-card.tier-ex .star-9 { left: 82%; bottom: 42px; width: 2.5px; height: 2.5px; animation-duration: 6.1s; animation-delay: 3.3s; box-shadow: 0 0 8px var(--accent); }
 .tier-card.tier-ex .star-10 { left: 8%; bottom: 22px; width: 4px; height: 4px; animation-duration: 4.7s; animation-delay: 1.8s; box-shadow: 0 0 10px #EC4899; }
-.tier-card.tier-ex .star-11 { left: 48%; bottom: 38px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 3.8s; box-shadow: 0 0 8px #22D3EE; }
+.tier-card.tier-ex .star-11 { left: 48%; bottom: 38px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 3.8s; box-shadow: 0 0 8px var(--accent); }
 .tier-card.tier-ex .star-12 { left: 95%; bottom: 30px; width: 2px; height: 2px; animation-duration: 4.9s; animation-delay: 0.8s; box-shadow: 0 0 6px #FFFFFF; }
 
 .tier-card.tier-ex .tier-cosmic-grid {
@@ -1983,10 +2058,10 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 .tier-card.tier-ex .tier-cta-btn {
   padding: 4px 12px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #06B6D4, #8B5CF6) !important;
-  border: 1px solid #67E8F9;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #8B5CF6)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, #67E8F9) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 18px rgba(34, 211, 238, 0.60);
+  box-shadow: 0 2px 18px color-mix(in srgb, var(--accent) 45%, rgba(34, 211, 238, 0.60)) !important;
   font-weight: 700;
 }
 

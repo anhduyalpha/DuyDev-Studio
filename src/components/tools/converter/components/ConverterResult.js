@@ -150,8 +150,8 @@ export function renderConverterResult(state) {
         </button>
 
         <button id="btnClearAllConverterResults" type="button"
-          class="px-3.5 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.05] text-xs font-medium transition flex items-center gap-1.5 ml-auto cursor-pointer active:scale-95">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          class="min-h-[42px] px-4 py-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-500/30 bg-indigo-50/70 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-200 text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition flex items-center gap-2 ml-auto cursor-pointer active:scale-95">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
           <span>Chuyển đổi tiếp</span>
         </button>
       </div>

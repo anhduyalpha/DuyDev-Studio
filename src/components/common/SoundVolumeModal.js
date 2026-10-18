@@ -138,8 +138,8 @@ export function openSoundVolumeModal() {
               <span>Cập nhật Web</span>
             </button>
             <button type="button" data-test="sovereignBlade" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-amber-50 dark:bg-white/[0.05] dark:hover:bg-amber-500/10 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer col-span-2 sm:col-span-1">
-              <i data-lucide="sword" class="w-3.5 h-3.5 text-amber-500"></i>
-              <span>Kiếm Hoàng Kim (LR)</span>
+              <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Gươm Ánh Sáng (LR)</span>
             </button>
           </div>
         </div>

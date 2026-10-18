@@ -54,29 +54,29 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 48 48" class="corner-plate cp-tl" fill="none">
             <path d="M 4 36 V 16 A 12 12 0 0 1 16 4 H 36" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 6 28 V 16 A 10 10 0 0 1 16 6 H 28" stroke="#93C5FD" stroke-width="1.2"/>
-            <polygon points="16,8 24,16 16,24 8,16" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
-            <circle cx="16" cy="16" r="3.5" fill="#93C5FD"/>
+            <polygon points="16,8 24,16 16,24 8,16" class="gem-facet" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3.5" class="gem-core" fill="#93C5FD"/>
             <circle cx="16" cy="16" r="1.5" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 48 48" class="corner-plate cp-tr" fill="none">
             <path d="M 44 36 V 16 A 12 12 0 0 0 32 4 H 12" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 42 28 V 16 A 10 10 0 0 0 32 6 H 20" stroke="#93C5FD" stroke-width="1.2"/>
-            <polygon points="32,8 40,16 32,24 24,16" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
-            <circle cx="32" cy="16" r="3.5" fill="#93C5FD"/>
+            <polygon points="32,8 40,16 32,24 24,16" class="gem-facet" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="32" cy="16" r="3.5" class="gem-core" fill="#93C5FD"/>
             <circle cx="32" cy="16" r="1.5" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 48 48" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 32 A 12 12 0 0 0 16 44 H 36" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 6 20 V 32 A 10 10 0 0 0 16 42 H 28" stroke="#93C5FD" stroke-width="1.2"/>
-            <polygon points="16,24 24,32 16,40 8,32" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
-            <circle cx="16" cy="32" r="3.5" fill="#93C5FD"/>
+            <polygon points="16,24 24,32 16,40 8,32" class="gem-facet" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="16" cy="32" r="3.5" class="gem-core" fill="#93C5FD"/>
             <circle cx="16" cy="32" r="1.5" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 48 48" class="corner-plate cp-br" fill="none">
             <path d="M 44 12 V 32 A 12 12 0 0 1 32 44 H 12" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 42 20 V 32 A 10 10 0 0 1 32 42 H 20" stroke="#93C5FD" stroke-width="1.2"/>
-            <polygon points="32,24 40,32 32,40 24,32" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
-            <circle cx="32" cy="32" r="3.5" fill="#93C5FD"/>
+            <polygon points="32,24 40,32 32,40 24,32" class="gem-facet" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5"/>
+            <circle cx="32" cy="32" r="3.5" class="gem-core" fill="#93C5FD"/>
             <circle cx="32" cy="32" r="1.5" fill="#FFFFFF"/>
           </svg>
         </div>
@@ -94,15 +94,15 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
             <path d="M 6 9 Q 36 15 48 15 Q 60 15 90 9" stroke="#F59E0B" stroke-width="1.5"/>
             <path d="M 28 4 L 48 14 L 68 4" stroke="#FDE68A" stroke-width="1.2"/>
-            <polygon points="48,2 55,9 48,16 41,9" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
-            <circle cx="48" cy="9" r="2.5" fill="#FEF08A"/>
+            <polygon points="48,2 55,9 48,16 41,9" class="keystone-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" class="keystone-gem" fill="#FEF08A"/>
           </svg>
         </div>
         <!-- Bottom Keystone Crest -->
         <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
             <path d="M 4 9 Q 26 3 36 3 Q 46 3 68 9" stroke="#F59E0B" stroke-width="1.5"/>
-            <polygon points="36,1 42,7 36,13 30,7" fill="#B45309" stroke="#FDE047" stroke-width="1.2"/>
+            <polygon points="36,1 42,7 36,13 30,7" class="keystone-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.2"/>
           </svg>
         </div>
 
@@ -111,29 +111,29 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 48 48" class="corner-plate cp-tl" fill="none">
             <path d="M 4 36 V 16 A 12 12 0 0 1 16 4 H 36" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 8 28 V 16 A 8 8 0 0 1 16 8 H 28" stroke="#FDE68A" stroke-width="1.2"/>
-            <polygon points="16,8 24,16 16,24 8,16" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
-            <circle cx="16" cy="16" r="3.5" fill="#FBBF24"/>
+            <polygon points="16,8 24,16 16,24 8,16" class="gem-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3.5" class="gem-core" fill="#FBBF24"/>
             <circle cx="16" cy="16" r="1.5" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 48 48" class="corner-plate cp-tr" fill="none">
             <path d="M 44 36 V 16 A 12 12 0 0 0 32 4 H 12" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 40 28 V 16 A 8 8 0 0 0 32 8 H 20" stroke="#FDE68A" stroke-width="1.2"/>
-            <polygon points="32,8 40,16 32,24 24,16" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
-            <circle cx="32" cy="16" r="3.5" fill="#FBBF24"/>
+            <polygon points="32,8 40,16 32,24 24,16" class="gem-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="32" cy="16" r="3.5" class="gem-core" fill="#FBBF24"/>
             <circle cx="32" cy="16" r="1.5" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 48 48" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 32 A 12 12 0 0 0 16 44 H 36" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 8 20 V 32 A 8 8 0 0 0 16 40 H 28" stroke="#FDE68A" stroke-width="1.2"/>
-            <polygon points="16,24 24,32 16,40 8,32" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
-            <circle cx="16" cy="32" r="3.5" fill="#FBBF24"/>
+            <polygon points="16,24 24,32 16,40 8,32" class="gem-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="16" cy="32" r="3.5" class="gem-core" fill="#FBBF24"/>
             <circle cx="16" cy="32" r="1.5" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 48 48" class="corner-plate cp-br" fill="none">
             <path d="M 44 12 V 32 A 12 12 0 0 1 32 44 H 12" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M 40 20 V 32 A 8 8 0 0 1 32 40 H 20" stroke="#FDE68A" stroke-width="1.2"/>
-            <polygon points="32,24 40,32 32,40 24,32" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
-            <circle cx="32" cy="32" r="3.5" fill="#FBBF24"/>
+            <polygon points="32,24 40,32 32,40 24,32" class="gem-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <circle cx="32" cy="32" r="3.5" class="gem-core" fill="#FBBF24"/>
             <circle cx="32" cy="32" r="1.5" fill="#FFFFFF"/>
           </svg>
         </div>
@@ -149,16 +149,16 @@ export function renderTierStructuralLayers(tierCode) {
         <!-- 4 Harmonic Arcane Rune Nodes at midpoints -->
         <div class="tier-rune-nodes-s pointer-events-none" aria-hidden="true">
           <div class="rune-node node-top">
-            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" class="gem-facet" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" class="gem-core" fill="#E9D5FF"/></svg>
           </div>
           <div class="rune-node node-bottom">
-            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" class="gem-facet" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" class="gem-core" fill="#E9D5FF"/></svg>
           </div>
           <div class="rune-node node-left">
-            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" class="gem-facet" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" class="gem-core" fill="#E9D5FF"/></svg>
           </div>
           <div class="rune-node node-right">
-            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" class="gem-facet" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" class="gem-core" fill="#E9D5FF"/></svg>
           </div>
         </div>
 
@@ -166,15 +166,15 @@ export function renderTierStructuralLayers(tierCode) {
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
             <path d="M 8 8 Q 36 15 48 15 Q 60 15 88 8" stroke="#9333EA" stroke-width="1.8"/>
-            <polygon points="48,2 56,9 48,16 40,9" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.5"/>
-            <circle cx="48" cy="9" r="2.5" fill="#E9D5FF"/>
+            <polygon points="48,2 56,9 48,16 40,9" class="keystone-facet" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" class="keystone-gem" fill="#E9D5FF"/>
           </svg>
         </div>
         <!-- Bottom Keystone Crest -->
         <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
             <path d="M 6 9 Q 26 3 36 3 Q 46 3 66 9" stroke="#9333EA" stroke-width="1.5"/>
-            <polygon points="36,1 42,7 36,13 30,7" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.2"/>
+            <polygon points="36,1 42,7 36,13 30,7" class="keystone-facet" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.2"/>
           </svg>
         </div>
 
@@ -183,26 +183,26 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 50 50" class="corner-plate cp-tl" fill="none">
             <path d="M 4 38 V 16 A 12 12 0 0 1 16 4 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 9 30 V 17 A 8 8 0 0 1 17 9 H 30" stroke="#F59E0B" stroke-width="1.5"/>
-            <polygon points="17,9 25,17 17,25 9,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
-            <circle cx="17" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+            <polygon points="17,9 25,17 17,25 9,17" class="gem-facet" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="17" r="3.5" class="gem-core" fill="#E9D5FF" stroke="#9333EA"/>
           </svg>
           <svg viewBox="0 0 50 50" class="corner-plate cp-tr" fill="none">
             <path d="M 46 38 V 16 A 12 12 0 0 0 34 4 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 41 30 V 17 A 8 8 0 0 0 33 9 H 20" stroke="#F59E0B" stroke-width="1.5"/>
-            <polygon points="33,9 41,17 33,25 25,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
-            <circle cx="33" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+            <polygon points="33,9 41,17 33,25 25,17" class="gem-facet" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="17" r="3.5" class="gem-core" fill="#E9D5FF" stroke="#9333EA"/>
           </svg>
           <svg viewBox="0 0 50 50" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 34 A 12 12 0 0 0 16 46 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 9 20 V 33 A 8 8 0 0 0 17 41 H 30" stroke="#F59E0B" stroke-width="1.5"/>
-            <polygon points="17,25 25,33 17,41 9,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
-            <circle cx="17" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+            <polygon points="17,25 25,33 17,41 9,33" class="gem-facet" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="33" r="3.5" class="gem-core" fill="#E9D5FF" stroke="#9333EA"/>
           </svg>
           <svg viewBox="0 0 50 50" class="corner-plate cp-br" fill="none">
             <path d="M 46 12 V 34 A 12 12 0 0 1 34 46 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 41 20 V 33 A 8 8 0 0 1 33 41 H 20" stroke="#F59E0B" stroke-width="1.5"/>
-            <polygon points="33,25 41,33 33,41 25,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
-            <circle cx="33" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+            <polygon points="33,25 41,33 33,41 25,33" class="gem-facet" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="33" r="3.5" class="gem-core" fill="#E9D5FF" stroke="#9333EA"/>
           </svg>
         </div>
 
@@ -251,15 +251,15 @@ export function renderTierStructuralLayers(tierCode) {
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 100 18" class="keystone-svg" fill="none">
             <path d="M 6 8 Q 36 16 50 16 Q 64 16 94 8" stroke="#E11D48" stroke-width="2"/>
-            <polygon points="50,2 58,9 50,16 42,9" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.5"/>
-            <circle cx="50" cy="9" r="2.5" fill="#FB7185" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <polygon points="50,2 58,9 50,16 42,9" class="keystone-facet" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.5"/>
+            <circle cx="50" cy="9" r="2.5" class="keystone-gem" fill="#FB7185" filter="drop-shadow(0 0 6px #E11D48)"/>
           </svg>
         </div>
         <!-- Bottom Keystone Crest -->
         <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
             <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#E11D48" stroke-width="1.8"/>
-            <polygon points="40,1 46,7 40,13 34,7" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
+            <polygon points="40,1 46,7 40,13 34,7" class="keystone-facet" fill="#9F1239" stroke="#FDA4AF" stroke-width="1.2"/>
           </svg>
         </div>
 
@@ -268,29 +268,29 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 52 52" class="corner-plate cp-tl" fill="none">
             <path d="M 4 40 V 16 A 12 12 0 0 1 16 4 H 40" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
             <path d="M 5 15 L 15 5" stroke="#FDA4AF" stroke-width="2"/>
-            <polygon points="16,8 24,16 16,24 8,16" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
-            <circle cx="16" cy="16" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <polygon points="16,8 24,16 16,24 8,16" class="gem-facet" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="16" cy="16" r="4" class="gem-core" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
             <circle cx="16" cy="16" r="1.5" fill="#FFF1F2"/>
           </svg>
           <svg viewBox="0 0 52 52" class="corner-plate cp-tr" fill="none">
             <path d="M 48 40 V 16 A 12 12 0 0 0 36 4 H 12" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
             <path d="M 47 15 L 37 5" stroke="#FDA4AF" stroke-width="2"/>
-            <polygon points="36,8 44,16 36,24 28,16" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
-            <circle cx="36" cy="16" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <polygon points="36,8 44,16 36,24 28,16" class="gem-facet" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="36" cy="16" r="4" class="gem-core" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
             <circle cx="36" cy="16" r="1.5" fill="#FFF1F2"/>
           </svg>
           <svg viewBox="0 0 52 52" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 36 A 12 12 0 0 0 16 48 H 40" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
             <path d="M 5 37 L 15 47" stroke="#FDA4AF" stroke-width="2"/>
-            <polygon points="16,28 24,36 16,44 8,36" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
-            <circle cx="16" cy="36" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <polygon points="16,28 24,36 16,44 8,36" class="gem-facet" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="16" cy="36" r="4" class="gem-core" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
             <circle cx="16" cy="36" r="1.5" fill="#FFF1F2"/>
           </svg>
           <svg viewBox="0 0 52 52" class="corner-plate cp-br" fill="none">
             <path d="M 48 12 V 36 A 12 12 0 0 1 36 48 H 12" stroke="#E11D48" stroke-width="3" stroke-linecap="round"/>
             <path d="M 47 37 L 37 47" stroke="#FDA4AF" stroke-width="2"/>
-            <polygon points="36,28 44,36 36,44 28,36" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
-            <circle cx="36" cy="36" r="4" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
+            <polygon points="36,28 44,36 36,44 28,36" class="gem-facet" fill="#881337" stroke="#FB7185" stroke-width="1.8"/>
+            <circle cx="36" cy="36" r="4" class="gem-core" fill="#F43F5E" filter="drop-shadow(0 0 6px #E11D48)"/>
             <circle cx="36" cy="36" r="1.5" fill="#FFF1F2"/>
           </svg>
         </div>
@@ -358,15 +358,15 @@ export function renderTierStructuralLayers(tierCode) {
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 100 18" class="keystone-svg" fill="none">
             <path d="M 6 8 Q 36 16 50 16 Q 64 16 94 8" stroke="#EC4899" stroke-width="2"/>
-            <polygon points="50,2 58,9 50,16 42,9" fill="#DB2777" stroke="#38BDF8" stroke-width="1.5"/>
-            <circle cx="50" cy="9" r="2.5" fill="#FFFFFF" filter="drop-shadow(0 0 6px #EC4899)"/>
+            <polygon points="50,2 58,9 50,16 42,9" class="keystone-facet" fill="#DB2777" stroke="#38BDF8" stroke-width="1.5"/>
+            <circle cx="50" cy="9" r="2.5" class="keystone-gem" fill="#FFFFFF" filter="drop-shadow(0 0 6px #EC4899)"/>
           </svg>
         </div>
         <!-- Bottom Keystone Crest -->
         <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
             <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#EC4899" stroke-width="1.8"/>
-            <polygon points="40,1 46,7 40,13 34,7" fill="#DB2777" stroke="#38BDF8" stroke-width="1.2"/>
+            <polygon points="40,1 46,7 40,13 34,7" class="keystone-facet" fill="#DB2777" stroke="#38BDF8" stroke-width="1.2"/>
           </svg>
         </div>
 
@@ -383,25 +383,25 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 52 52" class="corner-plate cp-tl" fill="none">
             <path d="M 4 40 V 16 A 12 12 0 0 1 16 4 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 6 16 L 16 6" stroke="#38BDF8" stroke-width="2"/>
-            <circle cx="16" cy="16" r="4.5" fill="#F472B6" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #EC4899)"/>
+            <circle cx="16" cy="16" r="4.5" class="gem-core" fill="#F472B6" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #EC4899)"/>
             <circle cx="16" cy="16" r="1.8" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 52 52" class="corner-plate cp-tr" fill="none">
             <path d="M 48 40 V 16 A 12 12 0 0 0 36 4 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 46 16 L 36 6" stroke="#38BDF8" stroke-width="2"/>
-            <circle cx="36" cy="16" r="4.5" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #38BDF8)"/>
+            <circle cx="36" cy="16" r="4.5" class="gem-core" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #38BDF8)"/>
             <circle cx="36" cy="16" r="1.8" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 52 52" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 36 A 12 12 0 0 0 16 48 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 6 36 L 16 46" stroke="#38BDF8" stroke-width="2"/>
-            <circle cx="16" cy="36" r="4.5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #FBBF24)"/>
+            <circle cx="16" cy="36" r="4.5" class="gem-core" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #FBBF24)"/>
             <circle cx="16" cy="36" r="1.8" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 52 52" class="corner-plate cp-br" fill="none">
             <path d="M 48 12 V 36 A 12 12 0 0 1 36 48 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M 46 36 L 36 46" stroke="#38BDF8" stroke-width="2"/>
-            <circle cx="36" cy="36" r="4.5" fill="#A855F7" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #A855F7)"/>
+            <circle cx="36" cy="36" r="4.5" class="gem-core" fill="#A855F7" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #A855F7)"/>
             <circle cx="36" cy="36" r="1.8" fill="#FFFFFF"/>
           </svg>
         </div>
@@ -499,7 +499,7 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 100 20" class="keystone-svg" fill="none">
             <path d="M 6 10 Q 36 18 50 18 Q 64 18 94 10" stroke="#FACC15" stroke-width="2.2"/>
             <circle cx="50" cy="10" r="6" fill="#B45309" stroke="#FDE047" stroke-width="1.8"/>
-            <circle cx="50" cy="10" r="3" fill="#FEF08A" filter="drop-shadow(0 0 8px #FACC15)"/>
+            <circle cx="50" cy="10" r="3" class="keystone-gem" fill="#FEF08A" filter="drop-shadow(0 0 8px #FACC15)"/>
             <path d="M 50 2 V 6M 42 4 L 45 7M 58 4 L 55 7" stroke="#FEF08A" stroke-width="1.5"/>
           </svg>
         </div>
@@ -507,7 +507,7 @@ export function renderTierStructuralLayers(tierCode) {
         <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
             <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#FACC15" stroke-width="2"/>
-            <polygon points="40,1 46,7 40,13 34,7" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
+            <polygon points="40,1 46,7 40,13 34,7" class="keystone-facet" fill="#B45309" stroke="#FDE047" stroke-width="1.5"/>
           </svg>
         </div>
 
@@ -516,29 +516,29 @@ export function renderTierStructuralLayers(tierCode) {
           <svg viewBox="0 0 54 54" class="corner-plate cp-tl" fill="none">
             <path d="M 4 42 V 16 A 12 12 0 0 1 16 4 H 42" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
             <path d="M 6 16 L 16 6" stroke="#FEF08A" stroke-width="2.2"/>
-            <polygon points="16,8 24,16 16,24 8,16" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
-            <circle cx="16" cy="16" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <polygon points="16,8 24,16 16,24 8,16" class="gem-facet" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="16" cy="16" r="4.5" class="gem-core" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
             <circle cx="16" cy="16" r="2" fill="#FEF08A"/>
           </svg>
           <svg viewBox="0 0 54 54" class="corner-plate cp-tr" fill="none">
             <path d="M 50 42 V 16 A 12 12 0 0 0 38 4 H 12" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
             <path d="M 48 16 L 38 6" stroke="#FEF08A" stroke-width="2.2"/>
-            <polygon points="38,8 46,16 38,24 30,16" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
-            <circle cx="38" cy="16" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <polygon points="38,8 46,16 38,24 30,16" class="gem-facet" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="38" cy="16" r="4.5" class="gem-core" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
             <circle cx="38" cy="16" r="2" fill="#FEF08A"/>
           </svg>
           <svg viewBox="0 0 54 54" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 38 A 12 12 0 0 0 16 50 H 42" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
             <path d="M 6 38 L 16 48" stroke="#FEF08A" stroke-width="2.2"/>
-            <polygon points="16,30 24,38 16,46 8,38" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
-            <circle cx="16" cy="38" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <polygon points="16,30 24,38 16,46 8,38" class="gem-facet" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="16" cy="38" r="4.5" class="gem-core" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
             <circle cx="16" cy="38" r="2" fill="#FEF08A"/>
           </svg>
           <svg viewBox="0 0 54 54" class="corner-plate cp-br" fill="none">
             <path d="M 50 12 V 38 A 12 12 0 0 1 38 50 H 12" stroke="#FACC15" stroke-width="3" stroke-linecap="round"/>
             <path d="M 48 38 L 38 48" stroke="#FEF08A" stroke-width="2.2"/>
-            <polygon points="38,30 46,38 38,46 30,38" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
-            <circle cx="38" cy="38" r="4.5" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
+            <polygon points="38,30 46,38 38,46 30,38" class="gem-facet" fill="#78350F" stroke="#FDE047" stroke-width="1.8"/>
+            <circle cx="38" cy="38" r="4.5" class="gem-core" fill="#FACC15" filter="drop-shadow(0 0 8px #FDE047)"/>
             <circle cx="38" cy="38" r="2" fill="#FEF08A"/>
           </svg>
         </div>
@@ -649,8 +649,8 @@ export function renderTierStructuralLayers(tierCode) {
         <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 100 20" class="keystone-svg" fill="none">
             <path d="M 6 10 Q 36 18 50 18 Q 64 18 94 10" stroke="#22D3EE" stroke-width="2.2"/>
-            <polygon points="50,2 60,10 50,18 40,10" fill="#0891B2" stroke="#67E8F9" stroke-width="1.8"/>
-            <circle cx="50" cy="10" r="3.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <polygon points="50,2 60,10 50,18 40,10" class="keystone-facet" fill="#0891B2" stroke="#67E8F9" stroke-width="1.8"/>
+            <circle cx="50" cy="10" r="3.5" class="keystone-gem" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
             <circle cx="50" cy="10" r="1.5" fill="#FFFFFF"/>
           </svg>
         </div>
@@ -658,7 +658,7 @@ export function renderTierStructuralLayers(tierCode) {
         <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
           <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
             <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#22D3EE" stroke-width="2"/>
-            <polygon points="40,1 46,7 40,13 34,7" fill="#0891B2" stroke="#67E8F9" stroke-width="1.5"/>
+            <polygon points="40,1 46,7 40,13 34,7" class="keystone-facet" fill="#0891B2" stroke="#67E8F9" stroke-width="1.5"/>
           </svg>
         </div>
 
@@ -668,32 +668,32 @@ export function renderTierStructuralLayers(tierCode) {
             <path d="M 4 44 V 16 A 12 12 0 0 1 16 4 H 44" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
             <path d="M 6 16 L 16 6" stroke="#67E8F9" stroke-width="2.5"/>
             <path d="M 10 24 L 24 10" stroke="#C084FC" stroke-width="1.8"/>
-            <polygon points="16,8 24,16 16,24 8,16" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
-            <circle cx="16" cy="16" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <polygon points="16,8 24,16 16,24 8,16" class="gem-facet" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="16" cy="16" r="4.5" class="gem-core" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
             <circle cx="16" cy="16" r="2" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 56 56" class="corner-plate cp-tr" fill="none">
             <path d="M 52 44 V 16 A 12 12 0 0 0 40 4 H 12" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
             <path d="M 50 16 L 40 6" stroke="#67E8F9" stroke-width="2.5"/>
             <path d="M 46 24 L 32 10" stroke="#C084FC" stroke-width="1.8"/>
-            <polygon points="40,8 48,16 40,24 32,16" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
-            <circle cx="40" cy="16" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <polygon points="40,8 48,16 40,24 32,16" class="gem-facet" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="40" cy="16" r="4.5" class="gem-core" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
             <circle cx="40" cy="16" r="2" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 56 56" class="corner-plate cp-bl" fill="none">
             <path d="M 4 12 V 40 A 12 12 0 0 0 16 52 H 44" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
             <path d="M 6 40 L 16 50" stroke="#67E8F9" stroke-width="2.5"/>
             <path d="M 10 32 L 24 46" stroke="#C084FC" stroke-width="1.8"/>
-            <polygon points="16,32 24,40 16,48 8,40" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
-            <circle cx="16" cy="40" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <polygon points="16,32 24,40 16,48 8,40" class="gem-facet" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="16" cy="40" r="4.5" class="gem-core" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
             <circle cx="16" cy="40" r="2" fill="#FFFFFF"/>
           </svg>
           <svg viewBox="0 0 56 56" class="corner-plate cp-br" fill="none">
             <path d="M 52 12 V 40 A 12 12 0 0 1 40 52 H 12" stroke="#22D3EE" stroke-width="3.2" stroke-linecap="round"/>
             <path d="M 50 40 L 40 50" stroke="#67E8F9" stroke-width="2.5"/>
             <path d="M 46 32 L 32 46" stroke="#C084FC" stroke-width="1.8"/>
-            <polygon points="40,32 48,40 40,48 32,40" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
-            <circle cx="40" cy="40" r="4.5" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
+            <polygon points="40,32 48,40 40,48 32,40" class="gem-facet" fill="#0891B2" stroke="#22D3EE" stroke-width="1.8"/>
+            <circle cx="40" cy="40" r="4.5" class="gem-core" fill="#E0F2FE" filter="drop-shadow(0 0 10px #06B6D4)"/>
             <circle cx="40" cy="40" r="2" fill="#FFFFFF"/>
           </svg>
         </div>

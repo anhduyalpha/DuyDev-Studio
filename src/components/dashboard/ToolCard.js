@@ -52,6 +52,11 @@ export function renderToolCard(tool) {
       
       ${tierOrnamentsHtml}
 
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        ${renderToolIcon(tool.id, tool.icon, 'w-24 h-24 sm:w-28 sm:h-28')}
+      </div>
+
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
       <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
       

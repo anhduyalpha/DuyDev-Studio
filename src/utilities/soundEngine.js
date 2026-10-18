@@ -1089,17 +1089,14 @@ class SoundEngine {
   }
 
   /**
-   * Cue 9: `playCardSovereignBlade()` (Radiant Golden Blade Gleam / Sovereign Solar Slash)
-   * A brilliant metallic sword draw and radiant golden solar bloom:
-   * 1. Metallic Blade Gleam: High FM blade sweep 1850Hz -> 3200Hz settling at 2793.8Hz (F7)
-   *    filtered via resonant bandpass (Q=5.5) over 180ms.
-   * 2. High Steel Ringing Overtones: 3729.3Hz (A#7) fast exponential decay over 140ms.
-   * 3. Radiant Golden Solar Chime (F# Major):
-   *    - F#4 [369.99Hz] warm triangle brass body (15ms attack, 380ms decay)
-   *    - C#5 [554.37Hz] fifth chime (350ms decay)
-   *    - A#5 [932.33Hz] major third glass bloom (420ms decay)
-   *    - F#6 [1479.98Hz] sparkling gold overtone (480ms silk decay)
-   * 4. Haptic pulse: [12, 24, 18]ms.
+   * Cue 9: `playCardSovereignBlade()` (Lưỡi Gươm Ánh Sáng / Radiant Solar Light Blade)
+   * A pure, ethereal sword of radiant light & solar plasma ignition:
+   * 1. Sub-Energy Core: 110Hz (A2) smooth sine pulse for power heft (200ms).
+   * 2. Plasma Ignition Sweep: Pure sine surging 220Hz -> 580Hz -> 440Hz with animated filter.
+   * 3. Searing Light Glissando: Pure sine gliding E5 (659Hz) -> E6 (1318Hz) -> B6 (1975Hz).
+   * 4. Resonant Crystal Singing: Dual crystal overtone at B5 (987.8Hz) & F#6 (1480Hz) with 450ms silk decay.
+   * 5. Luminous Crown Shimmer: E7 (2637Hz) stardust glint decaying over 480ms.
+   * 6. Zero harsh sawtooth buzz — 100% warm organic light harmonics.
    */
   playCardSovereignBlade() {
     const ctx = this._prepareForPlayback();
@@ -1107,7 +1104,7 @@ class SoundEngine {
 
     try {
       if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        navigator.vibrate([12, 24, 18]);
+        navigator.vibrate([15, 35, 20]);
       }
     } catch (_) {}
 
@@ -1115,105 +1112,128 @@ class SoundEngine {
     const duration = 0.480;
     const stopTime = now + duration;
 
-    // Local highpass/bandpass for the blade steel sheen
-    const bladeFilter = ctx.createBiquadFilter();
-    bladeFilter.type = 'bandpass';
-    bladeFilter.frequency.setValueAtTime(2800, now);
-    bladeFilter.Q.setValueAtTime(5.5, now);
-    bladeFilter.connect(this.masterGain);
+    // Dynamic light beam filter: opens rapidly from 800Hz to 3600Hz then smooths out
+    const beamFilter = ctx.createBiquadFilter();
+    beamFilter.type = 'lowpass';
+    beamFilter.frequency.setValueAtTime(800, now);
+    beamFilter.frequency.exponentialRampToValueAtTime(3600, now + 0.060);
+    beamFilter.frequency.exponentialRampToValueAtTime(2200, stopTime);
+    beamFilter.Q.setValueAtTime(1.2, now);
+    beamFilter.connect(this.masterGain);
 
-    // 1. Steel Blade Sweep (1850Hz -> 3200Hz -> 2793.8Hz)
-    const bladeGain = ctx.createGain();
-    bladeGain.gain.setValueAtTime(0.0001, now);
-    bladeGain.gain.linearRampToValueAtTime(0.22, now + 0.008);
-    bladeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.180);
-    bladeGain.connect(bladeFilter);
+    // 1. Sub-Energy Core (110Hz A2) - gives the light blade deep energy heft
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.linearRampToValueAtTime(0.18, now + 0.015);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.220);
+    subGain.connect(beamFilter);
 
-    const bladeOsc = ctx.createOscillator();
-    bladeOsc.type = 'sawtooth';
-    bladeOsc.frequency.setValueAtTime(1850, now);
-    bladeOsc.frequency.exponentialRampToValueAtTime(3200, now + 0.045);
-    bladeOsc.frequency.exponentialRampToValueAtTime(2793.83, now + 0.120);
-    bladeOsc.connect(bladeGain);
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(110, now);
+    subOsc.frequency.exponentialRampToValueAtTime(82.4, now + 0.220);
+    subOsc.connect(subGain);
 
-    // 2. High Steel Ringing Overtones (3729.3Hz A#7)
-    const ringGain = ctx.createGain();
-    ringGain.gain.setValueAtTime(0.0001, now);
-    ringGain.gain.linearRampToValueAtTime(0.14, now + 0.006);
-    ringGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.140);
-    ringGain.connect(bladeFilter);
+    // 2. Plasma Ignition Sweep (220Hz -> 580Hz -> 440Hz)
+    const plasmaGain = ctx.createGain();
+    plasmaGain.gain.setValueAtTime(0.0001, now);
+    plasmaGain.gain.linearRampToValueAtTime(0.24, now + 0.018);
+    plasmaGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.320);
+    plasmaGain.connect(beamFilter);
 
-    const ringOsc = ctx.createOscillator();
-    ringOsc.type = 'sine';
-    ringOsc.frequency.setValueAtTime(3729.31, now);
-    ringOsc.connect(ringGain);
+    const plasmaOsc = ctx.createOscillator();
+    plasmaOsc.type = 'sine';
+    plasmaOsc.frequency.setValueAtTime(220, now);
+    plasmaOsc.frequency.exponentialRampToValueAtTime(587.33, now + 0.050);
+    plasmaOsc.frequency.exponentialRampToValueAtTime(440, now + 0.200);
+    plasmaOsc.connect(plasmaGain);
 
-    // Local warm lowpass for radiant golden solar chord
-    const goldFilter = ctx.createBiquadFilter();
-    goldFilter.type = 'lowpass';
-    goldFilter.frequency.setValueAtTime(2400, now);
-    goldFilter.Q.setValueAtTime(0.8, now);
-    goldFilter.connect(this.masterGain);
+    // 3. Searing Light Glissando (E5: 659.25Hz -> E6: 1318.5Hz -> B6: 1975.5Hz)
+    const beamGain = ctx.createGain();
+    const beamStart = now + 0.010;
+    beamGain.gain.setValueAtTime(0.0001, beamStart);
+    beamGain.gain.linearRampToValueAtTime(0.26, beamStart + 0.020);
+    beamGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    beamGain.connect(beamFilter);
 
-    // 3. Radiant Golden Chime Chord (F#4, C#5, A#5, F#6)
-    const goldGain = ctx.createGain();
-    const chordStart = now + 0.012;
-    goldGain.gain.setValueAtTime(0.0001, chordStart);
-    goldGain.gain.linearRampToValueAtTime(0.25, chordStart + 0.015);
-    goldGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    goldGain.connect(goldFilter);
+    const beamSweepOsc = ctx.createOscillator();
+    beamSweepOsc.type = 'sine';
+    beamSweepOsc.frequency.setValueAtTime(659.25, beamStart);
+    beamSweepOsc.frequency.exponentialRampToValueAtTime(1318.51, beamStart + 0.065);
+    beamSweepOsc.frequency.exponentialRampToValueAtTime(1975.53, beamStart + 0.160);
+    beamSweepOsc.connect(beamGain);
 
-    const oscFsharp4 = ctx.createOscillator();
-    oscFsharp4.type = 'triangle';
-    oscFsharp4.frequency.setValueAtTime(369.99, chordStart);
-    oscFsharp4.connect(goldGain);
+    // 4. Resonant Crystal Singing (B5: 987.77Hz)
+    const singGain1 = ctx.createGain();
+    const chordStart = now + 0.025;
+    singGain1.gain.setValueAtTime(0.0001, chordStart);
+    singGain1.gain.linearRampToValueAtTime(0.20, chordStart + 0.015);
+    singGain1.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    singGain1.connect(beamFilter);
 
-    const oscCsharp5 = ctx.createOscillator();
-    oscCsharp5.type = 'sine';
-    oscCsharp5.frequency.setValueAtTime(554.37, chordStart);
-    oscCsharp5.connect(goldGain);
+    const singOsc1 = ctx.createOscillator();
+    singOsc1.type = 'triangle';
+    singOsc1.frequency.setValueAtTime(987.77, chordStart);
+    singOsc1.connect(singGain1);
 
-    const oscAsharp5 = ctx.createOscillator();
-    oscAsharp5.type = 'sine';
-    oscAsharp5.frequency.setValueAtTime(932.33, chordStart);
-    oscAsharp5.connect(goldGain);
+    // 5. Golden Radiant Harmonic (F#6: 1479.98Hz)
+    const singGain2 = ctx.createGain();
+    singGain2.gain.setValueAtTime(0.0001, chordStart);
+    singGain2.gain.linearRampToValueAtTime(0.18, chordStart + 0.015);
+    singGain2.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    singGain2.connect(beamFilter);
 
-    const oscFsharp6 = ctx.createOscillator();
-    oscFsharp6.type = 'sine';
-    oscFsharp6.frequency.setValueAtTime(1479.98, chordStart + 0.020);
-    oscFsharp6.connect(goldGain);
+    const singOsc2 = ctx.createOscillator();
+    singOsc2.type = 'sine';
+    singOsc2.frequency.setValueAtTime(1479.98, chordStart);
+    singOsc2.connect(singGain2);
 
-    // Start oscillators
-    bladeOsc.start(now);
-    ringOsc.start(now);
-    oscFsharp4.start(chordStart);
-    oscCsharp5.start(chordStart);
-    oscAsharp5.start(chordStart);
-    oscFsharp6.start(chordStart + 0.020);
+    // 6. Luminous Crown Shimmer (E7: 2637.02Hz) - ethereal stardust glint
+    const shimmerGain = ctx.createGain();
+    const shimmerStart = now + 0.040;
+    shimmerGain.gain.setValueAtTime(0.0001, shimmerStart);
+    shimmerGain.gain.linearRampToValueAtTime(0.14, shimmerStart + 0.012);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    shimmerGain.connect(beamFilter);
 
-    // Stop oscillators
-    bladeOsc.stop(now + 0.180);
-    ringOsc.stop(now + 0.140);
-    oscFsharp4.stop(stopTime);
-    oscCsharp5.stop(stopTime);
-    oscAsharp5.stop(stopTime);
-    oscFsharp6.stop(stopTime);
+    const shimmerOsc = ctx.createOscillator();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.setValueAtTime(2637.02, shimmerStart);
+    shimmerOsc.connect(shimmerGain);
 
-    // Disconnect cleanup
-    oscFsharp6.onended = () => {
+    // Start all oscillators
+    subOsc.start(now);
+    plasmaOsc.start(now);
+    beamSweepOsc.start(beamStart);
+    singOsc1.start(chordStart);
+    singOsc2.start(chordStart);
+    shimmerOsc.start(shimmerStart);
+
+    // Stop all oscillators
+    subOsc.stop(now + 0.220);
+    plasmaOsc.stop(now + 0.320);
+    beamSweepOsc.stop(stopTime);
+    singOsc1.stop(stopTime);
+    singOsc2.stop(stopTime);
+    shimmerOsc.stop(stopTime);
+
+    // Node cleanup
+    shimmerOsc.onended = () => {
       try {
-        bladeOsc.disconnect();
-        ringOsc.disconnect();
-        oscFsharp4.disconnect();
-        oscCsharp5.disconnect();
-        oscAsharp5.disconnect();
-        oscFsharp6.disconnect();
+        subOsc.disconnect();
+        plasmaOsc.disconnect();
+        beamSweepOsc.disconnect();
+        singOsc1.disconnect();
+        singOsc2.disconnect();
+        shimmerOsc.disconnect();
 
-        bladeGain.disconnect();
-        ringGain.disconnect();
-        goldGain.disconnect();
-        bladeFilter.disconnect();
-        goldFilter.disconnect();
+        subGain.disconnect();
+        plasmaGain.disconnect();
+        beamGain.disconnect();
+        singGain1.disconnect();
+        singGain2.disconnect();
+        shimmerGain.disconnect();
+        beamFilter.disconnect();
       } catch (_) {}
     };
 

@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.44': {
+    version: 'v23.44',
+    title: 'Bản cập nhật v23.44',
+    date: '18/10/2026',
+    features: [
+      'Converter Pro Prominent Next Batch CTA: Đóng khung và làm nổi bật nút "Chuyển đổi tiếp" với viền thương hiệu, nền tương phản cao và hiệu ứng phản hồi sắc nét'
+    ],
+    fixes: [
+      'Tối ưu độ tương phản và viền hiển thị cho nút chuyển đổi tiếp trong ConverterResult'
+    ]
+  },
+
   'v23.35': {
     version: 'v23.35',
     title: 'Bản cập nhật v23.35',
