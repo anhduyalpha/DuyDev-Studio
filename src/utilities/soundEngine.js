@@ -423,9 +423,18 @@ class SoundEngine {
       case 'update':
         this.playAppUpdate();
         break;
+      case 'urStudocu':
+      case 'studocu':
+      case 'cardBlue':
+        this.playCardUrStudocu();
+        break;
+      case 'urScribd':
+      case 'scribd':
+      case 'cardOrange':
+        this.playCardUrScribd();
+        break;
       case 'cardGold':
       case 'sovereignBlade':
-      case 'studocu':
       case 'blade':
         this.playCardSovereignBlade();
         break;
@@ -1075,17 +1084,284 @@ class SoundEngine {
 
   /**
    * Dispatches tailored acoustic feedback when clicking a dashboard tool card.
-   * Special high-tier cards (e.g. Studocu Downloader - Tier LR / Sovereign Gold)
-   * trigger custom thematic signatures (such as the radiant golden blade gleam).
-   * @param {string} toolId Tool identifier (e.g. 'studocu-dl', 'universal-converter', etc.)
+   * Special high-tier cards (e.g. Studocu Downloader UR, Scribd Downloader UR)
+   * trigger custom thematic signatures tailored to card color and rarity.
+   * @param {string} toolId Tool identifier (e.g. 'studocu-dl', 'scribd-archiver', etc.)
    */
   playCardClick(toolId) {
     if (!this.isEnabled()) return;
     if (toolId === 'studocu-dl' || toolId === 'studocu') {
-      this.playCardSovereignBlade();
+      this.playCardUrStudocu();
+    } else if (toolId === 'scribd-archiver' || toolId === 'scribd') {
+      this.playCardUrScribd();
     } else {
       this.playToggle();
     }
+  }
+
+  /**
+   * Cue 9a: `playCardUrStudocu()` (Lam Ngọc Vô Cực / Crystalline Cosmic Indigo-Blue Hologram Chime)
+   * Tailored for Studocu Downloader (Tier UR Prismatic, Indigo-Blue #6366F1):
+   * 1. Indigo Sub-Anchor: D#3 (155.56Hz) deep resonant sine anchor (240ms).
+   * 2. Holographic Glissando Sweep: Pure sine gliding D#5 (622.25Hz) -> G#5 (830.61Hz) -> C6 (1046.50Hz).
+   * 3. Twin Crystal Chime: D#6 (1244.51Hz) sine + G6 (1567.98Hz) soft triangle harmonic.
+   * 4. Ethereal Prism Shimmer: D#7 (2489.02Hz) stardust glint with 480ms silk decay.
+   * 5. Resonant dynamic lowpass filter sweeping 1200Hz -> 4200Hz -> 2800Hz (Q: 1.4).
+   */
+  playCardUrStudocu() {
+    const ctx = this._prepareForPlayback();
+    if (!ctx) return;
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([12, 30, 15]);
+      }
+    } catch (_) {}
+
+    const now = ctx.currentTime;
+    const duration = 0.480;
+    const stopTime = now + duration;
+
+    // Crystalline Indigo Hologram Filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1200, now);
+    filter.frequency.exponentialRampToValueAtTime(4200, now + 0.060);
+    filter.frequency.exponentialRampToValueAtTime(2800, stopTime);
+    filter.Q.setValueAtTime(1.4, now);
+    filter.connect(this.masterGain);
+
+    // 1. Indigo Sub-Anchor (D#3: 155.56Hz)
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.linearRampToValueAtTime(0.18, now + 0.012);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.240);
+    subGain.connect(filter);
+
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(155.56, now);
+    subOsc.connect(subGain);
+
+    // 2. Holographic Glissando Sweep (D#5: 622.25Hz -> G#5: 830.61Hz -> C6: 1046.50Hz)
+    const glissGain = ctx.createGain();
+    const glissStart = now + 0.008;
+    glissGain.gain.setValueAtTime(0.0001, glissStart);
+    glissGain.gain.linearRampToValueAtTime(0.24, glissStart + 0.018);
+    glissGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    glissGain.connect(filter);
+
+    const glissOsc = ctx.createOscillator();
+    glissOsc.type = 'sine';
+    glissOsc.frequency.setValueAtTime(622.25, glissStart);
+    glissOsc.frequency.exponentialRampToValueAtTime(830.61, glissStart + 0.060);
+    glissOsc.frequency.exponentialRampToValueAtTime(1046.50, glissStart + 0.160);
+    glissOsc.connect(glissGain);
+
+    // 3. Twin Crystal Chime 1 (D#6: 1244.51Hz)
+    const crystalGain1 = ctx.createGain();
+    const chimeStart = now + 0.025;
+    crystalGain1.gain.setValueAtTime(0.0001, chimeStart);
+    crystalGain1.gain.linearRampToValueAtTime(0.20, chimeStart + 0.012);
+    crystalGain1.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    crystalGain1.connect(filter);
+
+    const crystalOsc1 = ctx.createOscillator();
+    crystalOsc1.type = 'sine';
+    crystalOsc1.frequency.setValueAtTime(1244.51, chimeStart);
+    crystalOsc1.connect(crystalGain1);
+
+    // 4. Twin Crystal Chime 2 (G6: 1567.98Hz)
+    const crystalGain2 = ctx.createGain();
+    crystalGain2.gain.setValueAtTime(0.0001, chimeStart);
+    crystalGain2.gain.linearRampToValueAtTime(0.16, chimeStart + 0.012);
+    crystalGain2.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    crystalGain2.connect(filter);
+
+    const crystalOsc2 = ctx.createOscillator();
+    crystalOsc2.type = 'triangle';
+    crystalOsc2.frequency.setValueAtTime(1567.98, chimeStart);
+    crystalOsc2.connect(crystalGain2);
+
+    // 5. Ethereal Prism Shimmer (D#7: 2489.02Hz stardust glint)
+    const shimmerGain = ctx.createGain();
+    const shimmerStart = now + 0.045;
+    shimmerGain.gain.setValueAtTime(0.0001, shimmerStart);
+    shimmerGain.gain.linearRampToValueAtTime(0.14, shimmerStart + 0.010);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    shimmerGain.connect(filter);
+
+    const shimmerOsc = ctx.createOscillator();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.setValueAtTime(2489.02, shimmerStart);
+    shimmerOsc.connect(shimmerGain);
+
+    // Start oscillators
+    subOsc.start(now);
+    glissOsc.start(glissStart);
+    crystalOsc1.start(chimeStart);
+    crystalOsc2.start(chimeStart);
+    shimmerOsc.start(shimmerStart);
+
+    // Stop oscillators
+    subOsc.stop(now + 0.240);
+    glissOsc.stop(stopTime);
+    crystalOsc1.stop(stopTime);
+    crystalOsc2.stop(stopTime);
+    shimmerOsc.stop(stopTime);
+
+    // Node cleanup
+    shimmerOsc.onended = () => {
+      try {
+        subOsc.disconnect();
+        glissOsc.disconnect();
+        crystalOsc1.disconnect();
+        crystalOsc2.disconnect();
+        shimmerOsc.disconnect();
+
+        subGain.disconnect();
+        glissGain.disconnect();
+        crystalGain1.disconnect();
+        crystalGain2.disconnect();
+        shimmerGain.disconnect();
+        filter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
+  }
+
+  /**
+   * Cue 9b: `playCardUrScribd()` (San Hô Hoàng Kim / Solar Amber-Terracotta Bloom)
+   * Tailored for Scribd Downloader (Tier UR Prismatic, Terracotta Amber #EA580C):
+   * 1. Solar Low Hearth Anchor: F3 (174.61Hz) warm triangle wave (260ms).
+   * 2. Fifth Foundation Anchor: C4 (261.63Hz) pure sine foundation (300ms).
+   * 3. Warm Amber Swell Glissando: Sine glide A4 (440.00Hz) -> C#5 (554.37Hz) -> E5 (659.25Hz).
+   * 4. Coral Sunset Bloom: A5 (880.00Hz) resonant sine overtone.
+   * 5. Amber Hearth Shimmer: C#7 (2217.46Hz) warm golden shimmer with 480ms silk decay.
+   * 6. Warm solar lowpass filter sweeping 700Hz -> 3200Hz -> 2200Hz (Q: 1.0).
+   */
+  playCardUrScribd() {
+    const ctx = this._prepareForPlayback();
+    if (!ctx) return;
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([15, 25, 35]);
+      }
+    } catch (_) {}
+
+    const now = ctx.currentTime;
+    const duration = 0.480;
+    const stopTime = now + duration;
+
+    // Solar Amber Warm Lowpass Filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(700, now);
+    filter.frequency.exponentialRampToValueAtTime(3200, now + 0.070);
+    filter.frequency.exponentialRampToValueAtTime(2200, stopTime);
+    filter.Q.setValueAtTime(1.0, now);
+    filter.connect(this.masterGain);
+
+    // 1. Solar Low Hearth Anchor (F3: 174.61Hz)
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.linearRampToValueAtTime(0.20, now + 0.015);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.260);
+    subGain.connect(filter);
+
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(174.61, now);
+    subOsc.connect(subGain);
+
+    // 2. Fifth Foundation Anchor (C4: 261.63Hz)
+    const fifthGain = ctx.createGain();
+    fifthGain.gain.setValueAtTime(0.0001, now);
+    fifthGain.gain.linearRampToValueAtTime(0.18, now + 0.015);
+    fifthGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.300);
+    fifthGain.connect(filter);
+
+    const fifthOsc = ctx.createOscillator();
+    fifthOsc.type = 'sine';
+    fifthOsc.frequency.setValueAtTime(261.63, now);
+    fifthOsc.connect(fifthGain);
+
+    // 3. Warm Amber Swell Glissando (A4: 440Hz -> C#5: 554.37Hz -> E5: 659.25Hz)
+    const swellGain = ctx.createGain();
+    const swellStart = now + 0.010;
+    swellGain.gain.setValueAtTime(0.0001, swellStart);
+    swellGain.gain.linearRampToValueAtTime(0.24, swellStart + 0.018);
+    swellGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    swellGain.connect(filter);
+
+    const swellOsc = ctx.createOscillator();
+    swellOsc.type = 'sine';
+    swellOsc.frequency.setValueAtTime(440.00, swellStart);
+    swellOsc.frequency.exponentialRampToValueAtTime(554.37, swellStart + 0.065);
+    swellOsc.frequency.exponentialRampToValueAtTime(659.25, swellStart + 0.170);
+    swellOsc.connect(swellGain);
+
+    // 4. Coral Sunset Bloom (A5: 880.00Hz)
+    const bloomGain = ctx.createGain();
+    const bloomStart = now + 0.030;
+    bloomGain.gain.setValueAtTime(0.0001, bloomStart);
+    bloomGain.gain.linearRampToValueAtTime(0.20, bloomStart + 0.012);
+    bloomGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    bloomGain.connect(filter);
+
+    const bloomOsc = ctx.createOscillator();
+    bloomOsc.type = 'sine';
+    bloomOsc.frequency.setValueAtTime(880.00, bloomStart);
+    bloomOsc.connect(bloomGain);
+
+    // 5. Amber Hearth Shimmer (C#7: 2217.46Hz warm golden sheen)
+    const shimmerGain = ctx.createGain();
+    const shimmerStart = now + 0.050;
+    shimmerGain.gain.setValueAtTime(0.0001, shimmerStart);
+    shimmerGain.gain.linearRampToValueAtTime(0.14, shimmerStart + 0.012);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    shimmerGain.connect(filter);
+
+    const shimmerOsc = ctx.createOscillator();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.setValueAtTime(2217.46, shimmerStart);
+    shimmerOsc.connect(shimmerGain);
+
+    // Start oscillators
+    subOsc.start(now);
+    fifthOsc.start(now);
+    swellOsc.start(swellStart);
+    bloomOsc.start(bloomStart);
+    shimmerOsc.start(shimmerStart);
+
+    // Stop oscillators
+    subOsc.stop(now + 0.260);
+    fifthOsc.stop(now + 0.300);
+    swellOsc.stop(stopTime);
+    bloomOsc.stop(stopTime);
+    shimmerOsc.stop(stopTime);
+
+    // Node cleanup
+    shimmerOsc.onended = () => {
+      try {
+        subOsc.disconnect();
+        fifthOsc.disconnect();
+        swellOsc.disconnect();
+        bloomOsc.disconnect();
+        shimmerOsc.disconnect();
+
+        subGain.disconnect();
+        fifthGain.disconnect();
+        swellGain.disconnect();
+        bloomGain.disconnect();
+        shimmerGain.disconnect();
+        filter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
   }
 
   /**

@@ -399,39 +399,56 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(updateSpy).toHaveBeenCalledTimes(4);
   });
 
-  it('18. Tool Card Click & Sovereign Blade Cue: playCardClick dispatches playCardSovereignBlade for Studocu and playToggle for default cards', async () => {
+  it('18. Tool Card Click & UR Rarity Signatures: playCardClick dispatches playCardUrStudocu for Studocu, playCardUrScribd for Scribd, and playToggle for default cards', async () => {
     const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
 
+    const studocuSpy = vi.spyOn(soundEngine, 'playCardUrStudocu');
+    const scribdSpy = vi.spyOn(soundEngine, 'playCardUrScribd');
     const bladeSpy = vi.spyOn(soundEngine, 'playCardSovereignBlade');
     const toggleSpy = vi.spyOn(soundEngine, 'playToggle');
 
     mockContext.createOscillator.mockClear();
 
-    // Clicking studocu-dl plays Sovereign Blade
+    // 1. Clicking studocu-dl plays UR Studocu Chime (5 oscillators)
     soundEngine.playCardClick('studocu-dl');
-    expect(bladeSpy).toHaveBeenCalledTimes(1);
+    expect(studocuSpy).toHaveBeenCalledTimes(1);
+    expect(scribdSpy).not.toHaveBeenCalled();
     expect(toggleSpy).not.toHaveBeenCalled();
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(5);
 
-    // playCardSovereignBlade creates 6 oscillators (bladeOsc + ringOsc + oscFsharp4 + oscCsharp5 + oscAsharp5 + oscFsharp6)
-    expect(mockContext.createOscillator).toHaveBeenCalledTimes(6);
-
-    // Clicking studocu plays Sovereign Blade
+    // 2. Clicking studocu alias also plays UR Studocu
     soundEngine.playCardClick('studocu');
-    expect(bladeSpy).toHaveBeenCalledTimes(2);
+    expect(studocuSpy).toHaveBeenCalledTimes(2);
 
-    // Clicking regular cards (e.g. universal-converter) plays playToggle
+    // 3. Clicking scribd-archiver plays UR Scribd Bloom (5 oscillators)
+    mockContext.createOscillator.mockClear();
+    soundEngine.playCardClick('scribd-archiver');
+    expect(scribdSpy).toHaveBeenCalledTimes(1);
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(5);
+
+    // 4. Clicking scribd alias also plays UR Scribd
+    soundEngine.playCardClick('scribd');
+    expect(scribdSpy).toHaveBeenCalledTimes(2);
+
+    // 5. Clicking regular cards (e.g. universal-converter) plays playToggle
     soundEngine.playCardClick('universal-converter');
     expect(toggleSpy).toHaveBeenCalledTimes(1);
 
-    // Test preview routing via testSound
+    // 6. Test preview routing via testSound
+    soundEngine.testSound('urStudocu');
+    expect(studocuSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('cardBlue');
+    expect(studocuSpy).toHaveBeenCalledTimes(4);
+
+    soundEngine.testSound('urScribd');
+    expect(scribdSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('cardOrange');
+    expect(scribdSpy).toHaveBeenCalledTimes(4);
+
     soundEngine.testSound('sovereignBlade');
-    expect(bladeSpy).toHaveBeenCalledTimes(3);
-
-    soundEngine.testSound('cardGold');
-    expect(bladeSpy).toHaveBeenCalledTimes(4);
-
-    soundEngine.testSound('studocu');
-    expect(bladeSpy).toHaveBeenCalledTimes(5);
+    expect(bladeSpy).toHaveBeenCalledTimes(1);
   });
 });
 

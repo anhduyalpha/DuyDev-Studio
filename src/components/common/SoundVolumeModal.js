@@ -137,9 +137,17 @@ export function openSoundVolumeModal() {
               <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-500"></i>
               <span>Cập nhật Web</span>
             </button>
-            <button type="button" data-test="sovereignBlade" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-amber-50 dark:bg-white/[0.05] dark:hover:bg-amber-500/10 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer col-span-2 sm:col-span-1">
+            <button type="button" data-test="urStudocu" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-indigo-50 dark:bg-white/[0.05] dark:hover:bg-indigo-500/10 text-zinc-800 dark:text-zinc-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-500"></i>
+              <span>Studocu UR</span>
+            </button>
+            <button type="button" data-test="urScribd" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-orange-50 dark:bg-white/[0.05] dark:hover:bg-orange-500/10 text-zinc-800 dark:text-zinc-200 hover:text-orange-600 dark:hover:text-orange-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="flame" class="w-3.5 h-3.5 text-orange-500"></i>
+              <span>Scribd UR</span>
+            </button>
+            <button type="button" data-test="sovereignBlade" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-amber-50 dark:bg-white/[0.05] dark:hover:bg-amber-500/10 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
               <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-500"></i>
-              <span>Gươm Ánh Sáng (LR)</span>
+              <span>Gươm Ánh Sáng</span>
             </button>
           </div>
         </div>
