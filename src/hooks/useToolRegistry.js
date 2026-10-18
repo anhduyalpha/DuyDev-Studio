@@ -130,7 +130,7 @@ const DEFAULT_TOOLS = [
     featured: false,
     specs: ['PDF', 'Tài liệu học tập'],
     color: '#6366F1',
-    tier: 'LR',
+    tier: 'UR',
     route: '#tool/studocu-dl',
     tags: ['studocu', 'tài liệu', 'tiện ích', 'download', 'pdf', 'slide', 'bài giảng']
   },
@@ -155,6 +155,7 @@ const DEFAULT_TOOLS = [
     featured: true,
     specs: ['PDF', 'Slides', 'Drive'],
     color: '#EA580C',
+    tier: 'UR',
     route: '#tool/scribd',
     tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']
   },

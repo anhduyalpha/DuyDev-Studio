@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.46': {
+    version: 'v23.46',
+    title: 'Bản cập nhật v23.46',
+    date: '18/10/2026',
+    features: [
+      'Roll out Tier UR (Prismatic Hologram Mythic) cho Studocu Downloader và Scribd Downloader trên Dashboard: Thừa hưởng khung viền lăng kính 7 màu liền mạch, con dấu hoàng gia và hiệu ứng vật lý cao cấp',
+      'Preserve Original Identity: Giữ trọn 100% icon đồ họa vector Apple-grade và dải màu đặc trưng riêng biệt (Indigo #6366F1 cho Studocu & Terracotta Orange #EA580C cho Scribd) giúp nhận diện tức thì trong 0.1s'
+    ],
+    fixes: [
+      'Loại bỏ hoàn toàn viền sâu bò (crawling worms) sang khung viền vật lý liên tục',
+      'Đồng bộ socket đá quý 4 góc và nút bấm Mở sang màu thương hiệu của từng công cụ'
+    ]
+  },
+
   'v23.45': {
     version: 'v23.45',
     title: 'Bản cập nhật v23.45',
