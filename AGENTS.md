@@ -98,5 +98,7 @@ Storage: /data/storage/ (uploads/, processed/, temp/, drive/)
 - **Dead File**: `src/components/tools/pdf/hooks/pdfApi.js` is unimported dead code; use `services/pdfApi.js`.
 - **SW Cache Stale Trap**: When updating `src/**`, bump version in `sw.js` (e.g. `v19.2`) to prevent serving stale code.
 - **CWD Resolution**: Paths resolve to `data/storage/` or `server/data/storage/` depending on process CWD.
-- **No JS Re-implementation**: Never rewrite conversion/vector logic in JS when Python engines exist.
-- **10-Tier Tool Card Command Protocol**: Khi nhận lệnh `"Áp dụng box tier [tên_tier] cho card [tên_tool]"`, map tier (`E`, `D`, `C`, `B`, `A`, `S`, `SS`, `UR`, `LR`, `EX`) vào trường `tier` của tool trong `src/hooks/useToolRegistry.js` mà không sửa logic tool hay chạm vào module `Studocu`.
+- **10-Tier Tool Card & Production Deploy Protocol**:
+  - Khi nhận lệnh `"Áp dụng box tier [tên_tier] cho card [tên_tool]"` (local) hoặc `"Đổi card [tên_tool] trên https thành tier [tên_tier]"` (production), ngay lập tức kích hoạt skill `card-tier-production-deployer` (.agents/skills/card-tier-production-deployer/SKILL.md).
+  - Map tier (`E`, `D`, `C`, `B`, `A`, `S`, `SS`, `UR`, `LR`, `EX`) vào trường `tier` của tool trong `src/hooks/useToolRegistry.js`.
+  - TUYỆT ĐỐI không sửa code logic hay chạm vào bất kỳ file nào trong `src/components/tools/studocu/**` và `server/src/services/studocu/**`.
