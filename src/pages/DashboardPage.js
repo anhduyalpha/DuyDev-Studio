@@ -14,6 +14,7 @@ import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { detectSmartRoute, handoffSmartUrl } from '../utilities/smartUrlRouter.js';
+import { soundEngine } from '../utilities/soundEngine.js';
 
 function renderToolsContent(toolsList) {
   if (!toolsList || toolsList.length === 0) {
@@ -93,7 +94,7 @@ export function attachDashboardListeners(onReRender) {
   }).catch(() => {});
 
 
-  // Handle clear search filter click
+  // Handle clear search filter click & tool card acoustic cues
   const toolsGridContainer = document.getElementById('toolsGridContainer');
   if (toolsGridContainer) {
     toolsGridContainer.addEventListener('click', (e) => {
@@ -103,6 +104,13 @@ export function attachDashboardListeners(onReRender) {
         const searchInput = document.getElementById('globalSearchInput');
         if (searchInput) searchInput.value = '';
         if (onReRender) onReRender();
+        return;
+      }
+
+      const card = e.target.closest('.tool-card');
+      if (card) {
+        const toolId = card.getAttribute('data-tool-id');
+        soundEngine.playCardClick(toolId);
       }
     });
   }

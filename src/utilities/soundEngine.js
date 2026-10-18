@@ -423,6 +423,12 @@ class SoundEngine {
       case 'update':
         this.playAppUpdate();
         break;
+      case 'cardGold':
+      case 'sovereignBlade':
+      case 'studocu':
+      case 'blade':
+        this.playCardSovereignBlade();
+        break;
       case 'jobComplete':
       case 'success':
       default:
@@ -1061,6 +1067,157 @@ class SoundEngine {
    */
   playUpdate() {
     this.playAppUpdate();
+  }
+
+  // =========================================================================
+  // Tool Card Custom Signatures (Sovereign Gold / Radiant Blade Gleam)
+  // =========================================================================
+
+  /**
+   * Dispatches tailored acoustic feedback when clicking a dashboard tool card.
+   * Special high-tier cards (e.g. Studocu Downloader - Tier LR / Sovereign Gold)
+   * trigger custom thematic signatures (such as the radiant golden blade gleam).
+   * @param {string} toolId Tool identifier (e.g. 'studocu-dl', 'universal-converter', etc.)
+   */
+  playCardClick(toolId) {
+    if (!this.isEnabled()) return;
+    if (toolId === 'studocu-dl' || toolId === 'studocu') {
+      this.playCardSovereignBlade();
+    } else {
+      this.playToggle();
+    }
+  }
+
+  /**
+   * Cue 9: `playCardSovereignBlade()` (Radiant Golden Blade Gleam / Sovereign Solar Slash)
+   * A brilliant metallic sword draw and radiant golden solar bloom:
+   * 1. Metallic Blade Gleam: High FM blade sweep 1850Hz -> 3200Hz settling at 2793.8Hz (F7)
+   *    filtered via resonant bandpass (Q=5.5) over 180ms.
+   * 2. High Steel Ringing Overtones: 3729.3Hz (A#7) fast exponential decay over 140ms.
+   * 3. Radiant Golden Solar Chime (F# Major):
+   *    - F#4 [369.99Hz] warm triangle brass body (15ms attack, 380ms decay)
+   *    - C#5 [554.37Hz] fifth chime (350ms decay)
+   *    - A#5 [932.33Hz] major third glass bloom (420ms decay)
+   *    - F#6 [1479.98Hz] sparkling gold overtone (480ms silk decay)
+   * 4. Haptic pulse: [12, 24, 18]ms.
+   */
+  playCardSovereignBlade() {
+    const ctx = this._prepareForPlayback();
+    if (!ctx) return;
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([12, 24, 18]);
+      }
+    } catch (_) {}
+
+    const now = ctx.currentTime;
+    const duration = 0.480;
+    const stopTime = now + duration;
+
+    // Local highpass/bandpass for the blade steel sheen
+    const bladeFilter = ctx.createBiquadFilter();
+    bladeFilter.type = 'bandpass';
+    bladeFilter.frequency.setValueAtTime(2800, now);
+    bladeFilter.Q.setValueAtTime(5.5, now);
+    bladeFilter.connect(this.masterGain);
+
+    // 1. Steel Blade Sweep (1850Hz -> 3200Hz -> 2793.8Hz)
+    const bladeGain = ctx.createGain();
+    bladeGain.gain.setValueAtTime(0.0001, now);
+    bladeGain.gain.linearRampToValueAtTime(0.22, now + 0.008);
+    bladeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.180);
+    bladeGain.connect(bladeFilter);
+
+    const bladeOsc = ctx.createOscillator();
+    bladeOsc.type = 'sawtooth';
+    bladeOsc.frequency.setValueAtTime(1850, now);
+    bladeOsc.frequency.exponentialRampToValueAtTime(3200, now + 0.045);
+    bladeOsc.frequency.exponentialRampToValueAtTime(2793.83, now + 0.120);
+    bladeOsc.connect(bladeGain);
+
+    // 2. High Steel Ringing Overtones (3729.3Hz A#7)
+    const ringGain = ctx.createGain();
+    ringGain.gain.setValueAtTime(0.0001, now);
+    ringGain.gain.linearRampToValueAtTime(0.14, now + 0.006);
+    ringGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.140);
+    ringGain.connect(bladeFilter);
+
+    const ringOsc = ctx.createOscillator();
+    ringOsc.type = 'sine';
+    ringOsc.frequency.setValueAtTime(3729.31, now);
+    ringOsc.connect(ringGain);
+
+    // Local warm lowpass for radiant golden solar chord
+    const goldFilter = ctx.createBiquadFilter();
+    goldFilter.type = 'lowpass';
+    goldFilter.frequency.setValueAtTime(2400, now);
+    goldFilter.Q.setValueAtTime(0.8, now);
+    goldFilter.connect(this.masterGain);
+
+    // 3. Radiant Golden Chime Chord (F#4, C#5, A#5, F#6)
+    const goldGain = ctx.createGain();
+    const chordStart = now + 0.012;
+    goldGain.gain.setValueAtTime(0.0001, chordStart);
+    goldGain.gain.linearRampToValueAtTime(0.25, chordStart + 0.015);
+    goldGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    goldGain.connect(goldFilter);
+
+    const oscFsharp4 = ctx.createOscillator();
+    oscFsharp4.type = 'triangle';
+    oscFsharp4.frequency.setValueAtTime(369.99, chordStart);
+    oscFsharp4.connect(goldGain);
+
+    const oscCsharp5 = ctx.createOscillator();
+    oscCsharp5.type = 'sine';
+    oscCsharp5.frequency.setValueAtTime(554.37, chordStart);
+    oscCsharp5.connect(goldGain);
+
+    const oscAsharp5 = ctx.createOscillator();
+    oscAsharp5.type = 'sine';
+    oscAsharp5.frequency.setValueAtTime(932.33, chordStart);
+    oscAsharp5.connect(goldGain);
+
+    const oscFsharp6 = ctx.createOscillator();
+    oscFsharp6.type = 'sine';
+    oscFsharp6.frequency.setValueAtTime(1479.98, chordStart + 0.020);
+    oscFsharp6.connect(goldGain);
+
+    // Start oscillators
+    bladeOsc.start(now);
+    ringOsc.start(now);
+    oscFsharp4.start(chordStart);
+    oscCsharp5.start(chordStart);
+    oscAsharp5.start(chordStart);
+    oscFsharp6.start(chordStart + 0.020);
+
+    // Stop oscillators
+    bladeOsc.stop(now + 0.180);
+    ringOsc.stop(now + 0.140);
+    oscFsharp4.stop(stopTime);
+    oscCsharp5.stop(stopTime);
+    oscAsharp5.stop(stopTime);
+    oscFsharp6.stop(stopTime);
+
+    // Disconnect cleanup
+    oscFsharp6.onended = () => {
+      try {
+        bladeOsc.disconnect();
+        ringOsc.disconnect();
+        oscFsharp4.disconnect();
+        oscCsharp5.disconnect();
+        oscAsharp5.disconnect();
+        oscFsharp6.disconnect();
+
+        bladeGain.disconnect();
+        ringGain.disconnect();
+        goldGain.disconnect();
+        bladeFilter.disconnect();
+        goldFilter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
   }
 }
 

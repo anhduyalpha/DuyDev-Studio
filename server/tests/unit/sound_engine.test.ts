@@ -398,5 +398,40 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     soundEngine.testSound('update');
     expect(updateSpy).toHaveBeenCalledTimes(4);
   });
+
+  it('18. Tool Card Click & Sovereign Blade Cue: playCardClick dispatches playCardSovereignBlade for Studocu and playToggle for default cards', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    const bladeSpy = vi.spyOn(soundEngine, 'playCardSovereignBlade');
+    const toggleSpy = vi.spyOn(soundEngine, 'playToggle');
+
+    mockContext.createOscillator.mockClear();
+
+    // Clicking studocu-dl plays Sovereign Blade
+    soundEngine.playCardClick('studocu-dl');
+    expect(bladeSpy).toHaveBeenCalledTimes(1);
+    expect(toggleSpy).not.toHaveBeenCalled();
+
+    // playCardSovereignBlade creates 6 oscillators (bladeOsc + ringOsc + oscFsharp4 + oscCsharp5 + oscAsharp5 + oscFsharp6)
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(6);
+
+    // Clicking studocu plays Sovereign Blade
+    soundEngine.playCardClick('studocu');
+    expect(bladeSpy).toHaveBeenCalledTimes(2);
+
+    // Clicking regular cards (e.g. universal-converter) plays playToggle
+    soundEngine.playCardClick('universal-converter');
+    expect(toggleSpy).toHaveBeenCalledTimes(1);
+
+    // Test preview routing via testSound
+    soundEngine.testSound('sovereignBlade');
+    expect(bladeSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('cardGold');
+    expect(bladeSpy).toHaveBeenCalledTimes(4);
+
+    soundEngine.testSound('studocu');
+    expect(bladeSpy).toHaveBeenCalledTimes(5);
+  });
 });
 
