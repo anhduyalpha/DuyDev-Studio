@@ -507,7 +507,32 @@ export const TOOL_ICONS = {
       <line x1="8" y1="17" x2="13" y2="17" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
     </svg>
   `,
-  'scribd': (className = 'w-6 h-6') => TOOL_ICONS['scribd-archiver'](className)
+  'scribd': (className = 'w-6 h-6') => TOOL_ICONS['scribd-archiver'](className),
+
+  // 15. YouTube Downloader (Classic Rounded Red Screen Chassis & Centered Play Arrow)
+  'youtube-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-yt-base" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#B91C1C" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-apple-yt-body" x1="2" y1="5" x2="22" y2="19" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FF0000" />
+          <stop offset="100%" stop-color="#CC0000" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Red Glow Shadow Sheet -->
+      <rect x="2.5" y="4.5" width="19" height="15" rx="4.5" fill="url(#ds-apple-yt-base)" class="stroke-red-500/40 dark:stroke-red-400/30 transition-colors duration-200" stroke-width="1.2" />
+      <!-- Layer 2: Main Screen Chassis -->
+      <rect x="2" y="5.5" width="20" height="13" rx="4" fill="url(#ds-apple-yt-body)" />
+      <!-- Layer 3: Top Specular Sheen -->
+      <path d="M5.5 6.5h13c1.8 0 2.8 1 3.2 2.2H2.3C2.7 7.5 3.7 6.5 5.5 6.5z" fill="#FFFFFF" fill-opacity="0.28" />
+      <!-- Layer 4: Centered Play Triangle -->
+      <polygon points="10,8.5 16,12 10,15.5" fill="#FFFFFF" />
+    </svg>
+  `,
+  'youtube': (className = 'w-6 h-6') => TOOL_ICONS['youtube-downloader'](className)
 };
 
 /**

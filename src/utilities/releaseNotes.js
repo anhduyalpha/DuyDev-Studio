@@ -49,6 +49,20 @@ export const RELEASE_NOTES_MAP = {
     ]
   },
 
+  'v23.50': {
+    version: 'v23.50',
+    title: 'Bản cập nhật v23.50',
+    date: '19/10/2026',
+    features: [
+      'YouTube Downloader Light Mode & Dark Mode Parity: Chuẩn hóa toàn diện giao diện Light Mode và Dark Mode cho module YouTube Downloader',
+      'Đưa YouTube Downloader về card công cụ tiêu chuẩn (Standard Card) đồng bộ với TikTok Downloader',
+      'Tích hợp Apple-grade Vector YouTube Icon độc quyền hiển thị sắc nét trên cả Dashboard, Card Watermark và Workspace'
+    ],
+    fixes: [
+      'Khắc phục lỗi hiển thị tối đen (hardcoded dark mode) khi dùng giao diện sáng Light Mode trong YouTube Downloader'
+    ]
+  },
+
   'v23.49': {
     version: 'v23.49',
     title: 'Bản cập nhật v23.49',

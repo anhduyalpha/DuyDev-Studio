@@ -155,7 +155,6 @@ const DEFAULT_TOOLS = [
     featured: true,
     specs: ['MP4 1080p', 'MP3 320kbps', 'Lưu Drive'],
     color: '#FF0000',
-    tier: 'UR',
     route: '#tool/youtube-downloader',
     tags: ['youtube', 'yt', 'tải video', 'tải nhạc', 'youtube downloader', 'mp3', 'mp4', '1080p', 'audio', 'video', 'shorts', 'âm thanh']
   },
