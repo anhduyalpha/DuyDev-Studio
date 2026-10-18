@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.47': {
+    version: 'v23.47',
+    title: 'Bản cập nhật v23.47',
+    date: '18/10/2026',
+    features: [
+      '120Hz Native Compositor & Battery Shield: Tối ưu hoá toàn diện pipeline render thẻ 10-Tier RPG đạt 120 FPS cuộn mượt mà không hao pin',
+      'Offscreen Animation Governor: Tự động tạm dừng hoạt họa các thẻ nằm ngoài tầm mắt bằng IntersectionObserver để triệt tiêu tải GPU khi cuộn'
+    ],
+    fixes: [
+      'Loại bỏ backdrop-blur thừa trên nhãn specs để giải phóng 42 lớp tính toán Gaussian blur mỗi frame',
+      'Thay thế filter drop-shadow trên các vòng xoay SVG bằng baked vector glow strokes và static radial backdrops'
+    ]
+  },
+
   'v23.46': {
     version: 'v23.46',
     title: 'Bản cập nhật v23.46',

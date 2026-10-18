@@ -309,7 +309,9 @@ export function renderTierStructuralLayers(tierCode) {
 
         <!-- Layer A: High-Contrast Rotating Geometric Rune Ring (72px) -->
         <div class="tier-icon-rune-ss pointer-events-none" aria-hidden="true">
+          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, rgba(225, 29, 72, 0.4)) 0%, transparent 72%);"></div>
           <svg viewBox="0 0 72 72" class="rune-circle-svg" fill="none">
+            <circle cx="36" cy="36" r="32" stroke="color-mix(in srgb, var(--accent) 70%, #E11D48)" stroke-width="5" stroke-opacity="0.32"/>
             <circle cx="36" cy="36" r="32" stroke="#E11D48" stroke-width="1.8" stroke-dasharray="5 3"/>
             <polygon points="36,8 60,50 12,50" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
             <polygon points="36,64 12,22 60,22" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
@@ -419,6 +421,7 @@ export function renderTierStructuralLayers(tierCode) {
               <polygon points="87,35 96,78 139,87 96,96 87,139 78,96 35,87 78,78" stroke="#38BDF8" stroke-width="1"/>
             </g>
             <g class="ur-mandala-core">
+              <circle cx="87" cy="87" r="30" stroke="color-mix(in srgb, var(--accent) 60%, #A855F7)" stroke-width="6" stroke-opacity="0.3"/>
               <circle cx="87" cy="87" r="30" stroke="#A855F7" stroke-width="1.5"/>
               <circle cx="87" cy="87" r="16" stroke="#EC4899" stroke-width="1" stroke-dasharray="3 3"/>
             </g>
@@ -557,7 +560,9 @@ export function renderTierStructuralLayers(tierCode) {
 
         <!-- Layer A: High-Contrast Rotating Solar Halo (74px) -->
         <div class="tier-icon-solar-lr pointer-events-none" aria-hidden="true">
+          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, rgba(250, 204, 21, 0.45)) 0%, transparent 72%);"></div>
           <svg viewBox="0 0 74 74" class="solar-ring-svg" fill="none">
+            <circle cx="37" cy="37" r="33" stroke="color-mix(in srgb, var(--accent) 60%, #FACC15)" stroke-width="6" stroke-opacity="0.32"/>
             <circle cx="37" cy="37" r="33" stroke="#FACC15" stroke-width="2" stroke-dasharray="6 3"/>
             <circle cx="37" cy="37" r="24" stroke="#CA8A04" stroke-width="1.5" stroke-dasharray="3 3"/>
             <path d="M37 2V8M37 66V72M2 37H8M66 37H72M12 12L17 17M57 57L62 62M12 62L17 57M57 17L62 12" stroke="#FEF08A" stroke-width="1.8" stroke-linecap="round"/>
@@ -713,7 +718,9 @@ export function renderTierStructuralLayers(tierCode) {
 
         <!-- Layer A: High-Contrast Rotating Dual Astrolabe Rings (74px) -->
         <div class="tier-astrolabe-ex pointer-events-none" aria-hidden="true">
+          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, rgba(34, 211, 238, 0.4)) 0%, color-mix(in srgb, var(--accent) 30%, rgba(192, 132, 252, 0.2)) 50%, transparent 75%);"></div>
           <svg viewBox="0 0 74 74" class="astrolabe-outer" fill="none">
+            <circle cx="37" cy="37" r="33" stroke="color-mix(in srgb, var(--accent) 60%, #22D3EE)" stroke-width="6" stroke-opacity="0.32"/>
             <circle cx="37" cy="37" r="33" stroke="#22D3EE" stroke-width="2" stroke-dasharray="7 4 2 4"/>
             <circle cx="37" cy="37" r="26" stroke="#818CF8" stroke-width="1.2" stroke-dasharray="3 3"/>
             <circle cx="37" cy="4" r="2.2" fill="#67E8F9"/>
@@ -722,6 +729,7 @@ export function renderTierStructuralLayers(tierCode) {
             <circle cx="70" cy="37" r="2.2" fill="#67E8F9"/>
           </svg>
           <svg viewBox="0 0 74 74" class="astrolabe-inner" fill="none">
+            <circle cx="37" cy="37" r="20" stroke="color-mix(in srgb, var(--accent) 60%, #C084FC)" stroke-width="5" stroke-opacity="0.32"/>
             <circle cx="37" cy="37" r="20" stroke="#C084FC" stroke-width="1.5" stroke-dasharray="5 3"/>
             <polygon points="37,18 52,44 22,44" stroke="#38BDF8" stroke-width="1"/>
             <polygon points="37,56 22,30 52,30" stroke="#38BDF8" stroke-width="1"/>

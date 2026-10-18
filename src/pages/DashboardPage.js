@@ -115,6 +115,26 @@ export function attachDashboardListeners(onReRender) {
     });
   }
 
+  // 120Hz & Low-Battery Governor: Suspend offscreen tier card animations
+  let tierObserver = null;
+  const observeTierCards = (container = document) => {
+    if (!('IntersectionObserver' in window)) return;
+    if (tierObserver) tierObserver.disconnect();
+    tierObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.remove('tier-offscreen');
+        } else {
+          entry.target.classList.add('tier-offscreen');
+        }
+      });
+    }, { rootMargin: '60px 0px' });
+
+    container.querySelectorAll('.tier-card').forEach((card) => tierObserver.observe(card));
+  };
+
+  observeTierCards();
+
   attachCategoryFilterListeners((cat, clickedBtn) => {
     toolRegistry.setCategory(cat);
 
@@ -132,6 +152,7 @@ export function attachDashboardListeners(onReRender) {
     if (gridEl) {
       gridEl.innerHTML = renderToolsContent(filteredTools);
       if (window.lucide) window.lucide.createIcons({ root: gridEl });
+      observeTierCards(gridEl);
     }
     if (countEl) {
       countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
@@ -287,6 +308,10 @@ export function attachDashboardListeners(onReRender) {
   window.addEventListener('keydown', handleEscapeKey);
 
   return () => {
+    if (tierObserver) {
+      tierObserver.disconnect();
+      tierObserver = null;
+    }
     window.removeEventListener('keydown', handleEscapeKey);
     window.removeEventListener('paste', handleGlobalPaste);
   };

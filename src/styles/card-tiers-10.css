@@ -29,6 +29,10 @@
   isolation: isolate;
   border-radius: 1rem;
   overflow: hidden;
+  contain: layout style paint;
+  content-visibility: visible;
+  backface-visibility: hidden;
+  transform: translateZ(0);
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
               box-shadow 0.25s ease,
               border-color 0.2s ease,
@@ -36,7 +40,43 @@
 }
 
 .tier-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-4px) translateZ(0);
+}
+
+/* Offscreen Battery Shield: Pause all animation loops when card is outside viewport */
+.tier-card.tier-offscreen *,
+.tier-card.tier-offscreen *::before,
+.tier-card.tier-offscreen *::after {
+  animation-play-state: paused !important;
+}
+
+/* 120Hz Compositor Promotion: Dedicated GPU Texture Layering */
+.tier-card .rune-circle-svg,
+.tier-card .solar-ring-svg,
+.tier-card .astrolabe-outer,
+.tier-card .astrolabe-inner,
+.tier-card .ur-halo-ring,
+.tier-card .ur-mandala-outer,
+.tier-card .ur-mandala-inner,
+.tier-card .tier-holo-foil-sheen,
+.tier-card .tier-metallic-shimmer,
+.tier-card .particle,
+.tier-card .starlight-mote,
+.tier-card .spark,
+.tier-card .ember,
+.tier-card .star,
+.tier-card .tier-solar-pillars,
+.tier-card .solar-sunburst,
+.tier-card .flame-front,
+.tier-card .flame-back,
+.tier-card .corner-plate,
+.tier-card .diamond-flare,
+.tier-card .tier-prismatic-beam-sweep,
+.tier-card .tier-plasma-border-ex,
+.tier-card .tier-ex-strobe-overlay {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Tool Accent Box (Icon Squircle) - High Z-Index & Specular Clarity */
@@ -1042,7 +1082,7 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
 }
 @keyframes ur-mandala-pulse {
   0%, 100% { transform: scale(0.92); opacity: 0.55; }
-  50% { transform: scale(1.18); opacity: 1; filter: drop-shadow(0 0 12px #EC4899); }
+  50% { transform: scale(1.18); opacity: 1; }
 }
 
 /* Orbiting Satellites & Holographic Halo Around Icon Medallion */
@@ -1586,8 +1626,7 @@ html.dark .tier-card.tier-ss {
   width: 100%;
   height: 100%;
   animation: spin-clockwise 20s linear infinite;
-  filter: drop-shadow(0 0 6px rgba(225, 29, 72, 0.65));
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .tier-card.tier-ss .tool-accent-box {
@@ -1822,8 +1861,7 @@ html.dark .tier-card.tier-lr .flex.flex-wrap span {
   width: 100%;
   height: 100%;
   animation: spin-clockwise 24s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.75));
-  opacity: 0.9;
+  opacity: 0.95;
 }
 .tier-card.tier-lr .solar-ring-svg path {
   stroke: #B45309 !important;
@@ -2001,8 +2039,7 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
   width: 100%;
   height: 100%;
   animation: spin-clockwise 22s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.75));
-  opacity: 0.9;
+  opacity: 0.95;
 }
 .tier-card.tier-ex .astrolabe-inner {
   position: absolute;
@@ -2010,8 +2047,7 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
   width: 100%;
   height: 100%;
   animation: spin-counter 16s linear infinite;
-  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.7));
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .tier-card.tier-ex .tool-accent-box {

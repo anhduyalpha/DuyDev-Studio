@@ -88,8 +88,8 @@ export function renderToolCard(tool) {
           ${tool.specs && tool.specs.length > 0 ? tool.specs.map((spec, idx) => `
             <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium ${
               idx === 0 
-                ? 'bg-zinc-100/90 dark:bg-white/[0.08] backdrop-blur-md text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs' 
-                : 'bg-zinc-50/80 dark:bg-white/[0.04] backdrop-blur-sm text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]'
+                ? 'bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs' 
+                : 'bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]'
             }">
               ${spec}
             </span>
