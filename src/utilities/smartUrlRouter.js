@@ -18,10 +18,13 @@ const SCRIBD_REGEX = /(?:https?:\/\/)?(?:www\.)?scribd\.com\/(?:document|doc|pre
 const TIKTOK_REGEX = /(?:https?:\/\/)?(?:(?:vt|vm|www|m|v)\.)?tiktok\.com\/[^\s"']+/i;
 const DOUYIN_REGEX = /(?:https?:\/\/)?(?:(?:v|www|m)\.)?douyin\.com\/[^\s"']+/i;
 
+// YouTube video / shorts / youtu.be URL patterns
+const YOUTUBE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|v\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}[^\s"'>]*/i;
+
 /**
  * Detect if text contains a supported tool URL.
  * @param {string} raw
- * @returns {{ toolId: 'scribd'|'tiktok', route: string, url: string, autoStart: boolean }|null}
+ * @returns {{ toolId: 'scribd'|'tiktok'|'youtube', route: string, url: string, autoStart: boolean }|null}
  */
 export function detectSmartRoute(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -43,7 +46,22 @@ export function detectSmartRoute(raw) {
     };
   }
 
-  // 2. TikTok / Douyin Video & Photo Check
+  // 2. YouTube Video & Shorts Check
+  const youtubeMatch = trimmed.match(YOUTUBE_REGEX);
+  if (youtubeMatch) {
+    let matchedUrl = youtubeMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'youtube',
+      route: '#tool/youtube-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
+  // 3. TikTok / Douyin Video & Photo Check
   const tiktokMatch = trimmed.match(TIKTOK_REGEX) || trimmed.match(DOUYIN_REGEX);
   if (tiktokMatch) {
     let matchedUrl = tiktokMatch[0];
@@ -81,7 +99,7 @@ export function handoffSmartUrl(smartResult) {
     console.warn('[SmartUrlRouter] Failed to set sessionStorage:', err);
   }
 
-  const targetRoute = smartResult.route || (smartResult.toolId === 'scribd' ? '#tool/scribd' : '#tool/tiktok');
+  const targetRoute = smartResult.route || (smartResult.toolId === 'scribd' ? '#tool/scribd' : smartResult.toolId === 'youtube' ? '#tool/youtube-downloader' : '#tool/tiktok');
   if (window.location.hash === targetRoute) {
     window.dispatchEvent(new CustomEvent('ds:pending-autostart-ready', { detail: smartResult }));
   } else {
@@ -92,7 +110,7 @@ export function handoffSmartUrl(smartResult) {
 /**
  * Consumes pending auto-start URL for a specific tool if within TTL (<15s).
  * Clears sessionStorage immediately upon retrieval.
- * @param {'scribd'|'tiktok'} expectedToolId
+ * @param {'scribd'|'tiktok'|'youtube'} expectedToolId
  * @returns {string|null} The URL to auto-start, or null
  */
 export function consumePendingAutoStart(expectedToolId) {

@@ -49,6 +49,20 @@ export const RELEASE_NOTES_MAP = {
     ]
   },
 
+  'v23.49': {
+    version: 'v23.49',
+    title: 'Bản cập nhật v23.49',
+    date: '18/10/2026',
+    features: [
+      'Ra mắt YouTube Downloader Pro: Tải video YouTube Full HD/4K (1080p, 720p, 480p, 360p) với video+audio merging và trích xuất âm thanh chất lượng cao MP3 320kbps / M4A AAC nguyên bản',
+      'Tích hợp 1-click lưu trữ cá nhân DD Studio Drive (drive/YouTube/) và xem trước trực tiếp qua Universal File Viewer',
+      'Hỗ trợ nhận diện thông minh liên kết YouTube (watch, shorts, youtu.be, embed) từ Web Share Target và Smart URL Router'
+    ],
+    fixes: [
+      'Tối ưu hóa pipeline tải đa luồng yt-dlp và FFmpeg ghép nối trên máy chủ'
+    ]
+  },
+
   'v23.45': {
     version: 'v23.45',
     title: 'Bản cập nhật v23.45',

@@ -27,6 +27,7 @@ import { renderStoragePage, attachStoragePageListeners } from './StoragePage.js'
 import { renderQuizWorkspace, attachQuizListeners } from '../components/tools/quiz/QuizWorkspace.js';
 import { renderViewSplitWorkspace, attachViewSplitWorkspaceListeners } from '../components/tools/viewsplit/ViewSplitWorkspace.js?v=22.11';
 import { renderTiktokWorkspace, attachTiktokWorkspaceListeners } from '../components/tools/tiktok/TiktokWorkspace.js';
+import { renderYoutubeWorkspace, attachYoutubeWorkspaceListeners } from '../components/tools/youtube/YoutubeWorkspace.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
@@ -81,6 +82,10 @@ export function renderToolPage(toolId = 'pdf-convert', subTab = null) {
     case 'tiktok-downloader':
     case 'tiktok':
       return renderTiktokWorkspace();
+
+    case 'youtube-downloader':
+    case 'youtube':
+      return renderYoutubeWorkspace();
 
     case 'pdf-studio':
     case 'pdf-merge':
@@ -149,6 +154,10 @@ export function attachToolPageListeners(onReRender) {
     case 'tiktok-downloader':
     case 'tiktok':
       return attachTiktokWorkspaceListeners(onReRender);
+
+    case 'youtube-downloader':
+    case 'youtube':
+      return attachYoutubeWorkspaceListeners(onReRender);
 
     case 'pdf-studio':
     case 'pdf-merge':

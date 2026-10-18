@@ -147,6 +147,19 @@ const DEFAULT_TOOLS = [
     tags: ['tiktok', 'tik tok', 'tải video', 'album ảnh', 'slideshow', 'photo mode', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin']
   },
   {
+    id: 'youtube-downloader',
+    title: 'YouTube Downloader',
+    description: 'Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive.',
+    category: 'system',
+    icon: 'youtube',
+    featured: true,
+    specs: ['MP4 1080p', 'MP3 320kbps', 'Lưu Drive'],
+    color: '#FF0000',
+    tier: 'UR',
+    route: '#tool/youtube-downloader',
+    tags: ['youtube', 'yt', 'tải video', 'tải nhạc', 'youtube downloader', 'mp3', 'mp4', '1080p', 'audio', 'video', 'shorts', 'âm thanh']
+  },
+  {
     id: 'scribd-archiver',
     title: 'Scribd Downloader',
     description: 'Tải tài liệu & slide Scribd sang file PDF rõ nét.',

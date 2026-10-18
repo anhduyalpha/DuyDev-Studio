@@ -464,6 +464,15 @@ class App {
             tiktokManager.resolve(targetUrl);
           });
         }
+      } else if (parts[0] === 'youtube-downloader' || parts[0] === 'youtube') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          import('./components/tools/youtube/hooks/useYoutube.js').then(({ youtubeManager }) => {
+            youtubeManager.setUrl(targetUrl);
+            youtubeManager.resolve(targetUrl);
+          });
+        }
       }
     } else if (hash === '#qr' || hash.startsWith('#qr/')) {
       dispatchTool('qr-multi', hash.startsWith('#qr/') ? hash.replace('#qr/', '') : null);
@@ -490,6 +499,17 @@ class App {
         import('./components/tools/tiktok/hooks/useTiktok.js').then(({ tiktokManager }) => {
           tiktokManager.setUrl(targetUrl, false);
           tiktokManager.resolve(targetUrl);
+        });
+      }
+    } else if (hash === '#youtube' || hash === '#youtube-downloader' || hash.startsWith('#youtube?') || hash.startsWith('#youtube-downloader?')) {
+      dispatchTool('youtube-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        import('./components/tools/youtube/hooks/useYoutube.js').then(({ youtubeManager }) => {
+          youtubeManager.setUrl(targetUrl);
+          youtubeManager.resolve(targetUrl);
         });
       }
     } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {

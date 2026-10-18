@@ -6,6 +6,7 @@
 
 /** @enum {string} Payload classification types */
 export const SharePayloadType = {
+  YOUTUBE_URL: 'YOUTUBE_URL',
   TIKTOK_URL: 'TIKTOK_URL',
   SCRIBD_URL: 'SCRIBD_URL',
   STUDOCU_URL: 'STUDOCU_URL',
@@ -30,6 +31,12 @@ const ARCHIVE_MIMES = [
   'application/x-bzip2'
 ];
 const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff|svg|avif|ico)(\?.*)?$/i;
+
+function isYouTubeHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be';
+}
 
 function isTikTokHost(hostname) {
   if (!hostname) return false;
@@ -475,6 +482,16 @@ export function classifySharedPayload(payload) {
   if (effectiveUrl) {
     try {
       const parsed = new URL(effectiveUrl);
+      if (isYouTubeHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.YOUTUBE_URL,
+          recommendations: [
+            { label: 'Tải Video & Âm thanh YouTube', route: '#tool/youtube-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+          ],
+        };
+      }
+
       if (isTikTokHost(parsed.hostname)) {
         const isPhoto = parsed.pathname.includes('/photo/');
         return {
