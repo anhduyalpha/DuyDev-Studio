@@ -100,9 +100,20 @@ Các icon trạng thái và dock tiến trình sử dụng CSS `animate-ping` ho
    - `useViewSplitDom.js`: Tự động ngắt vòng lặp Canvas RAF (`renderCanvasFrame`) khi tab bị ẩn (`document.hidden`) và tự phục hồi khi tab hiển thị trở lại.
    - `StoragePage.js`, `TiktokWorkspace.js`, `ConverterProgress.js`: Khóa cờ `animate-ping` chỉ xuất hiện khi `state.isUploading`, `batchQueue.isActive` hoặc `isConverting` thực sự hoạt động; loại bỏ hoạt họa vô tận khỏi modal tĩnh (`MigrationNoticeModal.js`).
 
+### 4.5. Khắc Phục Hiện Tượng Lệch Tâm Hào Quang & Triệt Tiêu Scroll Lag 120 FPS Trên Android (v23.48)
+1. **Neo Trực Tiếp Hào Quang Vào Tâm Hộp Icon (Concentric Halo Anchor):**
+   - Bọc hộp icon `.tool-accent-box` trong `<div class="relative inline-flex items-center justify-center shrink-0">`.
+   - Các vòng hào quang (`.tier-icon-dual-halo`, `.tier-icon-rune-ss`, `.tier-icon-halo-ur`, `.tier-icon-solar-lr`, `.tier-astrolabe-ex`) được đặt bên trong thẻ neo với `position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);`, đạt độ đồng tâm 100% tuyệt đối trên cả mobile (44px) và desktop (48px).
+2. **Triệt Tiêu 4 Điểm Nghẽn GPU Khi Cuộn Trên Android:**
+   - **Loại bỏ `blur-2xl`:** Thay khối bloom nền thẻ `<div class="... blur-2xl">` bằng `radial-gradient(circle, var(--accent) 0%, transparent 70%)` tĩnh, loại bỏ 40px Gaussian blur trên mỗi thẻ.
+   - **Xóa `-webkit-mask-composite: xor`:** Ẩn lớp perimeter xoay conic gradient tạo offscreen FBO buffer, tận dụng viền đa sắc gốc của trình duyệt `border: 2.5px solid transparent; background: ... padding-box, linear-gradient(...) border-box`.
+   - **Tách `box-shadow` khỏi vòng xoay:** Đặt quầng sáng tĩnh trên thẻ cha (`.ur-halo-aura`), vòng xoay `.ur-halo-ring` chỉ render nét đứt vector thuần túy (`will-change: transform; backface-visibility: hidden;`).
+   - **Thu gọn `.tier-holo-foil-sheen`:** Thu nhỏ từ `400% x 400%` về `100% x 100%` với `translate3d` keyframes, giảm 16 lần diện tích overdraw GPU.
+   - **Passive Swipe Governor (`tierViewportGovernor.js`):** Lắng nghe `touchmove`/`scroll` (`{ passive: true }`), tự động tạm dừng `animation-play-state` của các vi chuyển động khi ngón tay đang chạm vuốt và phục hồi sau 120ms mà không gây layout thrash hay repaint.
+
 ---
 
 ## 5. Quy trình Kiểm thử & Xác minh (Verification)
-1. **Unit Tests:** Kiểm tra bộ test `server/tests/unit/battery_optimization.test.ts` (37 tests), `server/tests/unit/pwa_lifecycle.test.ts` (34 tests), `server/tests/unit/smooth_scroll_120hz.test.ts` (9 tests) và `server/tests/unit/domain_migration.test.ts` (6 tests) chạy qua 100% (Tổng cộng 86/86 tests PASS).
-2. **Cú pháp JS & TS:** `node --check` trên tất cả file frontend đã sửa và `tsc --noEmit` hoàn tất với mã thoát 0.
-3. **Quy Tắc Tam Giác Phiên Bản:** Đồng bộ tuyệt đối phiên bản `duydev-studio-v23.06` qua `sw.js`, `index.html`, `pwa.js` và `domain_migration.test.ts`.
+1. **Visual Testing:** Chụp ảnh Playwright trên viewport mobile `390x844` (`mobile_studocu_ur_light.png`, `mobile_scribd_ur_light.png`, `mobile_studocu_ur_dark.png`, `mobile_scribd_ur_dark.png`), xác nhận vòng hào quang đồng tâm 100% với hộp icon và chữ hiển thị rõ nét không bị che.
+2. **Cú pháp JS & TS:** `rtk err node --check` trên tất cả file frontend đã sửa (`ToolCard.js`, `TierFrameAssets.js`, `DashboardPage.js`, `tierViewportGovernor.js`, `pwa.js`, `releaseNotes.js`, `sw.js`) đều thoát mã 0.
+3. **Quy Tắc Tam Giác Phiên Bản:** Đồng bộ tuyệt đối phiên bản `duydev-studio-v23.48` qua `sw.js`, `index.html`, `pwa.js` và `releaseNotes.js`. Deploy trực tiếp lên production HTTPS (`studio.duydev.cloud`).
