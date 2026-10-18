@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.48': {
+    version: 'v23.48',
+    title: 'Bản cập nhật v23.48',
+    date: '18/10/2026',
+    features: [
+      'Concentric Icon Halos: Neo trực tiếp vòng hào quang vào tâm hộp icon đạt độ đồng tâm 100% hoàn hảo trên cả điện thoại (38px) lẫn máy tính (44px)',
+      '120FPS Android Swipe Governor: Tự động tạm ngưng nhẹ vi chuyển động khi ngón tay đang chạm vuốt (touchmove/scroll) và phục hồi sau 120ms'
+    ],
+    fixes: [
+      'Loại bỏ -webkit-mask-composite: xor và conic-gradient offscreen FBO buffer trên viền thẻ UR/EX để cuộn siêu mượt',
+      'Tách box-shadow khỏi vòng xoay ur-halo-ring sang quầng sáng radial-gradient tĩnh, thu gọn holo-foil-sheen về 100% giảm 16 lần overdraw GPU',
+      'Thay thế blur-2xl trên background bloom của thẻ bằng radial-gradient tĩnh loại bỏ 40px Gaussian blur'
+    ]
+  },
+
   'v23.47': {
     version: 'v23.47',
     title: 'Bản cập nhật v23.47',

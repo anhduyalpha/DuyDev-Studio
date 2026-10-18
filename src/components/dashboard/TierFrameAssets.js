@@ -217,10 +217,6 @@ export function renderTierStructuralLayers(tierCode) {
           </svg>
         </div>
 
-        <!-- Layer A: Glowing Icon Socket Ring (72px) -->
-        <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true">
-          <div class="halo-pulsing-core"></div>
-        </div>
       `.trim();
 
     case 'SS':
@@ -304,18 +300,6 @@ export function renderTierStructuralLayers(tierCode) {
             <polygon points="87,160 24,50 150,50" stroke="#E11D48" stroke-width="1.5"/>
             <circle cx="87" cy="87" r="45" stroke="#FDA4AF" stroke-width="1"/>
             <circle cx="87" cy="87" r="28" stroke="#E11D48" stroke-width="1.5" stroke-dasharray="6 3"/>
-          </svg>
-        </div>
-
-        <!-- Layer A: High-Contrast Rotating Geometric Rune Ring (72px) -->
-        <div class="tier-icon-rune-ss pointer-events-none" aria-hidden="true">
-          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, rgba(225, 29, 72, 0.4)) 0%, transparent 72%);"></div>
-          <svg viewBox="0 0 72 72" class="rune-circle-svg" fill="none">
-            <circle cx="36" cy="36" r="32" stroke="color-mix(in srgb, var(--accent) 70%, #E11D48)" stroke-width="5" stroke-opacity="0.32"/>
-            <circle cx="36" cy="36" r="32" stroke="#E11D48" stroke-width="1.8" stroke-dasharray="5 3"/>
-            <polygon points="36,8 60,50 12,50" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
-            <polygon points="36,64 12,22 60,22" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
-            <circle cx="36" cy="36" r="20" stroke="#FDA4AF" stroke-width="1"/>
           </svg>
         </div>
 
@@ -428,16 +412,7 @@ export function renderTierStructuralLayers(tierCode) {
           </svg>
         </div>
 
-        <!-- Layer A: Orbiting Prismatic Satellites & Holographic Halo -->
-        <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
-          <div class="ur-halo-ring"></div>
-          <div class="ur-halo-pulse"></div>
-          <div class="ur-orbit-satellite sat-1"></div>
-          <div class="ur-orbit-satellite sat-2"></div>
-          <div class="ur-orbit-satellite sat-3"></div>
-        </div>
-
-        <!-- Seamless Soft Holographic Foil Sheen (400% with feathered stops, zero cut lines) -->
+        <!-- Seamless Soft Holographic Foil Sheen -->
         <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
       `.trim();
 
@@ -555,17 +530,6 @@ export function renderTierStructuralLayers(tierCode) {
             <path d="M 90 5 V 175M 5 90 H 175M 30 30 L 150 150M 30 150 L 150 30" stroke="#FACC15" stroke-width="1" stroke-dasharray="6 4"/>
             <circle cx="90" cy="90" r="38" stroke="#FEF08A" stroke-width="1.5" stroke-dasharray="8 4"/>
             <circle cx="90" cy="90" r="20" stroke="#FACC15" stroke-width="2"/>
-          </svg>
-        </div>
-
-        <!-- Layer A: High-Contrast Rotating Solar Halo (74px) -->
-        <div class="tier-icon-solar-lr pointer-events-none" aria-hidden="true">
-          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, rgba(250, 204, 21, 0.45)) 0%, transparent 72%);"></div>
-          <svg viewBox="0 0 74 74" class="solar-ring-svg" fill="none">
-            <circle cx="37" cy="37" r="33" stroke="color-mix(in srgb, var(--accent) 60%, #FACC15)" stroke-width="6" stroke-opacity="0.32"/>
-            <circle cx="37" cy="37" r="33" stroke="#FACC15" stroke-width="2" stroke-dasharray="6 3"/>
-            <circle cx="37" cy="37" r="24" stroke="#CA8A04" stroke-width="1.5" stroke-dasharray="3 3"/>
-            <path d="M37 2V8M37 66V72M2 37H8M66 37H72M12 12L17 17M57 57L62 62M12 62L17 57M57 17L62 12" stroke="#FEF08A" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
         </div>
 
@@ -716,7 +680,88 @@ export function renderTierStructuralLayers(tierCode) {
           </svg>
         </div>
 
-        <!-- Layer A: High-Contrast Rotating Dual Astrolabe Rings (74px) -->
+        <!-- 12 Floating Cosmic Stardust -->
+        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
+          <span class="particle star star-1"></span>
+          <span class="particle star star-2"></span>
+          <span class="particle star star-3"></span>
+          <span class="particle star star-4"></span>
+          <span class="particle star star-5"></span>
+          <span class="particle star star-6"></span>
+          <span class="particle star star-7"></span>
+          <span class="particle star star-8"></span>
+          <span class="particle star star-9"></span>
+          <span class="particle star star-10"></span>
+          <span class="particle star star-11"></span>
+          <span class="particle star star-12"></span>
+        </div>
+
+        <div class="tier-cosmic-grid pointer-events-none" aria-hidden="true"></div>
+      `.trim();
+
+    default:
+      return '';
+  }
+}
+
+/**
+ * Concentric Tier Icon Halo (S, SS, UR, LR, EX)
+ * Rendered directly inside the relative icon container wrapper to guarantee 100% concentricity
+ * across mobile (44px) and desktop (48px) viewports (KI-FIX-023).
+ */
+export function renderTierIconHalo(tierCode) {
+  if (!tierCode) return '';
+  const code = String(tierCode).toUpperCase();
+
+  switch (code) {
+    case 'S':
+      return `
+        <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true">
+          <div class="halo-pulsing-core"></div>
+        </div>
+      `.trim();
+
+    case 'SS':
+      return `
+        <div class="tier-icon-rune-ss pointer-events-none" aria-hidden="true">
+          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, rgba(225, 29, 72, 0.4)) 0%, transparent 72%);"></div>
+          <svg viewBox="0 0 72 72" class="rune-circle-svg" fill="none">
+            <circle cx="36" cy="36" r="32" stroke="color-mix(in srgb, var(--accent) 70%, #E11D48)" stroke-width="5" stroke-opacity="0.32"/>
+            <circle cx="36" cy="36" r="32" stroke="#E11D48" stroke-width="1.8" stroke-dasharray="5 3"/>
+            <polygon points="36,8 60,50 12,50" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
+            <polygon points="36,64 12,22 60,22" stroke="#FB7185" stroke-width="1.2" stroke-dasharray="3 2"/>
+            <circle cx="36" cy="36" r="20" stroke="#FDA4AF" stroke-width="1"/>
+          </svg>
+        </div>
+      `.trim();
+
+    case 'UR':
+      return `
+        <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
+          <div class="ur-halo-aura"></div>
+          <div class="ur-halo-ring"></div>
+          <div class="ur-halo-pulse"></div>
+          <div class="ur-orbit-satellite sat-1"></div>
+          <div class="ur-orbit-satellite sat-2"></div>
+          <div class="ur-orbit-satellite sat-3"></div>
+        </div>
+      `.trim();
+
+    case 'LR':
+      return `
+        <div class="tier-icon-solar-lr pointer-events-none" aria-hidden="true">
+          <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, rgba(250, 204, 21, 0.45)) 0%, transparent 72%);"></div>
+          <svg viewBox="0 0 74 74" class="solar-ring-svg" fill="none">
+            <circle cx="37" cy="37" r="33" stroke="color-mix(in srgb, var(--accent) 60%, #FACC15)" stroke-width="6" stroke-opacity="0.32"/>
+            <circle cx="37" cy="37" r="33" stroke="#FACC15" stroke-width="2" stroke-dasharray="6 3"/>
+            <circle cx="37" cy="37" r="24" stroke="#CA8A04" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M37 2V8M37 66V72M2 37H8M66 37H72M12 12L17 17M57 57L62 62M12 62L17 57M57 17L62 12" stroke="#FEF08A" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+      `.trim();
+
+    case 'EX':
+      return `
         <div class="tier-astrolabe-ex pointer-events-none" aria-hidden="true">
           <div class="absolute inset-0 rounded-full pointer-events-none" style="background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, rgba(34, 211, 238, 0.4)) 0%, color-mix(in srgb, var(--accent) 30%, rgba(192, 132, 252, 0.2)) 50%, transparent 75%);"></div>
           <svg viewBox="0 0 74 74" class="astrolabe-outer" fill="none">
@@ -735,24 +780,6 @@ export function renderTierStructuralLayers(tierCode) {
             <polygon points="37,56 22,30 52,30" stroke="#38BDF8" stroke-width="1"/>
           </svg>
         </div>
-
-        <!-- 12 Floating Cosmic Stardust -->
-        <div class="tier-particles-wrap pointer-events-none" aria-hidden="true">
-          <span class="particle star star-1"></span>
-          <span class="particle star star-2"></span>
-          <span class="particle star star-3"></span>
-          <span class="particle star star-4"></span>
-          <span class="particle star star-5"></span>
-          <span class="particle star star-6"></span>
-          <span class="particle star star-7"></span>
-          <span class="particle star star-8"></span>
-          <span class="particle star star-9"></span>
-          <span class="particle star star-10"></span>
-          <span class="particle star star-11"></span>
-          <span class="particle star star-12"></span>
-        </div>
-
-        <div class="tier-cosmic-grid pointer-events-none" aria-hidden="true"></div>
       `.trim();
 
     default:

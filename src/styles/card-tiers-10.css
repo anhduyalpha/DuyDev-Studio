@@ -393,31 +393,38 @@ html.dark .tier-watermark-seal-ex {
 }
 
 /* ==============================================================================
-   1.6 Layer A: High-Contrast Rotating Icon Socket Rings (70px–74px max)
-   Centered precisely at 44px, 44px on p-5 card
+   1.6 Layer A: High-Contrast Rotating Icon Socket Rings (Concentric with Icon Box)
+   Centered precisely at 50%, 50% within relative icon container wrapper (KI-FIX-023)
    ============================================================================== */
-.tier-card.tier-s .tier-icon-dual-halo,
-.tier-card.tier-ss .tier-icon-rune-ss,
-.tier-card.tier-ur .tier-icon-halo-ur,
-.tier-card.tier-lr .tier-icon-solar-lr,
-.tier-card.tier-ex .tier-astrolabe-ex {
+.tier-card .tier-icon-dual-halo,
+.tier-card .tier-icon-rune-ss,
+.tier-card .tier-icon-halo-ur,
+.tier-card .tier-icon-solar-lr,
+.tier-card .tier-astrolabe-ex {
   position: absolute;
-  top: 44px;
-  left: 44px;
-  width: 72px;
-  height: 72px;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  --sat-radius: 30px;
 }
 
-.tier-card.tier-lr .tier-icon-solar-lr,
-.tier-card.tier-ex .tier-astrolabe-ex {
-  width: 74px;
-  height: 74px;
+@media (min-width: 640px) {
+  .tier-card .tier-icon-dual-halo,
+  .tier-card .tier-icon-rune-ss,
+  .tier-card .tier-icon-halo-ur,
+  .tier-card .tier-icon-solar-lr,
+  .tier-card .tier-astrolabe-ex {
+    width: 64px;
+    height: 64px;
+    --sat-radius: 32px;
+  }
 }
 
 /* ==============================================================================
@@ -965,27 +972,7 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
 /* --- Tier UR: Continuous 360° Iridescent Dichroic Frame & Diamond Lens Flares --- */
 /* --- Tier UR: Continuous 360° Iridescent Dichroic Frame, Orbiting Satellites, Floating Starlight & Prismatic Light Blade --- */
 .tier-card.tier-ur .tier-prismatic-perimeter-ur {
-  position: absolute;
-  inset: 0;
-  border-radius: 1rem;
-  padding: 3px;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 3;
-}
-.tier-card.tier-ur .tier-prismatic-perimeter-ur::before {
-  content: '';
-  position: absolute;
-  top: -70%;
-  left: -70%;
-  width: 240%;
-  height: 240%;
-  background: conic-gradient(from 0deg, #F472B6, #C084FC, #38BDF8, #34D399, #FACC15, #FB7185, #818CF8, #F472B6);
-  animation: spin-clockwise 4.5s linear infinite;
-  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.4)) drop-shadow(0 0 14px rgba(56, 189, 248, 0.4));
+  display: none !important;
 }
 
 /* Prismatic Crystalline Light Blade Sweep */
@@ -1100,29 +1087,35 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
 }
 .tier-card.tier-ur .ur-orbit-satellite {
   position: absolute;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 10px currentColor, 0 0 16px #FFFFFF;
+  box-shadow: 0 0 8px currentColor, 0 0 12px #FFFFFF;
+  z-index: 3;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 .tier-card.tier-ur .sat-1 {
-  top: -4px; left: 50%;
+  top: calc(50% - var(--sat-radius) - 3px);
+  left: calc(50% - 3px);
   background: #F472B6; color: #F472B6;
   animation: ur-orbit-360 4.2s linear infinite;
-  transform-origin: 0 44px;
+  transform-origin: 3px calc(var(--sat-radius) + 3px);
 }
 .tier-card.tier-ur .sat-2 {
-  bottom: -4px; left: 50%;
+  top: calc(50% + var(--sat-radius) - 3px);
+  left: calc(50% - 3px);
   background: #38BDF8; color: #38BDF8;
   animation: ur-orbit-360 5.6s linear infinite reverse;
-  transform-origin: 0 -44px;
+  transform-origin: 3px calc(-1 * var(--sat-radius) + 3px);
 }
 .tier-card.tier-ur .sat-3 {
-  top: 50%; right: -4px;
+  top: calc(50% - 3px);
+  left: calc(50% + var(--sat-radius) - 3px);
   background: #FACC15; color: #FACC15;
   animation: ur-orbit-360 7.0s linear infinite;
-  transform-origin: -44px 0;
+  transform-origin: calc(-1 * var(--sat-radius) + 3px) 3px;
 }
 @keyframes ur-orbit-360 {
   0% { transform: rotate(0deg); }
@@ -1700,14 +1693,29 @@ html.dark .tier-card.tier-ur {
   box-shadow: 0 0 42px rgba(236, 72, 153, 0.55) !important;
 }
 
+/* Static Radial Aura (No box-shadow recalculations during rotation - KI-FIX-023) */
+.tier-card.tier-ur .ur-halo-aura {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, rgba(236, 72, 153, 0.35)) 0%, color-mix(in srgb, var(--accent) 25%, rgba(56, 189, 248, 0.2)) 50%, transparent 72%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Rotating Dashed Perimeter (Pure Vector / Border, Zero Box-Shadow) */
 .tier-card.tier-ur .ur-halo-ring {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   border: 1.5px dashed color-mix(in srgb, var(--accent) 70%, #EC4899);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, rgba(236, 72, 153, 0.6)), inset 0 0 10px color-mix(in srgb, var(--accent) 50%, rgba(56, 189, 248, 0.4));
   animation: spin-clockwise 14s linear infinite;
   opacity: 0.9;
+  will-change: transform;
+  backface-visibility: hidden;
+  z-index: 1;
 }
 
 .tier-card.tier-ur .ur-orbit-satellite {
@@ -1727,22 +1735,22 @@ html.dark .tier-card.tier-ur {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
-/* Seamless Soft Holographic Foil Sheen (400% with feathered stops, zero cut lines) */
+/* Seamless Soft Holographic Foil Sheen (100% compact, zero cut lines, 16x overdraw reduction) */
 .tier-card.tier-ur .tier-holo-foil-sheen {
   position: absolute;
-  top: -150%;
-  left: -150%;
-  width: 400%;
-  height: 400%;
-  background: linear-gradient(135deg, 
-    transparent 38%, 
-    rgba(236, 72, 153, 0.08) 44%, 
-    rgba(56, 189, 248, 0.12) 50%, 
-    rgba(250, 204, 21, 0.08) 56%, 
-    transparent 62%);
-  animation: sweep-holo-foil 7s linear infinite;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  background: linear-gradient(115deg, 
+    transparent 30%, 
+    rgba(255, 255, 255, 0.45) 48%, 
+    rgba(56, 189, 248, 0.18) 52%, 
+    transparent 70%);
+  animation: sweep-holo-foil 6s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
+  will-change: transform;
 }
 
 .tier-card.tier-ur .star-svg {
@@ -2010,27 +2018,7 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 
 /* Supercharged 360° Conic Aurora Plasma Border (Stationary Masked Container with Spinning ::before) */
 .tier-card.tier-ex .tier-plasma-perimeter-ex {
-  position: absolute;
-  inset: 0;
-  border-radius: 1rem;
-  padding: 2.5px;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.tier-card.tier-ex .tier-plasma-perimeter-ex::before {
-  content: '';
-  position: absolute;
-  width: 240%;
-  height: 240%;
-  top: -70%;
-  left: -70%;
-  background: conic-gradient(from 0deg, #06B6D4, #8B5CF6, #EC4899, #38BDF8, #06B6D4);
-  animation: spin-clockwise 8s linear infinite;
+  display: none !important;
 }
 
 .tier-card.tier-ex .astrolabe-outer {
@@ -2144,8 +2132,10 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 }
 
 @keyframes sweep-holo-foil {
-  0% { transform: translateX(-50%) rotate(30deg); }
-  100% { transform: translateX(50%) rotate(30deg); }
+  0% { transform: translate3d(-100%, 0, 0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate3d(100%, 0, 0); opacity: 0; }
 }
 
 @keyframes star-twinkle {
@@ -2161,6 +2151,27 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 /* ==============================================================================
    8. Performance & Accessibility Compliance
    ============================================================================== */
+/* 120Hz & Low-Battery Governor: Micro-animations pause strictly during active touch swipe (KI-FIX-023) */
+html.is-swiping .tier-anim-layer,
+html.is-swiping .ur-halo-ring,
+html.is-swiping .ur-orbit-satellite,
+html.is-swiping .tier-holo-foil-sheen,
+html.is-swiping .rune-circle-svg,
+html.is-swiping .solar-ring-svg,
+html.is-swiping .astrolabe-outer,
+html.is-swiping .astrolabe-inner,
+html.is-swiping .particle,
+html.is-swiping .starlight-mote,
+html.is-swiping .spark,
+html.is-swiping .ember,
+html.is-swiping .star,
+html.is-swiping .diamond-flare,
+html.is-swiping .tier-prismatic-beam-sweep,
+html.is-swiping .tier-solar-beam-sweep,
+html.is-swiping .flame-tongue {
+  animation-play-state: paused !important;
+}
+
 html.app-backgrounded * {
   animation: none !important;
   transition: none !important;

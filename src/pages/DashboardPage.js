@@ -15,6 +15,7 @@ import { converterManager } from '../components/tools/converter/hooks/useConvert
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { detectSmartRoute, handoffSmartUrl } from '../utilities/smartUrlRouter.js';
 import { soundEngine } from '../utilities/soundEngine.js';
+import { initTierViewportGovernor } from '../utilities/tierViewportGovernor.js';
 
 function renderToolsContent(toolsList) {
   if (!toolsList || toolsList.length === 0) {
@@ -81,6 +82,9 @@ export function renderDashboardPage() {
 }
 
 export function attachDashboardListeners(onReRender) {
+  // 120Hz & Passive Swipe Governor: pause micro-animations during active swiping
+  const stopGovernor = initTierViewportGovernor();
+
   // Sync latest history & trash from server
   storage.fetchTrash().then(() => updateHeaderTrashIndicator()).catch(() => {});
   storage.fetchHistory().then((items) => {
@@ -308,6 +312,7 @@ export function attachDashboardListeners(onReRender) {
   window.addEventListener('keydown', handleEscapeKey);
 
   return () => {
+    stopGovernor();
     if (tierObserver) {
       tierObserver.disconnect();
       tierObserver = null;
