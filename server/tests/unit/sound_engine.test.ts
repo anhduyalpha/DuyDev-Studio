@@ -85,15 +85,86 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
   const rootDir = path.resolve(__dirname, '../../..');
   const mockContext = new MockAudioContext();
   let mockLocalStorage: Record<string, string>;
+  let mockSessionStorage: Record<string, string>;
 
   beforeEach(async () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     mockLocalStorage = {};
+    mockSessionStorage = {};
     mockContext.state = 'running';
 
+    const elementsMap = new Map<string, any>();
+    const mockDocument: any = {
+      hidden: false,
+      visibilityState: 'visible',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      getElementById: vi.fn((id: string) => elementsMap.get(id) || null),
+      createElement: vi.fn((tag: string) => {
+        const el: any = {
+          tagName: tag.toUpperCase(),
+          innerHTML: '',
+          children: [],
+          firstElementChild: null,
+          appendChild: vi.fn((child: any) => {
+            el.children.push(child);
+            if (!el.firstElementChild) el.firstElementChild = child;
+          }),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          querySelector: vi.fn(() => null),
+          querySelectorAll: vi.fn(() => []),
+          setAttribute: vi.fn(),
+          removeAttribute: vi.fn(),
+          classList: {
+            add: vi.fn(),
+            remove: vi.fn(),
+            toggle: vi.fn(),
+            contains: vi.fn(() => false)
+          }
+        };
+        Object.defineProperty(el, 'innerHTML', {
+          set(html: string) {
+            this._html = html;
+            const idMatch = html.match(/id=["']([^"']+)["']/);
+            if (idMatch) {
+              const childEl: any = {
+                id: idMatch[1],
+                remove: vi.fn(() => {
+                  elementsMap.delete(idMatch[1]);
+                }),
+                querySelector: vi.fn(() => null),
+                querySelectorAll: vi.fn(() => []),
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn()
+              };
+              elementsMap.set(idMatch[1], childEl);
+              this.firstElementChild = childEl;
+            }
+          },
+          get() {
+            return this._html || '';
+          }
+        });
+        return el;
+      }),
+      body: {
+        appendChild: vi.fn((child: any) => {
+          if (child?.id) {
+            elementsMap.set(child.id, child);
+          }
+        }),
+        removeChild: vi.fn((child: any) => {
+          if (child?.id) {
+            elementsMap.delete(child.id);
+          }
+        })
+      }
+    };
+
     // Global browser mocks
-    const win = {
+    const win: any = {
       AudioContext: vi.fn(function () { return mockContext; }),
       webkitAudioContext: vi.fn(function () { return mockContext; }),
       localStorage: {
@@ -103,6 +174,21 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
         }),
         removeItem: vi.fn((k: string) => {
           delete mockLocalStorage[k];
+        }),
+        clear: vi.fn(() => {
+          mockLocalStorage = {};
+        })
+      },
+      sessionStorage: {
+        getItem: vi.fn((k: string) => mockSessionStorage[k] ?? null),
+        setItem: vi.fn((k: string, v: string) => {
+          mockSessionStorage[k] = String(v);
+        }),
+        removeItem: vi.fn((k: string) => {
+          delete mockSessionStorage[k];
+        }),
+        clear: vi.fn(() => {
+          mockSessionStorage = {};
         })
       },
       addEventListener: vi.fn(),
@@ -110,15 +196,14 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
       dispatchEvent: vi.fn(),
       navigator: {
         vibrate: vi.fn()
-      }
+      },
+      document: mockDocument
     };
 
     (global as any).window = win;
-    (global as any).document = {
-      hidden: false,
-      visibilityState: 'visible',
-      addEventListener: vi.fn()
-    };
+    (global as any).document = mockDocument;
+    (global as any).localStorage = win.localStorage;
+    (global as any).sessionStorage = win.sessionStorage;
     try {
       Object.defineProperty(globalThis, 'navigator', {
         value: win.navigator,
@@ -449,6 +534,29 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
 
     soundEngine.testSound('sovereignBlade');
     expect(bladeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('19. Role-Based Sound Customization Governance: openSoundVolumeModal is strictly restricted to authenticated administrators', async () => {
+    const { openSoundVolumeModal, closeSoundVolumeModal } = await import('../../../src/components/common/SoundVolumeModal.js');
+
+    // 1. Unauthenticated regular user
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+
+    openSoundVolumeModal();
+    expect(document.getElementById('soundVolumeModalContainer')).toBeNull();
+
+    // 2. Authenticated administrator
+    window.sessionStorage.setItem('ds_admin_authenticated', 'true');
+
+    openSoundVolumeModal();
+    const modal = document.getElementById('soundVolumeModalContainer');
+    expect(modal).not.toBeNull();
+
+    // Cleanup modal
+    closeSoundVolumeModal();
+    expect(document.getElementById('soundVolumeModalContainer')).toBeNull();
+    window.sessionStorage.clear();
   });
 });
 

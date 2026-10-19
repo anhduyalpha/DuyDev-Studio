@@ -5,11 +5,17 @@
  */
 
 import { soundEngine } from '../../utilities/soundEngine.js';
+import { isAdminAuthenticated } from '../../utilities/adminAuth.js';
 
 let activeModalElement = null;
 
 export function openSoundVolumeModal() {
   if (typeof document === 'undefined') return;
+
+  // Deep sound customization is exclusively reserved for administrators
+  if (!isAdminAuthenticated()) {
+    return;
+  }
 
   // If already open, do not duplicate
   if (document.getElementById('soundVolumeModalContainer')) {

@@ -6,6 +6,7 @@ import { toggleTheme, getStoredTheme, updateThemeUI } from '../../hooks/useTheme
 import { storage } from '../../utilities/storage.js';
 import { soundEngine } from '../../utilities/soundEngine.js';
 import { openSoundVolumeModal } from '../common/SoundVolumeModal.js';
+import { isAdminAuthenticated } from '../../utilities/adminAuth.js';
 
 export function updateHeaderTrashIndicator() {
   const dot = document.getElementById('headerTrashDot');
@@ -18,7 +19,11 @@ export function updateHeaderTrashIndicator() {
 export function renderHeader() {
   const isDark = getStoredTheme() === 'dark';
   const isSoundEnabled = soundEngine.isEnabled();
+  const isAdmin = isAdminAuthenticated();
   const trashCount = storage.getLocalTrash().length;
+  const soundTitle = isSoundEnabled 
+    ? (isAdmin ? 'Tắt âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Tắt âm thanh') 
+    : (isAdmin ? 'Bật âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Bật âm thanh');
 
   return `
     <header class="sticky top-0 z-40 w-full glass-panel px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5">
@@ -74,9 +79,9 @@ export function renderHeader() {
             <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
           </div>
 
-          <!-- Sound Toggle & Amplification Button -->
+          <!-- Sound Toggle Button -->
           <button id="btnSoundToggle" 
-                  title="${isSoundEnabled ? 'Bấm để bật/tắt, click đúp hoặc giữ để chỉnh khuếch đại âm lượng' : 'Bật âm thanh (Click đúp để chỉnh âm lượng)'}" 
+                  title="${soundTitle}" 
                   aria-label="${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}" 
                   class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
             <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
@@ -160,10 +165,12 @@ export function attachHeaderListeners(onSearch) {
   const btnSound = document.getElementById('btnSoundToggle');
   const updateSoundUI = (enabled) => {
     if (!btnSound) return;
-    btnSound.title = enabled 
-      ? 'Bấm để bật/tắt, click đúp hoặc giữ để chỉnh khuếch đại âm lượng' 
-      : 'Bật âm thanh (Click đúp để chỉnh âm lượng)';
-    btnSound.setAttribute('aria-label', btnSound.title);
+    const isAuth = isAdminAuthenticated();
+    const title = enabled 
+      ? (isAuth ? 'Tắt âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Tắt âm thanh') 
+      : (isAuth ? 'Bật âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Bật âm thanh');
+    btnSound.title = title;
+    btnSound.setAttribute('aria-label', enabled ? 'Tắt âm thanh' : 'Bật âm thanh');
     btnSound.innerHTML = `<i data-lucide="${enabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>`;
     if (window.lucide) window.lucide.createIcons({ root: btnSound });
   };
@@ -172,7 +179,7 @@ export function attachHeaderListeners(onSearch) {
     let pressTimer = null;
     let isLongPress = false;
 
-    // Single click: toggle mute/unmute (unless long press fired)
+    // Single click: toggle mute/unmute (accessible to all users)
     btnSound.addEventListener('click', () => {
       if (isLongPress) {
         isLongPress = false;
@@ -185,24 +192,30 @@ export function attachHeaderListeners(onSearch) {
       updateSoundUI(newEnabled);
     });
 
-    // Double-click: open sound amplification modal
+    // Double-click: open sound amplification modal (Admin only)
     btnSound.addEventListener('dblclick', (e) => {
       e.preventDefault();
-      openSoundVolumeModal();
+      if (isAdminAuthenticated()) {
+        openSoundVolumeModal();
+      }
     });
 
-    // Right-click: open sound amplification modal
+    // Right-click: open sound amplification modal (Admin only)
     btnSound.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      openSoundVolumeModal();
+      if (isAdminAuthenticated()) {
+        e.preventDefault();
+        openSoundVolumeModal();
+      }
     });
 
-    // Long press on mobile touch
+    // Long press on mobile touch (Admin only)
     btnSound.addEventListener('touchstart', () => {
       isLongPress = false;
       pressTimer = setTimeout(() => {
         isLongPress = true;
-        openSoundVolumeModal();
+        if (isAdminAuthenticated()) {
+          openSoundVolumeModal();
+        }
       }, 400);
     }, { passive: true });
 

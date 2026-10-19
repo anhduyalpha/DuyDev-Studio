@@ -22,6 +22,7 @@ import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js
 import { openOperationsInspectorModal } from '../components/admin/AdminOperationsInspectorModal.js';
 import { renderIpTrafficManager, attachIpTrafficListeners } from '../components/admin/AdminIpTrafficManager.js';
 import { renderEngineTimeoutsCard, attachEngineTimeoutsListeners, fetchEngineTimeouts } from '../components/admin/AdminEngineTimeoutsCard.js';
+import { renderAdminSoundControlCard, attachAdminSoundControlListeners } from '../components/admin/AdminSoundControlCard.js';
 
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
@@ -585,7 +586,12 @@ function renderUnlockedDashboardView() {
         ${renderEngineTimeoutsCard(cachedEngineTimeoutsData)}
       </div>
 
-      <!-- 8. Web System Configuration & Maintenance Dock -->
+      <!-- 8. Web Audio Procedural Sound Control Card (Admin Exclusive) -->
+      <div id="adminSoundControlContainer">
+        ${renderAdminSoundControlCard()}
+      </div>
+
+      <!-- 9. Web System Configuration & Maintenance Dock -->
       <div class="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl shadow-xl space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -1378,6 +1384,9 @@ export function attachAdminPageListeners(onRerender) {
   if (document.getElementById('btnRefreshR2Stats')) {
     attachR2TelemetryListeners();
   }
+
+  // Attach Admin Sound Control Card listeners
+  attachAdminSoundControlListeners(onRerender);
 
   // Draw Initial Canvas Sparkline
   updateCanvasSparkline();
