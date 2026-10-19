@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.54': {
+    version: 'v23.54',
+    title: 'Bản cập nhật v23.54',
+    date: '19/10/2026',
+    features: [
+      'Hệ thống thông báo đẩy Android nhạy bén (Responsive Push Notifications V2): Nâng cấp kênh thông báo ds_push_channel_v2 với độ ưu tiên cao nhất (IMPORTANCE_HIGH/PRIORITY_MAX), âm báo chuông mặc định, rung haptic và hiển thị trực tiếp trên màn hình khóa',
+      'Hỗ trợ thông báo đẩy toàn diện trên cả Native APK và Web PWA: Tích hợp Unified NotificationHelper cho toàn bộ các công cụ nền (Tải YouTube, Tải TikTok, Quiz Generator, PDF Studio, File Converter, Task Coordinator)'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi thông báo bị ẩn hoặc không phát âm thanh trên các dòng máy Android (Samsung, Xiaomi, Oppo)',
+      'Bổ sung quyền POST_NOTIFICATIONS kiểm tra và yêu cầu trực tiếp qua AndroidBridge',
+      'Thêm notificationclick listener trong Service Worker giúp chạm vào thông báo là mở lại ứng dụng tức thì'
+    ]
+  },
+
   'v23.53': {
     version: 'v23.53',
     title: 'Bản cập nhật v23.53',

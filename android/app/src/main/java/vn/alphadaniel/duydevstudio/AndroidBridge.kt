@@ -514,12 +514,30 @@ class AndroidBridge(
     }
 
     /**
+     * Check if notification permission is granted on Android.
+     */
+    @JavascriptInterface
+    fun hasNotificationPermission(): Boolean {
+        return activity.hasNotificationPermission()
+    }
+
+    /**
      * Request notification permission on Android 13+ (API 33+).
      */
     @JavascriptInterface
     fun requestNotificationPermission() {
         activity.runOnUiThread {
             activity.requestNotificationPermission()
+        }
+    }
+
+    /**
+     * Open system notification settings for DuyDev Studio.
+     */
+    @JavascriptInterface
+    fun openNotificationSettings() {
+        activity.runOnUiThread {
+            activity.openNotificationSettings()
         }
     }
 

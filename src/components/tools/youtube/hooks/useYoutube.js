@@ -7,6 +7,7 @@
 import { youtubeApi } from '../services/youtubeApi.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
+import { notifyJobComplete, notifyJobFailed } from '../../../../utilities/notificationHelper.js';
 
 const STORAGE_KEY = 'ds_youtube_history_v1';
 
@@ -286,12 +287,20 @@ export class YoutubeManager {
       this.notify();
       try { soundEngine?.play('complete'); } catch {}
       showToast(`Tải xuống thành công: ${result.fileName}`, 'success');
+      notifyJobComplete('Tải xuống YouTube hoàn tất', `"${result.fileName}" đã được tải về máy của bạn!`, {
+        url: window.location.href,
+        tag: `yt_${result.fileName || Date.now()}`
+      });
     } catch (err) {
       this.state.isDownloading = false;
       this.state.downloadStatusText = '';
       this.notify();
       try { soundEngine?.play('error'); } catch {}
       showToast(err.message || 'Lỗi khi tải video/âm thanh', 'error');
+      notifyJobFailed('Tải xuống YouTube thất bại', err.message || 'Không thể tải video/âm thanh', {
+        url: window.location.href,
+        tag: `yt_err_${Date.now()}`
+      });
     }
   }
 

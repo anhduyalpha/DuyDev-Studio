@@ -8,6 +8,7 @@ import { showToast } from '../../../../utilities/toast.js';
 import { storage } from '../../../../utilities/storage.js';
 import { saveQuizHistoryPair } from '../utilities/quizHistoryHelper.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
+import { notifyJobComplete, notifyJobFailed } from '../../../../utilities/notificationHelper.js';
 
 export function isValidDriveUrl(url) {
   if (!url || typeof url !== 'string') return false;
@@ -592,16 +593,15 @@ class QuizManager {
 
           const quizName = this.state.prefix || 'PDF';
 
-          // Trigger native push notification if running inside Android APK
-          if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
-            try {
-              window.AndroidBridge.showNotification(
-                'Tạo bài tập hoàn tất',
-                `Đã tạo thành công Đề bài và Đáp án: ${quizName}`,
-                'quiz'
-              );
-            } catch (_) {}
-          }
+          // Trigger system push notification (Android APK / Web PWA)
+          notifyJobComplete(
+            'Tạo bài tập hoàn tất',
+            `Đã tạo thành công Đề bài và Đáp án: ${quizName}`,
+            {
+              url: window.location.href,
+              tag: `quiz_${Date.now()}`
+            }
+          );
 
           this.state.isProcessing = false;
           this.state.progress = 100;
@@ -644,15 +644,10 @@ class QuizManager {
           this.notify('job-error');
           showToast(this.state.error, 'error');
 
-          if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
-            try {
-              window.AndroidBridge.showNotification(
-                'Lỗi tạo bài tập',
-                this.state.error,
-                'quiz_error'
-              );
-            } catch (_) {}
-          }
+          notifyJobFailed('Lỗi tạo bài tập', this.state.error, {
+            url: window.location.href,
+            tag: `quiz_err_${Date.now()}`
+          });
         }
       });
     } catch (err) {

@@ -1,11 +1,14 @@
 package vn.alphadaniel.duydevstudio.download
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -21,32 +24,54 @@ import java.util.Locale
  * featuring the official app icon (large icon) and high-priority heads-up alerts.
  */
 object DownloadNotificationManager {
-    const val CHANNEL_DOWNLOAD_ID = "ds_download_channel"
-    const val CHANNEL_PUSH_ID = "ds_push_channel"
+    const val CHANNEL_DOWNLOAD_ID = "ds_download_channel_v2"
+    const val CHANNEL_PUSH_ID = "ds_push_channel_v2"
+    private const val LEGACY_CHANNEL_DOWNLOAD = "ds_download_channel"
+    private const val LEGACY_CHANNEL_PUSH = "ds_push_channel"
 
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+            // Clean up legacy silent channels so they don't suppress alerts on existing devices
+            try {
+                manager.deleteNotificationChannel(LEGACY_CHANNEL_DOWNLOAD)
+                manager.deleteNotificationChannel(LEGACY_CHANNEL_PUSH)
+            } catch (_: Exception) {}
+
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
             val downloadChannel = NotificationChannel(
                 CHANNEL_DOWNLOAD_ID,
-                "Tải tệp tin",
+                "Tải tệp & Tác vụ nền",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Thông báo tiến trình và kết quả tải tệp tin về thiết bị"
                 enableLights(true)
+                lightColor = 0xFF4F46E5.toInt()
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 150, 100, 150)
+                setSound(soundUri, audioAttributes)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 setShowBadge(true)
             }
 
             val pushChannel = NotificationChannel(
                 CHANNEL_PUSH_ID,
-                "Thông báo ứng dụng",
+                "Thông báo tác vụ & Hoàn tất",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Thông báo trạng thái tác vụ từ DuyDev Studio"
+                description = "Thông báo kết quả xử lý tài liệu, video và tác vụ từ DuyDev Studio"
                 enableLights(true)
+                lightColor = 0xFF4F46E5.toInt()
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 200, 100, 200)
+                setSound(soundUri, audioAttributes)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 setShowBadge(true)
             }
 
@@ -112,6 +137,7 @@ object DownloadNotificationManager {
         val sizeFormatted = formatBytes(if (fileSize > 0) fileSize else (file?.length() ?: 0L))
         val text = "$fileName ($sizeFormatted) đã được lưu vào máy"
 
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOAD_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setLargeIcon(appIcon)
@@ -121,12 +147,18 @@ object DownloadNotificationManager {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setOngoing(false)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setVibrate(longArrayOf(0, 200, 100, 200))
+            .setColor(0xFF4F46E5.toInt())
             .build()
 
         try {
             NotificationManagerCompat.from(context).notify(notificationId, notification)
-        } catch (_: SecurityException) {}
+        } catch (_: Exception) {}
     }
 
     fun showDownloadCompleted(
@@ -159,6 +191,7 @@ object DownloadNotificationManager {
             flags
         )
 
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notification = NotificationCompat.Builder(context, CHANNEL_PUSH_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setLargeIcon(appIcon)
@@ -167,12 +200,18 @@ object DownloadNotificationManager {
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setVibrate(longArrayOf(0, 200, 100, 200))
+            .setColor(0xFF4F46E5.toInt())
             .build()
 
         try {
             NotificationManagerCompat.from(context).notify(notificationId, notification)
-        } catch (_: SecurityException) {}
+        } catch (_: Exception) {}
     }
 
     fun cancelNotification(context: Context, notificationId: Int) {

@@ -6,6 +6,7 @@
 
 import { showActionableToast } from './toast.js';
 import { soundEngine } from './soundEngine.js';
+import { notifyJobComplete, notifyJobFailed } from './notificationHelper.js';
 
 /**
  * @typedef {Object} ActiveTask
@@ -215,11 +216,13 @@ class TaskCoordinator {
       }
     });
 
-    // Detect status transitions (e.g. running -> completed)
+    // Detect status transitions (e.g. running -> completed / error)
     currentTasks.forEach((task) => {
       const prevStatus = this.lastStatuses.get(task.id);
       if (prevStatus === 'running' && task.status === 'completed') {
         this.notifyCompletion(task);
+      } else if (prevStatus === 'running' && task.status === 'error') {
+        this.notifyFailure(task);
       }
       this.lastStatuses.set(task.id, task.status);
     });
@@ -262,7 +265,7 @@ class TaskCoordinator {
   }
 
   /**
-   * Triggers an actionable toast when a background task finishes.
+   * Triggers an actionable toast and system push notification when a background task finishes.
    * @param {ActiveTask} task
    */
   notifyCompletion(task) {
@@ -281,6 +284,35 @@ class TaskCoordinator {
         }
       }
     });
+
+    const moduleName = task.moduleTitle || 'DuyDev Studio';
+    const targetUrl = task.route ? `${window.location.origin}/#${task.route.replace(/^#/, '')}` : window.location.href;
+    notifyJobComplete(
+      `${moduleName} • Hoàn tất`,
+      `"${task.title}" đã hoàn tất! Chạm để xem kết quả.`,
+      {
+        url: targetUrl,
+        tag: `task_${task.id || Date.now()}`
+      }
+    );
+  }
+
+  /**
+   * Triggers an error system notification when a background task encounters an unrecoverable failure.
+   * @param {ActiveTask} task
+   */
+  notifyFailure(task) {
+    soundEngine.playError();
+    const moduleName = task.moduleTitle || 'DuyDev Studio';
+    const targetUrl = task.route ? `${window.location.origin}/#${task.route.replace(/^#/, '')}` : window.location.href;
+    notifyJobFailed(
+      `${moduleName} • Thất bại`,
+      `"${task.title}" gặp sự cố khi xử lý: ${task.stage || 'Vui lòng thử lại.'}`,
+      {
+        url: targetUrl,
+        tag: `task_${task.id || Date.now()}`
+      }
+    );
   }
 
   /**
