@@ -29,7 +29,8 @@ export function renderFileTableRows(files, archiveData) {
     return `
       <tr class="archive-file-row hover:bg-zinc-50/90 dark:hover:bg-white/[0.03] transition cursor-pointer"
           data-member-path="${file.rawPath}"
-          data-file-name="${file.name}">
+          data-file-name="${file.name}"
+          data-file-size="${file.sizeBytes}">
         <td class="py-2.5 px-3 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-200 font-medium min-w-[200px]">
           <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] text-zinc-500 dark:text-zinc-400 flex items-center justify-center shrink-0">
             <i data-lucide="${getFileIcon(file.name)}" class="w-4 h-4"></i>
@@ -44,6 +45,7 @@ export function renderFileTableRows(files, archiveData) {
           <button type="button"
              data-member-path="${file.rawPath}"
              data-file-name="${file.name}"
+             data-file-size="${file.sizeBytes}"
              class="btn-preview-member px-2.5 py-1 rounded-lg ${
                isNestedArchive
                  ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30'
@@ -177,9 +179,11 @@ export function attachTableMemberListeners({ archiveState, persistArchive, reren
         ? `${archiveState.archiveData.apiBase}/api/v1/archive/extract-file?drivePath=${encodeURIComponent(archiveState.archiveData.drivePath)}&memberPath=${encodeURIComponent(memberPath)}&inline=true${authQuery}`
         : `${archiveState.archiveData.apiBase}/api/v1/archive/extract-file?fileId=${archiveState.archiveData.fileId}&memberPath=${encodeURIComponent(memberPath)}&inline=true`;
 
+      const fileSize = Number(el.getAttribute('data-file-size') || 0);
       openMediaPreview({
         name: fileName,
-        url: previewUrl
+        url: previewUrl,
+        size: fileSize
       });
     };
   });

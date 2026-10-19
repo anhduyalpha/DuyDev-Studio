@@ -6,6 +6,23 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.57': {
+    version: 'v23.57',
+    title: 'Bản cập nhật v23.57',
+    date: '19/10/2026',
+    features: [
+      'Xem tài liệu Word (.docx) trực tiếp bên trong tệp nén ZIP: Tích hợp công nghệ docx-preview kết xuất trang A4 chuẩn xác mà không cần giải nén',
+      'Hỗ trợ toàn diện mọi định dạng bên trong tệp nén: Xem PDF nhiều trang, bảng tính Excel (.xlsx, .xls, .csv), hình ảnh, âm thanh, video và mã nguồn ngay trong modal',
+      'Hỗ trợ tệp nén lồng nhau đệ quy (Zip chồng zip): Khám phá các tệp nén bên trong tệp nén (.zip, .rar, .7z, .tar.gz) với nút "Mở tệp nén", breadcrumb đa cấp và nút quay lại',
+      'Nút "Toàn màn hình": Mở bất kỳ tệp tin con nào trong Trình xem Đa năng độc lập chỉ với 1 cú click'
+    ],
+    fixes: [
+      'Khắc phục lỗi xác thực 401 Unauthorized khi trích xuất hoặc xem tệp con trong kho lưu trữ Drive bằng mật khẩu quản trị',
+      'Sửa lỗi hiển thị rác ký tự hoặc bỏ qua không xem trước được đối với các tệp Word/PDF có dung lượng lớn trong tệp nén',
+      'Khắc phục triệt để việc chặn các tệp nén lồng nhau trong Trình xem tệp Đa năng'
+    ]
+  },
+
   'v23.56': {
     version: 'v23.56',
     title: 'Bản cập nhật v23.56',

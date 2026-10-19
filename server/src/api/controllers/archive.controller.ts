@@ -17,13 +17,15 @@ import { ArchiveService } from '../../services/archive.service.js';
 import { DriveService } from '../../services/drive.service.js';
 import { AuthService } from '../../services/auth.service.js';
 
-function verifyArchiveAdminAuth(request: FastifyRequest): boolean {
+async function verifyArchiveAdminAuth(request: FastifyRequest): Promise<boolean> {
   const authHeader = (request.headers['x-storage-auth'] as string) || (request.headers.authorization as string) || '';
   const queryToken = (request.query as Record<string, string>)?.auth || (request.query as Record<string, string>)?.token || '';
   const bodyToken = (request.body as Record<string, string>)?.auth || (request.body as Record<string, string>)?.token || '';
   const candidate = authHeader || queryToken || bodyToken;
   if (candidate) {
     if (AuthService.validateToken(candidate)) return true;
+    const isPasswordValid = await AuthService.verifyPassword(candidate.replace(/^Bearer\s+/i, '').trim());
+    if (isPasswordValid) return true;
   }
   return false;
 }
@@ -32,7 +34,7 @@ export async function inspectArchiveHandler(request: FastifyRequest, reply: Fast
   const { fileId, drivePath } = inspectArchiveSchema.parse(request.body);
 
   if (drivePath) {
-    if (!verifyArchiveAdminAuth(request)) {
+    if (!(await verifyArchiveAdminAuth(request))) {
       return reply.status(401).send({
         success: false,
         error: 'UNAUTHORIZED',
@@ -87,7 +89,7 @@ export async function inspectNestedArchiveHandler(request: FastifyRequest, reply
   let parentRecordId: string | null = null;
 
   if (parentDrivePath) {
-    if (!verifyArchiveAdminAuth(request)) {
+    if (!(await verifyArchiveAdminAuth(request))) {
       return reply.status(401).send({
         success: false,
         error: 'UNAUTHORIZED',
@@ -167,7 +169,7 @@ export async function extractFileHandler(request: FastifyRequest, reply: Fastify
 
   let archiveDiskPath = '';
   if (drivePath) {
-    if (!verifyArchiveAdminAuth(request)) {
+    if (!(await verifyArchiveAdminAuth(request))) {
       return reply.status(401).send({
         success: false,
         error: 'UNAUTHORIZED',

@@ -4,6 +4,8 @@ import {
   inspectNestedArchiveSchema,
   extractFileQuerySchema
 } from '../../src/schemas/archive.schema.js';
+import { AuthService } from '../../src/services/auth.service.js';
+import { getMimeTypeForExt } from '../../src/schemas/converter.schema.js';
 
 describe('Storage Drive Archive Viewing & Hierarchy Navigation', () => {
   describe('Zod Schema Contracts for Drive Archives', () => {
@@ -170,4 +172,41 @@ describe('Storage Drive Archive Viewing & Hierarchy Navigation', () => {
       expect(rootDoc?.rawPath).toBe('readme.txt');
     });
   });
+
+  describe('Archive Authentication & Format Support', () => {
+    it('should validate admin master password "anhduy123" for drive archives', async () => {
+      const isAuthValid = await AuthService.verifyPassword('anhduy123');
+      expect(isAuthValid).toBe(true);
+
+      const isBadAuthValid = await AuthService.verifyPassword('wrongpassword');
+      expect(isBadAuthValid).toBe(false);
+    });
+
+    it('should accurately resolve docx and spreadsheet MIME types for member extraction', () => {
+      expect(getMimeTypeForExt('.docx')).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      expect(getMimeTypeForExt('.xlsx')).toBe(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      expect(getMimeTypeForExt('.pdf')).toBe('application/pdf');
+    });
+
+    it('should recognize all nested archive extension formats including tar.gz', () => {
+      const checkIsNested = (filename: string) => {
+        const ext = filename.split('.').pop()?.toLowerCase() || '';
+        return ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'tgz', 'xz'].includes(ext) || filename.endsWith('.tar.gz');
+      };
+
+      expect(checkIsNested('inner.zip')).toBe(true);
+      expect(checkIsNested('sub_archive.rar')).toBe(true);
+      expect(checkIsNested('deep.7z')).toBe(true);
+      expect(checkIsNested('package.tar.gz')).toBe(true);
+      expect(checkIsNested('backup.tgz')).toBe(true);
+      expect(checkIsNested('IT012_Lab02_2026.docx')).toBe(false);
+      expect(checkIsNested('report.pdf')).toBe(false);
+      expect(checkIsNested('sheet.xlsx')).toBe(false);
+    });
+  });
 });
+

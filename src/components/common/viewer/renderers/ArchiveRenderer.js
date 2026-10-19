@@ -13,6 +13,10 @@ import { ViewerConnector } from '../FileViewerConnector.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { getAdminToken } from '../../../../utilities/adminAuth.js';
 import { smartUploadFile } from '../../../../utilities/resumableUploader.js';
+import { ensureDocxLoaded } from '../../../../utilities/docxHelper.js';
+import { ensureSheetJsLoaded } from '../../../../utilities/sheetHelper.js';
+import { ensurePdfJsLoaded } from '../../../../utilities/pdfJsHelper.js';
+import { inspectNestedArchiveFile } from '../../../tools/archive/hooks/useArchiveInspect.js';
 
 function escapeHtml(str) {
   if (typeof str !== 'string') return '';
@@ -87,6 +91,9 @@ export function renderArchiveViewer(state) {
             <span id="archiveMemberPreviewSize" class="text-[11px] font-mono text-zinc-400 hidden sm:inline"></span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
+            <button id="btnMemberFullscreen" type="button" class="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer" title="Mở bằng Trình xem Đa năng">
+              <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Toàn màn hình</span>
+            </button>
             <a id="archiveMemberPreviewDownload" href="#" download class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs cursor-pointer">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> <span>Tải về</span>
             </a>
@@ -178,8 +185,7 @@ function renderFilesTableHtml(options) {
         <!-- Direct Files / Matching Search Files -->
         ${files.map((file) => {
           const ext = file.name.split('.').pop()?.toLowerCase() || '';
-          const nonViewable = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'];
-          const isViewable = !nonViewable.includes(ext);
+          const isNestedArchive = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'tgz', 'xz'].includes(ext) || file.name.endsWith('.tar.gz');
           const rawPath = file.rawPath || (file.path ? file.path.replace(/^\/+/, '') : file.name);
           const extractUrl = archiveData.drivePath
             ? `/api/v1/archive/extract-file?drivePath=${encodeURIComponent(archiveData.drivePath)}&memberPath=${encodeURIComponent(rawPath)}${authParam}`
@@ -203,13 +209,19 @@ function renderFilesTableHtml(options) {
                 ${formatBytes(file.compressedBytes)}
               </td>
               <td class="py-2.5 px-3 text-right space-x-1.5 whitespace-nowrap">
-                ${isViewable ? `
+                ${isNestedArchive ? `
+                  <button type="button" data-open-nested="${escapeHtml(rawPath)}" data-nested-name="${escapeHtml(file.name)}"
+                    class="btn-viewer-nested-open px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition border border-indigo-200/60 dark:border-indigo-800/60">
+                    <i data-lucide="folder-archive" class="w-3.5 h-3.5"></i>
+                    <span>Mở tệp nén</span>
+                  </button>
+                ` : `
                   <button type="button" data-view-member="${escapeHtml(rawPath)}" data-name="${escapeHtml(file.name)}" data-size="${file.sizeBytes}"
                     class="btn-viewer-member-view px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition">
                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     <span>Xem</span>
                   </button>
-                ` : ''}
+                `}
                 <a href="${extractUrl}" download="${escapeHtml(file.name)}"
                   class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-medium inline-flex items-center gap-1 transition shadow-xs cursor-pointer">
                   <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -232,6 +244,7 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
   registerCleanup(() => abortController.abort());
 
   let archiveData = null;
+  let archiveStack = [];
   let currentFolder = '/';
   let isFlatView = false;
   let searchQuery = '';
@@ -352,6 +365,12 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
 
       statsEl.innerHTML = `
         <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+          ${archiveStack.length > 0 ? `
+            <button id="btnBackNestedArchive" type="button" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
+              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+              <span>Quay lại (${archiveStack.length})</span>
+            </button>
+          ` : ''}
           <span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
             ${archiveData.format || 'ARCHIVE'}
           </span>
@@ -364,6 +383,16 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
           <span>Mở rộng</span>
         </button>
       `;
+
+      statsEl.querySelector('#btnBackNestedArchive')?.addEventListener('click', () => {
+        if (archiveStack.length === 0) return;
+        const prev = archiveStack.pop();
+        archiveData = prev.archiveData;
+        currentFolder = prev.currentFolder;
+        isFlatView = prev.isFlatView;
+        searchQuery = prev.searchQuery;
+        displayArchive();
+      });
 
       statsEl.querySelector('#btnOpenArchiveFullscreen')?.addEventListener('click', () => {
         if (archiveData.drivePath) {
@@ -518,12 +547,72 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
       tableEl.querySelectorAll('.btn-viewer-member-view').forEach((btn) => {
         btn.onclick = () => previewMember(btn.dataset.viewMember, btn.dataset.name, Number(btn.dataset.size || 0));
       });
+
+      // Bind nested archive open handlers
+      tableEl.querySelectorAll('.btn-viewer-nested-open').forEach((btn) => {
+        btn.onclick = () => openNestedArchive(btn.dataset.openNested, btn.dataset.nestedName);
+      });
     }
 
     if (window.lucide) window.lucide.createIcons({ root });
   }
 
-  // 5. In-Modal Member Preview Overlay (Zero-modal-destruction)
+  // 5. Open nested archive recursively
+  async function openNestedArchive(memberPath, nestedName) {
+    const loading = document.getElementById('archiveViewerLoading');
+    const content = document.getElementById('archiveViewerContent');
+    if (loading && content) {
+      const p = loading.querySelector('p');
+      if (p) p.textContent = `Đang mở tệp nén: ${nestedName}...`;
+      loading.classList.remove('hidden');
+      content.classList.add('hidden');
+    }
+
+    try {
+      const inspected = await inspectNestedArchiveFile({
+        parentFileId: archiveData.fileId,
+        parentDrivePath: archiveData.drivePath,
+        memberPath,
+        apiBase: archiveData.apiBase || window.location.origin
+      });
+
+      archiveStack.push({
+        archiveData: { ...archiveData },
+        currentFolder,
+        isFlatView,
+        searchQuery
+      });
+
+      archiveData = {
+        fileId: inspected.fileId,
+        drivePath: null,
+        archiveName: `${archiveData.archiveName} / ${inspected.nestedName}`,
+        totalFiles: inspected.totalFiles,
+        totalUncompressedBytes: inspected.totalUncompressedBytes,
+        totalCompressedBytes: inspected.totalCompressedBytes,
+        format: inspected.format,
+        allEntries: inspected.allEntries,
+        folders: inspected.folders,
+        apiBase: archiveData.apiBase || window.location.origin
+      };
+
+      currentFolder = '/';
+      isFlatView = false;
+      searchQuery = '';
+      const searchInput = document.getElementById('archiveSearchInput');
+      if (searchInput) searchInput.value = '';
+      displayArchive();
+      showToast(`Đã mở tệp nén con: ${nestedName}`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi mở tệp nén lồng nhau', 'error');
+      if (loading && content) {
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+      }
+    }
+  }
+
+  // 6. In-Modal Member Preview Overlay (Zero-modal-destruction)
   async function previewMember(memberPath, fileName, sizeBytes) {
     const token = getAdminToken();
     const authParam = token ? `&auth=${encodeURIComponent(token)}` : '';
@@ -537,6 +626,7 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
     const titleEl = document.getElementById('archiveMemberPreviewTitle');
     const sizeEl = document.getElementById('archiveMemberPreviewSize');
     const dlBtn = document.getElementById('archiveMemberPreviewDownload');
+    const fsBtn = document.getElementById('btnMemberFullscreen');
 
     if (!overlay || !viewport) return;
 
@@ -545,6 +635,16 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
     if (dlBtn) {
       dlBtn.href = extractUrl;
       dlBtn.download = fileName;
+    }
+    if (fsBtn) {
+      fsBtn.onclick = () => {
+        ViewerConnector.preview({
+          fileName,
+          viewUrl: inlineExtractUrl,
+          downloadUrl: extractUrl,
+          resultSize: sizeBytes
+        });
+      };
     }
 
     viewport.innerHTML = `
@@ -594,9 +694,181 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
         return;
       }
 
-      // 4. Text / Code / Markdown / JSON / Config / Log
-      const textExts = ['txt', 'md', 'json', 'csv', 'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'py', 'sh', 'sql', 'xml', 'yaml', 'yml', 'log', 'ini', 'circ', 'env'];
-      if (textExts.includes(ext) || sizeBytes < 256 * 1024) {
+      // 4. Word Documents (.docx, .dotx)
+      if (['docx', 'dotx'].includes(ext)) {
+        viewport.innerHTML = `
+          <div class="my-auto py-12 text-center space-y-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center mx-auto">
+              <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+            </div>
+            <p class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">Đang đọc tài liệu Word...</p>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons({ root: viewport });
+        await ensureDocxLoaded();
+        const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+        const res = await fetchFn(inlineExtractUrl, { signal: abortController.signal });
+        if (!res.ok) throw new Error(`Lỗi nạp tệp Word (${res.status})`);
+        const buffer = await res.arrayBuffer();
+
+        viewport.innerHTML = `
+          <div class="w-full h-full overflow-auto custom-scrollbar p-2 sm:p-6 flex justify-center bg-zinc-100 dark:bg-[#0d0d10]" style="-webkit-overflow-scrolling: touch;">
+            <div id="archiveDocxHost" class="docx-preview-host origin-top max-w-full"></div>
+          </div>
+        `;
+        const host = document.getElementById('archiveDocxHost');
+        await window.docx.renderAsync(buffer, host, null, {
+          inWrapper: true,
+          breakPages: true,
+          ignoreWidth: false,
+          ignoreHeight: false
+        });
+        return;
+      }
+
+      // 5. PDF Documents (.pdf)
+      if (ext === 'pdf') {
+        viewport.innerHTML = `
+          <div class="my-auto py-12 text-center space-y-3">
+            <div class="w-10 h-10 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center mx-auto">
+              <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+            </div>
+            <p class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">Đang đọc tài liệu PDF...</p>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons({ root: viewport });
+        await ensurePdfJsLoaded();
+        const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+        const res = await fetchFn(inlineExtractUrl, { signal: abortController.signal });
+        if (!res.ok) throw new Error(`Lỗi nạp tệp PDF (${res.status})`);
+        const buffer = await res.arrayBuffer();
+
+        const loadingTask = window.pdfjsLib.getDocument({ data: buffer });
+        const pdfDoc = await loadingTask.promise;
+        const numPages = pdfDoc.numPages;
+
+        viewport.innerHTML = `
+          <div class="w-full h-full overflow-auto custom-scrollbar p-3 sm:p-6 flex flex-col items-center gap-4 bg-zinc-100 dark:bg-[#0d0d10]" style="-webkit-overflow-scrolling: touch;" id="archivePdfPagesWrapper">
+          </div>
+        `;
+        const wrapper = document.getElementById('archivePdfPagesWrapper');
+        const renderLimit = Math.min(numPages, 15);
+        for (let pNum = 1; pNum <= renderLimit; pNum++) {
+          const page = await pdfDoc.getPage(pNum);
+          const baseVp = page.getViewport({ scale: 1.0 });
+          const targetW = Math.min(800, window.innerWidth - 60);
+          const scale = targetW / baseVp.width;
+          const vp = page.getViewport({ scale });
+
+          const card = document.createElement('div');
+          card.className = 'relative bg-white shadow-md rounded border border-zinc-200 dark:border-white/10 overflow-hidden';
+          const canvas = document.createElement('canvas');
+          canvas.width = vp.width;
+          canvas.height = vp.height;
+          card.appendChild(canvas);
+
+          const badge = document.createElement('div');
+          badge.className = 'absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/60 text-white font-mono text-[10px] pointer-events-none';
+          badge.textContent = `${pNum} / ${numPages}`;
+          card.appendChild(badge);
+
+          wrapper.appendChild(card);
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        }
+        if (numPages > renderLimit) {
+          const note = document.createElement('div');
+          note.className = 'p-3 text-center text-xs font-mono text-zinc-500';
+          note.textContent = `Đang hiển thị ${renderLimit}/${numPages} trang đầu. Bấm "Toàn màn hình" để xem đầy đủ tất cả các trang.`;
+          wrapper.appendChild(note);
+        }
+        return;
+      }
+
+      // 6. Spreadsheets (.xlsx, .xls, .csv, .tsv, .ods)
+      if (['xlsx', 'xls', 'csv', 'tsv', 'ods'].includes(ext)) {
+        viewport.innerHTML = `
+          <div class="my-auto py-12 text-center space-y-3">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center mx-auto">
+              <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+            </div>
+            <p class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300">Đang đọc bảng tính...</p>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons({ root: viewport });
+        await ensureSheetJsLoaded();
+        const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+        const res = await fetchFn(inlineExtractUrl, { signal: abortController.signal });
+        if (!res.ok) throw new Error(`Lỗi nạp bảng tính (${res.status})`);
+        const buffer = await res.arrayBuffer();
+
+        const workbook = window.XLSX.read(buffer, { type: 'array' });
+        const sheetNames = workbook.SheetNames || [];
+        if (sheetNames.length === 0) throw new Error('Bảng tính rỗng');
+
+        let activeSheetIndex = 0;
+        const renderSheetTable = (idx) => {
+          const sheetName = sheetNames[idx];
+          const sheet = workbook.Sheets[sheetName];
+          const jsonData = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          if (!jsonData || jsonData.length === 0) {
+            return `<div class="p-8 text-center text-xs text-zinc-400 font-mono">Trang tính "${escapeHtml(sheetName)}" không có dữ liệu</div>`;
+          }
+          const maxCols = Math.min(40, Math.max(...jsonData.map((row) => (Array.isArray(row) ? row.length : 0))));
+          const displayRows = jsonData.slice(0, 100);
+
+          return `
+            <div class="overflow-auto custom-scrollbar flex-1 w-full" style="-webkit-overflow-scrolling: touch;">
+              <table class="w-full text-xs border-collapse">
+                <thead>
+                  <tr class="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono sticky top-0 z-10">
+                    <th class="p-2 border border-zinc-200 dark:border-white/10 w-10 text-center">#</th>
+                    ${Array.from({ length: maxCols }, (_, c) => `<th class="p-2 border border-zinc-200 dark:border-white/10 font-semibold text-center">${String.fromCharCode(65 + (c % 26))}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-200 dark:divide-white/5">
+                  ${displayRows.map((row, rIdx) => `
+                    <tr class="hover:bg-zinc-50 dark:hover:bg-white/[0.02]">
+                      <td class="p-1.5 font-mono text-[10px] bg-zinc-50 dark:bg-zinc-900 text-zinc-400 border border-zinc-200 dark:border-white/10 text-center">${rIdx + 1}</td>
+                      ${Array.from({ length: maxCols }, (_, c) => `<td class="p-1.5 border border-zinc-200 dark:border-white/10 font-mono text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]" title="${escapeHtml(String(row?.[c] ?? ''))}">${escapeHtml(String(row?.[c] ?? ''))}</td>`).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        };
+
+        const updateSpreadsheetView = () => {
+          viewport.innerHTML = `
+            <div class="w-full h-full flex flex-col bg-white dark:bg-[#121215] rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
+              ${sheetNames.length > 1 ? `
+                <div class="px-3 py-1.5 border-b border-zinc-200 dark:border-white/10 flex items-center gap-1.5 overflow-x-auto bg-zinc-50 dark:bg-white/[0.02] shrink-0 font-mono text-xs">
+                  ${sheetNames.map((sName, sIdx) => `
+                    <button type="button" class="btn-sheet-tab px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${sIdx === activeSheetIndex ? 'bg-emerald-500 text-white shadow-2xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}" data-sheet-idx="${sIdx}">
+                      ${escapeHtml(sName)}
+                    </button>
+                  `).join('')}
+                </div>
+              ` : ''}
+              <div id="archiveSheetTableHost" class="flex-1 overflow-auto custom-scrollbar flex flex-col min-h-0">
+                ${renderSheetTable(activeSheetIndex)}
+              </div>
+            </div>
+          `;
+          viewport.querySelectorAll('.btn-sheet-tab').forEach((tabBtn) => {
+            tabBtn.onclick = () => {
+              activeSheetIndex = Number(tabBtn.dataset.sheetIdx);
+              updateSpreadsheetView();
+            };
+          });
+        };
+        updateSpreadsheetView();
+        return;
+      }
+
+      // 7. Text / Code / Markdown / JSON / Config / Log
+      const textExts = ['txt', 'md', 'json', 'csv', 'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'py', 'sh', 'sql', 'xml', 'yaml', 'yml', 'log', 'ini', 'circ', 'env', 'c', 'cpp', 'h', 'hpp', 'java', 'rs', 'go'];
+      if (textExts.includes(ext) || (!['doc', 'ppt', 'pptx', 'exe', 'bin', 'iso', 'dll', 'so', 'dylib'].includes(ext) && sizeBytes < 128 * 1024)) {
         const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
         const res = await fetchFn(inlineExtractUrl, {
           headers: { Range: 'bytes=0-131071' },
@@ -620,21 +892,32 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
         return;
       }
 
-      // 5. Fallback for binary / large complex document
+      // 8. Fallback for binary / large complex document
       viewport.innerHTML = `
         <div class="my-auto p-6 max-w-sm w-full bg-white dark:bg-[#18181b] rounded-2xl border border-zinc-200 dark:border-white/10 shadow-lg text-center space-y-3">
-          <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto">
-            <i data-lucide="file-text" class="w-6 h-6"></i>
+          <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto">
+            <i data-lucide="${getFileIcon(fileName)}" class="w-6 h-6"></i>
           </div>
           <p class="font-mono text-sm font-semibold text-zinc-900 dark:text-white truncate">${escapeHtml(fileName)}</p>
-          <p class="text-xs text-zinc-500 dark:text-zinc-400">Định dạng này tối ưu nhất khi tải về hoặc mở độc lập</p>
-          <div class="pt-2 flex items-center justify-center gap-2">
-            <a href="${extractUrl}" download="${escapeHtml(fileName)}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs cursor-pointer">
-              <i data-lucide="download" class="w-4 h-4"></i> Tải về máy
+          <p class="text-xs text-zinc-500 dark:text-zinc-400">Định dạng này có thể mở bằng Trình xem Đa năng hoặc tải về máy</p>
+          <div class="pt-2 flex items-center justify-center gap-2 flex-wrap">
+            <button id="btnFallbackOpenViewer" type="button" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs cursor-pointer">
+              <i data-lucide="eye" class="w-4 h-4"></i> Mở Trình xem Đa năng
+            </button>
+            <a href="${extractUrl}" download="${escapeHtml(fileName)}" class="px-3.5 py-2 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/20 text-zinc-800 dark:text-zinc-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="download" class="w-4 h-4"></i> Tải về
             </a>
           </div>
         </div>
       `;
+      viewport.querySelector('#btnFallbackOpenViewer')?.addEventListener('click', () => {
+        ViewerConnector.preview({
+          fileName,
+          viewUrl: inlineExtractUrl,
+          downloadUrl: extractUrl,
+          resultSize: sizeBytes
+        });
+      });
       if (window.lucide) window.lucide.createIcons({ root: viewport });
     } catch (err) {
       viewport.innerHTML = `
