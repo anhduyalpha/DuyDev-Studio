@@ -93,4 +93,19 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v23.54'");
     });
   });
+
+  describe('5. Android Swipe-To-Refresh Suppression & APK Versioning', () => {
+    const gradlePath = path.join(rootDir, 'android/app/build.gradle.kts');
+    const gradleContent = fs.readFileSync(gradlePath, 'utf-8');
+
+    it('MainActivity must disable swipeRefreshLayout and set onChildScrollUpCallback to prevent accidental reload', () => {
+      expect(mainActContent).toContain('swipeRefreshLayout.isEnabled = false');
+      expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
+    });
+
+    it('build.gradle.kts must be bumped to versionCode 2354 and versionName 23.54.0', () => {
+      expect(gradleContent).toContain('versionCode = 2354');
+      expect(gradleContent).toContain('versionName = "23.54.0"');
+    });
+  });
 });

@@ -341,8 +341,11 @@ class MainActivity : AppCompatActivity() {
 
         swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#6366F1"))
         swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#18181B"))
+        // Disable swipe-to-refresh pull gesture completely to eliminate accidental page reloads
+        swipeRefreshLayout.isEnabled = false
+        swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }
         swipeRefreshLayout.setOnRefreshListener {
-            webView.reload()
+            swipeRefreshLayout.isRefreshing = false
         }
 
         btnRetry.setOnClickListener {
@@ -784,6 +787,9 @@ class MainActivity : AppCompatActivity() {
      */
     fun setSwipeRefreshEnabled(enabled: Boolean) {
         swipeRefreshLayout.isEnabled = enabled
+        if (!enabled) {
+            swipeRefreshLayout.isRefreshing = false
+        }
     }
 
     private fun showOffline(show: Boolean) {
