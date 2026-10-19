@@ -50,7 +50,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     bodyLimit: 50 * 1024 * 1024 * 1024,
     connectionTimeout: 0,
     keepAliveTimeout: 300_000,
-    requestTimeout: 0
+    requestTimeout: 0,
+    maxParamLength: 2048
   });
 
   // 1. Register Global Error Handler

@@ -222,8 +222,8 @@ export class YouTubeService {
         ? path.posix.join('drive', 'youtube', actualFileName)
         : path.posix.join('temp', 'youtube', actualFileName);
 
-      const downloadUrl = `/api/v1/youtube/stream/${encodeURIComponent(actualFileName)}?download=true`;
-      const viewUrl = `/api/v1/youtube/stream/${encodeURIComponent(actualFileName)}`;
+      const downloadUrl = `/api/v1/youtube/stream?file=${encodeURIComponent(actualFileName)}&download=true`;
+      const viewUrl = `/api/v1/youtube/stream?file=${encodeURIComponent(actualFileName)}`;
 
       // Register file in SQLite FileRecord / History for searchability and persistence
       if (saveToDrive) {
@@ -267,15 +267,47 @@ export class YouTubeService {
    * Resolves absolute file path for an existing downloaded YouTube file
    */
   static getDownloadedFilePath(filename: string): string {
-    const cleanName = path.basename(filename);
-    const driveCandidate = path.join(resolvedStoragePaths.drive, 'YouTube', cleanName);
-    if (fs.existsSync(driveCandidate)) {
-      return driveCandidate;
+    let cleanName = path.basename(filename);
+    try {
+      cleanName = decodeURIComponent(cleanName);
+    } catch {}
+
+    const directCandidates = [
+      path.join(resolvedStoragePaths.drive, 'youtube', cleanName),
+      path.join(resolvedStoragePaths.drive, 'YouTube', cleanName),
+      path.join(resolvedStoragePaths.temp, 'youtube', cleanName),
+      path.join(resolvedStoragePaths.temp, cleanName)
+    ];
+
+    for (const cand of directCandidates) {
+      if (fs.existsSync(cand)) {
+        return cand;
+      }
     }
-    const tempCandidate = path.join(resolvedStoragePaths.temp, 'youtube', cleanName);
-    if (fs.existsSync(tempCandidate)) {
-      return tempCandidate;
+
+    // Fallback directory scan with Unicode normalization (NFC/NFD) and unique suffix matching
+    try {
+      const searchDirs = [
+        path.join(resolvedStoragePaths.drive, 'youtube'),
+        path.join(resolvedStoragePaths.drive, 'YouTube'),
+        path.join(resolvedStoragePaths.temp, 'youtube')
+      ];
+      const normTarget = cleanName.normalize('NFC').toLowerCase();
+      for (const dir of searchDirs) {
+        if (!fs.existsSync(dir)) continue;
+        const files = fs.readdirSync(dir);
+        const matched = files.find(f => {
+          const normF = f.normalize('NFC').toLowerCase();
+          return normF === normTarget || (cleanName.length > 15 && f.endsWith(cleanName.slice(-12)));
+        });
+        if (matched) {
+          return path.join(dir, matched);
+        }
+      }
+    } catch (scanErr) {
+      logger.warn({ scanErr, cleanName }, 'Directory scan fallback failed in getDownloadedFilePath');
     }
+
     throw new NotFoundError('Tệp không tồn tại hoặc đã hết hạn.');
   }
 }

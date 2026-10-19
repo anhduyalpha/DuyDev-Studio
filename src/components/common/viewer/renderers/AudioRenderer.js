@@ -154,10 +154,10 @@ export function attachAudioListeners(state, registerCleanup) {
       errorMsg = 'Lỗi kết nối mạng khi tải luồng phát âm thanh.';
     }
 
-    const isCodecUnsupported = errCode === 4;
-    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 20 * 1024 * 1024);
+    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 30 * 1024 * 1024);
 
-    if (isCodecUnsupported || isTooLargeForBlob || hasRetried) {
+    // If already retried or too large for memory blob, show error fallback immediately
+    if (hasRetried || isTooLargeForBlob) {
       if (state.showErrorFallback) {
         state.showErrorFallback(errorMsg, `MediaError code: ${errCode || 'unknown'}`);
         return;
@@ -169,6 +169,7 @@ export function attachAudioListeners(state, registerCleanup) {
       }
       return;
     }
+
     hasRetried = true;
     try {
       const res = await fetch(state.viewUrl, { signal: state.abortSignal });
@@ -180,8 +181,13 @@ export function attachAudioListeners(state, registerCleanup) {
         audio.src = blobUrl;
         audio.play().catch(() => {});
       } else {
+        const statusText = res.status === 404
+          ? 'Tệp không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
+          : (res.status === 403 || res.status === 401
+              ? `Không có quyền truy cập tệp hoặc phiên làm việc đã hết hạn (HTTP ${res.status}).`
+              : `Máy chủ phản hồi lỗi khi nạp âm thanh (HTTP ${res.status}).`);
         if (state.showErrorFallback) {
-          state.showErrorFallback(errorMsg, `HTTP ${res.status}`);
+          state.showErrorFallback(statusText, `HTTP ${res.status}`);
         } else {
           if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
           if (playBtn) {
@@ -194,7 +200,7 @@ export function attachAudioListeners(state, registerCleanup) {
       if (e?.name === 'AbortError') return;
       console.warn('Audio fallback recovery failed:', e);
       if (state.showErrorFallback) {
-        state.showErrorFallback(errorMsg, e?.message);
+        state.showErrorFallback(errorMsg, e?.message || `MediaError code: ${errCode || 'unknown'}`);
       } else {
         if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
         if (playBtn) {

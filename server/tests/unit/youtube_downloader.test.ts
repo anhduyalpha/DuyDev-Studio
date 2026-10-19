@@ -113,5 +113,10 @@ describe('YouTube Downloader Service & Schema Tests', () => {
       const nonExistent = 'non_existent_youtube_file_987654321.mp4';
       expect(() => YouTubeService.getDownloadedFilePath(nonExistent)).toThrow(NotFoundError);
     });
+
+    it('resolves decoded Unicode filenames and preserves Vietnamese diacritics', () => {
+      const fn = 'Địa Ngục Trần Gian (Thazh x Đông Remix) - Phạm Kỳ ♫ Những Cánh Hoa Rơi.mp3';
+      expect(() => YouTubeService.getDownloadedFilePath(encodeURIComponent(fn))).toThrow(NotFoundError);
+    });
   });
 });

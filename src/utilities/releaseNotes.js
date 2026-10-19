@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.53': {
+    version: 'v23.53',
+    title: 'Bản cập nhật v23.53',
+    date: '19/10/2026',
+    features: [
+      'Engine phát media kiên cố hoá (Resilient Audio/Video Fallback): Tự động khôi phục phát blob URL khi luồng phát trực tiếp gặp lỗi giải mã hoặc hạn chế mạng trên Android WebView',
+      'Hỗ trợ tệp tên dài Unicode: Mở rộng tham số định tuyến máy chủ lên 2048 ký tự, chấp nhận mọi tên tệp tiếng Việt kèm ký tự đặc biệt'
+    ],
+    fixes: [
+      'Sửa lỗi MediaError code 4 trong trình xem âm thanh/video trên Android APK và trình duyệt',
+      'Khắc phục lỗi 404 Route Not Found đối với các liên kết stream có tên tệp dài hoặc mã hóa Unicode',
+      'Bổ sung cơ chế tìm kiếm tệp đa thư mục (drive/youtube, drive/YouTube, temp/youtube) với chuẩn hóa Unicode NFC'
+    ]
+  },
+
   'v23.52': {
     version: 'v23.52',
     title: 'Bản cập nhật v23.52',

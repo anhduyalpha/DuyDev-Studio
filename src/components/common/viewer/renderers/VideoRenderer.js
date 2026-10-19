@@ -127,10 +127,9 @@ export function attachVideoListeners(state, registerCleanup) {
       errorMsg = 'Lỗi kết nối mạng khi tải luồng phát video.';
     }
 
-    const isCodecUnsupported = errCode === 4;
-    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 25 * 1024 * 1024);
+    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 35 * 1024 * 1024);
 
-    if (isCodecUnsupported || isTooLargeForBlob || hasRetried) {
+    if (hasRetried || isTooLargeForBlob) {
       if (state.showErrorFallback) {
         state.showErrorFallback(errorMsg, `MediaError code: ${errCode || 'unknown'}`);
         return;
@@ -167,8 +166,13 @@ export function attachVideoListeners(state, registerCleanup) {
         video.src = blobUrl;
         video.play().catch(() => {});
       } else {
+        const statusText = res.status === 404
+          ? 'Tệp video không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
+          : (res.status === 403 || res.status === 401
+              ? `Không có quyền truy cập tệp hoặc phiên làm việc đã hết hạn (HTTP ${res.status}).`
+              : `Máy chủ phản hồi lỗi khi nạp video (HTTP ${res.status}).`);
         if (state.showErrorFallback) {
-          state.showErrorFallback(errorMsg, `HTTP ${res.status}`);
+          state.showErrorFallback(statusText, `HTTP ${res.status}`);
         }
       }
     } catch (e) {

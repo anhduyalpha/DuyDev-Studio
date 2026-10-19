@@ -43,21 +43,25 @@ export async function saveToDriveYouTubeHandler(request: FastifyRequest, reply: 
 }
 
 export async function streamYouTubeHandler(
-  request: FastifyRequest<{ Params: { filename: string }; Querystring: { download?: string } }>,
+  request: FastifyRequest<{ Params: { filename?: string }; Querystring: { download?: string; file?: string; name?: string; filename?: string } }>,
   reply: FastifyReply
 ) {
-  const { filename } = request.params;
-  if (!filename) {
+  const rawFilename = request.params?.filename || request.query?.file || request.query?.name || request.query?.filename;
+  if (!rawFilename) {
     throw new BadRequestError('Tên tệp không hợp lệ');
   }
 
+  let filename = rawFilename;
+  try {
+    filename = decodeURIComponent(rawFilename);
+  } catch {}
+
   const filePath = YouTubeService.getDownloadedFilePath(filename);
   const stat = await fs.promises.stat(filePath);
-  const ext = path.extname(filename).toLowerCase();
+  const ext = path.extname(filePath).toLowerCase();
   const mimeType = ext === '.mp3' ? 'audio/mpeg' : ext === '.m4a' ? 'audio/mp4' : 'video/mp4';
 
   const isDownload = request.query.download === 'true' || request.query.download === '1';
-  const disposition = isDownload ? 'attachment' : 'inline';
   const effectiveName = path.basename(filePath);
   const asciiName = effectiveName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
   const encodedFilename = encodeURIComponent(effectiveName);
@@ -108,15 +112,14 @@ export async function streamYouTubeHandler(
     const clampedEnd = Math.min(end, stat.size - 1);
     const chunkSize = (clampedEnd - start) + 1;
 
-    reply.raw.writeHead(206, {
-      'Content-Range': `bytes ${start}-${clampedEnd}/${stat.size}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunkSize,
-      'Content-Type': mimeType,
-      'Content-Disposition': isDownload ? `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedFilename}` : 'inline',
-      'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'public, max-age=86400'
-    });
+    reply.status(206);
+    reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${stat.size}`);
+    reply.header('Accept-Ranges', 'bytes');
+    reply.header('Content-Length', chunkSize);
+    reply.header('Content-Type', mimeType);
+    reply.header('Content-Disposition', isDownload ? `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedFilename}` : 'inline');
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Cache-Control', 'public, max-age=86400');
 
     return reply.send(fs.createReadStream(filePath, { start, end: clampedEnd }));
   }

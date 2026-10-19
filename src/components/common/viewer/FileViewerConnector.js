@@ -266,6 +266,10 @@ export function resolveViewerUrls(item) {
   }
 
   // 3. Dedicated streaming & download routes: preserve without rewriting
+  if (viewUrl.includes('/api/v1/youtube/stream') || downloadUrl.includes('/api/v1/youtube/stream')) {
+    return { viewUrl: viewUrl || downloadUrl, downloadUrl: downloadUrl || viewUrl, fileId: null };
+  }
+
   if (viewUrl.includes('/api/v1/studocu/') || downloadUrl.includes('/api/v1/studocu/') || viewUrl.startsWith('/downloads/') || downloadUrl.startsWith('/downloads/')) {
     let finalView = viewUrl || downloadUrl;
     let finalDl = downloadUrl || viewUrl;
