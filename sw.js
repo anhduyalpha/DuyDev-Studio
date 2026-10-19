@@ -3,30 +3,30 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v23.54';
+const CACHE_NAME = 'duydev-studio-v23.55';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=23.54',
-  './src/styles/card-tiers-10.css?v=23.54',
-  './src/styles/studocu.css?v=23.54',
-  './src/styles/scribd.css?v=23.54',
-  './src/styles/highlight-theme.css?v=23.54',
+  './src/styles/stitch-tokens.css?v=23.55',
+  './src/styles/card-tiers-10.css?v=23.55',
+  './src/styles/studocu.css?v=23.55',
+  './src/styles/scribd.css?v=23.55',
+  './src/styles/highlight-theme.css?v=23.55',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=23.54',
-  './src/utilities/soundEngine.js?v=23.54',
-  './src/utilities/releaseNotes.js?v=23.54',
-  './src/utilities/notificationHelper.js?v=23.54',
-  './src/utilities/smartUrlRouter.js?v=23.54',
+  './src/app.js?v=23.55',
+  './src/utilities/soundEngine.js?v=23.55',
+  './src/utilities/releaseNotes.js?v=23.55',
+  './src/utilities/notificationHelper.js?v=23.55',
+  './src/utilities/smartUrlRouter.js?v=23.55',
   './src/utilities/tierViewportGovernor.js',
-  './src/components/common/SoundVolumeModal.js?v=23.54',
+  './src/components/common/SoundVolumeModal.js?v=23.55',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/components/tools/youtube/YoutubeWorkspace.js',
@@ -324,13 +324,17 @@ self.addEventListener('fetch', (event) => {
   // Non-GET requests: pass through to network
   if (event.request.method !== 'GET') return;
 
-  // 1. Never intercept or cache API endpoints
-  if (url.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  // 1b. Pass through HTTP Range requests natively (streaming media, chunk inspection)
-  if (event.request.headers.has('range')) {
+  // 1. Pass through API, media streaming, download, viewer endpoints, blob protocols, and byte-range requests directly to network
+  if (
+    url.protocol === 'blob:' ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/downloads/') ||
+    url.pathname.includes('/download') ||
+    url.pathname.includes('/viewer') ||
+    url.pathname.includes('/stream') ||
+    url.searchParams.has('inline') ||
+    event.request.headers.has('range')
+  ) {
     return;
   }
 

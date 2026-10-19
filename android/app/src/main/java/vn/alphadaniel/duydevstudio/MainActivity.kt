@@ -728,7 +728,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 webView.evaluateJavascript("""
                     (function() {
-                        if (document.getElementById('fileViewerCoreModal')) {
+                        if (window.__ddFileViewerOpen === true || document.getElementById('fileViewerCoreModal')) {
                             if (window.closeFileViewer) window.closeFileViewer();
                             else window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));
                             return 'true';

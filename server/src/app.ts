@@ -297,6 +297,11 @@ function isAllowedStaticAsset(pathname: string): boolean {
         const normalizedPath = pathName.replace(/\\/g, '/');
         const reqUrl = this?.req?.url || (res as any)?.req?.url || '';
 
+        // Enforce strict JavaScript MIME type for .js and .mjs files per KI-FIX-007
+        if (/\.(mjs|js)$/i.test(normalizedPath)) {
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        }
+
         if (normalizedPath.endsWith('index.html') || normalizedPath.endsWith('sw.js')) {
           res.setHeader('Cache-Control', 'no-cache, must-revalidate');
           res.setHeader('Pragma', 'no-cache');

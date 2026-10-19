@@ -177,7 +177,8 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
         ? { drivePath, auth: token }
         : { fileId, auth: token };
 
-      const res = await fetch('/api/v1/archive/inspect', {
+      const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+      const res = await fetchFn('/api/v1/archive/inspect', {
         method: 'POST',
         headers: inspectHeaders,
         body: JSON.stringify(inspectBody),

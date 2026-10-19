@@ -28,10 +28,12 @@ export function ensureDocxLoaded() {
   docxPromise = (async () => {
     try {
       if (!window.JSZip) {
-        await loadScript('/src/vendor/jszip.min.js');
+        const jszipUrl = typeof window !== 'undefined' ? new URL('/src/vendor/jszip.min.js', window.location.origin).href : '/src/vendor/jszip.min.js';
+        await loadScript(jszipUrl);
       }
       if (!window.docx) {
-        await loadScript('/src/vendor/docx-preview.min.js');
+        const docxUrl = typeof window !== 'undefined' ? new URL('/src/vendor/docx-preview.min.js', window.location.origin).href : '/src/vendor/docx-preview.min.js';
+        await loadScript(docxUrl);
       }
       if (!window.docx) {
         throw new Error('Thư viện docx-preview không khởi tạo được');

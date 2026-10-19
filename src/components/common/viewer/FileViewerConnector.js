@@ -225,16 +225,122 @@ export function detectFileCategory(fileName = '', mimeType = '', viewUrl = '') {
   return FILE_CATEGORIES.FALLBACK;
 }
 
+/**
+ * Reliable 16-byte magic number signature inspector
+ * Detects %PDF, PK\x03\x04 (Docx/Xlsx/Zip), PNG, JPEG, GIF, WEBP, MP3, MP4, WebM, RAR, 7z
+ */
+export function detectCategoryFromMagicBytes(bytes) {
+  if (!bytes || bytes.length < 4) return null;
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+
+  // PDF: %PDF (0x25, 0x50, 0x44, 0x46)
+  if (u8[0] === 0x25 && u8[1] === 0x50 && u8[2] === 0x44 && u8[3] === 0x46) {
+    return FILE_CATEGORIES.PDF;
+  }
+  // PNG: \x89PNG (0x89, 0x50, 0x4E, 0x47)
+  if (u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4E && u8[3] === 0x47) {
+    return FILE_CATEGORIES.IMAGE;
+  }
+  // JPEG: \xFF\xD8\xFF
+  if (u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF) {
+    return FILE_CATEGORIES.IMAGE;
+  }
+  // GIF: GIF87a or GIF89a
+  if (u8[0] === 0x47 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x38) {
+    return FILE_CATEGORIES.IMAGE;
+  }
+  // WEBP: RIFF....WEBP (offset 8: 0x57, 0x45, 0x42, 0x50)
+  if (u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46 && u8.length >= 12) {
+    if (u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50) {
+      return FILE_CATEGORIES.IMAGE;
+    }
+  }
+  // ZIP / Office OpenXML: PK\x03\x04 (0x50, 0x4B, 0x03, 0x04)
+  if (u8[0] === 0x50 && u8[1] === 0x4B && u8[2] === 0x03 && u8[3] === 0x04) {
+    try {
+      let str = '';
+      const len = Math.min(u8.length, 1024);
+      for (let i = 0; i < len; i++) str += String.fromCharCode(u8[i]);
+      if (str.includes('word/')) return FILE_CATEGORIES.WORD;
+      if (str.includes('xl/')) return FILE_CATEGORIES.SHEET;
+      if (str.includes('ppt/')) return FILE_CATEGORIES.PDF;
+    } catch {}
+    return FILE_CATEGORIES.ARCHIVE;
+  }
+  // MP3: ID3 (0x49, 0x44, 0x33) or MPEG sync word 0xFF 0xFB/0xFA/0xF3/0xF2
+  if ((u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) || (u8[0] === 0xFF && (u8[1] & 0xE0) === 0xE0)) {
+    return FILE_CATEGORIES.AUDIO;
+  }
+  // MP4 / MOV: bytes 4-7 = 'ftyp' (0x66, 0x74, 0x79, 0x70)
+  if (u8.length >= 8 && u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70) {
+    return FILE_CATEGORIES.VIDEO;
+  }
+  // WebM / MKV: 0x1A, 0x45, 0xDF, 0xA3
+  if (u8[0] === 0x1A && u8[1] === 0x45 && u8[2] === 0xDF && u8[3] === 0xA3) {
+    return FILE_CATEGORIES.VIDEO;
+  }
+  // RAR: Rar! (0x52, 0x61, 0x72, 0x21)
+  if (u8[0] === 0x52 && u8[1] === 0x61 && u8[2] === 0x72 && u8[3] === 0x21) {
+    return FILE_CATEGORIES.ARCHIVE;
+  }
+  // 7Z: 7z (0x37, 0x7A, 0xBC, 0xAF)
+  if (u8[0] === 0x37 && u8[1] === 0x7A && u8[2] === 0xBC && u8[3] === 0xAF) {
+    return FILE_CATEGORIES.ARCHIVE;
+  }
+  return null;
+}
+
+/**
+ * Unified authenticated fetch helper for DD Studio Universal Viewer
+ * Automatically attaches X-Device-Id, x-storage-auth, and Bearer tokens for internal routes
+ */
+export async function viewerFetch(url, options = {}) {
+  const headers = new Headers(options.headers || {});
+  let isInternal = false;
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.href : 'http://localhost:3000');
+    isInternal = typeof window !== 'undefined' ? (parsed.origin === window.location.origin) : true;
+    if (typeof url === 'string' && (url.startsWith('/api/') || url.startsWith('/downloads/'))) isInternal = true;
+  } catch {
+    if (typeof url === 'string' && (url.startsWith('/') || url.startsWith('./'))) isInternal = true;
+  }
+
+  if (isInternal && typeof window !== 'undefined') {
+    const deviceId = localStorage.getItem('ds_device_id') || window.__ddDeviceId || '';
+    if (deviceId && !headers.has('x-device-id')) {
+      headers.set('x-device-id', deviceId);
+    }
+    const token = getAdminToken();
+    if (token) {
+      if (!headers.has('x-storage-auth')) headers.set('x-storage-auth', token);
+      if (!headers.has('authorization')) headers.set('authorization', `Bearer ${token}`);
+    }
+  }
+
+  return fetch(url, {
+    credentials: 'same-origin',
+    ...options,
+    headers
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.viewerFetch = viewerFetch;
+  window.__ddViewerFetch = viewerFetch;
+}
+
 export function resolveViewerUrls(item) {
   let fileId = item.fileId || item.resultFileId;
   let viewUrl = item.viewUrl || item.url || item.downloadUrl || '';
   let downloadUrl = item.downloadUrl || item.url || '';
   const drivePath = item.path || item.drivePath || null;
   const fileName = extractFileName(item, viewUrl, downloadUrl);
-  const ext = extractFileExtension(fileName, item.mimeType || item.type, viewUrl);
+  const ext = extractFileExtension(fileName, item.mimeType || item.mime || item.type, viewUrl);
   const isServerConvertedDoc = SERVER_CONVERTED_EXTS.includes(ext);
   const token = getAdminToken();
   const authParam = token ? `&auth=${encodeURIComponent(token)}` : '';
+  const deviceId = (typeof localStorage !== 'undefined' ? (localStorage.getItem('ds_device_id') || '') : '') || (typeof window !== 'undefined' ? (window.__ddDeviceId || '') : '');
+  const devParam = deviceId ? `&deviceId=${encodeURIComponent(deviceId)}` : '';
 
   // 1. Storage Drive items with relative path
   if (drivePath && !viewUrl && !fileId) {
@@ -254,12 +360,18 @@ export function resolveViewerUrls(item) {
       if (p1 === '&') return p2 ? '&' : '';
       return '';
     });
-    // Ensure token is attached for Range streams and media decoders
+    // Ensure token & deviceId are attached for Range streams and media decoders
     if (token && !sView.includes('auth=') && !sView.includes('token=')) {
       sView = sView.includes('?') ? `${sView}${authParam}` : `${sView}?${authParam.replace(/^&/, '')}`;
     }
+    if (deviceId && !sView.includes('deviceId=')) {
+      sView = sView.includes('?') ? `${sView}${devParam}` : `${sView}?${devParam.replace(/^&/, '')}`;
+    }
     if (token && !sDl.includes('auth=') && !sDl.includes('token=')) {
       sDl = sDl.includes('?') ? `${sDl}${authParam}` : `${sDl}?${authParam.replace(/^&/, '')}`;
+    }
+    if (deviceId && !sDl.includes('deviceId=')) {
+      sDl = sDl.includes('?') ? `${sDl}${devParam}` : `${sDl}?${devParam.replace(/^&/, '')}`;
     }
     viewUrl = sView;
     downloadUrl = sDl;
@@ -268,6 +380,25 @@ export function resolveViewerUrls(item) {
   // 3. Dedicated streaming & download routes: preserve without rewriting
   if (viewUrl.includes('/api/v1/youtube/stream') || downloadUrl.includes('/api/v1/youtube/stream')) {
     return { viewUrl: viewUrl || downloadUrl, downloadUrl: downloadUrl || viewUrl, fileId: null };
+  }
+
+  // 3b. Scribd routes: rewrite download to stream to avoid attachment triggers
+  if (viewUrl.includes('/api/v1/scribd/') || downloadUrl.includes('/api/v1/scribd/')) {
+    let finalView = viewUrl || downloadUrl;
+    let finalDl = downloadUrl || viewUrl;
+
+    if (finalView.includes('/api/v1/scribd/download/')) {
+      const fn = finalView.split('/api/v1/scribd/download/')[1];
+      finalView = `/api/v1/scribd/stream?file=${fn}`;
+    }
+
+    if (!finalDl.includes('/api/v1/scribd/download/')) {
+      const fnMatch = finalView.match(/[?&]file=([^&#]+)/) || finalDl.match(/\/([^/?#]+)$/);
+      const fn = fnMatch ? fnMatch[1] : (fileName ? encodeURIComponent(fileName) : '');
+      if (fn) finalDl = `/api/v1/scribd/download/${fn}`;
+    }
+
+    return { viewUrl: finalView, downloadUrl: finalDl, fileId: null };
   }
 
   if (viewUrl.includes('/api/v1/studocu/') || downloadUrl.includes('/api/v1/studocu/') || viewUrl.startsWith('/downloads/') || downloadUrl.startsWith('/downloads/')) {
@@ -320,6 +451,14 @@ export function resolveViewerUrls(item) {
     const safeFileId = encodeURIComponent(decoded);
     viewUrl = `/api/v1/files/view/${safeFileId}`;
     downloadUrl = `/api/v1/files/download/${safeFileId}`;
+    if (token) {
+      viewUrl += `?auth=${encodeURIComponent(token)}`;
+      downloadUrl += `?auth=${encodeURIComponent(token)}`;
+    }
+    if (deviceId) {
+      viewUrl += (viewUrl.includes('?') ? '&' : '?') + `deviceId=${encodeURIComponent(deviceId)}`;
+      downloadUrl += (downloadUrl.includes('?') ? '&' : '?') + `deviceId=${encodeURIComponent(deviceId)}`;
+    }
   } else if (viewUrl && !viewUrl.startsWith('blob:') && !viewUrl.startsWith('data:') && !viewUrl.includes('inline=') && !viewUrl.includes('/api/v1/viewer/preview-pdf')) {
     if (viewUrl.includes('/api/v1/files/download/')) {
       viewUrl = viewUrl.replace('/api/v1/files/download/', '/api/v1/files/view/');
@@ -332,14 +471,16 @@ export function resolveViewerUrls(item) {
   if (isServerConvertedDoc) {
     const token = getAdminToken();
     const authParam = token ? `&auth=${encodeURIComponent(token)}` : '';
+    const deviceId = (typeof localStorage !== 'undefined' ? (localStorage.getItem('ds_device_id') || '') : '') || (typeof window !== 'undefined' ? (window.__ddDeviceId || '') : '');
+    const devParam = deviceId ? `&deviceId=${encodeURIComponent(deviceId)}` : '';
     if (fileId) {
-      viewUrl = `/api/v1/viewer/preview-pdf?fileId=${encodeURIComponent(fileId)}${authParam}`;
+      viewUrl = `/api/v1/viewer/preview-pdf?fileId=${encodeURIComponent(fileId)}${authParam}${devParam}`;
     } else if (drivePath) {
-      viewUrl = `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(drivePath)}${authParam}`;
+      viewUrl = `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(drivePath)}${authParam}${devParam}`;
     } else {
       const pathMatch = (downloadUrl || viewUrl).match(/[?&]path=([^&#]+)/);
       if (pathMatch) {
-        viewUrl = `/api/v1/viewer/preview-pdf?path=${pathMatch[1]}${authParam}`;
+        viewUrl = `/api/v1/viewer/preview-pdf?path=${pathMatch[1]}${authParam}${devParam}`;
       }
     }
   }
@@ -365,10 +506,40 @@ export const ViewerConnector = {
   /**
    * Universal Preview Entry Point
    * Accepts any record schema from any DD Studio module
+   * Supports (url, filename), ({ url, name, path, size, mime, blob, file }), or File/Blob
    */
   preview(item, options = {}) {
     if (!item) return;
-    const rawFile = item.rawFile || item.file || null;
+
+    // 1. Normalize (url, filename) or (url, options) caller contract
+    if (typeof item === 'string') {
+      const itemUrl = item.trim();
+      const itemName = typeof options === 'string' ? options : (options.name || options.fileName || '');
+      const optObj = typeof options === 'object' && options !== null ? options : {};
+      item = {
+        viewUrl: itemUrl,
+        downloadUrl: itemUrl,
+        name: itemName,
+        ...optObj
+      };
+      options = optObj;
+    } else if (typeof Blob !== 'undefined' && item instanceof Blob) {
+      // 2. Normalize (File | Blob, filename) caller contract
+      const blobName = typeof options === 'string' ? options : (options.name || options.fileName || item.name || 'Tệp tin');
+      const optObj = typeof options === 'object' && options !== null ? options : {};
+      item = {
+        rawFile: item,
+        file: item,
+        name: blobName,
+        size: item.size,
+        mimeType: item.type,
+        isBlob: true,
+        ...optObj
+      };
+      options = optObj;
+    }
+
+    const rawFile = item.rawFile || item.file || item.blob || null;
     let { viewUrl, downloadUrl, fileId } = resolveViewerUrls(item);
     let isBlob = Boolean(item.isBlob);
 
@@ -379,7 +550,7 @@ export const ViewerConnector = {
     }
 
     const name = extractFileName(item, viewUrl, downloadUrl);
-    const mimeType = item.mimeType || item.type || (rawFile ? rawFile.type : '');
+    const mimeType = item.mimeType || item.mime || item.type || (rawFile ? rawFile.type : '');
     let size = Number(item.resultSize || item.originalSize || item.sizeBytes || item.size || (rawFile ? rawFile.size : 0));
 
     if (!size && viewUrl && viewUrl.startsWith('data:image')) {
@@ -387,7 +558,20 @@ export const ViewerConnector = {
       size = Math.round(b64.length * 0.75) || 1200;
     }
 
-    const category = item.category || detectFileCategory(name, mimeType, viewUrl);
+    let category = item.category || detectFileCategory(name, mimeType, viewUrl);
+
+    // Fast-path Magic Bytes Check for Blob instances
+    if (category === FILE_CATEGORIES.FALLBACK && rawFile instanceof Blob && rawFile.size >= 4) {
+      try {
+        const slice = rawFile.slice(0, 1024);
+        slice.arrayBuffer().then((buf) => {
+          const magicCat = detectCategoryFromMagicBytes(new Uint8Array(buf));
+          if (magicCat && typeof window !== 'undefined' && window.__ddActiveViewerState) {
+            window.__ddActiveViewerState.category = magicCat;
+          }
+        }).catch(() => {});
+      } catch {}
+    }
 
     const playlist = options.playlist || item.playlist || null;
     const playlistIndex = typeof options.playlistIndex === 'number' ? options.playlistIndex : (typeof item.playlistIndex === 'number' ? item.playlistIndex : -1);
@@ -419,28 +603,31 @@ export const ViewerConnector = {
   },
 
   /**
-   * Universal Preview Alias for direct module integration
+   * Universal Preview Aliases for direct module integration
    */
-  openViewer(item) {
-    return this.preview(item);
+  open(item, options = {}) {
+    return this.preview(item, options);
+  },
+
+  openViewer(item, options = {}) {
+    return this.preview(item, options);
   },
 
   /**
    * Client-side Blob Preview Entry Point
    */
   previewBlob(blob, fileName = 'Tệp tin') {
-    if (!blob) return;
-    const blobUrl = URL.createObjectURL(blob);
-    const category = detectFileCategory(fileName, blob.type);
-    openFileViewer({
-      name: fileName,
-      category,
-      rawFile: blob,
-      viewUrl: blobUrl,
-      downloadUrl: blobUrl,
-      size: blob.size,
-      mimeType: blob.type,
-      isBlob: true
-    });
+    return this.preview(blob, fileName);
+  },
+
+  /**
+   * Centralized Authenticated Fetcher helper
+   */
+  viewerFetch(url, options = {}) {
+    return viewerFetch(url, options);
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.openFileViewer = (item, options) => ViewerConnector.preview(item, options);
+}

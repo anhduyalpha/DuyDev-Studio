@@ -11,6 +11,33 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+export function clampCanvasDimensions(viewportWidth, viewportHeight, dpr = 1, maxDim = 4096, maxArea = 16777216) {
+  let effectiveDpr = dpr;
+  // 1. Clamp by max single dimension
+  if (viewportWidth * effectiveDpr > maxDim || viewportHeight * effectiveDpr > maxDim) {
+    effectiveDpr = Math.max(0.1, Math.min(maxDim / viewportWidth, maxDim / viewportHeight, effectiveDpr));
+  }
+  // 2. Clamp by total pixel area (Android WebView OOM protection: maxArea <= 16,777,216)
+  const rawArea = (viewportWidth * effectiveDpr) * (viewportHeight * effectiveDpr);
+  if (rawArea > maxArea) {
+    const areaScale = Math.sqrt(maxArea / rawArea);
+    effectiveDpr = Math.max(0.1, effectiveDpr * areaScale);
+  }
+  let targetWidth = Math.min(maxDim, Math.floor(viewportWidth * effectiveDpr));
+  let targetHeight = Math.min(maxDim, Math.floor(viewportHeight * effectiveDpr));
+  if (targetWidth * targetHeight > maxArea) {
+    const factor = Math.sqrt(maxArea / (targetWidth * targetHeight));
+    targetWidth = Math.floor(targetWidth * factor);
+    targetHeight = Math.floor(targetHeight * factor);
+  }
+  const finalDpr = Math.max(0.01, targetWidth / viewportWidth);
+  return {
+    width: Math.max(1, targetWidth),
+    height: Math.max(1, targetHeight),
+    dpr: finalDpr
+  };
+}
+
 export class PdfCanvasViewer {
   constructor(containerEl, onPageChange, onScaleChange = null) {
     this.containerEl = containerEl;
@@ -232,18 +259,18 @@ export class PdfCanvasViewer {
       const effectiveRotation = (intrinsicRotate + targetRotation) % 360;
       const viewport = page.getViewport({ scale: targetScale, rotation: effectiveRotation });
 
-      // Guard against canvas dimension overflow on high-DPI / mobile
+      // Guard against canvas dimension and area overflow on high-DPI / mobile (Android WebView OOM protection)
       const maxDim = 4096;
-      let dpr = Math.min(window.devicePixelRatio || 1, 2);
-      if (viewport.width * dpr > maxDim || viewport.height * dpr > maxDim) {
-        dpr = Math.max(0.5, Math.min(maxDim / viewport.width, maxDim / viewport.height, 1));
-      }
+      const maxArea = 16777216; // 16M pixels (64MB raw 32-bit RGBA)
+      const initialDpr = Math.min(window.devicePixelRatio || 1, 2);
+      const clamped = clampCanvasDimensions(viewport.width, viewport.height, initialDpr, maxDim, maxArea);
+      const dpr = clamped.dpr;
 
       // 1. Prepare Hi-DPI Canvas Layer in Background (Off-DOM)
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext ? canvas.getContext('2d', { alpha: false }) : null;
-      canvas.width = Math.floor(viewport.width * dpr);
-      canvas.height = Math.floor(viewport.height * dpr);
+      canvas.width = clamped.width;
+      canvas.height = clamped.height;
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       canvas.className = 'pdf-canvas absolute inset-0 w-full h-full block select-none pointer-events-none z-1';

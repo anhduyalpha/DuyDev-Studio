@@ -89,8 +89,8 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain('client.focus()');
     });
 
-    it('sw.js cache name must be v23.54', () => {
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v23.54'");
+    it('sw.js cache name must be v23.55', () => {
+      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v23.55'");
     });
   });
 

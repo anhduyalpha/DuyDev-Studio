@@ -5,10 +5,21 @@
 
 let pdfJsPromise = null;
 
+function getWorkerUrl(isFallback = false) {
+  if (isFallback) {
+    return 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  try {
+    return new URL('/pdfjs/build/pdf.worker.js', window.location.origin).href;
+  } catch {
+    return '/pdfjs/build/pdf.worker.js';
+  }
+}
+
 export function ensurePdfJsLoaded() {
   if (window.pdfjsLib) {
     if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = getWorkerUrl(false);
     }
     return Promise.resolve(window.pdfjsLib);
   }
@@ -21,9 +32,7 @@ export function ensurePdfJsLoaded() {
       script.src = src;
       script.onload = () => {
         if (window.pdfjsLib) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = isFallback
-            ? 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-            : '/pdfjs/build/pdf.worker.js';
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = getWorkerUrl(isFallback);
           resolve(window.pdfjsLib);
         } else if (!isFallback) {
           loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', true);

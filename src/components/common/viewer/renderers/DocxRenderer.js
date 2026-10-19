@@ -50,7 +50,7 @@ export function renderDocxViewer(state) {
       </div>
 
       <!-- Render Container -->
-      <div id="docxScrollWrapper" class="flex-1 overflow-auto custom-scrollbar p-3 sm:p-6 flex justify-center hidden">
+      <div id="docxScrollWrapper" class="flex-1 overflow-auto custom-scrollbar p-3 sm:p-6 flex justify-center hidden" style="-webkit-overflow-scrolling: touch;">
         <div id="docxRenderContainer" class="docx-preview-host origin-top transition-transform duration-100 max-w-full"></div>
       </div>
     </div>
@@ -182,7 +182,8 @@ export function attachDocxListeners(state, registerCleanup) {
       if (state.rawFile instanceof Blob) {
         fileBuffer = await state.rawFile.arrayBuffer();
       } else {
-        const res = await fetch(state.viewUrl, { signal: state.abortSignal || abortController.signal, credentials: 'same-origin' });
+        const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+        const res = await fetchFn(state.viewUrl, { signal: state.abortSignal || abortController.signal, credentials: 'same-origin' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fileBuffer = await res.arrayBuffer();
       }
@@ -195,6 +196,24 @@ export function attachDocxListeners(state, registerCleanup) {
     } catch (err) {
       if (err.name === 'AbortError') return;
       if (scrollWrapper) scrollWrapper.classList.add('hidden');
+
+      // Automatic fallback to backend /api/v1/viewer/preview-pdf for complex or client-unparseable Office files per Goal 3.2
+      const pathParam = state.path || state.drivePath || (state.viewUrl || '').match(/[?&]path=([^&#]+)/)?.[1];
+      const fileIdParam = state.fileId || (state.viewUrl || '').match(/\/api\/v1\/files\/(?:download|view)\/([^/?#]+)/)?.[1];
+      if ((pathParam || fileIdParam) && !state._triedBackendFallback && typeof window !== 'undefined' && window.openFileViewer) {
+        state._triedBackendFallback = true;
+        state.category = 'pdf';
+        const token = (typeof localStorage !== 'undefined' && (localStorage.getItem('ds_admin_token') || localStorage.getItem('token'))) || '';
+        const authParam = token ? `&auth=${encodeURIComponent(token)}` : '';
+        const devId = (typeof localStorage !== 'undefined' && localStorage.getItem('ds_device_id')) || '';
+        const devParam = devId ? `&deviceId=${encodeURIComponent(devId)}` : '';
+        state.viewUrl = pathParam
+          ? `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(decodeURIComponent(pathParam))}${authParam}${devParam}`
+          : `/api/v1/viewer/preview-pdf?fileId=${encodeURIComponent(fileIdParam)}${authParam}${devParam}`;
+        window.openFileViewer(state);
+        return;
+      }
+
       if (state.showErrorFallback) {
         state.showErrorFallback('Không thể kết xuất tài liệu Word', err.message);
       } else if (loading) {

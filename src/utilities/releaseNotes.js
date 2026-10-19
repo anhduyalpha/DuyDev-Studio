@@ -6,6 +6,22 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.55': {
+    version: 'v23.55',
+    title: 'Bản cập nhật v23.55',
+    date: '19/10/2026',
+    features: [
+      'Đại tu toàn diện trình xem tệp Universal File Viewer: Thống nhất caller contracts, tự động nhận diện magic bytes (%PDF, PK, PNG, JPEG, GIF, WEBP, MP3, MP4, WebM, RAR, 7z) và cơ chế viewerFetch xác thực bảo mật',
+      'Bảo vệ chống tràn bộ nhớ (OOM) trên Android WebView: Giới hạn diện tích canvas PDF <= 16,777,216 px và kích thước tối đa 4096 px với thuật toán co tỷ lệ mượt mà',
+      'Trải nghiệm di động mượt mà: Bổ sung thanh cuộn cảm ứng tự nhiên cho Word (.docx) và bảng tính (.xlsx), phát video/audio với playsinline và preload metadata, giới hạn đọc văn bản 128KB tức thì'
+    ],
+    fixes: [
+      'Bypass triệt để Service Worker cho các yêu cầu stream media, range byte, download và blob URL',
+      'Định dạng chuẩn Content-Type: text/javascript; charset=utf-8 cho các tệp script .js/.mjs trên Fastify backend',
+      'Tích hợp phím cứng quay lại (hardware back button) của Android đóng hộp thoại xem tệp qua cờ window.__ddFileViewerOpen'
+    ]
+  },
+
   'v23.54': {
     version: 'v23.54',
     title: 'Bản cập nhật v23.54',

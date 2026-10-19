@@ -14,7 +14,7 @@ export function ensureSheetJsLoaded() {
 
   sheetPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/src/vendor/xlsx.full.min.js';
+    script.src = typeof window !== 'undefined' ? new URL('/src/vendor/xlsx.full.min.js', window.location.origin).href : '/src/vendor/xlsx.full.min.js';
     script.onload = () => {
       if (window.XLSX) {
         resolve(window.XLSX);

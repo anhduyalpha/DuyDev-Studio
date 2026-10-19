@@ -140,12 +140,13 @@ export function attachTextListeners(state, registerCleanup) {
     };
   }
 
-  const isLargeFile = Number(state.size) > 2 * 1024 * 1024;
+  const isLargeFile = Number(state.size) > 128 * 1024;
   const shouldLimitStream = isLargeFile || !state.size;
 
   async function fetchBoundedText(url, signal) {
-    const res = await fetch(url, {
-      headers: shouldLimitStream ? { Range: 'bytes=0-524287' } : {},
+    const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+    const res = await fetchFn(url, {
+      headers: shouldLimitStream ? { Range: 'bytes=0-131071' } : {},
       signal,
       credentials: 'same-origin'
     });
@@ -155,7 +156,7 @@ export function attachTextListeners(state, registerCleanup) {
       const reader = res.body.getReader();
       const chunks = [];
       let totalBytes = 0;
-      const MAX_BYTES = 512 * 1024;
+      const MAX_BYTES = 128 * 1024;
       try {
         while (totalBytes < MAX_BYTES) {
           const { done, value } = await reader.read();
@@ -177,11 +178,11 @@ export function attachTextListeners(state, registerCleanup) {
       return new TextDecoder('utf-8', { fatal: false }).decode(clamped);
     }
     const fullText = await res.text();
-    return fullText.length > 512 * 1024 && shouldLimitStream ? fullText.slice(0, 512 * 1024) : fullText;
+    return fullText.length > 128 * 1024 && shouldLimitStream ? fullText.slice(0, 128 * 1024) : fullText;
   }
 
   const getContentPromise = (state.rawFile instanceof Blob)
-    ? (state.rawFile.size > 512 * 1024 ? state.rawFile.slice(0, 512 * 1024).text() : state.rawFile.text())
+    ? (state.rawFile.size > 128 * 1024 ? state.rawFile.slice(0, 128 * 1024).text() : state.rawFile.text())
     : fetchBoundedText(state.viewUrl, state.abortSignal || abortController.signal);
 
   getContentPromise
@@ -198,8 +199,8 @@ export function attachTextListeners(state, registerCleanup) {
       let truncateReason = '';
       let previewText = text;
 
-      if (isLargeFile || (state.rawFile instanceof Blob && state.rawFile.size > 512 * 1024)) {
-        truncateReason = ' (hiển thị 512KB đầu tiên)';
+      if (isLargeFile || (state.rawFile instanceof Blob && state.rawFile.size > 128 * 1024)) {
+        truncateReason = ' (hiển thị 128KB đầu tiên)';
       }
 
       if (totalLineCount > MAX_PREVIEW_LINES) {

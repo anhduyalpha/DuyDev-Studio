@@ -33,12 +33,112 @@ import { formatBytes } from '../../../utilities/formatters.js';
 import { copyText } from '../../../utilities/clipboard.js';
 import { showToast } from '../../../utilities/toast.js';
 import { soundEngine } from '../../../utilities/soundEngine.js';
+import { getAdminToken } from '../../../utilities/adminAuth.js';
 
 let currentSessionId = 0;
 let currentAbortController = null;
 let activeCleanups = [];
 let savedScrollY = 0;
 let currentViewerState = null;
+
+/**
+ * Reliable 16-byte magic number signature inspector
+ * Detects %PDF, PK\x03\x04 (Docx/Xlsx/Zip), PNG, JPEG, GIF, WEBP, MP3, MP4, WebM, RAR, 7z
+ */
+export function detectCategoryFromMagicBytes(bytes) {
+  if (!bytes || bytes.length < 4) return null;
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+
+  // PDF: %PDF (0x25, 0x50, 0x44, 0x46)
+  if (u8[0] === 0x25 && u8[1] === 0x50 && u8[2] === 0x44 && u8[3] === 0x46) {
+    return FILE_CATEGORIES.PDF;
+  }
+  // PNG: \x89PNG (0x89, 0x50, 0x4E, 0x47)
+  if (u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4E && u8[3] === 0x47) {
+    return FILE_CATEGORIES.IMAGE;
+  }
+  // JPEG: \xFF\xD8\xFF
+  if (u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF) {
+    return FILE_CATEGORIES.IMAGE;
+  }
+  // GIF: GIF87a or GIF89a
+  if (u8[0] === 0x47 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x38) {
+    return FILE_CATEGORIES.IMAGE;
+  }
+  // WEBP: RIFF....WEBP (offset 8: 0x57, 0x45, 0x42, 0x50)
+  if (u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46 && u8.length >= 12) {
+    if (u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50) {
+      return FILE_CATEGORIES.IMAGE;
+    }
+  }
+  // ZIP / Office OpenXML: PK\x03\x04 (0x50, 0x4B, 0x03, 0x04)
+  if (u8[0] === 0x50 && u8[1] === 0x4B && u8[2] === 0x03 && u8[3] === 0x04) {
+    try {
+      let str = '';
+      const len = Math.min(u8.length, 1024);
+      for (let i = 0; i < len; i++) str += String.fromCharCode(u8[i]);
+      if (str.includes('word/')) return FILE_CATEGORIES.WORD;
+      if (str.includes('xl/')) return FILE_CATEGORIES.SHEET;
+      if (str.includes('ppt/')) return FILE_CATEGORIES.PDF;
+    } catch {}
+    return FILE_CATEGORIES.ARCHIVE;
+  }
+  // MP3: ID3 (0x49, 0x44, 0x33) or MPEG sync word 0xFF 0xFB/0xFA/0xF3/0xF2
+  if ((u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) || (u8[0] === 0xFF && (u8[1] & 0xE0) === 0xE0)) {
+    return FILE_CATEGORIES.AUDIO;
+  }
+  // MP4 / MOV: bytes 4-7 = 'ftyp' (0x66, 0x74, 0x79, 0x70)
+  if (u8.length >= 8 && u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70) {
+    return FILE_CATEGORIES.VIDEO;
+  }
+  // WebM / MKV: 0x1A, 0x45, 0xDF, 0xA3
+  if (u8[0] === 0x1A && u8[1] === 0x45 && u8[2] === 0xDF && u8[3] === 0xA3) {
+    return FILE_CATEGORIES.VIDEO;
+  }
+  // RAR: Rar! (0x52, 0x61, 0x72, 0x21)
+  if (u8[0] === 0x52 && u8[1] === 0x61 && u8[2] === 0x72 && u8[3] === 0x21) {
+    return FILE_CATEGORIES.ARCHIVE;
+  }
+  // 7Z: 7z (0x37, 0x7A, 0xBC, 0xAF)
+  if (u8[0] === 0x37 && u8[1] === 0x7A && u8[2] === 0xBC && u8[3] === 0xAF) {
+    return FILE_CATEGORIES.ARCHIVE;
+  }
+  return null;
+}
+
+/**
+ * Unified authenticated fetch helper for DD Studio Universal Viewer
+ * Automatically attaches X-Device-Id, x-storage-auth, and Bearer tokens for internal routes
+ */
+export async function viewerFetch(url, options = {}) {
+  const headers = new Headers(options.headers || {});
+  let isInternal = false;
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.href : 'http://localhost:3000');
+    isInternal = typeof window !== 'undefined' ? (parsed.origin === window.location.origin) : true;
+    if (typeof url === 'string' && (url.startsWith('/api/') || url.startsWith('/downloads/'))) isInternal = true;
+  } catch {
+    if (typeof url === 'string' && (url.startsWith('/') || url.startsWith('./'))) isInternal = true;
+  }
+
+  if (isInternal && typeof window !== 'undefined') {
+    const deviceId = localStorage.getItem('ds_device_id') || window.__ddDeviceId || '';
+    if (deviceId && !headers.has('x-device-id')) {
+      headers.set('x-device-id', deviceId);
+    }
+    const token = getAdminToken();
+    if (token) {
+      if (!headers.has('x-storage-auth')) headers.set('x-storage-auth', token);
+      if (!headers.has('authorization')) headers.set('authorization', `Bearer ${token}`);
+    }
+  }
+
+  return fetch(url, {
+    credentials: 'same-origin',
+    ...options,
+    headers
+  });
+}
 
 function getOpenTabDetails(state) {
   const isPdf = state.category === FILE_CATEGORIES.PDF || state.category === FILE_CATEGORIES.PRESENTATION;
@@ -86,6 +186,11 @@ export function closeFileViewer() {
   currentSessionId++;
   cleanupCurrentView();
 
+  if (typeof window !== 'undefined') {
+    window.__ddFileViewerOpen = false;
+    window.__ddActiveViewerState = null;
+  }
+
   // Restore scroll lock on body & html
   try {
     document.body.style.overflow = '';
@@ -110,6 +215,10 @@ export function closeFileViewer() {
 
 if (typeof window !== 'undefined') {
   window.closeFileViewer = closeFileViewer;
+  window.__ddCloseFileViewer = closeFileViewer;
+  window.openFileViewer = openFileViewer;
+  window.viewerFetch = viewerFetch;
+  window.__ddViewerFetch = viewerFetch;
 }
 
 export function renderFallbackErrorCard(state, reason = '', details = '') {
@@ -238,8 +347,129 @@ function attachCategoryListeners(state, registerCleanup) {
   }
 }
 
+async function probeAndUpgradeCategory(state, sessionId, abortSignal) {
+  if (sessionId !== currentSessionId || abortSignal.aborted) return;
+  try {
+    let probeBuffer = null;
+    let contentType = state.mimeType || '';
+    let contentDisp = '';
+
+    if (state.rawFile instanceof Blob) {
+      probeBuffer = await state.rawFile.slice(0, 1024).arrayBuffer();
+      contentType = state.rawFile.type || contentType;
+    } else if (state.viewUrl) {
+      const res = await viewerFetch(state.viewUrl, {
+        headers: { Range: 'bytes=0-1023' },
+        signal: abortSignal
+      });
+      if (res.ok || res.status === 206) {
+        contentType = res.headers.get('content-type') || contentType;
+        contentDisp = res.headers.get('content-disposition') || '';
+        probeBuffer = await res.arrayBuffer();
+      }
+    }
+
+    if (sessionId !== currentSessionId || abortSignal.aborted) return;
+
+    let detectedCat = null;
+    if (probeBuffer) {
+      detectedCat = detectCategoryFromMagicBytes(new Uint8Array(probeBuffer));
+    }
+
+    if (!detectedCat && contentType) {
+      const lower = contentType.toLowerCase();
+      if (lower.includes('application/pdf')) detectedCat = FILE_CATEGORIES.PDF;
+      else if (lower.startsWith('image/')) detectedCat = FILE_CATEGORIES.IMAGE;
+      else if (lower.startsWith('video/')) detectedCat = FILE_CATEGORIES.VIDEO;
+      else if (lower.startsWith('audio/')) detectedCat = FILE_CATEGORIES.AUDIO;
+      else if (lower.includes('wordprocessingml') || lower.includes('msword')) detectedCat = FILE_CATEGORIES.WORD;
+      else if (lower.includes('spreadsheetml') || lower.includes('excel')) detectedCat = FILE_CATEGORIES.SHEET;
+      else if (lower.includes('zip') || lower.includes('tar') || lower.includes('compressed')) detectedCat = FILE_CATEGORIES.ARCHIVE;
+    }
+
+    if (contentDisp) {
+      const match = contentDisp.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+      if (match && match[1]) {
+        try {
+          const fn = decodeURIComponent(match[1].trim());
+          if (fn && (!state.name || state.name === 'Tài liệu' || state.name.endsWith('.bin'))) {
+            state.name = fn;
+            const nameEl = document.getElementById('viewerFileName');
+            if (nameEl) nameEl.textContent = fn;
+          }
+        } catch {}
+      }
+    }
+
+    if (detectedCat && detectedCat !== FILE_CATEGORIES.FALLBACK && detectedCat !== state.category) {
+      state.category = detectedCat;
+      const ext = state.name && state.name.includes('.')
+        ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
+        : detectedCat.toUpperCase();
+      const badge = document.getElementById('viewerFileExtBadge');
+      if (badge) badge.textContent = ext;
+
+      const isFullHeight = [
+        FILE_CATEGORIES.PDF,
+        FILE_CATEGORIES.PRESENTATION,
+        FILE_CATEGORIES.WORD,
+        FILE_CATEGORIES.SHEET,
+        FILE_CATEGORIES.HTML,
+        FILE_CATEGORIES.FONT,
+        FILE_CATEGORIES.ARCHIVE
+      ].includes(state.category);
+
+      const modalBox = document.querySelector('#fileViewerCoreModal > div');
+      if (modalBox) {
+        modalBox.className = isFullHeight
+          ? 'relative w-full h-full sm:h-auto sm:max-h-[95vh] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col'
+          : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]';
+      }
+
+      const viewerBody = document.getElementById('fileViewerBody');
+      if (viewerBody) {
+        viewerBody.className = isFullHeight
+          ? 'p-0 flex-1 overflow-hidden flex flex-col bg-zinc-100/70 dark:bg-[#09090b]'
+          : 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center bg-zinc-50/50 dark:bg-[#0e0e11]';
+        viewerBody.innerHTML = renderCategoryBody(state);
+      }
+      if (window.lucide) window.lucide.createIcons({ root: document.getElementById('fileViewerCoreModal') });
+
+      // Clean up previous listeners (e.g. fallback handlers) before attaching new category
+      while (activeCleanups.length > 0) {
+        const fn = activeCleanups.pop();
+        try { fn(); } catch {}
+      }
+
+      // Update open in new tab details for upgraded category
+      const { canOpenInTab, openTabUrl } = getOpenTabDetails(state);
+      const openTabBtn = document.getElementById('btnOpenViewerTab');
+      if (openTabBtn) {
+        if (canOpenInTab && openTabUrl) {
+          openTabBtn.href = openTabUrl;
+          openTabBtn.classList.remove('hidden');
+          openTabBtn.classList.add('flex');
+        } else {
+          openTabBtn.classList.add('hidden');
+          openTabBtn.classList.remove('flex');
+        }
+      }
+
+      const registerCleanup = (fn) => activeCleanups.push(fn);
+      attachCategoryListeners(state, registerCleanup);
+    }
+  } catch (err) {
+    console.warn('[FileViewerCore] Magic-byte probe failed:', err);
+  }
+}
+
 export function openFileViewer(state) {
   soundEngine.playToggle();
+  if (typeof window !== 'undefined') {
+    window.__ddFileViewerOpen = true;
+    window.__ddActiveViewerState = state;
+  }
+
   const existingModal = document.getElementById('fileViewerCoreModal');
   if (existingModal && state.direction) {
     cleanupCurrentView();
@@ -340,6 +570,10 @@ export function openFileViewer(state) {
 
     // Attach specific renderer listeners for active category
     attachCategoryListeners(state, registerCleanup);
+
+    if (state.category === FILE_CATEGORIES.FALLBACK) {
+      probeAndUpgradeCategory(state, sessionId, abortSignal);
+    }
     return;
   }
 
@@ -347,6 +581,11 @@ export function openFileViewer(state) {
   closeFileViewer();
   savedScrollY = currentScroll;
   currentViewerState = state;
+
+  if (typeof window !== 'undefined') {
+    window.__ddFileViewerOpen = true;
+    window.__ddActiveViewerState = state;
+  }
 
   // Lock scrolling while modal is open
   try {
@@ -395,31 +634,31 @@ export function openFileViewer(state) {
   const { canOpenInTab, openTabUrl } = getOpenTabDetails(state);
 
   const modalHtml = `
-    <div id="fileViewerCoreModal" class="fixed inset-0 z-50 flex items-center justify-center ${isFullHeight ? 'p-0 sm:p-4' : 'p-2.5 sm:p-5'} bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div id="fileViewerCoreModal" style="position: fixed; inset: 0; z-index: 99999;" class="fixed inset-0 z-[99999] flex items-center justify-center ${isFullHeight ? 'p-0 sm:p-4' : 'p-2.5 sm:p-5'} bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn">
       <div class="${isFullHeight ? 'relative w-full h-full sm:h-auto sm:max-h-[95vh] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col' : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]'}">
         
         <!-- Header Bar -->
-        <div class="px-4 sm:px-5 py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-3 bg-zinc-50/80 dark:bg-[#16161a] shrink-0">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span id="viewerFileExtBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+        <div class="px-3 sm:px-5 py-2.5 sm:py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-2 sm:gap-3 bg-zinc-50/90 dark:bg-[#16161a] shrink-0">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <span id="viewerFileExtBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
               ${ext}
             </span>
-            <span id="viewerFileName" class="font-medium text-sm text-zinc-900 dark:text-white truncate font-mono">${state.name}</span>
-            <span id="viewerFileSize" class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden sm:inline">${state.size > 0 ? `(${formatBytes(state.size)})` : ''}</span>
+            <span id="viewerFileName" class="font-medium text-xs sm:text-sm text-zinc-900 dark:text-white truncate font-mono min-w-0 flex-1">${state.name}</span>
+            <span id="viewerFileSize" class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden md:inline shrink-0">${state.size > 0 ? `(${formatBytes(state.size)})` : ''}</span>
           </div>
 
           <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            <button id="btnCopyViewerLink" type="button" class="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer" title="Sao chép liên kết">
+            <button id="btnCopyViewerLink" type="button" class="w-10 h-10 sm:w-8 sm:h-8 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer" title="Sao chép liên kết">
               <i data-lucide="link" class="w-4 h-4"></i>
             </button>
-            <a id="btnOpenViewerTab" href="${openTabUrl}" target="_blank" class="${canOpenInTab && openTabUrl ? 'flex' : 'hidden'} min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white items-center justify-center transition" title="Mở tab mới">
+            <a id="btnOpenViewerTab" href="${openTabUrl}" target="_blank" class="${canOpenInTab && openTabUrl ? 'flex' : 'hidden'} w-10 h-10 sm:w-8 sm:h-8 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white items-center justify-center transition" title="Mở tab mới">
               <i data-lucide="external-link" class="w-4 h-4"></i>
             </a>
-            <a id="btnDownloadViewerFile" href="${state.downloadUrl}" download="${state.name}" class="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition" title="Tải về">
+            <a id="btnDownloadViewerFile" href="${state.downloadUrl}" download="${state.name}" class="w-10 h-10 sm:w-8 sm:h-8 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition" title="Tải về">
               <i data-lucide="download" class="w-4 h-4"></i>
             </a>
-            <div class="w-px h-4 bg-zinc-200 dark:bg-white/10 mx-0.5 sm:mx-1"></div>
-            <button id="btnCloseFileViewer" type="button" class="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 flex items-center justify-center transition cursor-pointer" title="Đóng">
+            <div class="w-px h-4 bg-zinc-200 dark:bg-white/10 mx-0.5"></div>
+            <button id="btnCloseFileViewer" type="button" class="w-10 h-10 sm:w-8 sm:h-8 p-2 sm:p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 flex items-center justify-center transition cursor-pointer" title="Đóng">
               <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
@@ -433,10 +672,13 @@ export function openFileViewer(state) {
     </div>
   `.trim();
 
+  // Root Portal Mounting: Escapes any CSS transform / contain: paint traps
   let container = document.getElementById('globalFileViewerMount');
   if (!container) {
     container = document.createElement('div');
     container.id = 'globalFileViewerMount';
+    document.body.appendChild(container);
+  } else if (container.parentElement !== document.body) {
     document.body.appendChild(container);
   }
   container.innerHTML = modalHtml;
@@ -467,4 +709,8 @@ export function openFileViewer(state) {
 
   // Attach Specific Renderer Listeners
   attachCategoryListeners(state, registerCleanup);
+
+  if (state.category === FILE_CATEGORIES.FALLBACK) {
+    probeAndUpgradeCategory(state, sessionId, abortSignal);
+  }
 }

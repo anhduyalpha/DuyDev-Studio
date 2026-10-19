@@ -138,9 +138,10 @@ export function attachHtmlListeners(state, registerCleanup) {
         renderSourceHighlight(rawSource);
         return;
       }
+      const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
       const getSourcePromise = (state.rawFile instanceof Blob)
         ? state.rawFile.text()
-        : fetch(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' }).then(r => {
+        : fetchFn(state.viewUrl, { signal: abortController.signal, credentials: 'same-origin' }).then(r => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             return r.text();
           });

@@ -38,16 +38,18 @@ export async function sha256(str) {
  */
 export function isAdminAuthenticated() {
   try {
-    if (sessionStorage.getItem(SESSION_KEY_AUTH) === 'true') {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_KEY_AUTH) === 'true') {
       return true;
     }
-    const storedToken = localStorage.getItem(SESSION_KEY_TOKEN);
-    if (storedToken && storedToken.includes('.')) {
-      const exp = parseInt(storedToken.split('.')[0], 10);
-      if (!isNaN(exp) && exp > Date.now()) {
-        sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
-        sessionStorage.setItem(SESSION_KEY_TOKEN, storedToken);
-        return true;
+    if (typeof localStorage !== 'undefined') {
+      const storedToken = localStorage.getItem(SESSION_KEY_TOKEN);
+      if (storedToken && storedToken.includes('.')) {
+        const exp = parseInt(storedToken.split('.')[0], 10);
+        if (!isNaN(exp) && exp > Date.now()) {
+          try { sessionStorage?.setItem(SESSION_KEY_AUTH, 'true'); } catch {}
+          try { sessionStorage?.setItem(SESSION_KEY_TOKEN, storedToken); } catch {}
+          return true;
+        }
       }
     }
     return false;
@@ -61,14 +63,22 @@ export function isAdminAuthenticated() {
  */
 export function getAdminToken() {
   try {
-    const sessionToken = sessionStorage.getItem(SESSION_KEY_TOKEN);
-    if (sessionToken) return sessionToken;
-    const localToken = localStorage.getItem(SESSION_KEY_TOKEN);
-    if (localToken && localToken.includes('.')) {
-      const exp = parseInt(localToken.split('.')[0], 10);
-      if (!isNaN(exp) && exp > Date.now()) {
-        sessionStorage.setItem(SESSION_KEY_TOKEN, localToken);
-        return localToken;
+    if (typeof sessionStorage !== 'undefined') {
+      const sessionToken = sessionStorage.getItem(SESSION_KEY_TOKEN);
+      if (sessionToken) return sessionToken;
+    }
+    if (typeof localStorage !== 'undefined') {
+      const localToken = localStorage.getItem(SESSION_KEY_TOKEN);
+      if (localToken) {
+        if (localToken.includes('.')) {
+          const exp = parseInt(localToken.split('.')[0], 10);
+          if (!isNaN(exp) && exp > Date.now()) {
+            try { sessionStorage?.setItem(SESSION_KEY_TOKEN, localToken); } catch {}
+            return localToken;
+          }
+        } else {
+          return localToken;
+        }
       }
     }
     return '';

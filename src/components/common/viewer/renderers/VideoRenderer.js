@@ -33,6 +33,7 @@ export function renderVideoViewer(state) {
         controls 
         autoplay 
         playsinline 
+        preload="metadata"
         loop
         class="max-h-[80vh] max-w-full rounded-lg shadow-2xl object-contain z-10" 
         src="${state.viewUrl}"
@@ -157,7 +158,8 @@ export function attachVideoListeners(state, registerCleanup) {
     }
     hasRetried = true;
     try {
-      const res = await fetch(state.viewUrl, { signal: state.abortSignal });
+      const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+      const res = await fetchFn(state.viewUrl, { signal: state.abortSignal });
       if (res.ok) {
         const blob = await res.blob();
         if (state.isCurrentSession && !state.isCurrentSession()) return;

@@ -27,7 +27,7 @@ export function renderAudioViewer(state) {
       </div>
 
       <!-- Native Audio Hidden Element -->
-      <audio id="corePreviewAudio" preload="auto" src="${state.viewUrl}"></audio>
+      <audio id="corePreviewAudio" preload="metadata" src="${state.viewUrl}"></audio>
 
       <!-- Player Controls Card -->
       <div class="bg-zinc-50 dark:bg-white/[0.03] p-4 sm:p-5 rounded-2xl border border-zinc-200/80 dark:border-white/[0.06] space-y-4 shadow-sm">
@@ -172,7 +172,8 @@ export function attachAudioListeners(state, registerCleanup) {
 
     hasRetried = true;
     try {
-      const res = await fetch(state.viewUrl, { signal: state.abortSignal });
+      const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+      const res = await fetchFn(state.viewUrl, { signal: state.abortSignal });
       if (res.ok) {
         const blob = await res.blob();
         if (state.isCurrentSession && !state.isCurrentSession()) return;

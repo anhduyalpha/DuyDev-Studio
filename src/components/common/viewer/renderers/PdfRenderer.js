@@ -140,7 +140,8 @@ export function attachPdfListeners(state, registerCleanup) {
             ? fileUrl
             : new URL(fileUrl, window.location.href).href;
 
-          const resp = await fetch(fetchUrl, {
+          const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+          const resp = await fetchFn(fetchUrl, {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/pdf, */*' },
             signal: state.abortSignal
@@ -154,16 +155,39 @@ export function attachPdfListeners(state, registerCleanup) {
           throw new Error('Tệp PDF trống hoặc không thể tải nội dung');
         }
 
-        const bufferTask = pdfjsLib.getDocument({
-          data: new Uint8Array(pdfData),
-          cMapUrl,
-          cMapPacked: true,
-          standardFontDataUrl,
-          onPassword: handlePassword
-        });
-        activeLoadingTask = bufferTask;
-        pdfDoc = await bufferTask.promise;
-        loadedDoc = pdfDoc;
+        try {
+          const bufferTask = pdfjsLib.getDocument({
+            data: new Uint8Array(pdfData),
+            cMapUrl,
+            cMapPacked: true,
+            standardFontDataUrl,
+            onPassword: handlePassword
+          });
+          activeLoadingTask = bufferTask;
+          pdfDoc = await bufferTask.promise;
+          loadedDoc = pdfDoc;
+        } catch (workerErr) {
+          const wMsg = (workerErr?.message || '').toLowerCase();
+          if (workerErr?.name === 'PasswordException' || wMsg.includes('password') || wMsg.includes('mật khẩu')) {
+            throw workerErr;
+          }
+          if (wMsg.includes('worker') || workerErr?.name === 'WorkerException' || !window.pdfjsLib?.GlobalWorkerOptions?.workerSrc) {
+            console.warn('[PdfRenderer] Web Worker failed or blocked, falling back to main-thread fake worker:', workerErr);
+            if (window.pdfjsLib?.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+            const fallbackTask = pdfjsLib.getDocument({
+              data: new Uint8Array(pdfData),
+              cMapUrl,
+              cMapPacked: true,
+              standardFontDataUrl,
+              onPassword: handlePassword
+            });
+            activeLoadingTask = fallbackTask;
+            pdfDoc = await fallbackTask.promise;
+            loadedDoc = pdfDoc;
+          } else {
+            throw workerErr;
+          }
+        }
       } catch (primaryErr) {
         if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;
         const errMsg = (primaryErr?.message || '').toLowerCase();
@@ -175,16 +199,39 @@ export function attachPdfListeners(state, registerCleanup) {
           ? fileUrl
           : new URL(fileUrl, window.location.href).href;
 
-        const loadingTask = pdfjsLib.getDocument({
-          url: absoluteUrl,
-          cMapUrl,
-          cMapPacked: true,
-          standardFontDataUrl,
-          onPassword: handlePassword
-        });
-        activeLoadingTask = loadingTask;
-        pdfDoc = await loadingTask.promise;
-        loadedDoc = pdfDoc;
+        try {
+          const loadingTask = pdfjsLib.getDocument({
+            url: absoluteUrl,
+            cMapUrl,
+            cMapPacked: true,
+            standardFontDataUrl,
+            onPassword: handlePassword
+          });
+          activeLoadingTask = loadingTask;
+          pdfDoc = await loadingTask.promise;
+          loadedDoc = pdfDoc;
+        } catch (urlWorkerErr) {
+          const uMsg = (urlWorkerErr?.message || '').toLowerCase();
+          if (urlWorkerErr?.name === 'PasswordException' || uMsg.includes('password') || uMsg.includes('mật khẩu')) {
+            throw urlWorkerErr;
+          }
+          if (uMsg.includes('worker') || urlWorkerErr?.name === 'WorkerException') {
+            console.warn('[PdfRenderer] Direct URL stream worker failed, retrying on main-thread:', urlWorkerErr);
+            if (window.pdfjsLib?.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+            const fallbackTask = pdfjsLib.getDocument({
+              url: absoluteUrl,
+              cMapUrl,
+              cMapPacked: true,
+              standardFontDataUrl,
+              onPassword: handlePassword
+            });
+            activeLoadingTask = fallbackTask;
+            pdfDoc = await fallbackTask.promise;
+            loadedDoc = pdfDoc;
+          } else {
+            throw urlWorkerErr;
+          }
+        }
       }
 
       if (isDestroyed || (state.isCurrentSession && !state.isCurrentSession())) return;

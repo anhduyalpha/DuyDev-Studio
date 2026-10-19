@@ -542,9 +542,10 @@ class App {
 // Expose global Universal File Viewer bridge for tools and deep-links
 if (typeof window !== 'undefined') {
   window.ViewerConnector = ViewerConnector;
+  window.openFileViewer = (item, options) => ViewerConnector.preview(item, options);
   window.__ds_fileViewer = {
-    open: (item) => ViewerConnector.preview(item),
-    preview: (item) => ViewerConnector.preview(item)
+    open: (item, options) => ViewerConnector.preview(item, options),
+    preview: (item, options) => ViewerConnector.preview(item, options)
   };
 
   // Android Native bridge: Intercept any <a download> clicks to route through AndroidBridge.downloadFile

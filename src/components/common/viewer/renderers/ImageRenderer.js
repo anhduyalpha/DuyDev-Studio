@@ -82,6 +82,7 @@ export function attachImageListeners(state, registerCleanup) {
   let isDragging = false;
   let startX = 0, startY = 0;
   let rawSvgText = '';
+  let hasRetriedImg = false;
 
   const updateTransform = () => {
     if (viewport) {
@@ -94,7 +95,24 @@ export function attachImageListeners(state, registerCleanup) {
     img.onload = () => {
       if (spinner) spinner.classList.add('hidden');
     };
-    img.onerror = () => {
+    img.onerror = async () => {
+      if (!hasRetriedImg && state.viewUrl && !state.viewUrl.startsWith('blob:') && !state.viewUrl.startsWith('data:')) {
+        hasRetriedImg = true;
+        try {
+          const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+          const res = await fetchFn(state.viewUrl, { signal: state.abortSignal });
+          if (res.ok) {
+            const blob = await res.blob();
+            if (state.isCurrentSession && !state.isCurrentSession()) return;
+            const blobUrl = URL.createObjectURL(blob);
+            registerCleanup(() => URL.revokeObjectURL(blobUrl));
+            img.src = blobUrl;
+            return;
+          }
+        } catch {
+          // Fall through to error UI
+        }
+      }
       if (spinner) spinner.classList.add('hidden');
       if (state.showErrorFallback) {
         state.showErrorFallback('Không thể tải hoặc hiển thị hình ảnh này', 'Định dạng ảnh không được hỗ trợ hoặc tệp ảnh bị hỏng cấu trúc');
@@ -240,9 +258,10 @@ export function attachImageListeners(state, registerCleanup) {
 
       if (!rawSvgText) {
         try {
+          const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
           const fetchPromise = (state.rawFile instanceof Blob)
             ? state.rawFile.text()
-            : fetch(state.viewUrl, { credentials: 'same-origin' }).then(r => {
+            : fetchFn(state.viewUrl, { credentials: 'same-origin' }).then(r => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 return r.text();
               });

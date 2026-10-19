@@ -97,7 +97,8 @@ export function attachFallbackListeners(state, registerCleanup) {
         const slice = state.rawFile.slice(0, 65536);
         buffer = await slice.arrayBuffer();
       } else {
-        const res = await fetch(state.viewUrl, {
+        const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+        const res = await fetchFn(state.viewUrl, {
           headers: { Range: 'bytes=0-65535' },
           signal: state.abortSignal || abortController.signal,
           credentials: 'same-origin'

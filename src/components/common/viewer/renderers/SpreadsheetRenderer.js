@@ -56,7 +56,7 @@ export function renderSpreadsheetViewer(state) {
       </div>
 
       <!-- Table Viewport -->
-      <div id="sheetTableContainer" class="flex-1 overflow-auto custom-scrollbar relative hidden"></div>
+      <div id="sheetTableContainer" class="flex-1 overflow-auto custom-scrollbar relative hidden" style="-webkit-overflow-scrolling: touch;"></div>
 
       <!-- Sheet Tabs Bar (Bottom) -->
       <div id="sheetTabsBar" class="px-3 py-1.5 border-t border-zinc-200 dark:border-white/[0.06] flex items-center gap-1.5 overflow-x-auto custom-scrollbar bg-zinc-100/70 dark:bg-[#0a0a0c] shrink-0 hidden"></div>
@@ -179,7 +179,8 @@ export function attachSpreadsheetListeners(state, registerCleanup) {
       if (state.rawFile instanceof Blob) {
         buffer = await state.rawFile.arrayBuffer();
       } else {
-        const res = await fetch(state.viewUrl, { signal: state.abortSignal || abortController.signal, credentials: 'same-origin' });
+        const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
+        const res = await fetchFn(state.viewUrl, { signal: state.abortSignal || abortController.signal, credentials: 'same-origin' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         buffer = await res.arrayBuffer();
       }
@@ -218,6 +219,24 @@ export function attachSpreadsheetListeners(state, registerCleanup) {
       if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       if (err.name === 'AbortError') return;
+
+      // Automatic fallback to backend /api/v1/viewer/preview-pdf for complex or client-unparseable spreadsheets per Goal 3.2
+      const pathParam = state.path || state.drivePath || (state.viewUrl || '').match(/[?&]path=([^&#]+)/)?.[1];
+      const fileIdParam = state.fileId || (state.viewUrl || '').match(/\/api\/v1\/files\/(?:download|view)\/([^/?#]+)/)?.[1];
+      if ((pathParam || fileIdParam) && !state._triedBackendFallback && typeof window !== 'undefined' && window.openFileViewer) {
+        state._triedBackendFallback = true;
+        state.category = 'pdf';
+        const token = (typeof localStorage !== 'undefined' && (localStorage.getItem('ds_admin_token') || localStorage.getItem('token'))) || '';
+        const authParam = token ? `&auth=${encodeURIComponent(token)}` : '';
+        const devId = (typeof localStorage !== 'undefined' && localStorage.getItem('ds_device_id')) || '';
+        const devParam = devId ? `&deviceId=${encodeURIComponent(devId)}` : '';
+        state.viewUrl = pathParam
+          ? `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(decodeURIComponent(pathParam))}${authParam}${devParam}`
+          : `/api/v1/viewer/preview-pdf?fileId=${encodeURIComponent(fileIdParam)}${authParam}${devParam}`;
+        window.openFileViewer(state);
+        return;
+      }
+
       if (state.showErrorFallback) {
         state.showErrorFallback('Không thể đọc tệp bảng tính', err.message);
       } else if (loading) {
