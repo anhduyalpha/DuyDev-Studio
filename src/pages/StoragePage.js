@@ -710,6 +710,8 @@ function renderGridItem(item) {
   const visual = getFileVisualInfo(item);
   const preview = isPreviewable(item);
   const isSelected = state.selectedPaths.has(item.path);
+  const ext = (item.extension || item.name.split('.').pop() || '').toLowerCase();
+  const isArchive = !item.isDirectory && ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'tgz', 'xz'].includes(ext);
 
   return `
     <div 
@@ -748,6 +750,11 @@ function renderGridItem(item) {
             <i data-lucide="eye" class="w-3.5 h-3.5"></i>
           </button>
         ` : ''}
+        ${isArchive ? `
+          <button data-action="inspect-archive" data-item-path="${escapeHtml(item.path)}" title="Soi tệp nén" class="p-1 rounded-md hover:bg-amber-100 dark:hover:bg-amber-500/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer">
+            <i data-lucide="folder-archive" class="w-3.5 h-3.5"></i>
+          </button>
+        ` : ''}
         <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory}" title="${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về'}" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
           <i data-lucide="download" class="w-3.5 h-3.5"></i>
         </button>
@@ -775,6 +782,8 @@ function renderListItem(item) {
   const visual = getFileVisualInfo(item);
   const preview = isPreviewable(item);
   const isSelected = state.selectedPaths.has(item.path);
+  const ext = (item.extension || item.name.split('.').pop() || '').toLowerCase();
+  const isArchive = !item.isDirectory && ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'tgz', 'xz'].includes(ext);
 
   return `
     <tr 
@@ -811,6 +820,11 @@ function renderListItem(item) {
           ${preview ? `
             <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            </button>
+          ` : ''}
+          ${isArchive ? `
+            <button data-action="inspect-archive" data-item-path="${escapeHtml(item.path)}" title="Soi tệp nén" class="p-1 rounded-md hover:bg-amber-100 dark:hover:bg-amber-500/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer">
+              <i data-lucide="folder-archive" class="w-3.5 h-3.5"></i>
             </button>
           ` : ''}
           <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory}" title="${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về'}" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
@@ -1390,6 +1404,8 @@ export function attachStoragePageListeners(onSoftReRender) {
         } else if (action === 'preview') {
           const item = state.items.find((i) => i.path === itemPath);
           if (item) previewStorageItem(item);
+        } else if (action === 'inspect-archive') {
+          window.location.hash = `#archive?path=${encodeURIComponent(itemPath)}`;
         } else if (action === 'move') {
           handleMoveCopyModal([itemPath], false, loadDirectory);
         } else if (action === 'copy') {

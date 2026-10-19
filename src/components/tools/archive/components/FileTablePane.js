@@ -7,6 +7,7 @@ import { formatBytes } from '../../../../utilities/formatters.js';
 import { inspectNestedArchiveFile } from '../hooks/useArchiveInspect.js';
 import { openMediaPreview } from '../../../common/MediaPreviewModal.js';
 import { showToast } from '../../../../utilities/toast.js';
+import { getAdminToken } from '../../../../utilities/adminAuth.js';
 
 
 export function getFileIcon(fileName) {
@@ -51,7 +52,7 @@ export function renderFileTableRows(files, archiveData) {
             <i data-lucide="${isNestedArchive ? 'folder-archive' : 'eye'}" class="w-3.5 h-3.5"></i>
             <span>${isNestedArchive ? 'Mở tệp nén' : 'Xem'}</span>
           </button>
-          <a href="${archiveData.apiBase}/api/v1/archive/extract-file?fileId=${archiveData.fileId}&memberPath=${encodeURIComponent(file.rawPath)}"
+          <a href="${archiveData.apiBase}/api/v1/archive/extract-file?${archiveData.drivePath ? `drivePath=${encodeURIComponent(archiveData.drivePath)}${getAdminToken() ? `&auth=${encodeURIComponent(getAdminToken())}` : ''}` : `fileId=${archiveData.fileId}`}&memberPath=${encodeURIComponent(file.rawPath)}"
              download="${file.name}"
              onclick="event.stopPropagation()"
              class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 font-medium text-xs transition shadow-xs inline-flex items-center gap-1">
@@ -150,11 +151,12 @@ export function attachTableMemberListeners({ archiveState, persistArchive, reren
         }
 
         try {
-          const inspected = await inspectNestedArchiveFile(
-            archiveState.archiveData.fileId,
+          const inspected = await inspectNestedArchiveFile({
+            parentFileId: archiveState.archiveData.fileId,
+            parentDrivePath: archiveState.archiveData.drivePath,
             memberPath,
-            archiveState.archiveData.apiBase
-          );
+            apiBase: archiveState.archiveData.apiBase
+          });
           overlay?.remove();
           archiveState.archiveStack.push({ ...archiveState.archiveData, savedFolder: archiveState.currentFolder });
           archiveState.archiveData = { ...inspected, archiveName: `${archiveState.archiveData.archiveName} / ${inspected.nestedName}` };
@@ -169,9 +171,15 @@ export function attachTableMemberListeners({ archiveState, persistArchive, reren
         return;
       }
 
+      const token = getAdminToken();
+      const authQuery = token ? `&auth=${encodeURIComponent(token)}` : '';
+      const previewUrl = archiveState.archiveData.drivePath
+        ? `${archiveState.archiveData.apiBase}/api/v1/archive/extract-file?drivePath=${encodeURIComponent(archiveState.archiveData.drivePath)}&memberPath=${encodeURIComponent(memberPath)}&inline=true${authQuery}`
+        : `${archiveState.archiveData.apiBase}/api/v1/archive/extract-file?fileId=${archiveState.archiveData.fileId}&memberPath=${encodeURIComponent(memberPath)}&inline=true`;
+
       openMediaPreview({
         name: fileName,
-        url: `${archiveState.archiveData.apiBase}/api/v1/archive/extract-file?fileId=${archiveState.archiveData.fileId}&memberPath=${encodeURIComponent(memberPath)}&inline=true`
+        url: previewUrl
       });
     };
   });

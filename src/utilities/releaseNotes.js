@@ -6,6 +6,23 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.56': {
+    version: 'v23.56',
+    title: 'Bản cập nhật v23.56',
+    date: '19/10/2026',
+    features: [
+      'Trình Soi Tệp Nén (Archive Explorer) chuyên sâu cho Studio Drive: Hỗ trợ duyệt thư mục đa tầng (nested folders), hiển thị đầy đủ tệp tin trong mọi thư mục con, điều hướng thư mục cha và breadcrumb linh hoạt',
+      'Chế độ xem kép và tìm kiếm tức thì: Chuyển đổi linh hoạt giữa "Chế độ Thư mục" và "Tất cả tệp (Flat View)", tích hợp ô tìm kiếm lọc nhanh toàn bộ cây tệp nén',
+      'Xem trước tệp tin ngay trong modal (In-Modal Preview): Xem ảnh, âm thanh, video, mã nguồn/văn bản trực tiếp bên trong tệp nén mà không làm mất phiên duyệt tệp nén cha',
+      'Tích hợp nút thao tác "Soi tệp nén" 1 chạm trên danh sách Storage Drive và hỗ trợ mở rộng sang không gian làm việc toàn màn hình'
+    ],
+    fixes: [
+      'Sửa lỗi thiếu file hoặc hiển thị 0 tệp khi mở các tệp ZIP có thư mục gốc (như Lab2.zip hoặc repo archives)',
+      'Hỗ trợ tệp nén lồng nhau từ Storage Drive (nested drive archives) thông qua parentDrivePath trên API backend Fastify',
+      'Khắc phục triệt để lỗi mất ngữ cảnh modal khi bấm xem tệp con trong kho lưu trữ Drive'
+    ]
+  },
+
   'v23.55': {
     version: 'v23.55',
     title: 'Bản cập nhật v23.55',

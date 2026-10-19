@@ -57,11 +57,85 @@ export async function inspectArchiveFile(file, options = {}) {
   };
 }
 
-export async function inspectNestedArchiveFile(parentFileId, memberPath, apiBase) {
+import { getAdminToken } from '../../../../utilities/adminAuth.js';
+
+export async function inspectDriveArchive(drivePath, options = {}) {
+  const apiBase = window.location.origin;
+  const token = getAdminToken();
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['x-storage-auth'] = token;
+    headers['authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${apiBase}/api/v1/archive/inspect`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ drivePath, auth: token }),
+    signal: options.signal
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.error?.message || errJson.message || `Không thể phân tích file nén (${res.status})`);
+  }
+
+  const inspected = (await res.json()).data;
+  const fileName = drivePath.split('/').pop() || inspected.archiveName || 'archive.zip';
+  const authQuery = token ? `&auth=${encodeURIComponent(token)}` : '';
+
+  return {
+    drivePath,
+    archiveName: fileName,
+    totalFiles: inspected.totalFiles,
+    totalUncompressedBytes: inspected.totalUncompressedBytes,
+    totalCompressedBytes: inspected.totalCompressedBytes,
+    format: inspected.format,
+    allEntries: inspected.tree,
+    folders: extractFolders(inspected.tree),
+    currentFiles: getFilesInFolder(inspected.tree, '/'),
+    downloadUrl: `${apiBase}/api/v1/storage/download?path=${encodeURIComponent(drivePath)}${authQuery}`,
+    apiBase
+  };
+}
+
+export async function inspectNestedArchiveFile(arg1, memberPathArg, apiBaseArg) {
+  let parentFileId = '';
+  let parentDrivePath = '';
+  let memberPath = '';
+  let apiBase = window.location.origin;
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    parentFileId = arg1.parentFileId || '';
+    parentDrivePath = arg1.parentDrivePath || '';
+    memberPath = arg1.memberPath || '';
+    apiBase = arg1.apiBase || window.location.origin;
+  } else {
+    parentFileId = arg1 || '';
+    memberPath = memberPathArg || '';
+    apiBase = apiBaseArg || window.location.origin;
+  }
+
+  const token = getAdminToken();
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['x-storage-auth'] = token;
+    headers['authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${apiBase}/api/v1/archive/inspect-nested`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parentFileId, memberPath })
+    headers,
+    body: JSON.stringify({
+      parentFileId: parentFileId || undefined,
+      parentDrivePath: parentDrivePath || undefined,
+      memberPath,
+      auth: token
+    })
   });
 
   if (!res.ok) {
@@ -73,6 +147,7 @@ export async function inspectNestedArchiveFile(parentFileId, memberPath, apiBase
 
   return {
     fileId: inspected.fileId,
+    parentDrivePath: inspected.parentDrivePath || parentDrivePath || null,
     nestedName: inspected.nestedName,
     totalFiles: inspected.totalFiles,
     totalUncompressedBytes: inspected.totalUncompressedBytes,

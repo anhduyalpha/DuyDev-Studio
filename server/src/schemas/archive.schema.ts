@@ -11,8 +11,12 @@ export const inspectArchiveSchema = z.object({
 export type InspectArchiveInput = z.infer<typeof inspectArchiveSchema>;
 
 export const inspectNestedArchiveSchema = z.object({
-  parentFileId: z.string().min(1, 'parentFileId is required'),
+  parentFileId: z.string().optional(),
+  parentDrivePath: z.string().optional(),
+  auth: z.string().optional(),
   memberPath: z.string().min(1, 'memberPath is required')
+}).refine((data) => Boolean(data.parentFileId || data.parentDrivePath), {
+  message: 'parentFileId or parentDrivePath is required'
 });
 
 export type InspectNestedArchiveInput = z.infer<typeof inspectNestedArchiveSchema>;

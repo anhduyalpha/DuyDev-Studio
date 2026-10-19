@@ -39,6 +39,19 @@ export function attachArchivePageListeners(rerender) {
     bindControls();
   }
 
+  // Check URL params for direct drive inspection: #archive?path=... or ?drivePath=...
+  try {
+    const hash = window.location.hash || '';
+    const queryIdx = hash.indexOf('?');
+    if (queryIdx !== -1) {
+      const params = new URLSearchParams(hash.slice(queryIdx));
+      const targetDrivePath = params.get('path') || params.get('drivePath');
+      if (targetDrivePath && (!archiveManager.archiveData || archiveManager.archiveData.drivePath !== targetDrivePath)) {
+        archiveManager.loadDriveArchive(targetDrivePath);
+      }
+    }
+  } catch (_) {}
+
   const unsub = archiveManager.subscribe((event, data) => {
     if (!isMounted) return;
 

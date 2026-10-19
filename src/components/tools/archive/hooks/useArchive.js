@@ -4,7 +4,7 @@
  * Fully decoupled from DOM lifecycles to enable true background multitasking.
  */
 
-import { inspectArchiveFile } from './useArchiveInspect.js';
+import { inspectArchiveFile, inspectDriveArchive } from './useArchiveInspect.js';
 import { getFilesInFolder } from './archiveTreeHelper.js';
 import { loadModuleState, saveModuleState } from '../../../../utilities/moduleState.js';
 import { ResumableUploader } from '../../../../utilities/resumableUploader.js';
@@ -152,6 +152,35 @@ export class ArchiveManager {
         showToast(this.error, 'error');
         this.notify('upload-error', this.error);
       }
+    }
+  }
+
+  async loadDriveArchive(drivePath, archiveName = null) {
+    if (!drivePath) return;
+
+    this.isUploading = true;
+    this.error = null;
+    this.uploadingFileName = archiveName || drivePath.split('/').pop() || 'Tệp nén Drive';
+    this.uploadStage = 'Đang đọc tệp nén từ Studio Drive...';
+    this.uploadTelemetry = { percent: 100, formattedSpeed: 'Direct', formattedEta: '0s' };
+    this.notify('upload-start');
+
+    try {
+      const data = await inspectDriveArchive(drivePath);
+      this.archiveStack = [];
+      this.archiveData = data;
+      this.currentFolder = '/';
+      this.isUploading = false;
+      this.activeUploader = null;
+      this.persist();
+
+      showToast(`Đã mở tệp nén: ${data.archiveName}`, 'success');
+      this.notify('upload-complete', data);
+    } catch (err) {
+      this.isUploading = false;
+      this.error = err.message || 'Lỗi khi mở tệp nén từ Drive';
+      showToast(this.error, 'error');
+      this.notify('upload-error', this.error);
     }
   }
 

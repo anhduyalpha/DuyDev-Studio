@@ -81,20 +81,40 @@ export async function inspectArchiveHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function inspectNestedArchiveHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { parentFileId, memberPath } = inspectNestedArchiveSchema.parse(request.body);
-  if (!parentFileId || !parentFileId.trim()) {
-    throw new BadRequestError('parentFileId is required');
+  const { parentFileId, parentDrivePath, memberPath } = inspectNestedArchiveSchema.parse(request.body);
+
+  let parentStoragePath = '';
+  let parentRecordId: string | null = null;
+
+  if (parentDrivePath) {
+    if (!verifyArchiveAdminAuth(request)) {
+      return reply.status(401).send({
+        success: false,
+        error: 'UNAUTHORIZED',
+        message: 'Yêu cầu quyền quản trị để xem tệp nén trong kho lưu trữ'
+      });
+    }
+
+    const diskPath = DriveService.getDiskPath(parentDrivePath);
+    if (!fs.existsSync(diskPath)) {
+      throw new NotFoundError(`Tệp nén '${parentDrivePath}' không tồn tại trên máy chủ`);
+    }
+    parentStoragePath = diskPath;
+  } else if (parentFileId) {
+    const parentRecord = await prisma.fileRecord.findUnique({
+      where: { id: parentFileId }
+    });
+
+    if (!parentRecord || parentRecord.isPurged || (!isPermanentRetention && parentRecord.expiresAt <= new Date())) {
+      throw new NotFoundError(`Parent archive ${parentFileId} not found or has expired`);
+    }
+    parentStoragePath = parentRecord.storagePath;
+    parentRecordId = parentRecord.id;
+  } else {
+    throw new BadRequestError('parentFileId or parentDrivePath is required');
   }
 
-  const parentRecord = await prisma.fileRecord.findUnique({
-    where: { id: parentFileId }
-  });
-
-  if (!parentRecord || parentRecord.isPurged || (!isPermanentRetention && parentRecord.expiresAt <= new Date())) {
-    throw new NotFoundError(`Parent archive ${parentFileId} not found or has expired`);
-  }
-
-  const extracted = await ArchiveService.extractSingleMember(parentRecord.storagePath, memberPath);
+  const extracted = await ArchiveService.extractSingleMember(parentStoragePath, memberPath);
   const ext = path.extname(extracted.name).toLowerCase() || '.zip';
   const nestedFileId = `fil_nested_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
   const targetPath = StorageManager.getProcessedPath(nestedFileId, ext);
@@ -135,7 +155,8 @@ export async function inspectNestedArchiveHandler(request: FastifyRequest, reply
     data: {
       ...result,
       fileId: nestedRecord.id,
-      parentFileId: parentRecord.id,
+      parentFileId: parentRecordId,
+      parentDrivePath: parentDrivePath || null,
       nestedName: extracted.name
     }
   });
