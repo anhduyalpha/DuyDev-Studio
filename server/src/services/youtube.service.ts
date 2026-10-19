@@ -160,7 +160,7 @@ export class YouTubeService {
     const finalFileName = `${safeTitle} [${meta.id}_${quality}]_${uniqueId}.${ext}`;
 
     const targetDir = saveToDrive
-      ? path.join(resolvedStoragePaths.drive, 'YouTube')
+      ? path.join(resolvedStoragePaths.drive, 'youtube')
       : path.join(resolvedStoragePaths.temp, 'youtube');
 
     await fsPromises.mkdir(targetDir, { recursive: true });
@@ -219,7 +219,7 @@ export class YouTubeService {
       const stat = await fsPromises.stat(actualFilePath);
       const actualFileName = path.basename(actualFilePath);
       const relPath = saveToDrive
-        ? path.posix.join('drive', 'YouTube', actualFileName)
+        ? path.posix.join('drive', 'youtube', actualFileName)
         : path.posix.join('temp', 'youtube', actualFileName);
 
       const downloadUrl = `/api/v1/youtube/stream/${encodeURIComponent(actualFileName)}?download=true`;

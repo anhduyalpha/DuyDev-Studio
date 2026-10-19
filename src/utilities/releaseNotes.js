@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.52': {
+    version: 'v23.52',
+    title: 'Bản cập nhật v23.52',
+    date: '19/10/2026',
+    features: [
+      'Tab YouTube riêng biệt trong Storage Drive: Dễ dàng xem và quản lý tập trung toàn bộ video và âm thanh tải từ YouTube tại /youtube',
+      'Phát liên tục playlist media trong Storage Drive: Hỗ trợ tự động chuyển bài video/âm thanh kế tiếp khi duyệt file trong thư mục YouTube'
+    ],
+    fixes: [
+      'Tối ưu giao diện YouTube Downloader trên Android: Cải thiện bố cục lịch sử tải và kết quả tải gần đây, chống chữ bị ép dòng và tràn lề trên màn hình nhỏ',
+      'Định tuyến danh mục tải YouTube vào thư mục chuẩn hóa chữ thường và tự động khởi tạo thư mục trên máy chủ'
+    ]
+  },
+
   'v23.51': {
     version: 'v23.51',
     title: 'Bản cập nhật v23.51',

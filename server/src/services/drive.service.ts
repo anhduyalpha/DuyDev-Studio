@@ -97,10 +97,17 @@ export class DriveService {
    */
   static async listFiles(userRelPath = '/'): Promise<DriveListResult> {
     const normalizedRel = this.normalizeRelativePath(userRelPath);
-    const diskPath = this.getDiskPath(normalizedRel);
+    let diskPath = this.getDiskPath(normalizedRel);
 
     if (!existsSync(diskPath)) {
-      if (normalizedRel === '/' || normalizedRel === '/tiktok') {
+      if (normalizedRel.toLowerCase() === '/youtube') {
+        const altPath = this.getDiskPath('/YouTube');
+        if (existsSync(altPath)) {
+          diskPath = altPath;
+        } else {
+          await fs.mkdir(diskPath, { recursive: true });
+        }
+      } else if (normalizedRel === '/' || normalizedRel === '/tiktok') {
         await fs.mkdir(diskPath, { recursive: true });
       } else {
         throw new NotFoundError(`Thư mục '${normalizedRel}' không tồn tại`);

@@ -195,7 +195,7 @@ export class YoutubeWorkspace {
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+            <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
               <i data-lucide="film" class="w-3 h-3"></i> MP4 & Âm thanh MP3
             </span>
           </div>
@@ -372,12 +372,12 @@ export class YoutubeWorkspace {
 
                 <!-- Download Type Switcher (Video vs Audio) -->
                 <div class="space-y-3 pt-2">
-                  <div class="flex items-center gap-2 p-1 bg-zinc-100 dark:bg-black/40 rounded-xl border border-zinc-200/80 dark:border-zinc-800 w-fit">
+                  <div class="flex items-center gap-2 p-1 bg-zinc-100 dark:bg-black/40 rounded-xl border border-zinc-200/80 dark:border-zinc-800 w-full sm:w-fit">
                     <button 
                       type="button"
                       data-action="set-type" 
                       data-type="video"
-                      class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 min-h-[40px] cursor-pointer ${
+                      class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[40px] cursor-pointer ${
                         s.downloadType === 'video' 
                           ? 'bg-red-600 text-white shadow-xs' 
                           : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/5'
@@ -391,7 +391,7 @@ export class YoutubeWorkspace {
                       type="button"
                       data-action="set-type" 
                       data-type="audio"
-                      class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 min-h-[40px] cursor-pointer ${
+                      class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[40px] cursor-pointer ${
                         s.downloadType === 'audio' 
                           ? 'bg-red-600 text-white shadow-xs' 
                           : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/5'
@@ -464,20 +464,20 @@ export class YoutubeWorkspace {
         ${s.lastResult ? `
           <div class="rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 p-5 shadow-xs space-y-3">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
                 <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
                   <i data-lucide="check-circle-2" class="w-5 h-5"></i>
                 </div>
-                <div>
-                  <h3 class="text-sm font-bold text-zinc-900 dark:text-white">${s.lastResult.fileName}</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-sm font-bold text-zinc-900 dark:text-white truncate">${s.lastResult.fileName}</h3>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
                     Dung lượng: ${formatBytes(s.lastResult.sizeBytes)} • Định dạng: ${s.lastResult.format?.toUpperCase()}
                     ${s.lastResult.savedToDrive ? ' • <span class="text-blue-500 font-medium">Đã lưu trong Drive/YouTube</span>' : ''}
                   </p>
                 </div>
               </div>
 
-              <div class="flex items-center gap-2 w-full sm:w-auto">
+              <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
                 <a 
                   href="${s.lastResult.downloadUrl}"
                   download="${s.lastResult.fileName}"
@@ -524,8 +524,8 @@ export class YoutubeWorkspace {
 
             <div class="divide-y divide-zinc-200/80 dark:divide-white/5 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/5">
               ${s.recentHistory.map((item) => `
-                <div class="p-3.5 bg-zinc-50/50 dark:bg-zinc-950/40 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-colors flex items-center justify-between gap-4">
-                  <div class="flex items-center gap-3 min-w-0">
+                <div class="p-3.5 bg-zinc-50/50 dark:bg-zinc-950/40 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                     ${item.thumbnail ? `
                       <img 
                         src="${item.thumbnail}" 
@@ -538,26 +538,27 @@ export class YoutubeWorkspace {
                         <i data-lucide="film" class="w-5 h-5"></i>
                       </div>
                     `}
-                    <div class="min-w-0">
-                      <p class="text-xs font-semibold text-zinc-900 dark:text-white truncate">${item.title || item.fileName}</p>
-                      <div class="flex items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        <span class="px-1.5 py-0.2 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono uppercase">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-semibold text-zinc-900 dark:text-white truncate" title="${item.title || item.fileName}">${item.title || item.fileName}</p>
+                      <div class="flex items-center flex-wrap gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
+                        <span class="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono uppercase whitespace-nowrap">
                           ${item.type === 'audio' ? 'Audio' : 'Video'} • ${item.quality || '1080p'}
                         </span>
-                        <span>${formatBytes(item.sizeBytes)}</span>
-                        ${item.savedToDrive ? '<span class="text-blue-500">Drive</span>' : ''}
+                        <span class="whitespace-nowrap">${formatBytes(item.sizeBytes)}</span>
+                        ${item.savedToDrive ? '<span class="text-blue-500 font-medium whitespace-nowrap">Drive</span>' : ''}
                       </div>
                     </div>
                   </div>
 
-                  <div class="flex items-center gap-2 flex-shrink-0">
+                  <div class="flex items-center justify-end gap-2 pt-1 sm:pt-0 border-t border-zinc-200/50 dark:border-white/5 sm:border-0 w-full sm:w-auto shrink-0">
                     <a 
                       href="${item.downloadUrl}"
                       download="${item.fileName}"
                       title="Tải lại"
-                      class="p-2 rounded-lg bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-transparent transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                      class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-transparent transition-colors min-h-[36px] flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
                     >
                       <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                      <span class="sm:hidden">Tải về</span>
                     </a>
                     <button 
                       data-action="preview-stream"
@@ -565,9 +566,10 @@ export class YoutubeWorkspace {
                       data-download-url="${item.downloadUrl}"
                       data-filename="${item.fileName}"
                       title="Xem trước"
-                      class="p-2 rounded-lg bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-transparent transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                      class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-transparent transition-colors min-h-[36px] flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
                     >
                       <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                      <span class="sm:hidden">Xem</span>
                     </button>
                     <button 
                       data-action="remove-history"

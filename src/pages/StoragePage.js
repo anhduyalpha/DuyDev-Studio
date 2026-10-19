@@ -379,8 +379,9 @@ function renderBreadcrumbs(currentPath) {
  * Renders Quick Folder / Category Tabs
  */
 function renderFolderTabs(currentPath) {
+  const isYouTube = currentPath === '/youtube' || currentPath.startsWith('/youtube/') || currentPath === '/YouTube' || currentPath.startsWith('/YouTube/');
   const isTikTok = currentPath === '/tiktok' || currentPath.startsWith('/tiktok/');
-  const isRoot = !isTikTok;
+  const isRoot = !isTikTok && !isYouTube;
 
   return `
     <div id="storageFolderTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -391,6 +392,18 @@ function renderFolderTabs(currentPath) {
       >
         <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
         <span>Thư mục gốc</span>
+      </button>
+
+      <button 
+        type="button" 
+        data-storage-tab="/youtube" 
+        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${isYouTube ? 'bg-red-600 text-white border-red-600 shadow-xs' : 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10'}"
+      >
+        <svg class="w-3.5 h-3.5 fill-current ${isYouTube ? 'text-white' : 'text-red-500'}" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+        <span>YouTube</span>
+        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${isYouTube ? 'bg-white/20 text-white' : 'bg-red-500/10 text-red-500 border border-red-500/20'}">/youtube</span>
       </button>
 
       <button 
@@ -422,6 +435,30 @@ function renderExplorerContent() {
   const items = getProcessedItems();
 
   if (items.length === 0) {
+    if (!state.searchQuery && (state.currentPath === '/youtube' || state.currentPath.startsWith('/youtube/') || state.currentPath === '/YouTube' || state.currentPath.startsWith('/YouTube/'))) {
+      return `
+        <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center animate-fadeIn">
+          <div class="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shadow-xs">
+            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+          </div>
+          <div class="max-w-md">
+            <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-200">
+              Chưa có video hoặc âm thanh YouTube nào trong Drive
+            </h4>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Khi tải video hoặc âm thanh từ YouTube Downloader, bạn có thể bấm "Lưu vào Drive" để tự động lưu trữ và quản lý tập trung tại thư mục này.
+            </p>
+            <a href="#tool/youtube-downloader" class="inline-flex items-center gap-1.5 mt-3.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Mở YouTube Downloader</span>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
     if (!state.searchQuery && (state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/'))) {
       return `
         <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center animate-fadeIn">
@@ -1319,18 +1356,18 @@ export function attachStoragePageListeners(onSoftReRender) {
 
       const previewStorageItem = (item) => {
         if (!item) return;
-        const isTiktokFolder = state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/');
-        if (isTiktokFolder) {
-          const videoExts = ['mp4', 'webm', 'mov', 'mkv'];
-          const videoPlaylist = (state.items || []).filter((it) => {
+        const isMediaFolder = state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/') || state.currentPath === '/youtube' || state.currentPath.startsWith('/youtube/') || state.currentPath === '/YouTube' || state.currentPath.startsWith('/YouTube/');
+        if (isMediaFolder) {
+          const mediaExts = ['mp4', 'webm', 'mov', 'mkv', 'mp3', 'm4a', 'wav', 'aac'];
+          const mediaPlaylist = (state.items || []).filter((it) => {
             if (it.isDir) return false;
             const ext = (it.name || '').split('.').pop()?.toLowerCase();
-            return videoExts.includes(ext);
+            return mediaExts.includes(ext);
           });
-          const playlistIndex = videoPlaylist.findIndex((it) => it.path === item.path);
+          const playlistIndex = mediaPlaylist.findIndex((it) => it.path === item.path);
           if (playlistIndex !== -1) {
             ViewerConnector.preview(item, {
-              playlist: videoPlaylist,
+              playlist: mediaPlaylist,
               playlistIndex
             });
             return;
