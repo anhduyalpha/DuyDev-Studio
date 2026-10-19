@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.58': {
+    version: 'v23.58',
+    title: 'Bản cập nhật v23.58',
+    date: '20/10/2026',
+    features: [
+      'Menu thao tác nhanh dạng Bottom Sheet cho Studio Drive: Thay thế thanh nút chật chội trên thẻ bằng menu tiện dụng chuẩn công thái học di động (touch target >= 44px)',
+      'Tối ưu giao diện danh sách bảng (List View) trên màn hình hẹp: Tự động gom kích thước vào dòng tiêu đề và ẩn các cột phụ giúp danh sách hiển thị vừa khít không tràn màn hình',
+      'Gia cố chống tràn văn bản toàn diện (Text Overflow Defense): Bổ sung min-w-0, truncate và break-words cho hộp thoại xác nhận, thẻ công cụ và hàng lịch sử'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi biểu tượng xem trước và soi tệp nén bị tràn ra ngoài viền thẻ ở chế độ lưới trên APK và thiết bị di động',
+      'Sửa lỗi tràn chiều rộng thanh trạng thái đáy Drive và hộp thoại xác nhận trượt SlideConfirmModal khi thao tác với tên tệp dài'
+    ]
+  },
+
   'v23.57': {
     version: 'v23.57',
     title: 'Bản cập nhật v23.57',

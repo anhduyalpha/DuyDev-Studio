@@ -17,16 +17,16 @@ export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
       <div class="relative w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4">
         <!-- Header -->
         <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
             <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
               <i data-lucide="trash-2" class="w-5 h-5"></i>
             </div>
-            <div>
-              <h3 id="${id}Title" class="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100">Dọn sạch thùng rác</h3>
-              <p id="${id}Desc" class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Xóa vĩnh viễn toàn bộ tệp trong thùng rác.</p>
+            <div class="min-w-0 flex-1">
+              <h3 id="${id}Title" class="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">Dọn sạch thùng rác</h3>
+              <p id="${id}Desc" class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 break-words line-clamp-2">Xóa vĩnh viễn toàn bộ tệp trong thùng rác.</p>
             </div>
           </div>
-          <button type="button" id="${id}BtnClose" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer" title="Đóng">
+          <button type="button" id="${id}BtnClose" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer shrink-0" title="Đóng">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
@@ -34,7 +34,7 @@ export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
         <!-- Warning Callout -->
         <div id="${id}Warning" class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-300 flex items-center gap-2.5">
           <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 dark:text-rose-400 shrink-0"></i>
-          <span id="${id}WarningText">Hành động này không thể hoàn tác. Các tệp sẽ bị xóa hoàn toàn khỏi máy chủ.</span>
+          <span id="${id}WarningText" class="break-words">Hành động này không thể hoàn tác. Các tệp sẽ bị xóa hoàn toàn khỏi máy chủ.</span>
         </div>
 
         <!-- Slide to Confirm Track -->

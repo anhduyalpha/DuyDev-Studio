@@ -80,7 +80,7 @@ export function renderToolCard(tool) {
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight">
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="${tool.title}">
           ${tool.title}
         </h3>
         <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">

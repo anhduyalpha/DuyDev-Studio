@@ -9,13 +9,13 @@ export function renderHistoryItemRow(item, isTrash) {
 
   return `
     <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition text-sm">
-      <div class="flex items-center gap-3.5 min-w-0">
+      <div class="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
         <div class="w-10 h-10 rounded-xl ${isTrash ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'} border flex items-center justify-center shrink-0">
           <i data-lucide="${isTrash ? 'trash' : 'check'}" class="w-5 h-5"></i>
         </div>
         <div class="min-w-0 flex-1">
           <p class="font-semibold text-zinc-900 dark:text-white truncate text-sm sm:text-base">${item.fileName || 'Tài liệu'}</p>
-          <p class="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">
+          <p class="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
             Công cụ: <span class="text-indigo-600 dark:text-indigo-300 font-medium">${item.toolTitle || item.tool || 'Xử lý'}</span>
             ${item.resultSize ? ` • ${formatBytes(item.resultSize)}` : ''}
             • ${formatRelativeTime(item.deletedAt || item.createdAt || item.timestamp)}
@@ -23,7 +23,7 @@ export function renderHistoryItemRow(item, isTrash) {
         </div>
       </div>
 
-      <div class="flex items-center justify-end sm:justify-start gap-2 pt-2 sm:pt-0 border-t border-zinc-100 dark:border-white/[0.04] sm:border-t-0 shrink-0 w-full sm:w-auto">
+      <div class="flex items-center justify-end sm:justify-start gap-2 pt-2 sm:pt-0 border-t border-zinc-100 dark:border-white/[0.04] sm:border-t-0 shrink-0 w-full sm:w-auto flex-wrap">
         ${hasPreview ? `
           <button type="button" data-preview-id="${item.id}" class="btn-preview-history px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i> Xem

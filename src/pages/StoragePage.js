@@ -332,7 +332,7 @@ export function renderStoragePage() {
             <span id="storageFileCount">${state.items.filter((i) => !i.isDirectory).length} tệp tin</span>
             <span id="storageFilteredCount" class="${state.searchQuery ? '' : 'hidden'} text-indigo-600 dark:text-indigo-400 font-semibold">• Đang lọc: ${getProcessedItems().length} mục</span>
           </div>
-          <div class="flex items-center gap-3 font-mono">
+          <div class="flex items-center gap-3 font-mono flex-wrap">
             <span id="storageDriveUsed">Đã dùng: ${state.stats ? formatBytes(state.stats.driveUsedBytes) : '...'}</span>
             <span>•</span>
             <span id="storageDiskFree">Còn trống: ${state.stats ? formatBytes(state.stats.diskFreeBytes) : '...'}</span>
@@ -521,19 +521,19 @@ function renderExplorerContent() {
                   ${sortIcon('name')}
                 </div>
               </th>
-              <th class="py-2.5 px-3 w-28 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200 transition" data-sort-col="size">
+              <th class="py-2.5 px-3 w-28 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200 transition hidden sm:table-cell" data-sort-col="size">
                 <div class="flex items-center gap-1.5">
                   <span>Kích thước</span>
                   ${sortIcon('size')}
                 </div>
               </th>
-              <th class="py-2.5 px-3 w-32 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200 transition" data-sort-col="date">
+              <th class="py-2.5 px-3 w-32 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200 transition hidden md:table-cell" data-sort-col="date">
                 <div class="flex items-center gap-1.5">
                   <span>Ngày sửa đổi</span>
                   ${sortIcon('date')}
                 </div>
               </th>
-              <th class="py-2.5 px-3 w-40 text-right">Thao tác</th>
+              <th class="py-2.5 px-3 w-28 sm:w-40 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-zinc-100 dark:divide-white/5">
@@ -715,7 +715,7 @@ function renderGridItem(item) {
 
   return `
     <div 
-      class="group relative p-3 rounded-xl transition cursor-pointer select-none flex flex-col justify-between ${isSelected ? 'bg-indigo-50/80 dark:bg-indigo-950/30 border-indigo-400 dark:border-indigo-500/50 shadow-sm' : 'bg-zinc-50/70 hover:bg-zinc-100 dark:bg-white/[0.02] dark:hover:bg-white/[0.06] border-zinc-200/80 hover:border-zinc-300 dark:border-white/[0.06] dark:hover:border-white/15 border'}"
+      class="group relative p-3 rounded-xl transition cursor-pointer select-none flex flex-col justify-between overflow-hidden ${isSelected ? 'bg-indigo-50/80 dark:bg-indigo-950/30 border-indigo-400 dark:border-indigo-500/50 shadow-sm' : 'bg-zinc-50/70 hover:bg-zinc-100 dark:bg-white/[0.02] dark:hover:bg-white/[0.06] border-zinc-200/80 hover:border-zinc-300 dark:border-white/[0.06] dark:hover:border-white/15 border'}"
       data-item-path="${escapeHtml(item.path)}"
       data-is-dir="${item.isDirectory}"
     >
@@ -743,32 +743,23 @@ function renderGridItem(item) {
         </div>
       </div>
 
-      <!-- Action Hover Overlay Controls -->
-      <div class="flex items-center justify-end gap-0.5 mt-3 pt-2 border-t border-zinc-200/50 dark:border-white/5 opacity-80 group-hover:opacity-100 transition">
+      <!-- Action Overlay Controls (Clean 3-4 button layout, 0 overflow on mobile) -->
+      <div class="flex items-center justify-end gap-1 mt-3 pt-2 border-t border-zinc-200/50 dark:border-white/5 opacity-90 group-hover:opacity-100 transition">
         ${preview ? `
-          <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
+          <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Xem trước">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i>
           </button>
         ` : ''}
         ${isArchive ? `
-          <button data-action="inspect-archive" data-item-path="${escapeHtml(item.path)}" title="Soi tệp nén" class="p-1 rounded-md hover:bg-amber-100 dark:hover:bg-amber-500/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer">
+          <button data-action="inspect-archive" data-item-path="${escapeHtml(item.path)}" title="Soi tệp nén" class="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer" aria-label="Soi tệp nén">
             <i data-lucide="folder-archive" class="w-3.5 h-3.5"></i>
           </button>
         ` : ''}
-        <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory}" title="${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về'}" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
+        <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory}" title="${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về'}" class="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Tải về">
           <i data-lucide="download" class="w-3.5 h-3.5"></i>
         </button>
-        <button data-action="move" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Di chuyển" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer">
-          <i data-lucide="folder-input" class="w-3.5 h-3.5"></i>
-        </button>
-        <button data-action="copy" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Sao chép" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition cursor-pointer">
-          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-        </button>
-        <button data-action="rename" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Đổi tên" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
-          <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-        </button>
-        <button data-action="delete" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Xóa" class="p-1 rounded-md hover:bg-red-500/10 dark:hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition cursor-pointer">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        <button data-action="item-menu" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" data-is-dir="${item.isDirectory}" title="Thao tác khác" class="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Thao tác khác">
+          <i data-lucide="more-horizontal" class="w-3.5 h-3.5"></i>
         </button>
       </div>
     </div>
@@ -804,43 +795,53 @@ function renderListItem(item) {
           <div class="shrink-0 ${visual.color}">
             <i data-lucide="${visual.icon}" class="w-4 h-4"></i>
           </div>
-          <span class="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition truncate max-w-xs sm:max-w-md">
-            ${escapeHtml(item.name)}
-          </span>
+          <div class="min-w-0">
+            <span class="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition truncate max-w-xs sm:max-w-md block">
+              ${escapeHtml(item.name)}
+            </span>
+            <span class="sm:hidden text-[10px] text-zinc-400 font-mono">
+              ${item.isDirectory ? 'Thư mục' : formatBytes(item.sizeBytes)}
+            </span>
+          </div>
         </div>
       </td>
-      <td class="py-2 px-3 text-zinc-500 dark:text-zinc-400 font-mono text-[11px]">
+      <td class="py-2 px-3 text-zinc-500 dark:text-zinc-400 font-mono text-[11px] hidden sm:table-cell">
         ${item.isDirectory ? '—' : formatBytes(item.sizeBytes)}
       </td>
-      <td class="py-2 px-3 text-zinc-500 dark:text-zinc-400 text-[11px] whitespace-nowrap font-mono">
+      <td class="py-2 px-3 text-zinc-500 dark:text-zinc-400 text-[11px] whitespace-nowrap font-mono hidden md:table-cell">
         ${formatRelativeTime(item.updatedAt)}
       </td>
       <td class="py-2 px-3 text-right">
         <div class="flex items-center justify-end gap-1">
           ${preview ? `
-            <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
+            <button data-action="preview" data-item-path="${escapeHtml(item.path)}" title="Xem trước" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Xem trước">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
             </button>
           ` : ''}
           ${isArchive ? `
-            <button data-action="inspect-archive" data-item-path="${escapeHtml(item.path)}" title="Soi tệp nén" class="p-1 rounded-md hover:bg-amber-100 dark:hover:bg-amber-500/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer">
+            <button data-action="inspect-archive" data-item-path="${escapeHtml(item.path)}" title="Soi tệp nén" class="p-1 rounded-md hover:bg-amber-100 dark:hover:bg-amber-500/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer" aria-label="Soi tệp nén">
               <i data-lucide="folder-archive" class="w-3.5 h-3.5"></i>
             </button>
           ` : ''}
-          <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory}" title="${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về'}" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
+          <button data-action="download" data-item-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory}" title="${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về'}" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Tải về">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
           </button>
-          <button data-action="move" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Di chuyển" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer">
-            <i data-lucide="folder-input" class="w-3.5 h-3.5"></i>
-          </button>
-          <button data-action="copy" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Sao chép" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition cursor-pointer">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-          </button>
-          <button data-action="rename" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Đổi tên" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer">
-            <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-          </button>
-          <button data-action="delete" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Xóa" class="p-1 rounded-md hover:bg-red-500/10 dark:hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition cursor-pointer">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <div class="hidden md:flex items-center gap-1">
+            <button data-action="move" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Di chuyển" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400 transition cursor-pointer" aria-label="Di chuyển">
+              <i data-lucide="folder-input" class="w-3.5 h-3.5"></i>
+            </button>
+            <button data-action="copy" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Sao chép" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition cursor-pointer" aria-label="Sao chép">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
+            <button data-action="rename" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Đổi tên" class="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Đổi tên">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button data-action="delete" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" title="Xóa" class="p-1 rounded-md hover:bg-red-500/10 dark:hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400 transition cursor-pointer" aria-label="Xóa">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <button data-action="item-menu" data-item-path="${escapeHtml(item.path)}" data-item-name="${escapeHtml(item.name)}" data-is-dir="${item.isDirectory}" title="Thao tác khác" class="md:hidden p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white transition cursor-pointer" aria-label="Thao tác khác">
+            <i data-lucide="more-horizontal" class="w-3.5 h-3.5"></i>
           </button>
         </div>
       </td>
@@ -1406,6 +1407,13 @@ export function attachStoragePageListeners(onSoftReRender) {
           if (item) previewStorageItem(item);
         } else if (action === 'inspect-archive') {
           window.location.hash = `#archive?path=${encodeURIComponent(itemPath)}`;
+        } else if (action === 'item-menu') {
+          const item = state.items.find((i) => i.path === itemPath) || {
+            path: itemPath,
+            name: itemName || itemPath.split('/').pop(),
+            isDirectory: isDir
+          };
+          showStorageItemActionsModal(item, loadDirectory, previewStorageItem);
         } else if (action === 'move') {
           handleMoveCopyModal([itemPath], false, loadDirectory);
         } else if (action === 'copy') {
@@ -1683,6 +1691,205 @@ function showNewFolderModal(onConfirm) {
     input.onkeydown = (e) => {
       if (e.key === 'Enter') handleSubmit();
       if (e.key === 'Escape') cleanup();
+    };
+  }
+}
+
+/**
+ * Action Sheet / Modal for Item Operations (Mobile & Desktop)
+ */
+function showStorageItemActionsModal(item, loadDirectory, previewStorageItem) {
+  const modalRoot = document.getElementById('storageModalRoot');
+  if (!modalRoot || !item) return;
+
+  const visual = getFileVisualInfo(item);
+  const preview = isPreviewable(item);
+  const ext = (item.extension || item.name.split('.').pop() || '').toLowerCase();
+  const isArchive = !item.isDirectory && ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'tgz', 'xz'].includes(ext);
+
+  modalRoot.innerHTML = `
+    <div id="storageItemActionsOverlay" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn select-none">
+      <div class="bg-white dark:bg-[#18181b] border-t sm:border border-zinc-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto custom-scrollbar">
+        
+        <!-- Header: File info & Close -->
+        <div class="flex items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/5">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/60 dark:border-white/5 flex items-center justify-center shrink-0 ${visual.color}">
+              <i data-lucide="${visual.icon}" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <h4 class="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white truncate" title="${escapeHtml(item.name)}">
+                ${escapeHtml(item.name)}
+              </h4>
+              <p class="text-[11px] text-zinc-400 font-mono mt-0.5">
+                ${item.isDirectory ? 'Thư mục' : formatBytes(item.sizeBytes)}
+              </p>
+            </div>
+          </div>
+          <button id="btnCloseItemActionsModal" type="button" class="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition cursor-pointer shrink-0" title="Đóng">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Action Buttons List (Touch targets >= 44px) -->
+        <div class="space-y-1">
+          ${preview ? `
+            <button id="btnModalActionPreview" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center gap-3 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer text-left">
+              <div class="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="leading-none">Xem trước</p>
+                <p class="text-[10px] text-zinc-400 font-normal mt-0.5">Mở trong Universal File Viewer</p>
+              </div>
+            </button>
+          ` : ''}
+
+          ${isArchive ? `
+            <button id="btnModalActionInspectArchive" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center gap-3 text-xs font-semibold text-amber-600 dark:text-amber-400 transition cursor-pointer text-left">
+              <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <i data-lucide="folder-archive" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="leading-none">Soi cấu trúc tệp nén</p>
+                <p class="text-[10px] text-zinc-400 font-normal mt-0.5">Duyệt và giải nén tệp con</p>
+              </div>
+            </button>
+          ` : ''}
+
+          <button id="btnModalActionDownload" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center gap-3 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer text-left">
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <i data-lucide="download" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="leading-none">${item.isDirectory ? 'Tải ZIP thư mục' : 'Tải về máy'}</p>
+              <p class="text-[10px] text-zinc-400 font-normal mt-0.5">Lưu tệp về bộ nhớ thiết bị</p>
+            </div>
+          </button>
+
+          <button id="btnModalActionMove" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center gap-3 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer text-left">
+            <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <i data-lucide="folder-input" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="leading-none">Di chuyển</p>
+              <p class="text-[10px] text-zinc-400 font-normal mt-0.5">Chuyển sang thư mục khác</p>
+            </div>
+          </button>
+
+          <button id="btnModalActionCopy" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center gap-3 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer text-left">
+            <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="leading-none">Sao chép</p>
+              <p class="text-[10px] text-zinc-400 font-normal mt-0.5">Tạo bản sao tại vị trí khác</p>
+            </div>
+          </button>
+
+          <button id="btnModalActionRename" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center gap-3 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer text-left">
+            <div class="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <i data-lucide="edit-2" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="leading-none">Đổi tên</p>
+              <p class="text-[10px] text-zinc-400 font-normal mt-0.5">Đặt lại tên tệp hoặc thư mục</p>
+            </div>
+          </button>
+
+          <div class="pt-1 border-t border-zinc-100 dark:border-white/5">
+            <button id="btnModalActionDelete" type="button" class="w-full min-h-[44px] px-3.5 py-2 rounded-xl hover:bg-red-500/10 dark:hover:bg-red-500/20 flex items-center gap-3 text-xs font-semibold text-red-600 dark:text-red-400 transition cursor-pointer text-left">
+              <div class="w-7 h-7 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="leading-none">Xóa mục</p>
+                <p class="text-[10px] text-red-400/80 font-normal mt-0.5">Xóa vĩnh viễn khỏi Drive</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <button id="btnCancelItemActionsModal" type="button" class="w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition cursor-pointer text-center">
+          Đóng
+        </button>
+      </div>
+    </div>
+  `;
+
+  if (window.lucide) window.lucide.createIcons();
+
+  const cleanup = () => { modalRoot.innerHTML = ''; };
+
+  const overlay = document.getElementById('storageItemActionsOverlay');
+  if (overlay) {
+    overlay.onclick = (e) => {
+      if (e.target === overlay) cleanup();
+    };
+  }
+
+  const btnClose = document.getElementById('btnCloseItemActionsModal');
+  const btnCancel = document.getElementById('btnCancelItemActionsModal');
+  if (btnClose) btnClose.onclick = cleanup;
+  if (btnCancel) btnCancel.onclick = cleanup;
+
+  const btnPreview = document.getElementById('btnModalActionPreview');
+  if (btnPreview) {
+    btnPreview.onclick = () => {
+      cleanup();
+      if (typeof previewStorageItem === 'function') {
+        previewStorageItem(item);
+      } else {
+        ViewerConnector.preview(item);
+      }
+    };
+  }
+
+  const btnInspectArchive = document.getElementById('btnModalActionInspectArchive');
+  if (btnInspectArchive) {
+    btnInspectArchive.onclick = () => {
+      cleanup();
+      window.location.hash = `#archive?path=${encodeURIComponent(item.path)}`;
+    };
+  }
+
+  const btnDownload = document.getElementById('btnModalActionDownload');
+  if (btnDownload) {
+    btnDownload.onclick = () => {
+      cleanup();
+      handleDownloadItem(item.path, item.isDirectory);
+    };
+  }
+
+  const btnMove = document.getElementById('btnModalActionMove');
+  if (btnMove) {
+    btnMove.onclick = () => {
+      cleanup();
+      handleMoveCopyModal([item.path], false, loadDirectory);
+    };
+  }
+
+  const btnCopy = document.getElementById('btnModalActionCopy');
+  if (btnCopy) {
+    btnCopy.onclick = () => {
+      cleanup();
+      handleMoveCopyModal([item.path], true, loadDirectory);
+    };
+  }
+
+  const btnRename = document.getElementById('btnModalActionRename');
+  if (btnRename) {
+    btnRename.onclick = () => {
+      cleanup();
+      handleRenameItem(item.path, item.name, loadDirectory);
+    };
+  }
+
+  const btnDelete = document.getElementById('btnModalActionDelete');
+  if (btnDelete) {
+    btnDelete.onclick = () => {
+      cleanup();
+      handleDeleteItem(item.path, item.name, loadDirectory);
     };
   }
 }
