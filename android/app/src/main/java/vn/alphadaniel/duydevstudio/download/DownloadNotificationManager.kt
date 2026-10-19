@@ -78,7 +78,9 @@ object DownloadNotificationManager {
         context: Context,
         notificationId: Int,
         fileName: String,
-        file: File,
+        contentUri: Uri?,
+        file: File?,
+        fileSize: Long,
         mimeType: String
     ) {
         createChannels(context)
@@ -88,12 +90,14 @@ object DownloadNotificationManager {
 
         // Intent to open the downloaded file directly
         val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-            val contentUri: Uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-            setDataAndType(contentUri, mimeType.ifBlank { "application/octet-stream" })
+            val resolvedUri: Uri = contentUri ?: (if (file != null) {
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+            } else Uri.EMPTY)
+            setDataAndType(resolvedUri, mimeType.ifBlank { "application/octet-stream" })
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -105,8 +109,8 @@ object DownloadNotificationManager {
             flags
         )
 
-        val sizeFormatted = formatBytes(file.length())
-        val text = "$fileName ($sizeFormatted) đã được lưu vào thư mục Tải về"
+        val sizeFormatted = formatBytes(if (fileSize > 0) fileSize else (file?.length() ?: 0L))
+        val text = "$fileName ($sizeFormatted) đã được lưu vào máy"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOAD_ID)
             .setSmallIcon(R.drawable.ic_notification)
@@ -123,6 +127,16 @@ object DownloadNotificationManager {
         try {
             NotificationManagerCompat.from(context).notify(notificationId, notification)
         } catch (_: SecurityException) {}
+    }
+
+    fun showDownloadCompleted(
+        context: Context,
+        notificationId: Int,
+        fileName: String,
+        file: File,
+        mimeType: String
+    ) {
+        showDownloadCompleted(context, notificationId, fileName, null, file, file.length(), mimeType)
     }
 
     fun showPushNotification(context: Context, title: String, message: String, type: String = "general") {

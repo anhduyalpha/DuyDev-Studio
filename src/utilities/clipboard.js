@@ -44,6 +44,40 @@ export async function copyText(text) {
   }
 }
 
+/**
+ * Universal Clipboard Reader
+ * Seamlessly resolves clipboard text across Android APK native bridge,
+ * modern async Clipboard API, with timeout protection.
+ * @returns {Promise<string>}
+ */
+export async function readText() {
+  // 1. Android Native Bridge (0ms direct memory read from system clipboard)
+  try {
+    if (typeof window !== 'undefined' && typeof window.AndroidBridge?.getClipboardText === 'function') {
+      const nativeText = window.AndroidBridge.getClipboardText();
+      if (nativeText && typeof nativeText === 'string' && nativeText.trim()) {
+        return nativeText.trim();
+      }
+    }
+  } catch (_) {}
+
+  // 2. Modern Clipboard API with 1200ms timeout race (prevents hanging on permission dialogs)
+  if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+    try {
+      const clipPromise = navigator.clipboard.readText();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('CLIPBOARD_TIMEOUT')), 1200)
+      );
+      const text = await Promise.race([clipPromise, timeoutPromise]);
+      if (text && typeof text === 'string' && text.trim()) {
+        return text.trim();
+      }
+    } catch (_) {}
+  }
+
+  return '';
+}
+
 export function dataUrlToBlob(dataUrl) {
   try {
     const parts = dataUrl.split(',');

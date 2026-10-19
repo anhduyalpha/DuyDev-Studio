@@ -367,7 +367,7 @@ class MainActivity : AppCompatActivity() {
         settings.allowContentAccess = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        settings.mediaPlaybackRequiresUserGesture = true
+        settings.mediaPlaybackRequiresUserGesture = false
         settings.safeBrowsingEnabled = false
         settings.userAgentString = "${settings.userAgentString} DuyDevStudioNative/1.0"
 
@@ -423,8 +423,21 @@ class MainActivity : AppCompatActivity() {
         // Native download listener with accurate filename extraction, blob/data support, and app icon notification
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             val fileName = resolveDownloadFileName(url, contentDisposition, mimetype)
-            if (url.startsWith("blob:")) {
-                val safeUrl = url.replace("'", "\\'")
+            val fullUrl = if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:") || url.startsWith("data:")) {
+                url
+            } else {
+                val currentBase = try {
+                    val u = Uri.parse(webView.url ?: "")
+                    if (!u.scheme.isNullOrBlank() && !u.authority.isNullOrBlank()) {
+                        "${u.scheme}://${u.authority}"
+                    } else PRIMARY_HOST
+                } catch (_: Exception) { PRIMARY_HOST }
+                val path = if (url.startsWith('/')) url else "/$url"
+                "${currentBase.trimEnd('/')}$path"
+            }
+
+            if (fullUrl.startsWith("blob:")) {
+                val safeUrl = fullUrl.replace("'", "\\'")
                 val safeName = fileName.replace("'", "\\'")
                 val safeMime = (mimetype ?: "application/octet-stream").replace("'", "\\'")
                 val script = """
@@ -445,17 +458,17 @@ class MainActivity : AppCompatActivity() {
                     })();
                 """.trimIndent()
                 evaluateJs(script)
-            } else if (url.startsWith("data:")) {
+            } else if (fullUrl.startsWith("data:")) {
                 vn.alphadaniel.duydevstudio.download.DownloadHelper.saveBase64(
                     this,
-                    url,
+                    fullUrl,
                     fileName,
                     mimetype ?: "application/octet-stream"
                 )
             } else {
                 vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
                     this,
-                    url,
+                    fullUrl,
                     fileName,
                     mimetype ?: "application/octet-stream",
                     userAgent

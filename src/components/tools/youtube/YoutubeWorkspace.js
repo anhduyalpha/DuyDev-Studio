@@ -5,9 +5,11 @@
  * Fully compliant with Light Mode / Dark Mode parity and Impeccable Design standards
  */
 
-import { youtubeManager, formatDuration, formatViewCount, formatBytes } from './hooks/useYoutube.js';
+import { youtubeManager, extractYoutubeUrl, formatDuration, formatViewCount, formatBytes } from './hooks/useYoutube.js';
+import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { soundEngine } from '../../../utilities/soundEngine.js';
 import { showToast } from '../../../utilities/toast.js';
+import { readText } from '../../../utilities/clipboard.js';
 
 export class YoutubeWorkspace {
   constructor(containerEl) {
@@ -15,6 +17,7 @@ export class YoutubeWorkspace {
     this.unsubscribe = null;
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
+    this.boundHandlePaste = this.handlePaste.bind(this);
     this.boundHandleClick = this.handleClick.bind(this);
   }
 
@@ -46,6 +49,21 @@ export class YoutubeWorkspace {
     }
   }
 
+  handlePaste(e) {
+    if (e.target.id === 'ytUrlInput') {
+      const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      if (pasted) {
+        const clean = extractYoutubeUrl(pasted);
+        if (clean && clean !== pasted.trim()) {
+          e.preventDefault();
+          e.target.value = clean;
+          youtubeManager.setUrl(clean);
+          youtubeManager.resolve(clean);
+        }
+      }
+    }
+  }
+
   async handleClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -63,21 +81,26 @@ export class YoutubeWorkspace {
         break;
       }
       case 'paste-url': {
-        try {
-          if (navigator.clipboard && navigator.clipboard.readText) {
-            const text = await navigator.clipboard.readText();
-            if (text) {
-              const input = this.container.querySelector('#ytUrlInput');
-              if (input) input.value = text;
-              youtubeManager.setUrl(text);
-              showToast('Đã dán liên kết từ clipboard', 'info');
-              youtubeManager.resolve(text);
-            }
-          } else {
-            showToast('Trình duyệt chưa cấp quyền đọc clipboard', 'warning');
+        const input = this.container.querySelector('#ytUrlInput');
+        const text = await readText();
+        const trimmed = (text || '').trim();
+
+        if (trimmed) {
+          const ytUrl = extractYoutubeUrl(trimmed) || trimmed;
+          if (input) {
+            input.value = ytUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
           }
-        } catch {
-          showToast('Không thể đọc từ clipboard', 'warning');
+          youtubeManager.setUrl(ytUrl);
+          showToast('Đã dán liên kết từ clipboard', 'info');
+          youtubeManager.resolve(ytUrl);
+        } else {
+          // If clipboard was empty or blocked by browser permissions, focus input for native long-press paste
+          if (input) {
+            input.focus();
+            input.select();
+          }
+          showToast('Nhấn giữ ô nhập để dán liên kết', 'info');
         }
         break;
       }
@@ -102,8 +125,17 @@ export class YoutubeWorkspace {
       case 'preview-stream': {
         const streamUrl = btn.dataset.url;
         const fileName = btn.dataset.filename || 'youtube_preview.mp4';
-        if (window.__ds_fileViewer?.open) {
-          window.__ds_fileViewer.open({ url: streamUrl, name: fileName });
+        const downloadUrl = btn.dataset.downloadUrl || streamUrl;
+        if (typeof ViewerConnector?.preview === 'function') {
+          ViewerConnector.preview({
+            name: fileName,
+            fileName,
+            viewUrl: streamUrl,
+            downloadUrl,
+            category: fileName.endsWith('.mp3') || fileName.endsWith('.m4a') ? 'audio' : 'video'
+          });
+        } else if (window.__ds_fileViewer?.open) {
+          window.__ds_fileViewer.open({ url: streamUrl, name: fileName, downloadUrl });
         } else {
           window.open(streamUrl, '_blank');
         }
@@ -459,6 +491,7 @@ export class YoutubeWorkspace {
                   type="button"
                   data-action="preview-stream"
                   data-url="${s.lastResult.viewUrl || s.lastResult.downloadUrl}"
+                  data-download-url="${s.lastResult.downloadUrl}"
                   data-filename="${s.lastResult.fileName}"
                   class="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-transparent font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer"
                 >
@@ -529,6 +562,7 @@ export class YoutubeWorkspace {
                     <button 
                       data-action="preview-stream"
                       data-url="${item.viewUrl || item.downloadUrl}"
+                      data-download-url="${item.downloadUrl}"
                       data-filename="${item.fileName}"
                       title="Xem trước"
                       class="p-2 rounded-lg bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-transparent transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
@@ -558,8 +592,10 @@ export class YoutubeWorkspace {
     if (input) {
       input.removeEventListener('input', this.boundHandleInput);
       input.removeEventListener('keydown', this.boundHandleKeyDown);
+      input.removeEventListener('paste', this.boundHandlePaste);
       input.addEventListener('input', this.boundHandleInput);
       input.addEventListener('keydown', this.boundHandleKeyDown);
+      input.addEventListener('paste', this.boundHandlePaste);
     }
 
     this.container.removeEventListener('click', this.boundHandleClick);

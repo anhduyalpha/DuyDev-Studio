@@ -267,13 +267,21 @@ export class YoutubeManager {
         savedToDrive: false
       });
 
-      // Trigger automatic direct browser download
-      const a = document.createElement('a');
-      a.href = result.downloadUrl;
-      a.download = result.fileName;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => a.remove(), 100);
+      // Trigger download: native Android Bridge if available, otherwise direct browser anchor click
+      if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+        window.AndroidBridge.downloadFile(
+          result.downloadUrl,
+          result.fileName,
+          type === 'audio' ? (quality === 'm4a' ? 'audio/mp4' : 'audio/mpeg') : 'video/mp4'
+        );
+      } else {
+        const a = document.createElement('a');
+        a.href = result.downloadUrl;
+        a.download = result.fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => a.remove(), 100);
+      }
 
       this.notify();
       try { soundEngine?.play('complete'); } catch {}

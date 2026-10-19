@@ -182,8 +182,8 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   });
 
   describe('2. Android Native Power & Lifecycle (Pillar 2)', () => {
-    it('MainActivity.kt must set mediaPlaybackRequiresUserGesture = true', () => {
-      expect(mainActivityContent).toMatch(/settings\.mediaPlaybackRequiresUserGesture\s*=\s*true/);
+    it('MainActivity.kt must configure mediaPlaybackRequiresUserGesture = false for preview player playback', () => {
+      expect(mainActivityContent).toMatch(/settings\.mediaPlaybackRequiresUserGesture\s*=\s*false/);
     });
 
     it('MainActivity.kt must set safeBrowsingEnabled = false to eliminate telemetry wakeups', () => {

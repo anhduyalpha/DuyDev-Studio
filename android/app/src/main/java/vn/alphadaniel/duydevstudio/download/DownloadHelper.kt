@@ -1,8 +1,13 @@
 package vn.alphadaniel.duydevstudio.download
 
+import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
+import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
+import android.webkit.CookieManager
 import android.webkit.MimeTypeMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,9 +39,8 @@ object DownloadHelper {
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 
         CoroutineScope(Dispatchers.IO).launch {
+            var pendingUri: Uri? = null
             try {
-                val targetDir = getDestinationDirectory(finalMime, cleanName)
-                val destinationFile = resolveUniqueFile(targetDir, cleanName)
                 val rawBase64 = if (base64Data.contains(",")) {
                     base64Data.substringAfter(",")
                 } else {
@@ -44,24 +48,69 @@ object DownloadHelper {
                 }
 
                 val bytes = android.util.Base64.decode(rawBase64.trim(), android.util.Base64.DEFAULT)
-                FileOutputStream(destinationFile).use { it.write(bytes) }
 
-                // Scan file so it appears in the Android system Gallery / Photos app immediately
-                MediaScannerConnection.scanFile(
-                    context,
-                    arrayOf(destinationFile.absolutePath),
-                    arrayOf(finalMime)
-                ) { _, _ -> }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val (collectionUri, relativePath) = getMediaStoreDestination(finalMime, cleanName)
+                    val resolver = context.contentResolver
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, cleanName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, finalMime)
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                        put(MediaStore.MediaColumns.IS_PENDING, 1)
+                    }
 
-                // Post completed push notification with app icon
-                DownloadNotificationManager.showDownloadCompleted(
-                    context,
-                    notificationId,
-                    destinationFile.name,
-                    destinationFile,
-                    finalMime
-                )
-            } catch (_: Exception) {
+                    val itemUri = resolver.insert(collectionUri, values)
+                        ?: throw java.io.IOException("Failed to create MediaStore entry for $cleanName")
+                    pendingUri = itemUri
+
+                    resolver.openOutputStream(itemUri)?.use { out ->
+                        out.write(bytes)
+                        out.flush()
+                    } ?: throw java.io.IOException("Failed to open output stream for $itemUri")
+
+                    values.clear()
+                    values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    resolver.update(itemUri, values, null, null)
+
+                    DownloadNotificationManager.showDownloadCompleted(
+                        context,
+                        notificationId,
+                        cleanName,
+                        itemUri,
+                        null,
+                        bytes.size.toLong(),
+                        finalMime
+                    )
+                } else {
+                    val targetDir = getDestinationDirectory(finalMime, cleanName)
+                    val destinationFile = resolveUniqueFile(targetDir, cleanName)
+                    FileOutputStream(destinationFile).use { it.write(bytes) }
+
+                    // Scan file so it appears in the Android system Gallery / Photos app immediately
+                    MediaScannerConnection.scanFile(
+                        context,
+                        arrayOf(destinationFile.absolutePath),
+                        arrayOf(finalMime)
+                    ) { _, _ -> }
+
+                    // Post completed push notification with app icon
+                    DownloadNotificationManager.showDownloadCompleted(
+                        context,
+                        notificationId,
+                        destinationFile.name,
+                        null,
+                        destinationFile,
+                        destinationFile.length(),
+                        finalMime
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("DownloadHelper", "saveBase64 error: ${e.message}", e)
+                if (pendingUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    try {
+                        context.contentResolver.delete(pendingUri, null, null)
+                    } catch (_: Exception) {}
+                }
                 DownloadNotificationManager.cancelNotification(context, notificationId)
             }
         }
@@ -85,14 +134,25 @@ object DownloadHelper {
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 
         CoroutineScope(Dispatchers.IO).launch {
+            var pendingUri: Uri? = null
             try {
                 val requestBuilder = Request.Builder().url(url)
                 if (!userAgent.isNullOrBlank()) {
                     requestBuilder.addHeader("User-Agent", userAgent)
                 }
 
+                val cookie = try {
+                    CookieManager.getInstance().getCookie(url)
+                } catch (_: Exception) {
+                    null
+                }
+                if (!cookie.isNullOrBlank()) {
+                    requestBuilder.addHeader("Cookie", cookie)
+                }
+
                 val response = client.newCall(requestBuilder.build()).execute()
                 if (!response.isSuccessful) {
+                    android.util.Log.e("DownloadHelper", "Download HTTP failed with status ${response.code} for $url")
                     DownloadNotificationManager.cancelNotification(context, notificationId)
                     return@launch
                 }
@@ -113,51 +173,108 @@ object DownloadHelper {
                 }
 
                 val finalMime = normalizeMimeType(cleanName, serverMime)
-                val targetDir = getDestinationDirectory(finalMime, cleanName)
-                val destinationFile = resolveUniqueFile(targetDir, cleanName)
                 val totalBytes = body.contentLength()
                 var downloadedBytes = 0L
 
                 val inputStream = body.byteStream()
-                val outputStream = FileOutputStream(destinationFile)
-
                 val buffer = ByteArray(64 * 1024)
                 var bytesRead: Int
                 var lastProgressUpdate = System.currentTimeMillis()
 
-                outputStream.use { out ->
-                    inputStream.use { input ->
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            out.write(buffer, 0, bytesRead)
-                            downloadedBytes += bytesRead
-
-                            val now = System.currentTimeMillis()
-                            if (now - lastProgressUpdate > 600 && totalBytes > 0) {
-                                val progress = ((downloadedBytes * 100) / totalBytes).toInt()
-                                DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, progress)
-                                lastProgressUpdate = now
-                            }
-                        }
-                        out.flush()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val (collectionUri, relativePath) = getMediaStoreDestination(finalMime, cleanName)
+                    val resolver = context.contentResolver
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, cleanName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, finalMime)
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                        put(MediaStore.MediaColumns.IS_PENDING, 1)
                     }
+
+                    val itemUri = resolver.insert(collectionUri, values)
+                        ?: throw java.io.IOException("Failed to create MediaStore entry for $cleanName")
+                    pendingUri = itemUri
+
+                    val outputStream = resolver.openOutputStream(itemUri)
+                        ?: throw java.io.IOException("Failed to open output stream for $itemUri")
+
+                    outputStream.use { out ->
+                        inputStream.use { input ->
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                out.write(buffer, 0, bytesRead)
+                                downloadedBytes += bytesRead
+
+                                val now = System.currentTimeMillis()
+                                if (now - lastProgressUpdate > 600 && totalBytes > 0) {
+                                    val progress = ((downloadedBytes * 100) / totalBytes).toInt()
+                                    DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, progress)
+                                    lastProgressUpdate = now
+                                }
+                            }
+                            out.flush()
+                        }
+                    }
+
+                    values.clear()
+                    values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    resolver.update(itemUri, values, null, null)
+
+                    DownloadNotificationManager.showDownloadCompleted(
+                        context,
+                        notificationId,
+                        cleanName,
+                        itemUri,
+                        null,
+                        downloadedBytes,
+                        finalMime
+                    )
+                } else {
+                    val targetDir = getDestinationDirectory(finalMime, cleanName)
+                    val destinationFile = resolveUniqueFile(targetDir, cleanName)
+                    val outputStream = FileOutputStream(destinationFile)
+
+                    outputStream.use { out ->
+                        inputStream.use { input ->
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                out.write(buffer, 0, bytesRead)
+                                downloadedBytes += bytesRead
+
+                                val now = System.currentTimeMillis()
+                                if (now - lastProgressUpdate > 600 && totalBytes > 0) {
+                                    val progress = ((downloadedBytes * 100) / totalBytes).toInt()
+                                    DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, progress)
+                                    lastProgressUpdate = now
+                                }
+                            }
+                            out.flush()
+                        }
+                    }
+
+                    // Scan file so it appears in the Android system Gallery / Photos app immediately
+                    MediaScannerConnection.scanFile(
+                        context,
+                        arrayOf(destinationFile.absolutePath),
+                        arrayOf(finalMime)
+                    ) { _, _ -> }
+
+                    // Post completed push notification with app icon
+                    DownloadNotificationManager.showDownloadCompleted(
+                        context,
+                        notificationId,
+                        destinationFile.name,
+                        null,
+                        destinationFile,
+                        destinationFile.length(),
+                        finalMime
+                    )
                 }
-
-                // Scan file so it appears in the Android system Gallery / Photos app immediately
-                MediaScannerConnection.scanFile(
-                    context,
-                    arrayOf(destinationFile.absolutePath),
-                    arrayOf(finalMime)
-                ) { _, _ -> }
-
-                // Post completed push notification with app icon
-                DownloadNotificationManager.showDownloadCompleted(
-                    context,
-                    notificationId,
-                    destinationFile.name,
-                    destinationFile,
-                    finalMime
-                )
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.e("DownloadHelper", "Download error: ${e.message}", e)
+                if (pendingUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    try {
+                        context.contentResolver.delete(pendingUri, null, null)
+                    } catch (_: Exception) {}
+                }
                 DownloadNotificationManager.cancelNotification(context, notificationId)
             }
         }
@@ -209,6 +326,40 @@ object DownloadHelper {
         return file
     }
 
+    private fun getMediaStoreDestination(mimeType: String, fileName: String): Pair<Uri, String> {
+        val isVideo = mimeType.startsWith("video/", ignoreCase = true) ||
+                      fileName.endsWith(".mp4", ignoreCase = true) ||
+                      fileName.endsWith(".webm", ignoreCase = true) ||
+                      fileName.endsWith(".mov", ignoreCase = true) ||
+                      fileName.endsWith(".mkv", ignoreCase = true)
+
+        val isAudio = mimeType.startsWith("audio/", ignoreCase = true) ||
+                      fileName.endsWith(".mp3", ignoreCase = true) ||
+                      fileName.endsWith(".m4a", ignoreCase = true) ||
+                      fileName.endsWith(".wav", ignoreCase = true) ||
+                      fileName.endsWith(".aac", ignoreCase = true)
+
+        val isImage = mimeType.startsWith("image/", ignoreCase = true) ||
+                      fileName.endsWith(".jpg", ignoreCase = true) ||
+                      fileName.endsWith(".jpeg", ignoreCase = true) ||
+                      fileName.endsWith(".png", ignoreCase = true) ||
+                      fileName.endsWith(".webp", ignoreCase = true) ||
+                      fileName.endsWith(".gif", ignoreCase = true)
+
+        return when {
+            isVideo -> Pair(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_MOVIES + "/DuyDevStudio")
+            isAudio -> Pair(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_MUSIC + "/DuyDevStudio")
+            isImage -> Pair(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_PICTURES + "/DuyDevStudio")
+            else -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    Pair(MediaStore.Downloads.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_DOWNLOADS + "/DuyDevStudio")
+                } else {
+                    Pair(MediaStore.Files.getContentUri("external"), Environment.DIRECTORY_DOWNLOADS + "/DuyDevStudio")
+                }
+            }
+        }
+    }
+
     private fun getDestinationDirectory(mimeType: String, fileName: String): File {
         try {
             val isVideo = mimeType.startsWith("video/", ignoreCase = true) ||
@@ -222,6 +373,13 @@ object DownloadHelper {
                           fileName.endsWith(".m4a", ignoreCase = true) ||
                           fileName.endsWith(".wav", ignoreCase = true) ||
                           fileName.endsWith(".aac", ignoreCase = true)
+
+            val isImage = mimeType.startsWith("image/", ignoreCase = true) ||
+                          fileName.endsWith(".jpg", ignoreCase = true) ||
+                          fileName.endsWith(".jpeg", ignoreCase = true) ||
+                          fileName.endsWith(".png", ignoreCase = true) ||
+                          fileName.endsWith(".webp", ignoreCase = true) ||
+                          fileName.endsWith(".gif", ignoreCase = true)
 
             if (isVideo) {
                 val moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
@@ -240,6 +398,15 @@ object DownloadHelper {
                 }
                 if (musicDir.exists() || musicDir.mkdirs()) {
                     return musicDir
+                }
+            } else if (isImage) {
+                val picDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val appPic = File(picDir, "DuyDevStudio")
+                if (appPic.exists() || appPic.mkdirs()) {
+                    return appPic
+                }
+                if (picDir.exists() || picDir.mkdirs()) {
+                    return picDir
                 }
             }
         } catch (_: Exception) {}
@@ -264,3 +431,4 @@ object DownloadHelper {
         return if (mime.isNotBlank() && mime != "application/octet-stream") mime else "application/octet-stream"
     }
 }
+

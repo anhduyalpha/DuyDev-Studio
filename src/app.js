@@ -539,6 +539,28 @@ class App {
   }
 }
 
+// Expose global Universal File Viewer bridge for tools and deep-links
+if (typeof window !== 'undefined') {
+  window.ViewerConnector = ViewerConnector;
+  window.__ds_fileViewer = {
+    open: (item) => ViewerConnector.preview(item),
+    preview: (item) => ViewerConnector.preview(item)
+  };
+
+  // Android Native bridge: Intercept any <a download> clicks to route through AndroidBridge.downloadFile
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[download]');
+    if (link && window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
+      const href = link.getAttribute('href');
+      if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        e.preventDefault();
+        const fileName = link.getAttribute('download') || link.download || href.split('/').pop()?.split('?')[0] || 'download';
+        window.AndroidBridge.downloadFile(href, fileName);
+      }
+    }
+  });
+}
+
 // Start Application on DOM Ready
 function boot() {
   try {

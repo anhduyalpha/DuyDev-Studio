@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.51': {
+    version: 'v23.51',
+    title: 'Bản cập nhật v23.51',
+    date: '19/10/2026',
+    features: [
+      'Trình phát xem trước video/audio trong app: Trải nghiệm xem trước mượt mà trực tiếp trên Universal File Viewer cho YouTube Downloader và các công cụ media trên Android APK',
+      'Scoped Storage MediaStore: Lưu trữ file tải về tức thì vào thư mục Downloads, Movies, Music của hệ điều hành Android 10-14'
+    ],
+    fixes: [
+      'Khắc phục lỗi EACCES Permission Denied khi tải file trên Android APK qua MediaStore ContentResolver',
+      'Sửa lỗi media playback user gesture trên Android WebView và kích hoạt RFC 7233 byte-range streaming',
+      'Định tuyến tự động toàn bộ liên kết tải file (a[download]) qua AndroidBridge'
+    ]
+  },
+
   'v23.48': {
     version: 'v23.48',
     title: 'Bản cập nhật v23.48',

@@ -542,7 +542,7 @@ class AndroidBridge(
 
     @JavascriptInterface
     fun downloadFile(url: String, fileName: String, mimeType: String) {
-        val fullUrl = if (url.startsWith("http://") || url.startsWith("https://")) {
+        val fullUrl = if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:") || url.startsWith("data:")) {
             url
         } else {
             val base = getActiveHost().trimEnd('/')
@@ -554,17 +554,50 @@ class AndroidBridge(
             fileName.endsWith(".webm", ignoreCase = true) -> "video/webm"
             fileName.endsWith(".mp3", ignoreCase = true) -> "audio/mpeg"
             fileName.endsWith(".m4a", ignoreCase = true) -> "audio/mp4"
+            fileName.endsWith(".pdf", ignoreCase = true) -> "application/pdf"
+            fileName.endsWith(".zip", ignoreCase = true) -> "application/zip"
             mimeType.isNotBlank() && mimeType != "application/octet-stream" -> mimeType
             else -> "application/octet-stream"
         }
         activity.runOnUiThread {
-            vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
-                activity,
-                fullUrl,
-                fileName,
-                normalizedMime,
-                "DuyDevStudioNative/${getAppVersion()}"
-            )
+            if (fullUrl.startsWith("blob:")) {
+                val safeUrl = fullUrl.replace("'", "\\'")
+                val safeName = fileName.replace("'", "\\'")
+                val safeMime = normalizedMime.replace("'", "\\'")
+                val script = """
+                    (function() {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('GET', '$safeUrl', true);
+                        xhr.responseType = 'blob';
+                        xhr.onload = function() {
+                            var reader = new FileReader();
+                            reader.onloadend = function() {
+                                if (window.AndroidBridge && typeof window.AndroidBridge.saveBase64File === 'function') {
+                                    window.AndroidBridge.saveBase64File(reader.result, '$safeName', '$safeMime');
+                                }
+                            };
+                            reader.readAsDataURL(xhr.response);
+                        };
+                        xhr.send();
+                    })();
+                """.trimIndent()
+                activity.evaluateJs(script)
+            } else if (fullUrl.startsWith("data:")) {
+                vn.alphadaniel.duydevstudio.download.DownloadHelper.saveBase64(
+                    activity,
+                    fullUrl,
+                    fileName,
+                    normalizedMime
+                )
+            } else {
+                vn.alphadaniel.duydevstudio.download.DownloadHelper.download(
+                    activity,
+                    fullUrl,
+                    fileName,
+                    normalizedMime,
+                    "DuyDevStudioNative/${getAppVersion()}"
+                )
+            }
         }
     }
 
@@ -634,6 +667,33 @@ class AndroidBridge(
                 message,
                 type
             )
+        }
+    }
+
+    /**
+     * Read text directly from system clipboard on Android without WebView permission prompts.
+     */
+    @JavascriptInterface
+    fun getClipboardText(): String {
+        return try {
+            val future = java.util.concurrent.CompletableFuture<String>()
+            activity.runOnUiThread {
+                try {
+                    val clipboard = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    val clip = clipboard?.primaryClip
+                    if (clip != null && clip.itemCount > 0) {
+                        val text = clip.getItemAt(0)?.coerceToText(activity)?.toString() ?: ""
+                        future.complete(text)
+                    } else {
+                        future.complete("")
+                    }
+                } catch (_: Exception) {
+                    future.complete("")
+                }
+            }
+            future.get(1500, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (_: Exception) {
+            ""
         }
     }
 }
