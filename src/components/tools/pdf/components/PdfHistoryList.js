@@ -348,11 +348,12 @@ export function bindPdfHistory(qm) {
         confirmingText: 'Đang dọn sạch...',
         onConfirm: async () => {
           // 1. Optimistic instant storage purge
+          soundEngine.playDeleteAll();
           storage.permanentlyDeleteItemsSync(trashItems.map((it) => it.id));
 
           // 2. Instant DOM & indicator update
           updateHeaderTrashIndicator();
-          showToast('Đã dọn sạch thùng rác PDF', 'success');
+          showToast('Đã dọn sạch thùng rác PDF', 'deleteAll', 2500, { silent: true });
           updatePdfHistoryDom(qm);
 
           // 3. Background server deletion
@@ -425,9 +426,10 @@ export function bindPdfHistory(qm) {
       btn.closest('.pdf-history-row')?.classList.add('opacity-40', 'pointer-events-none');
       const id = btn.dataset.trashPdfId;
       if (!id) return;
+      soundEngine.playDelete();
       storage.moveToTrashSync(id);
       updateHeaderTrashIndicator();
-      showToast('Đã chuyển vào thùng rác', 'info');
+      showToast('Đã chuyển vào thùng rác', 'delete', 2500, { silent: true });
       updatePdfHistoryDom(qm);
       fetch(`/api/v1/history/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
     };
@@ -455,9 +457,10 @@ export function bindPdfHistory(qm) {
       btn.closest('.pdf-history-row')?.classList.add('opacity-40', 'pointer-events-none');
       const id = btn.dataset.deletePdfId;
       if (!id) return;
+      soundEngine.playDelete();
       storage.permanentlyDeleteTrashItemSync(id);
       updateHeaderTrashIndicator();
-      showToast('Đã xóa vĩnh viễn tệp', 'info');
+      showToast('Đã xóa vĩnh viễn tệp', 'delete', 2500, { silent: true });
       updatePdfHistoryDom(qm);
       fetch(`/api/v1/trash/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
     };
