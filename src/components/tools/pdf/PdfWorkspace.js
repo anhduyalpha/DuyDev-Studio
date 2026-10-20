@@ -17,6 +17,8 @@ export { renderPdfErrorBanner };
 
 export function renderPdfConverter(queueState = {}) {
   const { error, result, mode = 'compress', files = [], isProcessing = false } = queueState;
+  const isCompleted = Boolean(result);
+  const hideWhenCompleted = isCompleted ? 'hidden' : '';
   const hasFiles = files.length > 0;
   const isVisualMode = (mode === 'rotate' || mode === 'split' || mode === 'organize') && hasFiles;
   const leftSpan = !hasFiles ? 'lg:col-span-12' : (isVisualMode ? 'lg:col-span-8' : 'lg:col-span-7');
@@ -36,17 +38,17 @@ export function renderPdfConverter(queueState = {}) {
       </div>
 
       <!-- Mode Selector -->
-      <div id="pdfModeSelectorContainer">
+      <div id="pdfModeSelectorContainer" class="${hideWhenCompleted}">
         ${renderPdfModeSelector(mode, isProcessing)}
       </div>
 
       <!-- Error Banner -->
-      <div id="pdfErrorBannerContainer">
+      <div id="pdfErrorBannerContainer" class="${hideWhenCompleted}">
         ${renderPdfErrorBanner(error)}
       </div>
 
       <!-- 2-Column Responsive Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div id="pdfWorkspaceMainGrid" class="grid grid-cols-1 lg:grid-cols-12 gap-6 ${hideWhenCompleted}">
         <div id="pdfDropzoneContainer" class="${leftSpan} space-y-4">
           ${renderDropzoneQueue(queueState)}
         </div>
@@ -61,7 +63,7 @@ export function renderPdfConverter(queueState = {}) {
       </div>
 
       <!-- History List -->
-      <div id="pdfHistoryContainer" class="pt-4 sm:pt-6">
+      <div id="pdfHistoryContainer" class="pt-4 sm:pt-6 ${hideWhenCompleted}">
         ${renderPdfHistoryList()}
       </div>
     </div>

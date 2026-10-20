@@ -221,13 +221,13 @@ export function renderDropzoneQueue(queueState = {}) {
   `.trim();
   const accept = isImages
     ? 'image/png, image/jpeg, image/webp, image/avif, image/gif, image/bmp, image/tiff, .png, .jpg, .jpeg, .webp, .avif, .gif, .bmp, .tiff'
-    : '.pdf, application/pdf';
+    : 'application/pdf, .pdf';
 
   return `
     <div class="space-y-3.5">
       <!-- File Dropzone Card (Compact Vertical) -->
       <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
-        <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" ${isMulti ? 'multiple' : ''}>
+        <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" multiple>
         
         <div class="w-10 h-10 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center mb-1.5 group-hover:scale-105 transition duration-200">
           <i data-lucide="${theme.icon || 'upload-cloud'}" class="w-5 h-5"></i>

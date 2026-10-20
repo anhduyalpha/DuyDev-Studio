@@ -977,8 +977,8 @@ function bindResult(qm) {
     if (qm.result?.historyId) {
       await storage.moveToTrash(qm.result.historyId);
       showToast('Đã chuyển vào thùng rác', 'info');
-      qm.resetResult();
     }
+    qm.resetResult();
   });
 
   const btnCopy = resEl.querySelector('#btnCopyDownloadLink');
@@ -1074,6 +1074,28 @@ function syncLayoutColumns(state) {
 }
 
 /**
+ * Toggles visibility of mode selector, workspace grid, error banner, and history list
+ * so that when processing finishes with a result card, only the result card is shown.
+ */
+function syncResultVisibility(hasResult) {
+  const modeSel = document.getElementById('pdfModeSelectorContainer');
+  const mainGrid = document.getElementById('pdfWorkspaceMainGrid') || document.querySelector('#pdfStudioWorkspaceRoot > .grid');
+  const historyEl = document.getElementById('pdfHistoryContainer');
+  const errEl = document.getElementById('pdfErrorBannerContainer');
+
+  if (hasResult) {
+    modeSel?.classList.add('hidden');
+    mainGrid?.classList.add('hidden');
+    historyEl?.classList.add('hidden');
+    errEl?.classList.add('hidden');
+  } else {
+    modeSel?.classList.remove('hidden');
+    mainGrid?.classList.remove('hidden');
+    historyEl?.classList.remove('hidden');
+  }
+}
+
+/**
  * Attaches DOM listeners and subscribes to PDF queue manager updates.
  */
 export function attachPdfConverterListeners(queueManager) {
@@ -1092,6 +1114,7 @@ export function attachPdfConverterListeners(queueManager) {
   }
 
   syncLayoutColumns(queueManager);
+  syncResultVisibility(Boolean(queueManager.result));
   bindDropzone(queueManager);
   bindConfig(queueManager);
   bindResult(queueManager);
@@ -1300,6 +1323,7 @@ export function attachPdfConverterListeners(queueManager) {
     }
 
     if (eventType === 'process-start') {
+      syncResultVisibility(false);
       syncModeTabs(state.mode, true);
       const resEl = document.getElementById('pdfResultContainer');
       if (resEl) {
@@ -1322,6 +1346,7 @@ export function attachPdfConverterListeners(queueManager) {
     }
 
     if (eventType === 'error' || eventType === 'failed') {
+      syncResultVisibility(false);
       syncModeTabs(state.mode, false);
       const errEl = document.getElementById('pdfErrorBannerContainer');
       if (errEl) {
@@ -1339,7 +1364,8 @@ export function attachPdfConverterListeners(queueManager) {
       return;
     }
 
-    if (eventType === 'completed' || eventType === 'result-reset') {
+    if (eventType === 'completed') {
+      syncResultVisibility(true);
       syncModeTabs(state.mode, false);
       const resEl = document.getElementById('pdfResultContainer');
       if (resEl) {
@@ -1347,19 +1373,37 @@ export function attachPdfConverterListeners(queueManager) {
         bindResult(queueManager);
         refreshIcons(resEl);
       }
-      const errEl = document.getElementById('pdfErrorBannerContainer');
-      if (errEl) {
-        errEl.innerHTML = renderPdfErrorBanner(state.error);
-        bindError(queueManager);
+      setVisualWorkspaceProcessingState(false);
+      updatePdfHistoryDom(queueManager);
+      return;
+    }
+
+    if (eventType === 'result-reset') {
+      syncResultVisibility(false);
+      syncModeTabs(state.mode, false);
+      const resEl = document.getElementById('pdfResultContainer');
+      if (resEl) {
+        resEl.innerHTML = '';
+      }
+      syncLayoutColumns(state);
+      const dropEl = document.getElementById('pdfDropzoneContainer');
+      if (dropEl) {
+        dropEl.innerHTML = renderDropzoneQueue(state);
+        bindDropzone(queueManager);
       }
       const cfgEl = document.getElementById('pdfConfigContainer');
       if (cfgEl) {
         cfgEl.innerHTML = renderConfigPanel(state);
         bindConfig(queueManager);
-        refreshIcons(cfgEl);
+      }
+      const errEl = document.getElementById('pdfErrorBannerContainer');
+      if (errEl) {
+        errEl.innerHTML = renderPdfErrorBanner(state.error);
+        bindError(queueManager);
       }
       setVisualWorkspaceProcessingState(false);
       updatePdfHistoryDom(queueManager);
+      refreshIcons(document.getElementById('pdfStudioWorkspaceRoot'));
       return;
     }
 

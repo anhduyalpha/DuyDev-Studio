@@ -550,20 +550,35 @@ class MainActivity : AppCompatActivity() {
                 this@MainActivity.filePathCallback = filePathCallback
 
                 val isMulti = fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+                val mimeTypes = fileChooserParams?.acceptTypes
+                    ?.flatMap { it.split(",") }
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotBlank() }
+                    ?.map { rawType ->
+                        if (rawType.startsWith(".")) {
+                            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(rawType.removePrefix(".")) ?: rawType
+                        } else {
+                            rawType
+                        }
+                    }
+                    ?.filter { it.contains("/") }
+                    ?.distinct()
+
                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
                     flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
                     if (isMulti) {
                         putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
                     }
-                    val acceptTypes = fileChooserParams?.acceptTypes?.filter { it.isNotBlank() }
-                    if (!acceptTypes.isNullOrEmpty()) {
-                        if (acceptTypes.size == 1) {
-                            type = acceptTypes[0]
+                    if (!mimeTypes.isNullOrEmpty()) {
+                        if (mimeTypes.size == 1) {
+                            type = mimeTypes[0]
                         } else {
-                            putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
+                            type = "*/*"
+                            putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toTypedArray())
                         }
+                    } else {
+                        type = "*/*"
                     }
                 }
                 try {
@@ -573,6 +588,17 @@ class MainActivity : AppCompatActivity() {
                         val fallbackIntent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
                             type = "*/*"
                             addCategory(Intent.CATEGORY_OPENABLE)
+                        }
+                        if (isMulti) {
+                            fallbackIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                        }
+                        if (!mimeTypes.isNullOrEmpty()) {
+                            if (mimeTypes.size == 1) {
+                                fallbackIntent.type = mimeTypes[0]
+                            } else {
+                                fallbackIntent.type = "*/*"
+                                fallbackIntent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toTypedArray())
+                            }
                         }
                         fileChooserLauncher.launch(fallbackIntent)
                     } catch (_: Exception) {

@@ -607,9 +607,15 @@ export class PdfQueueManager {
     this.notify('file-loading');
 
     try {
-      const isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
+      let isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
       if (!isMulti && validFiles.length > 1) {
-        showToast('Chế độ đơn tệp: Đã tự động chọn tệp đầu tiên', 'info');
+        if (!isImages && this.mode !== 'images_to_pdf') {
+          this.setMode('merge', true);
+          isMulti = true;
+          showToast(`Đã nhận ${validFiles.length} tệp: Tự động chuyển sang chế độ Ghép PDF`, 'info');
+        } else {
+          showToast('Chế độ đơn tệp: Đã tự động chọn tệp đầu tiên', 'info');
+        }
       }
 
       if (!isMulti && this.files.length > 0) {
@@ -1119,6 +1125,19 @@ export class PdfQueueManager {
       try { this.activeJobWatcherCleanup(); } catch {}
       this.activeJobWatcherCleanup = null;
     }
+    this.files.forEach((f) => releasePdfFileResources(f));
+    this.files = [];
+    this.isLoadingFile = false;
+    this.loadingFileName = '';
+    this.pageRotations = {};
+    this.organizeOrder = [];
+    this.organizeDeleted.clear();
+    this.organizeRotations = {};
+    this.selectedSplitPages.clear();
+    this.splitRangeError = null;
+    this.pages = '';
+    this.totalPages = 0;
+    this.thumbnailPage = 0;
     this.result = null;
     this.error = null;
     this.stage = '';
