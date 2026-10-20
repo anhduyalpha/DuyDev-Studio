@@ -8,6 +8,7 @@
 import { tiktokManager, extractTiktokUrls } from './hooks/useTiktok.js';
 import { tiktokApi } from './services/tiktokApi.js';
 import { showToast } from '../../../utilities/toast.js';
+import { soundEngine } from '../../../utilities/soundEngine.js';
 import { StorageService } from '../../../services/storageService.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
@@ -1048,8 +1049,9 @@ export function attachTiktokWorkspaceListeners() {
     const btnClearHistory = document.getElementById('btnClearTiktokHistory');
     if (btnClearHistory) {
       btnClearHistory.onclick = () => {
+        soundEngine.playDeleteAll();
         tiktokManager.clearHistory();
-        showToast('Đã xóa lịch sử gần đây', 'info');
+        showToast('Đã xóa lịch sử gần đây', 'deleteAll', 2500, { silent: true });
       };
     }
 

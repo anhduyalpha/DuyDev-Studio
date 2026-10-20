@@ -1,8 +1,5 @@
 ---
-globs:
-  - "src/**/*.js"
-  - "src/styles/**/*.css"
-  - "index.html"
+globs: "src/**/*.js, src/styles/**/*.css, index.html"
 description: UI Production Minimalism & Anti-Filler Standards
 ---
 

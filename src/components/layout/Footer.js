@@ -1,14 +1,17 @@
 /**
  * Footer Component (Dark Professional Minimalism)
  */
+import { CURRENT_PWA_VERSION } from '../../utilities/pwa.js';
 
 export function renderFooter() {
+  const versionDisplay = CURRENT_PWA_VERSION ? CURRENT_PWA_VERSION.replace('duydev-studio-', '') : 'v23.63';
+
   return `
     <footer class="w-full border-t border-zinc-200 dark:border-white/5 px-4 lg:px-8 py-6 mt-auto mt-12 md:mt-16 text-sm text-zinc-600 dark:text-zinc-400 mb-16 md:mb-0">
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
-          <span class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v23.11</span>
+          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">${versionDisplay}</span>
           <span>•</span>
           <span>Studio riêng của Anh Duy</span>
         </div>

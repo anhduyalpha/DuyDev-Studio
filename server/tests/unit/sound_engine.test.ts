@@ -558,5 +558,50 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(document.getElementById('soundVolumeModalContainer')).toBeNull();
     window.sessionStorage.clear();
   });
+
+  it('20. Deletion & Purge Cues: playDelete and playDeleteAll generate warm procedural acoustics with alias support and preview routing', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    const deleteSpy = vi.spyOn(soundEngine, 'playDelete');
+    const deleteAllSpy = vi.spyOn(soundEngine, 'playDeleteAll');
+
+    mockContext.createOscillator.mockClear();
+
+    // 1. playDelete creates 2 oscillators (suction pop + air flutter)
+    soundEngine.playDelete();
+    expect(deleteSpy).toHaveBeenCalledTimes(1);
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(2);
+
+    // 2. playTrash alias calls playDelete
+    soundEngine.playTrash();
+    expect(deleteSpy).toHaveBeenCalledTimes(2);
+
+    // 3. playDeleteAll creates 3 oscillators (vacuum sweep + flutter harmonic + sub anchor)
+    mockContext.createOscillator.mockClear();
+    soundEngine.playDeleteAll();
+    expect(deleteAllSpy).toHaveBeenCalledTimes(1);
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(3);
+
+    // 4. playClearAll alias calls playDeleteAll
+    soundEngine.playClearAll();
+    expect(deleteAllSpy).toHaveBeenCalledTimes(2);
+
+    // 5. testSound('delete') and testSound('trash')
+    soundEngine.testSound('delete');
+    expect(deleteSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('trash');
+    expect(deleteSpy).toHaveBeenCalledTimes(4);
+
+    // 6. testSound('deleteAll'), testSound('clearAll'), testSound('clear')
+    soundEngine.testSound('deleteAll');
+    expect(deleteAllSpy).toHaveBeenCalledTimes(3);
+
+    soundEngine.testSound('clearAll');
+    expect(deleteAllSpy).toHaveBeenCalledTimes(4);
+
+    soundEngine.testSound('clear');
+    expect(deleteAllSpy).toHaveBeenCalledTimes(5);
+  });
 });
 

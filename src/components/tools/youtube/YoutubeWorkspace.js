@@ -143,10 +143,14 @@ export class YoutubeWorkspace {
       }
       case 'remove-history': {
         const id = btn.dataset.id;
-        if (id) youtubeManager.removeHistoryItem(id);
+        if (id) {
+          soundEngine.playDelete();
+          youtubeManager.removeHistoryItem(id);
+        }
         break;
       }
       case 'clear-history': {
+        soundEngine.playDeleteAll();
         youtubeManager.clearHistory();
         break;
       }

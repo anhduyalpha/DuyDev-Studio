@@ -131,6 +131,14 @@ export function openSoundVolumeModal() {
               <i data-lucide="toggle-right" class="w-3.5 h-3.5 text-amber-500"></i>
               <span>Micro-Click</span>
             </button>
+            <button type="button" data-test="delete" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-rose-50 dark:bg-white/[0.05] dark:hover:bg-rose-500/10 text-zinc-800 dark:text-zinc-200 hover:text-rose-600 dark:hover:text-rose-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
+              <span>Xóa mục</span>
+            </button>
+            <button type="button" data-test="deleteAll" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-red-50 dark:bg-white/[0.05] dark:hover:bg-red-500/10 text-zinc-800 dark:text-zinc-200 hover:text-red-600 dark:hover:text-red-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+              <i data-lucide="trash" class="w-3.5 h-3.5 text-red-600"></i>
+              <span>Xóa tất cả</span>
+            </button>
             <button type="button" data-test="themeLight" class="btn-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-amber-50 dark:bg-white/[0.05] dark:hover:bg-amber-500/10 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
               <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-500"></i>
               <span>Theme Sáng</span>

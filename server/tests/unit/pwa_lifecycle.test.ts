@@ -83,6 +83,13 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
     it('index.html fast-path share script must define search properly without ReferenceError', () => {
       expect(indexContent).toContain('const search = window.location.search || \'\';');
     });
+
+    it('Footer.js must dynamically display CURRENT_PWA_VERSION and not be hardcoded to an obsolete version', () => {
+      const footerPath = path.join(rootDir, 'src/components/layout/Footer.js');
+      const footerContent = fs.readFileSync(footerPath, 'utf-8');
+      expect(footerContent).toContain('CURRENT_PWA_VERSION');
+      expect(footerContent).not.toContain('v23.11');
+    });
   });
 
   describe('3. pwa.js Update Flow & Controlled Reload Logic', () => {

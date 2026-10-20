@@ -6,6 +6,17 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.64': {
+    version: 'v23.64',
+    title: 'Bản cập nhật v23.64',
+    date: '21/10/2026',
+    features: [
+      'Đồng bộ hóa hiển thị phiên bản động toàn hệ thống: Badge phiên bản dưới chân trang (Footer) tự động cập nhật theo PWA core, triệt tiêu lỗi kẹt số phiên bản cũ'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi hardcode v23.11 trên thanh Footer, đưa vào bộ nhớ đệm Precache của Service Worker để tải tức thì không phụ thuộc mạng'
+    ]
+  },
   'v23.63': {
     version: 'v23.63',
     title: 'Bản cập nhật v23.63',

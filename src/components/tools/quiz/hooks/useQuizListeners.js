@@ -23,6 +23,7 @@ import {
   emptyQuizTrashPermanently
 } from '../utilities/quizHistoryHelper.js';
 import { showToast } from '../../../../utilities/toast.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 
@@ -686,9 +687,10 @@ export function attachQuizListeners() {
         e.stopPropagation();
         const pairId = btn.dataset.pairId;
         if (pairId) {
+          soundEngine.playDelete();
           moveQuizPairToTrash(pairId);
           renderAndBindHistory();
-          showToast('Đã chuyển bộ đề vào thùng rác', 'success');
+          showToast('Đã chuyển bộ đề vào thùng rác', 'delete', 2500, { silent: true });
         }
       };
     });
@@ -714,9 +716,10 @@ export function attachQuizListeners() {
         e.stopPropagation();
         const pairId = btn.dataset.pairId;
         if (pairId) {
+          soundEngine.playDelete();
           deleteQuizPairPermanently(pairId);
           renderAndBindHistory();
-          showToast('Đã xóa vĩnh viễn bộ đề', 'success');
+          showToast('Đã xóa vĩnh viễn bộ đề', 'delete', 2500, { silent: true });
         }
       };
     });
@@ -732,9 +735,10 @@ export function attachQuizListeners() {
           actionText: 'Kéo sang phải để chuyển tất cả',
           confirmingText: 'Đang chuyển...',
           onConfirm: () => {
+            soundEngine.playDeleteAll();
             moveAllQuizPairsToTrash();
             renderAndBindHistory();
-            showToast('Đã chuyển tất cả bộ đề vào thùng rác', 'success');
+            showToast('Đã chuyển tất cả bộ đề vào thùng rác', 'deleteAll', 2500, { silent: true });
           }
         });
       };
@@ -759,9 +763,10 @@ export function attachQuizListeners() {
           actionText: 'Kéo sang phải để xóa vĩnh viễn',
           confirmingText: 'Đang dọn sạch...',
           onConfirm: () => {
+            soundEngine.playDeleteAll();
             emptyQuizTrashPermanently();
             renderAndBindHistory();
-            showToast('Đã dọn sạch thùng rác', 'success');
+            showToast('Đã dọn sạch thùng rác bộ đề', 'deleteAll', 2500, { silent: true });
           }
         });
       };

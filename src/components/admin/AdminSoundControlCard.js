@@ -96,7 +96,7 @@ export function renderAdminSoundControlCard() {
             <i data-lucide="music" class="w-3.5 h-3.5 text-orange-500"></i>
             <span>Nghe thử bảng âm thanh trực tiếp (Live Sound Palette):</span>
           </p>
-          <span class="text-[11px] font-mono text-zinc-400">11 âm hiệu quy chuẩn</span>
+          <span class="text-[11px] font-mono text-zinc-400">13 âm hiệu quy chuẩn</span>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -119,6 +119,14 @@ export function renderAdminSoundControlCard() {
           <button type="button" data-test="toggle" class="btn-admin-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-orange-50 dark:bg-white/[0.05] dark:hover:bg-orange-500/10 text-zinc-800 dark:text-zinc-200 hover:text-orange-600 dark:hover:text-orange-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
             <i data-lucide="toggle-right" class="w-3.5 h-3.5 text-amber-500"></i>
             <span>Micro-Click</span>
+          </button>
+          <button type="button" data-test="delete" class="btn-admin-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-rose-50 dark:bg-white/[0.05] dark:hover:bg-rose-500/10 text-zinc-800 dark:text-zinc-200 hover:text-rose-600 dark:hover:text-rose-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
+            <span>Xóa mục</span>
+          </button>
+          <button type="button" data-test="deleteAll" class="btn-admin-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-red-50 dark:bg-white/[0.05] dark:hover:bg-red-500/10 text-zinc-800 dark:text-zinc-200 hover:text-red-600 dark:hover:text-red-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
+            <i data-lucide="trash" class="w-3.5 h-3.5 text-red-600"></i>
+            <span>Xóa tất cả</span>
           </button>
           <button type="button" data-test="themeLight" class="btn-admin-test-sound min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-amber-50 dark:bg-white/[0.05] dark:hover:bg-amber-500/10 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 border border-zinc-200/80 dark:border-white/5 transition flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer">
             <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-500"></i>

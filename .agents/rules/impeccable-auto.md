@@ -1,8 +1,5 @@
 ---
-globs:
-  - "src/**/*.js"
-  - "src/styles/**/*.css"
-  - "index.html"
+globs: "src/**/*.js, src/styles/**/*.css, index.html"
 description: Autonomous Impeccable UI/UX Protocol for DuyDev-Studio
 ---
 

@@ -13,6 +13,7 @@ import {
 } from '../utilities/adminAuth.js';
 import { showToast } from '../utilities/toast.js';
 import { clearAllModuleStates } from '../utilities/moduleState.js';
+import { soundEngine } from '../utilities/soundEngine.js';
 import { renderSvgGauge, drawSparklineCanvas } from '../components/admin/AdminVisualizers.js';
 import { renderAiAgentsCard, attachAiAgentsListeners } from '../components/admin/AdminAiAgentsCard.js';
 import { renderR2TelemetryCard, attachR2TelemetryListeners } from '../components/server/R2TelemetryCard.js';
@@ -1352,8 +1353,9 @@ export function attachAdminPageListeners(onRerender) {
         actionText: 'Kéo sang phải để đặt lại bộ nhớ',
         confirmingText: 'Đang đặt lại...',
         onConfirm: () => {
+          soundEngine.playDeleteAll();
           clearAllModuleStates();
-          showToast('Đã xóa toàn bộ bộ nhớ nháp module trên trình duyệt', 'info');
+          showToast('Đã xóa toàn bộ bộ nhớ nháp module trên trình duyệt', 'deleteAll', 2500, { silent: true });
           setTimeout(() => window.location.reload(), 400);
         }
       });
