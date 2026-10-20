@@ -220,6 +220,57 @@ describe('Web Share Target & Classifier Suite', () => {
       expect(result.recommendations[1].route).toBe('#tool/hash-checksum');
     });
 
+    it('should prioritize Studocu URL over Chrome link preview thumbnail (fixes Chrome share-link bug)', () => {
+      const chromeSharePayload = {
+        title: '14...',
+        text: 'https://www.studocu.vn/vn/document/12345',
+        url: 'https://www.studocu.vn/vn/document/12345',
+        files: [{ name: '17924571158844779400704322456883.png', size: 6144, type: 'image/png' } as any]
+      };
+
+      const result = classifySharedPayload(chromeSharePayload);
+      expect(result.type).toBe(SharePayloadType.STUDOCU_URL);
+      expect(result.recommendations[0].route).toBe('#tool/studocu-dl');
+      expect(result.recommendations[0].label).toContain('Studocu');
+      // Crucial: files array must be sanitized so preview does not display the 6KB image
+      expect(chromeSharePayload.files).toEqual([]);
+    });
+
+    it('should prioritize Scribd, YouTube, and TikTok URLs over browser thumbnails', () => {
+      const scribdPayload = {
+        title: 'Document',
+        url: 'https://www.scribd.com/document/12345/Test-Doc',
+        files: [{ name: 'thumb_123.jpg', size: 12000, type: 'image/jpeg' } as any]
+      };
+      const scribdResult = classifySharedPayload(scribdPayload);
+      expect(scribdResult.type).toBe(SharePayloadType.SCRIBD_URL);
+      expect(scribdResult.recommendations[0].route).toBe('#tool/scribd');
+
+      const youtubePayload = {
+        url: 'https://youtu.be/dQw4w9WgXcQ',
+        files: [{ name: 'hqdefault.jpg', size: 8192, type: 'image/jpeg' } as any]
+      };
+      const youtubeResult = classifySharedPayload(youtubePayload);
+      expect(youtubeResult.type).toBe(SharePayloadType.YOUTUBE_URL);
+
+      const tiktokPayload = {
+        url: 'https://vt.tiktok.com/ZS2xyz/',
+        files: [{ name: 'preview.webp', size: 5000, type: 'image/webp' } as any]
+      };
+      const tiktokResult = classifySharedPayload(tiktokPayload);
+      expect(tiktokResult.type).toBe(SharePayloadType.TIKTOK_URL);
+    });
+
+    it('should prioritize generic URLs over Chrome preview thumbnail', () => {
+      const genericPayload = {
+        url: 'https://news.ycombinator.com',
+        files: [{ name: '17924571158844779400704322456883.png', size: 6144, type: 'image/png' } as any]
+      };
+      const genericResult = classifySharedPayload(genericPayload);
+      expect(genericResult.type).toBe(SharePayloadType.GENERIC_URL);
+      expect(genericResult.recommendations[0].route).toBe('#tool/qr-multi');
+    });
+
     it('should classify archive files by MIME type even if filename has no extension', () => {
       const zipMimeResult = classifySharedPayload({
         files: [{ name: 'download_blob', type: 'application/x-zip-compressed' } as any]

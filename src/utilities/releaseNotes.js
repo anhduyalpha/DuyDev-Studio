@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.62': {
+    version: 'v23.62',
+    title: 'Bản cập nhật v23.62',
+    date: '20/10/2026',
+    features: [
+      'Gia cố bộ lọc chia sẻ liên kết (Web Share Target): Nhận diện chuẩn xác 100% liên kết khi chia sẻ từ trình duyệt di động (Chrome, Edge)',
+      'Hỗ trợ toàn diện tài liệu Studocu: Tự động phát hiện liên kết Studocu và hiển thị menu gợi ý tải tài liệu hoặc tạo mã QR chuyên biệt'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi Chrome đính kèm ảnh thu nhỏ (preview thumbnail 6KB) khiến ứng dụng nhận nhầm liên kết thành tệp ảnh',
+      'Loại bỏ nhiễu tệp ảnh thu nhỏ trên hộp thoại Chia sẻ, ưu tiên hiển thị liên kết và tiêu đề bài viết sạch sẽ'
+    ]
+  },
   'v23.61': {
     version: 'v23.61',
     title: 'Bản cập nhật v23.61',

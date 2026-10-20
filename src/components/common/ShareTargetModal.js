@@ -4,7 +4,7 @@
  * displays preview + recommended tool actions, dispatches data to selected module.
  */
 
-import { classifySharedPayload, SharePayloadType } from '../../utilities/shareTargetHelper.js';
+import { classifySharedPayload, SharePayloadType, isBrowserThumbnailFile } from '../../utilities/shareTargetHelper.js';
 import { formatBytes } from '../../utilities/formatters.js';
 import { detectSmartRoute, handoffSmartUrl } from '../../utilities/smartUrlRouter.js';
 
@@ -52,7 +52,7 @@ function renderPayloadPreview(payload, classification) {
     try {
       const parsed = new URL(payload.url);
       const displayDomain = parsed.hostname.replace(/^www\./, '');
-      const pathSnippet = parsed.pathname.length > 25 ? parsed.pathname.slice(0, 25) + '…' : parsed.pathname;
+      const pathSnippet = parsed.pathname.length > 35 ? parsed.pathname.slice(0, 35) + '…' : parsed.pathname;
       parts.push(`<span class="text-xs text-zinc-300 font-mono truncate block" title="${payload.url}">${displayDomain}${pathSnippet}</span>`);
     } catch {
       parts.push(`<span class="text-xs text-zinc-300 font-mono truncate block">${payload.url}</span>`);
@@ -62,7 +62,16 @@ function renderPayloadPreview(payload, classification) {
     parts.push(`<span class="text-xs text-zinc-400 truncate block">${preview}</span>`);
   }
 
-  if (payload.files && payload.files.length > 0) {
+  const isUrlType = [
+    SharePayloadType.STUDOCU_URL,
+    SharePayloadType.SCRIBD_URL,
+    SharePayloadType.YOUTUBE_URL,
+    SharePayloadType.TIKTOK_URL,
+    SharePayloadType.GENERIC_URL,
+    SharePayloadType.IMAGE_URL
+  ].includes(classification.type);
+
+  if (!isUrlType && payload.files && payload.files.length > 0) {
     const fileList = payload.files.slice(0, 3).map(f =>
       `<span class="text-xs text-zinc-300">${f.name} <span class="text-zinc-500 font-mono">(${formatBytes(f.size)})</span></span>`
     ).join('<br>');
@@ -157,6 +166,12 @@ export function openShareTargetModal(payload) {
 
   const container = document.getElementById('globalShareTargetContainer');
   if (!container) return;
+
+  // Sanitize browser preview thumbnails attached to web link shares
+  const effectiveUrl = payload?.url || (payload?.text?.match(/https?:\/\/\S+/)?.[0]) || '';
+  if (effectiveUrl && payload?.files?.length === 1 && isBrowserThumbnailFile(payload.files[0], effectiveUrl)) {
+    payload.files = [];
+  }
 
   window.__FAST_PATH_SHARE_ACTIVE = true;
 

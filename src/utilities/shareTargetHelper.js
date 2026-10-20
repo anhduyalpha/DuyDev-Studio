@@ -399,16 +399,61 @@ export async function retrievePendingSharedData() {
 }
 
 /**
+ * Detect if a single shared file is actually a browser-generated link preview thumbnail/favicon
+ * (e.g. Chrome's numeric FileProvider name like 17924571158844779400704322456883.png, thumbnail.png, < 512KB)
+ * @param {File} file
+ * @param {string} effectiveUrl
+ * @returns {boolean}
+ */
+export function isBrowserThumbnailFile(file, effectiveUrl) {
+  if (!file || !effectiveUrl) return false;
+  const name = (file.name || '').toLowerCase();
+  const mime = (file.type || '').toLowerCase();
+  const isImage = mime.startsWith('image/') || IMAGE_RE.test(name);
+  if (!isImage) return false;
+
+  const isSmallThumb = !file.size || file.size < 512 * 1024;
+  const isNumericOrThumbPattern =
+    /^\d{10,}\.(png|jpe?g|webp)$/i.test(name) ||
+    /^(thumb|favicon|preview|cover|image|share)/i.test(name) ||
+    name.includes('fileprovider') ||
+    name === 'shared-file';
+
+  let hostname = '';
+  try {
+    hostname = new URL(effectiveUrl).hostname.toLowerCase();
+  } catch {}
+
+  const isSpecializedService =
+    isStudocuHost(hostname) ||
+    isScribdHost(hostname) ||
+    isYouTubeHost(hostname) ||
+    isTikTokHost(hostname);
+
+  return isSmallThumb && (isSpecializedService || isNumericOrThumbPattern);
+}
+
+/**
  * Classify share payload and return type + rich recommended actions.
  * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
  * @returns {{ type: string, recommendations: Array<{ label: string, route: string, mode?: string, imageUrl?: string, isPrimary?: boolean }> }}
  */
 export function classifySharedPayload(payload) {
   const { url, text, files } = payload || {};
+  const effectiveUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || '';
 
-  // 1. File-based classification (highest priority)
-  if (files && files.length > 0) {
-    const firstFile = files[0];
+  // Filter out browser preview thumbnails if a web link is being shared
+  let meaningfulFiles = files || [];
+  if (effectiveUrl && meaningfulFiles.length === 1 && isBrowserThumbnailFile(meaningfulFiles[0], effectiveUrl)) {
+    meaningfulFiles = [];
+    if (payload && Array.isArray(payload.files)) {
+      payload.files = [];
+    }
+  }
+
+  // 1. File-based classification (highest priority for genuine files)
+  if (meaningfulFiles && meaningfulFiles.length > 0) {
+    const firstFile = meaningfulFiles[0];
     if (!firstFile) {
       return { type: SharePayloadType.PLAIN_TEXT, recommendations: [] };
     }
@@ -477,8 +522,6 @@ export function classifySharedPayload(payload) {
   }
 
   // 3. URL-based classification
-  const effectiveUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || '';
-
   if (effectiveUrl) {
     try {
       const parsed = new URL(effectiveUrl);

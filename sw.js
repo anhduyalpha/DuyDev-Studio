@@ -3,30 +3,30 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v23.61';
+const CACHE_NAME = 'duydev-studio-v23.62';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=23.61',
-  './src/styles/card-tiers-10.css?v=23.61',
-  './src/styles/studocu.css?v=23.61',
-  './src/styles/scribd.css?v=23.61',
-  './src/styles/highlight-theme.css?v=23.61',
+  './src/styles/stitch-tokens.css?v=23.62',
+  './src/styles/card-tiers-10.css?v=23.62',
+  './src/styles/studocu.css?v=23.62',
+  './src/styles/scribd.css?v=23.62',
+  './src/styles/highlight-theme.css?v=23.62',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=23.61',
-  './src/utilities/soundEngine.js?v=23.61',
-  './src/utilities/releaseNotes.js?v=23.61',
-  './src/utilities/notificationHelper.js?v=23.61',
-  './src/utilities/smartUrlRouter.js?v=23.61',
+  './src/app.js?v=23.62',
+  './src/utilities/soundEngine.js?v=23.62',
+  './src/utilities/releaseNotes.js?v=23.62',
+  './src/utilities/notificationHelper.js?v=23.62',
+  './src/utilities/smartUrlRouter.js?v=23.62',
   './src/utilities/tierViewportGovernor.js',
-  './src/components/common/SoundVolumeModal.js?v=23.61',
+  './src/components/common/SoundVolumeModal.js?v=23.62',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/components/tools/youtube/YoutubeWorkspace.js',
@@ -191,6 +191,15 @@ async function handleShareTargetPost(event) {
     if (!payload.url && payload.text) {
       const urlMatch = payload.text.match(/https?:\/\/\S+/);
       if (urlMatch) payload.url = urlMatch[0];
+    }
+
+    // If a link is shared, filter out browser link preview thumbnails from files array
+    if (payload.url && payload.files.length === 1) {
+      const f = payload.files[0];
+      const isThumb = f.size < 512 * 1024 && (/^\d{10,}\.(png|jpe?g|webp)$/i.test(f.name) || /^(thumb|favicon|preview|cover|image)/i.test(f.name) || (f.type && f.type.startsWith('image/')));
+      if (isThumb) {
+        payload.files = [];
+      }
     }
 
     await saveSharePayload(payload);

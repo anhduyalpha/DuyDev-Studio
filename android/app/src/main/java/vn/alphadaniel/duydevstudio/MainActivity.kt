@@ -849,24 +849,6 @@ class MainActivity : AppCompatActivity() {
         val targetRoute = intent.getStringExtra(EXTRA_TARGET_ROUTE)
         val targetMode = intent.getStringExtra(EXTRA_TARGET_MODE)
 
-        val uris = mutableListOf<Uri>()
-        if (intent.action == Intent.ACTION_SEND) {
-            val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-                ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
-                ?: intent.data
-            if (uri != null) uris.add(uri)
-        } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
-            val list = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
-            if (list != null) {
-                uris.addAll(list)
-            } else if (intent.clipData != null) {
-                for (i in 0 until intent.clipData!!.itemCount) {
-                    val u = intent.clipData!!.getItemAt(i).uri
-                    if (u != null) uris.add(u)
-                }
-            }
-        }
-
         val text = (intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
             ?: intent.getStringExtra(Intent.EXTRA_TEXT)
             ?: "").trim()
@@ -880,6 +862,42 @@ class MainActivity : AppCompatActivity() {
             intent.dataString?.startsWith("http://") == true || intent.dataString?.startsWith("https://") == true -> intent.dataString
             text.startsWith("http://") || text.startsWith("https://") -> text
             else -> Regex("""https?://[^\s"'<>()]+""").find(text)?.value
+        }
+
+        val intentType = intent.type?.lowercase(Locale.ROOT) ?: ""
+        val isExplicitTextShare = intentType.startsWith("text/") || intentType.isBlank()
+        val hasStreamExtra = intent.hasExtra(Intent.EXTRA_STREAM)
+        val isSpecializedLink = !detectedUrl.isNullOrBlank() && (
+            detectedUrl.contains("studocu.", ignoreCase = true) ||
+            detectedUrl.contains("scribd.com", ignoreCase = true) ||
+            detectedUrl.contains("tiktok.com", ignoreCase = true) ||
+            detectedUrl.contains("douyin.com", ignoreCase = true) ||
+            detectedUrl.contains("youtube.com", ignoreCase = true) ||
+            detectedUrl.contains("youtu.be", ignoreCase = true)
+        )
+        // In Android 10+, browsers (like Chrome) share links as text/plain and populate ClipData with a tiny
+        // preview thumbnail image for the system ShareSheet preview header. If this is a web link share,
+        // do not treat the preview thumbnail in ClipData as an attached file!
+        val isWebLinkShare = !detectedUrl.isNullOrBlank() && (isSpecializedLink || isExplicitTextShare || !hasStreamExtra)
+
+        val uris = mutableListOf<Uri>()
+        if (intent.action == Intent.ACTION_SEND) {
+            if (!isWebLinkShare) {
+                val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+                    ?: intent.data
+                if (uri != null) uris.add(uri)
+            }
+        } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
+            val list = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+            if (list != null) {
+                uris.addAll(list)
+            } else if (intent.clipData != null) {
+                for (i in 0 until intent.clipData!!.itemCount) {
+                    val u = intent.clipData!!.getItemAt(i).uri
+                    if (u != null) uris.add(u)
+                }
+            }
         }
 
         if (uris.isNotEmpty() || text.isNotBlank() || !detectedUrl.isNullOrBlank()) {
