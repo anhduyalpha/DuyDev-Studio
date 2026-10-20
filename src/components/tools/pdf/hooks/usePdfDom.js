@@ -600,6 +600,7 @@ function bindDropzone(qm) {
   // 4. Multi-file Workspace (Merge & Images to PDF)
   else if ((qm.mode === 'merge' || qm.mode === 'images_to_pdf') && qm.files.length > 0) {
     rootEl.querySelector('#btnClearAllMultiFiles')?.addEventListener('click', () => {
+      soundEngine.playDeleteAll();
       qm.files.forEach((f) => pdfPageCache.releaseForFile(f));
       qm.clearFiles();
     });
@@ -614,6 +615,7 @@ function bindDropzone(qm) {
         fillElement: slideFill,
         labelElement: slideLabel,
         onClear: () => {
+          soundEngine.playDeleteAll();
           qm.files.forEach((f) => pdfPageCache.releaseForFile(f));
           qm.clearFiles();
         }
@@ -778,6 +780,7 @@ function bindDropzone(qm) {
     });
     rootEl.querySelectorAll('.btn-file-remove').forEach((btn) => {
       btn.onclick = () => {
+        soundEngine.playDelete();
         const removedFile = qm.files.find((f) => f.id === btn.dataset.removeMultiId);
         if (removedFile) pdfPageCache.releaseForFile(removedFile);
         qm.removeFile(btn.dataset.removeMultiId);
@@ -806,6 +809,7 @@ function bindDropzone(qm) {
         thresholdPx: 100,
         wrapperElement: rowEl.closest('.pdf-file-row-wrapper'),
         onComplete: () => {
+          soundEngine.playDelete();
           const removedFile = qm.files.find((f) => f.id === fileId);
           if (removedFile) pdfPageCache.releaseForFile(removedFile);
           qm.removeFile(fileId);
