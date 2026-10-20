@@ -555,10 +555,11 @@ class MainActivity : AppCompatActivity() {
                     ?.map { it.trim() }
                     ?.filter { it.isNotBlank() }
                     ?.map { rawType ->
-                        if (rawType.startsWith(".")) {
-                            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(rawType.removePrefix(".")) ?: rawType
-                        } else {
+                        if (rawType.contains("/")) {
                             rawType
+                        } else {
+                            val cleanExt = rawType.removePrefix(".")
+                            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(cleanExt) ?: rawType
                         }
                     }
                     ?.filter { it.contains("/") }
@@ -602,6 +603,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         fileChooserLauncher.launch(fallbackIntent)
                     } catch (_: Exception) {
+                        this@MainActivity.filePathCallback?.onReceiveValue(null)
                         this@MainActivity.filePathCallback = null
                         return false
                     }

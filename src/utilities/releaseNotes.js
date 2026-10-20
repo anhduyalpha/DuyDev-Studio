@@ -6,6 +6,23 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.60': {
+    version: 'v23.60',
+    title: 'Bản cập nhật v23.60',
+    date: '20/10/2026',
+    features: [
+      'PDF Studio: Hỗ trợ tải lên cùng lúc nhiều tệp trên cả trình duyệt Web và ứng dụng Android APK',
+      'Tự động chuyển sang chế độ Ghép PDF khi chọn nhiều tệp và đồng bộ hóa tức thì tab chế độ',
+      'Thẻ kết quả xử lý hoàn tất cô lập: Hiển thị chênh lệch dung lượng, thời gian, tải về, xem trước và xóa',
+      'Nút Tiếp tục đưa giao diện trở lại trạng thái sạch sẽ để đón nhận đợt tệp tiếp theo'
+    ],
+    fixes: [
+      'Khắc phục lỗi lệch tab chế độ khi tự động chuyển sang chế độ Ghép PDF',
+      'Khắc phục triệt để nguy cơ treo file picker trên Android APK khi Intent gặp lỗi',
+      'Chuẩn hóa kích thước cảm ứng chuẩn công thái học di động (>= 44px) và chống tràn tên tệp trên thẻ kết quả'
+    ]
+  },
+
   'v23.58': {
     version: 'v23.58',
     title: 'Bản cập nhật v23.58',

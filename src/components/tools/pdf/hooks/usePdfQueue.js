@@ -610,7 +610,7 @@ export class PdfQueueManager {
       let isMulti = this.mode === 'merge' || this.mode === 'images_to_pdf';
       if (!isMulti && validFiles.length > 1) {
         if (!isImages && this.mode !== 'images_to_pdf') {
-          this.setMode('merge', true);
+          this.setMode('merge', false);
           isMulti = true;
           showToast(`Đã nhận ${validFiles.length} tệp: Tự động chuyển sang chế độ Ghép PDF`, 'info');
         } else {

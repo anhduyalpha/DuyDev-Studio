@@ -1078,20 +1078,24 @@ function syncLayoutColumns(state) {
  * so that when processing finishes with a result card, only the result card is shown.
  */
 function syncResultVisibility(hasResult) {
+  const breadcrumb = document.getElementById('pdfBreadcrumbContainer');
   const modeSel = document.getElementById('pdfModeSelectorContainer');
   const mainGrid = document.getElementById('pdfWorkspaceMainGrid') || document.querySelector('#pdfStudioWorkspaceRoot > .grid');
   const historyEl = document.getElementById('pdfHistoryContainer');
   const errEl = document.getElementById('pdfErrorBannerContainer');
 
   if (hasResult) {
+    breadcrumb?.classList.add('hidden');
     modeSel?.classList.add('hidden');
     mainGrid?.classList.add('hidden');
     historyEl?.classList.add('hidden');
     errEl?.classList.add('hidden');
   } else {
+    breadcrumb?.classList.remove('hidden');
     modeSel?.classList.remove('hidden');
     mainGrid?.classList.remove('hidden');
     historyEl?.classList.remove('hidden');
+    errEl?.classList.remove('hidden');
   }
 }
 
@@ -1429,6 +1433,7 @@ export function attachPdfConverterListeners(queueManager) {
     }
 
     syncLayoutColumns(state);
+    syncModeTabs(state.mode, state.isProcessing);
     if (!state.isProcessing) {
       const dropEl = document.getElementById('pdfDropzoneContainer');
       if (dropEl) {

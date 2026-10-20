@@ -42,7 +42,7 @@ export function renderPdfMultiFileWorkspace({ mode = 'merge', files = [] } = {})
           <label class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             <span>Thêm tệp</span>
-            <input type="file" id="inputAddMoreFiles" ${isImages ? 'accept="image/*"' : 'accept=".pdf,application/pdf"'} multiple class="hidden" />
+            <input type="file" id="inputAddMoreFiles" ${isImages ? 'accept="image/*"' : 'accept="application/pdf, .pdf"'} multiple class="hidden" />
           </label>
 
           ${isImages ? `
