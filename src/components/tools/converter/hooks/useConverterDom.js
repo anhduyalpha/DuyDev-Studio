@@ -10,6 +10,7 @@ import { renderConverterResult } from '../components/ConverterResult.js';
 import { bindConverterHistory, updateConverterHistoryDom } from '../components/ConverterHistoryList.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 /**
  * Safely refreshes Lucide icons if available in current runtime environment.
@@ -434,6 +435,7 @@ export function attachConverterListeners(manager) {
 
       const removeBtn = e.target.closest('.btn-remove-item');
       if (removeBtn) {
+        soundEngine.playDelete();
         manager.removeItem(removeBtn.dataset.itemId);
         return;
       }
@@ -459,6 +461,7 @@ export function attachConverterListeners(manager) {
           actionText: 'Kéo sang phải để xóa hàng đợi',
           confirmingText: 'Đang xóa...',
           onConfirm: () => {
+            soundEngine.playDeleteAll();
             manager.clearQueue();
             updateConverterHistoryDom(manager);
           }
@@ -558,6 +561,7 @@ export function attachConverterListeners(manager) {
         return;
       }
       if (e.target.closest('#btnClearAllConverterResults')) {
+        soundEngine.playDeleteAll();
         manager.clearQueue();
         updateConverterHistoryDom(manager);
         document.getElementById('converterWorkspaceRoot')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

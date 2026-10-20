@@ -266,9 +266,10 @@ export function attachDashboardListeners(onReRender) {
           }, 200);
         }
 
+        soundEngine.playDelete();
         await storage.moveToTrash(id);
         updateHeaderTrashIndicator();
-        showToast('Đã chuyển mục vào thùng rác', 'info');
+        showToast('Đã chuyển mục vào thùng rác', 'delete', 2500, { silent: true });
         return;
       }
 

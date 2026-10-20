@@ -2185,7 +2185,8 @@ function handleDeleteItem(itemPath, itemName, onComplete) {
     onConfirm: async () => {
       try {
         await StorageService.deleteItem(itemPath);
-        showToast(`Đã xóa "${itemName}"`, 'success');
+        soundEngine.playDelete();
+        showToast(`Đã xóa "${itemName}"`, 'delete', 2500, { silent: true });
         if (typeof onComplete === 'function') onComplete();
       } catch (err) {
         showToast(err.message || 'Lỗi khi xóa', 'error');
@@ -2209,7 +2210,12 @@ function handleBatchDeleteItem(itemPaths, onComplete) {
     onConfirm: async () => {
       try {
         await StorageService.deleteItems(itemPaths);
-        showToast(`Đã xóa thành công ${itemPaths.length} mục`, 'success');
+        if (itemPaths.length > 1) {
+          soundEngine.playDeleteAll();
+        } else {
+          soundEngine.playDelete();
+        }
+        showToast(`Đã xóa thành công ${itemPaths.length} mục`, 'deleteAll', 2500, { silent: true });
         if (typeof onComplete === 'function') onComplete();
       } catch (err) {
         showToast(err.message || 'Lỗi khi xóa các mục', 'error');

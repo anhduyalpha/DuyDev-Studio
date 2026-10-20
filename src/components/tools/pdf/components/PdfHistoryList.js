@@ -11,6 +11,7 @@ import { copyText } from '../../../../utilities/clipboard.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { updateHeaderTrashIndicator } from '../../../layout/Header.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 
 let activePdfHistoryTab = 'history';
 let isPdfHistoryOpen = false;
@@ -314,11 +315,12 @@ export function bindPdfHistory(qm) {
         confirmingText: 'Đang chuyển vào thùng rác...',
         onConfirm: async () => {
           // 1. Optimistic instant storage update
+          soundEngine.playDeleteAll();
           storage.moveItemsToTrashSync(items.map((it) => it.id));
 
           // 2. Instant DOM & indicator update
           updateHeaderTrashIndicator();
-          showToast(`Đã chuyển ${items.length} tác vụ vào thùng rác`, 'info');
+          showToast(`Đã chuyển ${items.length} tác vụ vào thùng rác`, 'deleteAll', 2500, { silent: true });
           updatePdfHistoryDom(qm);
 
           // 3. Background server sync
