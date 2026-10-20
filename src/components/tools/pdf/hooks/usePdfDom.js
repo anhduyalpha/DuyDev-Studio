@@ -12,6 +12,7 @@ import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { copyText } from '../../../../utilities/clipboard.js';
 import { storage } from '../../../../utilities/storage.js';
+import { soundEngine } from '../../../../utilities/soundEngine.js';
 import { loadAndRenderPdfThumbnails } from '../components/PdfRotateWorkspace.js';
 import { loadAndRenderSplitThumbnails } from '../components/PdfSplitWorkspace.js';
 import { loadAndRenderOrganizeThumbnails } from '../components/PdfOrganizeWorkspace.js';
@@ -975,8 +976,9 @@ function bindResult(qm) {
 
   resEl.querySelector('#btnTrashPdfResult')?.addEventListener('click', async () => {
     if (qm.result?.historyId) {
+      soundEngine.playDelete();
       await storage.moveToTrash(qm.result.historyId);
-      showToast('Đã chuyển vào thùng rác', 'info');
+      showToast('Đã chuyển vào thùng rác', 'delete', 2500, { silent: true });
     }
     qm.resetResult();
   });
