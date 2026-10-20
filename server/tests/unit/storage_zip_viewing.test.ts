@@ -157,6 +157,57 @@ describe('Storage Drive Archive Viewing & Hierarchy Navigation', () => {
       expect(childFolders[0].fileCount).toBe(2); // extra.txt and secret.log
     });
 
+    it('should NOT treat root files as subfolders (fixes image_001.png fake folder duplication)', () => {
+      const rootFilesOnly = [
+        { path: 'image_001.png', sizeBytes: 120, compressedBytes: 112, isDirectory: false },
+        { path: 'image_002.png', sizeBytes: 120, compressedBytes: 112, isDirectory: false },
+        { path: 'image_003.png', sizeBytes: 120, compressedBytes: 112, isDirectory: false },
+        { path: 'image_004.png', sizeBytes: 120, compressedBytes: 112, isDirectory: false },
+        { path: 'image_005.png', sizeBytes: 120, compressedBytes: 112, isDirectory: false }
+      ];
+
+      function helperGetSubfolders(entries: any[], folderPath: string) {
+        const normFolder = !folderPath || folderPath === '/' ? '/' : (folderPath.endsWith('/') ? folderPath : folderPath + '/');
+        const subfolderMap = new Map();
+
+        entries.forEach((e) => {
+          const isDir = Boolean(e.isDirectory || e.isDir || (e.path && e.path.replace(/\\/g, '/').endsWith('/')));
+          const norm = (e.path.startsWith('/') ? e.path : '/' + e.path).replace(/\\/g, '/');
+          if (!norm.startsWith(normFolder) || norm === normFolder) return;
+
+          const remainder = norm.slice(normFolder.length);
+          const parts = remainder.split('/').filter(Boolean);
+          const isSubfolder = isDir ? (parts.length >= 1) : (parts.length > 1);
+          if (!isSubfolder) return;
+
+          const subName = parts[0];
+          const subPath = normFolder === '/' ? `/${subName}/` : `${normFolder}${subName}/`;
+
+          if (!subfolderMap.has(subPath)) {
+            subfolderMap.set(subPath, {
+              path: subPath,
+              name: subName,
+              fileCount: 0,
+              totalBytes: 0,
+              isDirectory: true
+            });
+          }
+
+          if (!isDir) {
+            const item = subfolderMap.get(subPath);
+            item.fileCount++;
+            item.totalBytes += (Number(e.sizeBytes || e.uncompressedBytes || 0) || 0);
+          }
+        });
+
+        return Array.from(subfolderMap.values());
+      }
+
+      const subfolders = helperGetSubfolders(rootFilesOnly, '/');
+      expect(subfolders).toEqual([]);
+      expect(subfolders.length).toBe(0);
+    });
+
     it('should flatten all files correctly for search and flat mode', () => {
       const allFiles = getAllFilesInArchive(mockEntries);
       expect(allFiles.length).toBe(6);

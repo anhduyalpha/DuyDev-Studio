@@ -43,35 +43,43 @@ export function renderArchiveViewer(state) {
       </div>
 
       <!-- Main Archive Explorer (Populated dynamically) -->
-      <div id="archiveViewerContent" class="hidden flex-1 flex flex-col min-h-0 space-y-2.5 overflow-hidden">
-        <!-- Summary Stats & Controls Bar -->
-        <div id="archiveViewerStats" class="p-2.5 sm:p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/70 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2.5 shrink-0"></div>
+      <div id="archiveViewerContent" class="hidden flex-1 flex flex-col min-h-0 space-y-2 overflow-hidden">
+        <!-- Unified Header: Breadcrumb, Meta Stats, Mode Switcher & Search -->
+        <div class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/70 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+          <!-- Left: Breadcrumb & Meta Pill -->
+          <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+            <div id="archiveViewerBackBtn" class="shrink-0"></div>
+            <div id="archiveViewerFolderBar" class="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 font-mono min-w-0 overflow-x-auto custom-scrollbar whitespace-nowrap"></div>
+            <span id="archiveViewerStatsDivider" class="text-zinc-300 dark:text-zinc-700 hidden sm:inline shrink-0">•</span>
+            <div id="archiveViewerMetaStats" class="hidden sm:flex items-center gap-1.5 text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0"></div>
+          </div>
 
-        <!-- Toolbar: Mode Switcher & Search Filter -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
-          <!-- Folder Breadcrumb / Path -->
-          <div id="archiveViewerFolderBar" class="flex items-center gap-1.5 px-1 text-xs text-zinc-600 dark:text-zinc-400 shrink-0 font-mono min-w-0 flex-1 overflow-x-auto custom-scrollbar whitespace-nowrap"></div>
-
-          <!-- Controls: Mode Switcher & Search Input -->
-          <div class="flex items-center gap-2 shrink-0">
+          <!-- Right: Controls (Mode, Search, Tool Link) -->
+          <div class="flex items-center gap-2 shrink-0 justify-end">
             <!-- Mode Switcher Pills -->
             <div class="inline-flex p-0.5 rounded-lg bg-zinc-200/70 dark:bg-white/[0.06] border border-zinc-300/60 dark:border-white/[0.08] text-xs font-mono shrink-0">
-              <button id="btnArchiveModeFolder" type="button" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer bg-white dark:bg-white/20 text-indigo-600 dark:text-white shadow-2xs">
+              <button id="btnArchiveModeFolder" type="button" class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-semibold transition cursor-pointer bg-white dark:bg-white/20 text-indigo-600 dark:text-white shadow-2xs">
                 Thư mục
               </button>
-              <button id="btnArchiveModeFlat" type="button" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
+              <button id="btnArchiveModeFlat" type="button" class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-semibold transition cursor-pointer text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
                 Tất cả tệp
               </button>
             </div>
 
             <!-- Instant Search Input -->
-            <div class="relative w-36 sm:w-48">
+            <div class="relative w-32 sm:w-44">
               <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400"></i>
               <input id="archiveSearchInput" type="text" placeholder="Tìm tệp..." class="w-full pl-8 pr-6 py-1 text-xs font-mono rounded-lg bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
               <button id="btnClearArchiveSearch" type="button" class="hidden absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
                 <i data-lucide="x" class="w-3 h-3"></i>
               </button>
             </div>
+
+            <!-- Fullscreen / External Tool Link Button -->
+            <button id="btnOpenArchiveFullscreen" type="button" class="px-2 py-1 rounded-lg bg-zinc-200/80 hover:bg-zinc-300/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1 transition cursor-pointer shadow-2xs shrink-0" title="Mở trong công cụ Soi Tệp Nén">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">Mở rộng</span>
+            </button>
           </div>
         </div>
 
@@ -167,10 +175,10 @@ function renderFilesTableHtml(options) {
               </span>
             </td>
             <td class="py-2.5 px-3 font-mono text-zinc-500 dark:text-zinc-400 hidden sm:table-cell">
-              ${folder.totalBytes > 0 ? formatBytes(folder.totalBytes) : '--'}
+              ${folder.totalBytes > 0 ? formatBytes(folder.totalBytes) : '—'}
             </td>
             <td class="py-2.5 px-3 font-mono text-zinc-400 dark:text-zinc-500 hidden sm:table-cell">
-              Thư mục
+              —
             </td>
             <td class="py-2.5 px-3 text-right">
               <button type="button" data-open-folder="${escapeHtml(folder.path)}"
@@ -354,47 +362,47 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
     if (loading) loading.classList.add('hidden');
     if (content) content.classList.remove('hidden');
 
-    // Stats bar
-    const statsEl = document.getElementById('archiveViewerStats');
-    if (statsEl) {
+    // Nested archive back button
+    const backBtnContainer = document.getElementById('archiveViewerBackBtn');
+    if (backBtnContainer) {
+      if (archiveStack.length > 0) {
+        backBtnContainer.innerHTML = `
+          <button id="btnBackNestedArchive" type="button" class="px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center gap-1 transition cursor-pointer border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            <span>Quay lại (${archiveStack.length})</span>
+          </button>
+        `;
+        backBtnContainer.querySelector('#btnBackNestedArchive')?.addEventListener('click', () => {
+          if (archiveStack.length === 0) return;
+          const prev = archiveStack.pop();
+          archiveData = prev.archiveData;
+          currentFolder = prev.currentFolder;
+          isFlatView = prev.isFlatView;
+          searchQuery = prev.searchQuery;
+          displayArchive();
+        });
+      } else {
+        backBtnContainer.innerHTML = '';
+      }
+    }
+
+    // Meta stats pill
+    const metaStatsEl = document.getElementById('archiveViewerMetaStats');
+    if (metaStatsEl && archiveData) {
       const ratio = archiveData.totalUncompressedBytes > 0
         ? Math.round((1 - archiveData.totalCompressedBytes / archiveData.totalUncompressedBytes) * 100)
         : 0;
-
-      const totalDirs = (archiveData.folders || []).length;
-
-      statsEl.innerHTML = `
-        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-          ${archiveStack.length > 0 ? `
-            <button id="btnBackNestedArchive" type="button" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
-              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-              <span>Quay lại (${archiveStack.length})</span>
-            </button>
-          ` : ''}
-          <span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-            ${archiveData.format || 'ARCHIVE'}
-          </span>
-          <span class="text-xs font-mono text-zinc-700 dark:text-zinc-300">
-            <strong>${archiveData.totalFiles}</strong> tệp • ${totalDirs > 1 ? `<strong>${totalDirs - 1}</strong> thư mục • ` : ''}${formatBytes(archiveData.totalUncompressedBytes)} (Tiết kiệm ${Math.max(0, ratio)}%)
-          </span>
-        </div>
-        <button id="btnOpenArchiveFullscreen" type="button" class="px-2.5 py-1 rounded-lg bg-zinc-200/80 hover:bg-zinc-300/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs" title="Mở trong công cụ Soi Tệp Nén">
-          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-          <span>Mở rộng</span>
-        </button>
+      metaStatsEl.innerHTML = `
+        <span class="text-zinc-500 dark:text-zinc-400">
+          <strong>${archiveData.totalFiles}</strong> tệp • ${formatBytes(archiveData.totalUncompressedBytes)}${ratio > 0 ? ` (Tiết kiệm ${ratio}%)` : ''}
+        </span>
       `;
+    }
 
-      statsEl.querySelector('#btnBackNestedArchive')?.addEventListener('click', () => {
-        if (archiveStack.length === 0) return;
-        const prev = archiveStack.pop();
-        archiveData = prev.archiveData;
-        currentFolder = prev.currentFolder;
-        isFlatView = prev.isFlatView;
-        searchQuery = prev.searchQuery;
-        displayArchive();
-      });
-
-      statsEl.querySelector('#btnOpenArchiveFullscreen')?.addEventListener('click', () => {
+    // Fullscreen / external tool button
+    const btnFullscreen = document.getElementById('btnOpenArchiveFullscreen');
+    if (btnFullscreen) {
+      btnFullscreen.onclick = () => {
         if (archiveData.drivePath) {
           closeFileViewer();
           window.location.hash = `#archive?path=${encodeURIComponent(archiveData.drivePath)}`;
@@ -410,7 +418,7 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
           closeFileViewer();
           window.location.hash = '#archive';
         }
-      });
+      };
     }
 
     // Attach mode switches
@@ -424,16 +432,16 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
         const searchInput = document.getElementById('archiveSearchInput');
         if (searchInput) searchInput.value = '';
         document.getElementById('btnClearArchiveSearch')?.classList.add('hidden');
-        btnFolderMode.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer bg-white dark:bg-white/20 text-indigo-600 dark:text-white shadow-2xs';
-        btnFlatMode.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white';
+        btnFolderMode.className = 'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-semibold transition cursor-pointer bg-white dark:bg-white/20 text-indigo-600 dark:text-white shadow-2xs';
+        btnFlatMode.className = 'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-semibold transition cursor-pointer text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white';
         refreshTableView();
       };
 
       btnFlatMode.onclick = () => {
         if (isFlatView) return;
         isFlatView = true;
-        btnFlatMode.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer bg-white dark:bg-white/20 text-indigo-600 dark:text-white shadow-2xs';
-        btnFolderMode.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white';
+        btnFlatMode.className = 'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-semibold transition cursor-pointer bg-white dark:bg-white/20 text-indigo-600 dark:text-white shadow-2xs';
+        btnFolderMode.className = 'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[11px] font-semibold transition cursor-pointer text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white';
         refreshTableView();
       };
     }
@@ -468,23 +476,27 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
     if (folderBar) {
       if (isFlatView || searchQuery) {
         folderBar.innerHTML = `
-          <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-medium truncate">
+          <div class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 font-medium truncate">
             <i data-lucide="${searchQuery ? 'search' : 'list-tree'}" class="w-3.5 h-3.5 text-indigo-500"></i>
-            <span>${searchQuery ? `Kết quả tìm kiếm cho: "${escapeHtml(searchQuery)}"` : 'Tất cả tệp trong file nén (Danh sách phẳng)'}</span>
+            <span>${searchQuery ? `Kết quả: "${escapeHtml(searchQuery)}"` : 'Tất cả tệp (Danh sách phẳng)'}</span>
           </div>
         `;
       } else {
         const parts = currentFolder.split('/').filter(Boolean);
-        let crumbHtml = `<button data-go-folder="/" class="btn-crumb text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer">root</button>`;
+        let crumbHtml = `
+          <button data-go-folder="/" class="btn-crumb inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold cursor-pointer transition">
+            <i data-lucide="home" class="w-3.5 h-3.5"></i>
+            <span>Gốc</span>
+          </button>
+        `;
         let pathAcc = '';
         parts.forEach((p) => {
           pathAcc += `/${p}`;
-          crumbHtml += ` <span class="text-zinc-300 dark:text-zinc-700">/</span> <button data-go-folder="${pathAcc}/" class="btn-crumb text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer">${escapeHtml(p)}</button>`;
+          crumbHtml += ` <span class="text-zinc-300 dark:text-zinc-700">/</span> <button data-go-folder="${pathAcc}/" class="btn-crumb text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold cursor-pointer transition">${escapeHtml(p)}</button>`;
         });
 
         folderBar.innerHTML = `
-          <div class="flex items-center gap-1.5 truncate">
-            <i data-lucide="folder" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
+          <div class="flex items-center gap-1 truncate">
             <span class="truncate">${crumbHtml}</span>
           </div>
         `;

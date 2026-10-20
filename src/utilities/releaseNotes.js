@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.61': {
+    version: 'v23.61',
+    title: 'Bản cập nhật v23.61',
+    date: '20/10/2026',
+    features: [
+      'Tinh giản giao diện Trình xem tệp nén (Archive Viewer): Hợp nhất thanh thống kê và thanh điều hướng thành thanh công cụ tối giản chuẩn công thái học',
+      'Đường dẫn thư mục thanh lịch: Hiển thị biểu tượng Gốc thay vì chữ root mộc mạc, bố trí thông số nén và kích thước nhỏ gọn'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi tệp ở thư mục gốc bị hiển thị trùng lặp thành thư mục ảo (fake folder)',
+      'Chuẩn hóa cột kích thước nén cho các hàng thư mục thành gạch ngang (—), loại bỏ nhãn dư thừa'
+    ]
+  },
   'v23.60': {
     version: 'v23.60',
     title: 'Bản cập nhật v23.60',

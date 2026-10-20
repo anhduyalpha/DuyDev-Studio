@@ -5,9 +5,10 @@
 export function extractFolders(entries) {
   const folderSet = new Set(['/']);
   entries.forEach((e) => {
+    const isDir = Boolean(e.isDirectory || e.isDir || (e.path && e.path.replace(/\\/g, '/').endsWith('/')));
     const norm = (e.path.startsWith('/') ? e.path : '/' + e.path).replace(/\\/g, '/');
     const parts = norm.split('/').filter(Boolean);
-    if (!e.isDirectory) parts.pop();
+    if (!isDir) parts.pop();
     let current = '';
     for (const part of parts) {
       current += '/' + part;
@@ -32,7 +33,7 @@ export function extractFolders(entries) {
 export function getFilesInFolder(entries, folderPath) {
   const normFolder = !folderPath || folderPath === '/' ? '/' : (folderPath.endsWith('/') ? folderPath : folderPath + '/');
   return (entries || [])
-    .filter((e) => !e.isDirectory)
+    .filter((e) => !e.isDirectory && !e.isDir && !(e.path && e.path.replace(/\\/g, '/').endsWith('/')))
     .filter((e) => {
       const norm = (e.path.startsWith('/') ? e.path : '/' + e.path).replace(/\\/g, '/');
       const lastSlash = norm.lastIndexOf('/');
@@ -50,30 +51,32 @@ export function getSubfoldersInFolder(entries, folderPath) {
   const subfolderMap = new Map();
 
   (entries || []).forEach((e) => {
+    const isDir = Boolean(e.isDirectory || e.isDir || (e.path && e.path.replace(/\\/g, '/').endsWith('/')));
     const norm = (e.path.startsWith('/') ? e.path : '/' + e.path).replace(/\\/g, '/');
     if (!norm.startsWith(normFolder) || norm === normFolder) return;
 
     const remainder = norm.slice(normFolder.length);
     const parts = remainder.split('/').filter(Boolean);
-    if (parts.length > 0) {
-      const subName = parts[0];
-      const subPath = normFolder === '/' ? `/${subName}/` : `${normFolder}${subName}/`;
+    const isSubfolder = isDir ? (parts.length >= 1) : (parts.length > 1);
+    if (!isSubfolder) return;
 
-      if (!subfolderMap.has(subPath)) {
-        subfolderMap.set(subPath, {
-          path: subPath,
-          name: subName,
-          fileCount: 0,
-          totalBytes: 0,
-          isDirectory: true
-        });
-      }
+    const subName = parts[0];
+    const subPath = normFolder === '/' ? `/${subName}/` : `${normFolder}${subName}/`;
 
-      if (!e.isDirectory) {
-        const item = subfolderMap.get(subPath);
-        item.fileCount++;
-        item.totalBytes += (Number(e.sizeBytes) || 0);
-      }
+    if (!subfolderMap.has(subPath)) {
+      subfolderMap.set(subPath, {
+        path: subPath,
+        name: subName,
+        fileCount: 0,
+        totalBytes: 0,
+        isDirectory: true
+      });
+    }
+
+    if (!isDir) {
+      const item = subfolderMap.get(subPath);
+      item.fileCount++;
+      item.totalBytes += (Number(e.sizeBytes || e.uncompressedBytes || 0) || 0);
     }
   });
 
@@ -85,7 +88,7 @@ export function getSubfoldersInFolder(entries, folderPath) {
  */
 export function getAllFilesInArchive(entries) {
   return (entries || [])
-    .filter((e) => !e.isDirectory)
+    .filter((e) => !e.isDirectory && !e.isDir && !(e.path && e.path.replace(/\\/g, '/').endsWith('/')))
     .map((e) => {
       const rawPath = e.path.replace(/^\/+/, '');
       const lastSlash = rawPath.lastIndexOf('/');
