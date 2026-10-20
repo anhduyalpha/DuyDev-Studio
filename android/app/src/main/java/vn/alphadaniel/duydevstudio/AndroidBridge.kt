@@ -86,6 +86,16 @@ class AndroidBridge(
     }
 
     /**
+     * Controls native SwipeRefreshLayout to prevent accidental refresh during horizontal gestures.
+     */
+    @JavascriptInterface
+    fun setSwipeRefreshEnabled(enabled: Boolean) {
+        activity.runOnUiThread {
+            activity.setSwipeRefreshEnabled(enabled)
+        }
+    }
+
+    /**
      * Return app version dynamically from Gradle BuildConfig.
      */
     @JavascriptInterface

@@ -2,7 +2,8 @@
  * DashboardPage View Controller (Dark Professional Minimalism)
  */
 
-import { renderCategoryFilters, attachCategoryFilterListeners } from '../components/dashboard/CategoryFilters.js';
+import { renderCategoryFilters, attachCategoryFilterListeners, getAdjacentCategory, CATEGORIES } from '../components/dashboard/CategoryFilters.js';
+import { initDashboardSwipe } from '../components/dashboard/dashboardSwipeController.js';
 import { renderToolCard } from '../components/dashboard/ToolCard.js';
 import { renderRecentActivity } from '../components/dashboard/RecentActivity.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
@@ -52,7 +53,7 @@ export function renderDashboardPage() {
   };
 
   return `
-    <div class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16">
+    <div id="dashboardRoot" class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16 touch-pan-y">
       
       <!-- Category Filter Pills Bar -->
       <div class="w-full min-w-0 overflow-hidden">
@@ -139,15 +140,17 @@ export function attachDashboardListeners(onReRender) {
 
   observeTierCards();
 
-  attachCategoryFilterListeners((cat, clickedBtn) => {
+  // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
+  const switchCategory = (cat, direction = null, clickedBtn = null) => {
     toolRegistry.setCategory(cat);
 
     // 1. Smooth scroll clicked tab into center view (no snapping back to 0!)
-    if (clickedBtn) {
-      clickedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const targetBtn = clickedBtn || document.querySelector(`.filter-pill[data-category="${cat}"]`);
+    if (targetBtn) {
+      targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
-    // 2. Perform in-place update of tools grid without re-rendering the category tabs
+    // 2. Perform in-place update of tools grid with optional slide transition
     const filteredTools = toolRegistry.getFilteredTools();
     const gridEl = document.getElementById('toolsGridContainer');
     const countEl = document.getElementById('toolsCountLabel');
@@ -155,6 +158,19 @@ export function attachDashboardListeners(onReRender) {
 
     if (gridEl) {
       gridEl.innerHTML = renderToolsContent(filteredTools);
+
+      if (direction === 'next') {
+        gridEl.classList.remove('animate-tab-slide-left');
+        gridEl.classList.add('animate-tab-slide-right');
+      } else if (direction === 'prev') {
+        gridEl.classList.remove('animate-tab-slide-right');
+        gridEl.classList.add('animate-tab-slide-left');
+      }
+
+      gridEl.addEventListener('animationend', () => {
+        gridEl.classList.remove('animate-tab-slide-right', 'animate-tab-slide-left');
+      }, { once: true });
+
       if (window.lucide) window.lucide.createIcons({ root: gridEl });
       observeTierCards(gridEl);
     }
@@ -181,6 +197,48 @@ export function attachDashboardListeners(onReRender) {
         }`;
       }
     });
+
+    // 4. Subtle acoustic & haptic response on swipe gestures
+    if (direction) {
+      soundEngine.playToggle();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(10); } catch {}
+      }
+    }
+  };
+
+  attachCategoryFilterListeners((cat, clickedBtn) => {
+    const currentCat = toolRegistry.currentCategory;
+    const currentIdx = CATEGORIES.findIndex(c => c.id === currentCat);
+    const targetIdx = CATEGORIES.findIndex(c => c.id === cat);
+    const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
+    switchCategory(cat, dir, clickedBtn);
+  });
+
+  // Mobile & Android Swipe Gesture Controller (Swipe Left -> Next Tab, Swipe Right -> Prev Tab)
+  const dashboardRoot = document.getElementById('dashboardRoot');
+  const stopSwipe = initDashboardSwipe({
+    container: dashboardRoot || document.getElementById('mainContent'),
+    onSwipeNext: () => {
+      const nextCat = getAdjacentCategory(toolRegistry.currentCategory, 'next');
+      if (nextCat) {
+        switchCategory(nextCat, 'next');
+      } else {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(5); } catch {}
+        }
+      }
+    },
+    onSwipePrev: () => {
+      const prevCat = getAdjacentCategory(toolRegistry.currentCategory, 'prev');
+      if (prevCat) {
+        switchCategory(prevCat, 'prev');
+      } else {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(5); } catch {}
+        }
+      }
+    }
   });
 
   const recentContainer = document.getElementById('recentActivityContainer');
@@ -313,6 +371,7 @@ export function attachDashboardListeners(onReRender) {
 
   return () => {
     stopGovernor();
+    stopSwipe();
     if (tierObserver) {
       tierObserver.disconnect();
       tierObserver = null;

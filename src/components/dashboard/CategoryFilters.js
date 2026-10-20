@@ -1,6 +1,6 @@
 import { soundEngine } from '../../utilities/soundEngine.js';
 
-const CATEGORIES = [
+export const CATEGORIES = [
   { id: 'all', label: 'Tất cả', color: '#A1A1AA' },
   { id: 'pdf', label: 'PDF', color: '#F59E0B' },
   { id: 'convert', label: 'Chuyển đổi', color: '#8B5CF6' },
@@ -9,6 +9,17 @@ const CATEGORIES = [
   { id: 'system', label: 'Tiện ích', color: '#6366F1' },
   { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
 ];
+
+export function getAdjacentCategory(currentCatId, direction = 'next') {
+  const idx = CATEGORIES.findIndex(c => c.id === currentCatId);
+  if (idx === -1) return null;
+  if (direction === 'next') {
+    return idx < CATEGORIES.length - 1 ? CATEGORIES[idx + 1].id : null;
+  } else if (direction === 'prev') {
+    return idx > 0 ? CATEGORIES[idx - 1].id : null;
+  }
+  return null;
+}
 
 export function renderCategoryFilters(activeCategory = 'all', counts = {}) {
   return `

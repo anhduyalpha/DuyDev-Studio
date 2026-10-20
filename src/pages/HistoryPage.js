@@ -5,6 +5,7 @@
 import { storage } from '../utilities/storage.js';
 import { ViewerConnector } from '../components/common/viewer/FileViewerConnector.js';
 import { showToast } from '../utilities/toast.js';
+import { soundEngine } from '../utilities/soundEngine.js';
 import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { renderHistoryItemRow } from '../components/history/HistoryItemRow.js';
@@ -112,11 +113,12 @@ function bindRowActions(root, rerender) {
       const id = btn.dataset.deleteHistory;
       const item = historyState.historyItems.find(x => x.id === id);
       if (item) {
+        soundEngine.playDelete();
         historyState.historyItems = historyState.historyItems.filter(x => x.id !== id);
         historyState.trashItems.unshift({ ...item, deletedAt: new Date().toISOString() });
         await storage.moveToTrash(id);
         updateHeaderTrashIndicator();
-        showToast('Đã chuyển mục vào thùng rác', 'info');
+        showToast('Đã chuyển mục vào thùng rác', 'delete', 2500, { silent: true });
         if (rerender) rerender();
       }
     };
@@ -145,10 +147,11 @@ function bindRowActions(root, rerender) {
       btn.dataset.deleting = 'true';
       btn.closest('.history-row')?.classList.add('opacity-40', 'pointer-events-none');
       const id = btn.dataset.permDelete;
+      soundEngine.playDelete();
       historyState.trashItems = historyState.trashItems.filter(x => x.id !== id);
       await storage.permanentlyDeleteTrashItem(id);
       updateHeaderTrashIndicator();
-      showToast('Đã xoá vĩnh viễn', 'info');
+      showToast('Đã xoá vĩnh viễn', 'delete', 2500, { silent: true });
       if (rerender) rerender();
     };
   });
@@ -213,11 +216,12 @@ export function attachHistoryPageListeners(rerender) {
       actionText: 'Kéo sang phải để xóa tất cả',
       confirmingText: 'Đang chuyển vào thùng rác...',
       onConfirm: async () => {
+        soundEngine.playDeleteAll();
         await storage.clearHistoryToTrash();
         historyState.trashItems = [...historyState.historyItems, ...historyState.trashItems];
         historyState.historyItems = [];
         updateHeaderTrashIndicator();
-        showToast('Đã chuyển toàn bộ lịch sử vào thùng rác', 'info');
+        showToast('Đã chuyển toàn bộ lịch sử vào thùng rác', 'deleteAll', 2500, { silent: true });
         if (rerender) rerender();
       }
     });
@@ -240,10 +244,11 @@ export function attachHistoryPageListeners(rerender) {
       actionText: 'Kéo sang phải để xác nhận',
       confirmingText: 'Đang dọn sạch...',
       onConfirm: async () => {
+        soundEngine.playDeleteAll();
         await storage.emptyTrash();
         historyState.trashItems = [];
         updateHeaderTrashIndicator();
-        showToast('Đã dọn sạch thùng rác', 'info');
+        showToast('Đã dọn sạch thùng rác', 'deleteAll', 2500, { silent: true });
         if (rerender) rerender();
       }
     });

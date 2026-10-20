@@ -650,6 +650,37 @@ html.dark .linear-card {
   animation: slideDownIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Horizontal Tab Slide Transitions for Mobile Gestures */
+@keyframes tabSlideFromRight {
+  from {
+    opacity: 0.55;
+    transform: translate3d(28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes tabSlideFromLeft {
+  from {
+    opacity: 0.55;
+    transform: translate3d(-28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-tab-slide-right {
+  animation: tabSlideFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-tab-slide-left {
+  animation: tabSlideFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* ==========================================================================
    PDF Viewer v2.0 TextLayer & Reading Modes
    ========================================================================== */

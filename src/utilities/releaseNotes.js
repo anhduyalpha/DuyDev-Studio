@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.63': {
+    version: 'v23.63',
+    title: 'Bản cập nhật v23.63',
+    date: '21/10/2026',
+    features: [
+      'Thao tác vuốt chuyển tab mượt mà trên Android & Mobile: Hỗ trợ vuốt sang trái/phải để chuyển đổi danh mục công cụ tức thì',
+      'Hiệu ứng trượt nội dung 120Hz: Lướt tab công cụ phản hồi thị giác tức thì, tự động cuộn tab đang chọn vào giữa màn hình',
+      'Đồng bộ rung xúc giác (Haptic Feedback) và âm thanh khi vuốt chuyển đổi giữa các nhóm công cụ'
+    ],
+    fixes: [
+      'Phân biệt thông minh giữa vuốt ngang chuyển tab và cuộn dọc trang để không làm gián đoạn trải nghiệm đọc',
+      'Độc lập hoàn toàn với thanh cuộn tab danh mục và tạm khóa tính năng kéo để tải lại (Pull-to-Refresh) khi vuốt ngang',
+      'Tự động giải phóng hoạt ảnh sau 0.22s, đảm bảo màn hình trở về tần số quét tiết kiệm pin (LTPO 1Hz) tuyệt đối'
+    ]
+  },
   'v23.62': {
     version: 'v23.62',
     title: 'Bản cập nhật v23.62',

@@ -411,6 +411,15 @@ class SoundEngine {
       case 'snap':
         this.playToggle();
         break;
+      case 'delete':
+      case 'trash':
+        this.playDelete();
+        break;
+      case 'deleteAll':
+      case 'clearAll':
+      case 'clear':
+        this.playDeleteAll();
+        break;
       case 'themeLight':
       case 'light':
         this.playThemeToLight();
@@ -796,6 +805,189 @@ class SoundEngine {
    */
   playSnap() {
     this.playToggle();
+  }
+
+  // =========================================================================
+  // Deletion & Purge Cues (Tactile Discard & Sweeping Clean-Slate)
+  // =========================================================================
+
+  /**
+   * Cue 6B: `playDelete()` / `playTrash()` (Single Item Discard / Soft Suction Pop)
+   * Organic, subtle paper swoosh & crisp downward suction pop:
+   * 1. Dynamic lowpass damping filter (sweeping 1600Hz -> 450Hz over 120ms, Q: 0.8).
+   * 2. Primary suction sine glide (340Hz -> 140Hz over 70ms with 5ms attack and 110ms decay).
+   * 3. Air flutter transient (warm triangle 520Hz -> 220Hz over 60ms, gain: 0.09).
+   * 4. Subtle mobile haptic pulse (10ms).
+   */
+  playDelete() {
+    const ctx = this._prepareForPlayback();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch (_) {}
+    }
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.130;
+    const stopTime = now + duration;
+
+    // 1. Dynamic lowpass acoustic damping filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1600, now);
+    filter.frequency.exponentialRampToValueAtTime(450, now + 0.120);
+    filter.Q.setValueAtTime(0.8, now);
+    filter.connect(this.masterGain);
+
+    // 2. Primary Tactile Suction Pop (Sine glide: 340Hz -> 140Hz)
+    const popGain = ctx.createGain();
+    popGain.gain.setValueAtTime(0.0001, now);
+    popGain.gain.linearRampToValueAtTime(0.26, now + 0.005);
+    popGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    popGain.connect(filter);
+
+    const popOsc = ctx.createOscillator();
+    popOsc.type = 'sine';
+    popOsc.frequency.setValueAtTime(340, now);
+    popOsc.frequency.exponentialRampToValueAtTime(140, now + 0.070);
+    popOsc.connect(popGain);
+
+    // 3. Air Flutter Transient (Subtle warm triangle flutter: 520Hz -> 220Hz)
+    const flutterStart = now + 0.008;
+    const flutterGain = ctx.createGain();
+    flutterGain.gain.setValueAtTime(0.0001, flutterStart);
+    flutterGain.gain.linearRampToValueAtTime(0.09, flutterStart + 0.006);
+    flutterGain.gain.exponentialRampToValueAtTime(0.0001, flutterStart + 0.060);
+    flutterGain.connect(filter);
+
+    const flutterOsc = ctx.createOscillator();
+    flutterOsc.type = 'triangle';
+    flutterOsc.frequency.setValueAtTime(520, flutterStart);
+    flutterOsc.frequency.exponentialRampToValueAtTime(220, flutterStart + 0.060);
+    flutterOsc.connect(flutterGain);
+
+    popOsc.start(now);
+    flutterOsc.start(flutterStart);
+
+    popOsc.stop(stopTime);
+    flutterOsc.stop(flutterStart + 0.060);
+
+    popOsc.onended = () => {
+      try {
+        popOsc.disconnect();
+        flutterOsc.disconnect();
+        popGain.disconnect();
+        flutterGain.disconnect();
+        filter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
+  }
+
+  /**
+   * Alias for `playDelete()`
+   */
+  playTrash() {
+    this.playDelete();
+  }
+
+  /**
+   * Cue 6C: `playDeleteAll()` / `playClearAll()` (Dual-Stage Vacuum Sweep & Resonant Clean Slate)
+   * A satisfying, sweeping wipe effect that signifies total reset / clean slate:
+   * 1. Resonant sweeping lowpass filter (2400Hz -> 350Hz over 260ms, Q: 1.2).
+   * 2. Stage 1: Sweeping vacuum whoosh glide (A4 [440Hz] -> C4 [261.63Hz] -> E3 [164.81Hz] over 160ms).
+   * 3. Stage 2: Secondary air flutter harmonic (E5 [659.25Hz] -> E4 [329.63Hz] over 140ms).
+   * 4. Stage 3: Deep clean-slate sub anchor (C3 [130.81Hz] -> E2 [82.41Hz] over 280ms).
+   * 5. Dual mobile haptic vibration pulse ([15, 30, 25]).
+   */
+  playDeleteAll() {
+    const ctx = this._prepareForPlayback();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate([15, 30, 25]); } catch (_) {}
+    }
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const duration = 0.320;
+    const stopTime = now + duration;
+
+    // Resonant Sweeping Filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2400, now);
+    filter.frequency.exponentialRampToValueAtTime(350, now + 0.260);
+    filter.Q.setValueAtTime(1.2, now);
+    filter.connect(this.masterGain);
+
+    // 1. Vacuum Whoosh Glide (440Hz -> 261.63Hz -> 164.81Hz)
+    const sweepGain = ctx.createGain();
+    sweepGain.gain.setValueAtTime(0.0001, now);
+    sweepGain.gain.linearRampToValueAtTime(0.28, now + 0.010);
+    sweepGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    sweepGain.connect(filter);
+
+    const sweepOsc = ctx.createOscillator();
+    sweepOsc.type = 'sine';
+    sweepOsc.frequency.setValueAtTime(440, now);
+    sweepOsc.frequency.exponentialRampToValueAtTime(261.63, now + 0.070);
+    sweepOsc.frequency.exponentialRampToValueAtTime(164.81, now + 0.160);
+    sweepOsc.connect(sweepGain);
+
+    // 2. Harmonic Air Flutter (E5 659.25Hz -> E4 329.63Hz)
+    const flutterStart = now + 0.020;
+    const flutterGain = ctx.createGain();
+    flutterGain.gain.setValueAtTime(0.0001, flutterStart);
+    flutterGain.gain.linearRampToValueAtTime(0.12, flutterStart + 0.012);
+    flutterGain.gain.exponentialRampToValueAtTime(0.0001, flutterStart + 0.140);
+    flutterGain.connect(filter);
+
+    const flutterOsc = ctx.createOscillator();
+    flutterOsc.type = 'triangle';
+    flutterOsc.frequency.setValueAtTime(659.25, flutterStart);
+    flutterOsc.frequency.exponentialRampToValueAtTime(329.63, flutterStart + 0.140);
+    flutterOsc.connect(flutterGain);
+
+    // 3. Deep Clean-Slate Sub Anchor (C3 130.81Hz -> E2 82.41Hz)
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.linearRampToValueAtTime(0.18, now + 0.015);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+    subGain.connect(filter);
+
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(130.81, now);
+    subOsc.frequency.exponentialRampToValueAtTime(82.41, now + 0.280);
+    subOsc.connect(subGain);
+
+    sweepOsc.start(now);
+    flutterOsc.start(flutterStart);
+    subOsc.start(now);
+
+    sweepOsc.stop(stopTime);
+    flutterOsc.stop(flutterStart + 0.140);
+    subOsc.stop(stopTime);
+
+    subOsc.onended = () => {
+      try {
+        sweepOsc.disconnect();
+        flutterOsc.disconnect();
+        subOsc.disconnect();
+        sweepGain.disconnect();
+        flutterGain.disconnect();
+        subGain.disconnect();
+        filter.disconnect();
+      } catch (_) {}
+    };
+
+    this._scheduleIdleSuspend(duration);
+  }
+
+  /**
+   * Alias for `playDeleteAll()`
+   */
+  playClearAll() {
+    this.playDeleteAll();
   }
 
   // =========================================================================

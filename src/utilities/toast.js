@@ -46,6 +46,12 @@ function getToastStyling(type) {
   } else if (type === 'warning') {
     icon = 'alert-triangle';
     styles = 'bg-amber-950/95 text-amber-100 border-amber-500/30';
+  } else if (type === 'delete' || type === 'trash') {
+    icon = 'trash-2';
+    styles = 'bg-rose-950/95 text-rose-100 border-rose-500/30';
+  } else if (type === 'deleteAll' || type === 'clearAll') {
+    icon = 'trash';
+    styles = 'bg-rose-950/95 text-rose-100 border-rose-500/30';
   }
 
   return { icon, styles };
@@ -111,6 +117,10 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION, o
       soundEngine.playError();
     } else if (type === 'warning') {
       soundEngine.playWarning();
+    } else if (type === 'delete' || type === 'trash') {
+      soundEngine.playDelete();
+    } else if (type === 'deleteAll' || type === 'clearAll') {
+      soundEngine.playDeleteAll();
     } else {
       soundEngine.playNotification();
     }
@@ -209,6 +219,10 @@ export function showActionableToast(message, { type = 'success', actionText = 'M
       soundEngine.playError();
     } else if (type === 'warning') {
       soundEngine.playWarning();
+    } else if (type === 'delete' || type === 'trash') {
+      soundEngine.playDelete();
+    } else if (type === 'deleteAll' || type === 'clearAll') {
+      soundEngine.playDeleteAll();
     } else {
       soundEngine.playNotification();
     }
