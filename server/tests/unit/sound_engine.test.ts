@@ -682,5 +682,18 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(html).toContain('cue-gain-slider');
     expect(html).toContain('data-cue-slider="jobComplete"');
   });
+
+  it('23. User Settings Page: renderServerPage allows only sound toggle (on/off) and contains no admin sound controls', async () => {
+    const { renderServerPage } = await import('../../../src/pages/ServerPage.js');
+
+    const html = renderServerPage();
+    expect(html).toContain('Âm thanh giao diện');
+    expect(html).toContain('btnServerSoundToggle');
+    expect(html).toContain('badgeServerSound');
+    // Strictly no admin sound control link or deep tuning references for regular user page
+    expect(html).not.toContain('Mở Admin Sound Control');
+    expect(html).not.toContain('Admin Sound Control');
+    expect(html).not.toContain('Khuếch đại & tuỳ biến sâu Web Audio');
+  });
 });
 

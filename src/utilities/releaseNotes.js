@@ -6,6 +6,17 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.66': {
+    version: 'v23.66',
+    title: 'Bản cập nhật v23.66',
+    date: '21/10/2026',
+    features: [
+      'Tinh gọn giao diện âm thanh trên trang Cài đặt & Tùy chọn (User Settings): Loại bỏ hoàn toàn lối tắt quản trị âm thanh, chỉ tập trung vào nút bật/tắt phản hồi'
+    ],
+    fixes: [
+      'Phân quyền giao diện rõ ràng: Chuyển toàn bộ tính năng khuếch đại và cân chỉnh âm thanh chuyên sâu về Trung tâm Quản trị Admin Mission Control (#admin)'
+    ]
+  },
   'v23.65': {
     version: 'v23.65',
     title: 'Bản cập nhật v23.65',

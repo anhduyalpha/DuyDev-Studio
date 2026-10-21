@@ -17,14 +17,12 @@ import {
 import { toggleTheme, getStoredTheme } from '../hooks/useTheme.js';
 import { showToast } from '../utilities/toast.js';
 import { soundEngine } from '../utilities/soundEngine.js';
-import { isAdminAuthenticated } from '../utilities/adminAuth.js';
 
 export function renderServerPage() {
   const isDark = getStoredTheme() === 'dark';
   const isStandalone = isStandaloneMode();
   const isNative = isNativeApp();
   const isSoundEnabled = soundEngine.isEnabled();
-  const isAdmin = isAdminAuthenticated();
 
   return `
     <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn pb-12 md:pb-16">
@@ -82,15 +80,6 @@ export function renderServerPage() {
             <span>${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}</span>
           </button>
         </div>
-
-        ${isAdmin ? `
-        <div class="pt-3 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-          <span>Khuếch đại & tuỳ biến sâu Web Audio nằm trong Trung tâm Quản trị.</span>
-          <a href="#admin" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer">
-            <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Mở Admin Sound Control
-          </a>
-        </div>
-        ` : ''}
       </div>
 
       <!-- 3. Ứng dụng & Cập nhật -->
