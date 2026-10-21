@@ -67,14 +67,20 @@ export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
  * @returns {HTMLElement}
  */
 function ensureModalMounted(id = 'globalSlideConfirmModal') {
-  let modal = document.getElementById(id);
-  if (!modal) {
+  const existingModals = typeof document !== 'undefined' ? document.querySelectorAll(`[id="${id}"]`) : [];
+  let modal = null;
+  if (existingModals.length > 0) {
+    modal = existingModals[0];
+    for (let i = 1; i < existingModals.length; i++) {
+      existingModals[i].remove();
+    }
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+  } else {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = renderSlideConfirmModal(id);
     modal = wrapper.firstElementChild;
-    document.body.appendChild(modal);
-  } else if (modal.parentElement !== document.body) {
-    // Teleport directly to document.body to break out of containing blocks, transforms, or max-width containers
     document.body.appendChild(modal);
   }
   return modal;
