@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.65': {
+    version: 'v23.65',
+    title: 'Bản cập nhật v23.65',
+    date: '21/10/2026',
+    features: [
+      'Bàn hòa âm khuếch đại độc lập từng âm hiệu (Per-Sound Gain Mixer) trong trang Quản trị Admin (#admin)',
+      '13 kênh khuếch đại âm thanh độc lập (0% – 250%): Tùy chỉnh độ lớn riêng biệt cho từng âm hiệu hệ thống (Hoàn thành, Bắt đầu, Báo lỗi, Xóa mục, Đổi theme, v.v.)',
+      'Nút nghe thử tức thì trên từng kênh âm hiệu kèm nút đặt lại nhanh về mức chuẩn 100% và nút đặt lại toàn bộ 13 âm'
+    ],
+    fixes: [
+      'Định tuyến âm thanh đa tầng: Tách riêng từng node GainNode cho từng âm hiệu trước khi đi qua Master Gain và Compressor',
+      'Lưu trữ cấu hình khuếch đại bền vững qua localStorage (ds_sound_cue_gains) và đồng bộ tức thì không cần tải lại trang'
+    ]
+  },
   'v23.64': {
     version: 'v23.64',
     title: 'Bản cập nhật v23.64',

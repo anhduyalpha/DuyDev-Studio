@@ -18,6 +18,7 @@
 
 const STORAGE_KEY = 'ds_sound_enabled';
 const STORAGE_KEY_VOLUME = 'ds_sound_volume';
+const STORAGE_KEY_CUE_GAINS = 'ds_sound_cue_gains';
 const IDLE_SUSPEND_DELAY_MS = 30000; // 30s generous idle on desktop
 const BASE_MASTER_GAIN = 0.60; // Clean, audible base gain staging
 
@@ -52,6 +53,10 @@ class SoundEngine {
     this.enabled = true;
     // Load initial volume / amplification (range: 0.0 to 2.5, default: 1.0 = 100%)
     this.volume = 1.0;
+    // Load per-cue gain multipliers from localStorage (default: 1.0 = 100%)
+    this.cueGains = {};
+    /** @type {Record<string, GainNode>} */
+    this.cueGainNodes = {};
 
     if (typeof window !== 'undefined' && window.localStorage) {
       const storedMute = window.localStorage.getItem(STORAGE_KEY);
@@ -61,6 +66,16 @@ class SoundEngine {
       if (!isNaN(storedVol) && storedVol >= 0) {
         this.volume = Math.max(0.0, Math.min(2.5, storedVol));
       }
+
+      try {
+        const storedCueGains = window.localStorage.getItem(STORAGE_KEY_CUE_GAINS);
+        if (storedCueGains) {
+          const parsed = JSON.parse(storedCueGains);
+          if (parsed && typeof parsed === 'object') {
+            this.cueGains = parsed;
+          }
+        }
+      } catch (_) {}
     }
 
     if (typeof window !== 'undefined') {
@@ -174,6 +189,7 @@ class SoundEngine {
     if (!this.ctx) {
       try {
         this.ctx = new AudioContextClass();
+        this.cueGainNodes = {};
 
         // 1. Master Low-pass Filter (Warm acoustic shaping, 2200Hz, Q: 0.7)
         this.masterFilter = this.ctx.createBiquadFilter();
@@ -343,6 +359,147 @@ class SoundEngine {
     return this.volume;
   }
 
+  // =========================================================================
+  // Per-Cue Gain Staging (Independent Sound Multipliers 0.0x to 2.5x)
+  // =========================================================================
+
+  /**
+   * Normalizes cue aliases to standard canonical IDs.
+   * @private
+   * @param {string} cueId
+   * @returns {string}
+   */
+  _normalizeCueId(cueId) {
+    if (!cueId) return 'jobComplete';
+    switch (cueId) {
+      case 'trash': return 'delete';
+      case 'clearAll':
+      case 'clear': return 'deleteAll';
+      case 'snap': return 'toggle';
+      case 'paste': return 'start';
+      case 'light': return 'themeLight';
+      case 'dark': return 'themeDark';
+      case 'update': return 'appUpdate';
+      case 'studocu':
+      case 'cardBlue': return 'urStudocu';
+      case 'scribd':
+      case 'cardOrange': return 'urScribd';
+      case 'cardGold':
+      case 'blade': return 'sovereignBlade';
+      default: return cueId;
+    }
+  }
+
+  /**
+   * Returns the dedicated GainNode destination for a given cue.
+   * Lazily instantiates the cue's GainNode and connects it to masterGain.
+   * @private
+   * @param {string} cueId
+   * @returns {AudioNode|null}
+   */
+  _getCueDestination(cueId) {
+    if (!this.ctx || !this.masterGain) return null;
+    const norm = this._normalizeCueId(cueId);
+    if (!this.cueGainNodes) this.cueGainNodes = {};
+    if (!this.cueGainNodes[norm]) {
+      const node = this.ctx.createGain();
+      const val = this.getCueGain(norm);
+      try {
+        node.gain.setValueAtTime(val, this.ctx.currentTime);
+      } catch (_) {
+        node.gain.value = val;
+      }
+      node.connect(this.masterGain);
+      this.cueGainNodes[norm] = node;
+    }
+    return this.cueGainNodes[norm];
+  }
+
+  /**
+   * Returns the gain multiplier for a specific sound cue (default: 1.0 = 100%).
+   * @param {string} cueId
+   * @returns {number}
+   */
+  getCueGain(cueId) {
+    const norm = this._normalizeCueId(cueId);
+    if (typeof this.cueGains[norm] === 'number') {
+      return this.cueGains[norm];
+    }
+    return 1.0;
+  }
+
+  /**
+   * Sets the gain multiplier for a specific sound cue (range: 0.0 to 2.5).
+   * Persists setting in localStorage, updates live AudioContext GainNode immediately,
+   * and dispatches change notification event.
+   * @param {string} cueId
+   * @param {number|string} multiplier
+   * @returns {number}
+   */
+  setCueGain(cueId, multiplier) {
+    const norm = this._normalizeCueId(cueId);
+    const parsed = parseFloat(multiplier);
+    const clamped = isNaN(parsed) ? 1.0 : Math.max(0.0, Math.min(2.5, Math.round(parsed * 100) / 100));
+
+    this.cueGains[norm] = clamped;
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY_CUE_GAINS, JSON.stringify(this.cueGains));
+      } catch (_) {}
+    }
+
+    if (this.cueGainNodes && this.cueGainNodes[norm] && this.ctx) {
+      try {
+        this.cueGainNodes[norm].gain.setValueAtTime(clamped, this.ctx.currentTime);
+      } catch (_) {
+        this.cueGainNodes[norm].gain.value = clamped;
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ds:sound-cue-gain-change', {
+        detail: { cue: norm, gain: clamped, percent: Math.round(clamped * 100) }
+      }));
+    }
+
+    return clamped;
+  }
+
+  /**
+   * Resets all per-cue gain multipliers back to default 1.0 (100%).
+   */
+  resetCueGains() {
+    this.cueGains = {};
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY_CUE_GAINS);
+      } catch (_) {}
+    }
+
+    if (this.cueGainNodes && this.ctx) {
+      Object.keys(this.cueGainNodes).forEach((norm) => {
+        try {
+          this.cueGainNodes[norm].gain.setValueAtTime(1.0, this.ctx.currentTime);
+        } catch (_) {
+          this.cueGainNodes[norm].gain.value = 1.0;
+        }
+      });
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ds:sound-cue-gains-reset'));
+    }
+  }
+
+  /**
+   * Returns a copy of all configured per-cue gain multipliers.
+   * @returns {Record<string, number>}
+   */
+  getAllCueGains() {
+    return { ...this.cueGains };
+  }
+
   /**
    * Sets volume multiplier, updates master gain, persists to localStorage, and notifies listeners.
    * @param {number|string} vol Multiplier from 0.0 (0%) to 2.5 (250%)
@@ -384,7 +541,8 @@ class SoundEngine {
       volume: this.volume,
       volumePercent: Math.round(this.volume * 100),
       isMobile: this._isMobileDevice(),
-      hasCompressor: Boolean(this.compressor)
+      hasCompressor: Boolean(this.compressor),
+      cueGains: this.getAllCueGains()
     };
   }
 
@@ -487,7 +645,8 @@ class SoundEngine {
       noteGain.gain.setValueAtTime(0.0001, noteStart);
       noteGain.gain.linearRampToValueAtTime(0.28, noteStart + 0.012);
       noteGain.gain.exponentialRampToValueAtTime(0.0001, noteStop);
-      noteGain.connect(this.masterGain);
+      const dest = this._getCueDestination('jobComplete') || this.masterGain;
+      noteGain.connect(dest);
 
       // Primary Glass Body (Pure Sine)
       const oscPrimary = ctx.createOscillator();
@@ -580,7 +739,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.linearRampToValueAtTime(0.30, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    gain.connect(this.masterGain);
+    gain.connect(this._getCueDestination('start') || this.masterGain);
 
     const osc = ctx.createOscillator();
     osc.type = 'sine';
@@ -625,7 +784,7 @@ class SoundEngine {
     noteGain.gain.setValueAtTime(0.0001, now);
     noteGain.gain.linearRampToValueAtTime(0.28, now + 0.008);
     noteGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    noteGain.connect(this.masterGain);
+    noteGain.connect(this._getCueDestination('notification') || this.masterGain);
 
     // Primary Bell Droplet (A5 = 880Hz)
     const bellOsc = ctx.createOscillator();
@@ -677,7 +836,7 @@ class SoundEngine {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(900, now);
     filter.Q.setValueAtTime(0.6, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('error') || this.masterGain);
 
     // Tap 1: 220Hz (A3)
     const t1Start = now;
@@ -742,7 +901,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.linearRampToValueAtTime(0.25, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    gain.connect(this.masterGain);
+    gain.connect(this._getCueDestination('error') || this.masterGain);
 
     const osc = ctx.createOscillator();
     osc.type = 'triangle';
@@ -780,7 +939,7 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.linearRampToValueAtTime(0.18, now + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    gain.connect(this.masterGain);
+    gain.connect(this._getCueDestination('toggle') || this.masterGain);
 
     const osc = ctx.createOscillator();
     osc.type = 'sine';
@@ -836,7 +995,7 @@ class SoundEngine {
     filter.frequency.setValueAtTime(1600, now);
     filter.frequency.exponentialRampToValueAtTime(450, now + 0.120);
     filter.Q.setValueAtTime(0.8, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('delete') || this.masterGain);
 
     // 2. Primary Tactile Suction Pop (Sine glide: 340Hz -> 140Hz)
     const popGain = ctx.createGain();
@@ -917,7 +1076,7 @@ class SoundEngine {
     filter.frequency.setValueAtTime(2400, now);
     filter.frequency.exponentialRampToValueAtTime(350, now + 0.260);
     filter.Q.setValueAtTime(1.2, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('deleteAll') || this.masterGain);
 
     // 1. Vacuum Whoosh Glide (440Hz -> 261.63Hz -> 164.81Hz)
     const sweepGain = ctx.createGain();
@@ -1026,7 +1185,8 @@ class SoundEngine {
     primaryGain.gain.setValueAtTime(0.0001, now);
     primaryGain.gain.linearRampToValueAtTime(0.24, now + 0.012);
     primaryGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    primaryGain.connect(this.masterGain);
+    const dest = this._getCueDestination('themeLight') || this.masterGain;
+    primaryGain.connect(dest);
 
     const primaryOsc = ctx.createOscillator();
     primaryOsc.type = 'sine';
@@ -1040,7 +1200,7 @@ class SoundEngine {
     sparkleGain.gain.setValueAtTime(0.0001, sparkleStart);
     sparkleGain.gain.linearRampToValueAtTime(0.16, sparkleStart + 0.010);
     sparkleGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-    sparkleGain.connect(this.masterGain);
+    sparkleGain.connect(dest);
 
     const sparkleOsc = ctx.createOscillator();
     sparkleOsc.type = 'sine';
@@ -1085,7 +1245,7 @@ class SoundEngine {
     filter.frequency.setValueAtTime(1100, now);
     filter.frequency.exponentialRampToValueAtTime(650, now + duration);
     filter.Q.setValueAtTime(0.8, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('themeDark') || this.masterGain);
 
     // Primary Descending Body (440Hz -> 261.63Hz)
     const bodyGain = ctx.createGain();
@@ -1156,7 +1316,7 @@ class SoundEngine {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(3200, now);
     filter.Q.setValueAtTime(0.7, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('appUpdate') || this.masterGain);
 
     // 1. Deep Analog Sub-Anchor (D3: 146.83Hz)
     const subGain = ctx.createGain();
@@ -1321,7 +1481,7 @@ class SoundEngine {
     filter.frequency.exponentialRampToValueAtTime(4200, now + 0.060);
     filter.frequency.exponentialRampToValueAtTime(2800, stopTime);
     filter.Q.setValueAtTime(1.4, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('urStudocu') || this.masterGain);
 
     // 1. Indigo Sub-Anchor (D#3: 155.56Hz)
     const subGain = ctx.createGain();
@@ -1454,7 +1614,7 @@ class SoundEngine {
     filter.frequency.exponentialRampToValueAtTime(3200, now + 0.070);
     filter.frequency.exponentialRampToValueAtTime(2200, stopTime);
     filter.Q.setValueAtTime(1.0, now);
-    filter.connect(this.masterGain);
+    filter.connect(this._getCueDestination('urScribd') || this.masterGain);
 
     // 1. Solar Low Hearth Anchor (F3: 174.61Hz)
     const subGain = ctx.createGain();
@@ -1587,7 +1747,7 @@ class SoundEngine {
     beamFilter.frequency.exponentialRampToValueAtTime(3600, now + 0.060);
     beamFilter.frequency.exponentialRampToValueAtTime(2200, stopTime);
     beamFilter.Q.setValueAtTime(1.2, now);
-    beamFilter.connect(this.masterGain);
+    beamFilter.connect(this._getCueDestination('sovereignBlade') || this.masterGain);
 
     // 1. Sub-Energy Core (110Hz A2) - gives the light blade deep energy heft
     const subGain = ctx.createGain();

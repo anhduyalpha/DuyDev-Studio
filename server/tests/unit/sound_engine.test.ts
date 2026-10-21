@@ -603,5 +603,84 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     soundEngine.testSound('clear');
     expect(deleteAllSpy).toHaveBeenCalledTimes(5);
   });
+
+  it('21. Per-Cue Gain Multipliers: getCueGain, setCueGain, resetCueGains, persistence and event notification', async () => {
+    const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
+
+    // Default cue gain should be 1.0 (100%)
+    expect(soundEngine.getCueGain('jobComplete')).toBe(1.0);
+    expect(soundEngine.getCueGain('error')).toBe(1.0);
+    expect(soundEngine.getCueGain('unknownCue')).toBe(1.0);
+
+    // Set cue gain with clamping (0.0 to 2.5)
+    soundEngine.setCueGain('jobComplete', 1.85);
+    expect(soundEngine.getCueGain('jobComplete')).toBe(1.85);
+    expect((global as any).window.dispatchEvent).toHaveBeenCalled();
+
+    // Test alias normalization: 'trash' -> 'delete'
+    soundEngine.setCueGain('trash', 0.5);
+    expect(soundEngine.getCueGain('delete')).toBe(0.5);
+    expect(soundEngine.getCueGain('trash')).toBe(0.5);
+
+    // Test bounds clamping: negative -> 0.0, excessive -> 2.5
+    soundEngine.setCueGain('error', -0.5);
+    expect(soundEngine.getCueGain('error')).toBe(0.0);
+
+    soundEngine.setCueGain('toggle', 3.5);
+    expect(soundEngine.getCueGain('toggle')).toBe(2.5);
+
+    // Verify persistence in localStorage
+    expect(mockLocalStorage['ds_sound_cue_gains']).toBeDefined();
+    const parsed = JSON.parse(mockLocalStorage['ds_sound_cue_gains']);
+    expect(parsed.jobComplete).toBe(1.85);
+    expect(parsed.delete).toBe(0.5);
+    expect(parsed.error).toBe(0.0);
+    expect(parsed.toggle).toBe(2.5);
+
+    // Verify getAllCueGains
+    const all = soundEngine.getAllCueGains();
+    expect(all.jobComplete).toBe(1.85);
+    expect(all.delete).toBe(0.5);
+
+    // Verify diagnostics include cueGains
+    const diag = soundEngine.getAudioDiagnostics();
+    expect(diag.cueGains).toBeDefined();
+    expect(diag.cueGains.jobComplete).toBe(1.85);
+
+    // Reset all cue gains to 1.0
+    soundEngine.resetCueGains();
+    expect(soundEngine.getCueGain('jobComplete')).toBe(1.0);
+    expect(soundEngine.getCueGain('delete')).toBe(1.0);
+    expect(soundEngine.getCueGain('error')).toBe(1.0);
+    expect(mockLocalStorage['ds_sound_cue_gains']).toBeUndefined();
+  });
+
+  it('22. Admin Sound Control: SOUND_CUES_CATALOG contains 13 channels with proper identifiers and UI metadata', async () => {
+    const { SOUND_CUES_CATALOG, renderAdminSoundControlCard } = await import('../../../src/components/admin/AdminSoundControlCard.js');
+
+    expect(Array.isArray(SOUND_CUES_CATALOG)).toBe(true);
+    expect(SOUND_CUES_CATALOG.length).toBe(13);
+
+    const ids = SOUND_CUES_CATALOG.map(c => c.id);
+    expect(ids).toContain('jobComplete');
+    expect(ids).toContain('start');
+    expect(ids).toContain('notification');
+    expect(ids).toContain('error');
+    expect(ids).toContain('toggle');
+    expect(ids).toContain('delete');
+    expect(ids).toContain('deleteAll');
+    expect(ids).toContain('themeLight');
+    expect(ids).toContain('themeDark');
+    expect(ids).toContain('appUpdate');
+    expect(ids).toContain('urStudocu');
+    expect(ids).toContain('urScribd');
+    expect(ids).toContain('sovereignBlade');
+
+    const html = renderAdminSoundControlCard();
+    expect(html).toContain('Khuếch đại từng âm hiệu');
+    expect(html).toContain('btnAdminResetAllCueGains');
+    expect(html).toContain('cue-gain-slider');
+    expect(html).toContain('data-cue-slider="jobComplete"');
+  });
 });
 
