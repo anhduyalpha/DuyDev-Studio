@@ -22,6 +22,12 @@ import {
   setQuizHistoryBoxOpen,
   isQuizHistoryBoxExpanded
 } from '../../../src/components/tools/quiz/components/QuizHistoryList.js';
+import {
+  renderRecentActivity,
+  setRecentActivityOpen,
+  isRecentActivityExpanded,
+  toggleRecentActivity
+} from '../../../src/components/dashboard/RecentActivity.js';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const store = new Map<string, string>();
@@ -44,6 +50,7 @@ describe('Collapsible History Dropboxes Across All Modules', () => {
     setQrHistoryOpen('scan', false);
     setQrHistoryOpen('all', false);
     setQuizHistoryBoxOpen(false);
+    setRecentActivityOpen(false);
   });
 
   describe('1. File Converter Pro History Dropbox', () => {
@@ -136,6 +143,61 @@ describe('Collapsible History Dropboxes Across All Modules', () => {
 
       toggleQuizHistoryBox();
       expect(isQuizHistoryBoxExpanded()).toBe(false);
+    });
+  });
+
+  describe('5. Dashboard Recent Activity Dropbox', () => {
+    it('returns empty string when there are no history items', () => {
+      localStorage.setItem('ds_job_history_v2', JSON.stringify([]));
+      const html = renderRecentActivity();
+      expect(html).toBe('');
+    });
+
+    it('renders collapsed dropbox by default when items exist', () => {
+      const mockHistory = [
+        {
+          id: 'hist_1',
+          toolId: 'universal-converter',
+          fileName: 'Bai tap TCP.txt',
+          resultSize: 1200,
+          timestamp: Date.now()
+        }
+      ];
+      localStorage.setItem('ds_job_history_v2', JSON.stringify(mockHistory));
+
+      setRecentActivityOpen(false);
+      expect(isRecentActivityExpanded()).toBe(false);
+
+      const html = renderRecentActivity();
+      expect(html).toContain('id="btnToggleRecentActivity"');
+      expect(html).toContain('Tác vụ gần đây');
+      expect(html).toContain('id="recentActivityBody" class="hidden');
+      expect(html).toContain('href="#trash"');
+      expect(html).toContain('href="#history"');
+    });
+
+    it('toggles expansion state and reveals body when opened', () => {
+      const mockHistory = [
+        {
+          id: 'hist_1',
+          toolId: 'universal-converter',
+          fileName: 'Bai tap TCP.txt',
+          resultSize: 1200,
+          timestamp: Date.now()
+        }
+      ];
+      localStorage.setItem('ds_job_history_v2', JSON.stringify(mockHistory));
+
+      toggleRecentActivity();
+      expect(isRecentActivityExpanded()).toBe(true);
+
+      const html = renderRecentActivity();
+      expect(html).toContain('id="recentActivityBody" class="block');
+      expect(html).toContain('id="recentActivityCardsGrid"');
+      expect(html).toContain('Bai tap TCP.txt');
+
+      toggleRecentActivity();
+      expect(isRecentActivityExpanded()).toBe(false);
     });
   });
 });

@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.67': {
+    version: 'v23.67',
+    title: 'Bản cập nhật v23.67',
+    date: '21/10/2026',
+    features: [
+      'Nâng cấp khu vực Tác vụ gần đây thành Dropbox thu gọn trên Dashboard chính: Tối ưu không gian hiển thị, hỗ trợ mở rộng/thu gọn tức thì',
+      'Đồng bộ trạng thái mở/đóng bền vững qua localStorage (ds_dashboard_recent_open) kèm phản hồi âm thanh tactile click khi bấm tiêu đề hoặc icon chevron',
+      'Giữ nguyên lối tắt nhanh đến Thùng rác và Xem tất cả lịch sử, tối ưu trải nghiệm đọc trên thiết bị di động và Android APK'
+    ],
+    fixes: [
+      'Loại bỏ tình trạng 3 thẻ tác vụ gần đây chiếm trọn chiều cao màn hình điện thoại khi truy cập Trang chủ'
+    ]
+  },
   'v23.66': {
     version: 'v23.66',
     title: 'Bản cập nhật v23.66',

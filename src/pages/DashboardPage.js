@@ -5,7 +5,7 @@
 import { renderCategoryFilters, attachCategoryFilterListeners, getAdjacentCategory, CATEGORIES } from '../components/dashboard/CategoryFilters.js';
 import { initDashboardSwipe } from '../components/dashboard/dashboardSwipeController.js';
 import { renderToolCard } from '../components/dashboard/ToolCard.js';
-import { renderRecentActivity } from '../components/dashboard/RecentActivity.js';
+import { renderRecentActivity, toggleRecentActivity } from '../components/dashboard/RecentActivity.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
 import { storage } from '../utilities/storage.js';
 import { ViewerConnector } from '../components/common/viewer/FileViewerConnector.js';
@@ -244,6 +244,17 @@ export function attachDashboardListeners(onReRender) {
   const recentContainer = document.getElementById('recentActivityContainer');
   if (recentContainer) {
     recentContainer.addEventListener('click', async (e) => {
+      // 0. Toggle Recent Activity Dropbox
+      const toggleTarget = e.target.closest('#btnToggleRecentActivity, #btnToggleRecentActivityChevron, #recentActivityHeader');
+      if (toggleTarget && !e.target.closest('a, .recent-activity-card, button[data-trash-recent], button[data-open-in-tool], button[data-copy-recent], button[data-preview-recent]')) {
+        e.preventDefault();
+        toggleRecentActivity();
+        recentContainer.innerHTML = renderRecentActivity();
+        if (window.lucide) window.lucide.createIcons({ root: recentContainer });
+        try { soundEngine.playToggle(); } catch (_) {}
+        return;
+      }
+
       // 1. Move to Trash (Optimistic removal)
       const trashBtn = e.target.closest('.btn-trash-recent');
       if (trashBtn) {
@@ -262,6 +273,11 @@ export function attachDashboardListeners(onReRender) {
             const grid = document.getElementById('recentActivityCardsGrid');
             if (grid && grid.children.length === 0) {
               recentContainer.innerHTML = '';
+            } else {
+              const badge = document.getElementById('recentActivityCountBadge');
+              if (badge && grid) {
+                badge.textContent = `${grid.children.length} mục`;
+              }
             }
           }, 200);
         }
