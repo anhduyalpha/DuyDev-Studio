@@ -13,8 +13,8 @@ let keydownListener = null;
  */
 export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
   return `
-    <div id="${id}" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden animate-fadeIn select-none" style="display: none;">
-      <div class="relative w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4">
+    <div id="${id}" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md hidden select-none" style="display: none; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
+      <div class="relative w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4 animate-scaleUp">
         <!-- Header -->
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -69,11 +69,13 @@ export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
 function ensureModalMounted(id = 'globalSlideConfirmModal') {
   let modal = document.getElementById(id);
   if (!modal) {
-    const container = document.getElementById('globalSlideConfirmContainer') || document.body;
     const wrapper = document.createElement('div');
     wrapper.innerHTML = renderSlideConfirmModal(id);
     modal = wrapper.firstElementChild;
-    container.appendChild(modal);
+    document.body.appendChild(modal);
+  } else if (modal.parentElement !== document.body) {
+    // Teleport directly to document.body to break out of containing blocks, transforms, or max-width containers
+    document.body.appendChild(modal);
   }
   return modal;
 }
@@ -103,6 +105,11 @@ export function openSlideConfirmModal(optionsOrConfirm) {
 
   if (!modal || !track || !handle) return;
 
+  // Guarantee modal is a direct child of document.body
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
   const title = options.title || 'Dọn sạch thùng rác';
   const description = options.description || 'Xóa vĩnh viễn toàn bộ tệp trong thùng rác.';
   const warningText = options.warningText || 'Hành động này không thể hoàn tác. Các tệp sẽ bị xóa hoàn toàn khỏi máy chủ.';
@@ -115,8 +122,21 @@ export function openSlideConfirmModal(optionsOrConfirm) {
 
   activeConfirmCallback = options.onConfirm || null;
   modal.classList.remove('hidden');
+  modal.style.position = 'fixed';
+  modal.style.inset = '0';
+  modal.style.width = '100vw';
+  modal.style.height = '100vh';
   modal.style.display = 'flex';
-  modal.style.zIndex = '9999';
+  modal.style.zIndex = '99999';
+  modal.style.backdropFilter = 'blur(12px)';
+  modal.style.webkitBackdropFilter = 'blur(12px)';
+
+  // Lock scrolling while confirm modal is active
+  try {
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  } catch {}
+
   if (window.lucide) window.lucide.createIcons();
 
   // Reset handle and track
@@ -264,6 +284,13 @@ export function closeSlideConfirmModal(id = 'globalSlideConfirmModal') {
     modal.classList.add('hidden');
     modal.style.display = 'none';
   }
+
+  // Restore background scrolling
+  try {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  } catch {}
+
   activeConfirmCallback = null;
   if (keydownListener) {
     window.removeEventListener('keydown', keydownListener);

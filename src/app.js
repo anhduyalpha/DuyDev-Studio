@@ -303,6 +303,14 @@ class App {
       document.body.appendChild(shareTargetEl);
     }
 
+    // Ensure globalSlideConfirmContainer exists on body outside appRoot so modal is never trapped in containing blocks
+    if (!document.getElementById('globalSlideConfirmContainer')) {
+      const slideConfirmEl = document.createElement('div');
+      slideConfirmEl.id = 'globalSlideConfirmContainer';
+      slideConfirmEl.innerHTML = renderSlideConfirmModal();
+      document.body.appendChild(slideConfirmEl);
+    }
+
     this.appRoot.innerHTML = `
       <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-clip">
         <div id="headerContainer" class="w-full"></div>
@@ -311,7 +319,6 @@ class App {
         <div id="bottomNavContainer"></div>
         <div id="globalPreviewContainer"></div>
         <div id="globalTaskDockContainer"></div>
-        <div id="globalSlideConfirmContainer">${renderSlideConfirmModal()}</div>
       </div>
     `;
 

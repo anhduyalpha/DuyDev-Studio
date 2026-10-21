@@ -1628,16 +1628,28 @@ function handleDownloadBatch(paths) {
   }
 }
 
+function getStorageModalRoot() {
+  let modalRoot = document.getElementById('storageModalRoot');
+  if (!modalRoot) {
+    modalRoot = document.createElement('div');
+    modalRoot.id = 'storageModalRoot';
+    document.body.appendChild(modalRoot);
+  } else if (modalRoot.parentElement !== document.body) {
+    document.body.appendChild(modalRoot);
+  }
+  return modalRoot;
+}
+
 /**
  * Modal for creating a new directory
  */
 function showNewFolderModal(onConfirm) {
-  const modalRoot = document.getElementById('storageModalRoot');
+  const modalRoot = getStorageModalRoot();
   if (!modalRoot) return;
 
   modalRoot.innerHTML = `
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
-      <div class="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+    <div class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
+      <div class="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-scaleUp">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
             <i data-lucide="folder-plus" class="w-5 h-5"></i>
@@ -1699,7 +1711,7 @@ function showNewFolderModal(onConfirm) {
  * Action Sheet / Modal for Item Operations (Mobile & Desktop)
  */
 function showStorageItemActionsModal(item, loadDirectory, previewStorageItem) {
-  const modalRoot = document.getElementById('storageModalRoot');
+  const modalRoot = getStorageModalRoot();
   if (!modalRoot || !item) return;
 
   const visual = getFileVisualInfo(item);
@@ -1708,7 +1720,7 @@ function showStorageItemActionsModal(item, loadDirectory, previewStorageItem) {
   const isArchive = !item.isDirectory && ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'tgz', 'xz'].includes(ext);
 
   modalRoot.innerHTML = `
-    <div id="storageItemActionsOverlay" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn select-none">
+    <div id="storageItemActionsOverlay" class="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
       <div class="bg-white dark:bg-[#18181b] border-t sm:border border-zinc-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto custom-scrollbar">
         
         <!-- Header: File info & Close -->
@@ -1898,11 +1910,11 @@ function showStorageItemActionsModal(item, loadDirectory, previewStorageItem) {
  * Modal for renaming an item
  */
 function handleRenameItem(itemPath, oldName, onComplete) {
-  const modalRoot = document.getElementById('storageModalRoot');
+  const modalRoot = getStorageModalRoot();
   if (!modalRoot) return;
 
   modalRoot.innerHTML = `
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+    <div class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
       <div class="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
@@ -1974,7 +1986,7 @@ function handleRenameItem(itemPath, oldName, onComplete) {
  * Interactive Modal for Moving or Copying items to any destination directory
  */
 function handleMoveCopyModal(itemPaths, isCopy = false, onComplete) {
-  const modalRoot = document.getElementById('storageModalRoot');
+  const modalRoot = getStorageModalRoot();
   if (!modalRoot || !itemPaths || itemPaths.length === 0) return;
 
   let browsePath = '/';
@@ -2016,7 +2028,7 @@ function handleMoveCopyModal(itemPaths, isCopy = false, onComplete) {
     const parentPath = browsePath === '/' ? null : (browsePath.split('/').slice(0, -1).join('/') || '/');
 
     modalRoot.innerHTML = `
-      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+      <div class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
         <div class="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center shrink-0">

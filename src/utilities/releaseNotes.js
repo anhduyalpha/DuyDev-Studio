@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.68': {
+    version: 'v23.68',
+    title: 'Bản cập nhật v23.68',
+    date: '21/10/2026',
+    features: [
+      'Nâng cấp toàn diện cơ chế Portal & Viewport Backdrop trên toàn bộ hệ thống modal (SlideConfirmModal, Storage, ViewSplit, Sound Mixer)',
+      'Chuẩn hóa hiệu ứng mờ kính sâu (Backdrop Blur 12px) bao phủ trọn vẹn 100vw màn hình, khắc phục triệt để hiện tượng khung mờ đen bị bó hẹp trong cột 896px trên màn hình máy tính/tablet',
+      'Tự động kích hoạt khóa cuộn trang (Scroll Lock) khi mở hộp thoại xác nhận hủy tệp và phục hồi mượt mà khi đóng'
+    ],
+    fixes: [
+      'Khắc phục lỗi CSS containing block trap do animation fadeIn lưu transform: translateY(0), giải phóng toàn bộ các hộp thoại fixed thoát khỏi container cha',
+      'Đảm bảo hộp thoại xác nhận Dọn sạch thùng rác hiển thị chuẩn xác, không bị viền trắng hai bên trên tất cả các trang'
+    ]
+  },
   'v23.67': {
     version: 'v23.67',
     title: 'Bản cập nhật v23.67',

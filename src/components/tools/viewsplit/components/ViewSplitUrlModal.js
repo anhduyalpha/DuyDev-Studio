@@ -17,7 +17,7 @@ export function renderViewSplitUrlModal(state) {
   const targetTitle = PANE_TITLES[urlModalTargetPaneId - 1] || `Ảnh ${urlModalTargetPaneId}`;
 
   return `
-    <div id="viewsplit-url-modal-backdrop" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div id="viewsplit-url-modal-backdrop" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
       <div class="relative w-full max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-2xl p-5 text-zinc-900 dark:text-white flex flex-col gap-4 animate-scaleUp">
         <!-- Modal Header -->
         <div class="flex items-center justify-between pb-3 border-b border-zinc-200/80 dark:border-white/10">

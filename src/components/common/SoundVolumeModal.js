@@ -28,7 +28,7 @@ export function openSoundVolumeModal() {
   const diag = soundEngine.getAudioDiagnostics();
 
   const modalHtml = `
-    <div id="soundVolumeModalContainer" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="soundModalTitle">
+    <div id="soundVolumeModalContainer" class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);" role="dialog" aria-modal="true" aria-labelledby="soundModalTitle">
       <div id="soundVolumeModalCard" class="relative w-full max-w-lg bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col p-5 sm:p-6 space-y-5 animate-scaleUp">
         
         <!-- Header -->
