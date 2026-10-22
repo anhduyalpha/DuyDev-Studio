@@ -42,41 +42,65 @@ class StudocuManager {
     this.pollInterval = null;
     this.timerInterval = null;
     this.orbInstance = null;
+    this.justDownloadedTimeout = null;
     this.downloadedDocNames = this.loadDownloadedDocs();
     this.justDownloadedDocName = null;
     this.prevDownloadSnapshot = null;
   }
 
   loadDownloadedDocs() {
-    try {
-      const raw = sessionStorage.getItem('ds_studocu_downloaded_docs');
-      return raw ? new Set(JSON.parse(raw)) : new Set();
-    } catch (_) {
-      return new Set();
-    }
+    return new Set();
   }
 
   saveDownloadedDocs() {
-    try {
-      sessionStorage.setItem('ds_studocu_downloaded_docs', JSON.stringify([...this.downloadedDocNames]));
-    } catch (_) {}
+    // Ephemeral in-memory only: do not persist to sessionStorage/localStorage
+  }
+
+  clearDownloadedHighlight() {
+    if (this.justDownloadedTimeout) {
+      clearTimeout(this.justDownloadedTimeout);
+      this.justDownloadedTimeout = null;
+    }
+    this.justDownloadedDocName = null;
+    this.downloadedDocNames.clear();
+    try { sessionStorage.removeItem('ds_studocu_downloaded_docs'); } catch (_) {}
+  }
+
+  cleanupWorkspace() {
+    this.clearDownloadedHighlight();
+    this.stopThinkingOrbs();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    this.stopPolling();
   }
 
   markAsDownloaded(docName, isJust = false) {
     if (!docName) return;
     const norm = (s) => (s || '').normalize('NFC').trim();
     const key = norm(docName);
-    this.downloadedDocNames.add(key);
-    this.saveDownloadedDocs();
-    if (isJust) {
-      this.justDownloadedDocName = key;
-      setTimeout(() => {
-        if (this.justDownloadedDocName === key) {
-          this.justDownloadedDocName = null;
-          this.notify();
-        }
-      }, 7000);
+
+    // Cancel existing timeout if active
+    if (this.justDownloadedTimeout) {
+      clearTimeout(this.justDownloadedTimeout);
+      this.justDownloadedTimeout = null;
     }
+
+    // Only highlight the newest file (clear previous highlights to prevent stacking)
+    this.downloadedDocNames.clear();
+    this.downloadedDocNames.add(key);
+    this.justDownloadedDocName = key;
+
+    // Automatically remove the highlight after 8 seconds ("rồi mất")
+    this.justDownloadedTimeout = setTimeout(() => {
+      if (this.justDownloadedDocName === key) {
+        this.justDownloadedDocName = null;
+        this.downloadedDocNames.delete(key);
+        this.notify();
+      }
+    }, 8000);
+
     this.notify();
   }
 
@@ -122,6 +146,7 @@ class StudocuManager {
   }
 
   async init() {
+    try { sessionStorage.removeItem('ds_studocu_downloaded_docs'); } catch (_) {}
     await this.fetchFiles();
     await this.resumeActiveJob();
   }
@@ -180,6 +205,7 @@ class StudocuManager {
 
   async startDownload(url, cookie = null) {
     if (this.isDownloading) return;
+    this.clearDownloadedHighlight();
     this.prevDownloadSnapshot = new Set(this.files.map(f => (f.name || f.title || '').normalize('NFC').trim()));
     this.isDownloading = true;
     this.hasError = false;

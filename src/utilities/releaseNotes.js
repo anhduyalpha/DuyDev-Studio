@@ -6,6 +6,17 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.69': {
+    version: 'v23.69',
+    title: 'Bản cập nhật v23.69',
+    date: '22/10/2026',
+    features: [
+      'Studocu Highlight Refinement: Tối ưu hiệu ứng báo mờ xanh tài liệu mới tải — tự động mờ dần và biến mất sau 8 giây, chỉ tô sáng duy nhất 1 tài liệu mới nhất thay vì dính vĩnh viễn'
+    ],
+    fixes: [
+      'Tự động dọn sạch trạng thái highlight khi rời khỏi module Studocu hoặc khi bắt đầu tải tệp mới, không tích lũy highlight xanh trên nhiều tệp'
+    ]
+  },
   'v23.68': {
     version: 'v23.68',
     title: 'Bản cập nhật v23.68',

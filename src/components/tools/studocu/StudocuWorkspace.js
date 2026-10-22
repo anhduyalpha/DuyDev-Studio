@@ -68,6 +68,7 @@ export function attachStudocuListeners() {
   let prevDownloading = false;
   let prevStructureKey = '';
   let prevSearchQuery = '';
+  let prevJustDownloadedDocName = '';
 
   function attachHeroHandlers() {
     const heroCancel = document.getElementById('studocuHeroCancelBtn');
@@ -187,10 +188,6 @@ export function attachStudocuListeners() {
         if (docName) {
           studocuManager.markAsDownloaded(docName, true);
         }
-        const fileItem = btn.closest('.file-item');
-        if (fileItem) {
-          fileItem.classList.add('file-item-downloaded', 'file-item-just-downloaded');
-        }
       });
     });
   }
@@ -255,16 +252,19 @@ export function attachStudocuListeners() {
 
     const itemsEl = document.getElementById('studocuItemsContainer');
     const topItemId = state.filteredItems?.[0]?.name || state.filteredItems?.[0]?.id || '';
-    const structureKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}:${topItemId}:${state.justDownloadedDocName || ''}:${(state.downloadedDocNames?.size || 0)}`;
+    const layoutKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}:${topItemId}`;
+    const highlightKey = state.justDownloadedDocName || '';
 
-    if (listEl && structureKey !== prevStructureKey) {
-      prevStructureKey = structureKey;
+    if (listEl && layoutKey !== prevStructureKey) {
+      prevStructureKey = layoutKey;
+      prevJustDownloadedDocName = highlightKey;
       prevSearchQuery = state.searchQuery;
       listEl.innerHTML = renderDocumentListCard(state);
       if (window.lucide?.createIcons) window.lucide.createIcons();
       attachListHandlers();
     } else if (itemsEl && state.searchQuery !== prevSearchQuery) {
       prevSearchQuery = state.searchQuery;
+      prevJustDownloadedDocName = highlightKey;
       const isTrash = state.currentTab === 'trash';
       const downloadedSet = state.downloadedDocNames || new Set();
       const justDownloadedName = state.justDownloadedDocName || null;
@@ -285,6 +285,16 @@ export function attachStudocuListeners() {
       if (clearBtn) clearBtn.classList.toggle('hidden', !state.searchQuery);
       const countBadge = document.getElementById('studocuItemCountBadge');
       if (countBadge) countBadge.textContent = `${(state.filteredItems || []).length} tệp`;
+    } else if (itemsEl && highlightKey !== prevJustDownloadedDocName) {
+      prevJustDownloadedDocName = highlightKey;
+      const norm = (s) => (s || '').normalize('NFC').trim();
+      const targetNorm = highlightKey ? norm(highlightKey) : null;
+      itemsEl.querySelectorAll('.file-item').forEach(el => {
+        const itemDocName = norm(el.getAttribute('data-doc-name'));
+        const isMatch = Boolean(targetNorm && itemDocName === targetNorm);
+        el.classList.toggle('file-item-downloaded', isMatch);
+        el.classList.toggle('file-item-just-downloaded', isMatch);
+      });
     }
   });
 
@@ -305,6 +315,6 @@ export function attachStudocuListeners() {
   return () => {
     unsubscribe();
     window.removeEventListener('paste', handleGlobalPaste);
-    studocuManager.stopThinkingOrbs();
+    studocuManager.cleanupWorkspace();
   };
 }
