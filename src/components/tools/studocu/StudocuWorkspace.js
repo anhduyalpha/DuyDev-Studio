@@ -35,30 +35,75 @@ export function renderStudocuWorkspace() {
   `.trim();
 }
 
-function isValidStudocuUrl(str) {
-  if (!str || typeof str !== 'string' || !/^https?:\/\//i.test(str.trim())) return false;
+export function extractStudocuUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  let text = raw.trim();
+
+  // 1. Strip markdown links [title](url) or <url>
+  const mdMatch = text.match(/\((https?:\/\/[^\s)]+)\)/i) || text.match(/<([^\s>]+)>/);
+  if (mdMatch) {
+    text = mdMatch[1];
+  }
+
+  // 2. Extract URL match from surrounded text
+  const urlMatch = text.match(/https?:\/\/[^\s"']+/i) || text.match(/(?:www\.)?(?:studocu|studeersnel)\.[a-z.]+\/[^\s"']+/i);
+  if (urlMatch) {
+    text = urlMatch[0];
+  }
+
+  // 3. Remove trailing punctuation commonly attached in text (. , ; ) > " ' etc.)
+  text = text.replace(/[.,;!?>"')\]]+$/, '').trim();
+
+  // 4. Ensure protocol
+  if (!/^https?:\/\//i.test(text)) {
+    text = 'https://' + text.replace(/^\/+/, '');
+  }
+
+  // 5. Validate hostname
   try {
-    const host = new URL(str.trim()).hostname.toLowerCase();
-    return host === 'studocu.com' || host.endsWith('.studocu.com') || host === 'studocu.vn' || host.endsWith('.studocu.vn');
-  } catch (_) { return false; }
+    const parsed = new URL(text);
+    const host = parsed.hostname.toLowerCase();
+    const isStudocu = host === 'studocu.com' ||
+      host.endsWith('.studocu.com') ||
+      host === 'studocu.vn' ||
+      host.endsWith('.studocu.vn') ||
+      host === 'studeersnel.nl' ||
+      host.endsWith('.studeersnel.nl');
+
+    if (isStudocu) {
+      return parsed.href;
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+function isValidStudocuUrl(str) {
+  return Boolean(extractStudocuUrl(str));
 }
 
 function handleUrlCandidate(raw) {
   const clean = String(raw || '').trim();
+  const validUrl = extractStudocuUrl(clean);
   const urlInput = document.getElementById('studocuUrlInput');
   const clearBtn = document.getElementById('btnClearStudocuUrl');
-  if (urlInput && urlInput.value !== clean) {
-    urlInput.value = clean;
-  }
-  if (clearBtn) clearBtn.classList.toggle('hidden', !clean);
 
-  if (!isValidStudocuUrl(clean)) {
+  if (urlInput && urlInput.value !== (validUrl || clean)) {
+    urlInput.value = validUrl || clean;
+  }
+  if (clearBtn) clearBtn.classList.toggle('hidden', !urlInput?.value?.trim());
+
+  if (!validUrl) {
     showToast('Link studocu không hợp lệ', 'error');
     const t = document.getElementById('studocuPasteBtnTitle');
-    if (t) { const old = t.textContent; t.textContent = 'Liên kết không hợp lệ'; setTimeout(() => { if (t) t.textContent = old; }, 2000); }
+    if (t) {
+      const old = t.textContent;
+      t.textContent = 'Liên kết không hợp lệ';
+      setTimeout(() => { if (t) t.textContent = old; }, 2000);
+    }
     return;
   }
-  studocuManager.startDownload(clean, null);
+  studocuManager.startDownload(validUrl, null);
 }
 
 export function attachStudocuListeners() {
@@ -77,6 +122,26 @@ export function attachStudocuListeners() {
     const form = document.getElementById('studocuDownloadForm');
     const urlInput = document.getElementById('studocuUrlInput');
     const clearBtn = document.getElementById('btnClearStudocuUrl');
+    const pasteBtn = document.getElementById('studocuPasteBtn');
+
+    function updateButtonState() {
+      const pasteBtnTitle = document.getElementById('studocuPasteBtnTitle');
+      const pasteBtnIcon = document.getElementById('studocuPasteBtnIcon');
+      const pasteBtnEl = document.getElementById('studocuPasteBtn');
+      if (!pasteBtnEl || studocuManager.getState().isDownloading) return;
+
+      const hasValue = Boolean(urlInput?.value?.trim());
+      if (hasValue) {
+        if (pasteBtnTitle) pasteBtnTitle.textContent = 'Bắt đầu tải';
+        if (pasteBtnIcon) pasteBtnIcon.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i>';
+        pasteBtnEl.setAttribute('title', 'Bắt đầu tải tài liệu');
+      } else {
+        if (pasteBtnTitle) pasteBtnTitle.textContent = 'Dán link & Tải';
+        if (pasteBtnIcon) pasteBtnIcon.innerHTML = '<i data-lucide="clipboard" class="w-4 h-4"></i>';
+        pasteBtnEl.setAttribute('title', 'Dán link từ bộ nhớ tạm & Tải ngay');
+      }
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: pasteBtnEl });
+    }
 
     const submitDownload = () => {
       if (studocuManager.getState().isDownloading) return;
@@ -89,6 +154,7 @@ export function attachStudocuListeners() {
     if (urlInput) {
       urlInput.oninput = () => {
         if (clearBtn) clearBtn.classList.toggle('hidden', !urlInput.value.trim());
+        updateButtonState();
       };
       urlInput.onkeydown = (e) => {
         if (e.key === 'Enter') {
@@ -99,7 +165,12 @@ export function attachStudocuListeners() {
       urlInput.onpaste = (e) => {
         const text = (e.clipboardData || window.clipboardData)?.getData('text');
         if (text && isValidStudocuUrl(text.trim())) {
-          setTimeout(() => handleUrlCandidate(text.trim()), 50);
+          setTimeout(() => {
+            handleUrlCandidate(text.trim());
+            updateButtonState();
+          }, 50);
+        } else {
+          setTimeout(() => updateButtonState(), 50);
         }
       };
     }
@@ -111,32 +182,81 @@ export function attachStudocuListeners() {
           urlInput.focus();
         }
         clearBtn.classList.add('hidden');
+        updateButtonState();
       };
     }
 
     if (form) form.onsubmit = (e) => { e.preventDefault(); submitDownload(); return false; };
 
-    const pasteBtn = document.getElementById('studocuPasteBtn');
     if (pasteBtn && !pasteBtn.disabled) {
       pasteBtn.onclick = async () => {
         if (studocuManager.getState().isDownloading) return;
+
+        // Option 1 Check: User has already entered or pasted a link into the box
         const currentInput = urlInput?.value?.trim();
         if (currentInput) {
           handleUrlCandidate(currentInput);
           return;
         }
-        if (navigator.clipboard?.readText) {
+
+        // Option 2: 1-Click Paste & Auto-Download from Clipboard
+        let text = '';
+
+        // 1. Android Native Bridge (0ms direct clipboard access)
+        try {
+          if (typeof window !== 'undefined' && typeof window.AndroidBridge?.getClipboardText === 'function') {
+            text = window.AndroidBridge.getClipboardText() || '';
+          }
+        } catch (_) {}
+
+        // 2. Modern async Clipboard API with 3000ms race timeout
+        if (!text && typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
           try {
-            const text = await navigator.clipboard.readText();
-            if (text?.trim()) { handleUrlCandidate(text); return; }
-            showToast('Clipboard rỗng', 'warning');
-            return;
-          } catch (_) {}
+            const clipPromise = navigator.clipboard.readText();
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('CLIPBOARD_TIMEOUT')), 3000)
+            );
+            text = await Promise.race([clipPromise, timeoutPromise]);
+          } catch (err) {
+            console.warn('[Studocu] Clipboard read failed:', err);
+          }
         }
-        showToast('Nhập liên kết hoặc nhấn Ctrl + V', 'info');
-        urlInput?.focus();
+
+        const trimmed = (text || '').trim();
+        if (trimmed) {
+          const validUrl = extractStudocuUrl(trimmed);
+          if (validUrl) {
+            // Auto-paste link into the input box so the user sees it
+            if (urlInput) {
+              urlInput.value = validUrl;
+              if (clearBtn) clearBtn.classList.remove('hidden');
+            }
+            updateButtonState();
+            showToast('Đã dán liên kết & bắt đầu tải...', 'success');
+            studocuManager.startDownload(validUrl, null);
+            return;
+          } else {
+            // Clipboard contains non-Studocu text
+            if (urlInput) {
+              urlInput.value = trimmed;
+              if (clearBtn) clearBtn.classList.remove('hidden');
+              urlInput.focus();
+            }
+            updateButtonState();
+            showToast('Nội dung trong clipboard không phải liên kết Studocu hợp lệ', 'warning');
+            return;
+          }
+        }
+
+        // 3. Fallback: Clipboard empty or blocked by browser permission
+        showToast('Bộ nhớ tạm trống hoặc bị trình duyệt chặn. Vui lòng bấm vào ô nhập để dán link.', 'info');
+        if (urlInput) {
+          urlInput.focus();
+        }
       };
     }
+
+    updateButtonState();
   }
 
   function attachTerminalHandlers() {

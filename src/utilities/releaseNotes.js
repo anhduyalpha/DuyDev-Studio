@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.70': {
+    version: 'v23.70',
+    title: 'Bản cập nhật v23.70',
+    date: '22/10/2026',
+    features: [
+      'Studocu Dual Input Workflow: Hỗ trợ hoàn hảo 2 lựa chọn nhập liên kết — bấm vào ô nhập để gõ/dán thủ công, hoặc bấm 1-click nút "Dán link & Tải" để tự động lấy link từ clipboard và bắt đầu tải tức thì'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi bấm nút Dán link bị nhảy con trỏ vào ô nhập thay vì tự động dán và tải: Tích hợp Android Native Bridge + bộ trích xuất link Studocu thông minh (extractStudocuUrl)',
+      'Đồng bộ động trạng thái nút hành động: Tự động chuyển đổi giữa "Dán link & Tải" và "Bắt đầu tải" linh hoạt theo dữ liệu ô nhập'
+    ]
+  },
   'v23.69': {
     version: 'v23.69',
     title: 'Bản cập nhật v23.69',
