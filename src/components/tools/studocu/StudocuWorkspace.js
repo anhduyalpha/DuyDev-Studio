@@ -33,7 +33,6 @@ export function renderStudocuWorkspace() {
       <div id="studocuTerminalContainer">${renderLiveTerminalCard(state)}</div>
       <div id="studocuListContainer">${renderDocumentListCard(state)}</div>
       ${renderSlideConfirmModal()}
-      ${renderInvalidUrlAlertModal()}
     </div>
   `.trim();
 }

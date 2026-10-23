@@ -6,6 +6,32 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.72': {
+    version: 'v23.72',
+    title: 'Bản cập nhật v23.72',
+    date: '23/10/2026',
+    features: [
+      'Popup cảnh báo liên kết môn học (Center Alert Modal): Tự động phát hiện khi dán nhầm liên kết môn học/thư mục (/course/), hiển thị popup nổi bật ngay chính giữa màn hình với tone màu cam cảnh báo',
+      'Hướng dẫn lấy link tài liệu trực quan: Trực quan hóa link môn học vs link file tài liệu (/document/) và cung cấp nút "Đã hiểu (OK)" để người dùng xác nhận',
+      'Kiểm định liên kết đa tầng (Link Verification Layer): Ngăn chặn triệt để tình trạng đơ/kẹt tại 95% trên Studocu Downloader'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi chứa containing block khiến popup cảnh báo bị lệch và nền mờ bị bó hẹp trong khung nội dung',
+      'Đồng bộ hóa phiên bản hệ thống v23.72 trên toàn bộ giao diện PWA, Service Worker và bảng tin cập nhật (Release Notes)',
+      'Sửa lỗi hiển thị badge trạng thái Live Stream Terminal: Tự động cập nhật Đang tải, Thất bại và Hoàn tất theo thời gian thực'
+    ]
+  },
+  'v23.71': {
+    version: 'v23.71',
+    title: 'Bản cập nhật v23.71',
+    date: '23/10/2026',
+    features: [
+      'Studocu Link Verification Layer: Hệ thống kiểm định đa tầng độc lập tự động phát hiện và chặn các liên kết không phải tài liệu (môn học, trường học, tìm kiếm)'
+    ],
+    fixes: [
+      'Phòng thủ đa tầng trên Frontend, Backend Fastify và Python Engine, ngăn chặn hoàn toàn việc nhận nhầm URL không hợp lệ'
+    ]
+  },
   'v23.70': {
     version: 'v23.70',
     title: 'Bản cập nhật v23.70',
@@ -798,7 +824,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.10'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.72'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -806,7 +832,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.10'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.10';
+  if (!rawVer) return 'v23.72';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

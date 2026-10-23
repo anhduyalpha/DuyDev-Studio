@@ -1,15 +1,16 @@
 /**
- * InvalidUrlAlertModal Component (< 120 lines)
+ * InvalidUrlAlertModal Component (< 130 lines)
  * Prominent centered amber/orange warning modal ensuring the user understands
  * why a course / folder / page URL cannot be downloaded directly.
+ * Teleports directly to document.body to guarantee 100% viewport coverage & true centering.
  */
 
 const MODAL_ID = 'studocuInvalidUrlModal';
 
 export function renderInvalidUrlAlertModal() {
   return `
-    <div id="${MODAL_ID}" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md hidden select-none" style="display: none; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
-      <div class="relative w-full max-w-md rounded-2xl border border-amber-500/35 dark:border-amber-500/30 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl shadow-amber-500/10 space-y-4 animate-scaleUp">
+    <div id="${MODAL_ID}" class="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/45 dark:bg-black/75 backdrop-blur-sm select-none" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);">
+      <div class="relative w-full max-w-md rounded-2xl border border-amber-500/35 dark:border-amber-500/30 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl shadow-amber-500/10 space-y-4 animate-scaleUp m-auto">
         
         <!-- Header with prominent Amber Icon -->
         <div class="flex items-start gap-3.5">
@@ -66,8 +67,26 @@ export function renderInvalidUrlAlertModal() {
   `.trim();
 }
 
+/**
+ * Ensures modal is mounted as a direct child of document.body
+ * This eliminates containing block restrictions from parent CSS transforms/animations.
+ */
+function ensureModalMounted() {
+  if (typeof document === 'undefined') return null;
+  let modal = document.getElementById(MODAL_ID);
+  if (!modal) {
+    const temp = document.createElement('div');
+    temp.innerHTML = renderInvalidUrlAlertModal();
+    modal = temp.firstElementChild;
+    document.body.appendChild(modal);
+  } else if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+  return modal;
+}
+
 export function openInvalidUrlAlertModal(options = {}) {
-  const modal = document.getElementById(MODAL_ID);
+  const modal = ensureModalMounted();
   if (!modal) return;
 
   const titleEl = document.getElementById(`${MODAL_ID}Title`);
