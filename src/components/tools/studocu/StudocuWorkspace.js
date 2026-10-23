@@ -8,6 +8,7 @@ import { renderHeroPasteCard } from './components/HeroPasteCard.js';
 import { renderLiveTerminalCard, renderTerminalLogs } from './components/LiveTerminalCard.js';
 import { renderDocumentListCard, renderDocumentItemsHtml } from './components/DocumentListCard.js';
 import { renderSlideConfirmModal, openSlideConfirmModal } from './components/SlideConfirmModal.js';
+import { renderInvalidUrlAlertModal, openInvalidUrlAlertModal } from './components/InvalidUrlAlertModal.js';
 import { studocuManager } from './hooks/useStudocu.js';
 import { extractStudocuUrl, verifyStudocuUrl } from './hooks/studocuApi.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
@@ -32,6 +33,7 @@ export function renderStudocuWorkspace() {
       <div id="studocuTerminalContainer">${renderLiveTerminalCard(state)}</div>
       <div id="studocuListContainer">${renderDocumentListCard(state)}</div>
       ${renderSlideConfirmModal()}
+      ${renderInvalidUrlAlertModal()}
     </div>
   `.trim();
 }
@@ -61,6 +63,11 @@ function handleUrlCandidate(raw) {
   if (clearBtn) clearBtn.classList.toggle('hidden', !urlInput?.value?.trim());
 
   if (!check.isValid) {
+    openInvalidUrlAlertModal({
+      title: check.type === 'course' ? 'Liên kết môn học, không phải tài liệu' : 'Liên kết không hợp lệ',
+      subtitle: check.type === 'course' ? 'Cần chọn tệp tài liệu cụ thể để tải' : 'Vui lòng kiểm tra lại đường dẫn',
+      message: check.error
+    });
     showToast(check.error || 'Link studocu không hợp lệ', 'warning');
     const t = document.getElementById('studocuPasteBtnTitle');
     if (t) {
@@ -205,6 +212,11 @@ export function attachStudocuListeners() {
             return;
           } else {
             if (urlInput) urlInput.focus();
+            openInvalidUrlAlertModal({
+              title: check.type === 'course' ? 'Liên kết môn học, không phải tài liệu' : 'Liên kết không hợp lệ',
+              subtitle: check.type === 'course' ? 'Cần chọn tệp tài liệu cụ thể để tải' : 'Vui lòng kiểm tra lại đường dẫn',
+              message: check.error
+            });
             showToast(check.error || 'Nội dung trong clipboard không phải liên kết Studocu hợp lệ', 'warning');
             return;
           }

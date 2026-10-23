@@ -5,6 +5,7 @@
  */
 
 import { showToast } from '../../../../utilities/toast.js';
+import { openInvalidUrlAlertModal } from '../components/InvalidUrlAlertModal.js';
 import {
   fetchFilesAndTrash,
   moveToTrashApi,
@@ -208,6 +209,13 @@ class StudocuManager {
     if (this.isDownloading) return;
     const check = verifyStudocuUrl(url);
     if (!check.isValid) {
+      try {
+        openInvalidUrlAlertModal({
+          title: check.type === 'course' ? 'Liên kết môn học, không phải tài liệu' : 'Liên kết không hợp lệ',
+          subtitle: check.type === 'course' ? 'Cần chọn tệp tài liệu cụ thể để tải' : 'Vui lòng kiểm tra lại đường dẫn',
+          message: check.error
+        });
+      } catch (_) {}
       showToast(check.error || 'Liên kết không hợp lệ', 'warning');
       return;
     }
