@@ -81,9 +81,9 @@ export function extractSemanticErrorDetailsClient(rawMsg, jobType = '') {
   const lower = trimmed.toLowerCase();
   const t = String(jobType || '').toLowerCase();
   let category = 'System Core';
-  if (t.includes('conv') || t.includes('media') || t.includes('format')) category = 'Universal Converter';
-  else if (t.includes('pdf')) category = 'PDF Studio Pro';
-  else if (t.includes('quiz')) category = 'Quiz Generator';
+  if (t.startsWith('convert_') || t.includes('conv') || t.includes('media') || t.includes('format')) category = 'Universal Converter';
+  else if ((t.startsWith('pdf_') || t === 'pdf' || t.includes('pdf')) && !t.startsWith('convert_')) category = 'PDF Studio Pro';
+  else if (t.startsWith('quiz_') || t.includes('quiz')) category = 'Quiz Generator';
 
   // 0a. USER_CANCELLED: User voluntarily cancelled the task
   if (
@@ -435,7 +435,7 @@ function formatExactTime(isoString) {
 }
 
 function formatJobDuration(ms) {
-  if (ms == null || isNaN(ms)) return '--';
+  if (ms == null || isNaN(ms) || ms < 0 || ms > 172800000) return '--';
   const sec = Number(ms) / 1000;
   if (sec < 1) return `${Math.round(ms)}ms`;
   if (sec < 60) return `${sec.toFixed(1)}s`;
@@ -449,13 +449,13 @@ function formatJobDuration(ms) {
 
 function getJobTypeBadge(type) {
   const t = String(type || '').toLowerCase();
-  if (t.includes('pdf')) {
-    return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">PDF Studio</span>`;
-  }
-  if (t.includes('conv') || t.includes('media')) {
+  if (t.startsWith('convert_') || t.includes('conv') || t.includes('media')) {
     return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">Universal Converter</span>`;
   }
-  if (t.includes('quiz')) {
+  if (t.startsWith('pdf_') || t === 'pdf' || t.includes('pdf')) {
+    return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">PDF Studio</span>`;
+  }
+  if (t.startsWith('quiz_') || t.includes('quiz')) {
     return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">Quiz Generator</span>`;
   }
   return `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">${escapeHtml(type || 'Unknown')}</span>`;
@@ -697,6 +697,32 @@ export function openJobDiagnosticsModal(job) {
   };
 }
 
+export function isJobOfCategory(j, cat) {
+  const t = String(j?.type || '').toLowerCase();
+  if (cat === 'conv') {
+    return t.startsWith('convert_') || t.includes('conv') || t.includes('media') || t.includes('format');
+  }
+  if (cat === 'pdf') {
+    return (t.startsWith('pdf_') || t === 'pdf') && !t.startsWith('convert_');
+  }
+  if (cat === 'quiz') {
+    return t.startsWith('quiz_') || t.includes('quiz');
+  }
+  return false;
+}
+
+export function isJobTimeout(j) {
+  const msg = String(j?.errorMessage || '').toLowerCase();
+  return (
+    msg.includes('timeout') ||
+    msg.includes('timed out') ||
+    msg.includes('etimedout') ||
+    msg.includes('hết giờ') ||
+    msg.includes('zaman aşımı') ||
+    msg.includes('quá thời gian')
+  );
+}
+
 /**
  * Renders the HTML markup for the Failed Jobs Inspector card
  */
@@ -707,10 +733,10 @@ export function renderFailedJobsInspector(jobs = []) {
     return ec === 'SYSTEM_ERROR';
   }).length;
   const userActionsCount = jobs.length - systemErrorsCount;
-  const timeoutCount = jobs.filter(j => {
-    const msg = (j.errorMessage || '').toLowerCase();
-    return msg.includes('timeout') || msg.includes('timed out') || msg.includes('hết giờ') || msg.includes('zaman aşımı') || (j.durationMs && j.durationMs >= 60000);
-  }).length;
+  const timeoutCount = jobs.filter(isJobTimeout).length;
+  const pdfCount = jobs.filter(j => isJobOfCategory(j, 'pdf')).length;
+  const convCount = jobs.filter(j => isJobOfCategory(j, 'conv')).length;
+  const quizCount = jobs.filter(j => isJobOfCategory(j, 'quiz')).length;
 
   let filteredJobs = jobs;
   if (activeTypeFilter === 'system') {
@@ -718,10 +744,9 @@ export function renderFailedJobsInspector(jobs = []) {
   } else if (activeTypeFilter === 'user') {
     filteredJobs = jobs.filter(j => (j.errorClass || extractSemanticErrorDetailsClient(j.errorMessage, j.type).errorClass) === 'USER_ACTION');
   } else if (activeTypeFilter === 'timeout') {
-    filteredJobs = jobs.filter(j => {
-      const msg = (j.errorMessage || '').toLowerCase();
-      return msg.includes('timeout') || msg.includes('timed out') || msg.includes('hết giờ') || msg.includes('zaman aşımı') || (j.durationMs && j.durationMs >= 60000);
-    });
+    filteredJobs = jobs.filter(isJobTimeout);
+  } else if (activeTypeFilter === 'pdf' || activeTypeFilter === 'conv' || activeTypeFilter === 'quiz') {
+    filteredJobs = jobs.filter(j => isJobOfCategory(j, activeTypeFilter));
   } else if (activeTypeFilter !== 'all') {
     filteredJobs = jobs.filter(j => String(j.type || '').toLowerCase().includes(activeTypeFilter));
   }
@@ -892,21 +917,21 @@ export function renderFailedJobsInspector(jobs = []) {
             data-filter-type="pdf"
             class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'pdf' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
           >
-            PDF Studio (${jobs.filter(j => String(j.type || '').toLowerCase().includes('pdf')).length})
+            PDF Studio (${pdfCount})
           </button>
           <button
             type="button"
             data-filter-type="conv"
             class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'conv' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
           >
-            Converter (${jobs.filter(j => String(j.type || '').toLowerCase().includes('conv') || String(j.type || '').toLowerCase().includes('media')).length})
+            Converter (${convCount})
           </button>
           <button
             type="button"
             data-filter-type="quiz"
             class="btn-failed-filter px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 ${activeTypeFilter === 'quiz' ? 'bg-orange-500 text-white font-bold shadow-xs' : 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'}"
           >
-            Quiz (${jobs.filter(j => String(j.type || '').toLowerCase().includes('quiz')).length})
+            Quiz (${quizCount})
           </button>
         </div>
       </div>
@@ -952,6 +977,14 @@ function renderFailedJobsItemsMarkup(jobs) {
       : `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0 whitespace-nowrap">CRITICAL</span>`;
 
     const fixText = job.suggestedFix || semantic.suggestedFix;
+    const isEngineReady =
+      semantic.signature === 'converter::libreoffice_missing' ||
+      (job.errorMessage && job.errorMessage.toLowerCase().includes('libreoffice')) ||
+      (job.errorMessage && job.errorMessage.toLowerCase().includes('cairosvg'));
+    const engineReadyNote = isEngineReady
+      ? `<div class="text-[11px] text-emerald-600 dark:text-emerald-400 pl-6 pt-1 border-t border-rose-500/10 font-sans font-medium flex items-center gap-1.5"><i data-lucide="check-circle" class="w-3.5 h-3.5 shrink-0 text-emerald-500"></i> Môi trường máy chủ hiện đã có <strong>LibreOffice & Công cụ READY</strong>. Tác vụ này có thể nhấn <strong>[Thử lại]</strong> để chạy thành công ngay.</div>`
+      : '';
+
     const calloutBox = isUserAction
       ? `
         <div class="p-3 rounded-xl bg-sky-500/5 dark:bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-mono space-y-1">
@@ -969,6 +1002,7 @@ function renderFailedJobsItemsMarkup(jobs) {
             <div class="flex-1 whitespace-pre-wrap break-all leading-relaxed"><strong class="text-rose-600 dark:text-rose-400">[Lỗi hệ thống]:</strong> ${cleanError}</div>
           </div>
           ${fixText ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400 pl-6 pt-1 border-t border-rose-500/10">💡 Khắc phục: ${escapeHtml(fixText)}</div>` : ''}
+          ${engineReadyNote}
         </div>
       `;
 

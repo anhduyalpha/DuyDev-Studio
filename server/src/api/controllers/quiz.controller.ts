@@ -138,7 +138,8 @@ export async function enqueueQuizJob(request: FastifyRequest, reply: FastifyRepl
         where: { id: job.id },
         data: {
           status: 'FAILED',
-          errorMessage: 'Không thể xếp hàng tạo bài tập trắc nghiệm. Vui lòng thử lại.'
+          errorMessage: 'Không thể xếp hàng tạo bài tập trắc nghiệm. Vui lòng thử lại.',
+          completedAt: new Date()
         }
       });
       return reply.status(503).send({

@@ -131,12 +131,12 @@ export function extractSemanticErrorDetails(rawMsg: string | null | undefined, j
   // Determine High-Level Category from jobType
   let category = 'Universal Converter';
   const jt = (jobType || '').toLowerCase();
-  if (jt.includes('pdf')) {
-    category = 'PDF Studio Pro';
-  } else if (jt.includes('quiz')) {
-    category = 'Quiz Generator';
-  } else if (jt.includes('convert') || jt.includes('media')) {
+  if (jt.startsWith('convert_') || jt.includes('converter') || jt.includes('media')) {
     category = 'Universal Converter';
+  } else if (jt.startsWith('pdf_') || jt === 'pdf' || jt.includes('pdf')) {
+    category = 'PDF Studio Pro';
+  } else if (jt.startsWith('quiz_') || jt.includes('quiz')) {
+    category = 'Quiz Generator';
   }
 
   // 0a. USER_CANCELLED: User voluntarily cancelled the task
@@ -954,9 +954,11 @@ export class AdminTelemetryService {
 
         let durationMs: number | null = null;
         if (j.startedAt && j.completedAt) {
-          durationMs = j.completedAt.getTime() - j.startedAt.getTime();
-        } else if (j.startedAt) {
-          durationMs = Math.max(0, Date.now() - j.startedAt.getTime());
+          const diff = j.completedAt.getTime() - j.startedAt.getTime();
+          durationMs = diff >= 0 && diff <= 172_800_000 ? diff : null;
+        } else if (j.startedAt && (j.status === 'PROCESSING' || j.status === 'RUNNING')) {
+          const diff = Date.now() - j.startedAt.getTime();
+          durationMs = diff >= 0 && diff <= 172_800_000 ? diff : null;
         }
 
         const semantic = extractSemanticErrorDetails(j.errorMessage, j.type);

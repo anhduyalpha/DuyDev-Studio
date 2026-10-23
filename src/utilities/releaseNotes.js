@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.74': {
+    version: 'v23.74',
+    title: 'Bản cập nhật v23.74',
+    date: '23/10/2026',
+    features: [
+      'Chuẩn hóa phân loại lỗi trang Admin Mission Control: Tách biệt chính xác tác vụ Universal Converter và PDF Studio',
+      'Chỉ số thời lượng tác vụ chuẩn xác: Loại bỏ hoàn toàn lỗi thời lượng ảo 150h+ cho các tác vụ lỗi trong quá khứ',
+      'Chỉ báo sẵn sàng môi trường máy chủ: Hiển thị trạng thái LibreOffice & công cụ READY đối với các tác vụ lỗi cũ để sẵn sàng Thử lại ngay'
+    ],
+    fixes: [
+      'Ghi nhận completedAt chính xác khi tác vụ gặp lỗi tại tất cả các worker (PDF, Converter, Quiz)',
+      'Chuẩn hóa bộ lọc tác vụ Hết giờ (Timeout) không còn bị tính sai do thời lượng ảo'
+    ]
+  },
   'v23.73': {
     version: 'v23.73',
     title: 'Bản cập nhật v23.73',

@@ -134,7 +134,8 @@ export async function enqueueConverterTask(request: FastifyRequest, reply: Fasti
         where: { id: job.id },
         data: {
           status: 'FAILED',
-          errorMessage: 'Không thể đưa tác vụ chuyển đổi vào hàng đợi. Vui lòng thử lại.'
+          errorMessage: 'Không thể đưa tác vụ chuyển đổi vào hàng đợi. Vui lòng thử lại.',
+          completedAt: new Date()
         }
       });
       return reply.status(503).send({

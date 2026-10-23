@@ -630,7 +630,7 @@ export async function processQuizJob(payload: QuizJobPayload): Promise<any> {
     const errorMessage = cleanQuizErrorMessage(rawMessage);
     const errorCode = (err as any)?.errorCode || 'INTERNAL_ERROR';
     const diagnosticLayer = (err as any)?.diagnosticLayer || null;
-    await safeJobUpsert(jobId, { status: 'FAILED', errorMessage }, payload).catch(() => {});
+    await safeJobUpsert(jobId, { status: 'FAILED', errorMessage, completedAt: new Date() }, payload).catch(() => {});
     await publishJobEvent(jobId, 'failed', {
       jobId,
       error: errorMessage,

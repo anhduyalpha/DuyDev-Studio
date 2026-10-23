@@ -291,7 +291,7 @@ export async function processConverterJob(payload: ConverterJobPayload): Promise
     }
     isFinished = true;
     const errorMessage = err instanceof Error ? err.message : String(err);
-    await safeConverterJobUpdate({ status: 'FAILED', errorMessage });
+    await safeConverterJobUpdate({ status: 'FAILED', errorMessage, completedAt: new Date() });
     await publishJobEvent(jobId, 'failed', { jobId, error: errorMessage, timestamp: Math.floor(Date.now() / 1000) });
     logger.error({ jobId, err }, 'Converter job execution failed');
     throw err;

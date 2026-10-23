@@ -49,7 +49,8 @@ export async function enqueuePdfJob(request: FastifyRequest, reply: FastifyReply
         where: { id: job.id },
         data: {
           status: 'FAILED',
-          errorMessage: 'Không thể đưa tác vụ vào hàng đợi xử lý. Vui lòng thử lại.'
+          errorMessage: 'Không thể đưa tác vụ vào hàng đợi xử lý. Vui lòng thử lại.',
+          completedAt: new Date()
         }
       });
       return reply.status(503).send({

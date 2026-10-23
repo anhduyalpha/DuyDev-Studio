@@ -340,7 +340,7 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
   } catch (err: unknown) {
     isFinished = true;
     const errorMessage = err instanceof Error ? err.message : String(err);
-    await safePdfJobUpdate({ status: 'FAILED', errorMessage });
+    await safePdfJobUpdate({ status: 'FAILED', errorMessage, completedAt: new Date() });
     await publishJobEvent(jobId, 'failed', { jobId, error: errorMessage, timestamp: Math.floor(Date.now() / 1000) });
     logger.error({ jobId, err }, 'PDF job execution failed');
     throw err;
