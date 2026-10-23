@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.76': {
+    version: 'v23.76',
+    title: 'Bản cập nhật v23.76',
+    date: '24/10/2026',
+    features: [
+      'Cổng xác thực danh tính bắt buộc (Mandatory Device Identity Gate): Bắt buộc 100% thiết bị mới phải nhập Tên profile khi truy cập, khóa hoàn toàn các thao tác đóng hay bỏ qua',
+      'Định danh thiết bị chuẩn xác vào Admin Console: Gán vĩnh viễn tên người dùng vào hồ sơ thiết bị (deviceRegistryService) để quản trị viên dễ dàng nhận biết trong Mission Control & Traffic Manager'
+    ],
+    fixes: [
+      'Vô hiệu hóa phím Escape, click backdrop và loại bỏ nút đóng/bỏ qua khi người dùng chưa hoàn tất nhập tên profile',
+      'Đảm bảo trải nghiệm đổi avatar tùy ý vẫn đầy đủ tính năng khi nhấp trực tiếp vào Avatar trên Header'
+    ]
+  },
   'v23.75': {
     version: 'v23.75',
     title: 'Bản cập nhật v23.75',
@@ -867,7 +880,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.75'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.76'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -875,7 +888,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.75'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.75';
+  if (!rawVer) return 'v23.76';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

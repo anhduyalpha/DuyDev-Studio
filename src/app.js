@@ -231,8 +231,6 @@ class App {
 
   checkAndPromptOnboardingProfile() {
     if (isProfileConfigured()) return;
-    const hasPrompted = sessionStorage.getItem('ds_profile_prompted_session') === 'true';
-    if (hasPrompted) return;
 
     if (document.getElementById('dsMigrationNoticeModal') || document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
       return;
@@ -243,9 +241,8 @@ class App {
       if (document.getElementById('dsMigrationNoticeModal') || document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
         return;
       }
-      sessionStorage.setItem('ds_profile_prompted_session', 'true');
       openProfileModal({ isOnboarding: true });
-    }, 650);
+    }, 600);
   }
 
   async checkAndOpenShareTarget() {

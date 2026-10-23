@@ -63,15 +63,17 @@ export function openProfileModal(options = {}) {
         <!-- Top Accent Bar -->
         <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-indigo-500 to-purple-500"></div>
 
-        <!-- Close Button (if not strictly required) -->
-        <button 
-          type="button" 
-          id="dsProfileCloseBtn"
-          class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer"
-          aria-label="Đóng"
-        >
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <!-- Close Button (Only when NOT in mandatory onboarding mode) -->
+        ${!isOnboarding ? `
+          <button 
+            type="button" 
+            id="dsProfileCloseBtn"
+            class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer"
+            aria-label="Đóng"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        ` : ''}
 
         ${isStep1 ? `
           <!-- ================= STEP 1: NHẬP TÊN PROFILE ================= -->
@@ -85,13 +87,21 @@ export function openProfileModal(options = {}) {
                   ${isOnboarding ? 'Chào mừng bạn đến với Studio' : 'Tên hồ sơ của bạn'}
                 </h3>
                 <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                  Nhập tên để lưu lịch sử và hiển thị khi tải tài liệu
+                  ${isOnboarding ? 'Hệ thống yêu cầu định danh thiết bị để lưu trữ lịch sử' : 'Nhập tên để lưu lịch sử và hiển thị khi tải tài liệu'}
                 </p>
               </div>
             </div>
 
+            <!-- Mandatory Gate Notice -->
+            ${isOnboarding ? `
+              <div class="px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/25 flex items-center gap-2 text-xs text-orange-700 dark:text-orange-300 font-medium">
+                <i data-lucide="shield-alert" class="w-4 h-4 shrink-0 text-orange-500"></i>
+                <span>Vui lòng nhập tên của bạn để tiếp tục sử dụng hệ thống</span>
+              </div>
+            ` : ''}
+
             <!-- Name Input Field -->
-            <div class="space-y-1.5 pt-2">
+            <div class="space-y-1.5 pt-1">
               <label for="dsProfileNameInput" class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                 Tên profile của bạn <span class="text-rose-500">*</span>
               </label>
@@ -110,14 +120,15 @@ export function openProfileModal(options = {}) {
             </div>
 
             <!-- Action Buttons for Step 1 -->
-            <div class="flex items-center gap-2.5 pt-3">
+            <div class="flex items-center gap-2.5 pt-2">
               ${isOnboarding ? `
                 <button 
                   type="button" 
-                  id="dsProfileSkipBtn"
-                  class="flex-1 h-11 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                  id="dsProfileNextStepBtn"
+                  class="w-full h-11 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-2"
                 >
-                  Để sau
+                  <span>Xác nhận & Tiếp tục (Chọn Avatar)</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
               ` : `
                 <button 
@@ -127,15 +138,15 @@ export function openProfileModal(options = {}) {
                 >
                   Hủy
                 </button>
+                <button 
+                  type="button" 
+                  id="dsProfileNextStepBtn"
+                  class="flex-[1.4] h-11 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
+                >
+                  <span>Tiếp tục</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
               `}
-              <button 
-                type="button" 
-                id="dsProfileNextStepBtn"
-                class="flex-[1.4] h-11 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
-              >
-                <span>Tiếp tục</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-              </button>
             </div>
           </div>
         ` : `
@@ -289,8 +300,9 @@ export function openProfileModal(options = {}) {
     const closeBtn = modalOverlay.querySelector('#dsProfileCloseBtn');
     if (closeBtn) closeBtn.onclick = closeProfileModal;
 
-    // Overlay click to close
+    // Overlay click to close (Strictly forbidden during mandatory onboarding)
     modalOverlay.onclick = (e) => {
+      if (isOnboarding) return;
       if (e.target === modalOverlay) closeProfileModal();
     };
 
@@ -304,7 +316,7 @@ export function openProfileModal(options = {}) {
         const val = (nameInput?.value || '').trim();
         if (!val || val.length < 2) {
           if (errorP) {
-            errorP.textContent = 'Vui lòng nhập tên có ít nhất 2 ký tự';
+            errorP.textContent = 'Bắt buộc nhập tên của bạn (tối thiểu 2 ký tự)';
             errorP.classList.remove('hidden');
           }
           nameInput?.focus();
@@ -440,8 +452,9 @@ export function openProfileModal(options = {}) {
     }
   }
 
-  // Keydown listener for Escape
+  // Keydown listener for Escape (Strictly forbidden during mandatory onboarding)
   const handleKeydown = (e) => {
+    if (isOnboarding) return;
     if (e.key === 'Escape') closeProfileModal();
   };
   document.addEventListener('keydown', handleKeydown);
