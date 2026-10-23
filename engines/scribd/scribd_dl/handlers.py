@@ -22,6 +22,16 @@ from typing import Optional, Tuple
 from .config import DOWNLOADS_DIR, TRASH_DIR
 from .engine import extract_scribd_doc_id
 from .job_worker import JOBS, create_job, run_archive_job, cancel_job
+from .storage import (
+    save_file_metadata,
+    get_file_downloader,
+    get_trash_downloader,
+    move_to_trash_metadata,
+    move_all_to_trash_metadata,
+    restore_from_trash_metadata,
+    delete_permanent_metadata,
+    empty_trash_metadata,
+)
 
 
 def extract_doc_id_from_filename(name: str) -> Optional[str]:
@@ -266,7 +276,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                         "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime)),
                         "download_url": f"/downloads/{urllib.parse.quote(p.name)}",
                         "stream_url": f"/api/document-stream?file={urllib.parse.quote(p.name)}",
-                        "downloaded_by": {"name": "Scribd Archiver"},
+                        "downloaded_by": get_file_downloader(p.name, doc_id),
                     })
             encoded = json.dumps(files, ensure_ascii=False).encode("utf-8")
             self.send_response(HTTPStatus.OK)
@@ -298,6 +308,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             "size_mb": round(st.st_size / (1024 * 1024), 2),
                             "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime)),
                             "download_url": f"/downloads/{urllib.parse.quote(p.name)}",
+                            "downloaded_by": get_trash_downloader(p.name, doc_id),
                         })
             encoded = json.dumps(trashed, ensure_ascii=False).encode("utf-8")
             self.send_response(HTTPStatus.OK)
@@ -430,7 +441,34 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                 return
 
             force_reload = bool(data.get("force_reload", False) or data.get("bypass_cache", False))
-            user_name = data.get("user_name") or "Máy khách"
+
+            # Rút trích thông tin người tải (IP, Thiết bị, Tên từ Visitor Registry)
+            downloader_data = data.get("downloaded_by")
+            if isinstance(downloader_data, dict):
+                raw_user_name = (data.get("user_name") or downloader_data.get("name") or "").strip()
+                device_summary = downloader_data.get("device") or "Trình duyệt Web"
+                client_ip = downloader_data.get("ip") or self.headers.get("X-Forwarded-For", "").split(",")[0].strip() or "127.0.0.1"
+            else:
+                raw_user_name = (data.get("user_name") or str(downloader_data or "")).strip()
+                device_summary = "Trình duyệt Web"
+                client_ip = self.headers.get("X-Forwarded-For", "").split(",")[0].strip() or "127.0.0.1"
+
+            device_id = (data.get("deviceId") or data.get("device_id") or self.headers.get("X-Device-Id") or "").strip()
+
+            if raw_user_name and raw_user_name not in ("172.18.0.1", "127.0.0.1", "localhost", "Scribd Archiver"):
+                display_name = raw_user_name
+            elif device_id:
+                display_name = f"Khách #{device_id[-6:]}"
+            elif client_ip and client_ip not in ("127.0.0.1", "localhost", "::1", "172.18.0.1"):
+                display_name = client_ip
+            else:
+                display_name = "👑 Máy của Duy" if client_ip in ("127.0.0.1", "localhost", "::1") else "Khách #m1a2b3"
+
+            downloaded_by = {
+                "name": display_name,
+                "ip": client_ip,
+                "device": device_summary,
+            }
 
             # Kiểm tra tài liệu đã tồn tại trong downloads (< 100ms instant cache hit)
             if not force_reload:
@@ -464,7 +502,16 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             "step_label": f"Tài liệu đã có sẵn trên máy chủ ({page_count} trang)",
                             "logs": [f"⚡ Tài liệu đã có sẵn trong kho lưu trữ: {p.name}"],
                             "result": cached_result,
+                            "downloaded_by": downloaded_by,
                         }
+                        save_file_metadata(
+                            filename=p.name,
+                            doc_id=doc_id,
+                            title=cached_result["title"],
+                            size_bytes=size_bytes,
+                            pages=page_count,
+                            downloaded_by=downloaded_by,
+                        )
                         self.send_response(HTTPStatus.OK)
                         self.send_cors_headers()
                         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -478,8 +525,8 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                         }).encode("utf-8"))
                         return
 
-            job_id = create_job(url, user_name)
-            run_archive_job(job_id, url, force_reload=force_reload, user_name=user_name)
+            job_id = create_job(url, user_name=display_name, downloaded_by=downloaded_by)
+            run_archive_job(job_id, url, force_reload=force_reload, user_name=display_name, downloaded_by=downloaded_by)
 
             self.send_response(HTTPStatus.OK)
             self.send_cors_headers()
@@ -508,6 +555,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                 if dest.exists():
                     dest.unlink()
                 shutil.move(str(trash_path), str(dest))
+                restore_from_trash_metadata(trash_path.name)
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
@@ -543,6 +591,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             trashed_count += 1
                         except Exception:
                             pass
+                move_all_to_trash_metadata()
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
@@ -556,6 +605,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                 if dest.exists():
                     dest.unlink()
                 shutil.move(str(file_path), str(dest))
+                move_to_trash_metadata(file_path.name)
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
@@ -576,6 +626,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                             f.unlink()
                         except Exception:
                             pass
+                empty_trash_metadata()
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()
@@ -586,6 +637,7 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
             if trash_path and trash_path.is_file():
                 deleted_name = trash_path.name
                 trash_path.unlink()
+                delete_permanent_metadata(deleted_name)
                 self.send_response(HTTPStatus.OK)
                 self.send_cors_headers()
                 self.end_headers()

@@ -3,6 +3,8 @@
  * Manages remote Scribd API calls, Studio Drive saving, and active job persistence.
  */
 
+import { getDeviceId } from '../../../../utilities/deviceId.js';
+
 const ACTIVE_JOB_KEY = 'ds_scribd_active_job';
 const MAX_JOB_AGE_MS = 5 * 60 * 1000; // 5 phút
 
@@ -56,10 +58,14 @@ export async function fetchFilesAndTrash() {
 }
 
 export async function startDownloadApi(url, forceReload = false) {
+  const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : '';
   return safeFetchJson('/api/v1/scribd/download', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, force_reload: forceReload })
+    headers: {
+      'Content-Type': 'application/json',
+      ...(deviceId ? { 'X-Device-Id': deviceId } : {})
+    },
+    body: JSON.stringify({ url, force_reload: forceReload, deviceId })
   });
 }
 
@@ -122,9 +128,13 @@ export async function emptyTrashApi() {
 }
 
 export async function saveToDriveApi(filename, title = '', targetDir = 'scribd') {
+  const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : '';
   return safeFetchJson('/api/v1/scribd/save-drive', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, title, targetDir })
+    headers: {
+      'Content-Type': 'application/json',
+      ...(deviceId ? { 'X-Device-Id': deviceId } : {})
+    },
+    body: JSON.stringify({ filename, title, targetDir, deviceId })
   });
 }

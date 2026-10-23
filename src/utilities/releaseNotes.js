@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.73': {
+    version: 'v23.73',
+    title: 'Bản cập nhật v23.73',
+    date: '23/10/2026',
+    features: [
+      'Ghi nhận danh tính người tải Scribd (Downloader Tracking): Tự động định danh thiết bị tải (Máy của Duy, Alias từ Visitor Registry hoặc Khách #id) tương đồng 100% với Studocu Downloader',
+      'Huy hiệu người tải trên Kệ tài liệu Scribd: Hiển thị pill người tải với biểu tượng user màu cam Terracotta đồng bộ với thiết kế Stitch Bookshelf',
+      'Lưu trữ metadata vĩnh viễn: Tự động đồng bộ và bảo tồn thông tin người tải trong .metadata.json ngay cả khi chuyển vào thùng rác hoặc phục hồi'
+    ],
+    fixes: [
+      'Đồng bộ hóa metadata người tải qua Fastify Gateway và Python Scribd Engine',
+      'Hỗ trợ ghi nhận thông tin thiết bị và người tải khi lưu tài liệu sang Studio Drive'
+    ]
+  },
   'v23.72': {
     version: 'v23.72',
     title: 'Bản cập nhật v23.72',
@@ -824,7 +838,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.72'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.73'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -832,7 +846,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.72'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.72';
+  if (!rawVer) return 'v23.73';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

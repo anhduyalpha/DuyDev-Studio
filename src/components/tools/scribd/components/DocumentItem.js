@@ -46,6 +46,18 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
   const downloadUrl = `/api/v1/scribd/download/${encodeURIComponent(docName)}`;
   const streamUrl = `/api/v1/scribd/stream?file=${encodeURIComponent(docName)}`;
 
+  let uploader = doc.downloaded_by?.name || doc.downloaded_by?.device || doc.uploader || '';
+  if (uploader === '172.18.0.1' || uploader === '127.0.0.1' || /^172\.(1[6-9]|2\d|3[01])\./.test(uploader)) {
+    const seed = doc.id || docName || 'guest';
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const hex = Math.abs(hash).toString(16).padStart(6, '0').slice(-6);
+    uploader = `Khách #${hex}`;
+  }
+
   const isDownloaded = Boolean(!isTrash && (doc.isDownloaded || options.isDownloaded));
   const isJustDownloaded = Boolean(!isTrash && (doc.isJustDownloaded || options.isJustDownloaded));
   const itemClasses = ['file-item', 'scribd-book-card'];
@@ -87,6 +99,13 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
             ${cleanTime ? `
               <span class="meta-pill px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/50 whitespace-nowrap">
                 ${escapeHtml(cleanTime)}
+              </span>
+            ` : ''}
+
+            ${uploader ? `
+              <span class="meta-pill meta-user px-2 py-0.5 rounded-md inline-flex items-center gap-1 whitespace-nowrap" title="Người tải: ${escapeHtml(uploader)}">
+                <i data-lucide="user" class="w-3 h-3 text-[#EA580C] dark:text-orange-400"></i>
+                <span>${escapeHtml(uploader)}</span>
               </span>
             ` : ''}
 
