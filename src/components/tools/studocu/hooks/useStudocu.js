@@ -15,7 +15,8 @@ import {
   safeFetchJson,
   saveActiveJob,
   loadActiveJob,
-  cancelJobApi
+  cancelJobApi,
+  verifyStudocuUrl
 } from './studocuApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 import { getDeviceId } from '../../../../utilities/deviceId.js';
@@ -205,6 +206,12 @@ class StudocuManager {
 
   async startDownload(url, cookie = null) {
     if (this.isDownloading) return;
+    const check = verifyStudocuUrl(url);
+    if (!check.isValid) {
+      showToast(check.error || 'Liên kết không hợp lệ', 'warning');
+      return;
+    }
+    const targetUrl = check.url || url;
     this.clearDownloadedHighlight();
     this.prevDownloadSnapshot = new Set(this.files.map(f => (f.name || f.title || '').normalize('NFC').trim()));
     this.isDownloading = true;
@@ -221,7 +228,7 @@ class StudocuManager {
 
     try {
       const deviceId = getDeviceId();
-      const payload = { url, cookie: cookie || undefined, deviceId };
+      const payload = { url: targetUrl, cookie: cookie || undefined, deviceId };
       const data = await safeFetchJson('/api/v1/studocu/download', {
         method: 'POST',
         headers: {

@@ -77,7 +77,7 @@ export function renderLiveTerminalCard(state) {
         </div>
 
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          ${statusBadge}
+          <span id="studocuStatusBadge">${statusBadge}</span>
           <span id="studocuTimer" class="text-xs font-mono text-zinc-400">${state.elapsedSeconds || 0}s</span>
 
           ${isRunning ? `

@@ -9,6 +9,7 @@ import { renderLiveTerminalCard, renderTerminalLogs } from './components/LiveTer
 import { renderDocumentListCard, renderDocumentItemsHtml } from './components/DocumentListCard.js';
 import { renderSlideConfirmModal, openSlideConfirmModal } from './components/SlideConfirmModal.js';
 import { studocuManager } from './hooks/useStudocu.js';
+import { extractStudocuUrl, verifyStudocuUrl } from './hooks/studocuApi.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../utilities/toast.js';
 
@@ -35,75 +36,41 @@ export function renderStudocuWorkspace() {
   `.trim();
 }
 
-export function extractStudocuUrl(raw) {
-  if (!raw || typeof raw !== 'string') return null;
-  let text = raw.trim();
-
-  // 1. Strip markdown links [title](url) or <url>
-  const mdMatch = text.match(/\((https?:\/\/[^\s)]+)\)/i) || text.match(/<([^\s>]+)>/);
-  if (mdMatch) {
-    text = mdMatch[1];
-  }
-
-  // 2. Extract URL match from surrounded text
-  const urlMatch = text.match(/https?:\/\/[^\s"']+/i) || text.match(/(?:www\.)?(?:studocu|studeersnel)\.[a-z.]+\/[^\s"']+/i);
-  if (urlMatch) {
-    text = urlMatch[0];
-  }
-
-  // 3. Remove trailing punctuation commonly attached in text (. , ; ) > " ' etc.)
-  text = text.replace(/[.,;!?>"')\]]+$/, '').trim();
-
-  // 4. Ensure protocol
-  if (!/^https?:\/\//i.test(text)) {
-    text = 'https://' + text.replace(/^\/+/, '');
-  }
-
-  // 5. Validate hostname
-  try {
-    const parsed = new URL(text);
-    const host = parsed.hostname.toLowerCase();
-    const isStudocu = host === 'studocu.com' ||
-      host.endsWith('.studocu.com') ||
-      host === 'studocu.vn' ||
-      host.endsWith('.studocu.vn') ||
-      host === 'studeersnel.nl' ||
-      host.endsWith('.studeersnel.nl');
-
-    if (isStudocu) {
-      return parsed.href;
-    }
-  } catch (_) {}
-
-  return null;
-}
+export { extractStudocuUrl, verifyStudocuUrl };
 
 function isValidStudocuUrl(str) {
-  return Boolean(extractStudocuUrl(str));
+  return verifyStudocuUrl(str).isValid;
 }
 
 function handleUrlCandidate(raw) {
   const clean = String(raw || '').trim();
-  const validUrl = extractStudocuUrl(clean);
   const urlInput = document.getElementById('studocuUrlInput');
   const clearBtn = document.getElementById('btnClearStudocuUrl');
 
-  if (urlInput && urlInput.value !== (validUrl || clean)) {
-    urlInput.value = validUrl || clean;
+  if (!clean) {
+    showToast('Vui lòng nhập hoặc dán liên kết Studocu', 'warning');
+    return;
+  }
+
+  const check = verifyStudocuUrl(clean);
+  const targetUrl = check.url || clean;
+
+  if (urlInput && urlInput.value !== targetUrl) {
+    urlInput.value = targetUrl;
   }
   if (clearBtn) clearBtn.classList.toggle('hidden', !urlInput?.value?.trim());
 
-  if (!validUrl) {
-    showToast('Link studocu không hợp lệ', 'error');
+  if (!check.isValid) {
+    showToast(check.error || 'Link studocu không hợp lệ', 'warning');
     const t = document.getElementById('studocuPasteBtnTitle');
     if (t) {
       const old = t.textContent;
-      t.textContent = 'Liên kết không hợp lệ';
-      setTimeout(() => { if (t) t.textContent = old; }, 2000);
+      t.textContent = check.type === 'course' ? 'Link môn học, không phải file' : 'Liên kết không hợp lệ';
+      setTimeout(() => { if (t) t.textContent = old; }, 2500);
     }
     return;
   }
-  studocuManager.startDownload(validUrl, null);
+  studocuManager.startDownload(check.url, null);
 }
 
 export function attachStudocuListeners() {
@@ -224,26 +191,21 @@ export function attachStudocuListeners() {
 
         const trimmed = (text || '').trim();
         if (trimmed) {
-          const validUrl = extractStudocuUrl(trimmed);
-          if (validUrl) {
-            // Auto-paste link into the input box so the user sees it
-            if (urlInput) {
-              urlInput.value = validUrl;
-              if (clearBtn) clearBtn.classList.remove('hidden');
-            }
-            updateButtonState();
+          const check = verifyStudocuUrl(trimmed);
+          const targetUrl = check.url || trimmed;
+          if (urlInput) {
+            urlInput.value = targetUrl;
+            if (clearBtn) clearBtn.classList.remove('hidden');
+          }
+          updateButtonState();
+
+          if (check.isValid) {
             showToast('Đã dán liên kết & bắt đầu tải...', 'success');
-            studocuManager.startDownload(validUrl, null);
+            studocuManager.startDownload(check.url, null);
             return;
           } else {
-            // Clipboard contains non-Studocu text
-            if (urlInput) {
-              urlInput.value = trimmed;
-              if (clearBtn) clearBtn.classList.remove('hidden');
-              urlInput.focus();
-            }
-            updateButtonState();
-            showToast('Nội dung trong clipboard không phải liên kết Studocu hợp lệ', 'warning');
+            if (urlInput) urlInput.focus();
+            showToast(check.error || 'Nội dung trong clipboard không phải liên kết Studocu hợp lệ', 'warning');
             return;
           }
         }
@@ -367,6 +329,14 @@ export function attachStudocuListeners() {
       const pctEl = document.getElementById('studocuProgressPct');
       if (pctEl) pctEl.textContent = `${state.progress || 5}%`;
       const barEl = document.getElementById('studocuProgressBar');
+      const badgeEl = document.getElementById('studocuStatusBadge');
+      if (badgeEl) {
+        badgeEl.innerHTML = state.isDownloading
+          ? '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">ĐANG TẢI</span>'
+          : state.hasError
+            ? '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-red-500/20 text-red-400 border border-red-500/30">THẤT BẠI</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HOÀN TẤT</span>';
+      }
       if (barEl) barEl.style.width = `${state.progress || 5}%`;
     }
 

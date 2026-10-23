@@ -62,12 +62,78 @@ export async function studocuRoute(app: FastifyInstance): Promise<void> {
     return { success: true, data: status, timestamp: new Date().toISOString() };
   });
 
+  // Helper: Verification layer for Studocu URLs
+  function validateStudocuDocumentUrl(url: string): { valid: boolean; error?: string } {
+    if (!url || typeof url !== 'string' || !url.trim()) {
+      return { valid: false, error: 'Thiếu liên kết Studocu cần tải' };
+    }
+    try {
+      const parsed = new URL(url.trim());
+      const host = parsed.hostname.toLowerCase();
+      const isStudocu = host === 'studocu.com' ||
+        host.endsWith('.studocu.com') ||
+        host === 'studocu.vn' ||
+        host.endsWith('.studocu.vn') ||
+        host === 'studeersnel.nl' ||
+        host.endsWith('.studeersnel.nl');
+
+      if (!isStudocu) {
+        return { valid: false, error: 'Liên kết không thuộc Studocu. Vui lòng dán link từ studocu.com hoặc studocu.vn' };
+      }
+
+      const pathname = parsed.pathname.toLowerCase();
+      if (/\/(?:course|courses)\//i.test(pathname)) {
+        return {
+          valid: false,
+          error: 'Đây là liên kết môn học/thư mục (chứa danh sách nhiều tài liệu). Vui lòng mở 1 tài liệu cụ thể trong môn này để lấy link tải.'
+        };
+      }
+      if (/\/(?:institution|univ|school|university)\//i.test(pathname)) {
+        return {
+          valid: false,
+          error: 'Đây là liên kết trường học/học viện. Vui lòng mở 1 tài liệu cụ thể để lấy link tải.'
+        };
+      }
+      if (pathname.includes('/search') || parsed.searchParams.has('search')) {
+        return {
+          valid: false,
+          error: 'Đây là liên kết trang tìm kiếm. Vui lòng chọn và mở 1 tài liệu cụ thể để lấy link tải.'
+        };
+      }
+      if (/\/(?:user|profile)\//i.test(pathname)) {
+        return {
+          valid: false,
+          error: 'Đây là liên kết trang cá nhân. Vui lòng dán liên kết của tài liệu cụ thể.'
+        };
+      }
+      if (!/\/(?:document|doc)\//i.test(pathname) && !/\/d\/\d+/i.test(pathname)) {
+        return {
+          valid: false,
+          error: 'Liên kết không phải là trang tài liệu Studocu hợp lệ (link tài liệu phải chứa /document/).'
+        };
+      }
+
+      return { valid: true };
+    } catch {
+      return { valid: false, error: 'Định dạng liên kết không hợp lệ' };
+    }
+  }
+
   // 2. Start download job
   app.post('/api/v1/studocu/download', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = (req.body || {}) as any;
       const url = typeof body.url === 'string' ? body.url.trim() : '';
       const forceReload = Boolean(body.force_reload || body.bypass_cache);
+
+      // Verification Layer: Ensure URL points to a specific document, not course/search/institution
+      const validation = validateStudocuDocumentUrl(url);
+      if (!validation.valid) {
+        return reply.status(400).send({
+          success: false,
+          error: validation.error
+        });
+      }
 
       // Fast pre-check: if doc ID exists in URL and not force_reload, check active files cache
       if (url && !forceReload) {

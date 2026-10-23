@@ -7,6 +7,7 @@ Bypass Cloudflare -> Khởi tạo CDP -> Giải mã Virtual DOM -> Ráp layout A
 """
 
 import asyncio
+import re
 import base64
 import json
 import time
@@ -961,6 +962,17 @@ class StudocuDownloader:
         self._log(f"  🔗 URL: {self.url}")
         self._log(f"  📂 Output: {self.output_dir.resolve()}")
         self._log(f"  🎯 Định dạng: {self.fmt.upper()}")
+
+        # Verification Layer: Bảo vệ ngăn chặn nhận nhầm link môn học / thư mục / tìm kiếm
+        parsed_path = urllib.parse.urlparse(self.url).path.lower()
+        if "/course/" in parsed_path or "/courses/" in parsed_path:
+            raise ValueError("Đây là liên kết môn học/thư mục (chứa danh sách nhiều tài liệu). Vui lòng mở 1 tài liệu cụ thể trong môn này để lấy link tải.")
+        if "/institution/" in parsed_path or "/univ/" in parsed_path or "/university/" in parsed_path:
+            raise ValueError("Đây là liên kết trường học/học viện. Vui lòng mở 1 tài liệu cụ thể để lấy link tải.")
+        if "/search" in parsed_path:
+            raise ValueError("Đây là liên kết trang tìm kiếm. Vui lòng chọn và mở 1 tài liệu cụ thể để lấy link tải.")
+        if "/document/" not in parsed_path and "/doc/" not in parsed_path and not re.search(r"/d/\d+", parsed_path):
+            raise ValueError("Liên kết không phải là trang tài liệu Studocu hợp lệ (link tài liệu phải chứa /document/).")
 
         created_target_id = None
         self.browser_context_id = None
