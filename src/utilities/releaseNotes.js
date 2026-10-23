@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.75': {
+    version: 'v23.75',
+    title: 'Bản cập nhật v23.75',
+    date: '24/10/2026',
+    features: [
+      'Thiết lập hồ sơ người dùng đa tầng (User Profile & Avatar System): Popup chào mừng hỏi Tên profile cho thiết bị lần đầu vào web, tự động ghi nhận vĩnh viễn và không hỏi lại',
+      'Tùy chỉnh Avatar linh hoạt: Bộ sưu tập 12 biểu tượng cá tính kết hợp tính năng tải ảnh đại diện từ thiết bị (Android & Web) với thuật toán nén ảnh canvas mượt mà',
+      'Hiển thị tên người dùng trực quan: Bổ sung nhãn tên nhỏ gọn tinh tế ngay bên dưới Avatar tại thanh điều hướng trên cùng (Header)',
+      'Đồng bộ hóa danh tính tự động: Tự động gắn tên người dùng vào phiên tải tài liệu Scribd, Studocu, lưu Drive và hệ thống giám sát Telemetry'
+    ],
+    fixes: [
+      'Tối ưu hóa bố cục thanh điều hướng Header trên mọi kích thước màn hình Android và máy tính, đảm bảo không bị tràn chữ hay lệch nút',
+      'Hỗ trợ đổi tên profile và đổi avatar tùy ý bất cứ lúc nào bằng cách nhấp trực tiếp vào Avatar trên Header'
+    ]
+  },
   'v23.74': {
     version: 'v23.74',
     title: 'Bản cập nhật v23.74',
@@ -852,7 +867,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.73'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.75'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -860,7 +875,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.73'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.73';
+  if (!rawVer) return 'v23.75';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

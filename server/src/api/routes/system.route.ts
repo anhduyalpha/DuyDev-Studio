@@ -4,6 +4,7 @@ import {
   extractClientIp,
   visitorSessionManager
 } from '../middleware/telemetry.middleware.js';
+import { deviceRegistryService } from '../../services/device-registry.service.js';
 
 export async function systemRoute(app: FastifyInstance) {
   app.get('/api/v1/system/telemetry', async (_req, reply) => {
@@ -136,6 +137,75 @@ export async function systemRoute(app: FastifyInstance) {
       return reply.send({ success: true, data: { left: Boolean(session) } });
     } catch (err: any) {
       return reply.status(200).send({ success: false, message: err?.message || 'Error recording session leave' });
+    }
+  });
+
+  // Client Device Profile (Tên & Avatar Người Dùng)
+  app.get('/api/v1/device/profile', async (req, reply) => {
+    try {
+      const q = (req.query as any) || {};
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || q.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : '';
+
+      if (!deviceId) {
+        return reply.status(400).send({ success: false, error: 'Thiếu mã thiết bị (deviceId)' });
+      }
+
+      const dev = deviceRegistryService.getDevice(deviceId);
+      return reply.send({
+        success: true,
+        data: {
+          deviceId,
+          alias: dev?.alias || '',
+          avatar: dev?.avatar || '',
+          isOwner: Boolean(dev?.isOwner),
+          isConfigured: Boolean(dev?.alias && dev.alias.trim().length > 0)
+        }
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err?.message || 'Lỗi đọc hồ sơ thiết bị' });
+    }
+  });
+
+  app.post('/api/v1/device/profile', async (req, reply) => {
+    try {
+      const body = (req.body as any) || {};
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || body.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : '';
+
+      if (!deviceId) {
+        return reply.status(400).send({ success: false, error: 'Thiếu mã thiết bị (deviceId)' });
+      }
+
+      let alias = body.alias;
+      if (typeof alias === 'string') {
+        alias = alias.trim().slice(0, 50); // Giới hạn 50 ký tự
+      }
+
+      let avatar = body.avatar;
+      if (typeof avatar === 'string') {
+        // Hỗ trợ preset name, emoji, hoặc data:image url (tối đa 150KB)
+        avatar = avatar.trim().slice(0, 150000);
+      }
+
+      const updatedDev = deviceRegistryService.setProfile(deviceId, {
+        alias: alias !== undefined ? alias : undefined,
+        avatar: avatar !== undefined ? avatar : undefined
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Đã cập nhật hồ sơ thiết bị thành công',
+        data: {
+          deviceId,
+          alias: updatedDev?.alias || '',
+          avatar: updatedDev?.avatar || '',
+          isOwner: Boolean(updatedDev?.isOwner),
+          isConfigured: Boolean(updatedDev?.alias && updatedDev.alias.trim().length > 0)
+        }
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err?.message || 'Lỗi cập nhật hồ sơ thiết bị' });
     }
   });
 }

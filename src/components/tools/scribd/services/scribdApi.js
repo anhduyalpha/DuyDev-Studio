@@ -4,6 +4,7 @@
  */
 
 import { getDeviceId } from '../../../../utilities/deviceId.js';
+import { getUserProfile } from '../../../../utilities/userProfile.js';
 
 const ACTIVE_JOB_KEY = 'ds_scribd_active_job';
 const MAX_JOB_AGE_MS = 5 * 60 * 1000; // 5 phút
@@ -59,13 +60,20 @@ export async function fetchFilesAndTrash() {
 
 export async function startDownloadApi(url, forceReload = false) {
   const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : '';
+  const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
+  const userName = profile?.name || '';
   return safeFetchJson('/api/v1/scribd/download', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(deviceId ? { 'X-Device-Id': deviceId } : {})
     },
-    body: JSON.stringify({ url, force_reload: forceReload, deviceId })
+    body: JSON.stringify({
+      url,
+      force_reload: forceReload,
+      deviceId,
+      user_name: userName
+    })
   });
 }
 
@@ -129,12 +137,14 @@ export async function emptyTrashApi() {
 
 export async function saveToDriveApi(filename, title = '', targetDir = 'scribd') {
   const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : '';
+  const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
+  const userName = profile?.name || '';
   return safeFetchJson('/api/v1/scribd/save-drive', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(deviceId ? { 'X-Device-Id': deviceId } : {})
     },
-    body: JSON.stringify({ filename, title, targetDir, deviceId })
+    body: JSON.stringify({ filename, title, targetDir, deviceId, user_name: userName })
   });
 }

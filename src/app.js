@@ -37,6 +37,8 @@ import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
 import { isAdminAuthenticated } from './utilities/adminAuth.js';
+import { isProfileConfigured, syncProfileWithServer } from './utilities/userProfile.js';
+import { openProfileModal } from './components/common/ProfileModal.js';
 
 /**
  * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id and role headers
@@ -153,6 +155,11 @@ class App {
     this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
 
+    // Background sync user profile and check for onboarding prompt
+    syncProfileWithServer().finally(() => {
+      this.checkAndPromptOnboardingProfile();
+    });
+
     // Signal app readiness for any fast-path queued interactions
     window.__dsAppReady = true;
     window.dispatchEvent(new CustomEvent('ds:app-ready'));
@@ -220,6 +227,25 @@ class App {
         runStorageJanitor();
       } catch {}
     }, 4000);
+  }
+
+  checkAndPromptOnboardingProfile() {
+    if (isProfileConfigured()) return;
+    const hasPrompted = sessionStorage.getItem('ds_profile_prompted_session') === 'true';
+    if (hasPrompted) return;
+
+    if (document.getElementById('dsMigrationNoticeModal') || document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
+      return;
+    }
+
+    setTimeout(() => {
+      if (isProfileConfigured()) return;
+      if (document.getElementById('dsMigrationNoticeModal') || document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
+        return;
+      }
+      sessionStorage.setItem('ds_profile_prompted_session', 'true');
+      openProfileModal({ isOnboarding: true });
+    }, 650);
   }
 
   async checkAndOpenShareTarget() {

@@ -113,11 +113,18 @@ class VisitorTracker {
 
       const screenRes = window.screen ? `${window.screen.width}x${window.screen.height}` : 'Unknown';
 
+      let userAlias = '';
+      try {
+        const raw = localStorage.getItem('ds_user_profile');
+        if (raw) userAlias = JSON.parse(raw)?.name || '';
+      } catch {}
+
       const isAdmin = Boolean(isAdminAuthenticated());
       const payload = {
         sessionId: this.sessionId,
         visitorId: this.visitorId,
         deviceId: this.deviceId,
+        ...(userAlias ? { alias: userAlias } : {}),
         isAdmin,
         route: this.currentRoute,
         referrer: document.referrer || '',

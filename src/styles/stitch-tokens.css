@@ -862,4 +862,22 @@ html.dark .converter-result-completed-glow,
   outline-offset: -1px;
 }
 
+/* ==============================================================================
+   User Profile & Avatar Dialog Animations
+   ============================================================================== */
+.animate-fade-in {
+  animation: dsProfileFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dsProfileFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 

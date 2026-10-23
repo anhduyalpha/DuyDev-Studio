@@ -7,6 +7,20 @@ import { storage } from '../../utilities/storage.js';
 import { soundEngine } from '../../utilities/soundEngine.js';
 import { openSoundVolumeModal } from '../common/SoundVolumeModal.js';
 import { isAdminAuthenticated } from '../../utilities/adminAuth.js';
+import {
+  getUserProfile,
+  renderAvatarInnerHtml,
+  getAvatarGradient
+} from '../../utilities/userProfile.js';
+import { openProfileModal } from '../common/ProfileModal.js';
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 export function updateHeaderTrashIndicator() {
   const dot = document.getElementById('headerTrashDot');
@@ -21,6 +35,10 @@ export function renderHeader() {
   const isSoundEnabled = soundEngine.isEnabled();
   const isAdmin = isAdminAuthenticated();
   const trashCount = storage.getLocalTrash().length;
+  const userProfile = getUserProfile();
+  const displayName = userProfile.name || (isAdmin ? 'Duy' : 'Khách');
+  const gradientClass = getAvatarGradient(userProfile.name);
+  const avatarHtml = renderAvatarInnerHtml(userProfile.avatar, userProfile.name);
   const soundTitle = isSoundEnabled 
     ? (isAdmin ? 'Tắt âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Tắt âm thanh') 
     : (isAdmin ? 'Bật âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Bật âm thanh');
@@ -92,10 +110,21 @@ export function renderHeader() {
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
           </button>
 
-          <!-- User Profile Avatar -->
-          <div onclick="window.location.hash = '#settings'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.hash='#settings';}" role="button" tabindex="0" title="Cài đặt hệ thống" aria-label="Cài đặt hệ thống" class="flex w-9 h-9 sm:w-9 sm:h-9 rounded-full bg-zinc-200 dark:bg-white/[0.08] border border-zinc-300 dark:border-white/[0.15] items-center justify-center font-bold text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 cursor-pointer hover:border-zinc-400 dark:hover:border-white/30 transition shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-            D
-          </div>
+          <!-- User Profile Avatar with Small Name Underneath -->
+          <button 
+            type="button" 
+            id="headerProfileBtn" 
+            title="${userProfile.name ? `Hồ sơ: ${escapeHtml(userProfile.name)} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)'}" 
+            aria-label="Hồ sơ người dùng & Đổi avatar" 
+            class="flex flex-col items-center justify-center px-1 py-0.5 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          >
+            <div id="headerUserAvatar" class="relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ${gradientClass}">
+              ${avatarHtml}
+            </div>
+            <span id="headerUserNameText" class="text-[9px] sm:text-[9.5px] font-medium text-zinc-600 dark:text-zinc-400 max-w-[46px] sm:max-w-[54px] truncate leading-tight mt-0.5 text-center">
+              ${escapeHtml(displayName)}
+            </span>
+          </button>
 
         </div>
 
@@ -242,6 +271,32 @@ export function attachHeaderListeners(onSearch) {
       toggleTheme();
     });
   }
+
+  // Profile avatar & name modal trigger
+  const btnProfile = document.getElementById('headerProfileBtn');
+  if (btnProfile) {
+    btnProfile.addEventListener('click', () => {
+      openProfileModal({ isOnboarding: false });
+    });
+  }
+
+  // Reactive listener for profile updates without reloading
+  window.addEventListener('ds:profile-updated', (e) => {
+    const updated = e.detail || getUserProfile();
+    const avatarEl = document.getElementById('headerUserAvatar');
+    const nameEl = document.getElementById('headerUserNameText');
+    const btnEl = document.getElementById('headerProfileBtn');
+    if (avatarEl) {
+      avatarEl.className = `relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
+      avatarEl.innerHTML = renderAvatarInnerHtml(updated.avatar, updated.name);
+    }
+    if (nameEl) {
+      nameEl.textContent = updated.name || (isAdminAuthenticated() ? 'Duy' : 'Khách');
+    }
+    if (btnEl) {
+      btnEl.title = updated.name ? `Hồ sơ: ${updated.name} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)';
+    }
+  });
 
   // Ensure current theme icon is rendered
   updateThemeUI(getStoredTheme());

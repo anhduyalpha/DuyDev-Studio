@@ -5,6 +5,7 @@ import { logger } from '../lib/logger.js';
 export interface StoredDeviceInfo {
   deviceId: string;
   alias?: string;
+  avatar?: string;
   isOwner: boolean;
   isBlocked: boolean;
   firstSeenAt: string;
@@ -148,6 +149,33 @@ export class DeviceRegistryService {
     const dev = this.devices.get(deviceId);
     if (!dev) return null;
     dev.alias = alias ? alias.trim() : undefined;
+    this.scheduleSave();
+    return dev;
+  }
+
+  public setProfile(deviceId: string, data: { alias?: string; avatar?: string }): StoredDeviceInfo | null {
+    let dev = this.devices.get(deviceId);
+    if (!dev) {
+      dev = {
+        deviceId,
+        isOwner: false,
+        isBlocked: false,
+        firstSeenAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+        userAgent: '',
+        deviceSummary: 'Web Client',
+        country: 'VN',
+        lastIp: '127.0.0.1',
+        ipHistory: []
+      };
+      this.devices.set(deviceId, dev);
+    }
+    if (data.alias !== undefined) {
+      dev.alias = data.alias ? data.alias.trim() : undefined;
+    }
+    if (data.avatar !== undefined) {
+      dev.avatar = data.avatar ? data.avatar.trim() : undefined;
+    }
     this.scheduleSave();
     return dev;
   }
