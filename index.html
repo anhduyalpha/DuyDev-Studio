@@ -6,7 +6,7 @@
   <title>DuyDev Studio - Utility Hub</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#F4F4F6">
+  <meta name="theme-color" content="#F5F5F7">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DuyDev Studio">
@@ -21,7 +21,7 @@
           document.documentElement.classList.add('dark');
           document.documentElement.style.colorScheme = 'dark';
           var m = document.querySelector('meta[name="theme-color"]');
-          if (m) m.setAttribute('content', '#09090B');
+          if (m) m.setAttribute('content', '#0A0A0C');
         } else {
           document.documentElement.classList.remove('dark');
           document.documentElement.style.colorScheme = 'light';
@@ -163,14 +163,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.87">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.87">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=23.87">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=23.87">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.87">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.90">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.90">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=23.90">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=23.90">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.90">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=23.87">
+  <link rel="modulepreload" href="src/app.js?v=23.90">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -2990,7 +2990,7 @@
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
-          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v23.87</span>
+          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v23.90</span>
           <span>•</span>
           <span>Studio riêng của Anh Duy</span>
         </div>
@@ -3061,7 +3061,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=23.87"></script>
+  <script type="module" src="src/app.js?v=23.90"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>

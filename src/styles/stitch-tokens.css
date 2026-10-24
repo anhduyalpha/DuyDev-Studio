@@ -7,19 +7,19 @@
 
 :root {
   color-scheme: light;
-  /* Light Mode Palette - High Contrast */
-  --canvas: #F4F4F6;
+  /* Light Mode Palette - Apple Ceramic Quartz */
+  --canvas: #F5F5F7;
   --surface-base: #FFFFFF;
-  --surface-elevated: #F8F9FA;
-  --surface-hover: #EBECEF;
+  --surface-elevated: #FAFAFC;
+  --surface-hover: #F0F0F2;
   
-  --border-subtle: rgba(0, 0, 0, 0.09);
-  --border-hover: rgba(0, 0, 0, 0.18);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-hover: rgba(0, 0, 0, 0.12);
   --border-active: rgba(0, 0, 0, 0.28);
 
-  --text-primary: #09090B;
-  --text-secondary: #27272A;
-  --text-muted: #52525B;
+  --text-primary: #1D1D1F;
+  --text-secondary: #424245;
+  --text-muted: #86868B;
 
   --accent: #4F46E5;
   --accent-light: #6366F1;
@@ -32,26 +32,26 @@
 
 html.dark {
   color-scheme: dark;
-  /* Dark Mode Palette (Linear / Vercel Minimalist) */
-  --canvas: #09090B;
-  --surface-base: #131317;
-  --surface-elevated: #1a1a20;
-  --surface-hover: #22222a;
+  /* Dark Mode Palette (Apple Space Black & Carbon Graphite) */
+  --canvas: #0A0A0C;
+  --surface-base: #121215;
+  --surface-elevated: #16161A;
+  --surface-hover: #1E1E24;
   
-  --border-subtle: rgba(255, 255, 255, 0.12);
-  --border-hover: rgba(255, 255, 255, 0.22);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.16);
   --border-active: rgba(255, 255, 255, 0.32);
 
-  --text-primary: #FAFAFA;
-  --text-secondary: #A1A1AA;
-  --text-muted: #71717A;
+  --text-primary: #F5F5F7;
+  --text-secondary: #A1A1A6;
+  --text-muted: #86868B;
 
   --accent: #4F46E5;
   --accent-light: #6366F1;
 
-  --glass-dock: rgba(16, 18, 26, 0.75);
-  --glass-panel: rgba(12, 14, 22, 0.58);
-  --glass-card: rgba(16, 18, 27, 0.62);
+  --glass-dock: rgba(16, 16, 20, 0.75);
+  --glass-panel: rgba(10, 10, 12, 0.80);
+  --glass-card: rgba(16, 16, 20, 0.70);
   --dock-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
@@ -330,9 +330,9 @@ html.dark .task-micro-dock {
 }
 
 html.dark .glass-panel-contained {
-  background: linear-gradient(165deg, rgba(20, 23, 33, 0.96) 0%, rgba(13, 15, 22, 0.98) 100%);
+  background: linear-gradient(165deg, rgba(22, 22, 26, 0.96) 0%, rgba(14, 14, 16, 0.98) 100%);
   border: 1px solid rgba(255, 255, 255, 0.11);
-  box-shadow: 0 10px 32px -4px rgba(0, 0, 0, 0.55),
+  box-shadow: 0 10px 32px -4px rgba(0, 0, 0, 0.55);
 }
 
 .glass-pill {
@@ -344,7 +344,7 @@ html.dark .glass-panel-contained {
 }
 
 html.dark .glass-pill {
-  background: linear-gradient(165deg, rgba(26, 29, 41, 0.95) 0%, rgba(17, 19, 28, 0.98) 100%);
+  background: linear-gradient(165deg, rgba(24, 24, 28, 0.95) 0%, rgba(16, 16, 20, 0.98) 100%);
   border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
@@ -356,7 +356,7 @@ html.dark .glass-pill {
 }
 
 html.dark .recent-activity-card {
-  background: linear-gradient(165deg, #181b28 0%, #12141c 100%);
+  background: linear-gradient(165deg, #16161A 0%, #121215 100%);
   border: 1px solid rgba(255, 255, 255, 0.11);
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.40),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
@@ -372,7 +372,7 @@ html.dark .recent-activity-card {
 }
 
 html.dark .glass-search {
-  background: #151821;
+  background: #16161A;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
@@ -385,14 +385,14 @@ html.dark .glass-search {
   }
 
   html.dark .glass-pill:hover {
-    background: linear-gradient(165deg, rgba(34, 38, 54, 0.98) 0%, rgba(23, 26, 38, 1) 100%);
+    background: linear-gradient(165deg, rgba(30, 30, 36, 0.98) 0%, rgba(20, 20, 24, 1) 100%);
     border-color: rgba(255, 255, 255, 0.20);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.40),
                 inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
   }
 
   html.dark .recent-activity-card:hover {
-    background: linear-gradient(165deg, #1f2334 0%, #161823 100%);
+    background: linear-gradient(165deg, #1E1E24 0%, #16161A 100%);
     border-color: rgba(255, 255, 255, 0.22);
     box-shadow: 0 8px 24px -3px rgba(0, 0, 0, 0.55),
                 inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
@@ -406,7 +406,7 @@ html.dark .glass-search {
   }
 
   html.dark .glass-search:hover {
-    background: #181c28;
+    background: #1E1E24;
     border-color: rgba(255, 255, 255, 0.24);
     box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.45),
                 inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
@@ -576,9 +576,10 @@ html.dark body::before {
 .linear-card {
   position: relative;
   background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.09);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03),
+              0 6px 18px -2px rgba(0, 0, 0, 0.04),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.90);
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
               opacity 0.18s ease,
               background-color 0.15s ease,
@@ -587,11 +588,11 @@ html.dark body::before {
 }
 
 html.dark .linear-card {
-  background: #151821;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 6px 24px -4px rgba(0, 0, 0, 0.55),
-              0 2px 8px -2px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  background: #16161A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.40),
+              0 10px 28px -4px rgba(0, 0, 0, 0.55),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -604,7 +605,7 @@ html.dark .linear-card {
   }
 
   html.dark .linear-card:hover {
-    background: #181c28;
+    background: #1E1E24;
     border-color: color-mix(in srgb, var(--accent) 38%, rgba(255, 255, 255, 0.18));
     box-shadow: 0 14px 34px -6px rgba(0, 0, 0, 0.68),
                 0 2px 10px -2px rgba(0, 0, 0, 0.40),

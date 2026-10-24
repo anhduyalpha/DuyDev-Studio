@@ -383,3 +383,60 @@ Integrity mode: development
 - [ ] Biên dịch TypeScript toàn bộ backend (`npm --prefix server run build`) đạt 0 lỗi typecheck.
 - [ ] Kiểm tra cú pháp JavaScript frontend (`node --check`) đạt 0 lỗi cú pháp.
 - [ ] Triển khai lên máy chủ homeserver `192.168.2.171`, khởi động lại dịch vụ `dd-studio.service` thành công, kiểm tra `curl http://192.168.2.171:3000/api/v1/health` đạt HTTP 200 UP.
+
+
+## 2026-10-24T16:10:51Z
+
+Implement the Apple Luxury UI design system (macOS Sequoia / iOS 18 "Space Black & Ceramic Quartz") across DuyDev Studio's dashboard, tool cards, category filters, and persistent chrome while maintaining 100% 60Hz/120Hz native compositor performance.
+
+Working directory: c:\Users\AnhDuy\Code\Project\DD Studio
+Integrity mode: development
+
+Reference Plan: docs/superpowers/plans/2026-10-24-apple-luxury-ui.md
+Architectural Invariant: docs/knowledge-base/KI-CON-012-120hz-inertial-smooth-scroll-gpu-compositing.md
+
+## Requirements
+
+### R1. Apple Color Physics & Specular Lighting Tokens
+- Calibrate design tokens in `src/styles/stitch-tokens.css`:
+  - Dark Mode: OLED Space Black (`#0A0A0C`) canvas, Carbon Graphite (`#16161A`) elevated surface, neutral gray text (`#86868B`). Purge outdated blue-slate tint (`#151821`).
+  - Light Mode: Ceramic Alabaster (`#F5F5F7`) canvas, pure white (`#FFFFFF`) card surface, neutral text (`#1D1D1F`).
+  - Specular Rim: Apply precision double-lighting highlight `inset 0 1px 0 rgba(255,255,255,...)` and hairline 1px border to `.linear-card`.
+
+### R2. Concentric Squircle Geometry & Optical Hierarchy for Tool Cards
+- In `src/components/dashboard/ToolCard.js`:
+  - Outer card wrapper: `rounded-[20px]`, `touch-manipulation`, fluid micro-press `active:scale-[0.985]`.
+  - Icon container: `rounded-[14px]` preserving concentric squircle ratio ($R_{\text{inner}} \approx R_{\text{outer}} - \text{padding}$).
+  - Typography: Optical negative tracking (`tracking-[-0.025em]`) for titles; muted contrast `#86868B` for descriptions with line-height 1.45.
+  - Maintain 100% backward compatibility with 10-Tier RPG badge and ornament classes (`tier-card`, `tier-crest-badge`).
+
+### R3. macOS Segmented Control Aesthetic for Category Filters
+- In `src/components/dashboard/CategoryFilters.js`:
+  - Active pill: High-contrast frosted graphite/white with subtle specular rim.
+  - Inactive pill: Neutral surface matching the Apple palette.
+  - Count badge: Concentric `rounded-[6px]`, tabular mono numbers.
+  - Fluid tactile press: `active:scale-[0.96]`.
+
+### R4. Specular Glass Rims for Persistent Chrome
+- In `src/styles/stitch-tokens.css`:
+  - Sticky Header (`.glass-panel`): Preserve dedicated GPU layer (`transform: translateZ(0)`), enforce `blur(12px)`, specular bottom hairline border.
+  - Bottom Navigation Dock (`.glass-dock`): Specular top rim `inset 0 1px 0 rgba(255,255,255,0.15)` simulating physical glass chamfer.
+
+### R5. Protected Modules & Zero Regression Guardrails
+- TUYỆT ĐỐI không chỉnh sửa bất kỳ file nào thuộc module Studocu và Scribd (`src/components/tools/studocu/**`, `server/src/services/studocu/**`, `src/styles/studocu.css`).
+- Bump Service Worker cache version in `sw.js` and query strings in `index.html`.
+
+## Acceptance Criteria
+
+### Automated Test Verification
+- [ ] `node server/node_modules/vitest/vitest.mjs run server/tests/unit/smooth_scroll_120hz.test.ts` passes 9/9 tests with 0 failures.
+- [ ] No `backdrop-filter` exists on repeating scroll elements (`.linear-card`, `.recent-activity-card`, `.tool-accent-box`).
+- [ ] `cmd.exe /c "server\node_modules\.bin\tsc.cmd -p server\tsconfig.json --noEmit"` exits with code 0 (0 TypeScript errors).
+- [ ] Syntax check `cmd.exe /c "node --check src/components/dashboard/ToolCard.js"` exits with code 0.
+- [ ] Syntax check `cmd.exe /c "node --check src/components/dashboard/CategoryFilters.js"` exits with code 0.
+
+### Visual & Architectural Integrity
+- [ ] Tool cards exhibit concentric squircle corners ($20\text{px}$ outer, $14\text{px}$ inner icon box).
+- [ ] Dark Mode displays pure neutral graphite/OLED black without blue-slate tint.
+- [ ] Micro-interactions use GPU-accelerated `transform` without layout shifts or scroll jank.
+- [ ] All 10-Tier tool card visual classes (`E` through `EX`) function without regression.
