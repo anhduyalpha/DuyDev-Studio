@@ -6,6 +6,17 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.82': {
+    version: 'v23.82',
+    title: 'Bản cập nhật v23.82',
+    date: '24/10/2026',
+    features: [
+      'Chuyển công cụ ViewSplit sang nhóm Nâng cao: Đưa ViewSplit từ tab Tiện ích sang tab Nâng cao trên bảng điều khiển chính, giúp phân loại trực quan cùng các công cụ chuyên sâu'
+    ],
+    fixes: [
+      'Cập nhật nhãn đếm phân loại công cụ và bộ lọc danh mục tương thích liền mạch'
+    ]
+  },
   'v23.81': {
     version: 'v23.81',
     title: 'Bản cập nhật v23.81',

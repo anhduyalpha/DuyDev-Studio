@@ -110,18 +110,6 @@ const DEFAULT_TOOLS = [
 
   // 5. System & Utility
   {
-    id: 'view-split',
-    title: 'ViewSplit',
-    description: 'So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector.',
-    category: 'system',
-    icon: 'columns-2',
-    featured: true,
-    specs: ['So sánh đa ảnh', 'Slider Wipe', 'Pixel Inspector'],
-    color: '#06B6D4',
-    route: '#tool/view-split',
-    tags: ['viewsplit', 'view split', 'so sánh ảnh', 'soi điểm ảnh', 'pixel inspector', 'slider wipe', 'diff', 'compare']
-  },
-  {
     id: 'studocu-dl',
     title: 'Studocu Downloader',
     description: 'Tải giáo trình & tài liệu Studocu sang PDF rõ nét.',
@@ -173,6 +161,18 @@ const DEFAULT_TOOLS = [
   },
 
   // 6. Advanced Tools
+  {
+    id: 'view-split',
+    title: 'ViewSplit',
+    description: 'So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector.',
+    category: 'advanced',
+    icon: 'columns-2',
+    featured: true,
+    specs: ['So sánh đa ảnh', 'Slider Wipe', 'Pixel Inspector'],
+    color: '#06B6D4',
+    route: '#tool/view-split',
+    tags: ['viewsplit', 'view split', 'so sánh ảnh', 'soi điểm ảnh', 'pixel inspector', 'slider wipe', 'diff', 'compare', 'nâng cao', 'advanced']
+  },
   {
     id: 'hash-checksum',
     title: 'Mã Băm & Base64',

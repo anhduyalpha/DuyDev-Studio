@@ -21,9 +21,10 @@ describe('Tool Registry Categories & Advanced Tab Suite', () => {
     expect(content).toMatch(/id:\s*'hash-checksum'[\s\S]*?category:\s*'advanced'/);
     // storage must be advanced
     expect(content).toMatch(/id:\s*'storage'[\s\S]*?category:\s*'advanced'/);
+    // view-split must be advanced
+    expect(content).toMatch(/id:\s*'view-split'[\s\S]*?category:\s*'advanced'/);
 
     // system tools must remain in system
-    expect(content).toMatch(/id:\s*'view-split'[\s\S]*?category:\s*'system'/);
     expect(content).toMatch(/id:\s*'studocu-dl'[\s\S]*?category:\s*'system'/);
     expect(content).toMatch(/id:\s*'tiktok-downloader'[\s\S]*?category:\s*'system'/);
     expect(content).toMatch(/id:\s*'scribd-archiver'[\s\S]*?category:\s*'system'/);
