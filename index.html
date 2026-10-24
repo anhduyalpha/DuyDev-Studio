@@ -163,14 +163,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.90">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.90">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=23.90">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=23.90">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.90">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.95">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.95">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=23.95">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=23.95">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.95">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=23.90">
+  <link rel="modulepreload" href="src/app.js?v=23.95">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -661,7 +661,7 @@
       <!-- Category Filter Pills Bar -->
       <div class="w-full min-w-0 overflow-hidden">
         
-    <div id="categoryFilterBar" role="tablist" aria-label="Bộ lọc phân loại công cụ" class="flex items-center gap-2 overflow-x-auto pb-2 pr-4 sm:pr-0 custom-scrollbar select-none py-1">
+    <div id="categoryFilterBar" role="tablist" aria-label="Bộ lọc phân loại công cụ" class="flex items-center gap-2 overflow-x-auto pb-2 pr-4 sm:pr-0 custom-scrollbar scroll-smooth select-none py-1">
       
           <button 
             type="button"
@@ -669,10 +669,10 @@
             role="tab"
             aria-selected="true"
             aria-pressed="true"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20">
-            <span class="w-2 h-2 rounded-full mr-2 shrink-0 bg-white dark:bg-zinc-900" style=""></span>
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-[#1D1D1F] text-white font-semibold shadow-xs border-[#1D1D1F] dark:bg-white/[0.14] dark:text-white dark:border-white/[0.16] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 bg-white" style=""></span>
             <span>Tất cả</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900">15</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-white/20 text-white dark:bg-white/[0.18] dark:text-white">15</span>
           </button>
         
           <button 
@@ -681,10 +681,10 @@
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-white text-zinc-600 border-black/[0.06] hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #F59E0B;"></span>
             <span>PDF</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]">2</span>
           </button>
         
           <button 
@@ -693,10 +693,10 @@
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-white text-zinc-600 border-black/[0.06] hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #8B5CF6;"></span>
             <span>Chuyển đổi</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]">2</span>
           </button>
         
           <button 
@@ -705,10 +705,10 @@
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-white text-zinc-600 border-black/[0.06] hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #0EA5E9;"></span>
             <span>File nén</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]">2</span>
           </button>
         
           <button 
@@ -717,10 +717,10 @@
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-white text-zinc-600 border-black/[0.06] hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #10B981;"></span>
             <span>Mã QR</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]">2</span>
           </button>
         
           <button 
@@ -729,10 +729,10 @@
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-white text-zinc-600 border-black/[0.06] hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #6366F1;"></span>
             <span>Tiện ích</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">4</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]">4</span>
           </button>
         
           <button 
@@ -741,10 +741,10 @@
             role="tab"
             aria-selected="false"
             aria-pressed="false"
-            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-white text-zinc-600 border-black/[0.06] hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs">
             <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #EC4899;"></span>
             <span>Nâng cao</span>
-            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">3</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]">3</span>
           </button>
         
     </div>
@@ -762,7 +762,7 @@
         <div id="toolsGridContainer">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
       <a href="#tool/pdf-studio"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="pdf-studio"
        aria-label="PDF Studio - Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector."
        style="--accent: #F59E0B; --accent-contrast: #B45309;">
@@ -817,20 +817,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -880,25 +880,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="PDF Studio">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="PDF Studio">
           PDF Studio
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Nén & Ghép
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Tách & Xoay
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Watermark
             </span>
           
@@ -910,14 +910,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           PDF
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/quiz-generator"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="quiz-generator"
        aria-label="Tạo Bài Tập Trắc Nghiệm - Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive."
        style="--accent: #8B5CF6; --accent-contrast: #6D28D9;">
@@ -969,20 +969,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1029,25 +1029,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Tạo Bài Tập Trắc Nghiệm">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Tạo Bài Tập Trắc Nghiệm">
           Tạo Bài Tập Trắc Nghiệm
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Đề bài A4
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Đáp án & Lời giải
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Agnes AI
             </span>
           
@@ -1059,14 +1059,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           PDF
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#archive"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="archive-inspect"
        aria-label="Soi Tệp Nén - Duyệt cấu trúc thư mục và trích xuất không cần giải nén."
        style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
@@ -1127,20 +1127,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1196,29 +1196,29 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Soi Tệp Nén">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Soi Tệp Nén">
           Soi Tệp Nén
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Duyệt cấu trúc thư mục và trích xuất không cần giải nén.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               .ZIP
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               .RAR
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               .7Z
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Trích xuất
             </span>
           
@@ -1230,14 +1230,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           File nén
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#server-archive"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="server-archive"
        aria-label="Nén Tệp ZIP - Nén tệp tin và thư mục thành định dạng ZIP."
        style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
@@ -1286,20 +1286,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1343,17 +1343,17 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Nén Tệp ZIP">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Nén Tệp ZIP">
           Nén Tệp ZIP
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Nén tệp tin và thư mục thành định dạng ZIP.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               ZIP
             </span>
           
@@ -1365,14 +1365,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           File nén
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/universal-converter"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="universal-converter"
        aria-label="File Converter - Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng."
        style="--accent: #6366F1; --accent-contrast: #6366F1;">
@@ -1423,20 +1423,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1482,25 +1482,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="File Converter">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="File Converter">
           File Converter
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Hình ảnh
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Video & Nhạc
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Tài liệu
             </span>
           
@@ -1512,14 +1512,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Chuyển đổi
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/markdown-docs"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="markdown-docs"
        aria-label="Văn Bản & Tài Liệu - Chuyển đổi Markdown sang HTML, Word (.docx) và in PDF."
        style="--accent: #8B5CF6; --accent-contrast: #6D28D9;">
@@ -1569,20 +1569,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1627,25 +1627,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Văn Bản & Tài Liệu">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Văn Bản & Tài Liệu">
           Văn Bản & Tài Liệu
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Chuyển đổi Markdown sang HTML, Word (.docx) và in PDF.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Markdown
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               DOCX
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               PDF
             </span>
           
@@ -1657,14 +1657,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Chuyển đổi
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/qr-multi"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="qr-multi"
        aria-label="QR Studio - Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ."
        style="--accent: #10B981; --accent-contrast: #047857;">
@@ -1715,20 +1715,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1774,25 +1774,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="QR Studio">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="QR Studio">
           QR Studio
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               VietQR
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Wi-Fi & Link
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Tùy biến
             </span>
           
@@ -1804,14 +1804,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Mã QR
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/qr-scan"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="qr-scan"
        aria-label="Quét Mã QR - Đọc nội dung mã QR từ tệp ảnh hoặc clipboard."
        style="--accent: #10B981; --accent-contrast: #047857;">
@@ -1851,20 +1851,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -1899,17 +1899,17 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Quét Mã QR">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Quét Mã QR">
           Quét Mã QR
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Đọc nội dung mã QR từ tệp ảnh hoặc clipboard.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Ảnh & Clipboard
             </span>
           
@@ -1921,14 +1921,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Mã QR
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/studocu-dl"
-       class="tool-card linear-card tier-card tier-ur group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card tier-card tier-ur group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="studocu-dl"
        aria-label="Studocu Downloader - Tải giáo trình & tài liệu Studocu sang PDF rõ nét."
        style="--accent: #6366F1; --accent-contrast: #6366F1;">
@@ -2061,13 +2061,13 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
@@ -2081,7 +2081,7 @@
           <div class="ur-orbit-satellite sat-2"></div>
           <div class="ur-orbit-satellite sat-3"></div>
         </div>
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -2120,21 +2120,21 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Studocu Downloader">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Studocu Downloader">
           Studocu Downloader
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải giáo trình & tài liệu Studocu sang PDF rõ nét.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               PDF
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Tài liệu học tập
             </span>
           
@@ -2146,14 +2146,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Tiện ích
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/tiktok-downloader"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="tiktok-downloader"
        aria-label="TikTok Downloader - Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive."
        style="--accent: #EE1D52; --accent-contrast: #EE1D52;">
@@ -2166,20 +2166,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               <i data-lucide="video" class="w-6 h-6 sm:w-6.5 sm:h-6.5"></i>
             </div>
           </div>
@@ -2187,25 +2187,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="TikTok Downloader">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="TikTok Downloader">
           TikTok Downloader
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Không Logo
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Video & Album Ảnh
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Lưu Drive
             </span>
           
@@ -2217,14 +2217,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Tiện ích
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/youtube-downloader"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="youtube-downloader"
        aria-label="YouTube Downloader - Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive."
        style="--accent: #FF0000; --accent-contrast: #FF0000;">
@@ -2258,20 +2258,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -2300,25 +2300,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="YouTube Downloader">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="YouTube Downloader">
           YouTube Downloader
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               MP4 1080p
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               MP3 320kbps
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Lưu Drive
             </span>
           
@@ -2330,14 +2330,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Tiện ích
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/scribd"
-       class="tool-card linear-card tier-card tier-ur group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card tier-card tier-ur group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="scribd-archiver"
        aria-label="Scribd Downloader - Tải tài liệu & slide Scribd sang file PDF rõ nét."
        style="--accent: #EA580C; --accent-contrast: #C2410C;">
@@ -2467,13 +2467,13 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
@@ -2487,7 +2487,7 @@
           <div class="ur-orbit-satellite sat-2"></div>
           <div class="ur-orbit-satellite sat-3"></div>
         </div>
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -2523,25 +2523,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Scribd Downloader">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Scribd Downloader">
           Scribd Downloader
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải tài liệu & slide Scribd sang file PDF rõ nét.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               PDF
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Slides
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Drive
             </span>
           
@@ -2553,14 +2553,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Tiện ích
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/view-split"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="view-split"
        aria-label="ViewSplit - So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector."
        style="--accent: #06B6D4; --accent-contrast: #06B6D4;">
@@ -2609,20 +2609,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -2666,25 +2666,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="ViewSplit">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="ViewSplit">
           ViewSplit
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               So sánh đa ảnh
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Slider Wipe
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Pixel Inspector
             </span>
           
@@ -2696,14 +2696,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Nâng cao
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#tool/hash-checksum"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="hash-checksum"
        aria-label="Mã Băm & Base64 - Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64."
        style="--accent: #64748B; --accent-contrast: #334155;">
@@ -2746,20 +2746,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -2797,25 +2797,25 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Mã Băm & Base64">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Mã Băm & Base64">
           Mã Băm & Base64
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               MD5
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               SHA-256
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Base64
             </span>
           
@@ -2827,14 +2827,14 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Nâng cao
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
       </div>
 
     </a><a href="#storage"
-       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="storage"
        aria-label="Bộ Nhớ Lưu Trữ - Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị."
        style="--accent: #6366F1; --accent-contrast: #6366F1;">
@@ -2882,20 +2882,20 @@
       </div>
 
       <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
-      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-40 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
       <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full opacity-[0.14] dark:opacity-[0.20] group-hover:opacity-[0.26] dark:group-hover:opacity-[0.32] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
       <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.04] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
         <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
           <div class="relative inline-flex items-center justify-center shrink-0">
             
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
               
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
       <defs>
@@ -2938,21 +2938,21 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Bộ Nhớ Lưu Trữ">
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Bộ Nhớ Lưu Trữ">
           Bộ Nhớ Lưu Trữ
         </h3>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
               Cloud Drive
             </span>
           
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-[#86868B] border border-zinc-200/60 dark:border-white/[0.06]">
               Truyền tệp
             </span>
           
@@ -2964,7 +2964,7 @@
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
           Nâng cao
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
@@ -2990,7 +2990,7 @@
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
-          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v23.90</span>
+          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v23.95</span>
           <span>•</span>
           <span>Studio riêng của Anh Duy</span>
         </div>
@@ -3061,7 +3061,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=23.90"></script>
+  <script type="module" src="src/app.js?v=23.95"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
