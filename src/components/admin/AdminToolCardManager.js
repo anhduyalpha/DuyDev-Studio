@@ -280,7 +280,7 @@ export function renderAdminToolCardManager() {
                     class="btn-move-tool w-9 h-9 rounded-lg flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
                     title="Di chuyển lên trên"
                   >
-                    <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                    <i data-lucide="chevron-up" class="w-4 h-4 pointer-events-none"></i>
                   </button>
 
                   <button
@@ -291,7 +291,7 @@ export function renderAdminToolCardManager() {
                     class="btn-move-tool w-9 h-9 rounded-lg flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
                     title="Di chuyển xuống dưới"
                   >
-                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    <i data-lucide="chevron-down" class="w-4 h-4 pointer-events-none"></i>
                   </button>
                 </div>
               </div>
@@ -399,7 +399,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
       const targetTool = draftTools.find(t => t.id === toolId);
       if (targetTool && targetTool.category !== newCat) {
         targetTool.category = newCat;
-        soundEngine?.play('click');
+        try { soundEngine?.playToggle(); } catch (_) {}
         refreshUI();
       }
     };
@@ -421,7 +421,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
           draftTools.splice(newPrevIdx, 0, item);
           // Normalize sequential order
           draftTools.forEach((t, i) => { t.order = i + 1; });
-          soundEngine?.play('click');
+          try { soundEngine?.playToggle(); } catch (_) {}
           refreshUI();
         }
       }
@@ -443,7 +443,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
           draftTools.splice(newNextIdx + 1, 0, item);
           // Normalize sequential order
           draftTools.forEach((t, i) => { t.order = i + 1; });
-          soundEngine?.play('click');
+          try { soundEngine?.playToggle(); } catch (_) {}
           refreshUI();
         }
       }
@@ -469,11 +469,11 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
         await toolRegistry.saveLayoutToServer(payload, authHeaders);
         originalToolsSnapshot = JSON.parse(JSON.stringify(draftTools));
 
-        soundEngine?.play('success');
+        try { soundEngine?.playSuccess(); } catch (_) {}
         showToast('Đã lưu cấu hình thẻ và danh mục thành công', 'success');
       } catch (err) {
         console.error('[AdminToolCardManager] Save error:', err);
-        soundEngine?.play('error');
+        try { soundEngine?.playError(); } catch (_) {}
         showToast(err?.message || 'Không thể lưu cấu hình thẻ công cụ', 'error');
       } finally {
         isSaving = false;
@@ -499,11 +499,11 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
         await toolRegistry.resetLayoutToServer(authHeaders);
         initDraftTools();
 
-        soundEngine?.play('success');
+        try { soundEngine?.playSuccess(); } catch (_) {}
         showToast('Đã khôi phục bố cục thẻ công cụ về mặc định ban đầu', 'info');
       } catch (err) {
         console.error('[AdminToolCardManager] Reset error:', err);
-        soundEngine?.play('error');
+        try { soundEngine?.playError(); } catch (_) {}
         showToast(err?.message || 'Không thể khôi phục bố cục mặc định', 'error');
       } finally {
         isSaving = false;

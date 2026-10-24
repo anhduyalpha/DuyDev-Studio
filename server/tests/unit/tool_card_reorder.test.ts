@@ -25,6 +25,13 @@ describe('Tool Card Manager Reordering & Real-time Dynamic Layout Sync', () => {
     expect(code).toContain('const nextVisibleTool = currentFiltered[visibleIndex + 1];');
   });
 
+  it('SoundEngine: supports safe play() dispatcher and does not throw', () => {
+    const soundEnginePath = path.resolve(process.cwd(), 'src/utilities/soundEngine.js');
+    const code = fs.readFileSync(soundEnginePath, 'utf-8');
+    expect(code).toContain('play(cue = \'toggle\')');
+    expect(code).toContain('case \'click\':');
+  });
+
   it('DashboardPage: subscribes to toolRegistry to dynamically synchronize cards and counts', () => {
     const code = fs.readFileSync(dashboardPagePath, 'utf-8');
     expect(code).toContain('const unsubscribeRegistry = toolRegistry.subscribe(');

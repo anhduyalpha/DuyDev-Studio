@@ -565,6 +565,7 @@ class SoundEngine {
       case 'warning':
         this.playWarning();
         break;
+      case 'click':
       case 'toggle':
       case 'snap':
         this.playToggle();
@@ -611,6 +612,16 @@ class SoundEngine {
         this.playJobComplete();
         break;
     }
+  }
+
+  /**
+   * Safe generic dispatcher for playing procedural audio cues by name.
+   * @param {string} [cue='toggle']
+   */
+  play(cue = 'toggle') {
+    try {
+      this.testSound(cue);
+    } catch (_) {}
   }
 
   // =========================================================================

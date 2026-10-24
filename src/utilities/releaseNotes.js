@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.86': {
+    version: 'v23.86',
+    title: 'Bản cập nhật v23.86',
+    date: '24/10/2026',
+    features: [
+      'Phòng Thủ Toàn Diện Âm Thanh (SoundEngine Defense-in-Depth): Bổ sung hàm play() an toàn hỗ trợ đầy đủ các sound cue click/toggle/success/error, ngăn ngừa triệt để lỗi TypeError crash luồng sự kiện UI',
+      'Đổi Thứ Tự Thẻ & Tab Mượt Mà: Cố định pointer-events trên icon chevron, đổi vị trí tức thì 100% trong bảng quản trị và tự động phản hồi tới trang chủ người dùng'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi TypeError: soundEngine.play is not a function gây đơ nút mũi tên lên xuống',
+      'Đảm bảo click icon chevron luôn kích hoạt đúng nút cha và re-render bảng thẻ công cụ'
+    ]
+  },
   'v23.85': {
     version: 'v23.85',
     title: 'Bản cập nhật v23.85',
