@@ -216,6 +216,7 @@ export class TiktokManager {
       this.state.videoData = data;
       this.state.existingInDrive = data.existingInDrive || null;
       this.state.isLoading = false;
+      this.state.error = null;
 
       const driveRelPath = data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null;
       this.saveHistory({
@@ -235,7 +236,15 @@ export class TiktokManager {
       this.notify({ type: 'resolved', data });
     } catch (err) {
       this.state.isLoading = false;
-      this.state.error = err?.message || 'Không thể trích xuất liên kết TikTok này';
+      this.state.videoData = null;
+      let rawMsg = err?.message || err;
+      if (typeof rawMsg === 'object' && rawMsg !== null) {
+        rawMsg = rawMsg.message || rawMsg.error || JSON.stringify(rawMsg);
+      }
+      const cleanMsg = typeof rawMsg === 'string' && rawMsg !== '[object Object]' && rawMsg.trim()
+        ? rawMsg
+        : 'Không thể trích xuất liên kết TikTok này';
+      this.state.error = cleanMsg;
       showToast(this.state.error, 'error');
       this.notify({ type: 'error' });
     }
@@ -285,7 +294,14 @@ export class TiktokManager {
       this.notify({ type: 'drive-saved', result });
     } catch (err) {
       this.state.isSavingDrive = false;
-      showToast(`Lỗi lưu Drive: ${err?.message || 'Thất bại'}`, 'error');
+      let rawMsg = err?.message || err;
+      if (typeof rawMsg === 'object' && rawMsg !== null) {
+        rawMsg = rawMsg.message || rawMsg.error || JSON.stringify(rawMsg);
+      }
+      const cleanMsg = typeof rawMsg === 'string' && rawMsg !== '[object Object]' && rawMsg.trim()
+        ? rawMsg
+        : 'Lỗi lưu video vào Drive';
+      showToast(`Lỗi lưu Drive: ${cleanMsg}`, 'error');
       this.notify({ type: 'drive-error' });
     }
   }

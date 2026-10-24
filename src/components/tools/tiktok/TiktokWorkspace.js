@@ -12,6 +12,7 @@ import { soundEngine } from '../../../utilities/soundEngine.js';
 import { StorageService } from '../../../services/storageService.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
+import { readText } from '../../../utilities/clipboard.js';
 
 function formatCompactNumber(num) {
   if (!num || isNaN(num)) return '0';
@@ -155,7 +156,7 @@ export function renderTiktokWorkspace() {
         <!-- Inline Error Banner -->
         <div id="tiktokErrorBanner" class="${error ? '' : 'hidden'} mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
           <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
-          <span class="err-msg">${escapeHtml(error || '')}</span>
+          <span class="err-msg">${escapeHtml(typeof error === 'string' && error !== '[object Object]' ? error : (error?.message || ''))}</span>
         </div>
       </div>
 
@@ -1082,7 +1083,14 @@ export function attachTiktokWorkspaceListeners() {
       if (state.error) {
         errBanner.classList.remove('hidden');
         const msgEl = errBanner.querySelector('.err-msg');
-        if (msgEl) msgEl.textContent = state.error;
+        let raw = state.error;
+        if (typeof raw === 'object' && raw !== null) {
+          raw = raw.message || raw.error || JSON.stringify(raw);
+        }
+        const text = typeof raw === 'string' && raw !== '[object Object]' && raw.trim()
+          ? raw
+          : 'Đã xảy ra lỗi khi xử lý liên kết TikTok';
+        if (msgEl) msgEl.textContent = text;
       } else {
         errBanner.classList.add('hidden');
       }
@@ -1230,23 +1238,14 @@ export function attachTiktokWorkspaceListeners() {
     };
   }
 
-  // Non-blocking Mobile Clipboard Paste with Timeout & Dirty-Text Extractor
+  // Universal Mobile & Desktop Clipboard Paste with AndroidBridge & Dirty-Text Extractor
   if (btnPaste) {
     btnPaste.onclick = async () => {
       if (tiktokManager.getState().isLoading) return;
 
-      let pastedText = '';
-      if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
-        try {
-          const clipPromise = navigator.clipboard.readText();
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('CLIPBOARD_TIMEOUT')), 1200)
-          );
-          pastedText = await Promise.race([clipPromise, timeoutPromise]);
-        } catch (err) {
-          console.warn('[TikTok] Clipboard access failed or timed out:', err);
-        }
-      }
+      try { soundEngine?.play('click'); } catch (_) {}
+
+      const pastedText = await readText();
 
       if (pastedText && typeof pastedText === 'string' && pastedText.trim()) {
         const extracted = extractTiktokUrls(pastedText);
@@ -1256,6 +1255,7 @@ export function attachTiktokWorkspaceListeners() {
             input.value = cleanUrl;
             syncInputButtons(cleanUrl);
           }
+          showToast('Đã dán liên kết từ clipboard', 'info');
           tiktokManager.setUrl(cleanUrl, false);
           tiktokManager.resolve(cleanUrl);
           return;
@@ -1264,6 +1264,7 @@ export function attachTiktokWorkspaceListeners() {
             input.value = extracted.join('\n');
             syncInputButtons(input.value);
           }
+          showToast(`Đã dán ${extracted.length} liên kết TikTok từ clipboard`, 'info');
           tiktokManager.startBatchSave(extracted);
           return;
         } else {
@@ -1272,6 +1273,7 @@ export function attachTiktokWorkspaceListeners() {
             input.value = clean;
             syncInputButtons(clean);
           }
+          showToast('Đã dán nội dung từ clipboard', 'info');
           tiktokManager.setUrl(clean, false);
           tiktokManager.resolve(clean);
           return;

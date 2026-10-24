@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.81': {
+    version: 'v23.81',
+    title: 'Bản cập nhật v23.81',
+    date: '24/10/2026',
+    features: [
+      'Nâng cấp Universal Clipboard cho TikTok Downloader: Tích hợp bộ đọc Clipboard toàn cầu đa tầng kết hợp Android Native Bridge và Async Clipboard API, cho phép dán link TikTok một chạm tức thì trên cả Android APK lẫn trình duyệt web',
+      'Chuẩn hóa cơ chế báo lỗi thân thiện (Clean Error Extraction): Loại bỏ triệt để lỗi hiển thị chuỗi "[object Object]" trong banner cảnh báo khi gặp sự cố trích xuất video hoặc tệp riêng tư, hiển thị chính xác thông điệp lỗi rõ ràng từ máy chủ'
+    ],
+    fixes: [
+      'Khắc phục sự cố nút "Dán" trong TikTok Downloader không phản hồi khi bấm',
+      'Đảm bảo banner thông báo lỗi luôn hiển thị văn bản có nghĩa và tự động ẩn khi lấy video thành công'
+    ]
+  },
   'v23.80': {
     version: 'v23.80',
     title: 'Bản cập nhật v23.80',

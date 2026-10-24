@@ -148,4 +148,38 @@ describe('TikTok Downloader Suite', () => {
       expect(Array.isArray(res.items)).toBe(true);
     });
   });
+
+  describe('Client Error Robustness & Universal Clipboard', () => {
+    it('tiktokApi.js must extract error.message from server error objects and never produce [object Object]', async () => {
+      const { tiktokApi } = await import('../../../src/components/tools/tiktok/services/tiktokApi.js');
+      
+      // Mock global fetch to return structured error object from Fastify global error handler
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST_PAYLOAD',
+            message: 'Video TikTok không tồn tại hoặc đã bị xóa'
+          }
+        })
+      });
+
+      try {
+        await expect(tiktokApi.resolveVideo('https://vt.tiktok.com/ZSgMxTbNA/')).rejects.toThrow('Video TikTok không tồn tại hoặc đã bị xóa');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('TiktokWorkspace.js must import readText from utilities/clipboard.js', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const workspaceFile = path.resolve(__dirname, '../../../src/components/tools/tiktok/TiktokWorkspace.js');
+      const content = fs.readFileSync(workspaceFile, 'utf-8');
+      expect(content).toContain("import { readText } from '../../../utilities/clipboard.js'");
+    });
+  });
 });

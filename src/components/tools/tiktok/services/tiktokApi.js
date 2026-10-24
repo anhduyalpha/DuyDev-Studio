@@ -15,9 +15,12 @@ export const tiktokApi = {
       body: JSON.stringify({ url })
     });
 
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) {
-      throw new Error(json.message || json.error || 'Không thể trích xuất video TikTok');
+      const errMsg = json.message ||
+        (typeof json.error === 'string' ? json.error : json.error?.message) ||
+        `Không thể trích xuất video TikTok (HTTP ${res.status})`;
+      throw new Error(errMsg);
     }
     return json.data;
   },
@@ -34,7 +37,7 @@ export const tiktokApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) return { exists: false };
       return json.data || { exists: false };
     } catch {
@@ -71,9 +74,12 @@ export const tiktokApi = {
       body: JSON.stringify(payload)
     });
 
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) {
-      throw new Error(json.message || json.error || 'Lỗi lưu video vào Drive');
+      const errMsg = json.message ||
+        (typeof json.error === 'string' ? json.error : json.error?.message) ||
+        `Lỗi lưu video vào Drive (HTTP ${res.status})`;
+      throw new Error(errMsg);
     }
     return json.data;
   }
