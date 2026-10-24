@@ -24,6 +24,7 @@ import { openOperationsInspectorModal } from '../components/admin/AdminOperation
 import { renderIpTrafficManager, attachIpTrafficListeners } from '../components/admin/AdminIpTrafficManager.js';
 import { renderEngineTimeoutsCard, attachEngineTimeoutsListeners, fetchEngineTimeouts } from '../components/admin/AdminEngineTimeoutsCard.js';
 import { renderAdminSoundControlCard, attachAdminSoundControlListeners } from '../components/admin/AdminSoundControlCard.js';
+import { renderAdminToolCardManager, attachAdminToolCardManagerListeners, initDraftTools } from '../components/admin/AdminToolCardManager.js';
 
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
@@ -35,7 +36,7 @@ let cachedEngineTimeoutsData = null;
 let trafficHistoryRps = [];
 let lastUserInteractionTime = Date.now();
 let idleAutoLockTimer = null;
-let currentAdminTab = 'overview'; // 'overview' | 'ip-manager'
+let currentAdminTab = 'overview'; // 'overview' | 'ip-manager' | 'tool-manager'
 
 function formatBytes(bytes) {
   if (!bytes || isNaN(bytes) || bytes === 0) return '0 B';
@@ -222,15 +223,15 @@ function renderUnlockedDashboardView() {
         </div>
       </div>
 
-      <!-- Top Navigation Tabs (Overview vs User & IP Traffic) -->
-      <div class="w-full sm:w-fit grid grid-cols-2 sm:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl">
+      <!-- Top Navigation Tabs (Overview vs User & IP Traffic vs Tool Manager) -->
+      <div class="w-full sm:w-fit grid grid-cols-3 sm:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-xl">
         <button
           type="button"
           id="adminTabOverview"
           class="w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${currentAdminTab === 'overview' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
         >
           <i data-lucide="layout-dashboard" class="w-4 h-4 text-orange-500 shrink-0"></i>
-          <span class="truncate">Tổng Quan & Telemetry</span>
+          <span class="truncate">Tổng Quan</span>
         </button>
         <button
           type="button"
@@ -238,7 +239,15 @@ function renderUnlockedDashboardView() {
           class="w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${currentAdminTab === 'ip-manager' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
         >
           <i data-lucide="users" class="w-4 h-4 text-orange-500 shrink-0"></i>
-          <span class="truncate">Quản Lý Người Dùng & IP</span>
+          <span class="truncate">Người Dùng & IP</span>
+        </button>
+        <button
+          type="button"
+          id="adminTabToolManager"
+          class="w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${currentAdminTab === 'tool-manager' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}"
+        >
+          <i data-lucide="layout-grid" class="w-4 h-4 text-orange-500 shrink-0"></i>
+          <span class="truncate">Quản Lý Thẻ & Tab</span>
         </button>
       </div>
 
@@ -713,6 +722,11 @@ function renderUnlockedDashboardView() {
       ${renderIpTrafficManager()}
     </div>
 
+    <!-- Tab 3: Tool & Tab Layout Manager View -->
+    <div id="adminToolManagerViewContainer" class="${currentAdminTab === 'tool-manager' ? '' : 'hidden'}">
+      ${renderAdminToolCardManager()}
+    </div>
+
   </div>
   `;
 }
@@ -1033,36 +1047,49 @@ export function attachAdminPageListeners(onRerender) {
   }
 
   // 2. Unlocked State Handlers
-  // Top Tab Switcher: Overview vs IP Traffic Manager
+  // Top Tab Switcher: Overview vs IP Traffic Manager vs Tool Layout Manager
   const tabOverview = document.getElementById('adminTabOverview');
   const tabIpManager = document.getElementById('adminTabIpManager');
+  const tabToolManager = document.getElementById('adminTabToolManager');
   const viewOverview = document.getElementById('adminOverviewViewContainer');
   const viewIpManager = document.getElementById('adminIpManagerViewContainer');
+  const viewToolManager = document.getElementById('adminToolManagerViewContainer');
+
+  const activeTabClass = 'w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10';
+  const inactiveTabClass = 'w-full sm:w-auto justify-center px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
 
   const switchTab = (tab) => {
     currentAdminTab = tab;
     if (tab === 'overview') {
       if (viewOverview) viewOverview.classList.remove('hidden');
       if (viewIpManager) viewIpManager.classList.add('hidden');
-      if (tabOverview) {
-        tabOverview.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10';
-      }
-      if (tabIpManager) {
-        tabIpManager.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
-      }
+      if (viewToolManager) viewToolManager.classList.add('hidden');
+      if (tabOverview) tabOverview.className = activeTabClass;
+      if (tabIpManager) tabIpManager.className = inactiveTabClass;
+      if (tabToolManager) tabToolManager.className = inactiveTabClass;
       updateCanvasSparkline();
-    } else {
+    } else if (tab === 'ip-manager') {
       if (viewOverview) viewOverview.classList.add('hidden');
       if (viewIpManager) {
         viewIpManager.classList.remove('hidden');
         attachIpTrafficListeners(viewIpManager);
       }
-      if (tabIpManager) {
-        tabIpManager.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200/50 dark:border-white/10';
+      if (viewToolManager) viewToolManager.classList.add('hidden');
+      if (tabOverview) tabOverview.className = inactiveTabClass;
+      if (tabIpManager) tabIpManager.className = activeTabClass;
+      if (tabToolManager) tabToolManager.className = inactiveTabClass;
+    } else if (tab === 'tool-manager') {
+      if (viewOverview) viewOverview.classList.add('hidden');
+      if (viewIpManager) viewIpManager.classList.add('hidden');
+      if (viewToolManager) {
+        viewToolManager.classList.remove('hidden');
+        initDraftTools();
+        viewToolManager.innerHTML = renderAdminToolCardManager();
+        attachAdminToolCardManagerListeners(viewToolManager);
       }
-      if (tabOverview) {
-        tabOverview.className = 'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200';
-      }
+      if (tabOverview) tabOverview.className = inactiveTabClass;
+      if (tabIpManager) tabIpManager.className = inactiveTabClass;
+      if (tabToolManager) tabToolManager.className = activeTabClass;
     }
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons();
@@ -1071,9 +1098,12 @@ export function attachAdminPageListeners(onRerender) {
 
   if (tabOverview) tabOverview.onclick = () => switchTab('overview');
   if (tabIpManager) tabIpManager.onclick = () => switchTab('ip-manager');
+  if (tabToolManager) tabToolManager.onclick = () => switchTab('tool-manager');
 
   if (currentAdminTab === 'ip-manager' && viewIpManager) {
     attachIpTrafficListeners(viewIpManager);
+  } else if (currentAdminTab === 'tool-manager' && viewToolManager) {
+    attachAdminToolCardManagerListeners(viewToolManager);
   }
 
   // Top bar controls

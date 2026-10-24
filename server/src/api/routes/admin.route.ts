@@ -5,6 +5,11 @@
 import { FastifyInstance } from 'fastify';
 import { adminAuthGuard } from '../controllers/auth.controller.js';
 import {
+  getToolLayoutHandler,
+  updateToolLayoutHandler,
+  resetToolLayoutHandler
+} from '../controllers/tool-layout.controller.js';
+import {
   getAdminTelemetryHandler,
   getAiMetricsHandler,
   updateAiKeyHandler,
@@ -71,6 +76,11 @@ export async function adminRoute(app: FastifyInstance) {
   // Dynamic Engine Timeouts
   app.get('/api/v1/admin/config/engine-timeouts', { preHandler: adminAuthGuard }, getEngineTimeoutsHandler);
   app.put('/api/v1/admin/config/engine-timeouts', { preHandler: adminAuthGuard }, updateEngineTimeoutsHandler);
+
+  // Tool Card Layout & Category Manager
+  app.get('/api/v1/admin/tool-layout', { preHandler: adminAuthGuard }, getToolLayoutHandler);
+  app.put('/api/v1/admin/tool-layout', { preHandler: adminAuthGuard }, updateToolLayoutHandler);
+  app.post('/api/v1/admin/tool-layout/reset', { preHandler: adminAuthGuard }, resetToolLayoutHandler);
 
   // Failed Jobs & Error Logs
   app.get('/api/v1/admin/logs/failed-jobs', { preHandler: adminAuthGuard }, getFailedJobsHandler);

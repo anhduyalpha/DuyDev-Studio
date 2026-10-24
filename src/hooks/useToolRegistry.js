@@ -322,12 +322,130 @@ export function getCardTierConfig(tierKey) {
   return CARD_TIERS[key] || null;
 }
 
+export const TOOL_LAYOUT_STORAGE_KEY = 'ds_tool_layout_override';
+
 class ToolRegistry {
   constructor() {
-    this.tools = [...DEFAULT_TOOLS];
+    this.tools = DEFAULT_TOOLS.map(t => ({ ...t }));
     this.listeners = new Set();
     this.currentCategory = 'all';
     this.searchQuery = '';
+    this.loadLocalLayout();
+  }
+
+  loadLocalLayout() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem(TOOL_LAYOUT_STORAGE_KEY);
+        if (raw) {
+          const items = JSON.parse(raw);
+          if (Array.isArray(items) && items.length > 0) {
+            this.applyLayoutSync(items, false);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[ToolRegistry] Failed to load local layout override:', err);
+    }
+  }
+
+  applyLayoutSync(layoutItems, shouldSave = true) {
+    if (!Array.isArray(layoutItems) || layoutItems.length === 0) return;
+
+    const layoutMap = new Map();
+    layoutItems.forEach((it, idx) => {
+      if (it && it.id) {
+        layoutMap.set(it.id, {
+          category: it.category,
+          order: typeof it.order === 'number' ? it.order : idx + 1
+        });
+      }
+    });
+
+    // Update categories
+    this.tools.forEach(tool => {
+      const override = layoutMap.get(tool.id);
+      if (override && override.category) {
+        tool.category = override.category;
+      }
+    });
+
+    // Sort according to order
+    this.tools.sort((a, b) => {
+      const orderA = layoutMap.has(a.id) ? layoutMap.get(a.id).order : 9999;
+      const orderB = layoutMap.has(b.id) ? layoutMap.get(b.id).order : 9999;
+      return orderA - orderB;
+    });
+
+    if (shouldSave && typeof localStorage !== 'undefined') {
+      try {
+        const toSave = this.tools.map((t, idx) => ({
+          id: t.id,
+          category: t.category,
+          order: idx + 1
+        }));
+        localStorage.setItem(TOOL_LAYOUT_STORAGE_KEY, JSON.stringify(toSave));
+      } catch (e) {
+        console.warn('[ToolRegistry] Failed to save layout to localStorage:', e);
+      }
+    }
+
+    this.notify();
+  }
+
+  async fetchServerLayout() {
+    try {
+      const res = await fetch('/api/v1/system/tool-layout', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data && Array.isArray(json.data.items)) {
+          this.applyLayoutSync(json.data.items, true);
+        }
+      }
+    } catch {
+      // Silent catch for offline PWA
+    }
+  }
+
+  async saveLayoutToServer(layoutItems, authHeaders = {}) {
+    const res = await fetch('/api/v1/admin/tool-layout', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({ items: layoutItems })
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || json.error || 'Lỗi khi lưu cấu hình thẻ công cụ');
+    }
+    this.applyLayoutSync(json.data?.items || layoutItems, true);
+    return json;
+  }
+
+  async resetLayoutToServer(authHeaders = {}) {
+    const res = await fetch('/api/v1/admin/tool-layout/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      }
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || json.error || 'Lỗi khi khôi phục cấu hình thẻ công cụ');
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      try { localStorage.removeItem(TOOL_LAYOUT_STORAGE_KEY); } catch {}
+    }
+
+    this.tools = DEFAULT_TOOLS.map(t => ({ ...t }));
+    this.notify();
+    return json;
   }
 
   subscribe(listener) {
@@ -394,4 +512,12 @@ class ToolRegistry {
 }
 
 export const toolRegistry = new ToolRegistry();
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    try {
+      toolRegistry.fetchServerLayout();
+    } catch {}
+  }, 120);
+}
 

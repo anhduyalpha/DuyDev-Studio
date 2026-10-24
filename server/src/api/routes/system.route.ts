@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { getToolLayoutHandler } from '../controllers/tool-layout.controller.js';
 import { redisConnection, taskQueue, converterQueue } from '../../queues/task.queue.js';
 import {
   extractClientIp,
@@ -7,6 +8,9 @@ import {
 import { deviceRegistryService } from '../../services/device-registry.service.js';
 
 export async function systemRoute(app: FastifyInstance) {
+  // Public Tool Layout (Category & Ordering per Tool Card)
+  app.get('/api/v1/system/tool-layout', getToolLayoutHandler);
+
   app.get('/api/v1/system/telemetry', async (_req, reply) => {
     try {
       const isRedisReady = redisConnection.status === 'ready' || redisConnection.status === 'connect';

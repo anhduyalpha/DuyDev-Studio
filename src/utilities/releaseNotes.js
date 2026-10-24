@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.83': {
+    version: 'v23.83',
+    title: 'Bản cập nhật v23.83',
+    date: '24/10/2026',
+    features: [
+      'Tab Quản Lý Thẻ & Danh Mục Trong Admin Console: Bổ sung tab thứ 3 trong bảng quản trị cho phép quản trị viên tự do tùy chỉnh tab danh mục (PDF, Chuyển đổi, File nén, Mã QR, Tiện ích, Nâng cao) và sắp xếp thứ tự hiển thị của từng thẻ công cụ với tính năng lưu trữ bền vững trên máy chủ',
+      'Đồng bộ hóa bố cục thẻ toàn hệ thống: Hỗ trợ nạp cấu hình bố cục động đa thiết bị qua API GET /api/v1/system/tool-layout kết hợp lưu trữ bộ nhớ đệm client-side, bảo đảm 0ms khi khởi động ứng dụng'
+    ],
+    fixes: [
+      'Bổ sung cơ chế tự động hợp nhất công cụ mặc định (Zero-Tool Loss) ngăn chặn mất mát thẻ khi có công cụ mới trong tương lai',
+      'Hỗ trợ khôi phục bố cục mặc định ban đầu chỉ với 1 click xác nhận'
+    ]
+  },
   'v23.82': {
     version: 'v23.82',
     title: 'Bản cập nhật v23.82',
