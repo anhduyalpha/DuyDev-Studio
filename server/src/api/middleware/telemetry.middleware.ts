@@ -4,7 +4,7 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { deviceRegistryService } from '../../services/device-registry.service.js';
+import { deviceRegistryService, StoredDeviceInfo } from '../../services/device-registry.service.js';
 
 interface SecondBucket {
   timestamp: number; // Unix seconds
@@ -54,9 +54,23 @@ export interface VisitorSession {
   screenResolution?: string;
 }
 
+export interface DeviceSubItem {
+  deviceId: string;
+  deviceSummary: string;
+  userAgent: string;
+  ip: string;
+  lastSeenAt: string;
+  firstSeenAt: string;
+  status: 'ONLINE' | 'IDLE' | 'LEFT';
+  isOnline: boolean;
+  pwaMode: boolean;
+}
+
 export interface AggregatedDeviceSession {
   deviceId: string;
+  userId?: string;
   alias?: string;
+  avatar?: string;
   isOwner: boolean;
   isBlocked: boolean;
   status: 'ONLINE' | 'IDLE' | 'LEFT';
@@ -77,6 +91,8 @@ export interface AggregatedDeviceSession {
   latestSessionRouteHistory: Array<{ route: string; timestamp: string }>;
   totalSessionsCount: number;
   totalAccumulatedDurationSec: number;
+  devicesCount?: number;
+  devices?: DeviceSubItem[];
   pastSessions: Array<{
     sessionId: string;
     enteredAt: string;
@@ -1070,6 +1086,7 @@ export class VisitorSessionManager {
     devices: AggregatedDeviceSession[];
     stats: {
       totalDevices: number;
+      totalUsers: number;
       onlineDevices: number;
       ownerDevices: number;
       lanDevices: number;
@@ -1077,48 +1094,150 @@ export class VisitorSessionManager {
       avgDurationSec: number;
     };
   } {
-    // 1. Group sessions by deviceId
-    const map = new Map<string, VisitorSession[]>();
+    // 1. Group active in-memory sessions by deviceId
+    const deviceSessionsMap = new Map<string, VisitorSession[]>();
     for (const s of this.sessions.values()) {
       const devKey = s.deviceId || s.visitorId || `ip_${s.ip}`;
-      if (!map.has(devKey)) map.set(devKey, []);
-      map.get(devKey)!.push(s);
+      if (!deviceSessionsMap.has(devKey)) deviceSessionsMap.set(devKey, []);
+      deviceSessionsMap.get(devKey)!.push(s);
     }
 
-    // Also include any devices from persistent deviceRegistryService that may not have active sessions in this run
+    // Include all persistent registered devices
     for (const dev of deviceRegistryService.listDevices()) {
-      if (!map.has(dev.deviceId)) {
-        map.set(dev.deviceId, []);
+      if (!deviceSessionsMap.has(dev.deviceId)) {
+        deviceSessionsMap.set(dev.deviceId, []);
       }
+    }
+
+    const totalUniqueDevicesCount = deviceSessionsMap.size;
+
+    // 2. Group devices into User Entities (userKey)
+    // - All owner devices merge into 'owner:duy'
+    // - Devices with the same custom alias merge into 'alias:' + alias.toLowerCase()
+    // - Anonymous devices (no alias, not owner) stay partitioned as 'guest:' + deviceId
+    interface DeviceEntry {
+      deviceId: string;
+      devMeta?: StoredDeviceInfo;
+      devSessions: VisitorSession[];
+    }
+
+    const userMap = new Map<string, DeviceEntry[]>();
+
+    for (const [deviceId, devSessions] of deviceSessionsMap.entries()) {
+      const devMeta = deviceRegistryService.getDevice(deviceId);
+      const isOwner = Boolean(devMeta?.isOwner || devSessions.some(s => s.isLan));
+      const aliasClean = devMeta?.alias ? devMeta.alias.trim() : '';
+
+      let userKey: string;
+      if (isOwner) {
+        userKey = 'owner:duy';
+      } else if (aliasClean) {
+        userKey = `alias:${aliasClean.toLowerCase()}`;
+      } else {
+        userKey = `guest:${deviceId}`;
+      }
+
+      if (!userMap.has(userKey)) userMap.set(userKey, []);
+      userMap.get(userKey)!.push({ deviceId, devMeta, devSessions });
     }
 
     const aggregatedList: AggregatedDeviceSession[] = [];
     let totalDurSum = 0;
     let totalDurCount = 0;
 
-    for (const [deviceId, devSessions] of map.entries()) {
-      const devMeta = deviceRegistryService.getDevice(deviceId);
+    for (const [userKey, entries] of userMap.entries()) {
+      // Collect all sessions belonging to this user
+      const allSessions: VisitorSession[] = [];
+      for (const entry of entries) {
+        allSessions.push(...entry.devSessions);
+      }
+      allSessions.sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime());
+      const latestSession = allSessions[0];
 
-      // Sort sessions by lastActiveAt descending
-      devSessions.sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime());
-      const latestSession = devSessions[0];
+      // Find the latest active device entry
+      entries.sort((a, b) => {
+        const timeA = new Date(a.devSessions[0]?.lastActiveAt || a.devMeta?.lastSeenAt || 0).getTime();
+        const timeB = new Date(b.devSessions[0]?.lastActiveAt || b.devMeta?.lastSeenAt || 0).getTime();
+        return timeB - timeA;
+      });
+      const primaryEntry = entries[0];
+      const primaryDeviceId = primaryEntry.deviceId;
 
-      // Determine aggregated status: ONLINE if any session is ONLINE, IDLE if any is IDLE, else LEFT
+      // User meta (avatar, alias) from whichever entry has it defined
+      const metaWithAvatar = entries.find(e => e.devMeta?.avatar)?.devMeta;
+      const metaWithAlias = entries.find(e => e.devMeta?.alias)?.devMeta;
+      const avatar = metaWithAvatar?.avatar;
+
+      const isOwner = entries.some(e => Boolean(e.devMeta?.isOwner || e.devSessions.some(s => s.isLan)));
+      const isBlocked = entries.some(e => Boolean(e.devMeta?.isBlocked));
+
+      let alias = metaWithAlias?.alias;
+      if (!alias && isOwner) {
+        alias = 'Máy của Duy';
+      }
+
+      // User status: ONLINE if any device is ONLINE, IDLE if any is IDLE, else LEFT
       let overallStatus: 'ONLINE' | 'IDLE' | 'LEFT' = 'LEFT';
-      if (devSessions.some(s => s.status === 'ONLINE')) overallStatus = 'ONLINE';
-      else if (devSessions.some(s => s.status === 'IDLE')) overallStatus = 'IDLE';
+      if (entries.some(e => e.devSessions.some(s => s.status === 'ONLINE'))) {
+        overallStatus = 'ONLINE';
+      } else if (entries.some(e => e.devSessions.some(s => s.status === 'IDLE'))) {
+        overallStatus = 'IDLE';
+      }
 
-      const totalAccumulatedDuration = devSessions.reduce((acc, s) => acc + (s.durationSec || 0), 0);
+      // Total duration accumulated across all sessions of this user
+      const totalAccumulatedDuration = allSessions.reduce((acc, s) => acc + (s.durationSec || 0), 0);
       if (totalAccumulatedDuration > 0) {
         totalDurSum += totalAccumulatedDuration;
         totalDurCount++;
       }
 
-      const ip = latestSession?.ip || devMeta?.lastIp || '127.0.0.1';
-      const isLan = latestSession ? latestSession.isLan : (ip.startsWith('192.168.') || ip === '127.0.0.1' || ip === '::1');
-      const isOwner = Boolean(devMeta?.isOwner || isLan);
+      // IP History union across all devices
+      const ipSet = new Set<string>();
+      for (const e of entries) {
+        if (e.devMeta?.ipHistory) {
+          e.devMeta.ipHistory.forEach((ip: string) => ipSet.add(ip));
+        }
+        e.devSessions.forEach(s => { if (s.ip) ipSet.add(s.ip); });
+      }
+      const primaryIp = latestSession?.ip || primaryEntry.devMeta?.lastIp || '127.0.0.1';
+      ipSet.add(primaryIp);
+      const ipHistory = Array.from(ipSet);
 
-      const pastSessions = devSessions.slice(1).map(s => ({
+      const isLan = entries.some(e => e.devSessions.some(s => s.isLan) || (e.devMeta?.lastIp && (e.devMeta.lastIp.startsWith('192.168.') || e.devMeta.lastIp === '127.0.0.1' || e.devMeta.lastIp === '::1')));
+
+      // Build Sub-Devices list
+      const subDevices: DeviceSubItem[] = entries.map(e => {
+        const devSess = e.devSessions;
+        const isDevOnline = devSess.some(s => s.status === 'ONLINE');
+        const isDevIdle = devSess.some(s => s.status === 'IDLE');
+        const devStatus: 'ONLINE' | 'IDLE' | 'LEFT' = isDevOnline ? 'ONLINE' : (isDevIdle ? 'IDLE' : 'LEFT');
+        const s0 = devSess[0];
+        const m = e.devMeta;
+        return {
+          deviceId: e.deviceId,
+          deviceSummary: s0?.deviceSummary || m?.deviceSummary || 'Web Client',
+          userAgent: s0?.userAgent || m?.userAgent || 'Unknown',
+          ip: s0?.ip || m?.lastIp || '127.0.0.1',
+          lastSeenAt: s0?.lastActiveAt || m?.lastSeenAt || new Date().toISOString(),
+          firstSeenAt: m?.firstSeenAt || s0?.enteredAt || new Date().toISOString(),
+          status: devStatus,
+          isOnline: isDevOnline,
+          pwaMode: Boolean(s0?.pwaMode)
+        };
+      });
+
+      // Sort sub-devices: online first, then by lastSeenAt desc
+      subDevices.sort((a, b) => {
+        if (a.isOnline && !b.isOnline) return -1;
+        if (!a.isOnline && b.isOnline) return 1;
+        return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
+      });
+
+      const deviceSummary = entries.length > 1
+        ? `${subDevices[0]?.deviceSummary || 'Web'} (+${entries.length - 1} thiết bị khác)`
+        : (subDevices[0]?.deviceSummary || 'Unknown Device');
+
+      const pastSessions = allSessions.slice(1).map(s => ({
         sessionId: s.sessionId,
         enteredAt: s.enteredAt,
         leftAt: s.leftAt,
@@ -1130,28 +1249,32 @@ export class VisitorSessionManager {
       }));
 
       aggregatedList.push({
-        deviceId,
-        alias: devMeta?.alias,
+        deviceId: primaryDeviceId,
+        userId: userKey,
+        alias,
+        avatar,
         isOwner,
-        isBlocked: Boolean(devMeta?.isBlocked),
+        isBlocked,
         status: overallStatus,
-        ip,
-        lastIp: devMeta?.lastIp || ip,
-        ipHistory: devMeta?.ipHistory && devMeta.ipHistory.length > 0 ? devMeta.ipHistory : [ip],
+        ip: primaryIp,
+        lastIp: primaryEntry.devMeta?.lastIp || primaryIp,
+        ipHistory,
         isLan,
-        country: latestSession?.country || devMeta?.country || (isLan ? 'LAN' : 'VN'),
-        userAgent: latestSession?.userAgent || devMeta?.userAgent || 'Unknown',
-        deviceSummary: latestSession?.deviceSummary || devMeta?.deviceSummary || 'Unknown Device',
-        pwaMode: Boolean(latestSession?.pwaMode),
+        country: latestSession?.country || primaryEntry.devMeta?.country || (isLan ? 'LAN' : 'VN'),
+        userAgent: latestSession?.userAgent || primaryEntry.devMeta?.userAgent || 'Unknown',
+        deviceSummary,
+        pwaMode: entries.some(e => e.devSessions.some(s => s.pwaMode)),
         screenResolution: latestSession?.screenResolution || 'Unknown',
         currentRoute: latestSession?.currentRoute || '#dashboard',
-        latestSessionEnteredAt: latestSession?.enteredAt || devMeta?.firstSeenAt || new Date().toISOString(),
+        latestSessionEnteredAt: latestSession?.enteredAt || primaryEntry.devMeta?.firstSeenAt || new Date().toISOString(),
         latestSessionLeftAt: latestSession?.leftAt,
-        latestSessionLastActiveAt: latestSession?.lastActiveAt || devMeta?.lastSeenAt || new Date().toISOString(),
+        latestSessionLastActiveAt: latestSession?.lastActiveAt || primaryEntry.devMeta?.lastSeenAt || new Date().toISOString(),
         latestSessionDurationSec: latestSession?.durationSec || 0,
         latestSessionRouteHistory: latestSession?.routeHistory || [{ route: '#dashboard', timestamp: new Date().toISOString() }],
-        totalSessionsCount: devSessions.length,
+        totalSessionsCount: allSessions.length,
         totalAccumulatedDurationSec: totalAccumulatedDuration,
+        devicesCount: entries.length,
+        devices: subDevices,
         pastSessions
       });
     }
@@ -1173,7 +1296,8 @@ export class VisitorSessionManager {
     return {
       devices: aggregatedList,
       stats: {
-        totalDevices: aggregatedList.length,
+        totalDevices: totalUniqueDevicesCount,
+        totalUsers: aggregatedList.length,
         onlineDevices,
         ownerDevices,
         lanDevices,
@@ -1200,9 +1324,21 @@ export class VisitorSessionManager {
     return { clearedCount: count };
   }
 
+  public removeDeviceSessions(deviceId: string): void {
+    for (const [key, s] of this.sessions.entries()) {
+      if (s.deviceId === deviceId) {
+        this.sessions.delete(key);
+      }
+    }
+  }
+
   // --- Static Convenience Proxies ---
   public static clearSessions(): { clearedCount: number } {
     return VisitorSessionManager.getInstance().clearAllSessions();
+  }
+
+  public static removeDeviceSessions(deviceId: string): void {
+    VisitorSessionManager.getInstance().removeDeviceSessions(deviceId);
   }
 
   public static clearEvents(): { clearedCount: number } {

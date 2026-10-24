@@ -24,7 +24,8 @@ export class DeviceRegistryService {
   private saveTimer: NodeJS.Timeout | null = null;
 
   private constructor() {
-    const dataDir = path.resolve(process.cwd(), 'server', 'data');
+    const baseDir = process.cwd().endsWith('server') ? process.cwd() : path.join(process.cwd(), 'server');
+    const dataDir = path.join(baseDir, 'data');
     if (!fs.existsSync(dataDir)) {
       try {
         fs.mkdirSync(dataDir, { recursive: true });
@@ -32,11 +33,8 @@ export class DeviceRegistryService {
         // Fallback to local data dir
       }
     }
-    this.filePath = path.resolve(
-      fs.existsSync(dataDir) ? dataDir : process.cwd(),
-      'device_registry.json'
-    );
-    this.loadFromDisk();
+    this.filePath = path.join(dataDir, 'device_registry.json');
+    this.loadFromDisk(baseDir);
   }
 
   public static getInstance(): DeviceRegistryService {
@@ -46,8 +44,18 @@ export class DeviceRegistryService {
     return DeviceRegistryService.instance;
   }
 
-  private loadFromDisk() {
+  private loadFromDisk(baseDir?: string) {
     try {
+      // Migrate from nested server/server/data if target filePath does not exist
+      if (!fs.existsSync(this.filePath) && baseDir) {
+        const legacyPath = path.join(baseDir, 'server', 'data', 'device_registry.json');
+        if (fs.existsSync(legacyPath)) {
+          try {
+            fs.copyFileSync(legacyPath, this.filePath);
+          } catch {}
+        }
+      }
+
       if (fs.existsSync(this.filePath)) {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
         const list: StoredDeviceInfo[] = JSON.parse(raw);
@@ -91,7 +99,11 @@ export class DeviceRegistryService {
 
   public upsertDevice(params: {
     deviceId: string;
-    ip: string;
+    ip?: string;
+    lastIp?: string;
+    alias?: string;
+    avatar?: string;
+    isOwner?: boolean;
     userAgent: string;
     deviceSummary: string;
     country: string;
@@ -100,17 +112,21 @@ export class DeviceRegistryService {
   }): StoredDeviceInfo {
     const nowIso = new Date().toISOString();
     let dev = this.devices.get(params.deviceId);
+    const resolvedIp = params.ip || params.lastIp || '127.0.0.1';
 
     const shouldBeOwner = Boolean(
       dev?.isOwner ||
+      params.isOwner ||
       params.isLan ||
       params.isAdmin ||
-      (params.ip.startsWith('192.168.') || params.ip === '127.0.0.1' || params.ip === '::1')
+      (resolvedIp && (resolvedIp.startsWith('192.168.') || resolvedIp === '127.0.0.1' || resolvedIp === '::1'))
     );
 
     if (!dev) {
       dev = {
         deviceId: params.deviceId,
+        alias: params.alias,
+        avatar: params.avatar,
         isOwner: shouldBeOwner,
         isBlocked: false,
         firstSeenAt: nowIso,
@@ -118,14 +134,18 @@ export class DeviceRegistryService {
         userAgent: params.userAgent,
         deviceSummary: params.deviceSummary,
         country: params.country,
-        lastIp: params.ip,
-        ipHistory: [params.ip]
+        lastIp: resolvedIp,
+        ipHistory: [resolvedIp]
       };
       this.devices.set(params.deviceId, dev);
     } else {
       dev.lastSeenAt = nowIso;
-      dev.lastIp = params.ip;
-      if (shouldBeOwner && !dev.isOwner) {
+      dev.lastIp = resolvedIp;
+      if (params.alias !== undefined) dev.alias = params.alias;
+      if (params.avatar !== undefined) dev.avatar = params.avatar;
+      if (params.isOwner !== undefined) {
+        dev.isOwner = params.isOwner;
+      } else if (shouldBeOwner && !dev.isOwner) {
         dev.isOwner = true;
       }
       if (params.userAgent && params.userAgent !== 'Unknown') dev.userAgent = params.userAgent;
@@ -133,8 +153,8 @@ export class DeviceRegistryService {
       if (params.country && params.country !== 'Unknown') dev.country = params.country;
 
       if (!dev.ipHistory) dev.ipHistory = [];
-      if (!dev.ipHistory.includes(params.ip)) {
-        dev.ipHistory.push(params.ip);
+      if (!dev.ipHistory.includes(resolvedIp)) {
+        dev.ipHistory.push(resolvedIp);
         if (dev.ipHistory.length > 10) {
           dev.ipHistory = dev.ipHistory.slice(-10);
         }
@@ -148,7 +168,25 @@ export class DeviceRegistryService {
   public setAlias(deviceId: string, alias: string): StoredDeviceInfo | null {
     const dev = this.devices.get(deviceId);
     if (!dev) return null;
-    dev.alias = alias ? alias.trim() : undefined;
+    const oldAlias = dev.alias;
+    const newAlias = alias ? alias.trim() : undefined;
+    dev.alias = newAlias;
+
+    // Propagate alias change across all sibling devices with same old alias or owner
+    if (oldAlias && oldAlias !== newAlias) {
+      for (const other of this.devices.values()) {
+        if (other.alias && other.alias.toLowerCase() === oldAlias.toLowerCase()) {
+          other.alias = newAlias;
+        }
+      }
+    } else if (dev.isOwner) {
+      for (const other of this.devices.values()) {
+        if (other.isOwner) {
+          other.alias = newAlias;
+        }
+      }
+    }
+
     this.scheduleSave();
     return dev;
   }
@@ -183,7 +221,23 @@ export class DeviceRegistryService {
   public toggleBlock(deviceId: string, blocked?: boolean): StoredDeviceInfo | null {
     const dev = this.devices.get(deviceId);
     if (!dev) return null;
-    dev.isBlocked = blocked !== undefined ? blocked : !dev.isBlocked;
+    const targetState = blocked !== undefined ? blocked : !dev.isBlocked;
+    dev.isBlocked = targetState;
+
+    if (dev.alias) {
+      for (const other of this.devices.values()) {
+        if (other.alias && other.alias.toLowerCase() === dev.alias.toLowerCase()) {
+          other.isBlocked = targetState;
+        }
+      }
+    } else if (dev.isOwner) {
+      for (const other of this.devices.values()) {
+        if (other.isOwner) {
+          other.isBlocked = targetState;
+        }
+      }
+    }
+
     this.scheduleSave();
     return dev;
   }
@@ -194,6 +248,109 @@ export class DeviceRegistryService {
     dev.isOwner = isOwner;
     this.scheduleSave();
     return dev;
+  }
+
+  public deleteDevice(deviceId: string): boolean {
+    const existed = this.devices.delete(deviceId);
+    if (existed) {
+      this.scheduleSave();
+    }
+    return existed;
+  }
+
+  public deleteUserDevices(userIdentifier: string): number {
+    let deletedCount = 0;
+    const ident = userIdentifier.trim().toLowerCase();
+
+    if (ident === 'owner:duy' || ident === 'owner') {
+      const ownerDevs = Array.from(this.devices.values())
+        .filter(d => d.isOwner)
+        .sort((a, b) => new Date(b.lastSeenAt || 0).getTime() - new Date(a.lastSeenAt || 0).getTime());
+
+      // Keep only the single latest owner device, delete all other owner duplicates
+      for (let i = 1; i < ownerDevs.length; i++) {
+        this.devices.delete(ownerDevs[i].deviceId);
+        deletedCount++;
+      }
+    } else if (ident.startsWith('alias:')) {
+      const targetAlias = ident.replace('alias:', '').trim();
+      for (const [id, d] of this.devices.entries()) {
+        if (d.alias && d.alias.toLowerCase() === targetAlias) {
+          this.devices.delete(id);
+          deletedCount++;
+        }
+      }
+    } else {
+      if (this.devices.delete(userIdentifier)) {
+        deletedCount++;
+      }
+    }
+
+    if (deletedCount > 0) {
+      this.scheduleSave();
+    }
+    return deletedCount;
+  }
+
+  public pruneDuplicateDevices(keepLatestPerUser = 3): number {
+    let prunedCount = 0;
+
+    // 1. Prune redundant owner devices (e.g. 25 owner devices accumulated on LAN)
+    const ownerDevs = Array.from(this.devices.values())
+      .filter(d => d.isOwner)
+      .sort((a, b) => new Date(b.lastSeenAt || 0).getTime() - new Date(a.lastSeenAt || 0).getTime());
+
+    if (ownerDevs.length > keepLatestPerUser) {
+      for (let i = keepLatestPerUser; i < ownerDevs.length; i++) {
+        this.devices.delete(ownerDevs[i].deviceId);
+        prunedCount++;
+      }
+    }
+
+    // 2. Prune redundant devices per alias
+    const aliasMap = new Map<string, StoredDeviceInfo[]>();
+    for (const d of this.devices.values()) {
+      if (d.alias && !d.isOwner) {
+        const k = d.alias.trim().toLowerCase();
+        if (!aliasMap.has(k)) aliasMap.set(k, []);
+        aliasMap.get(k)!.push(d);
+      }
+    }
+
+    for (const devs of aliasMap.values()) {
+      if (devs.length > keepLatestPerUser) {
+        devs.sort((a, b) => new Date(b.lastSeenAt || 0).getTime() - new Date(a.lastSeenAt || 0).getTime());
+        for (let i = keepLatestPerUser; i < devs.length; i++) {
+          this.devices.delete(devs[i].deviceId);
+          prunedCount++;
+        }
+      }
+    }
+
+    if (prunedCount > 0) {
+      this.scheduleSave();
+    }
+    return prunedCount;
+  }
+
+  public pruneStaleDevices(maxAgeDays = 30): number {
+    const cutoff = Date.now() - maxAgeDays * 24 * 3600 * 1000;
+    let prunedCount = 0;
+
+    for (const [id, dev] of this.devices.entries()) {
+      // Do not auto-prune owner devices or devices with custom alias
+      if (dev.isOwner || (dev.alias && dev.alias.trim())) continue;
+      const lastSeen = new Date(dev.lastSeenAt || dev.firstSeenAt).getTime();
+      if (lastSeen < cutoff) {
+        this.devices.delete(id);
+        prunedCount++;
+      }
+    }
+
+    if (prunedCount > 0) {
+      this.scheduleSave();
+    }
+    return prunedCount;
   }
 
   public listDevices(): StoredDeviceInfo[] {

@@ -647,6 +647,73 @@ export async function setDeviceOwnerHandler(request: FastifyRequest, reply: Fast
 }
 
 /**
+ * DELETE /api/v1/admin/traffic/devices/:deviceId
+ * Deletes a single device from registry and terminates any associated sessions
+ */
+export async function deleteDeviceHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { deviceId } = (request.params as any) || {};
+  if (!deviceId) throw new BadRequestError('Missing deviceId parameter');
+
+  const existed = deviceRegistryService.deleteDevice(deviceId);
+  visitorSessionManager.removeDeviceSessions(deviceId);
+
+  return reply.send({
+    success: true,
+    message: existed ? `Đã xóa thiết bị ${deviceId}` : `Thiết bị ${deviceId} không tồn tại`,
+    deleted: existed
+  });
+}
+
+/**
+ * DELETE /api/v1/admin/traffic/users/:userIdentifier
+ * Deletes all associated devices for a consolidated user
+ */
+export async function deleteUserDevicesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { userIdentifier } = (request.params as any) || {};
+  if (!userIdentifier) throw new BadRequestError('Missing userIdentifier parameter');
+
+  const count = deviceRegistryService.deleteUserDevices(decodeURIComponent(userIdentifier));
+
+  return reply.send({
+    success: true,
+    message: `Đã xóa ${count} thiết bị liên kết với người dùng này`,
+    deletedCount: count
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/prune-duplicates
+ * Prunes redundant stale device IDs for the same user/owner, keeping the latest 3 active devices
+ */
+export async function pruneDuplicateDevicesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { keepLatest } = (request.body as any) || {};
+  const keep = Math.max(1, Math.min(10, parseInt(String(keepLatest || '3'), 10) || 3));
+  const pruned = deviceRegistryService.pruneDuplicateDevices(keep);
+
+  return reply.send({
+    success: true,
+    message: `Đã dọn sạch ${pruned} thiết bị rác trùng lặp (giữ lại tối đa ${keep} thiết bị mới nhất/người dùng)`,
+    prunedCount: pruned
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/prune-stale
+ * Prunes stale anonymous devices older than maxAgeDays
+ */
+export async function pruneStaleDevicesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { maxAgeDays } = (request.body as any) || {};
+  const days = Math.max(1, Math.min(180, parseInt(String(maxAgeDays || '30'), 10) || 30));
+  const pruned = deviceRegistryService.pruneStaleDevices(days);
+
+  return reply.send({
+    success: true,
+    message: `Đã dọn sạch ${pruned} thiết bị khách vãng lai không hoạt động trên ${days} ngày`,
+    prunedCount: pruned
+  });
+}
+
+/**
  * GET /api/v1/admin/traffic/events
  * Returns rolling log of visitor session lifecycle events (enter, route_change, leave, timeout)
  */

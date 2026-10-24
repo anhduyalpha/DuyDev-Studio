@@ -6,6 +6,22 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.77': {
+    version: 'v23.77',
+    title: 'Bản cập nhật v23.77',
+    date: '24/10/2026',
+    features: [
+      'Gom nhóm người dùng & thiết bị liên kết trong Admin (Multi-Device User Consolidation): Tự động hợp nhất toàn bộ thiết bị của cùng một người dùng (Chủ nhà hoặc cùng tên đại diện Alias) thành một thẻ duy nhất, loại bỏ hoàn toàn tình trạng 1 user lặp 2–10 thẻ',
+      'Ngăn kéo danh sách thiết bị liên kết (Linked Devices Drawer): Cho phép xem danh sách chi tiết các thiết bị (OS, IP, trạng thái online, lần hoạt động cuối) và xóa từng máy cũ',
+      'Dọn thiết bị trùng lặp siêu tốc (Admin Pruning Suite): Nút "Dọn trùng" trên thanh công cụ hỗ trợ dọn sạch các thiết bị rác trùng lặp trong 1 chạm, giữ lại 3 thiết bị mới nhất',
+      'Xóa triệt để người dùng & thiết bị: Bổ sung thao tác xóa trực tiếp từng thiết bị hoặc xóa toàn bộ thiết bị liên kết với người dùng ngay trên giao diện Admin'
+    ],
+    fixes: [
+      'Khắc phục triệt để lỗi đường dẫn lưu trữ Device Registry giữa server/data và server/server/data',
+      'Tự động đồng bộ hóa việc đổi tên (alias) và chặn (block) trên toàn bộ các thiết bị cùng danh tính của một người dùng'
+    ]
+  },
+
   'v23.76': {
     version: 'v23.76',
     title: 'Bản cập nhật v23.76',

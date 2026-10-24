@@ -158,6 +158,26 @@ function renderSessionCardsMarkup(devices) {
       ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center gap-1">👑 Chủ nhà</span>`
       : '';
 
+    const isMultiDevice = (d.devicesCount || 1) > 1;
+    const avatarHtml = d.avatar
+      ? `<img src="${escapeHtml(d.avatar)}" class="w-6 h-6 rounded-full object-cover border border-zinc-200 dark:border-white/10 shrink-0" alt="Avatar">`
+      : `<div class="w-6 h-6 rounded-full ${d.isOwner ? 'bg-amber-500/15 text-amber-500' : 'bg-indigo-500/15 text-indigo-400'} font-bold flex items-center justify-center text-[10px] shrink-0">${d.isOwner ? '👑' : (d.alias ? escapeHtml(d.alias[0].toUpperCase()) : '👤')}</div>`;
+
+    const devicesDrawerId = `devices_${escapeHtml((d.userId || d.deviceId || '').replace(/[^a-zA-Z0-9_-]/g, '_'))}`;
+    const devicesCountBadge = isMultiDevice
+      ? `<button
+          type="button"
+          data-action="toggle-devices-drawer"
+          data-target="${devicesDrawerId}"
+          class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-400 border border-indigo-500/25 flex items-center gap-1 shrink-0 transition cursor-pointer active:scale-95"
+          title="Xem danh sách ${d.devicesCount} thiết bị liên kết của người dùng này"
+        >
+          <i data-lucide="layers" class="w-3 h-3"></i>
+          <span>${d.devicesCount} thiết bị</span>
+          <i data-lucide="chevron-down" class="w-2.5 h-2.5 transition-transform duration-200" id="chevron_${devicesDrawerId}"></i>
+        </button>`
+      : '';
+
     const displayName = d.alias
       ? `${d.isOwner ? '👑 ' : ''}${escapeHtml(d.alias)}`
       : (d.isOwner ? '👑 Máy của Duy' : `Khách #${escapeHtml((d.deviceId || '').slice(-6))}`);
@@ -203,6 +223,7 @@ function renderSessionCardsMarkup(devices) {
           <div class="flex flex-wrap items-center gap-2 min-w-0">
             ${statusBadge}
             <span class="text-base leading-none">${flag}</span>
+            ${avatarHtml}
 
             <!-- Device Name & Inline Rename Button -->
             <div class="flex items-center gap-1.5">
@@ -221,6 +242,7 @@ function renderSessionCardsMarkup(devices) {
               </button>
             </div>
 
+            ${devicesCountBadge}
             ${ownerBadge}
             ${netBadge}
             ${pwaBadge}
@@ -292,6 +314,18 @@ function renderSessionCardsMarkup(devices) {
             >
               <i data-lucide="ban" class="w-3 h-3"></i>
             </button>
+
+            <!-- Delete User & All Linked Devices -->
+            <button
+              type="button"
+              data-action="delete-user-devices"
+              data-user-identifier="${escapeHtml(d.userId || d.deviceId)}"
+              data-user-name="${escapeHtml(d.alias || displayName)}"
+              class="px-2 py-1 rounded-lg bg-zinc-200/80 hover:bg-rose-500/15 hover:text-rose-500 dark:bg-zinc-800 dark:hover:bg-rose-500/20 dark:hover:text-rose-400 text-zinc-400 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95"
+              title="Xóa người dùng này và các thiết bị liên kết"
+            >
+              <i data-lucide="trash-2" class="w-3 h-3"></i>
+            </button>
           </div>
         </div>
 
@@ -321,6 +355,54 @@ function renderSessionCardsMarkup(devices) {
           <span class="text-zinc-400 text-[10px] font-medium mr-1 shrink-0">Lộ trình:</span>
           ${breadcrumbHtml}
         </div>
+
+        <!-- Collapsible Sub-Devices Drawer (if multi-device) -->
+        ${isMultiDevice && Array.isArray(d.devices) ? `
+          <div id="${devicesDrawerId}" class="hidden pt-2 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-zinc-500 font-medium px-1">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="smartphone" class="w-3 h-3 text-indigo-400"></i>
+                <span class="font-bold text-zinc-700 dark:text-zinc-300">Danh sách ${d.devices.length} thiết bị liên kết:</span>
+              </span>
+              <span class="text-[10px] text-zinc-400 font-mono">Bấm 🗑 để dọn thiết bị cũ</span>
+            </div>
+            <div class="space-y-1">
+              ${d.devices.map(dev => {
+                const devOnline = dev.status === 'ONLINE';
+                const devIdle = dev.status === 'IDLE';
+                const devStatusDot = devOnline
+                  ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>'
+                  : (devIdle ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>');
+                const devCompactIp = formatCompactIp(dev.lastIp);
+                const devSeen = formatRelativeTime(dev.lastSeenAt);
+                return `
+                  <div class="flex items-center justify-between p-2 rounded-xl bg-zinc-100/70 dark:bg-white/5 border border-zinc-200/50 dark:border-white/5 text-[11px] font-mono">
+                    <div class="flex flex-wrap items-center gap-2 min-w-0">
+                      ${devStatusDot}
+                      <span class="font-bold text-zinc-800 dark:text-zinc-200" title="${escapeHtml(dev.deviceId)}">#${escapeHtml(dev.deviceId.slice(-6))}</span>
+                      <span class="text-zinc-500 dark:text-zinc-400 font-sans">· ${escapeHtml(dev.deviceSummary || 'Web')}</span>
+                      <span class="text-zinc-400 font-mono">· ${escapeHtml(devCompactIp)}</span>
+                      <span class="text-zinc-400 font-sans text-[10px]">(${devSeen})</span>
+                      ${dev.isOwner ? '<span class="text-amber-500 text-[10px]">👑</span>' : ''}
+                      ${dev.isBlocked ? '<span class="text-rose-500 text-[10px] font-sans">Đã chặn</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        type="button"
+                        data-action="delete-single-device"
+                        data-device-id="${escapeHtml(dev.deviceId)}"
+                        class="p-1 rounded text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
+                        title="Xóa thiết bị này (${escapeHtml(dev.deviceId)})"
+                      >
+                        <i data-lucide="trash" class="w-3 h-3"></i>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Collapsible Past Sessions Accordion Drawer -->
         ${hasPastSessions ? `
@@ -507,6 +589,15 @@ function renderSessionsView() {
               class="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/5 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-orange-500"
             />
           </div>
+          <button
+            type="button"
+            id="btnPruneDuplicates"
+            class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-orange-500/10 hover:text-orange-500 dark:bg-zinc-800 dark:hover:bg-orange-500/15 dark:hover:text-orange-400 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs active:scale-95 border border-transparent hover:border-orange-500/30"
+            title="Dọn sạch các thiết bị rác trùng lặp (giữ lại 3 thiết bị mới nhất mỗi người dùng)"
+          >
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-orange-400"></i>
+            <span class="hidden sm:inline">Dọn trùng</span>
+          </button>
           <button
             type="button"
             id="btnRefreshSessions"
@@ -1789,6 +1880,7 @@ export function attachIpTrafficListeners(containerEl) {
   });
 
   // ===================== SESSIONS TAB LOGIC =====================
+  const btnPruneDuplicates = containerEl.querySelector('#btnPruneDuplicates');
   const btnRefreshSessions = containerEl.querySelector('#btnRefreshSessions');
   const inputSearchSessions = containerEl.querySelector('#inputSearchSessions');
   const sessionFilterButtons = containerEl.querySelectorAll('.btn-session-filter');
@@ -1888,6 +1980,31 @@ export function attachIpTrafficListeners(containerEl) {
       if (window.lucide) window.lucide.createIcons();
     }
   };
+
+  if (btnPruneDuplicates) {
+    btnPruneDuplicates.onclick = async () => {
+      if (!confirm('Bạn có chắc muốn dọn sạch các thiết bị rác trùng lặp của cùng một người dùng? (Giữ lại tối đa 3 thiết bị mới nhất mỗi người dùng)')) return;
+      btnPruneDuplicates.disabled = true;
+      btnPruneDuplicates.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>';
+      if (window.lucide) window.lucide.createIcons();
+      try {
+        const res = await fetch('/api/v1/admin/traffic/devices/prune-duplicates', {
+          method: 'POST',
+          headers: { ...getStorageAuthHeaders(), 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ keepLatest: 3 })
+        });
+        const json = await res.json();
+        showToast(json.message || 'Đã dọn dẹp thiết bị trùng', json.success ? 'success' : 'error');
+        await fetchAndRenderSessionsData();
+      } catch (err) {
+        showToast(`Lỗi dọn trùng: ${err.message}`, 'error');
+      } finally {
+        btnPruneDuplicates.disabled = false;
+        btnPruneDuplicates.innerHTML = '<i data-lucide="sparkles" class="w-3.5 h-3.5 text-orange-400"></i> <span class="hidden sm:inline">Dọn trùng</span>';
+        if (window.lucide) window.lucide.createIcons();
+      }
+    };
+  }
 
   if (btnRefreshSessions) {
     btnRefreshSessions.onclick = async () => {
@@ -1999,6 +2116,58 @@ export function attachIpTrafficListeners(containerEl) {
           fetchAndRenderSessionsData();
         } catch (err) {
           showToast(err.message, 'error');
+        }
+        return;
+      }
+
+      // 3.5. Toggle Sub-Devices Drawer
+      const toggleDevBtn = e.target.closest('[data-action="toggle-devices-drawer"]');
+      if (toggleDevBtn) {
+        const targetId = toggleDevBtn.dataset.target;
+        const drawerEl = document.getElementById(targetId);
+        const chevronEl = document.getElementById(`chevron_${targetId}`);
+        if (drawerEl) {
+          drawerEl.classList.toggle('hidden');
+          if (chevronEl) chevronEl.classList.toggle('rotate-180');
+        }
+        return;
+      }
+
+      // 3.6. Delete Single Device
+      const delSingleDevBtn = e.target.closest('[data-action="delete-single-device"]');
+      if (delSingleDevBtn) {
+        const deviceId = delSingleDevBtn.dataset.deviceId;
+        if (!confirm(`Bạn có chắc muốn xóa thiết bị #${deviceId.slice(-6)}?`)) return;
+        try {
+          const res = await fetch(`/api/v1/admin/traffic/devices/${encodeURIComponent(deviceId)}`, {
+            method: 'DELETE',
+            headers: { ...getStorageAuthHeaders(), Accept: 'application/json' }
+          });
+          const json = await res.json();
+          showToast(json.message || 'Đã xóa thiết bị', json.success ? 'success' : 'error');
+          fetchAndRenderSessionsData();
+        } catch (err) {
+          showToast(`Lỗi khi xóa thiết bị: ${err.message}`, 'error');
+        }
+        return;
+      }
+
+      // 3.7. Delete User & All Linked Devices
+      const delUserBtn = e.target.closest('[data-action="delete-user-devices"]');
+      if (delUserBtn) {
+        const userIdentifier = delUserBtn.dataset.userIdentifier;
+        const userName = delUserBtn.dataset.userName || 'người dùng';
+        if (!confirm(`Bạn có chắc muốn xóa toàn bộ thiết bị của "${userName}"?`)) return;
+        try {
+          const res = await fetch(`/api/v1/admin/traffic/users/${encodeURIComponent(userIdentifier)}`, {
+            method: 'DELETE',
+            headers: { ...getStorageAuthHeaders(), Accept: 'application/json' }
+          });
+          const json = await res.json();
+          showToast(json.message || 'Đã xóa người dùng', json.success ? 'success' : 'error');
+          fetchAndRenderSessionsData();
+        } catch (err) {
+          showToast(`Lỗi khi xóa người dùng: ${err.message}`, 'error');
         }
         return;
       }
