@@ -148,9 +148,9 @@ export function attachDashboardListeners(onReRender) {
 
     gridEl.innerHTML = renderToolsContent(filteredTools);
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons({ root: gridEl });
+      try { window.lucide.createIcons({ root: gridEl }); } catch (_) { try { window.lucide.createIcons(); } catch (_) {} }
     }
-    observeTierCards(gridEl);
+    try { observeTierCards(gridEl); } catch (_) {}
 
     if (countEl) {
       const isAll = category === 'all' && !query;

@@ -5,6 +5,9 @@ import path from 'path';
 describe('Tool Card Manager Reordering & Real-time Dynamic Layout Sync', () => {
   const adminManagerPath = path.resolve(process.cwd(), 'src/components/admin/AdminToolCardManager.js');
   const dashboardPagePath = path.resolve(process.cwd(), 'src/pages/DashboardPage.js');
+  const registryPath = path.resolve(process.cwd(), 'src/hooks/useToolRegistry.js');
+  const appPath = path.resolve(process.cwd(), 'src/app.js');
+  const indexPath = path.resolve(process.cwd(), 'index.html');
 
   it('AdminToolCardManager: exports getFilteredDraftTools helper', () => {
     const code = fs.readFileSync(adminManagerPath, 'utf-8');
@@ -19,7 +22,6 @@ describe('Tool Card Manager Reordering & Real-time Dynamic Layout Sync', () => {
 
   it('AdminToolCardManager: reorders relative to visible filtered tools', () => {
     const code = fs.readFileSync(adminManagerPath, 'utf-8');
-    // Verifies move-up finds previous visible tool and splices target immediately before it
     expect(code).toContain('const currentFiltered = getFilteredDraftTools();');
     expect(code).toContain('const prevVisibleTool = currentFiltered[visibleIndex - 1];');
     expect(code).toContain('const nextVisibleTool = currentFiltered[visibleIndex + 1];');
@@ -36,6 +38,20 @@ describe('Tool Card Manager Reordering & Real-time Dynamic Layout Sync', () => {
     const code = fs.readFileSync(dashboardPagePath, 'utf-8');
     expect(code).toContain('const unsubscribeRegistry = toolRegistry.subscribe(');
     expect(code).toContain('if (typeof unsubscribeRegistry === \'function\') unsubscribeRegistry();');
+  });
+
+  it('ToolRegistry: supports BroadcastChannel & storage event real-time auto-sync across tabs', () => {
+    const code = fs.readFileSync(registryPath, 'utf-8');
+    expect(code).toContain('new BroadcastChannel(\'ds_tool_layout\')');
+    expect(code).toContain('window.addEventListener(\'storage\'');
+    expect(code).toContain('document.addEventListener(\'visibilitychange\'');
+  });
+
+  it('AppWatchdog: watchdog is cancelled and cleaned up upon ds:app-ready', () => {
+    const appCode = fs.readFileSync(appPath, 'utf-8');
+    const indexCode = fs.readFileSync(indexPath, 'utf-8');
+    expect(appCode).toContain('const startupHint = document.getElementById(\'appStartupTimeoutHint\');');
+    expect(indexCode).toContain('window.addEventListener(\'ds:app-ready\'');
   });
 
   it('Simulation: swapping items in a filtered category list does not freeze or get blocked by interleaved tools', () => {

@@ -330,7 +330,52 @@ class ToolRegistry {
     this.listeners = new Set();
     this.currentCategory = 'all';
     this.searchQuery = '';
+    this.channel = null;
     this.loadLocalLayout();
+    this.initCrossTabSync();
+  }
+
+  initCrossTabSync() {
+    if (typeof window === 'undefined') return;
+
+    // 1. BroadcastChannel for instant 0ms cross-tab sync
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        this.channel = new BroadcastChannel('ds_tool_layout');
+        this.channel.onmessage = (event) => {
+          if (event.data?.type === 'TOOL_LAYOUT_UPDATED' && Array.isArray(event.data.items)) {
+            this.applyLayoutSync(event.data.items, false);
+          }
+        };
+      } catch (_) {}
+    }
+
+    // 2. Cross-tab localStorage storage event fallback
+    window.addEventListener('storage', (e) => {
+      if (e.key === TOOL_LAYOUT_STORAGE_KEY && e.newValue) {
+        try {
+          const items = JSON.parse(e.newValue);
+          if (Array.isArray(items)) {
+            this.applyLayoutSync(items, false);
+          }
+        } catch (_) {}
+      }
+    });
+
+    // 3. Tab visibility / window focus auto-check
+    window.addEventListener('focus', () => this.fetchServerLayout());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.fetchServerLayout();
+      }
+    });
+
+    // 4. Background gentle polling every 12 seconds when active
+    setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        this.fetchServerLayout();
+      }
+    }, 12000);
   }
 
   loadLocalLayout() {
@@ -362,6 +407,32 @@ class ToolRegistry {
       }
     });
 
+    // Check if there are any differences between new layout and current tools
+    let hasDifference = false;
+    for (let i = 0; i < this.tools.length; i++) {
+      const tool = this.tools[i];
+      const override = layoutMap.get(tool.id);
+      if (override && override.category && tool.category !== override.category) {
+        hasDifference = true;
+        break;
+      }
+    }
+    if (!hasDifference) {
+      const sortedIds = [...this.tools].sort((a, b) => {
+        const orderA = layoutMap.has(a.id) ? layoutMap.get(a.id).order : 9999;
+        const orderB = layoutMap.has(b.id) ? layoutMap.get(b.id).order : 9999;
+        return orderA - orderB;
+      }).map(t => t.id);
+
+      const currentIds = this.tools.map(t => t.id);
+      for (let i = 0; i < currentIds.length; i++) {
+        if (currentIds[i] !== sortedIds[i]) {
+          hasDifference = true;
+          break;
+        }
+      }
+    }
+
     // Update categories
     this.tools.forEach(tool => {
       const override = layoutMap.get(tool.id);
@@ -390,7 +461,28 @@ class ToolRegistry {
       }
     }
 
-    this.notify();
+    // Broadcast update across open tabs in real-time
+    if (this.channel && shouldSave) {
+      try {
+        this.channel.postMessage({
+          type: 'TOOL_LAYOUT_UPDATED',
+          items: this.tools.map((t, idx) => ({ id: t.id, category: t.category, order: idx + 1 }))
+        });
+      } catch (_) {}
+    }
+
+    if (typeof window !== 'undefined' && shouldSave) {
+      try {
+        window.dispatchEvent(new CustomEvent('ds:tool-layout-changed', {
+          detail: { tools: this.tools }
+        }));
+      } catch (_) {}
+    }
+
+    // Only notify listeners if layout actually changed or explicit save
+    if (hasDifference || shouldSave) {
+      this.notify();
+    }
   }
 
   async fetchServerLayout() {

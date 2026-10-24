@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.87': {
+    version: 'v23.87',
+    title: 'Bản cập nhật v23.87',
+    date: '24/10/2026',
+    features: [
+      'Tự Động Đồng Bộ Bố Cục Thẻ Công Cụ Tức Thì (Cross-Tab & Real-Time Sync): Khi quản trị viên lưu cấu hình, tất cả các tab người dùng đang mở tự động cập nhật ngay lập tức qua BroadcastChannel & Storage Event mà không cần tải lại trang',
+      'Đồng Bộ Bố Cục Đa Thiết Bị: Tự động kiểm tra và cập nhật bố cục thẻ mới nhất khi người dùng mở lại tab hoặc sau mỗi 12 giây khi đang xem trang chủ',
+      'Tối Ưu Watchdog Khởi Động: Tăng ngưỡng phát hiện lên 12 giây và tự động dọn dẹp thông báo lỗi khởi động ngay khi hệ thống sẵn sàng'
+    ],
+    fixes: [
+      'Khắc phục triệt để hiện tượng trang người dùng không tự cập nhật sau khi admin lưu cấu hình',
+      'Loại bỏ hoàn toàn thông báo lỗi timeout khởi động không mong muốn'
+    ]
+  },
   'v23.86': {
     version: 'v23.86',
     title: 'Bản cập nhật v23.86',

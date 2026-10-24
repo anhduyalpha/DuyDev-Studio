@@ -163,6 +163,8 @@ class App {
     // Signal app readiness for any fast-path queued interactions
     window.__dsAppReady = true;
     window.dispatchEvent(new CustomEvent('ds:app-ready'));
+    const startupHint = document.getElementById('appStartupTimeoutHint');
+    if (startupHint) startupHint.remove();
 
     // Cold-start share target check (handles Android native intent and Service Worker shares)
     this.checkAndOpenShareTarget();
