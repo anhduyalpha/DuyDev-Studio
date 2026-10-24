@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.84': {
+    version: 'v23.84',
+    title: 'Bản cập nhật v23.84',
+    date: '24/10/2026',
+    features: [
+      'Nâng Cấp Giao Diện ProfileModal Chuẩn Apple Frosted Glass: Thay thế hoàn toàn tone cam bằng phong cách kính mờ Apple cao cấp (Backdrop Blur 28px, thẻ bo góc rounded-3xl, viền specular hairline, điểm nhấn Indigo thương hiệu #4F46E5)',
+      'Tối Ưu Trải Nghiệm Nhập Tên & Chọn Avatar: Touch target thoải mái 48px chuẩn công thái học, thẻ xem trước avatar trực quan, thiết kế tương phản hoàn hảo cho cả Light Mode và Dark Mode'
+    ],
+    fixes: [
+      'Loại bỏ triệt để các mã màu cam gây gắt mắt trên form định danh thiết bị',
+      'Đồng bộ giao diện onboarding và modal sửa hồ sơ cá nhân đồng nhất trên toàn hệ thống'
+    ]
+  },
   'v23.83': {
     version: 'v23.83',
     title: 'Bản cập nhật v23.83',

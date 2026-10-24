@@ -45,7 +45,7 @@ export function openProfileModal(options = {}) {
 
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'dsProfileModalOverlay';
-  modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none';
+  modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/60 backdrop-blur-2xl -webkit-backdrop-filter: blur(28px) saturate(180%) animate-fade-in select-none';
 
   function renderModalContent() {
     const isStep1 = currentStep === 1;
@@ -55,20 +55,20 @@ export function openProfileModal(options = {}) {
     modalOverlay.innerHTML = `
       <div 
         id="dsProfileModalCard" 
-        class="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-2xl p-5 sm:p-6 overflow-hidden transition-all duration-200"
+        class="relative w-full max-w-md bg-white/90 dark:bg-zinc-900/85 backdrop-blur-2xl -webkit-backdrop-filter: blur(32px) saturate(190%) border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-6 sm:p-7 overflow-hidden transition-all duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dsProfileModalTitle"
       >
-        <!-- Top Accent Bar -->
-        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-indigo-500 to-purple-500"></div>
+        <!-- Top Apple Specular Sheen -->
+        <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/40 dark:via-indigo-400/50 to-transparent"></div>
 
         <!-- Close Button (Only when NOT in mandatory onboarding mode) -->
         ${!isOnboarding ? `
           <button 
             type="button" 
             id="dsProfileCloseBtn"
-            class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer"
+            class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition cursor-pointer"
             aria-label="Đóng"
           >
             <i data-lucide="x" class="w-4 h-4"></i>
@@ -78,15 +78,15 @@ export function openProfileModal(options = {}) {
         ${isStep1 ? `
           <!-- ================= STEP 1: NHẬP TÊN PROFILE ================= -->
           <div class="space-y-4 pt-1">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-orange-500/10 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
                 <i data-lucide="user" class="w-5 h-5"></i>
               </div>
               <div>
-                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
                   ${isOnboarding ? 'Chào mừng bạn đến với Studio' : 'Tên hồ sơ của bạn'}
                 </h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                   ${isOnboarding ? 'Hệ thống yêu cầu định danh thiết bị để lưu trữ lịch sử' : 'Nhập tên để lưu lịch sử và hiển thị khi tải tài liệu'}
                 </p>
               </div>
@@ -94,8 +94,8 @@ export function openProfileModal(options = {}) {
 
             <!-- Mandatory Gate Notice -->
             ${isOnboarding ? `
-              <div class="px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/25 flex items-center gap-2 text-xs text-orange-700 dark:text-orange-300 font-medium">
-                <i data-lucide="shield-alert" class="w-4 h-4 shrink-0 text-orange-500"></i>
+              <div class="px-3.5 py-2.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/10 border border-indigo-200/60 dark:border-indigo-500/20 flex items-center gap-2.5 text-xs text-indigo-950 dark:text-indigo-200 font-medium">
+                <i data-lucide="shield-check" class="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400"></i>
                 <span>Vui lòng nhập tên của bạn để tiếp tục sử dụng hệ thống</span>
               </div>
             ` : ''}
@@ -112,7 +112,7 @@ export function openProfileModal(options = {}) {
                   value="${escapeHtml(pendingName)}" 
                   placeholder="Ví dụ: Hải Nam, Minh Trang, Duy IT..." 
                   maxlength="40"
-                  class="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700/80 text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition"
+                  class="w-full h-12 px-4 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-white/10 text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder-zinc-400/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/80 focus:bg-white dark:focus:bg-zinc-800 transition shadow-2xs"
                   autofocus
                 />
               </div>
@@ -125,7 +125,7 @@ export function openProfileModal(options = {}) {
                 <button 
                   type="button" 
                   id="dsProfileNextStepBtn"
-                  class="w-full h-11 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-2"
+                  class="w-full h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-2"
                 >
                   <span>Xác nhận & Tiếp tục (Chọn Avatar)</span>
                   <i data-lucide="arrow-right" class="w-4 h-4"></i>
@@ -134,14 +134,14 @@ export function openProfileModal(options = {}) {
                 <button 
                   type="button" 
                   id="dsProfileSkipBtn"
-                  class="flex-1 h-11 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                  class="flex-1 h-12 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button 
                   type="button" 
                   id="dsProfileNextStepBtn"
-                  class="flex-[1.4] h-11 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
+                  class="flex-[1.4] h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
                 >
                   <span>Tiếp tục</span>
                   <i data-lucide="arrow-right" class="w-4 h-4"></i>
@@ -152,23 +152,23 @@ export function openProfileModal(options = {}) {
         ` : `
           <!-- ================= STEP 2: ĐỔI AVATAR (HOẶC EDIT PROFILE) ================= -->
           <div class="space-y-4 pt-1">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
                 <i data-lucide="sparkles" class="w-5 h-5"></i>
               </div>
               <div class="min-w-0 flex-1">
-                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
                   ${isOnboarding ? 'Bạn có muốn đổi avatar không?' : 'Chỉnh sửa hồ sơ & Avatar'}
                 </h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                   Chọn biểu tượng cá tính hoặc tải ảnh từ máy
                 </p>
               </div>
             </div>
 
             <!-- Big Live Avatar Preview with Name Underneath -->
-            <div class="flex flex-col items-center justify-center py-2.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/60 dark:border-zinc-800 rounded-xl">
-              <div id="dsModalAvatarPreview" class="relative w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden flex items-center justify-center font-bold text-xl sm:text-2xl shadow-sm border-2 border-white dark:border-zinc-700 bg-gradient-to-tr ${gradientClass}">
+            <div class="flex flex-col items-center justify-center py-3.5 bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/60 dark:border-white/5 rounded-2xl shadow-2xs">
+              <div id="dsModalAvatarPreview" class="relative w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-sm border-2 border-white dark:border-zinc-700 bg-gradient-to-tr ${gradientClass}">
                 ${renderAvatarInnerHtml(pendingAvatar, pendingName)}
               </div>
               <span id="dsModalNamePreview" class="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-2 max-w-[200px] truncate text-center">
@@ -185,7 +185,7 @@ export function openProfileModal(options = {}) {
                 <label for="dsProfileNameInput2" class="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">
                   Tên hiển thị
                 </label>
-                <button type="button" id="dsProfileChangeNameQuick" class="text-[11px] text-orange-600 dark:text-orange-400 hover:underline">
+                <button type="button" id="dsProfileChangeNameQuick" class="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
                   Sửa tên
                 </button>
               </div>
@@ -195,7 +195,7 @@ export function openProfileModal(options = {}) {
                 value="${escapeHtml(pendingName)}" 
                 placeholder="Nhập tên của bạn..." 
                 maxlength="40"
-                class="w-full h-9 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                class="w-full h-10 px-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-white/10 text-xs font-medium text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition"
               />
             </div>
 
@@ -208,7 +208,7 @@ export function openProfileModal(options = {}) {
                 <button 
                   type="button" 
                   id="dsProfileResetInitialBtn"
-                  class="text-[11px] text-zinc-500 hover:text-orange-600 dark:hover:text-orange-400 transition"
+                  class="text-[11px] font-medium text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
                   title="Dùng avatar chữ cái"
                 >
                   Dùng chữ cái đầu (${initialLetter})
@@ -220,10 +220,10 @@ export function openProfileModal(options = {}) {
                   return `
                     <button 
                       type="button" 
-                      class="btn-avatar-preset flex flex-col items-center justify-center h-11 rounded-xl border text-xl transition cursor-pointer ${
+                      class="btn-avatar-preset flex flex-col items-center justify-center h-11 rounded-xl border text-xl transition cursor-pointer active:scale-95 ${
                         isSelected 
-                          ? 'border-orange-500 bg-orange-500/10 ring-2 ring-orange-500/30' 
-                          : 'border-zinc-200 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 ring-2 ring-indigo-500/30 text-indigo-600 dark:text-indigo-300 shadow-xs' 
+                          : 'border-zinc-200/80 dark:border-white/10 bg-white/70 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 text-zinc-700 dark:text-zinc-300'
                       }"
                       data-avatar-id="${p.id}"
                       title="${p.label}"
@@ -241,27 +241,27 @@ export function openProfileModal(options = {}) {
               <button 
                 type="button" 
                 id="dsProfileUploadPhotoBtn"
-                class="w-full h-10 px-3.5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition cursor-pointer inline-flex items-center justify-center gap-2"
+                class="w-full h-11 px-3.5 rounded-xl border border-dashed border-zinc-300 dark:border-white/20 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                <i data-lucide="image-plus" class="w-4 h-4 text-orange-500"></i>
+                <i data-lucide="image-plus" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
                 <span>Tải ảnh đại diện từ thiết bị</span>
               </button>
             </div>
 
             <!-- Action Buttons for Step 2 -->
-            <div class="flex items-center gap-2 pt-2">
+            <div class="flex items-center gap-2.5 pt-2">
               ${isOnboarding ? `
                 <button 
                   type="button" 
                   id="dsProfileBackToStep1"
-                  class="h-11 px-3.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                  class="h-12 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
                 >
                   Quay lại
                 </button>
                 <button 
                   type="button" 
                   id="dsProfileSkipAvatarBtn"
-                  class="flex-1 h-11 px-3 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition cursor-pointer text-center"
+                  class="flex-1 h-12 px-3.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer text-center"
                 >
                   Dùng chữ cái
                 </button>
@@ -269,7 +269,7 @@ export function openProfileModal(options = {}) {
                 <button 
                   type="button" 
                   id="dsProfileCancelEditBtn"
-                  class="flex-1 h-11 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                  class="flex-1 h-12 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -277,7 +277,7 @@ export function openProfileModal(options = {}) {
               <button 
                 type="button" 
                 id="dsProfileSaveAllBtn"
-                class="flex-[1.3] h-11 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
+                class="flex-[1.4] h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
               >
                 <i data-lucide="check" class="w-4 h-4"></i>
                 <span>${isOnboarding ? 'Hoàn tất' : 'Lưu hồ sơ'}</span>
