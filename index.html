@@ -69,6 +69,7 @@
   </script>
   <style>
     /* Instant suppression: Never show startup loader when opening via Share Sheet */
+    .is-share-target #appInstantShell,
     .is-share-target #appStartupLoader {
       display: none !important;
     }
@@ -82,6 +83,7 @@
 
     /* Suppress default loader & regular app shell when on deprecated domain */
     .is-domain-migrated #app,
+    .is-domain-migrated #appInstantShell,
     .is-domain-migrated #appStartupLoader {
       display: none !important;
     }
@@ -149,11 +151,16 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.77">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.77">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=23.77">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=23.77">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.77">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.78">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.78">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=23.78">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=23.78">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.78">
+
+  <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
+  <link rel="modulepreload" href="src/app.js?v=23.78">
+  <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
+  <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -541,12 +548,130 @@
 
   <!-- Root Mount Point for Modular PWA Architecture -->
   <div id="app" class="w-full max-w-full overflow-x-clip min-h-screen">
-    <!-- Immediate CSS loader to prevent black void during normal script execution (suppressed in share mode) -->
-    <div id="appStartupLoader" class="min-h-screen flex items-center justify-center p-4">
-      <div class="flex flex-col items-center gap-3 text-zinc-400">
-        <img src="src/assets/logo-ds.svg?v=22.42" alt="DuyDev Studio" class="w-10 h-10 rounded-xl object-contain shadow-xs animate-pulse" />
-        <span class="text-xs font-mono text-zinc-500">Đang khởi động DuyDev Studio...</span>
-      </div>
+    <!-- Instant App Shell & Dashboard (Zero-Delay First Paint - Suppressed in share mode) -->
+    <div id="appInstantShell" class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-clip">
+      
+      <!-- Instant Header -->
+      <header class="sticky top-0 z-40 w-full glass-panel px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 border-b border-zinc-200/50 dark:border-white/5 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
+          <div class="flex items-center gap-2.5 sm:gap-3 select-none shrink-0 cursor-pointer" onclick="window.location.hash=''">
+            <img src="src/assets/logo-ds.svg?v=22.12" alt="DuyDev Studio" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain shadow-xs shrink-0" />
+            <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
+          </div>
+
+          <div class="hidden md:flex flex-1 max-w-md mx-6">
+            <div class="relative w-full">
+              <svg class="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input type="text" placeholder="Tìm kiếm công cụ... (Phím /)" readonly class="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-zinc-100/70 dark:bg-white/5 border border-zinc-200/80 dark:border-white/10 text-zinc-400 cursor-pointer placeholder-zinc-400 dark:placeholder-zinc-500" />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div class="w-8 h-8 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 flex items-center justify-center text-zinc-400">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 flex items-center justify-center text-zinc-400">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-xs">
+              D
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Instant Main Dashboard -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-24 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0">
+        <div class="space-y-6 sm:space-y-8 animate-fadeIn">
+          
+          <!-- Category Filter Bar -->
+          <div class="w-full min-w-0 overflow-x-auto no-scrollbar flex items-center gap-1.5 sm:gap-2 py-1">
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs whitespace-nowrap cursor-pointer">Tất cả</span>
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Tài liệu PDF</span>
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Chuyển đổi</span>
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Nén & Lưu trữ</span>
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Mã QR & Link</span>
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Hệ thống</span>
+          </div>
+
+          <!-- Pre-rendered Core Tool Cards Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
+            <!-- PDF Studio -->
+            <a href="#tool/pdf" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-orange-500/40 transition shadow-xs">
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center font-bold text-sm">PDF</div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">TIER S</span>
+              </div>
+              <div class="mt-3">
+                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">PDF Studio</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Ghép, tách, nén, trích xuất và chuyển đổi PDF chất lượng cao.</p>
+              </div>
+            </a>
+
+            <!-- Converter -->
+            <a href="#tool/converter" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-indigo-500/40 transition shadow-xs">
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-sm">⇄</div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">TIER S</span>
+              </div>
+              <div class="mt-3">
+                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Chuyển Đổi Tệp</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Chuyển đổi qua lại giữa hơn 65+ định dạng video, âm thanh, tài liệu.</p>
+              </div>
+            </a>
+
+            <!-- Studocu VIP -->
+            <a href="#tool/studocu" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-emerald-500/40 transition shadow-xs">
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-sm">VIP</div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">TIER EX</span>
+              </div>
+              <div class="mt-3">
+                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Studocu VIP Downloader</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Tải tài liệu Studocu chất lượng cao không giới hạn.</p>
+              </div>
+            </a>
+
+            <!-- Archive Compress -->
+            <a href="#tool/archive-compress" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-purple-500/40 transition shadow-xs">
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center font-bold text-sm">ZIP</div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">TIER A</span>
+              </div>
+              <div class="mt-3">
+                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Nén & Giải Nén Tệp</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Nén ZIP, TAR, 7Z, GZ đa định dạng với tốc độ cực nhanh.</p>
+              </div>
+            </a>
+
+            <!-- Dynamic QR -->
+            <a href="#tool/dynamic-qr" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-sky-500/40 transition shadow-xs">
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-bold text-sm">QR</div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-500 border border-sky-500/20">TIER A</span>
+              </div>
+              <div class="mt-3">
+                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Mã QR Động & Rút Gọn</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Tạo mã QR nghệ thuật đổi đích đến linh hoạt và rút gọn link.</p>
+              </div>
+            </a>
+
+            <!-- Quiz Generator -->
+            <a href="#tool/quiz" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-amber-500/40 transition shadow-xs">
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-sm">AI</div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">TIER S</span>
+              </div>
+              <div class="mt-3">
+                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Quiz & Trắc Nghiệm AI</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Tạo đề thi và phiếu bài tập trắc nghiệm tự động bằng trí tuệ nhân tạo.</p>
+              </div>
+            </a>
+          </div>
+
+        </div>
+      </main>
+
     </div>
   </div>
 
@@ -557,28 +682,24 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=23.77"></script>
+  <script type="module" src="src/app.js?v=23.78"></script>
 
-  <!-- Startup Fallback Watchdog (Guarantees user is never trapped in startup loader) -->
+  <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
     setTimeout(function() {
-      var loader = document.getElementById('appStartupLoader');
-      if (loader && !window.__dsAppReady) {
-        var hint = document.getElementById('appStartupTimeoutHint');
-        if (!hint) {
-          var container = loader.querySelector('.flex.flex-col') || loader;
-          var box = document.createElement('div');
-          box.id = 'appStartupTimeoutHint';
-          box.className = 'mt-4 flex flex-col items-center gap-2.5 text-center animate-fadeIn';
-          box.innerHTML = '<span class="text-xs text-amber-500 font-medium">Khởi động lâu hơn bình thường...</span>' +
-            '<div class="flex items-center gap-2">' +
-            '<button onclick="window.location.reload(true)" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 border border-zinc-700 cursor-pointer transition">Tải lại</button>' +
-            '<button onclick="caches.keys().then(function(keys){return Promise.all(keys.map(function(k){return caches.delete(k);}));}).then(function(){localStorage.clear();sessionStorage.clear();window.location.reload(true);});" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs text-white cursor-pointer transition">Làm mới toàn bộ cache</button>' +
-            '</div>';
-          container.appendChild(box);
+      if (!window.__dsAppReady) {
+        var existing = document.getElementById('appStartupTimeoutHint');
+        if (!existing) {
+          var toast = document.createElement('div');
+          toast.id = 'appStartupTimeoutHint';
+          toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 p-3 rounded-2xl bg-zinc-900/95 border border-amber-500/40 text-xs text-amber-400 flex items-center gap-2.5 shadow-2xl backdrop-blur-md animate-fadeIn';
+          toast.innerHTML = '<span>Tải mô-đun ứng dụng lâu hơn bình thường</span>' +
+            '<button onclick="window.location.reload(true)" class="px-2.5 py-1 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 border border-zinc-700 cursor-pointer transition">Tải lại</button>' +
+            '<button onclick="caches.keys().then(function(keys){return Promise.all(keys.map(function(k){return caches.delete(k);}));}).then(function(){localStorage.clear();sessionStorage.clear();window.location.reload(true);});" class="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs text-white cursor-pointer transition">Xóa Cache</button>';
+          document.body.appendChild(toast);
         }
       }
-    }, 4000);
+    }, 5000);
   </script>
 </body>
 </html>

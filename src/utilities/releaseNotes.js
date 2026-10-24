@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.78': {
+    version: 'v23.78',
+    title: 'Bản cập nhật v23.78',
+    date: '24/10/2026',
+    features: [
+      'Truy cập web tức thì (Zero-Loader Instant First Paint): Loại bỏ hoàn toàn màn hình chờ xoay tròn "Đang khởi động DuyDev Studio...", hiển thị ngay lập tức toàn bộ thanh điều hướng, phân loại và lưới công cụ chính trong 0.05 giây',
+      'Kiến trúc nạp module song song (High-Priority ModulePreload): Tải trước các gói tập lệnh quan trọng song song với HTML và CSS, tăng tốc độ tương tác (Time-to-Interactive) lên mức tối đa'
+    ],
+    fixes: [
+      'Loại bỏ cảm giác chờ đợi khó chịu khi mở ứng dụng hoặc truy cập lần đầu trên mọi trình duyệt và chế độ PWA',
+      'Đảm bảo chuyển đổi mượt mà giữa vỏ ứng dụng tức thì và các trạng thái động (Hydration) mà không gây giật chớp màn hình'
+    ]
+  },
+
   'v23.77': {
     version: 'v23.77',
     title: 'Bản cập nhật v23.77',
