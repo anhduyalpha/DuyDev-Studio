@@ -140,6 +140,36 @@ export function attachDashboardListeners(onReRender) {
 
   observeTierCards();
 
+  // Subscribe to toolRegistry so layout reordering and category updates dynamically sync to DOM in real-time
+  const unsubscribeRegistry = toolRegistry.subscribe((filteredTools, category, query) => {
+    const gridEl = document.getElementById('toolsGridContainer');
+    const countEl = document.getElementById('toolsCountLabel');
+    if (!gridEl) return;
+
+    gridEl.innerHTML = renderToolsContent(filteredTools);
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons({ root: gridEl });
+    }
+    observeTierCards(gridEl);
+
+    if (countEl) {
+      const isAll = category === 'all' && !query;
+      countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
+    }
+
+    // Synchronize category counts across tab pills
+    document.querySelectorAll('.filter-pill').forEach(btn => {
+      const catId = btn.getAttribute('data-category');
+      const badge = btn.querySelector('.filter-count-badge');
+      if (badge && catId) {
+        const count = catId === 'all'
+          ? toolRegistry.tools.length
+          : toolRegistry.tools.filter(t => t.category === catId).length;
+        badge.textContent = count;
+      }
+    });
+  });
+
   // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
   const switchCategory = (cat, direction = null, clickedBtn = null) => {
     toolRegistry.setCategory(cat);
@@ -150,15 +180,9 @@ export function attachDashboardListeners(onReRender) {
       targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
-    // 2. Perform in-place update of tools grid with optional slide transition
-    const filteredTools = toolRegistry.getFilteredTools();
+    // 2. Perform slide transition on tools grid
     const gridEl = document.getElementById('toolsGridContainer');
-    const countEl = document.getElementById('toolsCountLabel');
-    const isAll = cat === 'all' && !toolRegistry.searchQuery;
-
-    if (gridEl) {
-      gridEl.innerHTML = renderToolsContent(filteredTools);
-
+    if (gridEl && direction) {
       if (direction === 'next') {
         gridEl.classList.remove('animate-tab-slide-left');
         gridEl.classList.add('animate-tab-slide-right');
@@ -170,12 +194,6 @@ export function attachDashboardListeners(onReRender) {
       gridEl.addEventListener('animationend', () => {
         gridEl.classList.remove('animate-tab-slide-right', 'animate-tab-slide-left');
       }, { once: true });
-
-      if (window.lucide) window.lucide.createIcons({ root: gridEl });
-      observeTierCards(gridEl);
-    }
-    if (countEl) {
-      countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
     }
 
     // 3. Update active pill styling across all tabs in place
@@ -387,6 +405,7 @@ export function attachDashboardListeners(onReRender) {
   window.addEventListener('keydown', handleEscapeKey);
 
   return () => {
+    if (typeof unsubscribeRegistry === 'function') unsubscribeRegistry();
     stopGovernor();
     stopSwipe();
     if (tierObserver) {

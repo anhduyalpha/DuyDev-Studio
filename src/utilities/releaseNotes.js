@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.85': {
+    version: 'v23.85',
+    title: 'Bản cập nhật v23.85',
+    date: '24/10/2026',
+    features: [
+      'Khắc Phục Hoàn Toàn Lỗi Sắp Xếp Thẻ Công Cụ: Sửa lỗi mũi tên lên/xuống bị đơ khi lọc theo từng Tab danh mục trong bảng quản trị; vị trí thẻ công cụ giờ đây đổi chỗ tức thì so với các thẻ cùng danh mục',
+      'Đồng Bộ Bố Cục Động Thời Gian Thực Giữa Admin & Người Dùng: Dashboard người dùng tự động lắng nghe cập nhật bố cục từ máy chủ và quản trị viên, cập nhật thứ tự thẻ và số lượng badge tức thì không cần tải lại trang'
+    ],
+    fixes: [
+      'Sửa lỗi nút lên/xuống trong admin manager chỉ hoán đổi với thẻ ẩn ở danh mục khác',
+      'Sửa lỗi Dashboard phía người dùng không hiển thị thứ tự thẻ mới do thiếu cơ chế subscribe ToolRegistry'
+    ]
+  },
   'v23.84': {
     version: 'v23.84',
     title: 'Bản cập nhật v23.84',

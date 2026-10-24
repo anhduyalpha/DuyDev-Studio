@@ -58,6 +58,19 @@ function hasUnsavedChanges() {
 }
 
 /**
+ * Returns the currently visible draft tools filtered by active category and search
+ */
+export function getFilteredDraftTools() {
+  return draftTools.filter(tool => {
+    const matchCat = activeCategoryFilter === 'all' || tool.category === activeCategoryFilter;
+    if (!matchCat) return false;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (tool.title || '').toLowerCase().includes(q) || (tool.id || '').toLowerCase().includes(q);
+  });
+}
+
+/**
  * Renders the Tool Card Manager HTML
  */
 export function renderAdminToolCardManager() {
@@ -74,13 +87,7 @@ export function renderAdminToolCardManager() {
   });
 
   // Filter tools based on activeCategoryFilter and searchQuery
-  const filteredTools = draftTools.filter(tool => {
-    const matchCat = activeCategoryFilter === 'all' || tool.category === activeCategoryFilter;
-    if (!matchCat) return false;
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (tool.title || '').toLowerCase().includes(q) || (tool.id || '').toLowerCase().includes(q);
-  });
+  const filteredTools = getFilteredDraftTools();
 
   return `
     <div class="space-y-6">
@@ -203,8 +210,8 @@ export function renderAdminToolCardManager() {
           </div>
         ` : filteredTools.map((tool, index) => {
           const globalIndex = draftTools.findIndex(t => t.id === tool.id);
-          const isFirst = globalIndex === 0;
-          const isLast = globalIndex === draftTools.length - 1;
+          const isFirst = index === 0;
+          const isLast = index === filteredTools.length - 1;
           const currentCat = CATEGORY_OPTIONS.find(c => c.id === tool.category) || { label: tool.category, color: '#6366F1' };
 
           return `
@@ -398,18 +405,25 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
     };
   });
 
-  // 4. Move Up / Move Down Reordering
+  // 4. Move Up / Move Down Reordering (Relative to current visible tab/filter)
   container.querySelectorAll('button[data-action="move-up"]').forEach(btn => {
     btn.onclick = () => {
       const toolId = btn.dataset.toolId;
-      const index = draftTools.findIndex(t => t.id === toolId);
-      if (index > 0) {
-        const item = draftTools.splice(index, 1)[0];
-        draftTools.splice(index - 1, 0, item);
-        // Normalize order
-        draftTools.forEach((t, i) => { t.order = i + 1; });
-        soundEngine?.play('click');
-        refreshUI();
+      const currentFiltered = getFilteredDraftTools();
+      const visibleIndex = currentFiltered.findIndex(t => t.id === toolId);
+      if (visibleIndex > 0) {
+        const prevVisibleTool = currentFiltered[visibleIndex - 1];
+        const targetIdx = draftTools.findIndex(t => t.id === toolId);
+        const prevIdx = draftTools.findIndex(t => t.id === prevVisibleTool.id);
+        if (targetIdx !== -1 && prevIdx !== -1) {
+          const [item] = draftTools.splice(targetIdx, 1);
+          const newPrevIdx = draftTools.findIndex(t => t.id === prevVisibleTool.id);
+          draftTools.splice(newPrevIdx, 0, item);
+          // Normalize sequential order
+          draftTools.forEach((t, i) => { t.order = i + 1; });
+          soundEngine?.play('click');
+          refreshUI();
+        }
       }
     };
   });
@@ -417,14 +431,21 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
   container.querySelectorAll('button[data-action="move-down"]').forEach(btn => {
     btn.onclick = () => {
       const toolId = btn.dataset.toolId;
-      const index = draftTools.findIndex(t => t.id === toolId);
-      if (index >= 0 && index < draftTools.length - 1) {
-        const item = draftTools.splice(index, 1)[0];
-        draftTools.splice(index + 1, 0, item);
-        // Normalize order
-        draftTools.forEach((t, i) => { t.order = i + 1; });
-        soundEngine?.play('click');
-        refreshUI();
+      const currentFiltered = getFilteredDraftTools();
+      const visibleIndex = currentFiltered.findIndex(t => t.id === toolId);
+      if (visibleIndex >= 0 && visibleIndex < currentFiltered.length - 1) {
+        const nextVisibleTool = currentFiltered[visibleIndex + 1];
+        const targetIdx = draftTools.findIndex(t => t.id === toolId);
+        const nextIdx = draftTools.findIndex(t => t.id === nextVisibleTool.id);
+        if (targetIdx !== -1 && nextIdx !== -1) {
+          const [item] = draftTools.splice(targetIdx, 1);
+          const newNextIdx = draftTools.findIndex(t => t.id === nextVisibleTool.id);
+          draftTools.splice(newNextIdx + 1, 0, item);
+          // Normalize sequential order
+          draftTools.forEach((t, i) => { t.order = i + 1; });
+          soundEngine?.play('click');
+          refreshUI();
+        }
       }
     };
   });
