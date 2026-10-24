@@ -37,7 +37,7 @@ import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
 import { isAdminAuthenticated } from './utilities/adminAuth.js';
-import { isProfileConfigured, syncProfileWithServer } from './utilities/userProfile.js';
+import { isProfileConfigured, syncProfileWithServer, getUserProfile } from './utilities/userProfile.js';
 import { openProfileModal } from './components/common/ProfileModal.js';
 
 /**
@@ -334,20 +334,38 @@ class App {
       document.body.appendChild(slideConfirmEl);
     }
 
-    this.appRoot.innerHTML = `
-      <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-clip">
-        <div id="headerContainer" class="w-full"></div>
-        <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-36 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0 overflow-x-clip"></main>
-        <div id="footerContainer" class="w-full"></div>
-        <div id="bottomNavContainer"></div>
-        <div id="globalPreviewContainer"></div>
-        <div id="globalTaskDockContainer"></div>
-      </div>
-    `;
+    // Zero-Swap In-Place Hydration Check:
+    // If the pixel-identical instant shell is already pre-rendered into the DOM (from index.html),
+    // preserve the entire DOM tree and attach event listeners in-place without flashing.
+    const existingHeader = document.getElementById('headerContainer');
+    const existingMain = document.getElementById('mainContent');
+    const existingFooter = document.getElementById('footerContainer');
+    const isShellPreRendered = existingHeader && existingMain && existingFooter && existingHeader.children.length > 0;
 
-    // Render header and footer
-    document.getElementById('headerContainer').innerHTML = renderHeader();
-    document.getElementById('footerContainer').innerHTML = renderFooter();
+    if (!isShellPreRendered) {
+      this.appRoot.innerHTML = `
+        <div class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-clip">
+          <div id="headerContainer" class="w-full"></div>
+          <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-36 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0 overflow-x-clip"></main>
+          <div id="footerContainer" class="w-full"></div>
+          <div id="bottomNavContainer"></div>
+          <div id="globalPreviewContainer"></div>
+          <div id="globalTaskDockContainer"></div>
+        </div>
+      `;
+
+      // Render header and footer
+      document.getElementById('headerContainer').innerHTML = renderHeader();
+      document.getElementById('footerContainer').innerHTML = renderFooter();
+    } else {
+      // In-place hydration sync for user profile (in case user customized name/avatar in localStorage)
+      try {
+        const profile = getUserProfile();
+        if (profile && (profile.name || profile.avatar)) {
+          window.dispatchEvent(new CustomEvent('ds:profile-updated', { detail: profile }));
+        }
+      } catch (_) {}
+    }
 
     attachHeaderListeners((query) => {
       toolRegistry.setSearchQuery(query);
@@ -416,9 +434,14 @@ class App {
         }
       }
 
-      // Update bottom nav active state
+      // Update bottom nav active state (Preserve pre-rendered bottom nav on initial dashboard load)
       const bottomNav = document.getElementById('bottomNavContainer');
-      if (bottomNav) bottomNav.innerHTML = renderBottomNav(hash);
+      const isDashboardRoute = (!hash || hash === '#' || hash === '#dashboard');
+      if (bottomNav) {
+        if (!isDashboardRoute || bottomNav.children.length === 0) {
+          bottomNav.innerHTML = renderBottomNav(hash);
+        }
+      }
 
       this.renderCurrentView();
       updateThemeUI(getStoredTheme());
@@ -479,6 +502,13 @@ class App {
     };
 
     if (!hash || hash === '#' || hash === '#dashboard' || hash === '#share-target' || hash.startsWith('#share-target?') || hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {
+      // In-place zero-swap hydration: if dashboard is already mounted statically in mainContainer and this is not a soft update
+      const existingGrid = !isSoftUpdate && mainContainer && mainContainer.querySelector('#toolsGridContainer');
+      if (existingGrid) {
+        cleanup = attachDashboardListeners(onSoftReRender);
+        if (cleanup) this.currentCleanups.push(cleanup);
+        return;
+      }
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
     } else if (hash.startsWith('#tool/')) {
       const cleanHash = hash.replace('#tool/', '');

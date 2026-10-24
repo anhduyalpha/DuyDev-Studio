@@ -163,14 +163,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.79">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.79">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=23.79">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=23.79">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.79">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.80">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.80">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=23.80">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=23.80">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.80">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=23.79">
+  <link rel="modulepreload" href="src/app.js?v=23.80">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -563,129 +563,2496 @@
     <!-- Instant App Shell & Dashboard (Zero-Delay First Paint - Suppressed in share mode) -->
     <div id="appInstantShell" class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200 w-full max-w-full overflow-x-clip">
       
-      <!-- Instant Header -->
-      <header class="sticky top-0 z-40 w-full glass-panel px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 border-b border-zinc-200/50 dark:border-white/5 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
-          <div class="flex items-center gap-2.5 sm:gap-3 select-none shrink-0 cursor-pointer" onclick="window.location.hash=''">
-            <img src="src/assets/logo-ds.svg?v=22.12" alt="DuyDev Studio" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain shadow-xs shrink-0" />
-            <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
-          </div>
+      <div id="headerContainer" class="w-full">
 
-          <div class="hidden md:flex flex-1 max-w-md mx-6">
-            <div class="relative w-full">
-              <svg class="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-              <input type="text" placeholder="Tìm kiếm công cụ... (Phím /)" readonly class="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-zinc-100/70 dark:bg-white/5 border border-zinc-200/80 dark:border-white/10 text-zinc-400 cursor-pointer placeholder-zinc-400 dark:placeholder-zinc-500" />
-            </div>
-          </div>
+    <header class="sticky top-0 z-40 w-full glass-panel px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
+        
+        <!-- Left: Clean Branding -->
+        <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0 group" onclick="window.location.hash = ''">
+          <img src="src/assets/logo-ds.svg?v=22.12" alt="DuyDev Studio" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain transition-all duration-200 group-hover:scale-105 group-hover:ring-2 group-hover:ring-orange-500/30 group-hover:shadow-md group-hover:shadow-orange-500/10 shrink-0" />
+          <span class="font-bold text-sm sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
+        </div>
 
-          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <div class="w-8 h-8 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 flex items-center justify-center text-zinc-400">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-            </div>
-            <div class="w-8 h-8 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 flex items-center justify-center text-zinc-400">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
-            </div>
-            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-xs">
-              D
-            </div>
+        <!-- Center: Minimalist Search Bar (Desktop - Apple Sequoia Frosted Glass) -->
+        <div class="hidden md:flex flex-1 max-w-md mx-6">
+          <div class="relative w-full group/search">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within/search:text-indigo-500 dark:group-focus-within/search:text-indigo-400"></i>
+            <input 
+              type="text" 
+              id="globalSearchInput"
+              role="searchbox"
+              aria-label="Tìm kiếm công cụ (⌘K)"
+              placeholder="Tìm kiếm công cụ..." 
+              class="w-full glass-search rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans"
+            >
+            <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-300 glass-pill rounded border border-zinc-200/90 dark:border-white/[0.12]">⌘K</kbd>
           </div>
         </div>
-      </header>
 
-      <!-- Instant Main Dashboard -->
-      <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-24 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0">
-        <div class="space-y-6 sm:space-y-8 animate-fadeIn">
-          
-          <!-- Category Filter Bar -->
-          <div class="w-full min-w-0 overflow-x-auto no-scrollbar flex items-center gap-1.5 sm:gap-2 py-1">
-            <span class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs whitespace-nowrap cursor-pointer">Tất cả</span>
-            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Tài liệu PDF</span>
-            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Chuyển đổi</span>
-            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Nén & Lưu trữ</span>
-            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Mã QR & Link</span>
-            <span class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-white/5 whitespace-nowrap cursor-pointer">Hệ thống</span>
+        <!-- Right: Controls (Ergonomic touch targets >= 38-44px) -->
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+
+          <!-- Storage Drive Link -->
+          <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+          </a>
+
+          <!-- History Link (Desktop only) -->
+          <a href="#history" title="Lịch sử tác vụ" aria-label="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition">
+            <i data-lucide="clock" class="w-4.5 h-4.5"></i>
+          </a>
+
+          <!-- Trash Bin Link -->
+          <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-rose-600 dark:text-zinc-300 dark:hover:text-rose-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <i data-lucide="trash-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+            <span id="headerTrashDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
+          </a>
+
+          <!-- Pure System Status Dot (Non-clickable, Indicator Only) -->
+          <div id="headerSystemStatus" 
+               role="status"
+               aria-label="Trạng thái hệ thống"
+               title="Trực tuyến" 
+               class="inline-flex items-center justify-center w-6 h-6 select-none">
+            <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
           </div>
 
-          <!-- Pre-rendered Core Tool Cards Grid -->
+          <!-- Sound Toggle Button -->
+          <button id="btnSoundToggle" 
+                  title="Tắt âm thanh" 
+                  aria-label="Tắt âm thanh" 
+                  class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <i data-lucide="volume-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+          </button>
+
+          <!-- Theme Toggle Button -->
+          <button id="btnThemeToggle" title="Giao diện tối" aria-label="Chuyển sang giao diện tối" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <i data-lucide="moon" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+          </button>
+
+          <!-- User Profile Avatar with Small Name Underneath -->
+          <button 
+            type="button" 
+            id="headerProfileBtn" 
+            title="Hồ sơ người dùng (Nhấp để đổi avatar / tên)" 
+            aria-label="Hồ sơ người dùng & Đổi avatar" 
+            class="flex flex-col items-center justify-center px-1 py-0.5 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          >
+            <div id="headerUserAvatar" class="relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr from-indigo-500 to-purple-600 text-white">
+              <span class="font-bold select-none">D</span>
+            </div>
+            <span id="headerUserNameText" class="text-[9px] sm:text-[9.5px] font-medium text-zinc-600 dark:text-zinc-400 max-w-[46px] sm:max-w-[54px] truncate leading-tight mt-0.5 text-center">
+              Khách
+            </span>
+          </button>
+
+        </div>
+
+      </div>
+    </header>
+  
+      </div>
+
+      <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-36 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0 overflow-x-clip">
+
+    <div id="dashboardRoot" class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16 touch-pan-y">
+      
+      <!-- Category Filter Pills Bar -->
+      <div class="w-full min-w-0 overflow-hidden">
+        
+    <div id="categoryFilterBar" role="tablist" aria-label="Bộ lọc phân loại công cụ" class="flex items-center gap-2 overflow-x-auto pb-2 pr-4 sm:pr-0 custom-scrollbar select-none py-1">
+      
+          <button 
+            type="button"
+            data-category="all"
+            role="tab"
+            aria-selected="true"
+            aria-pressed="true"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 bg-white dark:bg-zinc-900" style=""></span>
+            <span>Tất cả</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900">15</span>
+          </button>
+        
+          <button 
+            type="button"
+            data-category="pdf"
+            role="tab"
+            aria-selected="false"
+            aria-pressed="false"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #F59E0B;"></span>
+            <span>PDF</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+          </button>
+        
+          <button 
+            type="button"
+            data-category="convert"
+            role="tab"
+            aria-selected="false"
+            aria-pressed="false"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #8B5CF6;"></span>
+            <span>Chuyển đổi</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+          </button>
+        
+          <button 
+            type="button"
+            data-category="archive"
+            role="tab"
+            aria-selected="false"
+            aria-pressed="false"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #0EA5E9;"></span>
+            <span>File nén</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+          </button>
+        
+          <button 
+            type="button"
+            data-category="qr"
+            role="tab"
+            aria-selected="false"
+            aria-pressed="false"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #10B981;"></span>
+            <span>Mã QR</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+          </button>
+        
+          <button 
+            type="button"
+            data-category="system"
+            role="tab"
+            aria-selected="false"
+            aria-pressed="false"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #6366F1;"></span>
+            <span>Tiện ích</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">5</span>
+          </button>
+        
+          <button 
+            type="button"
+            data-category="advanced"
+            role="tab"
+            aria-selected="false"
+            aria-pressed="false"
+            class="filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium">
+            <span class="w-2 h-2 rounded-full mr-2 shrink-0 " style="background-color: #EC4899;"></span>
+            <span>Nâng cao</span>
+            <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]">2</span>
+          </button>
+        
+    </div>
+  
+      </div>
+
+      <!-- Tools Grid -->
+      <div>
+        <div class="flex items-center justify-between mb-3.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base font-mono tracking-tight">
+            Tất cả công cụ (15)
+          </span>
+        </div>
+
+        <div id="toolsGridContainer">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
-            <!-- PDF Studio -->
-            <a href="#tool/pdf" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-orange-500/40 transition shadow-xs">
-              <div class="flex items-start justify-between gap-3">
-                <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center font-bold text-sm">PDF</div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">TIER S</span>
-              </div>
-              <div class="mt-3">
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">PDF Studio</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Ghép, tách, nén, trích xuất và chuyển đổi PDF chất lượng cao.</p>
-              </div>
-            </a>
+      <a href="#tool/pdf-studio"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="pdf-studio"
+       aria-label="PDF Studio - Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector."
+       style="--accent: #F59E0B; --accent-contrast: #B45309;">
+      
+      
 
-            <!-- Converter -->
-            <a href="#tool/converter" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-indigo-500/40 transition shadow-xs">
-              <div class="flex items-start justify-between gap-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-sm">⇄</div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">TIER S</span>
-              </div>
-              <div class="mt-3">
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Chuyển Đổi Tệp</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Chuyển đổi qua lại giữa hơn 65+ định dạng video, âm thanh, tài liệu.</p>
-              </div>
-            </a>
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-pdf-base" x1="4" y1="3" x2="16" y2="18" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.28" />
+          <stop offset="100%" stop-color="#D97706" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-apple-pdf-sheet" x1="7" y1="6" x2="19" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95" />
+          <stop offset="100%" stop-color="#F4F4F5" stop-opacity="0.80" />
+        </linearGradient>
+        <linearGradient id="ds-apple-pdf-curve" x1="8" y1="17" x2="16" y2="13" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent-contrast, #B45309)" />
+          <stop offset="100%" stop-color="var(--accent, #F59E0B)" />
+        </linearGradient>
+      </defs>
 
-            <!-- Studocu VIP -->
-            <a href="#tool/studocu" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-emerald-500/40 transition shadow-xs">
-              <div class="flex items-start justify-between gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-sm">VIP</div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">TIER EX</span>
-              </div>
-              <div class="mt-3">
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Studocu VIP Downloader</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Tải tài liệu Studocu chất lượng cao không giới hạn.</p>
-              </div>
-            </a>
+      <!-- Layer 1: Under-sheet with Ambient Glow -->
+      <rect x="3.5" y="3" width="11.5" height="15" rx="2.5" fill="url(#ds-apple-pdf-base)" class="stroke-amber-500/40 dark:stroke-amber-400/30 transition-colors duration-200" stroke-width="1.2" />
 
-            <!-- Archive Compress -->
-            <a href="#tool/archive-compress" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-purple-500/40 transition shadow-xs">
-              <div class="flex items-start justify-between gap-3">
-                <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center font-bold text-sm">ZIP</div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">TIER A</span>
-              </div>
-              <div class="mt-3">
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Nén & Giải Nén Tệp</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Nén ZIP, TAR, 7Z, GZ đa định dạng với tốc độ cực nhanh.</p>
-              </div>
-            </a>
+      <!-- Layer 2: Main Document Frame with Folded Corner -->
+      <path d="M7.5 6.5h6.5l4.5 4.5v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11.5a2 2 0 0 1 2-2z"
+            fill="url(#ds-apple-pdf-sheet)"
+            class="dark:fill-zinc-900/90 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" stroke-linejoin="round" />
+      
+      <!-- Folded Flap with Specular Sheen -->
+      <path d="M14 6.5v3.5a1 1 0 0 0 1 1h3.5"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 fill-zinc-200/70 dark:fill-zinc-800 transition-colors duration-200"
+            stroke-width="1.4" stroke-linejoin="round" />
 
-            <!-- Dynamic QR -->
-            <a href="#tool/dynamic-qr" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-sky-500/40 transition shadow-xs">
-              <div class="flex items-start justify-between gap-3">
-                <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-bold text-sm">QR</div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-500 border border-sky-500/20">TIER A</span>
-              </div>
-              <div class="mt-3">
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Mã QR Động & Rút Gọn</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Tạo mã QR nghệ thuật đổi đích đến linh hoạt và rút gọn link.</p>
-              </div>
-            </a>
+      <!-- Layer 3: Precision Bézier Vector Curve & Control Nodes -->
+      <path d="M8.5 16.5c1.8-3.5 3.8 1.2 5.5-2.2"
+            stroke="url(#ds-apple-pdf-curve)"
+            stroke-width="1.8" stroke-linecap="round" />
+      
+      <!-- Tangent Guides & Anchor Diamonds -->
+      <line x1="8.5" y1="16.5" x2="10" y2="13.5" class="stroke-amber-600/60 dark:stroke-amber-400/60" stroke-width="0.9" stroke-dasharray="1 1" />
+      <circle cx="8.5" cy="16.5" r="1.3" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200" stroke-width="0.8" />
+      <circle cx="14" cy="14.3" r="1.3" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200" stroke-width="0.8" />
+      <rect x="10.8" y="11.8" width="1.6" height="1.6" rx="0.3" class="fill-[var(--accent)] dark:fill-amber-300" transform="rotate(45 11.6 12.6)" />
+    </svg>
+  
+      </div>
 
-            <!-- Quiz Generator -->
-            <a href="#tool/quiz" class="block p-4 rounded-2xl border border-zinc-200/80 dark:border-white/5 bg-white/60 dark:bg-zinc-900/40 hover:border-amber-500/40 transition shadow-xs">
-              <div class="flex items-start justify-between gap-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-sm">AI</div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">TIER S</span>
-              </div>
-              <div class="mt-3">
-                <h3 class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Quiz & Trắc Nghiệm AI</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">Tạo đề thi và phiếu bài tập trắc nghiệm tự động bằng trí tuệ nhân tạo.</p>
-              </div>
-            </a>
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-pdf-base" x1="4" y1="3" x2="16" y2="18" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.28" />
+          <stop offset="100%" stop-color="#D97706" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-apple-pdf-sheet" x1="7" y1="6" x2="19" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95" />
+          <stop offset="100%" stop-color="#F4F4F5" stop-opacity="0.80" />
+        </linearGradient>
+        <linearGradient id="ds-apple-pdf-curve" x1="8" y1="17" x2="16" y2="13" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent-contrast, #B45309)" />
+          <stop offset="100%" stop-color="var(--accent, #F59E0B)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Under-sheet with Ambient Glow -->
+      <rect x="3.5" y="3" width="11.5" height="15" rx="2.5" fill="url(#ds-apple-pdf-base)" class="stroke-amber-500/40 dark:stroke-amber-400/30 transition-colors duration-200" stroke-width="1.2" />
+
+      <!-- Layer 2: Main Document Frame with Folded Corner -->
+      <path d="M7.5 6.5h6.5l4.5 4.5v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11.5a2 2 0 0 1 2-2z"
+            fill="url(#ds-apple-pdf-sheet)"
+            class="dark:fill-zinc-900/90 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" stroke-linejoin="round" />
+      
+      <!-- Folded Flap with Specular Sheen -->
+      <path d="M14 6.5v3.5a1 1 0 0 0 1 1h3.5"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 fill-zinc-200/70 dark:fill-zinc-800 transition-colors duration-200"
+            stroke-width="1.4" stroke-linejoin="round" />
+
+      <!-- Layer 3: Precision Bézier Vector Curve & Control Nodes -->
+      <path d="M8.5 16.5c1.8-3.5 3.8 1.2 5.5-2.2"
+            stroke="url(#ds-apple-pdf-curve)"
+            stroke-width="1.8" stroke-linecap="round" />
+      
+      <!-- Tangent Guides & Anchor Diamonds -->
+      <line x1="8.5" y1="16.5" x2="10" y2="13.5" class="stroke-amber-600/60 dark:stroke-amber-400/60" stroke-width="0.9" stroke-dasharray="1 1" />
+      <circle cx="8.5" cy="16.5" r="1.3" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200" stroke-width="0.8" />
+      <circle cx="14" cy="14.3" r="1.3" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200" stroke-width="0.8" />
+      <rect x="10.8" y="11.8" width="1.6" height="1.6" rx="0.3" class="fill-[var(--accent)] dark:fill-amber-300" transform="rotate(45 11.6 12.6)" />
+    </svg>
+  
+            </div>
           </div>
-
+          
         </div>
-      </main>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="PDF Studio">
+          PDF Studio
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Nén & Ghép
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Tách & Xoay
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Watermark
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          PDF
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/quiz-generator"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="quiz-generator"
+       aria-label="Tạo Bài Tập Trắc Nghiệm - Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive."
+       style="--accent: #8B5CF6; --accent-contrast: #6D28D9;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-quiz-sheet" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="#6D28D9" stop-opacity="0.04" />
+        </linearGradient>
+        <linearGradient id="ds-apple-quiz-check" x1="14" y1="11" x2="17" y2="14" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #8B5CF6)" />
+          <stop offset="100%" stop-color="var(--accent-contrast, #6D28D9)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: A4 Exam Blueprint Canvas -->
+      <rect x="4" y="3" width="16" height="18" rx="2.5"
+            fill="url(#ds-apple-quiz-sheet)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Top Title Bar -->
+      <rect x="7" y="6" width="6" height="1.8" rx="0.9" class="fill-purple-600/30 dark:fill-purple-400/40" />
+
+      <!-- Layer 2: Question Rows & Option Bubble Checks -->
+      <line x1="7" y1="10" x2="12.5" y2="10" class="stroke-zinc-400/90 dark:stroke-zinc-500" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="7" y1="13.5" x2="12" y2="13.5" class="stroke-zinc-400/90 dark:stroke-zinc-500" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="7" y1="17" x2="14.5" y2="17" class="stroke-zinc-400/90 dark:stroke-zinc-500" stroke-width="1.4" stroke-linecap="round" />
+
+      <!-- Unchecked Option Circle -->
+      <circle cx="15.5" cy="10" r="1.5" class="stroke-zinc-400 dark:stroke-zinc-600" stroke-width="1" />
+
+      <!-- Checked Option Enamel Badge -->
+      <circle cx="15.5" cy="13.5" r="2" fill="url(#ds-apple-quiz-check)" class="stroke-white/80 dark:stroke-zinc-900" stroke-width="0.8" />
+      <path d="M14.6 13.5l.6.6 1.4-1.4" class="stroke-white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Layer 3: Agnes AI 4-Point Holographic Neural Spark -->
+      <path d="M18 4.2l.6 1.3 1.4.6-1.4.6-.6 1.3-.6-1.3-1.4-.6 1.4-.6z"
+            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] transition-colors duration-200" />
+      <circle cx="18" cy="6.1" r="0.6" class="fill-white" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-quiz-sheet" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="#6D28D9" stop-opacity="0.04" />
+        </linearGradient>
+        <linearGradient id="ds-apple-quiz-check" x1="14" y1="11" x2="17" y2="14" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #8B5CF6)" />
+          <stop offset="100%" stop-color="var(--accent-contrast, #6D28D9)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: A4 Exam Blueprint Canvas -->
+      <rect x="4" y="3" width="16" height="18" rx="2.5"
+            fill="url(#ds-apple-quiz-sheet)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Top Title Bar -->
+      <rect x="7" y="6" width="6" height="1.8" rx="0.9" class="fill-purple-600/30 dark:fill-purple-400/40" />
+
+      <!-- Layer 2: Question Rows & Option Bubble Checks -->
+      <line x1="7" y1="10" x2="12.5" y2="10" class="stroke-zinc-400/90 dark:stroke-zinc-500" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="7" y1="13.5" x2="12" y2="13.5" class="stroke-zinc-400/90 dark:stroke-zinc-500" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="7" y1="17" x2="14.5" y2="17" class="stroke-zinc-400/90 dark:stroke-zinc-500" stroke-width="1.4" stroke-linecap="round" />
+
+      <!-- Unchecked Option Circle -->
+      <circle cx="15.5" cy="10" r="1.5" class="stroke-zinc-400 dark:stroke-zinc-600" stroke-width="1" />
+
+      <!-- Checked Option Enamel Badge -->
+      <circle cx="15.5" cy="13.5" r="2" fill="url(#ds-apple-quiz-check)" class="stroke-white/80 dark:stroke-zinc-900" stroke-width="0.8" />
+      <path d="M14.6 13.5l.6.6 1.4-1.4" class="stroke-white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Layer 3: Agnes AI 4-Point Holographic Neural Spark -->
+      <path d="M18 4.2l.6 1.3 1.4.6-1.4.6-.6 1.3-.6-1.3-1.4-.6 1.4-.6z"
+            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] transition-colors duration-200" />
+      <circle cx="18" cy="6.1" r="0.6" class="fill-white" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Tạo Bài Tập Trắc Nghiệm">
+          Tạo Bài Tập Trắc Nghiệm
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Đề bài A4
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Đáp án & Lời giải
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Agnes AI
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          PDF
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#archive"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="archive-inspect"
+       aria-label="Soi Tệp Nén - Duyệt cấu trúc thư mục và trích xuất không cần giải nén."
+       style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-arch-body" x1="3" y1="4" x2="21" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.16" />
+          <stop offset="100%" stop-color="#0284C7" stop-opacity="0.05" />
+        </linearGradient>
+        <linearGradient id="ds-apple-arch-lens" x1="10" y1="8" x2="18" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95" />
+          <stop offset="100%" stop-color="#E0F2FE" stop-opacity="0.80" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Titanium Archive Cabinet Vault -->
+      <rect x="3" y="4" width="18" height="16" rx="3"
+            fill="url(#ds-apple-arch-body)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Top Lid Seam & Fastener Ridge -->
+      <line x1="3" y1="8" x2="21" y2="8" class="stroke-zinc-400/60 dark:stroke-zinc-600" stroke-width="1" />
+      <rect x="9.5" y="7" width="5" height="2" rx="0.8" class="fill-zinc-300/80 dark:fill-zinc-700 stroke-zinc-600 dark:stroke-zinc-400" stroke-width="0.8" />
+
+      <!-- Zipper Track Spine -->
+      <path d="M6.5 8v12" class="stroke-sky-600/50 dark:stroke-sky-400/40" stroke-width="1.4" stroke-dasharray="1.5 1.5" />
+
+      <!-- Layer 2 & 3: Optical Loupe with Specular Arc & Internal Tree -->
+      <circle cx="14" cy="13.5" r="4.2"
+              fill="url(#ds-apple-arch-lens)"
+              class="dark:fill-zinc-900/90 stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+              stroke-width="1.8" />
+      
+      <!-- Lens Specular Glint Reflection Arc -->
+      <path d="M11.5 11.2a3 3 0 0 1 3.5-.8" class="stroke-white dark:stroke-sky-300/60" stroke-width="1" stroke-linecap="round" />
+
+      <!-- Directory Tree Branches inside Lens -->
+      <path d="M12.5 12h3 M12.5 12v3 M14 15h1.5"
+            class="stroke-zinc-700 dark:stroke-zinc-200 transition-colors duration-200"
+            stroke-width="1.3" stroke-linecap="round" />
+      <circle cx="12.5" cy="12" r="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+      <circle cx="15.5" cy="12" r="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+      <circle cx="15.5" cy="15" r="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Loupe Ergonomic Handle -->
+      <path d="M17.2 16.7L20.5 20"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="2.2" stroke-linecap="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-arch-body" x1="3" y1="4" x2="21" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.16" />
+          <stop offset="100%" stop-color="#0284C7" stop-opacity="0.05" />
+        </linearGradient>
+        <linearGradient id="ds-apple-arch-lens" x1="10" y1="8" x2="18" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95" />
+          <stop offset="100%" stop-color="#E0F2FE" stop-opacity="0.80" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Titanium Archive Cabinet Vault -->
+      <rect x="3" y="4" width="18" height="16" rx="3"
+            fill="url(#ds-apple-arch-body)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Top Lid Seam & Fastener Ridge -->
+      <line x1="3" y1="8" x2="21" y2="8" class="stroke-zinc-400/60 dark:stroke-zinc-600" stroke-width="1" />
+      <rect x="9.5" y="7" width="5" height="2" rx="0.8" class="fill-zinc-300/80 dark:fill-zinc-700 stroke-zinc-600 dark:stroke-zinc-400" stroke-width="0.8" />
+
+      <!-- Zipper Track Spine -->
+      <path d="M6.5 8v12" class="stroke-sky-600/50 dark:stroke-sky-400/40" stroke-width="1.4" stroke-dasharray="1.5 1.5" />
+
+      <!-- Layer 2 & 3: Optical Loupe with Specular Arc & Internal Tree -->
+      <circle cx="14" cy="13.5" r="4.2"
+              fill="url(#ds-apple-arch-lens)"
+              class="dark:fill-zinc-900/90 stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+              stroke-width="1.8" />
+      
+      <!-- Lens Specular Glint Reflection Arc -->
+      <path d="M11.5 11.2a3 3 0 0 1 3.5-.8" class="stroke-white dark:stroke-sky-300/60" stroke-width="1" stroke-linecap="round" />
+
+      <!-- Directory Tree Branches inside Lens -->
+      <path d="M12.5 12h3 M12.5 12v3 M14 15h1.5"
+            class="stroke-zinc-700 dark:stroke-zinc-200 transition-colors duration-200"
+            stroke-width="1.3" stroke-linecap="round" />
+      <circle cx="12.5" cy="12" r="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+      <circle cx="15.5" cy="12" r="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+      <circle cx="15.5" cy="15" r="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Loupe Ergonomic Handle -->
+      <path d="M17.2 16.7L20.5 20"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="2.2" stroke-linecap="round" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Soi Tệp Nén">
+          Soi Tệp Nén
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Duyệt cấu trúc thư mục và trích xuất không cần giải nén.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              .ZIP
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              .RAR
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              .7Z
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Trích xuất
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          File nén
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#server-archive"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="server-archive"
+       aria-label="Nén Tệp ZIP - Nén tệp tin và thư mục thành định dạng ZIP."
+       style="--accent: #0EA5E9; --accent-contrast: #0369A1;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-clamp-jaw" x1="4" y1="3" x2="20" y2="7" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#0369A1" stop-opacity="0.15" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Top & Bottom Heavy Hydraulic Plates -->
+      <rect x="3.5" y="3" width="17" height="4" rx="1.8"
+            fill="url(#ds-apple-clamp-jaw)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <rect x="3.5" y="17" width="17" height="4" rx="1.8"
+            fill="url(#ds-apple-clamp-jaw)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+
+      <!-- Layer 2: Consolidated Archive Package -->
+      <rect x="5.5" y="8.5" width="13" height="7" rx="1.8"
+            class="fill-white/80 dark:fill-zinc-900/80 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Interlocking ZIP Center Latch -->
+      <path d="M9.5 8.5v7 M14.5 8.5v7" class="stroke-zinc-400 dark:stroke-zinc-600" stroke-width="1" stroke-dasharray="1 1.5" />
+      <rect x="10.5" y="10.5" width="3" height="3" rx="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900" stroke-width="0.8" />
+
+      <!-- Layer 3: Symmetrical Inward Compression Force Chevrons -->
+      <path d="M12 4.2v2.6 M10.2 5.6l1.8 1.4 1.8-1.4"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M12 19.8v-2.6 M10.2 18.4l1.8-1.4 1.8 1.4"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-clamp-jaw" x1="4" y1="3" x2="20" y2="7" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#0369A1" stop-opacity="0.15" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Top & Bottom Heavy Hydraulic Plates -->
+      <rect x="3.5" y="3" width="17" height="4" rx="1.8"
+            fill="url(#ds-apple-clamp-jaw)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <rect x="3.5" y="17" width="17" height="4" rx="1.8"
+            fill="url(#ds-apple-clamp-jaw)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+
+      <!-- Layer 2: Consolidated Archive Package -->
+      <rect x="5.5" y="8.5" width="13" height="7" rx="1.8"
+            class="fill-white/80 dark:fill-zinc-900/80 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Interlocking ZIP Center Latch -->
+      <path d="M9.5 8.5v7 M14.5 8.5v7" class="stroke-zinc-400 dark:stroke-zinc-600" stroke-width="1" stroke-dasharray="1 1.5" />
+      <rect x="10.5" y="10.5" width="3" height="3" rx="0.8" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900" stroke-width="0.8" />
+
+      <!-- Layer 3: Symmetrical Inward Compression Force Chevrons -->
+      <path d="M12 4.2v2.6 M10.2 5.6l1.8 1.4 1.8-1.4"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M12 19.8v-2.6 M10.2 18.4l1.8-1.4 1.8 1.4"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Nén Tệp ZIP">
+          Nén Tệp ZIP
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Nén tệp tin và thư mục thành định dạng ZIP.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              ZIP
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          File nén
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/universal-converter"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="universal-converter"
+       aria-label="File Converter - Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng."
+       style="--accent: #6366F1; --accent-contrast: #6366F1;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-conv-core" x1="9" y1="8" x2="15" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #6366F1)" />
+          <stop offset="100%" stop-color="var(--accent-contrast, #4338CA)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Ambient Orbit Velocity Halo -->
+      <circle cx="12" cy="12" r="8.2" class="stroke-indigo-500/25 dark:stroke-indigo-400/20" stroke-width="1.2" stroke-dasharray="2 3" />
+
+      <!-- Layer 2: Aerodynamic Transcode Vector Sweeps -->
+      <path d="M19.2 12a7.2 7.2 0 0 1-7.2 7.2 7.2 7.2 0 0 1-5.6-2.7l-1.6 1.7"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.6" stroke-linecap="round" />
+      <path d="M4.8 12a7.2 7.2 0 0 1 7.2-7.2 7.2 7.2 0 0 1 5.6 2.7l1.6-1.7"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.6" stroke-linecap="round" />
+
+      <!-- Top & Bottom Precision Arrowheads -->
+      <path d="M20.2 6.8v3.6h-3.6"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M3.8 17.2v-3.6h3.6"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Layer 3: Central 3D Faceted Diamond Prism -->
+      <polygon points="12,8 15.5,12 12,16 8.5,12"
+               fill="url(#ds-apple-conv-core)"
+               class="stroke-white dark:stroke-zinc-900 shadow-sm"
+               stroke-width="1" stroke-linejoin="round" />
+      
+      <!-- Optical Refraction Glint Facet -->
+      <polygon points="12,8 15.5,12 12,12" class="fill-white/40" />
+      <circle cx="12" cy="12" r="1.1" class="fill-white" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-conv-core" x1="9" y1="8" x2="15" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #6366F1)" />
+          <stop offset="100%" stop-color="var(--accent-contrast, #4338CA)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Ambient Orbit Velocity Halo -->
+      <circle cx="12" cy="12" r="8.2" class="stroke-indigo-500/25 dark:stroke-indigo-400/20" stroke-width="1.2" stroke-dasharray="2 3" />
+
+      <!-- Layer 2: Aerodynamic Transcode Vector Sweeps -->
+      <path d="M19.2 12a7.2 7.2 0 0 1-7.2 7.2 7.2 7.2 0 0 1-5.6-2.7l-1.6 1.7"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.6" stroke-linecap="round" />
+      <path d="M4.8 12a7.2 7.2 0 0 1 7.2-7.2 7.2 7.2 0 0 1 5.6 2.7l1.6-1.7"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.6" stroke-linecap="round" />
+
+      <!-- Top & Bottom Precision Arrowheads -->
+      <path d="M20.2 6.8v3.6h-3.6"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M3.8 17.2v-3.6h3.6"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Layer 3: Central 3D Faceted Diamond Prism -->
+      <polygon points="12,8 15.5,12 12,16 8.5,12"
+               fill="url(#ds-apple-conv-core)"
+               class="stroke-white dark:stroke-zinc-900 shadow-sm"
+               stroke-width="1" stroke-linejoin="round" />
+      
+      <!-- Optical Refraction Glint Facet -->
+      <polygon points="12,8 15.5,12 12,12" class="fill-white/40" />
+      <circle cx="12" cy="12" r="1.1" class="fill-white" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="File Converter">
+          File Converter
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Hình ảnh
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Video & Nhạc
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Tài liệu
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Chuyển đổi
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/markdown-docs"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="markdown-docs"
+       aria-label="Văn Bản & Tài Liệu - Chuyển đổi Markdown sang HTML, Word (.docx) và in PDF."
+       style="--accent: #8B5CF6; --accent-contrast: #6D28D9;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-doc-sheet" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="#7C3AED" stop-opacity="0.04" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Document Foundation -->
+      <rect x="4" y="3" width="16" height="18" rx="2.5"
+            fill="url(#ds-apple-doc-sheet)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+
+      <!-- Layer 2: Markdown Syntax Column (Left) -->
+      <!-- Header Hash # -->
+      <path d="M6.2 7.8h3.2 M6.2 10.2h3.2 M7 6.8v4.4 M8.6 6.8v4.4"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.3" stroke-linecap="round" />
+      
+      <!-- Blockquote Bar -->
+      <path d="M6.2 13.8v4.2"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="2" stroke-linecap="round" />
+      <line x1="8.5" y1="14.8" x2="10.8" y2="14.8" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.2" stroke-linecap="round" />
+      <line x1="8.5" y1="17.2" x2="10.2" y2="17.2" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.2" stroke-linecap="round" />
+
+      <!-- Subtle Column Dividing Rule -->
+      <line x1="12" y1="5.5" x2="12" y2="18.5" class="stroke-zinc-300 dark:stroke-zinc-700" stroke-width="1" stroke-dasharray="1.5 2" />
+
+      <!-- Layer 3: Rendered Typographic Hierarchy (Right) -->
+      <rect x="13.8" y="7" width="4.8" height="2.2" rx="0.6" class="fill-zinc-800 dark:fill-zinc-200" />
+      <line x1="13.8" y1="11.5" x2="18.2" y2="11.5" class="stroke-zinc-600 dark:stroke-zinc-400" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="13.8" y1="14" x2="17.2" y2="14" class="stroke-zinc-600 dark:stroke-zinc-400" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="13.8" y1="16.5" x2="18" y2="16.5" class="stroke-zinc-600 dark:stroke-zinc-400" stroke-width="1.4" stroke-linecap="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-doc-sheet" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="#7C3AED" stop-opacity="0.04" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Document Foundation -->
+      <rect x="4" y="3" width="16" height="18" rx="2.5"
+            fill="url(#ds-apple-doc-sheet)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+
+      <!-- Layer 2: Markdown Syntax Column (Left) -->
+      <!-- Header Hash # -->
+      <path d="M6.2 7.8h3.2 M6.2 10.2h3.2 M7 6.8v4.4 M8.6 6.8v4.4"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="1.3" stroke-linecap="round" />
+      
+      <!-- Blockquote Bar -->
+      <path d="M6.2 13.8v4.2"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="2" stroke-linecap="round" />
+      <line x1="8.5" y1="14.8" x2="10.8" y2="14.8" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.2" stroke-linecap="round" />
+      <line x1="8.5" y1="17.2" x2="10.2" y2="17.2" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.2" stroke-linecap="round" />
+
+      <!-- Subtle Column Dividing Rule -->
+      <line x1="12" y1="5.5" x2="12" y2="18.5" class="stroke-zinc-300 dark:stroke-zinc-700" stroke-width="1" stroke-dasharray="1.5 2" />
+
+      <!-- Layer 3: Rendered Typographic Hierarchy (Right) -->
+      <rect x="13.8" y="7" width="4.8" height="2.2" rx="0.6" class="fill-zinc-800 dark:fill-zinc-200" />
+      <line x1="13.8" y1="11.5" x2="18.2" y2="11.5" class="stroke-zinc-600 dark:stroke-zinc-400" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="13.8" y1="14" x2="17.2" y2="14" class="stroke-zinc-600 dark:stroke-zinc-400" stroke-width="1.4" stroke-linecap="round" />
+      <line x1="13.8" y1="16.5" x2="18" y2="16.5" class="stroke-zinc-600 dark:stroke-zinc-400" stroke-width="1.4" stroke-linecap="round" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Văn Bản & Tài Liệu">
+          Văn Bản & Tài Liệu
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Chuyển đổi Markdown sang HTML, Word (.docx) và in PDF.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Markdown
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              DOCX
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              PDF
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Chuyển đổi
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/qr-multi"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="qr-multi"
+       aria-label="QR Studio - Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ."
+       style="--accent: #10B981; --accent-contrast: #047857;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-qr-matrix" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#10B981" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#059669" stop-opacity="0.05" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Rounded Matrix Substrate -->
+      <rect x="3" y="3" width="18" height="18" rx="3.5"
+            fill="url(#ds-apple-qr-matrix)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+
+      <!-- Layer 2: 3 Concentric Finder Targets -->
+      <!-- Top-Left -->
+      <rect x="5.2" y="5.2" width="4.8" height="4.8" rx="1.2" class="stroke-zinc-800 dark:stroke-zinc-100" stroke-width="1.4" />
+      <rect x="6.8" y="6.8" width="1.6" height="1.6" rx="0.4" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Top-Right -->
+      <rect x="14" y="5.2" width="4.8" height="4.8" rx="1.2" class="stroke-zinc-800 dark:stroke-zinc-100" stroke-width="1.4" />
+      <rect x="15.6" y="6.8" width="1.6" height="1.6" rx="0.4" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Bottom-Left -->
+      <rect x="5.2" y="14" width="4.8" height="4.8" rx="1.2" class="stroke-zinc-800 dark:stroke-zinc-100" stroke-width="1.4" />
+      <rect x="6.8" y="15.6" width="1.6" height="1.6" rx="0.4" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Timing Pattern Dots -->
+      <circle cx="12" cy="7.6" r="0.9" class="fill-zinc-500 dark:fill-zinc-400" />
+      <circle cx="12" cy="16.4" r="0.9" class="fill-zinc-500 dark:fill-zinc-400" />
+      <circle cx="7.6" cy="12" r="0.9" class="fill-zinc-500 dark:fill-zinc-400" />
+
+      <!-- Layer 3: Dynamic VietQR Payment Lightning Spark -->
+      <path d="M16.5 12l-3 3.5h3l-1.2 4 4.2-4.8h-3z"
+            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200"
+            stroke-width="0.8" stroke-linejoin="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-qr-matrix" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#10B981" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#059669" stop-opacity="0.05" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Rounded Matrix Substrate -->
+      <rect x="3" y="3" width="18" height="18" rx="3.5"
+            fill="url(#ds-apple-qr-matrix)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+
+      <!-- Layer 2: 3 Concentric Finder Targets -->
+      <!-- Top-Left -->
+      <rect x="5.2" y="5.2" width="4.8" height="4.8" rx="1.2" class="stroke-zinc-800 dark:stroke-zinc-100" stroke-width="1.4" />
+      <rect x="6.8" y="6.8" width="1.6" height="1.6" rx="0.4" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Top-Right -->
+      <rect x="14" y="5.2" width="4.8" height="4.8" rx="1.2" class="stroke-zinc-800 dark:stroke-zinc-100" stroke-width="1.4" />
+      <rect x="15.6" y="6.8" width="1.6" height="1.6" rx="0.4" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Bottom-Left -->
+      <rect x="5.2" y="14" width="4.8" height="4.8" rx="1.2" class="stroke-zinc-800 dark:stroke-zinc-100" stroke-width="1.4" />
+      <rect x="6.8" y="15.6" width="1.6" height="1.6" rx="0.4" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Timing Pattern Dots -->
+      <circle cx="12" cy="7.6" r="0.9" class="fill-zinc-500 dark:fill-zinc-400" />
+      <circle cx="12" cy="16.4" r="0.9" class="fill-zinc-500 dark:fill-zinc-400" />
+      <circle cx="7.6" cy="12" r="0.9" class="fill-zinc-500 dark:fill-zinc-400" />
+
+      <!-- Layer 3: Dynamic VietQR Payment Lightning Spark -->
+      <path d="M16.5 12l-3 3.5h3l-1.2 4 4.2-4.8h-3z"
+            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200"
+            stroke-width="0.8" stroke-linejoin="round" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="QR Studio">
+          QR Studio
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              VietQR
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Wi-Fi & Link
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Tùy biến
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Mã QR
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/qr-scan"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="qr-scan"
+       aria-label="Quét Mã QR - Đọc nội dung mã QR từ tệp ảnh hoặc clipboard."
+       style="--accent: #10B981; --accent-contrast: #047857;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-laser-beam" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #10B981)" stop-opacity="0.1" />
+          <stop offset="50%" stop-color="var(--accent-contrast, #047857)" stop-opacity="1" />
+          <stop offset="100%" stop-color="var(--accent, #10B981)" stop-opacity="0.1" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: 4 VisionOS Viewfinder Precision L-Brackets -->
+      <path d="M4 8.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+      <path d="M15.5 4h3a1.5 1.5 0 0 1 1.5 1.5v3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+      <path d="M4 15.5v3a1.5 1.5 0 0 0 1.5 1.5h3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+      <path d="M15.5 20h3a1.5 1.5 0 0 0 1.5-1.5v-3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+
+      <!-- Layer 2: Matrix Alignment Dots -->
+      <rect x="7.8" y="7.2" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+      <rect x="14.2" y="7.2" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+      <rect x="7.8" y="14.8" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+      <rect x="14.2" y="14.8" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+
+      <!-- Layer 3: Holographic Laser Sweep Beam with Core Optical Bead -->
+      <line x1="2.5" y1="12" x2="21.5" y2="12" stroke="url(#ds-apple-laser-beam)" stroke-width="2.2" stroke-linecap="round" />
+      <circle cx="12" cy="12" r="2.2" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200" stroke-width="1" />
+      <circle cx="12" cy="12" r="0.8" class="fill-white" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-laser-beam" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #10B981)" stop-opacity="0.1" />
+          <stop offset="50%" stop-color="var(--accent-contrast, #047857)" stop-opacity="1" />
+          <stop offset="100%" stop-color="var(--accent, #10B981)" stop-opacity="0.1" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: 4 VisionOS Viewfinder Precision L-Brackets -->
+      <path d="M4 8.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+      <path d="M15.5 4h3a1.5 1.5 0 0 1 1.5 1.5v3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+      <path d="M4 15.5v3a1.5 1.5 0 0 0 1.5 1.5h3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+      <path d="M15.5 20h3a1.5 1.5 0 0 0 1.5-1.5v-3" class="stroke-zinc-700/80 dark:stroke-zinc-300" stroke-width="2" stroke-linecap="round" />
+
+      <!-- Layer 2: Matrix Alignment Dots -->
+      <rect x="7.8" y="7.2" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+      <rect x="14.2" y="7.2" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+      <rect x="7.8" y="14.8" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+      <rect x="14.2" y="14.8" width="2" height="2" rx="0.5" class="fill-zinc-400 dark:fill-zinc-500" />
+
+      <!-- Layer 3: Holographic Laser Sweep Beam with Core Optical Bead -->
+      <line x1="2.5" y1="12" x2="21.5" y2="12" stroke="url(#ds-apple-laser-beam)" stroke-width="2.2" stroke-linecap="round" />
+      <circle cx="12" cy="12" r="2.2" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 transition-colors duration-200" stroke-width="1" />
+      <circle cx="12" cy="12" r="0.8" class="fill-white" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Quét Mã QR">
+          Quét Mã QR
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Đọc nội dung mã QR từ tệp ảnh hoặc clipboard.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Ảnh & Clipboard
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Mã QR
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/view-split"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="view-split"
+       aria-label="ViewSplit - So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector."
+       style="--accent: #06B6D4; --accent-contrast: #06B6D4;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-split-left" x1="3" y1="4" x2="12" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#0891B2" stop-opacity="0.08" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Dual Juxtaposed Comparison Frames -->
+      <rect x="3" y="4" width="18" height="16" rx="3"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <rect x="3" y="4" width="9" height="16" rx="2.5" fill="url(#ds-apple-split-left)" />
+
+      <!-- Layer 2: Central Wipe Slider Bar -->
+      <line x1="12" y1="2.8" x2="12" y2="21.2"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="2" stroke-linecap="round" />
+
+      <!-- Tactile Circular Knurled Wipe Thumb -->
+      <circle cx="12" cy="12" r="3.2"
+              class="fill-white dark:fill-zinc-900 stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] shadow-md transition-colors duration-200"
+              stroke-width="1.6" />
+      <path d="M10.8 11.2l-1 0.8 1 0.8 M13.2 11.2l1 0.8-1 0.8"
+            class="stroke-zinc-700 dark:stroke-zinc-200"
+            stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Layer 3: OLED Pixel Inspector Crosshair Loupe in Right Pane -->
+      <circle cx="16.5" cy="7.8" r="2.2"
+              class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] stroke-1 fill-white/80 dark:fill-zinc-900/80" />
+      <line x1="16.5" y1="5" x2="16.5" y2="6.2" class="stroke-[var(--accent)]" stroke-width="0.8" />
+      <line x1="16.5" y1="9.4" x2="16.5" y2="10.6" class="stroke-[var(--accent)]" stroke-width="0.8" />
+      <rect x="15.8" y="7.1" width="1.4" height="1.4" rx="0.3"
+            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-split-left" x1="3" y1="4" x2="12" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#0891B2" stop-opacity="0.08" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Dual Juxtaposed Comparison Frames -->
+      <rect x="3" y="4" width="18" height="16" rx="3"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <rect x="3" y="4" width="9" height="16" rx="2.5" fill="url(#ds-apple-split-left)" />
+
+      <!-- Layer 2: Central Wipe Slider Bar -->
+      <line x1="12" y1="2.8" x2="12" y2="21.2"
+            class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] transition-colors duration-200"
+            stroke-width="2" stroke-linecap="round" />
+
+      <!-- Tactile Circular Knurled Wipe Thumb -->
+      <circle cx="12" cy="12" r="3.2"
+              class="fill-white dark:fill-zinc-900 stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] shadow-md transition-colors duration-200"
+              stroke-width="1.6" />
+      <path d="M10.8 11.2l-1 0.8 1 0.8 M13.2 11.2l1 0.8-1 0.8"
+            class="stroke-zinc-700 dark:stroke-zinc-200"
+            stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Layer 3: OLED Pixel Inspector Crosshair Loupe in Right Pane -->
+      <circle cx="16.5" cy="7.8" r="2.2"
+              class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)] stroke-1 fill-white/80 dark:fill-zinc-900/80" />
+      <line x1="16.5" y1="5" x2="16.5" y2="6.2" class="stroke-[var(--accent)]" stroke-width="0.8" />
+      <line x1="16.5" y1="9.4" x2="16.5" y2="10.6" class="stroke-[var(--accent)]" stroke-width="0.8" />
+      <rect x="15.8" y="7.1" width="1.4" height="1.4" rx="0.3"
+            class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="ViewSplit">
+          ViewSplit
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              So sánh đa ảnh
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Slider Wipe
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Pixel Inspector
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/studocu-dl"
+       class="tool-card linear-card tier-card tier-ur group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="studocu-dl"
+       aria-label="Studocu Downloader - Tải giáo trình & tài liệu Studocu sang PDF rõ nét."
+       style="--accent: #6366F1; --accent-contrast: #6366F1;">
+      
+      <div class="tier-inner-frame tier-inner-frame-ur pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings tier-side-wings-ur pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Seamless 360° Iridescent Dichroic Frame -->
+        <div class="tier-prismatic-perimeter-ur pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Prismatic Crystalline Shimmer Beam Sweep -->
+        <div class="tier-prismatic-beam-sweep pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Floating Prismatic Starlight Motes (Drifting Particles) -->
+        <div class="tier-starlight-particles-ur pointer-events-none" aria-hidden="true">
+          <span class="starlight-mote mote-1"></span>
+          <span class="starlight-mote mote-2"></span>
+          <span class="starlight-mote mote-3"></span>
+          <span class="starlight-mote mote-4"></span>
+          <span class="starlight-mote mote-5"></span>
+          <span class="starlight-mote mote-6"></span>
+        </div>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 100 18" class="keystone-svg" fill="none">
+            <path d="M 6 8 Q 36 16 50 16 Q 64 16 94 8" stroke="#EC4899" stroke-width="2"/>
+            <polygon points="50,2 58,9 50,16 42,9" class="keystone-facet" fill="#DB2777" stroke="#38BDF8" stroke-width="1.5"/>
+            <circle cx="50" cy="9" r="2.5" class="keystone-gem" fill="#FFFFFF" filter="drop-shadow(0 0 6px #EC4899)"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#EC4899" stroke-width="1.8"/>
+            <polygon points="40,1 46,7 40,13 34,7" class="keystone-facet" fill="#DB2777" stroke="#38BDF8" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 4 Supernova Diamond Lens Flare Glints -->
+        <div class="tier-diamond-glints-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-tl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#F472B6"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-tr" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#38BDF8"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-bl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#FBBF24"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-br" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#A855F7"/></svg>
+        </div>
+
+        <!-- 52px Crystalline Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 40 V 16 A 12 12 0 0 1 16 4 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 6 16 L 16 6" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="16" cy="16" r="4.5" class="gem-core" fill="#F472B6" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #EC4899)"/>
+            <circle cx="16" cy="16" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tr" fill="none">
+            <path d="M 48 40 V 16 A 12 12 0 0 0 36 4 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 46 16 L 36 6" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="36" cy="16" r="4.5" class="gem-core" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #38BDF8)"/>
+            <circle cx="36" cy="16" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 36 A 12 12 0 0 0 16 48 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 6 36 L 16 46" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="16" cy="36" r="4.5" class="gem-core" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #FBBF24)"/>
+            <circle cx="16" cy="36" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-br" fill="none">
+            <path d="M 48 12 V 36 A 12 12 0 0 1 36 48 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 46 36 L 36 46" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="36" cy="36" r="4.5" class="gem-core" fill="#A855F7" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #A855F7)"/>
+            <circle cx="36" cy="36" r="1.8" fill="#FFFFFF"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Multi-Phase Dual-Rotating Mythic Mandala Seal (175px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 175 175" class="watermark-svg" fill="none">
+            <g class="ur-mandala-outer">
+              <circle cx="87" cy="87" r="82" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="10 5"/>
+              <circle cx="87" cy="87" r="72" stroke="#38BDF8" stroke-width="1.2" stroke-dasharray="4 4"/>
+              <circle cx="87" cy="87" r="60" stroke="#FBBF24" stroke-width="1" stroke-dasharray="2 4"/>
+            </g>
+            <g class="ur-mandala-inner">
+              <polygon points="87,15 100,74 159,87 100,100 87,159 74,100 15,87 74,74" stroke="#EC4899" stroke-width="1.5"/>
+              <polygon points="87,35 96,78 139,87 96,96 87,139 78,96 35,87 78,78" stroke="#38BDF8" stroke-width="1"/>
+            </g>
+            <g class="ur-mandala-core">
+              <circle cx="87" cy="87" r="30" stroke="color-mix(in srgb, var(--accent) 60%, #A855F7)" stroke-width="6" stroke-opacity="0.3"/>
+              <circle cx="87" cy="87" r="30" stroke="#A855F7" stroke-width="1.5"/>
+              <circle cx="87" cy="87" r="16" stroke="#EC4899" stroke-width="1" stroke-dasharray="3 3"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Seamless Soft Holographic Foil Sheen -->
+        <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-dl-stream" x1="12" y1="8" x2="12" y2="17" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #6366F1)" />
+          <stop offset="100%" stop-color="var(--accent-contrast, #4338CA)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Top Academic Slide Deck Cards (Stratified) -->
+      <rect x="6.5" y="2.8" width="11" height="4" rx="1.5" class="fill-indigo-500/10 stroke-zinc-400/50 dark:stroke-zinc-600" stroke-width="1" />
+      <rect x="4.5" y="4.8" width="15" height="5" rx="1.8"
+            class="fill-indigo-500/20 dark:fill-indigo-400/20 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <line x1="7.5" y1="7.3" x2="13.5" y2="7.3" class="stroke-zinc-500 dark:stroke-zinc-400" stroke-width="1.2" stroke-linecap="round" />
+
+      <!-- Layer 2: Output PDF Binder Tray -->
+      <path d="M5.5 15h13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"
+            class="fill-white/85 dark:fill-zinc-900/85 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Tray Status Notch -->
+      <path d="M9.5 15v1.5a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V15" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1" />
+
+      <!-- Layer 3: Precision High-Velocity Downward Suction Stream -->
+      <line x1="12" y1="8.5" x2="12" y2="16.5" stroke="url(#ds-apple-dl-stream)" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M8.8 13.8l3.2 3.2 3.2-3.2" stroke="url(#ds-apple-dl-stream)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
+          <div class="ur-halo-aura"></div>
+          <div class="ur-halo-ring"></div>
+          <div class="ur-halo-pulse"></div>
+          <div class="ur-orbit-satellite sat-1"></div>
+          <div class="ur-orbit-satellite sat-2"></div>
+          <div class="ur-orbit-satellite sat-3"></div>
+        </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-dl-stream" x1="12" y1="8" x2="12" y2="17" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="var(--accent, #6366F1)" />
+          <stop offset="100%" stop-color="var(--accent-contrast, #4338CA)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Top Academic Slide Deck Cards (Stratified) -->
+      <rect x="6.5" y="2.8" width="11" height="4" rx="1.5" class="fill-indigo-500/10 stroke-zinc-400/50 dark:stroke-zinc-600" stroke-width="1" />
+      <rect x="4.5" y="4.8" width="15" height="5" rx="1.8"
+            class="fill-indigo-500/20 dark:fill-indigo-400/20 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <line x1="7.5" y1="7.3" x2="13.5" y2="7.3" class="stroke-zinc-500 dark:stroke-zinc-400" stroke-width="1.2" stroke-linecap="round" />
+
+      <!-- Layer 2: Output PDF Binder Tray -->
+      <path d="M5.5 15h13a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z"
+            class="fill-white/85 dark:fill-zinc-900/85 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      
+      <!-- Tray Status Notch -->
+      <path d="M9.5 15v1.5a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V15" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1" />
+
+      <!-- Layer 3: Precision High-Velocity Downward Suction Stream -->
+      <line x1="12" y1="8.5" x2="12" y2="16.5" stroke="url(#ds-apple-dl-stream)" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M8.8 13.8l3.2 3.2 3.2-3.2" stroke="url(#ds-apple-dl-stream)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+            </div>
+          </div>
+          <div class="tier-crest-badge shadow-xs shrink-0" title="Prismatic Hologram - Thần thoại">
+      <span class="tier-badge-indicator"></span>
+      <span class="tier-badge-label">✦ UR · MYTHIC</span>
+    </div>
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Studocu Downloader">
+          Studocu Downloader
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Tải giáo trình & tài liệu Studocu sang PDF rõ nét.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              PDF
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Tài liệu học tập
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/tiktok-downloader"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="tiktok-downloader"
+       aria-label="TikTok Downloader - Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive."
+       style="--accent: #EE1D52; --accent-contrast: #EE1D52;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        <i data-lucide="video" class="w-24 h-24 sm:w-28 sm:h-28"></i>
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              <i data-lucide="video" class="w-6 h-6 sm:w-6.5 sm:h-6.5"></i>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="TikTok Downloader">
+          TikTok Downloader
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Không Logo
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Video & Album Ảnh
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Lưu Drive
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/youtube-downloader"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="youtube-downloader"
+       aria-label="YouTube Downloader - Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive."
+       style="--accent: #FF0000; --accent-contrast: #FF0000;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-yt-base" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#B91C1C" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-apple-yt-body" x1="2" y1="5" x2="22" y2="19" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FF0000" />
+          <stop offset="100%" stop-color="#CC0000" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Red Glow Shadow Sheet -->
+      <rect x="2.5" y="4.5" width="19" height="15" rx="4.5" fill="url(#ds-apple-yt-base)" class="stroke-red-500/40 dark:stroke-red-400/30 transition-colors duration-200" stroke-width="1.2" />
+      <!-- Layer 2: Main Screen Chassis -->
+      <rect x="2" y="5.5" width="20" height="13" rx="4" fill="url(#ds-apple-yt-body)" />
+      <!-- Layer 3: Top Specular Sheen -->
+      <path d="M5.5 6.5h13c1.8 0 2.8 1 3.2 2.2H2.3C2.7 7.5 3.7 6.5 5.5 6.5z" fill="#FFFFFF" fill-opacity="0.28" />
+      <!-- Layer 4: Centered Play Triangle -->
+      <polygon points="10,8.5 16,12 10,15.5" fill="#FFFFFF" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-yt-base" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#B91C1C" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-apple-yt-body" x1="2" y1="5" x2="22" y2="19" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FF0000" />
+          <stop offset="100%" stop-color="#CC0000" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Red Glow Shadow Sheet -->
+      <rect x="2.5" y="4.5" width="19" height="15" rx="4.5" fill="url(#ds-apple-yt-base)" class="stroke-red-500/40 dark:stroke-red-400/30 transition-colors duration-200" stroke-width="1.2" />
+      <!-- Layer 2: Main Screen Chassis -->
+      <rect x="2" y="5.5" width="20" height="13" rx="4" fill="url(#ds-apple-yt-body)" />
+      <!-- Layer 3: Top Specular Sheen -->
+      <path d="M5.5 6.5h13c1.8 0 2.8 1 3.2 2.2H2.3C2.7 7.5 3.7 6.5 5.5 6.5z" fill="#FFFFFF" fill-opacity="0.28" />
+      <!-- Layer 4: Centered Play Triangle -->
+      <polygon points="10,8.5 16,12 10,15.5" fill="#FFFFFF" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="YouTube Downloader">
+          YouTube Downloader
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              MP4 1080p
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              MP3 320kbps
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Lưu Drive
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/scribd"
+       class="tool-card linear-card tier-card tier-ur group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="scribd-archiver"
+       aria-label="Scribd Downloader - Tải tài liệu & slide Scribd sang file PDF rõ nét."
+       style="--accent: #EA580C; --accent-contrast: #C2410C;">
+      
+      <div class="tier-inner-frame tier-inner-frame-ur pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-side-wings tier-side-wings-ur pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- Seamless 360° Iridescent Dichroic Frame -->
+        <div class="tier-prismatic-perimeter-ur pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Prismatic Crystalline Shimmer Beam Sweep -->
+        <div class="tier-prismatic-beam-sweep pointer-events-none" aria-hidden="true"></div>
+
+        <!-- Floating Prismatic Starlight Motes (Drifting Particles) -->
+        <div class="tier-starlight-particles-ur pointer-events-none" aria-hidden="true">
+          <span class="starlight-mote mote-1"></span>
+          <span class="starlight-mote mote-2"></span>
+          <span class="starlight-mote mote-3"></span>
+          <span class="starlight-mote mote-4"></span>
+          <span class="starlight-mote mote-5"></span>
+          <span class="starlight-mote mote-6"></span>
+        </div>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 100 18" class="keystone-svg" fill="none">
+            <path d="M 6 8 Q 36 16 50 16 Q 64 16 94 8" stroke="#EC4899" stroke-width="2"/>
+            <polygon points="50,2 58,9 50,16 42,9" class="keystone-facet" fill="#DB2777" stroke="#38BDF8" stroke-width="1.5"/>
+            <circle cx="50" cy="9" r="2.5" class="keystone-gem" fill="#FFFFFF" filter="drop-shadow(0 0 6px #EC4899)"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 80 14" class="keystone-svg" fill="none">
+            <path d="M 6 10 Q 28 3 40 3 Q 52 3 74 10" stroke="#EC4899" stroke-width="1.8"/>
+            <polygon points="40,1 46,7 40,13 34,7" class="keystone-facet" fill="#DB2777" stroke="#38BDF8" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 4 Supernova Diamond Lens Flare Glints -->
+        <div class="tier-diamond-glints-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-tl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#F472B6"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-tr" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#38BDF8"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-bl" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#FBBF24"/></svg>
+          <svg viewBox="0 0 24 24" class="diamond-flare flare-br" fill="none"><path d="M12 0L13.5 9.5L24 12L13.5 14.5L12 24L10.5 14.5L0 12L10.5 9.5Z" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#A855F7"/></svg>
+        </div>
+
+        <!-- 52px Crystalline Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 40 V 16 A 12 12 0 0 1 16 4 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 6 16 L 16 6" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="16" cy="16" r="4.5" class="gem-core" fill="#F472B6" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #EC4899)"/>
+            <circle cx="16" cy="16" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-tr" fill="none">
+            <path d="M 48 40 V 16 A 12 12 0 0 0 36 4 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 46 16 L 36 6" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="36" cy="16" r="4.5" class="gem-core" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #38BDF8)"/>
+            <circle cx="36" cy="16" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 36 A 12 12 0 0 0 16 48 H 40" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 6 36 L 16 46" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="16" cy="36" r="4.5" class="gem-core" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #FBBF24)"/>
+            <circle cx="16" cy="36" r="1.8" fill="#FFFFFF"/>
+          </svg>
+          <svg viewBox="0 0 52 52" class="corner-plate cp-br" fill="none">
+            <path d="M 48 12 V 36 A 12 12 0 0 1 36 48 H 12" stroke="#EC4899" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 46 36 L 36 46" stroke="#38BDF8" stroke-width="2"/>
+            <circle cx="36" cy="36" r="4.5" class="gem-core" fill="#A855F7" stroke="#FFFFFF" stroke-width="1.2" filter="drop-shadow(0 0 8px #A855F7)"/>
+            <circle cx="36" cy="36" r="1.8" fill="#FFFFFF"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Multi-Phase Dual-Rotating Mythic Mandala Seal (175px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-ur pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 175 175" class="watermark-svg" fill="none">
+            <g class="ur-mandala-outer">
+              <circle cx="87" cy="87" r="82" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="10 5"/>
+              <circle cx="87" cy="87" r="72" stroke="#38BDF8" stroke-width="1.2" stroke-dasharray="4 4"/>
+              <circle cx="87" cy="87" r="60" stroke="#FBBF24" stroke-width="1" stroke-dasharray="2 4"/>
+            </g>
+            <g class="ur-mandala-inner">
+              <polygon points="87,15 100,74 159,87 100,100 87,159 74,100 15,87 74,74" stroke="#EC4899" stroke-width="1.5"/>
+              <polygon points="87,35 96,78 139,87 96,96 87,139 78,96 35,87 78,78" stroke="#38BDF8" stroke-width="1"/>
+            </g>
+            <g class="ur-mandala-core">
+              <circle cx="87" cy="87" r="30" stroke="color-mix(in srgb, var(--accent) 60%, #A855F7)" stroke-width="6" stroke-opacity="0.3"/>
+              <circle cx="87" cy="87" r="30" stroke="#A855F7" stroke-width="1.5"/>
+              <circle cx="87" cy="87" r="16" stroke="#EC4899" stroke-width="1" stroke-dasharray="3 3"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Seamless Soft Holographic Foil Sheen -->
+        <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-scribd-base" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#EA580C" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#C2410C" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-scribd-sheet" x1="5" y1="4" x2="19" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96" />
+          <stop offset="100%" stop-color="#FFF7ED" stop-opacity="0.85" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Document Spine Glow -->
+      <rect x="3.5" y="3" width="17" height="18" rx="3" fill="url(#ds-scribd-base)" class="stroke-orange-500/40 dark:stroke-orange-400/30 transition-colors duration-200" stroke-width="1.2" />
+      <!-- Layer 2: Main Document Frame -->
+      <path d="M5.5 4.5h9l4 4v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"
+            fill="url(#ds-scribd-sheet)"
+            class="dark:fill-zinc-900/90 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" stroke-linejoin="round" />
+      <!-- Layer 3: Bookmark Ribbon -->
+      <path d="M9 4.5v6l2-1.5 2 1.5v-6" fill="#EA580C" class="dark:fill-orange-400" />
+      <!-- Layer 4: Text Content Lines -->
+      <line x1="8" y1="14" x2="16" y2="14" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      <line x1="8" y1="17" x2="13" y2="17" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            <div class="tier-icon-halo-ur pointer-events-none" aria-hidden="true">
+          <div class="ur-halo-aura"></div>
+          <div class="ur-halo-ring"></div>
+          <div class="ur-halo-pulse"></div>
+          <div class="ur-orbit-satellite sat-1"></div>
+          <div class="ur-orbit-satellite sat-2"></div>
+          <div class="ur-orbit-satellite sat-3"></div>
+        </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-scribd-base" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#EA580C" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#C2410C" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-scribd-sheet" x1="5" y1="4" x2="19" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96" />
+          <stop offset="100%" stop-color="#FFF7ED" stop-opacity="0.85" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Document Spine Glow -->
+      <rect x="3.5" y="3" width="17" height="18" rx="3" fill="url(#ds-scribd-base)" class="stroke-orange-500/40 dark:stroke-orange-400/30 transition-colors duration-200" stroke-width="1.2" />
+      <!-- Layer 2: Main Document Frame -->
+      <path d="M5.5 4.5h9l4 4v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"
+            fill="url(#ds-scribd-sheet)"
+            class="dark:fill-zinc-900/90 stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" stroke-linejoin="round" />
+      <!-- Layer 3: Bookmark Ribbon -->
+      <path d="M9 4.5v6l2-1.5 2 1.5v-6" fill="#EA580C" class="dark:fill-orange-400" />
+      <!-- Layer 4: Text Content Lines -->
+      <line x1="8" y1="14" x2="16" y2="14" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      <line x1="8" y1="17" x2="13" y2="17" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+    </svg>
+  
+            </div>
+          </div>
+          <div class="tier-crest-badge shadow-xs shrink-0" title="Prismatic Hologram - Thần thoại">
+      <span class="tier-badge-indicator"></span>
+      <span class="tier-badge-label">✦ UR · MYTHIC</span>
+    </div>
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Scribd Downloader">
+          Scribd Downloader
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Tải tài liệu & slide Scribd sang file PDF rõ nét.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              PDF
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Slides
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Drive
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/hash-checksum"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="hash-checksum"
+       aria-label="Mã Băm & Base64 - Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64."
+       style="--accent: #64748B; --accent-contrast: #334155;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-hash-shield" x1="4" y1="2.5" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#64748B" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#334155" stop-opacity="0.06" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Beveled Security Shield Perimeter -->
+      <path d="M12 2.5L4 6v6.2c0 5 3.4 9.6 8 10.8 4.6-1.2 8-5.8 8-10.8V6l-8-3.5z"
+            fill="url(#ds-apple-hash-shield)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.6" stroke-linejoin="round" />
+
+      <!-- Inner Armor Bevel -->
+      <path d="M12 4.6L6 7.2v4.8c0 3.8 2.5 7.4 6 8.5 3.5-1.1 6-4.7 6-8.5V7.2l-6-2.6z"
+            class="stroke-zinc-400/40 dark:stroke-zinc-600/40" stroke-width="1" />
+
+      <!-- Layer 2: Central Cryptographic Hash Grid # -->
+      <path d="M9.2 9.5h5.6 M9.2 13.5h5.6 M10.8 8v7 M13.2 8v7"
+            class="stroke-zinc-400 dark:stroke-zinc-500"
+            stroke-width="1.3" stroke-linecap="round" />
+
+      <!-- Layer 3: Verified Enamel Medallion with Checkmark -->
+      <circle cx="12" cy="11.5" r="3"
+              class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 shadow-md transition-colors duration-200"
+              stroke-width="1.2" />
+      <path d="M10.8 11.5l.8.8 1.6-1.6" class="stroke-white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-hash-shield" x1="4" y1="2.5" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#64748B" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#334155" stop-opacity="0.06" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Beveled Security Shield Perimeter -->
+      <path d="M12 2.5L4 6v6.2c0 5 3.4 9.6 8 10.8 4.6-1.2 8-5.8 8-10.8V6l-8-3.5z"
+            fill="url(#ds-apple-hash-shield)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.6" stroke-linejoin="round" />
+
+      <!-- Inner Armor Bevel -->
+      <path d="M12 4.6L6 7.2v4.8c0 3.8 2.5 7.4 6 8.5 3.5-1.1 6-4.7 6-8.5V7.2l-6-2.6z"
+            class="stroke-zinc-400/40 dark:stroke-zinc-600/40" stroke-width="1" />
+
+      <!-- Layer 2: Central Cryptographic Hash Grid # -->
+      <path d="M9.2 9.5h5.6 M9.2 13.5h5.6 M10.8 8v7 M13.2 8v7"
+            class="stroke-zinc-400 dark:stroke-zinc-500"
+            stroke-width="1.3" stroke-linecap="round" />
+
+      <!-- Layer 3: Verified Enamel Medallion with Checkmark -->
+      <circle cx="12" cy="11.5" r="3"
+              class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)] stroke-white dark:stroke-zinc-900 shadow-md transition-colors duration-200"
+              stroke-width="1.2" />
+      <path d="M10.8 11.5l.8.8 1.6-1.6" class="stroke-white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Mã Băm & Base64">
+          Mã Băm & Base64
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              MD5
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              SHA-256
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Base64
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Nâng cao
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#storage"
+       class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 rounded-2xl cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="storage"
+       aria-label="Bộ Nhớ Lưu Trữ - Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị."
+       style="--accent: #6366F1; --accent-contrast: #6366F1;">
+      
+      
+
+      <!-- Giant Tool-Specific Icon Silhouette Watermark -->
+      <div class="tier-tool-watermark pointer-events-none" aria-hidden="true">
+        
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-24 h-24 sm:w-28 sm:h-28 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-nvme-bay" x1="3" y1="4" x2="21" y2="11" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#6366F1" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.06" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Top NVMe Drive Bay -->
+      <rect x="3" y="3.8" width="18" height="6.8" rx="2.2"
+            fill="url(#ds-apple-nvme-bay)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <line x1="11.5" y1="7.2" x2="17.5" y2="7.2" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      
+      <!-- Top Bay Optical Status LED with Bezel -->
+      <circle cx="6.5" cy="7.2" r="1.6" class="fill-zinc-300 dark:fill-zinc-700 stroke-zinc-400 dark:stroke-zinc-600" stroke-width="0.6" />
+      <circle cx="6.5" cy="7.2" r="1" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Layer 2: Bottom NVMe Drive Bay -->
+      <rect x="3" y="13.4" width="18" height="6.8" rx="2.2"
+            fill="url(#ds-apple-nvme-bay)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <line x1="11.5" y1="16.8" x2="17.5" y2="16.8" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      
+      <!-- Bottom Bay Optical Status LED with Bezel -->
+      <circle cx="6.5" cy="16.8" r="1.6" class="fill-zinc-300 dark:fill-zinc-700 stroke-zinc-400 dark:stroke-zinc-600" stroke-width="0.6" />
+      <circle cx="6.5" cy="16.8" r="1" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Layer 3: High-Speed PCIe Bus Interconnect Lines -->
+      <line x1="9" y1="10.6" x2="9" y2="13.4" class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]" stroke-width="1.6" stroke-linecap="round" />
+      <line x1="15" y1="10.6" x2="15" y2="13.4" class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]" stroke-width="1.6" stroke-linecap="round" />
+    </svg>
+  
+      </div>
+
+      <!-- Top Precision Accent Beam: Refined, delicate edge accent -->
+      <div class="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-25 group-hover:opacity-70 transition-opacity duration-300 pointer-events-none"></div>
+      
+      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.08] dark:opacity-[0.14] group-hover:opacity-[0.18] dark:group-hover:opacity-[0.22] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+
+      <!-- Subtle Ambient Top-Down Surface Tint -->
+      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.02] via-transparent to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge (Concentric Icon Anchor) -->
+        <div class="flex items-center justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-apple-nvme-bay" x1="3" y1="4" x2="21" y2="11" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#6366F1" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.06" />
+        </linearGradient>
+      </defs>
+
+      <!-- Layer 1: Top NVMe Drive Bay -->
+      <rect x="3" y="3.8" width="18" height="6.8" rx="2.2"
+            fill="url(#ds-apple-nvme-bay)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <line x1="11.5" y1="7.2" x2="17.5" y2="7.2" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      
+      <!-- Top Bay Optical Status LED with Bezel -->
+      <circle cx="6.5" cy="7.2" r="1.6" class="fill-zinc-300 dark:fill-zinc-700 stroke-zinc-400 dark:stroke-zinc-600" stroke-width="0.6" />
+      <circle cx="6.5" cy="7.2" r="1" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Layer 2: Bottom NVMe Drive Bay -->
+      <rect x="3" y="13.4" width="18" height="6.8" rx="2.2"
+            fill="url(#ds-apple-nvme-bay)"
+            class="stroke-zinc-700/80 dark:stroke-zinc-300 transition-colors duration-200"
+            stroke-width="1.5" />
+      <line x1="11.5" y1="16.8" x2="17.5" y2="16.8" class="stroke-zinc-400 dark:stroke-zinc-500" stroke-width="1.3" stroke-linecap="round" />
+      
+      <!-- Bottom Bay Optical Status LED with Bezel -->
+      <circle cx="6.5" cy="16.8" r="1.6" class="fill-zinc-300 dark:fill-zinc-700 stroke-zinc-400 dark:stroke-zinc-600" stroke-width="0.6" />
+      <circle cx="6.5" cy="16.8" r="1" class="fill-[var(--accent-contrast)] dark:fill-[var(--accent)]" />
+
+      <!-- Layer 3: High-Speed PCIe Bus Interconnect Lines -->
+      <line x1="9" y1="10.6" x2="9" y2="13.4" class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]" stroke-width="1.6" stroke-linecap="round" />
+      <line x1="15" y1="10.6" x2="15" y2="13.4" class="stroke-[var(--accent-contrast)] dark:stroke-[var(--accent)]" stroke-width="1.6" stroke-linecap="round" />
+    </svg>
+  
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-bold text-zinc-900 dark:text-white text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-tight truncate" title="Bộ Nhớ Lưu Trữ">
+          Bộ Nhớ Lưu Trữ
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-100/90 dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-white/[0.12] font-semibold shadow-2xs">
+              Cloud Drive
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-zinc-50/80 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-white/[0.06]">
+              Truyền tệp
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Footer / CTA -->
+      <div class="relative z-10 mt-4 pt-3.5 border-t border-zinc-200/60 dark:border-white/[0.08] flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text">
+          Nâng cao
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a>
+    </div>
+        </div>
+      </div>
+
+      <!-- Recent Executions Activity Feed (Apple Sequoia Pure Frost Glass - Located at bottom) -->
+      <div id="recentActivityContainer" class="empty:hidden pt-2 sm:pt-4">
+        
+      </div>
 
     </div>
+  
+      </main>
+
+      <div id="footerContainer" class="w-full">
+
+    <footer class="w-full border-t border-zinc-200 dark:border-white/5 px-4 lg:px-8 py-6 mt-auto mt-12 md:mt-16 text-sm text-zinc-600 dark:text-zinc-400 mb-16 md:mb-0">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
+          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v23.79</span>
+          <span>•</span>
+          <span>Studio riêng của Anh Duy</span>
+        </div>
+
+        <div class="flex items-center gap-4 text-zinc-700 dark:text-zinc-300 font-medium">
+          <a href="#terms" class="hover:text-black dark:hover:text-white transition">Điều khoản</a>
+          <span>•</span>
+          <a href="#settings" class="hover:text-black dark:hover:text-white transition">Cài đặt</a>
+        </div>
+      </div>
+    </footer>
+  
+      </div>
+
+      <div id="bottomNavContainer">
+
+    <nav class="md:hidden fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto rounded-2xl p-1.5 flex items-center justify-around glass-dock safe-bottom">
+      
+    <a href="#" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/90 dark:bg-white/[0.08] shadow-2xs">
+      <i data-lucide="layout-grid" class="w-5 h-5 shrink-0 stroke-[2.5]"></i>
+      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Trang chủ</span>
+    </a>
+  
+      
+    <a href="#tool/universal-converter" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
+      <i data-lucide="refresh-cw" class="w-5 h-5 shrink-0 stroke-2"></i>
+      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Converter</span>
+    </a>
+  
+      
+    <a href="#tool/pdf-studio" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
+      <i data-lucide="file-text" class="w-5 h-5 shrink-0 stroke-2"></i>
+      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">PDF</span>
+    </a>
+  
+      
+    <a href="#archive" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
+      <i data-lucide="archive" class="w-5 h-5 shrink-0 stroke-2"></i>
+      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">File nén</span>
+    </a>
+  
+      
+    <a href="#tool/qr-multi" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
+      <i data-lucide="qr-code" class="w-5 h-5 shrink-0 stroke-2"></i>
+      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Mã QR</span>
+    </a>
+  
+    </nav>
+  
+      </div>
+
+      <div id="globalPreviewContainer"></div>
+      <div id="globalTaskDockContainer"></div>
+    </div>
   </div>
+
+  <!-- Immediate Lucide Icon Resolution for Frame 0 (Zero Icon Flash) -->
+  <script>
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  </script>
 
   <!-- Non-blocking deferred vendor engines -->
   <script src="src/vendor/highlight.min.js" defer></script>
@@ -694,7 +3061,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=23.79"></script>
+  <script type="module" src="src/app.js?v=23.80"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
