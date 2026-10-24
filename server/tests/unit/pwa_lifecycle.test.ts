@@ -677,6 +677,37 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(mockWorker.postMessage).toHaveBeenCalledWith({ type: 'PURGE_AND_UPDATE' });
       expect(mockSessionStore['ds_hard_purged']).toBe('true');
     });
+
+    it('fastCheckAppUpdate triggers update modal immediately if server version differs from current version', async () => {
+      const { fastCheckAppUpdate } = await import('../../../src/utilities/pwa.js');
+      const originalFetch = (globalThis as any).fetch;
+      const originalNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+
+      (globalThis as any).fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve("const CACHE_NAME = 'duydev-studio-v99.99';")
+      });
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          serviceWorker: {
+            controller: { postMessage: vi.fn() },
+            getRegistration: vi.fn().mockResolvedValue({ waiting: null, update: vi.fn().mockResolvedValue(undefined) })
+          }
+        },
+        configurable: true,
+        writable: true
+      });
+
+      await fastCheckAppUpdate();
+
+      const capsule = elementsById['ds-update-capsule'];
+      expect(capsule).toBeDefined();
+
+      (globalThis as any).fetch = originalFetch;
+      if (originalNav) Object.defineProperty(globalThis, 'navigator', originalNav);
+      else delete (globalThis as any).navigator;
+    });
   });
 
   describe('4. Frame-0 Domain Migration Protection', () => {

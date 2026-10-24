@@ -23,7 +23,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v23.78';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v23.79';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -749,11 +749,56 @@ export async function checkForAppUpdate() {
  * Register the Service Worker, listen for updates, and auto-check
  * on visibility change (foreground resume).
  */
+/**
+ * Fast-path early update detection:
+ * Probes the server version immediately (<50ms) on Frame 1 without waiting for window.onload
+ * or background SW install completion. If an update exists, triggers the Update Modal instantly.
+ */
+export async function fastCheckAppUpdate() {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  if (!navigator.serviceWorker.controller) return;
+  if (typeof fetch !== 'function') return;
+
+  try {
+    // 1. Immediate check: If registration or window has a waiting worker, prompt immediately
+    const reg = swRegistration || (await navigator.serviceWorker.getRegistration?.());
+    const waitingWorker = reg?.waiting || (typeof window !== 'undefined' ? window.__ds_waiting_worker : null);
+    if (waitingWorker) {
+      showUpdateCapsule(waitingWorker, { immediate: true });
+      return;
+    }
+
+    // 2. Fast server version probe (bypassing browser cache)
+    const resp = await fetch(`./sw.js?fast_check=${Date.now()}`, { cache: 'no-store' });
+    if (!resp.ok) return;
+    const text = await resp.text();
+    const match = text.match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/);
+    if (!match) return;
+
+    const serverVersion = match[1];
+    if (serverVersion && serverVersion !== CURRENT_PWA_VERSION) {
+      latestDiscoveredServerVersion = serverVersion;
+      if (reg) reg.update().catch(() => {});
+      showUpdateCapsule(reg?.waiting || reg?.installing || null, {
+        version: serverVersion,
+        immediate: true
+      });
+    }
+  } catch (err) {
+    // Silent fail if offline or fetch restricted
+  }
+}
+
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
   const hadExistingController = Boolean(navigator.serviceWorker.controller);
   refreshing = false;
+
+  // Immediate fast-path check for updates (<100ms) - do NOT wait for window.onload
+  if (hadExistingController) {
+    fastCheckAppUpdate().catch(() => {});
+  }
 
   // When a new SW takes over, reload to apply new assets ONLY if the user explicitly commanded an update.
   // Otherwise, allow the new SW to control background requests without disrupting the active page session (zero double loading).
@@ -795,11 +840,8 @@ export function registerServiceWorker() {
       });
   };
 
-  if (document.readyState === 'complete') {
-    doRegister();
-  } else {
-    window.addEventListener('load', doRegister);
-  }
+  // Execute registration immediately without waiting for window.onload
+  doRegister();
 
   // Auto-check for updates when app returns to foreground or window regains focus.
   let lastBackgroundTime = 0;

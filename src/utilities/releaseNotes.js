@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.79': {
+    version: 'v23.79',
+    title: 'Bản cập nhật v23.79',
+    date: '24/10/2026',
+    features: [
+      'Thông báo cập nhật siêu tốc tức thì (Instant Frame-1 Update Modal): Loại bỏ hoàn toàn độ trễ 2–3 giây khi có bản cập nhật mới. Popup thông báo bản mới sẽ xuất hiện tức thì trong <0.1 giây ngay khi mở trang để người dùng chủ động Làm mới hoặc Để sau mà không bị gián đoạn giữa chừng',
+      'Cơ chế Fast-Path Version Probe: Tự động đối soát phiên bản máy chủ ngay trên Frame đầu tiên mà không cần chờ đợi Service Worker tải xong toàn bộ tài nguyên cache'
+    ],
+    fixes: [
+      'Loại bỏ triệt để hiện tượng đang lướt web bình thường được 2–3 giây thì popup cập nhật bất ngờ nhảy ra che màn hình',
+      'Kích hoạt Service Worker song song ngay khi tải trang thay vì trì hoãn đợi sự kiện window.onload'
+    ]
+  },
+
   'v23.78': {
     version: 'v23.78',
     title: 'Bản cập nhật v23.78',

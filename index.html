@@ -40,6 +40,18 @@
   <link rel="modulepreload" href="./src/components/common/ShareTargetModal.js">
   <link rel="modulepreload" href="./src/utilities/formatters.js">
 
+  <!-- Frame-0 Fast-Path SW Update Detection -->
+  <script>
+    (function() {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistration().then(function(reg) {
+          if (reg && reg.waiting) {
+            window.__ds_waiting_worker = reg.waiting;
+          }
+        }).catch(function() {});
+      }
+    })();
+  </script>
   <!-- Frame-0 Share Target Instant Detection & Startup Loader Suppression -->
   <script>
     (function() {
@@ -151,14 +163,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.78">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.78">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=23.78">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=23.78">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.78">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=23.79">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=23.79">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=23.79">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=23.79">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=23.79">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=23.78">
+  <link rel="modulepreload" href="src/app.js?v=23.79">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -682,7 +694,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=23.78"></script>
+  <script type="module" src="src/app.js?v=23.79"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
