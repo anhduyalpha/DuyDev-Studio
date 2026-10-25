@@ -69,46 +69,47 @@ export function renderHeader() {
           </div>
         </div>
 
-        <!-- Right: Controls (Ergonomic touch targets >= 38-44px) -->
-        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+        <!-- Right: Controls (Ergonomic Apple Control Center Dock) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div class="flex items-center gap-0.5 sm:gap-1 p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06]">
+            <!-- Storage Drive Link -->
+            <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-8.5 h-8.5 sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+              <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+            </a>
 
-          <!-- Storage Drive Link -->
-          <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
-            <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
-          </a>
+            <!-- History Link (Desktop only) -->
+            <a href="#history" title="Lịch sử tác vụ" aria-label="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition">
+              <i data-lucide="clock" class="w-4.5 h-4.5"></i>
+            </a>
 
-          <!-- History Link (Desktop only) -->
-          <a href="#history" title="Lịch sử tác vụ" aria-label="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition">
-            <i data-lucide="clock" class="w-4.5 h-4.5"></i>
-          </a>
+            <!-- Trash Bin Link -->
+            <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-8.5 h-8.5 sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+              <i data-lucide="trash-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+              <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
+            </a>
 
-          <!-- Trash Bin Link -->
-          <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-rose-600 dark:text-zinc-300 dark:hover:text-rose-400 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
-            <i data-lucide="trash-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
-            <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
-          </a>
+            <!-- Pure System Status Dot (Non-clickable, Indicator Only) -->
+            <div id="headerSystemStatus" 
+                 role="status"
+                 aria-label="Trạng thái hệ thống"
+                 title="Trực tuyến" 
+                 class="inline-flex items-center justify-center w-6 h-6 select-none">
+              <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
+            </div>
 
-          <!-- Pure System Status Dot (Non-clickable, Indicator Only) -->
-          <div id="headerSystemStatus" 
-               role="status"
-               aria-label="Trạng thái hệ thống"
-               title="Trực tuyến" 
-               class="inline-flex items-center justify-center w-6 h-6 select-none">
-            <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
+            <!-- Sound Toggle Button -->
+            <button id="btnSoundToggle" 
+                    title="${soundTitle}" 
+                    aria-label="${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}" 
+                    class="inline-flex w-8.5 h-8.5 sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+              <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+            </button>
+
+            <!-- Theme Toggle Button -->
+            <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-8.5 h-8.5 sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+              <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+            </button>
           </div>
-
-          <!-- Sound Toggle Button -->
-          <button id="btnSoundToggle" 
-                  title="${soundTitle}" 
-                  aria-label="${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}" 
-                  class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
-            <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
-          </button>
-
-          <!-- Theme Toggle Button -->
-          <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 sm:w-9 sm:h-9 items-center justify-center text-zinc-700 hover:text-black dark:text-zinc-300 dark:hover:text-white rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer">
-            <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
-          </button>
 
           <!-- User Profile Avatar with Small Name Underneath -->
           <button 

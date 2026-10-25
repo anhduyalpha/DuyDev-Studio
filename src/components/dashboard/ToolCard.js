@@ -73,7 +73,7 @@ export function renderToolCard(tool) {
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             ${tierBadgeHtml}
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.06] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors duration-200 shrink-0">
+            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
               <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
             </div>
           </div>
@@ -83,7 +83,7 @@ export function renderToolCard(tool) {
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="${tool.title}">
           ${tool.title}
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#86868B] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           ${tool.description}
         </p>
 
@@ -93,7 +93,7 @@ export function renderToolCard(tool) {
             <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums ${
               idx === 0 
                 ? 'bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold' 
-                : 'bg-black/[0.02] dark:bg-white/[0.03] text-zinc-500 dark:text-[#86868B] border border-black/[0.03] dark:border-white/[0.06]'
+                : 'bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]'
             }">
               ${spec}
             </span>
@@ -106,7 +106,7 @@ export function renderToolCard(tool) {
         <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text opacity-90">
           ${categoryLabel}
         </span>
-        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-500 group-hover:text-zinc-900 dark:text-[#86868B] dark:group-hover:text-[#F5F5F7] transition">
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-[#F5F5F7] transition">
           <span>Mở</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
         </div>
