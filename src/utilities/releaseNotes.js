@@ -6,7 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
-  'v23.97': {
+    'v23.98': {
+    version: 'v23.98',
+    title: 'Bản cập nhật v23.98',
+    date: '25/10/2026',
+    features: [
+      'Bảo Toàn Lịch Sử Xử Lý PDF: Khắc phục triệt để lỗi tài liệu PDF xử lý xong không lưu vào lịch sử hoặc bị xóa khi đồng bộ với máy chủ',
+      'Tiếp Tục Xử Lý Tệp Kết Quả: Bổ sung nút "Xử lý tiếp" trực tiếp trên thẻ kết quả PDF Studio để nạp nhanh tệp vừa tạo vào workspace cho thao tác tiếp theo',
+      'Mở Rộng Lịch Sử Thông Minh: Tự động mở rộng danh sách lịch sử khi nhấn "Tiếp tục" để người dùng kiểm tra và quản lý tệp đã hoàn tất thuận tiện'
+    ],
+    fixes: [
+      'Khắc phục tình trạng mất file khi nhấn nút "Tiếp tục" sau khi xử lý xong trong PDF Studio',
+      'Đồng bộ Device-Id khi tạo tác vụ PDF và ngăn việc ghi đè làm trắng lịch sử trong bộ nhớ cục bộ'
+    ]
+  },
+'v23.97': {
     version: 'v23.97',
     title: 'Bản cập nhật v23.97',
     date: '25/10/2026',

@@ -7,7 +7,7 @@ import { renderDropzoneQueue } from '../components/DropzoneQueue.js';
 import { renderConfigPanel } from '../components/ConfigPanel.js';
 import { renderResultCard } from '../components/ResultCard.js';
 import { renderPdfErrorBanner } from '../components/PdfErrorBanner.js';
-import { bindPdfHistory, updatePdfHistoryDom } from '../components/PdfHistoryList.js';
+import { bindPdfHistory, updatePdfHistoryDom, setPdfHistoryOpen } from '../components/PdfHistoryList.js';
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { copyText } from '../../../../utilities/clipboard.js';
@@ -968,7 +968,29 @@ function bindResult(qm) {
   const resEl = document.getElementById('pdfResultContainer');
   if (!resEl) return;
 
-  resEl.querySelector('#btnResetResult')?.addEventListener('click', () => qm.resetResult());
+  resEl.querySelector('#btnResetResult')?.addEventListener('click', () => {
+    setPdfHistoryOpen(true);
+    qm.resetResult();
+  });
+
+  resEl.querySelector('#btnContinueWithResult')?.addEventListener('click', async () => {
+    if (!qm.result) return;
+    try {
+      showToast('Đang nạp tệp kết quả để xử lý tiếp...', 'info');
+      const url = qm.result.downloadUrl;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Không thể tải tệp kết quả');
+      const blob = await res.blob();
+      const fileName = qm.result.fileName || 'document.pdf';
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+      qm.resetResult();
+      await qm.addFiles([file]);
+      showToast('Đã nạp tệp kết quả vào không gian làm việc', 'success');
+    } catch (err) {
+      showToast(err.message || 'Lỗi nạp tệp kết quả', 'error');
+    }
+  });
+
   resEl.querySelector('#btnPreviewPdfResult')?.addEventListener('click', () => {
     if (qm.result) {
       ViewerConnector.preview({

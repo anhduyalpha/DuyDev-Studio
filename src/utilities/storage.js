@@ -52,9 +52,11 @@ export const storage = {
       const res = await fetch('/api/v1/history?limit=50');
       if (res.ok) {
         const json = await res.json();
-        const items = deduplicateList(json.data?.items || []);
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(items.slice(0, 50)));
-        return items;
+        const serverItems = deduplicateList(json.data?.items || []);
+        const localItems = this.getLocalHistory();
+        const merged = deduplicateList([...serverItems, ...localItems]);
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged.slice(0, 50)));
+        return merged;
       }
     } catch {}
     return this.getLocalHistory();
@@ -78,6 +80,9 @@ export const storage = {
           fileName: record.fileName || 'Tài liệu',
           originalSize: record.originalSize || 0,
           resultSize: size,
+          savedPct: record.savedPct || 0,
+          mode: record.mode || null,
+          targetFormat: record.targetFormat || null,
           downloadUrl: record.downloadUrl || null,
           resultFileId: record.resultFileId || null,
           status: record.status || 'success',
@@ -88,6 +93,29 @@ export const storage = {
     } catch (e) {
       console.warn('Failed to record completed job locally', e);
     }
+
+    // Sync to Fastify backend /api/v1/history with user's X-Device-Id
+    try {
+      fetch('/api/v1/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toolId: record.toolId || 'general',
+          toolTitle: record.toolTitle || record.tool || 'Công cụ',
+          fileName: record.fileName || 'Tài liệu',
+          originalSize: record.originalSize || 0,
+          resultSize: record.resultSize || 0,
+          downloadUrl: record.downloadUrl || null,
+          resultFileId: record.resultFileId || null,
+          status: record.status || 'success',
+          detailsJson: JSON.stringify({
+            mode: record.mode,
+            savedPct: record.savedPct,
+            targetFormat: record.targetFormat
+          })
+        })
+      }).catch(() => {});
+    } catch {}
   },
 
   async addHistoryItem(item) {

@@ -85,14 +85,25 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
   if (body.resultFileId || body.downloadUrl) {
     const existing = await prisma.historyRecord.findFirst({
       where: {
-        ...(targetDeviceId ? { deviceId: targetDeviceId } : {}),
-        OR: [
-          ...(body.resultFileId ? [{ resultFileId: body.resultFileId }] : []),
-          ...(body.downloadUrl ? [{ downloadUrl: body.downloadUrl }] : [])
+        ...(targetDeviceId ? { OR: [{ deviceId: targetDeviceId }, { deviceId: null }] } : {}),
+        AND: [
+          {
+            OR: [
+              ...(body.resultFileId ? [{ resultFileId: body.resultFileId }] : []),
+              ...(body.downloadUrl ? [{ downloadUrl: body.downloadUrl }] : [])
+            ]
+          }
         ]
       }
     });
     if (existing) {
+      if (!existing.deviceId && targetDeviceId) {
+        await prisma.historyRecord.update({
+          where: { id: existing.id },
+          data: { deviceId: targetDeviceId }
+        }).catch(() => {});
+        existing.deviceId = targetDeviceId;
+      }
       return reply.send({
         success: true,
         data: formatHistoryRecord(existing)

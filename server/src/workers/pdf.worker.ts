@@ -24,6 +24,7 @@ export interface PdfJobPayload {
   fileId: string;
   operation: PdfOperation;
   options?: PdfJobOptions;
+  deviceId?: string | null;
 }
 
 function resolvePythonBin(): string {
@@ -303,9 +304,19 @@ export async function processPdfJob(payload: PdfJobPayload): Promise<string> {
 
     const historyItem = await prisma.historyRecord.create({
       data: {
-        toolId: 'pdf-studio', toolTitle: 'PDF Studio Pro', fileName: processedFileName,
-        originalSize: BigInt(originalSizeBytes), resultSize: BigInt(resultSizeBytes),
-        resultFileId, downloadUrl, status: 'success'
+        deviceId: payload.deviceId || null,
+        toolId: 'pdf-studio',
+        toolTitle: 'PDF Studio Pro',
+        fileName: processedFileName,
+        originalSize: BigInt(originalSizeBytes),
+        resultSize: BigInt(resultSizeBytes),
+        resultFileId,
+        downloadUrl,
+        status: 'success',
+        detailsJson: JSON.stringify({
+          mode: payload.operation,
+          savingsPct
+        })
       }
     }).catch((e) => { logger.warn({ e }, 'Failed to record pdf history'); return null; });
 

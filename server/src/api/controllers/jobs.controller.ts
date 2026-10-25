@@ -24,6 +24,8 @@ export async function enqueuePdfJob(request: FastifyRequest, reply: FastifyReply
   }
 
   const jobId = `job_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+  const deviceIdHeader = (request.headers['x-device-id'] as string) || (request.query as any)?.deviceId;
+  const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : null;
 
   const job = await prisma.job.create({
     data: {
@@ -31,7 +33,7 @@ export async function enqueuePdfJob(request: FastifyRequest, reply: FastifyReply
       type: `pdf_${operation}`,
       status: 'QUEUED',
       progress: 0,
-      optionsJson: JSON.stringify({ fileId, operation, options })
+      optionsJson: JSON.stringify({ fileId, operation, options, deviceId })
     }
   });
 
@@ -40,7 +42,8 @@ export async function enqueuePdfJob(request: FastifyRequest, reply: FastifyReply
       jobId: job.id,
       fileId,
       operation,
-      options
+      options,
+      deviceId
     });
   } catch (queueErr) {
     logger.warn({ jobId: job.id, queueErr }, 'Queue enqueue failed, job remains QUEUED in database');

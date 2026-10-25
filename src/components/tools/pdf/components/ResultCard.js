@@ -77,14 +77,22 @@ export function renderResultCard(result) {
           <i data-lucide="${previewIcon}" class="w-4 h-4 text-[#d97706] dark:text-amber-400"></i> Xem trước
         </button>
 
+        ${!isZip && !isDocx ? `
+          <button id="btnContinueWithResult" type="button" title="Tiếp tục chỉnh sửa với tệp kết quả này"
+            class="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]">
+            <i data-lucide="arrow-up-right" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i> Xử lý tiếp
+          </button>
+        ` : ''}
+
         <button id="btnTrashPdfResult" type="button"
           class="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-700 hover:text-red-600 dark:bg-white/[0.04] dark:hover:bg-red-500/10 dark:text-zinc-300 dark:hover:text-red-400 text-xs sm:text-sm font-medium border border-zinc-200 dark:border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]">
           <i data-lucide="trash-2" class="w-4 h-4 text-zinc-500 dark:text-zinc-400"></i> Xóa
         </button>
 
-        <button id="btnResetResult" type="button"
-          class="ml-auto min-h-[44px] px-3.5 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition cursor-pointer flex items-center">
-          Tiếp tục
+        <button id="btnResetResult" type="button" title="Đóng kết quả và tiếp tục thao tác (tệp đã được lưu an toàn trong lịch sử)"
+          class="ml-auto min-h-[44px] px-3.5 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition cursor-pointer flex items-center gap-1">
+          <span>Tiếp tục</span>
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
         </button>
       </div>
     </div>
