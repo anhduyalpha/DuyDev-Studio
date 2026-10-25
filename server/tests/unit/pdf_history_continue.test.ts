@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildPdfResult } from '../../../src/components/tools/pdf/hooks/pdfApi.js';
 import { storage, STORAGE_KEYS } from '../../../src/utilities/storage.js';
 import { renderResultCard } from '../../../src/components/tools/pdf/components/ResultCard.js';
+import { soundEngine } from '../../../src/utilities/soundEngine.js';
+import { openPdfContinueModal, closePdfContinueModal } from '../../../src/components/tools/pdf/components/PdfContinueModal.js';
 
 describe('PDF Studio History & Result Card Continuation Test Suite', () => {
   let originalFetch: any;
@@ -173,6 +175,74 @@ describe('PDF Studio History & Result Card Continuation Test Suite', () => {
       expect(html).not.toContain('id="btnContinueWithResult"');
       expect(html).toContain('id="btnResetResult"');
       expect(html).toContain('Tiếp tục');
+    });
+  });
+
+  describe('3. SoundEngine & PdfContinueModal Resilience', () => {
+    it('soundEngine.playAction exists and calls playToggle without throwing', () => {
+      const spyToggle = vi.spyOn(soundEngine, 'playToggle').mockImplementation(() => {});
+      expect(typeof (soundEngine as any).playAction).toBe('function');
+      (soundEngine as any).playAction();
+      expect(spyToggle).toHaveBeenCalledTimes(1);
+    });
+
+    it('openPdfContinueModal creates modal with z-[99999] and closes cleanly', () => {
+      const mockQm = {
+        result: { fileName: 'output.pdf', resultSize: 12345 },
+        chainResultToMode: vi.fn()
+      };
+
+      let insertedHtml = '';
+      const mockElements: Record<string, any> = {};
+
+      const originalDoc = (global as any).document;
+      const originalWin = (global as any).window;
+
+      const mockModalEl = {
+        id: 'pdfContinueModal',
+        className: 'fixed inset-0 z-[99999] flex items-center justify-center',
+        innerHTML: '',
+        remove: vi.fn(() => {
+          delete mockElements['pdfContinueModal'];
+        }),
+        querySelector: vi.fn(() => ({ addEventListener: vi.fn() })),
+        querySelectorAll: vi.fn(() => []),
+        addEventListener: vi.fn()
+      };
+
+      (global as any).window = {
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn()
+      };
+
+      (global as any).document = {
+        body: {
+          style: { overflow: '' },
+          insertAdjacentHTML: vi.fn((pos, html) => {
+            insertedHtml = html;
+            mockModalEl.innerHTML = html;
+            mockElements['pdfContinueModal'] = mockModalEl;
+            mockElements['pdfContinueModalCard'] = { contains: vi.fn(() => true), addEventListener: vi.fn() };
+          })
+        },
+        getElementById: vi.fn((id: string) => mockElements[id] || null)
+      };
+
+      try {
+        openPdfContinueModal({ fileInfo: mockQm.result, qm: mockQm as any });
+
+        const modal = (global as any).document.getElementById('pdfContinueModal');
+        expect(modal).not.toBeNull();
+        expect(insertedHtml).toContain('z-[99999]');
+        expect(insertedHtml).toContain('Chọn công cụ xử lý tiếp');
+        expect(insertedHtml).toContain('output.pdf');
+
+        closePdfContinueModal();
+        expect(mockModalEl.remove).toHaveBeenCalled();
+      } finally {
+        (global as any).document = originalDoc;
+        (global as any).window = originalWin;
+      }
     });
   });
 });

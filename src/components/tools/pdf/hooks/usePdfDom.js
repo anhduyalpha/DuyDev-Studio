@@ -972,78 +972,116 @@ function bindConfig(qm) {
 }
 
 /**
- * Binds result card actions (reset, preview, trash, copy download URL).
+ * Binds result card actions via robust Event Delegation (continue, reset, preview, trash, copy download URL).
  */
 function bindResult(qm) {
   const resEl = document.getElementById('pdfResultContainer');
   if (!resEl) return;
 
-  resEl.querySelector('#btnResetResult')?.addEventListener('click', () => {
-    setPdfHistoryOpen(true);
-    qm.resetResult();
-  });
+  const queueMgr = qm || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager : null);
 
-  resEl.querySelector('#btnContinueWithResult')?.addEventListener('click', () => {
-    if (!qm.result) return;
-    soundEngine.playAction();
-    openPdfContinueModal({ fileInfo: qm.result, qm });
-  });
+  cleanupChainMenuListener();
 
-  resEl.querySelector('#btnPreviewPdfResult')?.addEventListener('click', () => {
-    if (qm.result) {
-      ViewerConnector.preview({
-        ...qm.result,
-        fileId: qm.result.resultFileId
-      });
+  resEl.onclick = async (e) => {
+    // 1. Continue with Result
+    const continueBtn = e.target.closest('#btnContinueWithResult');
+    if (continueBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const resultObj = queueMgr?.result || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager?.result : null);
+      if (!resultObj) {
+        showToast('Không tìm thấy tệp kết quả để tiếp tục', 'warning');
+        return;
+      }
+      soundEngine.playAction?.() || soundEngine.playToggle?.();
+      openPdfContinueModal({ fileInfo: resultObj, qm: queueMgr });
+      return;
     }
-  });
 
-  resEl.querySelector('#btnTrashPdfResult')?.addEventListener('click', async () => {
-    if (qm.result?.historyId) {
-      soundEngine.playDelete();
-      await storage.moveToTrash(qm.result.historyId);
-      showToast('Đã chuyển vào thùng rác', 'delete', 2500, { silent: true });
+    // 2. Reset Result ("Tiếp tục >")
+    const resetBtn = e.target.closest('#btnResetResult');
+    if (resetBtn) {
+      e.preventDefault();
+      setPdfHistoryOpen(true);
+      queueMgr?.resetResult();
+      return;
     }
-    qm.resetResult();
-  });
 
-  const btnCopy = resEl.querySelector('#btnCopyDownloadLink');
-  if (btnCopy) {
-    btnCopy.onclick = async () => {
-      const url = btnCopy.getAttribute('data-url');
+    // 3. Preview Result
+    const previewBtn = e.target.closest('#btnPreviewPdfResult');
+    if (previewBtn) {
+      e.preventDefault();
+      const resultObj = queueMgr?.result || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager?.result : null);
+      if (resultObj) {
+        ViewerConnector.preview({
+          ...resultObj,
+          fileId: resultObj.resultFileId
+        });
+      }
+      return;
+    }
+
+    // 4. Trash Result
+    const trashBtn = e.target.closest('#btnTrashPdfResult');
+    if (trashBtn) {
+      e.preventDefault();
+      const resultObj = queueMgr?.result || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager?.result : null);
+      if (resultObj?.historyId) {
+        soundEngine.playDelete?.();
+        await storage.moveToTrash(resultObj.historyId);
+        showToast('Đã chuyển vào thùng rác', 'delete', 2500, { silent: true });
+      }
+      queueMgr?.resetResult();
+      return;
+    }
+
+    // 5. Copy Download Link
+    const copyBtn = e.target.closest('#btnCopyDownloadLink');
+    if (copyBtn) {
+      e.preventDefault();
+      const url = copyBtn.getAttribute('data-url');
       if (url) {
         const ok = await copyText(url);
         if (ok) showToast('Đã sao chép link', 'success');
       }
-    };
-  }
+      return;
+    }
 
-  cleanupChainMenuListener();
-  const toggleChainBtn = resEl.querySelector('#btnToggleChainWorkflow');
-  const chainMenu = resEl.querySelector('#chainWorkflowMenu');
-  if (toggleChainBtn && chainMenu) {
-    toggleChainBtn.onclick = (e) => {
+    // 6. Chain Workflow Toggle Button
+    const toggleChainBtn = e.target.closest('#btnToggleChainWorkflow');
+    if (toggleChainBtn) {
+      e.preventDefault();
       e.stopPropagation();
-      chainMenu.classList.toggle('hidden');
-    };
+      const chainMenu = resEl.querySelector('#chainWorkflowMenu');
+      if (chainMenu) chainMenu.classList.toggle('hidden');
+      return;
+    }
+
+    // 7. Chain Mode Selection
+    const chainBtn = e.target.closest('.btn-chain-mode');
+    if (chainBtn) {
+      e.preventDefault();
+      const chainMenu = resEl.querySelector('#chainWorkflowMenu');
+      if (chainMenu) chainMenu.classList.add('hidden');
+      cleanupChainMenuListener();
+      const targetMode = chainBtn.dataset.chainMode;
+      if (targetMode) {
+        queueMgr?.chainResultToMode(targetMode);
+      }
+      return;
+    }
+  };
+
+  const chainMenu = resEl.querySelector('#chainWorkflowMenu');
+  const toggleChainBtn = resEl.querySelector('#btnToggleChainWorkflow');
+  if (chainMenu && toggleChainBtn) {
     activeChainMenuDocListener = (e) => {
-      if (!chainMenu.contains(e.target) && e.target !== toggleChainBtn) {
+      if (!chainMenu.contains(e.target) && !toggleChainBtn.contains(e.target)) {
         chainMenu.classList.add('hidden');
       }
     };
     document.addEventListener('click', activeChainMenuDocListener);
   }
-
-  resEl.querySelectorAll('.btn-chain-mode').forEach((btn) => {
-    btn.onclick = () => {
-      if (chainMenu) chainMenu.classList.add('hidden');
-      cleanupChainMenuListener();
-      const targetMode = btn.dataset.chainMode;
-      if (targetMode) {
-        qm.chainResultToMode(targetMode);
-      }
-    };
-  });
 }
 
 let activeChainMenuDocListener = null;
@@ -1129,6 +1167,9 @@ function syncResultVisibility(hasResult) {
  * Attaches DOM listeners and subscribes to PDF queue manager updates.
  */
 export function attachPdfConverterListeners(queueManager) {
+  if (typeof window !== 'undefined') {
+    window.__ds_pdfQueueManager = queueManager;
+  }
   const selectorContainer = document.getElementById('pdfModeSelectorContainer');
   if (selectorContainer) {
     selectorContainer.onclick = (e) => {

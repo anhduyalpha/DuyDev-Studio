@@ -406,7 +406,7 @@ export function bindPdfHistory(qm) {
     btn.onclick = () => {
       const it = storage.getLocalHistory().find((x) => x.id === btn.dataset.reusePdfId);
       if (it) {
-        soundEngine.playAction();
+        soundEngine.playAction?.() || soundEngine.playToggle?.();
         openPdfContinueModal({ fileInfo: it, qm });
       }
     };

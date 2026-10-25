@@ -977,6 +977,13 @@ class SoundEngine {
     this.playToggle();
   }
 
+  /**
+   * Alias for playToggle / subtle tactile action cue
+   */
+  playAction() {
+    this.playToggle();
+  }
+
   // =========================================================================
   // Deletion & Purge Cues (Tactile Discard & Sweeping Clean-Slate)
   // =========================================================================

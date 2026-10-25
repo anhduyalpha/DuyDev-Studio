@@ -96,14 +96,17 @@ const CROSS_MODULES = [
  * Closes the active PDF continue modal and unlocks document scrolling.
  */
 export function closePdfContinueModal() {
+  if (typeof document === 'undefined') return;
   const modal = document.getElementById('pdfContinueModal');
   if (modal) modal.remove();
 
-  if (activeContinueKeydownHandler) {
+  if (activeContinueKeydownHandler && typeof window !== 'undefined') {
     window.removeEventListener('keydown', activeContinueKeydownHandler);
     activeContinueKeydownHandler = null;
   }
-  document.body.style.overflow = '';
+  if (document.body) {
+    document.body.style.overflow = '';
+  }
 }
 
 /**
@@ -112,13 +115,16 @@ export function closePdfContinueModal() {
  */
 export function openPdfContinueModal({ fileInfo, qm } = {}) {
   closePdfContinueModal();
-  if (!fileInfo || !qm) return;
+  if (typeof document === 'undefined') return;
+  const queueMgr = qm || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager : null);
+  const targetFile = fileInfo || queueMgr?.result;
+  if (!targetFile || !queueMgr) return;
 
-  const fileName = fileInfo.fileName || fileInfo.name || 'document.pdf';
-  const fileSize = fileInfo.fileSize || fileInfo.size || 0;
+  const fileName = targetFile.fileName || targetFile.name || 'document.pdf';
+  const fileSize = targetFile.fileSize || targetFile.size || targetFile.resultSize || targetFile.originalSize || 0;
 
   const modalHtml = `
-    <div id="pdfContinueModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-zinc-950/60 dark:bg-black/75 backdrop-blur-sm animate-fadeIn select-none">
+    <div id="pdfContinueModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-zinc-950/60 dark:bg-black/75 backdrop-blur-sm animate-fadeIn select-none">
       <div id="pdfContinueModalCard" class="w-full max-w-2xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/[0.09] rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <!-- Header Bar -->
         <div class="p-4 sm:p-5 bg-zinc-50/70 dark:bg-white/[0.02] border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between gap-3 shrink-0">
@@ -221,7 +227,14 @@ export function openPdfContinueModal({ fileInfo, qm } = {}) {
   if (window.lucide) window.lucide.createIcons({ root: modalEl });
 
   // Event bindings
-  modalEl.querySelector('#btnClosePdfContinueModal')?.addEventListener('click', closePdfContinueModal);
+  modalEl.querySelector('#btnClosePdfContinueModal')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePdfContinueModal();
+  });
+
+  cardEl?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
 
   modalEl.addEventListener('click', (e) => {
     if (cardEl && !cardEl.contains(e.target)) {
@@ -235,12 +248,13 @@ export function openPdfContinueModal({ fileInfo, qm } = {}) {
   window.addEventListener('keydown', activeContinueKeydownHandler);
 
   modalEl.querySelectorAll('.btn-select-continue-module').forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
       const mode = btn.dataset.continueMode;
       if (!mode) return;
-      soundEngine.playAction();
+      soundEngine.playAction?.() || soundEngine.playToggle?.();
       closePdfContinueModal();
-      qm.chainResultToMode(mode, fileInfo);
+      queueMgr.chainResultToMode(mode, targetFile);
     };
   });
 }
