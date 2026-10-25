@@ -721,7 +721,21 @@ if (typeof window !== 'undefined') {
 
         e.preventDefault();
         e.stopPropagation();
-        const fileName = link.getAttribute('download') || link.download || href.split('/').pop()?.split('?')[0] || 'download';
+
+        let fileName = link.getAttribute('download') || link.download;
+        if (!fileName || fileName === 'true' || fileName === 'download') {
+          try {
+            const urlObj = new URL(href, window.location.href);
+            const queryName = urlObj.searchParams.get('filename') || urlObj.searchParams.get('name') || urlObj.searchParams.get('file');
+            if (queryName) {
+              fileName = queryName;
+            } else {
+              fileName = urlObj.pathname.split('/').filter(Boolean).pop() || 'download';
+            }
+          } catch (_) {
+            fileName = href.split('/').pop()?.split('?')[0] || 'download';
+          }
+        }
         window.AndroidBridge.downloadFile(href, fileName);
       }
     }

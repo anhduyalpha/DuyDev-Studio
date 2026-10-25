@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.07': {
+    version: 'v24.07',
+    title: 'Bản cập nhật v24.07 (APK v24.7.0)',
+    date: '25/10/2026',
+    features: [
+      'Tái Thiết Kế & Chuẩn Hóa Thông Báo Android: Loại bỏ hoàn toàn biểu tượng ứng dụng kép trùng lặp, căn chỉnh tiêu đề ngắn gọn "Tải xuống hoàn tất" chống tràn chữ ("Đã tả..."), phân loại nhãn media thông minh (TikTok Video/Audio, YouTube, Facebook, Instagram, Spotify) và bổ sung nút thao tác "Mở tệp" trực tiếp trên thanh thông báo hệ thống',
+      'Định Danh Tải Xuống Đồng Bộ: Chuẩn hóa ID thông báo và trích xuất tham số tệp URL tự động, giúp cập nhật trạng thái thông báo tải tệp mượt mà và không bao giờ xuất hiện nhiều thông báo trùng'
+    ],
+    fixes: [
+      'Khắc Phục Triệt Để Lỗi Tải Trùng Tệp (Double Download): Sửa chữa cơ chế chống trùng DownloadHelper theo URL chuẩn hóa (bất kể tên tệp đề xuất), chặn lan truyền sự kiện nhấp chuột (event bubbling) trên web app và ngăn chặn xung đột giữa WebView DownloadListener với AndroidBridge',
+      'Sửa Lỗi Biên Dịch Kotlin AndroidBridge: Loại bỏ khai báo trùng lặp phương thức setSwipeRefreshEnabled gây lỗi conflicting overloads trên CI, phát hành thành công gói APK v24.7.0 chính thức'
+    ]
+  },
   'v24.06': {
     version: 'v24.06',
     title: 'Bản cập nhật v24.06 (APK v24.6.0)',

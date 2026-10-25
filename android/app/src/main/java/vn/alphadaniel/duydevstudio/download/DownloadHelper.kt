@@ -55,26 +55,27 @@ object DownloadHelper {
         val cleanName = sanitizeFileName(suggestedFileName, mimeType)
         val finalMime = normalizeMimeType(cleanName, mimeType)
 
-        val dedupeKey = "base64_${cleanName.trim()}_${base64Data.length}"
+        val rawBase64 = if (base64Data.contains(",")) {
+            base64Data.substringAfter(",")
+        } else {
+            base64Data
+        }.trim()
+
+        val sample = if (rawBase64.length > 64) rawBase64.take(32) + rawBase64.takeLast(32) else rawBase64
+        val dedupeKey = "b64_${rawBase64.length}_$sample"
         if (isDuplicateDownload(dedupeKey)) {
             android.util.Log.w("DownloadHelper", "Ignoring duplicate saveBase64 request for $cleanName")
             return
         }
 
-        val notificationId = (cleanName.hashCode() and 0x7FFFFFFF) % 100000
+        val notificationId = (dedupeKey.hashCode() and 0x7FFFFFFF) % 90000 + 10000
 
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 
         CoroutineScope(Dispatchers.IO).launch {
             var pendingUri: Uri? = null
             try {
-                val rawBase64 = if (base64Data.contains(",")) {
-                    base64Data.substringAfter(",")
-                } else {
-                    base64Data
-                }
-
-                val bytes = android.util.Base64.decode(rawBase64.trim(), android.util.Base64.DEFAULT)
+                val bytes = android.util.Base64.decode(rawBase64, android.util.Base64.DEFAULT)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     val (collectionUri, relativePath) = getMediaStoreDestination(finalMime, cleanName)
@@ -156,13 +157,14 @@ object DownloadHelper {
         }
 
         var cleanName = sanitizeFileName(suggestedFileName, mimeType)
-        val dedupeKey = "url_${url.trim()}_${cleanName.trim()}"
+        val normalizedUrl = url.trim().lowercase()
+        val dedupeKey = "url_$normalizedUrl"
         if (isDuplicateDownload(dedupeKey)) {
             android.util.Log.w("DownloadHelper", "Ignoring duplicate download request for $cleanName ($url)")
             return
         }
 
-        val notificationId = ((url.hashCode() xor cleanName.hashCode()) and 0x7FFFFFFF) % 100000
+        val notificationId = (normalizedUrl.hashCode() and 0x7FFFFFFF) % 90000 + 10000
 
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 

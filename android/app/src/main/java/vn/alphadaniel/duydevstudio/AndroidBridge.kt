@@ -655,16 +655,6 @@ class AndroidBridge(
     }
 
     /**
-     * Enable or disable pull-to-refresh to avoid accidental reloads during tool interactions.
-     */
-    @JavascriptInterface
-    fun setSwipeRefreshEnabled(enabled: Boolean) {
-        activity.runOnUiThread {
-            activity.setSwipeRefreshEnabled(enabled)
-        }
-    }
-
-    /**
      * Native text and link share via Android system intent chooser.
      */
     @JavascriptInterface

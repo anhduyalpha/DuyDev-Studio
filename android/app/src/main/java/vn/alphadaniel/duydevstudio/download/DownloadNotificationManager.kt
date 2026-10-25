@@ -89,19 +89,52 @@ object DownloadNotificationManager {
         val dotIndex = trimmed.lastIndexOf('.')
         val ext = if (dotIndex != -1) trimmed.substring(dotIndex) else ""
         val nameWithoutExt = if (dotIndex != -1) trimmed.substring(0, dotIndex) else trimmed
+        val isAudio = ext.equals(".mp3", ignoreCase = true) ||
+            ext.equals(".m4a", ignoreCase = true) ||
+            ext.equals(".wav", ignoreCase = true) ||
+            ext.equals(".aac", ignoreCase = true) ||
+            ext.equals(".opus", ignoreCase = true) ||
+            ext.equals(".flac", ignoreCase = true) ||
+            nameWithoutExt.endsWith("_audio", ignoreCase = true)
+        val isImage = ext.equals(".jpg", ignoreCase = true) ||
+            ext.equals(".jpeg", ignoreCase = true) ||
+            ext.equals(".png", ignoreCase = true) ||
+            ext.equals(".webp", ignoreCase = true)
 
-        if (nameWithoutExt.startsWith("tiktok_", ignoreCase = true) && nameWithoutExt.length > 15) {
-            val suffix = nameWithoutExt.takeLast(6)
-            return "TikTok Video ($suffix)$ext"
-        }
-        if (nameWithoutExt.startsWith("youtube_", ignoreCase = true) && nameWithoutExt.length > 20) {
-            val suffix = nameWithoutExt.takeLast(6)
-            return "YouTube Media ($suffix)$ext"
+        val digits = Regex("\\d{4,}").findAll(nameWithoutExt).map { it.value }.lastOrNull()?.takeLast(4)
+
+        if (nameWithoutExt.startsWith("tiktok_", ignoreCase = true) && nameWithoutExt.length > 14) {
+            val label = when {
+                isAudio -> "TikTok Audio"
+                nameWithoutExt.contains("HD", ignoreCase = true) -> "TikTok Video HD"
+                isImage -> "TikTok Slide"
+                else -> "TikTok Video"
+            }
+            return if (digits != null) "$label (..$digits)$ext" else "$label$ext"
         }
 
-        if (trimmed.length > 40) {
-            val prefix = nameWithoutExt.take(22)
-            val suffix = nameWithoutExt.takeLast(8)
+        if (nameWithoutExt.startsWith("youtube_", ignoreCase = true) && nameWithoutExt.length > 16) {
+            val label = if (isAudio) "YouTube Audio" else "YouTube Video"
+            return if (digits != null) "$label (..$digits)$ext" else "$label$ext"
+        }
+
+        if (nameWithoutExt.startsWith("facebook_", ignoreCase = true) && nameWithoutExt.length > 16) {
+            val label = if (isAudio) "Facebook Audio" else "Facebook Video"
+            return if (digits != null) "$label (..$digits)$ext" else "$label$ext"
+        }
+
+        if (nameWithoutExt.startsWith("instagram_", ignoreCase = true) && nameWithoutExt.length > 16) {
+            val label = if (isImage) "Instagram Photo" else "Instagram Media"
+            return if (digits != null) "$label (..$digits)$ext" else "$label$ext"
+        }
+
+        if (nameWithoutExt.startsWith("spotify_", ignoreCase = true)) {
+            return if (digits != null) "Spotify Track (..$digits)$ext" else "Spotify Track$ext"
+        }
+
+        if (trimmed.length > 36) {
+            val prefix = nameWithoutExt.take(20)
+            val suffix = nameWithoutExt.takeLast(6)
             return "$prefix...$suffix$ext"
         }
         return trimmed

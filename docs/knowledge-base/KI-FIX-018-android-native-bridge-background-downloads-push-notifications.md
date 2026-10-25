@@ -7,7 +7,7 @@ domain: mobile
 tags: [android, webview, native-bridge, download-manager, push-notifications, pwa, file-provider]
 created_at: 2026-10-02
 updated_at: 2026-10-25
-version: 1.2.0
+version: 1.2.1
 owner: "@anhduy"
 trigger_conditions: "Khi người dùng sử dụng ứng dụng Android (WebView / TWA Wrapper) bấm tải file PDF hoặc APK nhưng trình duyệt WebView không phản hồi, tải ngầm bị hủy khi thoát app, hoặc thanh thông báo không hiện tiến độ tải"
 search_queries:
@@ -191,8 +191,9 @@ MediaScannerConnection.scanFile(
 > 2. **FileProvider và quyền mở file ngoài**: Khi người dùng nhấn vào notification để mở file PDF, Intent mở file bắt buộc dùng `FileProvider.getUriForFile(...)` kèm cờ `FLAG_GRANT_READ_URI_PERMISSION`. Cấm truyền thẳng `Uri.fromFile(destFile)` vì sẽ ném ngoại lệ `FileUriExposedException`.
 > 3. **Tên file tải về (APK / PDF / MP4)**: Luôn chuẩn hóa đuôi mở rộng `.pdf`, `.mp4` hoặc `.apk`. Tránh để server trả về header `Content-Disposition` không có extension khiến Android lưu thành file không định dạng.
 > 4. **MIME Type cho MediaScanner**: MediaScanner trên Android yêu cầu MIME type chuẩn xác (`video/mp4`, `audio/mpeg`). Nếu truyền `application/octet-stream`, Android MediaProvider sẽ bỏ qua việc lập chỉ mục cho Thư viện Ảnh/Video (Gallery).
-> 5. **Bẫy Event Bubbling & Tải Trùng Tệp (Double Download Trap)**: Khi các nút download trong giao diện (như TikTok / Quiz) được gắn thẻ `<a download>` kèm `onclick` gọi `AndroidBridge.downloadFile`, nếu không gọi `e.stopPropagation()`, sự kiện nhấp chuột sẽ tiếp tục nổi bọt lên `document` và bị trình lắng nghe toàn cục trong `app.js` tóm lại rồi gọi `downloadFile` lần thứ hai. Cần chặn bọt ở nút con, kiểm tra `e.defaultPrevented` ở `document`, và cài đặt bộ đệm trượt 2000ms trong `DownloadHelper` bản địa để triệt tiêu tải trùng lặp.
+> 5. **Bẫy Event Bubbling & Tải Trùng Tệp (Double Download Trap)**: Khi các nút download trong giao diện (như TikTok / Quiz) được gắn thẻ `<a download>` kèm `onclick` gọi `AndroidBridge.downloadFile`, nếu không gọi `e.stopPropagation()`, sự kiện nhấp chuột sẽ tiếp tục nổi bọt lên `document` và bị trình lắng nghe toàn cục trong `app.js` tóm lại rồi gọi `downloadFile` lần thứ hai với tên tệp mặc định hoặc từ đuôi endpoint. Khóa khử trùng lặp trong `DownloadHelper` BẮT BUỘC phải dựa trên URL chuẩn hóa (`url_${normalizedUrl}`) và ID thông báo phải tính theo hash của URL để triệt tiêu việc tạo thông báo kép khi tên tệp đề xuất khác nhau.
 > 6. **Anti-Pattern Biểu Tượng Kép (Duplicate Icons)**: Trên Android 10+, thanh thông báo đã tự động hiển thị biểu tượng ứng dụng nhỏ ở đầu tiêu đề. Việc gọi thêm `.setLargeIcon(appIcon)` với cùng icon launcher sẽ khiến thông báo hiển thị hai biểu tượng giống hệt nhau (trái nhỏ, phải to). Hãy bỏ `setLargeIcon` đối với thông báo tệp thông thường để đạt chuẩn Material You tối giản.
+> 7. **Lỗi Trùng Lặp Phương Thức Kotlin (Conflicting Overloads)**: Khi bổ sung phương thức trong `AndroidBridge.kt`, phải đảm bảo không khai báo trùng signature `@JavascriptInterface fun setSwipeRefreshEnabled(enabled: Boolean)` ở nhiều vị trí trong class, nếu không `kotlinc` sẽ báo lỗi biên dịch và làm đứt gãy CI build release.
 
 ---
 
@@ -209,6 +210,7 @@ MediaScannerConnection.scanFile(
 ---
 
 ## 5. Changelog
+- **2026-10-25 (v1.2.1)**: Khắc phục lỗi conflicting overloads trong `AndroidBridge.kt` (loại bỏ phương thức trùng lặp `setSwipeRefreshEnabled`), chuẩn hóa khóa khử trùng `DownloadHelper` theo URL thuần túy, đồng bộ ID thông báo deterministically per URL và trích xuất filename từ query string trong `app.js` (APK v24.7.0).
 - **2026-10-25 (v1.2.0)**: Sửa triệt để lỗi double download bằng cách ngăn event bubbling, kiểm tra `e.defaultPrevented` trong `app.js` và bổ sung bộ đệm trượt khử trùng lặp 2000ms trong `DownloadHelper.kt`. Tái thiết kế toàn diện thông báo: bỏ `largeIcon` trùng lặp, căn chỉnh tiêu đề chống tràn chữ ("Tải xuống hoàn tất"), định dạng tên tệp thông minh và thêm action button "Mở tệp" trực tiếp (APK v24.6.0).
 - **2026-10-14 (v1.1.0)**: Thêm phân luồng thư mục `DIRECTORY_MOVIES/DuyDevStudio` cho video và `DIRECTORY_MUSIC/DuyDevStudio` cho audio, chuẩn hóa MIME `video/mp4` và kích hoạt `MediaScannerConnection.scanFile` giúp video/audio hiển thị ngay trong Thư viện Gallery.
 - **2026-10-02 (v1.0.0)**: Khởi tạo KI-FIX-018 dựa trên commit `213f698` và `88137cd`.
