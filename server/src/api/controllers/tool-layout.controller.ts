@@ -3,16 +3,21 @@ import { z } from 'zod';
 import { toolLayoutService, VALID_CATEGORIES } from '../../services/tool-layout.service.js';
 import { BadRequestError } from '../../lib/errors.js';
 
+const categoryItemSchema = z.object({
+  id: z.string().min(1, 'ID danh mục không được để trống').regex(/^[a-zA-Z0-9_-]+$/, 'ID danh mục chỉ chứa chữ cái, số, gạch nối hoặc gạch dưới'),
+  label: z.string().min(1, 'Tên danh mục không được để trống'),
+  color: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Màu đại diện phải là mã màu HEX hợp lệ (#RRGGBB)')
+});
+
 const toolLayoutItemSchema = z.object({
   id: z.string().min(1, 'Mã công cụ không được để trống'),
-  category: z.enum(VALID_CATEGORIES, {
-    errorMap: () => ({ message: 'Danh mục công cụ không hợp lệ' })
-  }),
+  category: z.string().min(1, 'Danh mục công cụ không được để trống'),
   order: z.number().int().optional()
 });
 
 const updateToolLayoutBodySchema = z.object({
-  items: z.array(toolLayoutItemSchema).min(1, 'Danh sách thẻ công cụ không được để trống')
+  items: z.array(toolLayoutItemSchema).min(1, 'Danh sách thẻ công cụ không được để trống'),
+  categories: z.array(categoryItemSchema).optional()
 });
 
 /**
@@ -37,7 +42,7 @@ export async function updateToolLayoutHandler(request: FastifyRequest, reply: Fa
     throw new BadRequestError(parseResult.error.errors[0]?.message || 'Dữ liệu bố cục thẻ công cụ không hợp lệ');
   }
 
-  const data = await toolLayoutService.updateLayout(parseResult.data.items);
+  const data = await toolLayoutService.updateLayout(parseResult.data.items, parseResult.data.categories);
   return reply.send({
     success: true,
     message: 'Đã cập nhật bố cục thẻ công cụ thành công',

@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.01': {
+    version: 'v24.01',
+    title: 'Bản cập nhật v24.01',
+    date: '25/10/2026',
+    features: [
+      'Quản Lý & Tạo Mới Tab Trong Admin: Cho phép admin tùy ý tạo tab mới, đặt tên tab hiển thị, và sinh mã slug tự động',
+      'Bộ Chọn Màu Chấm Tròn Đại Diện: Cho phép chọn màu sắc bất kỳ qua bộ chọn màu hoặc bảng màu gợi ý cao cấp cho từng tab hiển thị trên Dashboard',
+      'Đồng Bộ & Phân Bổ Thẻ Linh Hoạt: Cho phép gán thẻ vào bất kỳ tab nào (gốc hoặc tạo mới), chỉnh sửa tên, đổi màu hoặc xóa tab tùy biến an toàn',
+      'Đồng Bộ Tức Thì Thời Gian Thực: Toàn bộ thay đổi về tab, màu sắc chấm tròn và thứ tự thẻ tự động phản ánh tức thì lên Dashboard của người dùng qua BroadcastChannel và Server API'
+    ],
+    fixes: [
+      'Tự động bảo vệ thẻ công cụ: Khi xóa một tab tùy biến, các thẻ công cụ bên trong sẽ tự động chuyển về tab Tiện ích để đảm bảo không bao giờ bị mất thẻ',
+      'Khắc phục việc kiểm tra danh mục cứng trên máy chủ, hỗ trợ lưu trữ bền vững cả danh sách tab và thứ tự thẻ'
+    ]
+  },
   'v24.00': {
     version: 'v24.00',
     title: 'Bản cập nhật v24.00',

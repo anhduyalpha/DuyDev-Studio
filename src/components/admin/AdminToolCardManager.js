@@ -1,31 +1,53 @@
 /**
  * AdminToolCardManager - Tool Card & Tab Category Layout Editor
- * Allows administrators to reorder tools and reassign categories (tabs) with real-time preview and server persistence.
+ * Allows administrators to create/edit tabs, pick indicator colors, reorder tools,
+ * and reassign categories with real-time preview and server persistence.
  */
 
-import { toolRegistry } from '../../hooks/useToolRegistry.js';
+import { toolRegistry, DEFAULT_TOOL_CATEGORIES } from '../../hooks/useToolRegistry.js';
 import { getStorageAuthHeaders } from '../../utilities/adminAuth.js';
 import { showToast } from '../../utilities/toast.js';
 import { soundEngine } from '../../utilities/soundEngine.js';
 
-export const CATEGORY_OPTIONS = [
-  { id: 'pdf', label: 'PDF', color: '#F59E0B' },
-  { id: 'convert', label: 'Chuyển đổi', color: '#8B5CF6' },
-  { id: 'archive', label: 'File nén', color: '#0EA5E9' },
-  { id: 'qr', label: 'Mã QR', color: '#10B981' },
-  { id: 'system', label: 'Tiện ích', color: '#6366F1' },
-  { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
+export const SYSTEM_CATEGORY_IDS = new Set(['pdf', 'convert', 'archive', 'qr', 'system', 'advanced']);
+
+export const PRESET_TAB_COLORS = [
+  '#F59E0B', // Amber
+  '#8B5CF6', // Violet
+  '#0EA5E9', // Sky
+  '#10B981', // Emerald
+  '#6366F1', // Indigo
+  '#EC4899', // Pink
+  '#F43F5E', // Rose
+  '#14B8A6', // Teal
+  '#06B6D4', // Cyan
+  '#F97316'  // Orange
 ];
 
 // In-memory working draft state
 let draftTools = [];
 let originalToolsSnapshot = [];
+let draftCategories = [];
+let originalCategoriesSnapshot = [];
 let activeCategoryFilter = 'all';
 let searchQuery = '';
 let isSaving = false;
+let showAddTabModal = false;
+let newTabForm = { label: '', id: '', color: '#8B5CF6' };
+
+function toSlug(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
 
 /**
- * Syncs working draft state from toolRegistry.tools
+ * Syncs working draft state from toolRegistry.tools and toolRegistry.categories
  */
 export function initDraftTools() {
   draftTools = toolRegistry.tools.map((t, idx) => ({
@@ -40,6 +62,13 @@ export function initDraftTools() {
     order: idx + 1
   }));
   originalToolsSnapshot = JSON.parse(JSON.stringify(draftTools));
+
+  draftCategories = toolRegistry.getRawCategories().map(c => ({
+    id: c.id,
+    label: c.label,
+    color: c.color
+  }));
+  originalCategoriesSnapshot = JSON.parse(JSON.stringify(draftCategories));
 }
 
 /**
@@ -54,6 +83,16 @@ function hasUnsavedChanges() {
       return true;
     }
   }
+
+  if (draftCategories.length !== originalCategoriesSnapshot.length) return true;
+  for (let i = 0; i < draftCategories.length; i++) {
+    const d = draftCategories[i];
+    const o = originalCategoriesSnapshot[i];
+    if (!o || d.id !== o.id || d.label !== o.label || d.color !== o.color) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -71,10 +110,10 @@ export function getFilteredDraftTools() {
 }
 
 /**
- * Renders the Tool Card Manager HTML
+ * Renders the Tool Card & Tab Manager HTML
  */
 export function renderAdminToolCardManager() {
-  if (draftTools.length === 0) {
+  if (draftTools.length === 0 || draftCategories.length === 0) {
     initDraftTools();
   }
 
@@ -82,7 +121,7 @@ export function renderAdminToolCardManager() {
 
   // Calculate counts per category
   const counts = { all: draftTools.length };
-  CATEGORY_OPTIONS.forEach(c => {
+  draftCategories.forEach(c => {
     counts[c.id] = draftTools.filter(t => t.category === c.id).length;
   });
 
@@ -100,7 +139,7 @@ export function renderAdminToolCardManager() {
           <div>
             <div class="flex items-center gap-2.5 flex-wrap">
               <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Quản Lý Thẻ & Danh Mục
+                Quản Lý Thẻ & Danh Mục Tab
               </h2>
               ${isDirty ? `
                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 animate-pulse">
@@ -115,7 +154,7 @@ export function renderAdminToolCardManager() {
               `}
             </div>
             <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-              Tùy chỉnh danh mục thẻ (tab hiển thị) và kéo đổi thứ tự thẻ công cụ trên trang chủ.
+              Tạo mới tab, chọn màu chấm tròn đại diện, gán thẻ công cụ vào tab và sắp xếp thứ tự hiển thị.
             </p>
           </div>
         </div>
@@ -126,7 +165,7 @@ export function renderAdminToolCardManager() {
             type="button"
             id="btnResetToolLayout"
             class="px-3.5 py-2.5 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 min-h-[44px]"
-            title="Khôi phục toàn bộ vị trí và danh mục mặc định"
+            title="Khôi phục toàn bộ vị trí, tab và danh mục mặc định"
           >
             <i data-lucide="rotate-ccw" class="w-4 h-4 text-zinc-500"></i>
             <span>Mặc định</span>
@@ -144,7 +183,196 @@ export function renderAdminToolCardManager() {
         </div>
       </div>
 
-      <!-- 2. Search & Category Filters Bar -->
+      <!-- 2. Tab Management & Color Dot Customizer -->
+      <div class="p-5 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-md shadow-xs space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+              <i data-lucide="palette" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Danh Sách Tab & Màu Chấm Tròn Đại Diện
+              </h3>
+              <p class="text-[11px] text-zinc-500">Click vào chấm màu để đổi màu hoặc sửa tên tab trực tiếp</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            id="btnOpenAddTab"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 min-h-[38px]"
+          >
+            <i data-lucide="${showAddTabModal ? 'chevron-up' : 'plus'}" class="w-3.5 h-3.5"></i>
+            <span>${showAddTabModal ? 'Đóng form tạo' : 'Tạo mới Tab'}</span>
+          </button>
+        </div>
+
+        <!-- Add New Tab Form Panel -->
+        ${showAddTabModal ? `
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-indigo-500/30 space-y-3.5 animate-fadeIn">
+            <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
+              <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                Thêm Tab Mới
+              </span>
+              <span class="text-[11px] text-zinc-400 font-mono">Slug: #${newTabForm.id || 'tự sinh'}</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Label Input -->
+              <div>
+                <label for="inputNewTabLabel" class="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                  Tên Tab hiển thị *
+                </label>
+                <input
+                  type="text"
+                  id="inputNewTabLabel"
+                  value="${newTabForm.label}"
+                  placeholder="Ví dụ: Media Hub, AI Tools..."
+                  class="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[38px]"
+                />
+              </div>
+
+              <!-- Slug ID Input -->
+              <div>
+                <label for="inputNewTabId" class="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                  Mã Tab (ID/Slug) *
+                </label>
+                <input
+                  type="text"
+                  id="inputNewTabId"
+                  value="${newTabForm.id}"
+                  placeholder="ví dụ: media-hub"
+                  class="w-full px-3 py-2 rounded-xl text-xs font-mono bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[38px]"
+                />
+              </div>
+
+              <!-- Color Picker & Live Preview -->
+              <div>
+                <label class="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                  Màu chấm tròn đại diện
+                </label>
+                <div class="flex items-center gap-2">
+                  <div class="relative w-9 h-9 rounded-xl border border-black/10 dark:border-white/10 shrink-0 overflow-hidden cursor-pointer shadow-xs" style="background-color: ${newTabForm.color};">
+                    <input
+                      type="color"
+                      id="inputNewTabColor"
+                      value="${newTabForm.color}"
+                      class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      title="Chọn màu bất kỳ"
+                    />
+                  </div>
+
+                  <!-- Live Preview Pill -->
+                  <div class="flex-1 flex items-center px-3 py-1.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 min-h-[38px]">
+                    <span class="w-2 h-2 rounded-full mr-2 shrink-0 transition-colors" style="background-color: ${newTabForm.color};"></span>
+                    <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                      ${newTabForm.label || 'Xem trước Tab'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Color Palette Presets -->
+            <div class="flex items-center gap-1.5 pt-1 flex-wrap">
+              <span class="text-[11px] text-zinc-400 mr-1">Bảng màu gợi ý:</span>
+              ${PRESET_TAB_COLORS.map(c => `
+                <button
+                  type="button"
+                  data-preset-color="${c}"
+                  class="btn-preset-color w-6 h-6 rounded-lg border transition-transform hover:scale-110 active:scale-95 cursor-pointer ${newTabForm.color.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-zinc-900' : 'border-black/10 dark:border-white/10'}"
+                  style="background-color: ${c};"
+                  title="Chọn màu ${c}"
+                ></button>
+              `).join('')}
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-zinc-200 dark:border-white/5">
+              <button
+                type="button"
+                id="btnCancelAddTab"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                id="btnSubmitNewTab"
+                class="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition cursor-pointer flex items-center gap-1.5"
+              >
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>Thêm Tab Này</span>
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Tabs Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          ${draftCategories.map(cat => {
+            const isSystem = SYSTEM_CATEGORY_IDS.has(cat.id);
+            const count = counts[cat.id] || 0;
+
+            return `
+              <div
+                class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/10 transition-all flex items-center justify-between gap-2.5"
+                data-category-card="${cat.id}"
+              >
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <!-- Color Dot with Hidden Native Picker -->
+                  <div class="relative w-5 h-5 rounded-full shrink-0 border border-black/10 dark:border-white/20 cursor-pointer shadow-xs group" style="background-color: ${cat.color};" title="Click để đổi màu chấm tròn">
+                    <input
+                      type="color"
+                      data-cat-id="${cat.id}"
+                      value="${cat.color}"
+                      class="input-tab-color-edit absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                  </div>
+
+                  <!-- Editable Tab Label -->
+                  <div class="min-w-0 flex-1">
+                    <input
+                      type="text"
+                      data-cat-id="${cat.id}"
+                      value="${cat.label}"
+                      title="Sửa tên tab"
+                      class="input-tab-label-edit w-full bg-transparent border-b border-transparent hover:border-zinc-300 dark:hover:border-zinc-600 focus:border-indigo-500 text-xs font-bold text-zinc-900 dark:text-zinc-100 px-1 py-0.5 rounded focus:outline-none transition-colors"
+                    />
+                    <div class="flex items-center gap-1.5 px-1">
+                      <span class="text-[10px] font-mono text-zinc-400">#${cat.id}</span>
+                      <span class="text-[10px] text-zinc-400">•</span>
+                      <span class="text-[10px] font-mono font-semibold text-zinc-500 dark:text-zinc-400 tabular-nums">${count} thẻ</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Delete Custom Tab Button (System categories cannot be deleted) -->
+                ${!isSystem ? `
+                  <button
+                    type="button"
+                    data-action="delete-tab"
+                    data-cat-id="${cat.id}"
+                    data-cat-label="${cat.label}"
+                    class="btn-delete-tab w-7 h-7 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition cursor-pointer active:scale-95 shrink-0"
+                    title="Xóa tab này (các thẻ bên trong sẽ tự chuyển về Tiện ích)"
+                  >
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+                  </button>
+                ` : `
+                  <span class="text-[10px] font-mono text-zinc-400 shrink-0 px-1.5 py-0.5 rounded bg-zinc-200/50 dark:bg-zinc-700/50" title="Tab mặc định hệ thống">
+                    Gốc
+                  </span>
+                `}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- 3. Search & Category Filters Bar -->
       <div class="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 backdrop-blur-md shadow-xs space-y-3">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <!-- Filter Pills -->
@@ -158,7 +386,7 @@ export function renderAdminToolCardManager() {
               <span class="px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${activeCategoryFilter === 'all' ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900' : 'bg-zinc-200/60 dark:bg-white/10 text-zinc-600 dark:text-zinc-400'}">${counts.all}</span>
             </button>
 
-            ${CATEGORY_OPTIONS.map(cat => {
+            ${draftCategories.map(cat => {
               const isActive = activeCategoryFilter === cat.id;
               const count = counts[cat.id] || 0;
               return `
@@ -198,7 +426,7 @@ export function renderAdminToolCardManager() {
         </div>
       </div>
 
-      <!-- 3. Tools Cards List -->
+      <!-- 4. Tools Cards List -->
       <div class="space-y-2.5" id="toolLayoutCardsList">
         ${filteredTools.length === 0 ? `
           <div class="p-12 text-center rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 space-y-3">
@@ -212,7 +440,7 @@ export function renderAdminToolCardManager() {
           const globalIndex = draftTools.findIndex(t => t.id === tool.id);
           const isFirst = index === 0;
           const isLast = index === filteredTools.length - 1;
-          const currentCat = CATEGORY_OPTIONS.find(c => c.id === tool.category) || { label: tool.category, color: '#6366F1' };
+          const currentCat = draftCategories.find(c => c.id === tool.category) || { label: tool.category, color: '#6366F1' };
 
           return `
             <div
@@ -260,9 +488,9 @@ export function renderAdminToolCardManager() {
                       data-tool-id="${tool.id}"
                       class="select-tool-category appearance-none pl-3 pr-7 py-2 rounded-xl text-xs font-semibold bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[40px]"
                     >
-                      ${CATEGORY_OPTIONS.map(c => `
+                      ${draftCategories.map(c => `
                         <option value="${c.id}" ${c.id === tool.category ? 'selected' : ''}>
-                          ${c.label}
+                          ${c.label} (#${c.id})
                         </option>
                       `).join('')}
                     </select>
@@ -300,18 +528,18 @@ export function renderAdminToolCardManager() {
         }).join('')}
       </div>
 
-      <!-- 4. Real-Time Visual Tab Preview Card -->
+      <!-- 5. Real-Time Visual Tab Preview Card -->
       <div class="p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 space-y-3.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <i data-lucide="eye" class="w-4 h-4 text-zinc-500"></i>
             <h3 class="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Xem Trước Bố Cục Thẻ Theo Tab</h3>
           </div>
-          <span class="text-[11px] text-zinc-500">Tổng cộng: ${draftTools.length} thẻ</span>
+          <span class="text-[11px] text-zinc-500">Tổng cộng: ${draftTools.length} thẻ trong ${draftCategories.length} tabs</span>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          ${CATEGORY_OPTIONS.map(cat => {
+          ${draftCategories.map(cat => {
             const catTools = draftTools.filter(t => t.category === cat.id);
             return `
               <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-white/5 space-y-2">
@@ -346,7 +574,7 @@ export function renderAdminToolCardManager() {
 }
 
 /**
- * Attaches interactive listeners to the Tool Card Manager UI
+ * Attaches interactive listeners to the Tool Card & Tab Manager UI
  */
 export function attachAdminToolCardManagerListeners(container, onReRender) {
   if (!container) return;
@@ -355,7 +583,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
     container.innerHTML = renderAdminToolCardManager();
     attachAdminToolCardManagerListeners(container, onReRender);
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
+      try { window.lucide.createIcons(); } catch (_) {}
     }
     if (typeof onReRender === 'function') {
       onReRender();
@@ -391,7 +619,163 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
     };
   }
 
-  // 3. Category Change Selectors
+  // 3. Tab Creation Form Toggle & Submission
+  const btnOpenAddTab = container.querySelector('#btnOpenAddTab');
+  if (btnOpenAddTab) {
+    btnOpenAddTab.onclick = () => {
+      showAddTabModal = !showAddTabModal;
+      if (showAddTabModal) {
+        newTabForm = { label: '', id: '', color: PRESET_TAB_COLORS[Math.floor(Math.random() * PRESET_TAB_COLORS.length)] };
+      }
+      refreshUI();
+    };
+  }
+
+  const btnCancelAddTab = container.querySelector('#btnCancelAddTab');
+  if (btnCancelAddTab) {
+    btnCancelAddTab.onclick = () => {
+      showAddTabModal = false;
+      refreshUI();
+    };
+  }
+
+  const inputNewTabLabel = container.querySelector('#inputNewTabLabel');
+  const inputNewTabId = container.querySelector('#inputNewTabId');
+  const inputNewTabColor = container.querySelector('#inputNewTabColor');
+
+  if (inputNewTabLabel) {
+    inputNewTabLabel.oninput = (e) => {
+      newTabForm.label = e.target.value;
+      if (!inputNewTabId.dataset.manuallyEdited) {
+        newTabForm.id = toSlug(e.target.value);
+        if (inputNewTabId) inputNewTabId.value = newTabForm.id;
+      }
+    };
+  }
+
+  if (inputNewTabId) {
+    inputNewTabId.oninput = (e) => {
+      inputNewTabId.dataset.manuallyEdited = 'true';
+      newTabForm.id = toSlug(e.target.value);
+      e.target.value = newTabForm.id;
+    };
+  }
+
+  if (inputNewTabColor) {
+    inputNewTabColor.oninput = (e) => {
+      newTabForm.color = e.target.value;
+      refreshUI();
+    };
+  }
+
+  container.querySelectorAll('.btn-preset-color').forEach(btn => {
+    btn.onclick = () => {
+      const color = btn.dataset.presetColor;
+      if (color) {
+        newTabForm.color = color;
+        refreshUI();
+      }
+    };
+  });
+
+  const btnSubmitNewTab = container.querySelector('#btnSubmitNewTab');
+  if (btnSubmitNewTab) {
+    btnSubmitNewTab.onclick = () => {
+      const label = (newTabForm.label || '').trim();
+      let id = (newTabForm.id || '').trim().toLowerCase();
+      if (!id) {
+        id = toSlug(label);
+      }
+
+      if (!label) {
+        showToast('Vui lòng nhập tên tab hiển thị', 'error');
+        return;
+      }
+      if (!id) {
+        showToast('Vui lòng nhập mã ID/Slug cho tab', 'error');
+        return;
+      }
+
+      if (id === 'all' || draftCategories.some(c => c.id === id)) {
+        showToast(`Mã tab #${id} đã tồn tại! Vui lòng chọn ID khác`, 'error');
+        return;
+      }
+
+      draftCategories.push({
+        id,
+        label,
+        color: newTabForm.color || '#6366F1'
+      });
+
+      showAddTabModal = false;
+      newTabForm = { label: '', id: '', color: '#8B5CF6' };
+      try { soundEngine?.playSuccess(); } catch (_) {}
+      showToast(`Đã thêm tab "${label}" thành công`, 'success');
+      refreshUI();
+    };
+  }
+
+  // 4. In-Place Edit Tab Color & Label
+  container.querySelectorAll('.input-tab-color-edit').forEach(input => {
+    input.onchange = (e) => {
+      const catId = input.dataset.catId;
+      const targetCat = draftCategories.find(c => c.id === catId);
+      if (targetCat && targetCat.color !== e.target.value) {
+        targetCat.color = e.target.value;
+        try { soundEngine?.playToggle(); } catch (_) {}
+        refreshUI();
+      }
+    };
+  });
+
+  container.querySelectorAll('.input-tab-label-edit').forEach(input => {
+    input.onchange = (e) => {
+      const catId = input.dataset.catId;
+      const targetCat = draftCategories.find(c => c.id === catId);
+      const val = (e.target.value || '').trim();
+      if (targetCat && val && targetCat.label !== val) {
+        targetCat.label = val;
+        try { soundEngine?.playToggle(); } catch (_) {}
+        refreshUI();
+      }
+    };
+  });
+
+  // 5. Delete Custom Tab
+  container.querySelectorAll('.btn-delete-tab').forEach(btn => {
+    btn.onclick = () => {
+      const catId = btn.dataset.catId;
+      const catLabel = btn.dataset.catLabel || catId;
+      if (SYSTEM_CATEGORY_IDS.has(catId)) {
+        showToast('Không thể xóa tab mặc định của hệ thống', 'error');
+        return;
+      }
+
+      const confirmDelete = window.confirm(
+        `Bạn có chắc chắn muốn xóa tab "${catLabel}"? Các thẻ trong tab này sẽ tự động chuyển về tab "Tiện ích".`
+      );
+      if (!confirmDelete) return;
+
+      // Reassign tools in this category to 'system'
+      draftTools.forEach(t => {
+        if (t.category === catId) {
+          t.category = 'system';
+        }
+      });
+
+      // Remove from draftCategories
+      draftCategories = draftCategories.filter(c => c.id !== catId);
+      if (activeCategoryFilter === catId) {
+        activeCategoryFilter = 'all';
+      }
+
+      try { soundEngine?.playToggle(); } catch (_) {}
+      showToast(`Đã xóa tab "${catLabel}". Các thẻ liên quan đã chuyển sang Tiện ích`, 'info');
+      refreshUI();
+    };
+  });
+
+  // 6. Category Change Selectors for Tools
   container.querySelectorAll('.select-tool-category').forEach(sel => {
     sel.onchange = (e) => {
       const toolId = sel.dataset.toolId;
@@ -405,7 +789,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
     };
   });
 
-  // 4. Move Up / Move Down Reordering (Relative to current visible tab/filter)
+  // 7. Move Up / Move Down Reordering
   container.querySelectorAll('button[data-action="move-up"]').forEach(btn => {
     btn.onclick = () => {
       const toolId = btn.dataset.toolId;
@@ -450,7 +834,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
     };
   });
 
-  // 5. Save Button
+  // 8. Save Button
   const btnSave = container.querySelector('#btnSaveToolLayout');
   if (btnSave) {
     btnSave.onclick = async () => {
@@ -466,8 +850,9 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
           order: idx + 1
         }));
 
-        await toolRegistry.saveLayoutToServer(payload, authHeaders);
+        await toolRegistry.saveLayoutToServer(payload, authHeaders, draftCategories);
         originalToolsSnapshot = JSON.parse(JSON.stringify(draftTools));
+        originalCategoriesSnapshot = JSON.parse(JSON.stringify(draftCategories));
 
         try { soundEngine?.playSuccess(); } catch (_) {}
         showToast('Đã lưu cấu hình thẻ và danh mục thành công', 'success');
@@ -482,12 +867,12 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
     };
   }
 
-  // 6. Reset to Defaults Button
+  // 9. Reset to Defaults Button
   const btnReset = container.querySelector('#btnResetToolLayout');
   if (btnReset) {
     btnReset.onclick = async () => {
       const confirmReset = window.confirm(
-        'Bạn có chắc chắn muốn khôi phục vị trí và danh mục của tất cả các thẻ về mặc định ban đầu?'
+        'Bạn có chắc chắn muốn khôi phục vị trí, tab và danh mục của tất cả các thẻ về mặc định ban đầu?'
       );
       if (!confirmReset) return;
 
@@ -500,7 +885,7 @@ export function attachAdminToolCardManagerListeners(container, onReRender) {
         initDraftTools();
 
         try { soundEngine?.playSuccess(); } catch (_) {}
-        showToast('Đã khôi phục bố cục thẻ công cụ về mặc định ban đầu', 'info');
+        showToast('Đã khôi phục bố cục thẻ và tab về mặc định ban đầu', 'info');
       } catch (err) {
         console.error('[AdminToolCardManager] Reset error:', err);
         try { soundEngine?.playError(); } catch (_) {}

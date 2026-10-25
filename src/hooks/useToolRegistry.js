@@ -323,16 +323,38 @@ export function getCardTierConfig(tierKey) {
 }
 
 export const TOOL_LAYOUT_STORAGE_KEY = 'ds_tool_layout_override';
+export const TOOL_CATEGORIES_STORAGE_KEY = 'ds_tool_categories_override';
+
+export const DEFAULT_TOOL_CATEGORIES = [
+  { id: 'pdf', label: 'PDF', color: '#F59E0B' },
+  { id: 'convert', label: 'Chuyển đổi', color: '#8B5CF6' },
+  { id: 'archive', label: 'File nén', color: '#0EA5E9' },
+  { id: 'qr', label: 'Mã QR', color: '#10B981' },
+  { id: 'system', label: 'Tiện ích', color: '#6366F1' },
+  { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
+];
 
 class ToolRegistry {
   constructor() {
     this.tools = DEFAULT_TOOLS.map(t => ({ ...t }));
+    this.categories = DEFAULT_TOOL_CATEGORIES.map(c => ({ ...c }));
     this.listeners = new Set();
     this.currentCategory = 'all';
     this.searchQuery = '';
     this.channel = null;
     this.loadLocalLayout();
     this.initCrossTabSync();
+  }
+
+  getCategories() {
+    return [
+      { id: 'all', label: 'Tất cả', color: '#A1A1AA' },
+      ...this.categories
+    ];
+  }
+
+  getRawCategories() {
+    return this.categories;
   }
 
   initCrossTabSync() {
@@ -343,8 +365,13 @@ class ToolRegistry {
       try {
         this.channel = new BroadcastChannel('ds_tool_layout');
         this.channel.onmessage = (event) => {
-          if (event.data?.type === 'TOOL_LAYOUT_UPDATED' && Array.isArray(event.data.items)) {
-            this.applyLayoutSync(event.data.items, false);
+          if (event.data?.type === 'TOOL_LAYOUT_UPDATED') {
+            if (Array.isArray(event.data.categories)) {
+              this.applyCategoriesSync(event.data.categories, false);
+            }
+            if (Array.isArray(event.data.items)) {
+              this.applyLayoutSync(event.data.items, false);
+            }
           }
         };
       } catch (_) {}
@@ -352,6 +379,14 @@ class ToolRegistry {
 
     // 2. Cross-tab localStorage storage event fallback
     window.addEventListener('storage', (e) => {
+      if (e.key === TOOL_CATEGORIES_STORAGE_KEY && e.newValue) {
+        try {
+          const cats = JSON.parse(e.newValue);
+          if (Array.isArray(cats)) {
+            this.applyCategoriesSync(cats, false);
+          }
+        } catch (_) {}
+      }
       if (e.key === TOOL_LAYOUT_STORAGE_KEY && e.newValue) {
         try {
           const items = JSON.parse(e.newValue);
@@ -371,16 +406,26 @@ class ToolRegistry {
     });
 
     // 4. Background gentle polling every 12 seconds when active
-    setInterval(() => {
+    const pollTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         this.fetchServerLayout();
       }
     }, 12000);
+    if (pollTimer && typeof pollTimer.unref === 'function') {
+      pollTimer.unref();
+    }
   }
 
   loadLocalLayout() {
     try {
       if (typeof localStorage !== 'undefined') {
+        const rawCats = localStorage.getItem(TOOL_CATEGORIES_STORAGE_KEY);
+        if (rawCats) {
+          const cats = JSON.parse(rawCats);
+          if (Array.isArray(cats) && cats.length > 0) {
+            this.applyCategoriesSync(cats, false);
+          }
+        }
         const raw = localStorage.getItem(TOOL_LAYOUT_STORAGE_KEY);
         if (raw) {
           const items = JSON.parse(raw);
@@ -391,6 +436,79 @@ class ToolRegistry {
       }
     } catch (err) {
       console.warn('[ToolRegistry] Failed to load local layout override:', err);
+    }
+  }
+
+  applyCategoriesSync(newCategories, shouldSave = true) {
+    if (!Array.isArray(newCategories) || newCategories.length === 0) return;
+
+    const hexColorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+    const sanitized = [];
+    const seenIds = new Set();
+
+    for (const cat of newCategories) {
+      if (!cat || typeof cat.id !== 'string') continue;
+      const id = cat.id.trim().toLowerCase();
+      if (!id || seenIds.has(id)) continue;
+      seenIds.add(id);
+
+      sanitized.push({
+        id,
+        label: typeof cat.label === 'string' && cat.label.trim() ? cat.label.trim() : id,
+        color: typeof cat.color === 'string' && hexColorRegex.test(cat.color.trim()) ? cat.color.trim() : '#6366F1'
+      });
+    }
+
+    // Ensure default categories exist
+    for (const def of DEFAULT_TOOL_CATEGORIES) {
+      if (!seenIds.has(def.id)) {
+        seenIds.add(def.id);
+        sanitized.push({ ...def });
+      }
+    }
+
+    let hasDiff = sanitized.length !== this.categories.length;
+    if (!hasDiff) {
+      for (let i = 0; i < sanitized.length; i++) {
+        if (sanitized[i].id !== this.categories[i]?.id ||
+            sanitized[i].label !== this.categories[i]?.label ||
+            sanitized[i].color !== this.categories[i]?.color) {
+          hasDiff = true;
+          break;
+        }
+      }
+    }
+
+    this.categories = sanitized;
+
+    if (shouldSave && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(TOOL_CATEGORIES_STORAGE_KEY, JSON.stringify(this.categories));
+      } catch (e) {
+        console.warn('[ToolRegistry] Failed to save categories to localStorage:', e);
+      }
+    }
+
+    if (this.channel && shouldSave) {
+      try {
+        this.channel.postMessage({
+          type: 'TOOL_LAYOUT_UPDATED',
+          items: this.tools.map((t, idx) => ({ id: t.id, category: t.category, order: idx + 1 })),
+          categories: this.categories
+        });
+      } catch (_) {}
+    }
+
+    if (typeof window !== 'undefined' && shouldSave) {
+      try {
+        window.dispatchEvent(new CustomEvent('ds:tool-categories-changed', {
+          detail: { categories: this.categories }
+        }));
+      } catch (_) {}
+    }
+
+    if (hasDiff || shouldSave) {
+      this.notify();
     }
   }
 
@@ -492,8 +610,13 @@ class ToolRegistry {
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data && Array.isArray(json.data.items)) {
-          this.applyLayoutSync(json.data.items, true);
+        if (json.success && json.data) {
+          if (Array.isArray(json.data.categories)) {
+            this.applyCategoriesSync(json.data.categories, true);
+          }
+          if (Array.isArray(json.data.items)) {
+            this.applyLayoutSync(json.data.items, true);
+          }
         }
       }
     } catch {
@@ -501,18 +624,26 @@ class ToolRegistry {
     }
   }
 
-  async saveLayoutToServer(layoutItems, authHeaders = {}) {
+  async saveLayoutToServer(layoutItems, authHeaders = {}, categories = null) {
+    const payload = { items: layoutItems };
+    if (Array.isArray(categories)) {
+      payload.categories = categories;
+    }
+
     const res = await fetch('/api/v1/admin/tool-layout', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders
       },
-      body: JSON.stringify({ items: layoutItems })
+      body: JSON.stringify(payload)
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) {
       throw new Error(json.message || json.error || 'Lỗi khi lưu cấu hình thẻ công cụ');
+    }
+    if (Array.isArray(json.data?.categories)) {
+      this.applyCategoriesSync(json.data.categories, true);
     }
     this.applyLayoutSync(json.data?.items || layoutItems, true);
     return json;
@@ -532,9 +663,13 @@ class ToolRegistry {
     }
 
     if (typeof localStorage !== 'undefined') {
-      try { localStorage.removeItem(TOOL_LAYOUT_STORAGE_KEY); } catch {}
+      try {
+        localStorage.removeItem(TOOL_LAYOUT_STORAGE_KEY);
+        localStorage.removeItem(TOOL_CATEGORIES_STORAGE_KEY);
+      } catch {}
     }
 
+    this.categories = DEFAULT_TOOL_CATEGORIES.map(c => ({ ...c }));
     this.tools = DEFAULT_TOOLS.map(t => ({ ...t }));
     this.notify();
     return json;

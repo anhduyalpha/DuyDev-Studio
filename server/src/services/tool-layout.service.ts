@@ -14,10 +14,26 @@ export interface ToolLayoutInputItem {
   order?: number;
 }
 
+export interface CategoryItem {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface ToolLayoutConfig {
   items: ToolLayoutItem[];
+  categories: CategoryItem[];
   updatedAt: string;
 }
+
+export const DEFAULT_CATEGORIES: CategoryItem[] = [
+  { id: 'pdf', label: 'PDF', color: '#F59E0B' },
+  { id: 'convert', label: 'Chuyển đổi', color: '#8B5CF6' },
+  { id: 'archive', label: 'File nén', color: '#0EA5E9' },
+  { id: 'qr', label: 'Mã QR', color: '#10B981' },
+  { id: 'system', label: 'Tiện ích', color: '#6366F1' },
+  { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
+];
 
 export const VALID_CATEGORIES = ['pdf', 'convert', 'archive', 'qr', 'system', 'advanced'] as const;
 export type ValidCategory = typeof VALID_CATEGORIES[number];
@@ -74,9 +90,12 @@ export class ToolLayoutService {
         const raw = await fs.promises.readFile(this.filePath, 'utf-8');
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.items)) {
-          const merged = this.mergeWithDefaults(parsed.items);
+          const mergedCategories = this.mergeCategoriesWithDefaults(parsed.categories);
+          const validCatIds = new Set(mergedCategories.map(c => c.id));
+          const mergedItems = this.mergeWithDefaults(parsed.items, validCatIds);
           return {
-            items: merged,
+            items: mergedItems,
+            categories: mergedCategories,
             updatedAt: parsed.updatedAt || new Date().toISOString()
           };
         }
@@ -87,6 +106,7 @@ export class ToolLayoutService {
 
     return {
       items: [...DEFAULT_TOOL_LAYOUT],
+      categories: [...DEFAULT_CATEGORIES],
       updatedAt: new Date().toISOString()
     };
   }
@@ -94,12 +114,23 @@ export class ToolLayoutService {
   /**
    * Updates tool layout configuration and writes to disk.
    */
-  public async updateLayout(newItems: ToolLayoutInputItem[]): Promise<ToolLayoutConfig> {
+  public async updateLayout(newItems: ToolLayoutInputItem[], newCategories?: CategoryItem[]): Promise<ToolLayoutConfig> {
     if (!Array.isArray(newItems) || newItems.length === 0) {
       throw new Error('Dữ liệu danh sách thẻ công cụ không hợp lệ');
     }
 
-    // Sanitize and validate items
+    // 1. Process and sanitize categories
+    let finalCategories: CategoryItem[];
+    if (Array.isArray(newCategories) && newCategories.length > 0) {
+      finalCategories = this.mergeCategoriesWithDefaults(newCategories);
+    } else {
+      const current = await this.getLayout();
+      finalCategories = current.categories;
+    }
+
+    const validCategoryIds = new Set(finalCategories.map(c => c.id));
+
+    // 2. Sanitize and validate items
     const sanitized: ToolLayoutItem[] = [];
     const seenIds = new Set<string>();
 
@@ -112,10 +143,10 @@ export class ToolLayoutService {
       seenIds.add(id);
 
       let cat = typeof item.category === 'string' ? item.category.trim().toLowerCase() : 'system';
-      if (!VALID_CATEGORIES.includes(cat as any)) {
+      if (!validCategoryIds.has(cat)) {
         // Fallback to default category for this tool if available, otherwise 'system'
         const def = DEFAULT_TOOL_LAYOUT.find(d => d.id === id);
-        cat = def ? def.category : 'system';
+        cat = def && validCategoryIds.has(def.category) ? def.category : 'system';
       }
 
       const orderVal = typeof item.order === 'number' && !isNaN(item.order) ? item.order : (i + 1);
@@ -128,7 +159,7 @@ export class ToolLayoutService {
     }
 
     // Merge any missing tools from defaults so no tools ever disappear
-    const completeList = this.mergeWithDefaults(sanitized);
+    const completeList = this.mergeWithDefaults(sanitized, validCategoryIds);
 
     // Normalize order sequentially: 1, 2, 3...
     completeList.sort((a, b) => a.order - b.order);
@@ -138,6 +169,7 @@ export class ToolLayoutService {
 
     const config: ToolLayoutConfig = {
       items: completeList,
+      categories: finalCategories,
       updatedAt: new Date().toISOString()
     };
 
@@ -170,23 +202,60 @@ export class ToolLayoutService {
 
     return {
       items: [...DEFAULT_TOOL_LAYOUT],
+      categories: [...DEFAULT_CATEGORIES],
       updatedAt: new Date().toISOString()
     };
   }
 
   /**
+   * Merges custom categories with system defaults to guarantee core tabs never break.
+   */
+  private mergeCategoriesWithDefaults(categories?: any[]): CategoryItem[] {
+    const hexColorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+    const result: CategoryItem[] = [];
+    const seenIds = new Set<string>();
+
+    if (Array.isArray(categories)) {
+      for (const cat of categories) {
+        if (!cat || typeof cat.id !== 'string') continue;
+        const id = cat.id.trim().toLowerCase();
+        if (!id || seenIds.has(id)) continue;
+
+        const label = typeof cat.label === 'string' && cat.label.trim() ? cat.label.trim() : id;
+        const color = typeof cat.color === 'string' && hexColorRegex.test(cat.color.trim())
+          ? cat.color.trim()
+          : '#6366F1';
+
+        seenIds.add(id);
+        result.push({ id, label, color });
+      }
+    }
+
+    // Ensure all default categories exist
+    for (const def of DEFAULT_CATEGORIES) {
+      if (!seenIds.has(def.id)) {
+        seenIds.add(def.id);
+        result.push({ ...def });
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Merges custom items with defaults so newly introduced tools are never lost.
    */
-  private mergeWithDefaults(items: ToolLayoutItem[]): ToolLayoutItem[] {
+  private mergeWithDefaults(items: ToolLayoutItem[], validCategoryIds?: Set<string>): ToolLayoutItem[] {
     const result: ToolLayoutItem[] = [];
     const itemMap = new Map<string, ToolLayoutItem>();
+    const isCatValid = (cat: string) => validCategoryIds ? validCategoryIds.has(cat) : (VALID_CATEGORIES as readonly string[]).includes(cat);
 
     for (const it of items) {
       if (it && typeof it.id === 'string') {
         itemMap.set(it.id, it);
         result.push({
           id: it.id,
-          category: VALID_CATEGORIES.includes(it.category as any) ? it.category : 'system',
+          category: isCatValid(it.category) ? it.category : 'system',
           order: typeof it.order === 'number' && !isNaN(it.order) ? it.order : result.length + 1
         });
       }
@@ -198,7 +267,7 @@ export class ToolLayoutService {
       if (!itemMap.has(def.id)) {
         result.push({
           id: def.id,
-          category: def.category,
+          category: isCatValid(def.category) ? def.category : 'system',
           order: nextOrder++
         });
       }

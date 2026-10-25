@@ -86,6 +86,7 @@ ${bottomNavHtml}
 
   fs.writeFileSync(indexPath, newIndexHtml, 'utf-8');
   console.log('✅ Generated pixel-identical instant shell into index.html successfully!');
+  process.exit(0);
 }
 
 main().catch(err => {

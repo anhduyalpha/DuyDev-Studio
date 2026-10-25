@@ -66,22 +66,33 @@ Khi lưu trữ hoặc nạp cấu hình tùy biến, `ToolLayoutService` thực 
 
 ---
 
+### 2.3. Tạo Mới Tab, Đổi Tên & Chọn Màu Chấm Tròn Đại Diện (v24.01)
+- Cho phép Quản trị viên tự do tạo mới các Tab tùy biến (`id`, `label`, `color`) bên cạnh các tab mặc định hệ thống.
+- Tích hợp bộ chọn màu chấm tròn đại diện (`<input type="color">`) kết hợp bảng 10 màu preset tuyển chọn (Amber, Violet, Sky, Emerald, Indigo, Pink, Rose, Teal, Cyan, Orange).
+- Cho phép click trực tiếp vào chấm màu hoặc tên tab trong danh sách để chỉnh sửa màu sắc và nhãn hiển thị tại chỗ.
+- **Cơ chế xóa tab an toàn (Zero Orphan Guarantee)**: Tab mặc định hệ thống (`pdf`, `convert`, `archive`, `qr`, `system`, `advanced`) không được phép xóa ID; các tab tùy biến có thể xóa bất cứ lúc nào và toàn bộ các thẻ bên trong tab bị xóa sẽ tự động chuyển về tab "Tiện ích" (`system`), đảm bảo không có thẻ nào bị thất lạc.
+- Đồng bộ thời gian thực đa tab qua `BroadcastChannel('ds_tool_layout')` và `localStorage.getItem('ds_tool_categories_override')`.
+
+---
+
 ## 3. Các Thành Phần & Điểm Chạm (Touched Components)
 
 | Tệp / Mô-đun | Trách Nhiệm Chính |
 |---|---|
-| `server/src/services/tool-layout.service.ts` | Dịch vụ đọc, ghi nguyên tử và reset cấu hình bố cục tại `server/data/tool_layout_config.json`. |
-| `server/src/api/controllers/tool-layout.controller.ts` | Trình điều khiển xác thực Zod schema và xử lý các yêu cầu HTTP quản trị và công khai. |
+| `server/src/services/tool-layout.service.ts` | Dịch vụ đọc, ghi nguyên tử và reset cấu hình bố cục cả thẻ `items` và danh mục `categories` tại `server/data/tool_layout_config.json`. |
+| `server/src/api/controllers/tool-layout.controller.ts` | Trình điều khiển xác thực Zod schema cho cả `items` và `categories`, hỗ trợ tạo và gán thẻ vào tab tùy biến. |
 | `server/src/api/routes/admin.route.ts` | Đăng ký các route bảo vệ: `GET/PUT /api/v1/admin/tool-layout`, `POST /api/v1/admin/tool-layout/reset`. |
 | `server/src/api/routes/system.route.ts` | Đăng ký route công khai: `GET /api/v1/system/tool-layout`. |
-| `src/hooks/useToolRegistry.js` | Mở rộng `ToolRegistry` với cơ chế `loadLocalLayout()`, `fetchServerLayout()`, `applyLayoutSync()`, và các API quản trị. |
-| `src/components/admin/AdminToolCardManager.js` | Giao diện đồ họa Tab Quản lý thẻ: lọc tab con, tìm kiếm, đổi dropdown danh mục, đảo vị trí thẻ, lưu và reset. |
+| `src/hooks/useToolRegistry.js` | Quản lý `this.categories` song song với `this.tools`, đồng bộ đa tab tức thì qua `BroadcastChannel` và `localStorage`. |
+| `src/components/admin/AdminToolCardManager.js` | Giao diện đồ họa Quản lý Thẻ & Tab: Tạo tab mới, chọn màu chấm tròn, sửa tên tab tại chỗ, xóa custom tab, phân bổ thẻ và di chuyển vị trí. |
+| `src/components/dashboard/CategoryFilters.js` | Render thanh filter tab động dựa trên danh sách tab và màu chấm tròn được nạp từ `toolRegistry`. |
+| `src/pages/DashboardPage.js` | Đồng bộ bộ lọc và nhãn số lượng thẻ theo tab động, hỗ trợ vuốt chạm chuyển tab (swipe) trên danh sách tab động. |
 | `src/pages/AdminPage.js` | Bổ sung nút Tab thứ 3 trên thanh điều hướng top và container `#adminToolManagerViewContainer`. |
-| `server/tests/unit/tool_layout.test.ts` | Bộ kiểm thử tự động 8 kịch bản bao phủ trọn vẹn tầng service, controller, route bảo vệ và tính toàn vẹn frontend. |
+| `server/tests/unit/tool_layout.test.ts` | Bộ kiểm thử tự động 10 kịch bản bao phủ trọn vẹn tầng service, controller, route bảo vệ, tạo custom tab, chọn màu chấm tròn và tính toàn vẹn frontend. |
 
 ---
 
 ## 4. Kiểm Thử & Xác Nhận (Verification)
-- Đạt 100% test cases trong `server/tests/unit/tool_layout.test.ts` (Exit 0).
+- Đạt 100% test cases trong `server/tests/unit/tool_layout.test.ts` (10 test cases, Exit 0).
 - Không ảnh hưởng đến các kịch bản kiểm thử hồi quy `pwa_lifecycle.test.ts`, `tool_registry_categories.test.ts`, `viewsplit.test.ts`.
-- Giao diện tuân thủ tuyệt đối chuẩn thiết kế tối giản Vercel/Linear và Impeccable UI tokens.
+- Giao diện tuân thủ tuyệt đối chuẩn thiết kế tối giản Vercel/Linear và Impeccable UI tokens (touch targets >= 44px, độ tương phản Light/Dark mode).

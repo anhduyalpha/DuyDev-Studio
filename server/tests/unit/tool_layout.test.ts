@@ -190,5 +190,58 @@ describe('ToolLayoutService & Admin Tool Manager Suite', () => {
     expect(compContent).toContain('attachAdminToolCardManagerListeners');
     expect(compContent).toContain('btnSaveToolLayout');
     expect(compContent).toContain('btnResetToolLayout');
+    expect(compContent).toContain('btnOpenAddTab');
+    expect(compContent).toContain('btnSubmitNewTab');
+    expect(compContent).toContain('inputNewTabColor');
+  });
+
+  it('9. Supports custom tabs creation, dot color selection, and card assignment', async () => {
+    const customCategories = [
+      { id: 'media-lab', label: 'Media Lab', color: '#EC4899' },
+      { id: 'pdf', label: 'PDF Custom', color: '#F59E0B' }
+    ];
+
+    const customItems = [
+      { id: 'tiktok-downloader', category: 'media-lab', order: 1 },
+      { id: 'pdf-studio', category: 'pdf', order: 2 }
+    ];
+
+    const resPut = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/admin/tool-layout',
+      headers: {
+        'x-storage-auth': adminToken
+      },
+      payload: {
+        items: customItems,
+        categories: customCategories
+      }
+    });
+
+    expect(resPut.statusCode).toBe(200);
+    const body = JSON.parse(resPut.payload);
+    expect(body.success).toBe(true);
+    expect(body.data.items[0].id).toBe('tiktok-downloader');
+    expect(body.data.items[0].category).toBe('media-lab');
+
+    // Verify custom tab exists and default tabs are preserved
+    const mediaLab = body.data.categories.find((c: any) => c.id === 'media-lab');
+    expect(mediaLab).toBeDefined();
+    expect(mediaLab.label).toBe('Media Lab');
+    expect(mediaLab.color).toBe('#EC4899');
+
+    // Verify disk persistence
+    const reloaded = await toolLayoutService.getLayout();
+    expect(reloaded.categories.some(c => c.id === 'media-lab')).toBe(true);
+    expect(reloaded.items.find(i => i.id === 'tiktok-downloader')?.category).toBe('media-lab');
+
+    // Verify public endpoint returns the new tab & dot color
+    const resPublic = await app.inject({
+      method: 'GET',
+      url: '/api/v1/system/tool-layout'
+    });
+    expect(resPublic.statusCode).toBe(200);
+    const pubBody = JSON.parse(resPublic.payload);
+    expect(pubBody.data.categories.some((c: any) => c.id === 'media-lab')).toBe(true);
   });
 });

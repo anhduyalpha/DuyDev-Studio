@@ -10,22 +10,24 @@ export const CATEGORIES = [
   { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
 ];
 
-export function getAdjacentCategory(currentCatId, direction = 'next') {
-  const idx = CATEGORIES.findIndex(c => c.id === currentCatId);
+export function getAdjacentCategory(currentCatId, direction = 'next', categoriesList = CATEGORIES) {
+  const list = Array.isArray(categoriesList) && categoriesList.length > 0 ? categoriesList : CATEGORIES;
+  const idx = list.findIndex(c => c.id === currentCatId);
   if (idx === -1) return null;
   if (direction === 'next') {
-    return idx < CATEGORIES.length - 1 ? CATEGORIES[idx + 1].id : null;
+    return idx < list.length - 1 ? list[idx + 1].id : null;
   } else if (direction === 'prev') {
-    return idx > 0 ? CATEGORIES[idx - 1].id : null;
+    return idx > 0 ? list[idx - 1].id : null;
   }
   return null;
 }
 
-export function renderCategoryFilters(activeCategory = 'all', counts = {}) {
+export function renderCategoryFilters(activeCategory = 'all', counts = {}, categoriesList = CATEGORIES) {
+  const list = Array.isArray(categoriesList) && categoriesList.length > 0 ? categoriesList : CATEGORIES;
   return `
     <div class="inline-flex max-w-full p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-[16px] border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto custom-scrollbar select-none">
       <div id="categoryFilterBar" role="tablist" aria-label="Bộ lọc phân loại công cụ" class="flex items-center gap-1 min-w-max">
-        ${CATEGORIES.map(cat => {
+        ${list.map(cat => {
           const isActive = cat.id === activeCategory;
           const count = counts[cat.id] !== undefined ? counts[cat.id] : 0;
           const activeClasses = 'bg-[#1D1D1F] text-white font-semibold shadow-xs border-[#1D1D1F] dark:bg-white/[0.14] dark:text-white dark:border-white/[0.16] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]';

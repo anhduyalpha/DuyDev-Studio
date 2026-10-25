@@ -42,22 +42,20 @@ export function renderDashboardPage() {
   const tools = toolRegistry.getFilteredTools();
   const currentCategory = toolRegistry.currentCategory;
   const isAllDefault = currentCategory === 'all' && !toolRegistry.searchQuery;
-  const counts = {
-    all: toolRegistry.tools.length,
-    pdf: toolRegistry.tools.filter(t => t.category === 'pdf').length,
-    convert: toolRegistry.tools.filter(t => t.category === 'convert').length,
-    archive: toolRegistry.tools.filter(t => t.category === 'archive').length,
-    qr: toolRegistry.tools.filter(t => t.category === 'qr').length,
-    system: toolRegistry.tools.filter(t => t.category === 'system').length,
-    advanced: toolRegistry.tools.filter(t => t.category === 'advanced').length
-  };
+  const categoriesList = toolRegistry.getCategories();
+  const counts = { all: toolRegistry.tools.length };
+  categoriesList.forEach(c => {
+    if (c.id !== 'all') {
+      counts[c.id] = toolRegistry.tools.filter(t => t.category === c.id).length;
+    }
+  });
 
   return `
     <div id="dashboardRoot" class="space-y-6 sm:space-y-8 animate-fadeIn pb-12 md:pb-16 touch-pan-y">
       
       <!-- Category Filter Pills Bar -->
-      <div class="w-full min-w-0 overflow-hidden">
-        ${renderCategoryFilters(currentCategory, counts)}
+      <div id="dashboardCategoryBarContainer" class="w-full min-w-0 overflow-hidden">
+        ${renderCategoryFilters(currentCategory, counts, categoriesList)}
       </div>
 
       <!-- Tools Grid -->
@@ -157,17 +155,34 @@ export function attachDashboardListeners(onReRender) {
       countEl.textContent = isAll ? `Tất cả công cụ (${filteredTools.length})` : `Kết quả (${filteredTools.length})`;
     }
 
-    // Synchronize category counts across tab pills
-    document.querySelectorAll('.filter-pill').forEach(btn => {
-      const catId = btn.getAttribute('data-category');
-      const badge = btn.querySelector('.filter-count-badge');
-      if (badge && catId) {
-        const count = catId === 'all'
-          ? toolRegistry.tools.length
-          : toolRegistry.tools.filter(t => t.category === catId).length;
-        badge.textContent = count;
+    // Synchronize category bar and counts across tab pills
+    const barContainer = document.getElementById('dashboardCategoryBarContainer');
+    const cats = toolRegistry.getCategories();
+    const counts = { all: toolRegistry.tools.length };
+    cats.forEach(c => {
+      if (c.id !== 'all') {
+        counts[c.id] = toolRegistry.tools.filter(t => t.category === c.id).length;
       }
     });
+
+    if (barContainer) {
+      barContainer.innerHTML = renderCategoryFilters(category, counts, cats);
+      attachCategoryFilterListeners((cat, clickedBtn) => {
+        const currentCat = toolRegistry.currentCategory;
+        const currentIdx = cats.findIndex(c => c.id === currentCat);
+        const targetIdx = cats.findIndex(c => c.id === cat);
+        const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
+        switchCategory(cat, dir, clickedBtn);
+      });
+    } else {
+      document.querySelectorAll('.filter-pill').forEach(btn => {
+        const catId = btn.getAttribute('data-category');
+        const badge = btn.querySelector('.filter-count-badge');
+        if (badge && catId) {
+          badge.textContent = counts[catId] ?? 0;
+        }
+      });
+    }
   });
 
   // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
@@ -227,8 +242,9 @@ export function attachDashboardListeners(onReRender) {
 
   attachCategoryFilterListeners((cat, clickedBtn) => {
     const currentCat = toolRegistry.currentCategory;
-    const currentIdx = CATEGORIES.findIndex(c => c.id === currentCat);
-    const targetIdx = CATEGORIES.findIndex(c => c.id === cat);
+    const cats = toolRegistry.getCategories();
+    const currentIdx = cats.findIndex(c => c.id === currentCat);
+    const targetIdx = cats.findIndex(c => c.id === cat);
     const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
     switchCategory(cat, dir, clickedBtn);
   });
@@ -238,7 +254,7 @@ export function attachDashboardListeners(onReRender) {
   const stopSwipe = initDashboardSwipe({
     container: dashboardRoot || document.getElementById('mainContent'),
     onSwipeNext: () => {
-      const nextCat = getAdjacentCategory(toolRegistry.currentCategory, 'next');
+      const nextCat = getAdjacentCategory(toolRegistry.currentCategory, 'next', toolRegistry.getCategories());
       if (nextCat) {
         switchCategory(nextCat, 'next');
       } else {
@@ -248,7 +264,7 @@ export function attachDashboardListeners(onReRender) {
       }
     },
     onSwipePrev: () => {
-      const prevCat = getAdjacentCategory(toolRegistry.currentCategory, 'prev');
+      const prevCat = getAdjacentCategory(toolRegistry.currentCategory, 'prev', toolRegistry.getCategories());
       if (prevCat) {
         switchCategory(prevCat, 'prev');
       } else {
