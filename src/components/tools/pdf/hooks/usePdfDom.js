@@ -18,6 +18,7 @@ import { loadAndRenderSplitThumbnails } from '../components/PdfSplitWorkspace.js
 import { loadAndRenderOrganizeThumbnails } from '../components/PdfOrganizeWorkspace.js';
 import { openPdfPageLightbox, closePdfPageLightbox } from '../components/PdfPageLightboxModal.js';
 import { restoreThumbnailsSynchronously, renderWorkspaceThumbnails } from '../components/PdfPreviewCanvas.js';
+import { openPdfContinueModal } from '../components/PdfContinueModal.js';
 import { pdfPageCache } from '../services/PdfPageCache.js';
 import { attachSwipeToDismiss } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
@@ -982,22 +983,10 @@ function bindResult(qm) {
     qm.resetResult();
   });
 
-  resEl.querySelector('#btnContinueWithResult')?.addEventListener('click', async () => {
+  resEl.querySelector('#btnContinueWithResult')?.addEventListener('click', () => {
     if (!qm.result) return;
-    try {
-      showToast('Đang nạp tệp kết quả để xử lý tiếp...', 'info');
-      const url = qm.result.downloadUrl;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Không thể tải tệp kết quả');
-      const blob = await res.blob();
-      const fileName = qm.result.fileName || 'document.pdf';
-      const file = new File([blob], fileName, { type: 'application/pdf' });
-      qm.resetResult();
-      await qm.addFiles([file]);
-      showToast('Đã nạp tệp kết quả vào không gian làm việc', 'success');
-    } catch (err) {
-      showToast(err.message || 'Lỗi nạp tệp kết quả', 'error');
-    }
+    soundEngine.playAction();
+    openPdfContinueModal({ fileInfo: qm.result, qm });
   });
 
   resEl.querySelector('#btnPreviewPdfResult')?.addEventListener('click', () => {

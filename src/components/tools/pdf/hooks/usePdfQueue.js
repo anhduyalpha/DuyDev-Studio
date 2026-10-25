@@ -10,6 +10,7 @@ import { uploadPdfFiles, dispatchPdfJob, buildPdfResult } from './pdfApi.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 import { smartUploadFile, batchPresignFiles } from '../../../../utilities/resumableUploader.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
+import { storeSharePayload } from '../../../../utilities/shareTargetHelper.js';
 
 const ALLOWED_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'tiff', 'tif', 'svg']);
 
@@ -1150,30 +1151,57 @@ export class PdfQueueManager {
       merge: 'Ghép PDF', split: 'Tách trang', rotate: 'Xoay trang',
       organize: 'Sắp xếp trang', compress: 'Nén PDF', extract_images: 'Trích ảnh',
       images_to_pdf: 'Ảnh sang PDF', pdf_to_docx: 'PDF sang Word',
-      watermark: 'Watermark', security: 'Bảo mật'
+      watermark: 'Watermark', security: 'Bảo mật',
+      'quiz-generator': 'Trắc nghiệm Quiz',
+      'universal-converter': 'Universal Converter'
     };
     return titles[modeId] || modeId;
   }
 
-  async chainResultToMode(targetMode) {
+  async chainResultToMode(targetMode, customFile = null) {
     if (this.isProcessing) return;
-    if (!this.result?.downloadUrl) return;
+    const source = customFile || this.result;
+    if (!source) return;
     if (targetMode === 'images_to_pdf') {
       showToast('Không thể chuyển tiếp tệp PDF vào chế độ Ảnh sang PDF', 'warning');
       return;
     }
     try {
       showToast('Đang chuyển tiếp tệp...', 'info');
-      const res = await fetch(this.result.downloadUrl);
-      if (!res.ok) throw new Error('Không thể tải tệp kết quả');
-      const blob = await res.blob();
-      const fileName = this.result.fileName || 'document.pdf';
-      const file = new File([blob], fileName, { type: 'application/pdf' });
+      let file = null;
+      if (source.rawFile instanceof File) {
+        file = source.rawFile;
+      } else if (source.downloadUrl) {
+        const res = await fetch(source.downloadUrl);
+        if (!res.ok) throw new Error('Không thể tải tệp kết quả');
+        const blob = await res.blob();
+        const fileName = source.fileName || source.name || 'document.pdf';
+        file = new File([blob], fileName, { type: 'application/pdf' });
+      }
+      if (!file) throw new Error('Không tìm thấy dữ liệu tệp hợp lệ');
 
+      // Cross-module forwarding
+      if (targetMode === 'quiz-generator') {
+        await storeSharePayload({ files: [file] });
+        window.location.hash = '#tool/quiz-generator';
+        showToast('Đã chuyển tệp sang Trắc nghiệm Quiz', 'success');
+        return;
+      }
+
+      if (targetMode === 'universal-converter') {
+        await storeSharePayload({ files: [file] });
+        window.location.hash = '#tool/universal-converter';
+        showToast('Đã chuyển tệp sang Converter', 'success');
+        return;
+      }
+
+      // Intra-PDF Studio forwarding
       this.resetResult();
+      this.clearFiles();
       this.setMode(targetMode, true);
       await this.addFiles([file]);
       this.notify('mode-change');
+      document.getElementById('pdfStudioWorkspaceRoot')?.scrollIntoView({ behavior: 'smooth' });
       showToast(`Đã chuyển tệp sang ${this.getModeTitle(targetMode)}`, 'success');
     } catch (err) {
       showToast(err.message || 'Lỗi chuyển tiếp tệp', 'error');

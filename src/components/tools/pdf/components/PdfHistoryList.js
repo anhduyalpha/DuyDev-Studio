@@ -12,6 +12,7 @@ import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { updateHeaderTrashIndicator } from '../../../layout/Header.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
+import { openPdfContinueModal } from './PdfContinueModal.js';
 
 let activePdfHistoryTab = 'history';
 let isPdfHistoryOpen = false;
@@ -402,11 +403,11 @@ export function bindPdfHistory(qm) {
   });
 
   el.querySelectorAll('.btn-reuse-pdf-history').forEach((btn) => {
-    btn.onclick = async () => {
+    btn.onclick = () => {
       const it = storage.getLocalHistory().find((x) => x.id === btn.dataset.reusePdfId);
-      if (it && (await qm.addFileFromHistory(it))) {
-        document.getElementById('pdfStudioWorkspaceRoot')?.scrollIntoView({ behavior: 'smooth' });
-        showToast('Đã nạp tệp', 'success');
+      if (it) {
+        soundEngine.playAction();
+        openPdfContinueModal({ fileInfo: it, qm });
       }
     };
   });

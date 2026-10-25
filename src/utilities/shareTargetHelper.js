@@ -180,6 +180,27 @@ function openShareDb() {
 }
 
 /**
+ * Store a share payload into IndexedDB ds_share_db so another tool or router can consume it.
+ * @param {{ title?: string, text?: string, url?: string, files?: File[] }} payload
+ * @returns {Promise<void>}
+ */
+export async function storeSharePayload(payload) {
+  if (typeof indexedDB === 'undefined') return;
+  const db = await openShareDb();
+  try {
+    const tx = db.transaction('shares', 'readwrite');
+    const store = tx.objectStore('shares');
+    store.add({ ...payload, timestamp: Date.now() });
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+/**
  * Peek pending share payload from AndroidBridge or IndexedDB without write locks or deletion.
  * Opens a readonly transaction on object store 'shares'.
  * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}

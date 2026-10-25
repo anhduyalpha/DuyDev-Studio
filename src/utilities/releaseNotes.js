@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.00': {
+    version: 'v24.00',
+    title: 'Bản cập nhật v24.00',
+    date: '25/10/2026',
+    features: [
+      'Hộp Thoại Chọn Mô-Đun Xử Lý Tiếp: Khi bấm "Xử lý tiếp", hệ thống hiển thị danh sách trực quan các mô-đun PDF (Nén, Tách trang, Xoay, Sắp xếp, Ghép, Word, Trích ảnh, Watermark, Bảo mật) cùng các công cụ liên quan (Tạo đề trắc nghiệm Quiz, Converter) để người dùng chọn luồng xử lý tiếp theo',
+      'Tự Động Nạp & Chuyển Đổi Không Gian Làm Việc: Tự động chuyển tab công cụ, nạp tệp kết quả vào workspace mới và cuộn mượt mà lên vùng thao tác với 0ms độ trễ',
+      'Đồng Bộ Xử Lý Tiếp Trong Lịch Sử: Áp dụng cùng hộp thoại chọn mô-đun thông minh khi bấm nút xử lý tiếp tệp từ danh sách lịch sử PDF Studio'
+    ],
+    fixes: [
+      'Khắc phục việc tệp PDF kết quả bị ép nạp lại vào chế độ cũ (như chế độ Ảnh sang PDF không tương thích với tệp PDF) khi bấm Xử lý tiếp'
+    ]
+  },
   'v23.99': {
     version: 'v23.99',
     title: 'Bản cập nhật v23.99',
