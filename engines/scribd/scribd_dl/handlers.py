@@ -388,20 +388,25 @@ class ScribdHTTPRequestHandler(BaseHTTPRequestHandler):
                 return
 
             file_size = file_path.stat().st_size
+            file_name = file_path.name
             self.send_response(HTTPStatus.OK)
             self.send_cors_headers()
             self.send_header("Content-Type", "application/pdf")
             self.send_header("Content-Length", str(file_size))
             self.send_header("Accept-Ranges", "bytes")
-            quoted = urllib.parse.quote(filename)
-            ascii_name = filename.encode("ascii", "ignore").decode("ascii") or "document.pdf"
+            quoted = urllib.parse.quote(file_name)
+            ascii_name = file_name.encode("ascii", "ignore").decode("ascii") or "document.pdf"
             self.send_header("Content-Disposition", f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quoted}')
             self.end_headers()
 
             if not is_head:
                 try:
                     with open(file_path, "rb") as f:
-                        shutil.copyfileobj(f, self.wfile)
+                        while True:
+                            chunk = f.read(65536)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
             return

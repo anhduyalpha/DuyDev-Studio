@@ -305,8 +305,18 @@ export async function scribdRoute(app: FastifyInstance): Promise<void> {
   // 12. Download File Attachment
   const handleDownload = async (req: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
     try {
-      const filename = req.params['*'];
-      const res = await fetch(`${BACKEND_URL}/downloads/${encodeURIComponent(filename)}`);
+      const rawParam = req.params['*'] || '';
+      let filename = rawParam;
+      try {
+        filename = decodeURIComponent(rawParam);
+      } catch {}
+
+      await ScribdDaemonService.ensureDaemonRunning();
+
+      let res = await fetch(`${BACKEND_URL}/downloads/${encodeURIComponent(filename)}`);
+      if (!res.ok) {
+        res = await fetch(`${BACKEND_URL}/downloads/${encodeURI(filename)}`);
+      }
       if (!res.ok) return reply.status(res.status).send('File not found');
 
       reply.status(res.status);

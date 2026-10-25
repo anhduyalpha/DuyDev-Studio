@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v23.97': {
+    version: 'v23.97',
+    title: 'Bản cập nhật v23.97',
+    date: '25/10/2026',
+    features: [
+      'Sửa lỗi tải PDF Scribd: Khắc phục triệt để lỗi biến không xác định khiến trình duyệt báo "Site wasn\'t available" khi tải tài liệu đã xử lý xong',
+      'Tối ưu hóa tải tệp luồng lớn: Cải thiện hiệu suất truyền luồng nhị phân và mã hóa tiêu đề UTF-8 cho tệp có dấu tiếng Việt'
+    ],
+    fixes: [
+      'Khắc phục mã lỗi 502 Bad Gateway khi nhấn Tải PDF trong công cụ Scribd Downloader'
+    ]
+  },
+
   'v23.87': {
     version: 'v23.87',
     title: 'Bản cập nhật v23.87',
