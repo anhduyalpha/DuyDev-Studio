@@ -109,15 +109,16 @@ export function renderDropzoneQueue(queueState = {}) {
     const singleFile = files[0];
 
     return `
-      <div id="pdfSingleFileCardRoot" class="space-y-4 select-none">
-        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs flex flex-wrap items-center justify-between gap-3">
+      <div id="pdfSingleFileCardRoot" class="rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs overflow-hidden select-none">
+        <!-- 1. Top File Header Bar -->
+        <div class="p-3.5 sm:p-4 bg-zinc-50/70 dark:bg-white/[0.02] border-b border-zinc-100 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-3.5 min-w-0">
-            <div class="w-11 h-11 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center shrink-0">
+            <div class="w-11 h-11 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center shrink-0 shadow-2xs">
               <i data-lucide="${theme.icon}" class="w-5 h-5"></i>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">${singleFile.name}</span>
+                <span class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">${singleFile.name}</span>
                 ${isProcessing ? `
                   <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${theme.badgeBg} flex items-center gap-1.5 shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
@@ -129,27 +130,31 @@ export function renderDropzoneQueue(queueState = {}) {
                   </span>
                 `}
               </div>
-              <p class="text-xs font-mono text-zinc-500 mt-1">
+              <p class="text-xs font-mono text-zinc-500 mt-0.5">
                 ${formatBytes(singleFile.size)} ${singleFile.pages ? `• ${singleFile.pages} trang` : ''}
               </p>
             </div>
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
-            <button id="btnPreviewSingleFile" type="button" class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <button id="btnPreviewSingleFile" type="button" class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-white hover:bg-zinc-100 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Xem trước</span>
             </button>
-            <button id="btnChangeSingleFile" type="button" ${isProcessing ? 'disabled' : ''} class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition ${isProcessing ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}">
+            <button id="btnChangeSingleFile" type="button" ${isProcessing ? 'disabled' : ''} class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-white hover:bg-zinc-100 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition ${isProcessing ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer'} shadow-2xs">
               <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
               <span>Đổi tệp</span>
+            </button>
+            <button id="btnClearSingleFile" type="button" ${isProcessing ? 'disabled' : ''} class="min-h-[40px] px-3.5 py-2 rounded-xl border border-red-200/80 dark:border-red-500/20 bg-red-50/80 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition ${isProcessing ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer'} shadow-2xs active:scale-[0.98]" title="Xóa tệp khỏi hàng đợi">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Xóa tệp</span>
             </button>
           </div>
         </div>
 
-        <!-- Document Preview & Inspection Card -->
-        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-white/[0.08] shadow-xs">
-          <div class="flex items-center justify-between pb-3 mb-4 border-b border-zinc-100 dark:border-white/[0.06]">
+        <!-- 2. Document Preview & Inspection Section -->
+        <div class="p-4 sm:p-5 bg-zinc-50/40 dark:bg-black/20 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-zinc-200/60 dark:border-white/[0.06]">
             <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
               <i data-lucide="book-open" class="w-4 h-4 ${theme.textSoft}"></i> Trang bìa tài liệu
             </span>
@@ -169,26 +174,26 @@ export function renderDropzoneQueue(queueState = {}) {
 
             <div class="flex-1 w-full space-y-3">
               <div class="grid grid-cols-2 gap-2 text-xs">
-                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                <div class="p-3 rounded-xl bg-white dark:bg-[#16161a] border border-zinc-200/70 dark:border-white/[0.06] shadow-2xs">
                   <span class="block text-zinc-400 text-[11px]">Định dạng</span>
                   <span class="font-semibold text-zinc-800 dark:text-zinc-200 font-mono mt-0.5">PDF Document</span>
                 </div>
-                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                <div class="p-3 rounded-xl bg-white dark:bg-[#16161a] border border-zinc-200/70 dark:border-white/[0.06] shadow-2xs">
                   <span class="block text-zinc-400 text-[11px]">Số trang</span>
                   <span class="font-semibold text-zinc-800 dark:text-zinc-200 font-mono mt-0.5">${singleFile.pages || 1} trang</span>
                 </div>
-                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                <div class="p-3 rounded-xl bg-white dark:bg-[#16161a] border border-zinc-200/70 dark:border-white/[0.06] shadow-2xs">
                   <span class="block text-zinc-400 text-[11px]">Dung lượng</span>
                   <span class="font-semibold text-zinc-800 dark:text-zinc-200 font-mono mt-0.5">${formatBytes(singleFile.size)}</span>
                 </div>
-                <div class="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
+                <div class="p-3 rounded-xl bg-white dark:bg-[#16161a] border border-zinc-200/70 dark:border-white/[0.06] shadow-2xs">
                   <span class="block text-zinc-400 text-[11px]">Công cụ</span>
                   <span class="font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">${theme.label}</span>
                 </div>
               </div>
 
               <div class="pt-1">
-                <button type="button" data-preview-page="0" class="btn-preview-page w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-white/[0.08] hover:bg-zinc-50 dark:hover:bg-white/[0.04] text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-center gap-1.5 transition cursor-pointer">
+                <button type="button" data-preview-page="0" class="btn-preview-page w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs">
                   <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
                   <span>Xem chi tiết trang bìa</span>
                 </button>
@@ -226,7 +231,7 @@ export function renderDropzoneQueue(queueState = {}) {
   return `
     <div class="space-y-3.5">
       <!-- File Dropzone Card (Compact Vertical) -->
-      <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
+      <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-zinc-300 dark:border-zinc-700/80 hover:${theme.borderActive} shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
         <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" multiple>
         
         <div class="w-10 h-10 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center mb-1.5 group-hover:scale-105 transition duration-200">
@@ -253,7 +258,7 @@ export function renderDropzoneQueue(queueState = {}) {
 
       ${!isImages ? `
         <!-- Separate Google Drive Link Card -->
-        <div id="pdfDriveImportCard" class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-red-500/80 dark:border-red-500/70 shadow-xs space-y-2.5 transition-colors duration-200">
+        <div id="pdfDriveImportCard" class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-zinc-300 dark:border-zinc-700/80 hover:${theme.borderActive} shadow-xs space-y-2.5 transition-colors duration-200">
           <div class="flex items-center text-xs px-0.5">
             <span class="font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <i data-lucide="link" class="w-3.5 h-3.5 ${theme.textSoft}"></i>

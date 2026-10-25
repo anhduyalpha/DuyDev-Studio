@@ -19,7 +19,7 @@ import { loadAndRenderOrganizeThumbnails } from '../components/PdfOrganizeWorksp
 import { openPdfPageLightbox, closePdfPageLightbox } from '../components/PdfPageLightboxModal.js';
 import { restoreThumbnailsSynchronously, renderWorkspaceThumbnails } from '../components/PdfPreviewCanvas.js';
 import { pdfPageCache } from '../services/PdfPageCache.js';
-import { attachSwipeToDismiss, attachSlideToClear } from '../../../../utilities/swipeGesture.js';
+import { attachSwipeToDismiss } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
 import { attachPdfClipboardPaste, pasteImageFromClipboard } from './usePdfPaste.js';
 import { getToolTheme, PDF_THEMES } from '../services/pdfThemes.js';
@@ -82,6 +82,7 @@ function setVisualWorkspaceProcessingState(isProcessing) {
 
   const buttonsToToggle = [
     '#btnChangeRotateFile', '#btnChangeSplitFile', '#btnChangeOrganizeFile', '#btnChangeSingleFile',
+    '#btnClearRotateFile', '#btnClearSplitFile', '#btnClearOrganizeFile', '#btnClearSingleFile',
     '#btnRotateAllCW', '#btnRotateAllCCW', '#btnResetRotations',
     '#btnSelectAllPages', '#btnSelectOddPages', '#btnSelectEvenPages', '#btnDeselectAllPages',
     '#btnReverseOrganize', '#btnResetOrganize',
@@ -390,6 +391,12 @@ function bindDropzone(qm) {
       if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
       qm.clearFiles();
     });
+    rootEl.querySelector('#btnClearRotateFile')?.addEventListener('click', () => {
+      soundEngine.playDelete();
+      if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
+      qm.clearFiles();
+      showToast('Đã xóa tệp', 'delete');
+    });
     rootEl.querySelector('#btnRotateAllCW')?.addEventListener('click', () => qm.rotateAll(90));
     rootEl.querySelector('#btnRotateAllCCW')?.addEventListener('click', () => qm.rotateAll(-90));
     rootEl.querySelector('#btnResetRotations')?.addEventListener('click', () => qm.resetRotations());
@@ -455,6 +462,12 @@ function bindDropzone(qm) {
       if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
       qm.clearFiles();
     });
+    rootEl.querySelector('#btnClearSplitFile')?.addEventListener('click', () => {
+      soundEngine.playDelete();
+      if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
+      qm.clearFiles();
+      showToast('Đã xóa tệp', 'delete');
+    });
     rootEl.querySelector('#btnSelectAllPages')?.addEventListener('click', () => qm.selectAllSplitPages());
     rootEl.querySelector('#btnDeselectAllPages')?.addEventListener('click', () => qm.deselectAllSplitPages());
     rootEl.querySelector('#btnSelectOddPages')?.addEventListener('click', () => qm.selectOddSplitPages());
@@ -517,6 +530,12 @@ function bindDropzone(qm) {
     rootEl.querySelector('#btnChangeOrganizeFile')?.addEventListener('click', () => {
       if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
       qm.clearFiles();
+    });
+    rootEl.querySelector('#btnClearOrganizeFile')?.addEventListener('click', () => {
+      soundEngine.playDelete();
+      if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
+      qm.clearFiles();
+      showToast('Đã xóa tệp', 'delete');
     });
     rootEl.querySelector('#btnReverseOrganize')?.addEventListener('click', () => qm.reverseOrganizePages());
     rootEl.querySelector('#btnResetOrganize')?.addEventListener('click', () => qm.resetOrganizePages());
@@ -603,24 +622,8 @@ function bindDropzone(qm) {
       soundEngine.playDeleteAll();
       qm.files.forEach((f) => pdfPageCache.releaseForFile(f));
       qm.clearFiles();
+      showToast('Đã xóa tất cả tệp', 'delete');
     });
-
-    const slideTrack = rootEl.querySelector('#slideClearTrack');
-    const slideThumb = rootEl.querySelector('#slideClearThumb');
-    const slideFill = rootEl.querySelector('#slideClearFill');
-    const slideLabel = rootEl.querySelector('#slideClearLabel');
-    if (slideTrack && slideThumb) {
-      attachSlideToClear(slideTrack, slideThumb, {
-        thresholdRatio: 0.70,
-        fillElement: slideFill,
-        labelElement: slideLabel,
-        onClear: () => {
-          soundEngine.playDeleteAll();
-          qm.files.forEach((f) => pdfPageCache.releaseForFile(f));
-          qm.clearFiles();
-        }
-      });
-    }
 
     rootEl.querySelector('#inputAddMoreFiles')?.addEventListener('change', (e) => {
       if (e.target.files) qm.addFiles(e.target.files);
@@ -823,6 +826,12 @@ function bindDropzone(qm) {
     rootEl.querySelector('#btnChangeSingleFile')?.addEventListener('click', () => {
       if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
       qm.clearFiles();
+    });
+    rootEl.querySelector('#btnClearSingleFile')?.addEventListener('click', () => {
+      soundEngine.playDelete();
+      if (qm.files[0]) pdfPageCache.releaseForFile(qm.files[0]);
+      qm.clearFiles();
+      showToast('Đã xóa tệp', 'delete');
     });
     rootEl.querySelector('#btnPreviewSingleFile')?.addEventListener('click', () => {
       const f = qm.files[0];

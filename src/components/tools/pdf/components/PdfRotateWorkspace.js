@@ -50,9 +50,13 @@ export function renderPdfRotateWorkspace({ file, pageRotations = {}, totalPages 
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
-            <button id="btnChangeRotateFile" type="button" class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <button id="btnChangeRotateFile" type="button" class="min-h-[40px] px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs">
               <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
               <span>Đổi tệp</span>
+            </button>
+            <button id="btnClearRotateFile" type="button" class="min-h-[40px] px-3.5 py-2 rounded-xl border border-red-200/80 dark:border-red-500/20 bg-red-50/80 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-[0.98]" title="Xóa tệp khỏi hàng đợi">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Xóa tệp</span>
             </button>
           </div>
         </div>

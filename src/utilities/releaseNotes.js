@@ -6,7 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
-    'v23.98': {
+  'v23.99': {
+    version: 'v23.99',
+    title: 'Bản cập nhật v23.99',
+    date: '25/10/2026',
+    features: [
+      'Nút Xóa Tất Cả Trực Quan: Thay thế thao tác vuốt trượt phức tạp thành nút "Xóa tất cả" tiện lợi, thao tác 1 chạm nhanh chóng trên toàn bộ PDF Studio',
+      'Hợp Nhất Thẻ Workspace PDF: Gộp các khối rời rạc thành 1 Master Card Container đồng nhất với phân cấp thị giác tinh tế, giao diện hiện đại và gọn gàng',
+      'Bổ Sung Nút Xóa Tệp Cho Tất Cả Công Cụ PDF: Cho phép xóa tệp nhanh chóng trên các chế độ Xoay trang, Tách trang, Sắp xếp trang và Thao tác tệp đơn'
+    ],
+    fixes: [
+      'Loại bỏ viền đỏ bất thường trên khung tải tệp PDF về chuẩn thiết kế giao diện tối/sáng của hệ thống',
+      'Tối ưu hóa bố cục khu vực nạp tệp Google Drive thành khay phụ tích hợp ở đáy thẻ giúp trải nghiệm mượt mà hơn'
+    ]
+  },
+  'v23.98': {
     version: 'v23.98',
     title: 'Bản cập nhật v23.98',
     date: '25/10/2026',
