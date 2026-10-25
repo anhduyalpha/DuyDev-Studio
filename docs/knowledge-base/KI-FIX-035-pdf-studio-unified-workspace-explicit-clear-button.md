@@ -58,15 +58,28 @@ Thay thế hoàn toàn cử chỉ vuốt trượt phức tạp bằng nút butto
 ```
 Đồng thời bổ sung nút `#btnClearSingleFile`, `#btnClearRotateFile`, `#btnClearSplitFile`, `#btnClearOrganizeFile` cho toàn bộ các workspace còn lại trong PDF Studio, gọi `soundEngine.playDelete()`, giải phóng cache qua `pdfPageCache.releaseForFile()` và hiển thị toast `showToast('Đã xóa tệp', 'delete')`.
 
+### C. Hộp Thoại Chọn Mô-Đun Xử Lý Tiếp (Continue Workflow Modal)
+Khi nhấn nút "Xử lý tiếp" (`#btnContinueWithResult` trên thẻ kết quả hoặc `.btn-reuse-pdf-history` trong danh sách lịch sử):
+- Hiển thị hộp thoại `PdfContinueModal` trực quan với thông tin tệp (tên, dung lượng) và danh sách các công cụ tương thích để người dùng lựa chọn:
+  - **9 công cụ PDF Studio**: Nén PDF, Tách trang, Xoay trang, Sắp xếp trang, Ghép PDF, PDF sang Word, Trích ảnh, Watermark, Bảo mật.
+  - **Mô-đun liên quan**: Tạo đề trắc nghiệm Quiz (`#tool/quiz-generator`), Chuyển đổi định dạng (`#tool/universal-converter`).
+- Khi người dùng bấm chọn một module:
+  - Tự động chuyển mode tương ứng qua `qm.chainResultToMode(targetMode, fileInfo)`.
+  - Tải tệp kết quả (hoặc tái sử dụng blob), làm sạch trạng thái cũ, nạp tệp vào workspace mới và tự động cuộn mượt mà lên `#pdfStudioWorkspaceRoot`.
+  - Với các công cụ ngoài (Quiz / Converter), tệp được lưu vào IndexedDB `ds_share_db` qua `storeSharePayload` và tự động mở đúng trang công cụ để người dùng tiếp tục thao tác ngay.
+
 ---
 
 ## 3. Mã Nguồn Tham Chiếu (Code Reference)
+- `src/components/tools/pdf/components/PdfContinueModal.js`: Modal chọn mô-đun xử lý tiếp trực quan.
 - `src/components/tools/pdf/components/PdfMultiFileWorkspace.js`: Master container & nút xóa tất cả.
 - `src/components/tools/pdf/components/DropzoneQueue.js`: Loại bỏ viền đỏ `border-red-500/80` và hợp nhất `pdfSingleFileCardRoot`.
 - `src/components/tools/pdf/components/PdfRotateWorkspace.js`: Nút `#btnClearRotateFile`.
 - `src/components/tools/pdf/components/PdfSplitWorkspace.js`: Nút `#btnClearSplitFile`.
 - `src/components/tools/pdf/components/PdfOrganizeWorkspace.js`: Nút `#btnClearOrganizeFile`.
-- `src/components/tools/pdf/hooks/usePdfDom.js`: Khởi tạo và liên kết sự kiện click xóa tệp và thông báo toast.
+- `src/components/tools/pdf/hooks/usePdfQueue.js`: Phương thức `chainResultToMode` hỗ trợ chuyển đổi mode nội bộ và chia sẻ liên mô-đun qua IndexedDB.
+- `src/components/tools/pdf/hooks/usePdfDom.js`: Khởi tạo và liên kết sự kiện click mở modal xử lý tiếp.
+- `src/utilities/shareTargetHelper.js`: Bổ sung `storeSharePayload` cho phép truyền tệp giữa các công cụ.
 
 ---
 
@@ -74,4 +87,4 @@ Thay thế hoàn toàn cử chỉ vuốt trượt phức tạp bằng nút butto
 - `rtk err node --check <files>`: Exit 0 (hợp lệ cú pháp).
 - `rtk npm --prefix server run build`: Exit 0 (TypeScript biên dịch sạch sẽ).
 - `rtk vitest run server/tests/unit/pdf_gestures.test.ts`: Exit 0.
-- Production HTTPS (`https://studio.duydev.cloud`): Health check HTTP 200 `UP`, Service Worker đồng bộ phiên bản `v23.99`.
+- Production HTTPS (`https://studio.duydev.cloud`): Health check HTTP 200 `UP`, Service Worker đồng bộ phiên bản `v24.00`.
