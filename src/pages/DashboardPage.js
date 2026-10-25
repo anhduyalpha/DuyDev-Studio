@@ -62,8 +62,8 @@ export function renderDashboardPage() {
 
       <!-- Tools Grid -->
       <div>
-        <div class="flex items-center justify-between mb-3.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base font-mono tracking-tight">
+        <div class="flex items-center justify-between mb-4 sm:mb-5">
+          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg tracking-[-0.02em]">
             ${isAllDefault ? `Tất cả công cụ (${tools.length})` : `Kết quả (${tools.length})`}
           </span>
         </div>
