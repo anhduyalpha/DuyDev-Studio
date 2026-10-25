@@ -13,6 +13,7 @@ const CATEGORY_LABELS = {
   convert: 'Chuyển đổi',
   archive: 'File nén',
   qr: 'Mã QR',
+  media: 'Media',
   system: 'Tiện ích',
   advanced: 'Nâng cao'
 };
@@ -28,6 +29,10 @@ export function renderToolCard(tool) {
     '#10B981': '#047857', // Emerald-700
     '#64748B': '#334155', // Slate-700
     '#EC4899': '#BE185D', // Pink-700
+    '#E11D48': '#BE123C', // Rose-700 (Media)
+    '#1877F2': '#1D4ED8', // Blue-700 (Facebook)
+    '#E1306C': '#BE185D', // Pink-700 (Instagram)
+    '#1DB954': '#15803D', // Green-700 (Spotify)
     '#A1A1AA': '#3F3F46'  // Zinc-700
   };
   const contrastColor = contrastMap[accent] || accent;

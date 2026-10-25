@@ -7,13 +7,14 @@ import { CATEGORIES, getAdjacentCategory } from '../../../src/components/dashboa
 
 describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
   describe('1. Category Adjacent Transition Invariants', () => {
-    it('should have standard 7 categories in correct order', () => {
+    it('should have standard 8 categories in correct order', () => {
       expect(CATEGORIES.map(c => c.id)).toEqual([
         'all',
         'pdf',
         'convert',
         'archive',
         'qr',
+        'media',
         'system',
         'advanced'
       ]);
@@ -24,7 +25,8 @@ describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
       expect(getAdjacentCategory('pdf', 'next')).toBe('convert');
       expect(getAdjacentCategory('convert', 'next')).toBe('archive');
       expect(getAdjacentCategory('archive', 'next')).toBe('qr');
-      expect(getAdjacentCategory('qr', 'next')).toBe('system');
+      expect(getAdjacentCategory('qr', 'next')).toBe('media');
+      expect(getAdjacentCategory('media', 'next')).toBe('system');
       expect(getAdjacentCategory('system', 'next')).toBe('advanced');
     });
 
@@ -34,7 +36,8 @@ describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
 
     it('should correctly retreat to previous category in reverse order', () => {
       expect(getAdjacentCategory('advanced', 'prev')).toBe('system');
-      expect(getAdjacentCategory('system', 'prev')).toBe('qr');
+      expect(getAdjacentCategory('system', 'prev')).toBe('media');
+      expect(getAdjacentCategory('media', 'prev')).toBe('qr');
       expect(getAdjacentCategory('qr', 'prev')).toBe('archive');
       expect(getAdjacentCategory('archive', 'prev')).toBe('convert');
       expect(getAdjacentCategory('convert', 'prev')).toBe('pdf');

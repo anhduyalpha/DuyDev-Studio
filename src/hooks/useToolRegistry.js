@@ -123,28 +123,64 @@ const DEFAULT_TOOLS = [
     tags: ['studocu', 'tài liệu', 'tiện ích', 'download', 'pdf', 'slide', 'bài giảng']
   },
   {
+    id: 'facebook-downloader',
+    title: 'Facebook Downloader',
+    description: 'Tải video Reel, bài viết Facebook chất lượng HD/SD, lưu trực tiếp vào Drive.',
+    category: 'media',
+    icon: 'video',
+    featured: true,
+    specs: ['Video Reel', 'HD & SD MP4', 'Lưu Drive'],
+    color: '#1877F2',
+    route: '#tool/facebook-downloader',
+    tags: ['facebook', 'fb', 'video', 'reel', 'tải video facebook', 'media']
+  },
+  {
+    id: 'instagram-downloader',
+    title: 'Instagram Downloader',
+    description: 'Tải video Reels, bài viết và Story Instagram sang MP4 không nén, lưu trực tiếp vào Drive.',
+    category: 'media',
+    icon: 'camera',
+    featured: true,
+    specs: ['Reels & Story', 'MP4 Full HD', 'Lưu Drive'],
+    color: '#E1306C',
+    route: '#tool/instagram-downloader',
+    tags: ['instagram', 'ig', 'reels', 'story', 'tải video instagram', 'media']
+  },
+  {
+    id: 'spotify-downloader',
+    title: 'Spotify Downloader',
+    description: 'Tải bài hát Spotify sang MP3 chất lượng cao, kèm ảnh bìa album và lưu trực tiếp vào Drive.',
+    category: 'media',
+    icon: 'music',
+    featured: true,
+    specs: ['MP3 320kbps', 'Ảnh bìa Album', 'Lưu Drive'],
+    color: '#1DB954',
+    route: '#tool/spotify-downloader',
+    tags: ['spotify', 'nhạc', 'mp3', 'âm thanh', 'tải nhạc spotify', 'audio', 'media']
+  },
+  {
     id: 'tiktok-downloader',
     title: 'TikTok Downloader',
     description: 'Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive.',
-    category: 'system',
+    category: 'media',
     icon: 'video',
     featured: true,
     specs: ['Không Logo', 'Video & Album Ảnh', 'Lưu Drive'],
     color: '#EE1D52',
     route: '#tool/tiktok-downloader',
-    tags: ['tiktok', 'tik tok', 'tải video', 'album ảnh', 'slideshow', 'photo mode', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin']
+    tags: ['tiktok', 'tik tok', 'tải video', 'album ảnh', 'slideshow', 'photo mode', 'tiktok downloader', 'no watermark', 'không logo', 'mp3', 'video', 'douyin', 'media']
   },
   {
     id: 'youtube-downloader',
     title: 'YouTube Downloader',
     description: 'Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive.',
-    category: 'system',
+    category: 'media',
     icon: 'youtube',
     featured: true,
     specs: ['MP4 1080p', 'MP3 320kbps', 'Lưu Drive'],
     color: '#FF0000',
     route: '#tool/youtube-downloader',
-    tags: ['youtube', 'yt', 'tải video', 'tải nhạc', 'youtube downloader', 'mp3', 'mp4', '1080p', 'audio', 'video', 'shorts', 'âm thanh']
+    tags: ['youtube', 'yt', 'tải video', 'tải nhạc', 'youtube downloader', 'mp3', 'mp4', '1080p', 'audio', 'video', 'shorts', 'âm thanh', 'media']
   },
   {
     id: 'scribd-archiver',
@@ -330,6 +366,7 @@ export const DEFAULT_TOOL_CATEGORIES = [
   { id: 'convert', label: 'Chuyển đổi', color: '#8B5CF6' },
   { id: 'archive', label: 'File nén', color: '#0EA5E9' },
   { id: 'qr', label: 'Mã QR', color: '#10B981' },
+  { id: 'media', label: 'Media', color: '#E11D48' },
   { id: 'system', label: 'Tiện ích', color: '#6366F1' },
   { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
 ];
@@ -715,6 +752,15 @@ class ToolRegistry {
     }
     if (id === 'scribd' || id === 'scribd-archiver') {
       return this.tools.find(t => t.id === 'scribd-archiver') || this.tools[0];
+    }
+    if (id === 'facebook' || id === 'facebook-downloader') {
+      return this.tools.find(t => t.id === 'facebook-downloader') || this.tools[0];
+    }
+    if (id === 'instagram' || id === 'instagram-downloader') {
+      return this.tools.find(t => t.id === 'instagram-downloader') || this.tools[0];
+    }
+    if (id === 'spotify' || id === 'spotify-downloader') {
+      return this.tools.find(t => t.id === 'spotify-downloader') || this.tools[0];
     }
     return this.tools.find(t => t.id === id) || this.tools[0];
   }

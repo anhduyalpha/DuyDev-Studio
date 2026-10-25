@@ -21,10 +21,19 @@ const DOUYIN_REGEX = /(?:https?:\/\/)?(?:(?:v|www|m)\.)?douyin\.com\/[^\s"']+/i;
 // YouTube video / shorts / youtu.be URL patterns
 const YOUTUBE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|v\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}[^\s"'>]*/i;
 
+// Facebook video / reel / watch URL patterns
+const FACEBOOK_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com\/(?:[a-zA-Z0-9._-]+\/videos|reel|watch)|fb\.watch)[^\s"'>]*/i;
+
+// Instagram post / reel / story URL patterns
+const INSTAGRAM_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?instagram\.com\/(?:p|reel|reels|tv|stories)\/[a-zA-Z0-9_-]+[^\s"'>]*/i;
+
+// Spotify track / album URL patterns
+const SPOTIFY_REGEX = /(?:https?:\/\/)?(?:open\.)?spotify\.com\/(?:track|album|playlist|intl-[a-z]+\/track)\/([a-zA-Z0-9]+)[^\s"'>]*/i;
+
 /**
  * Detect if text contains a supported tool URL.
  * @param {string} raw
- * @returns {{ toolId: 'scribd'|'tiktok'|'youtube', route: string, url: string, autoStart: boolean }|null}
+ * @returns {{ toolId: 'scribd'|'tiktok'|'youtube'|'facebook'|'instagram'|'spotify', route: string, url: string, autoStart: boolean }|null}
  */
 export function detectSmartRoute(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -61,7 +70,52 @@ export function detectSmartRoute(raw) {
     };
   }
 
-  // 3. TikTok / Douyin Video & Photo Check
+  // 3. Facebook Video & Reel Check
+  const facebookMatch = trimmed.match(FACEBOOK_REGEX);
+  if (facebookMatch) {
+    let matchedUrl = facebookMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'facebook',
+      route: '#tool/facebook-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
+  // 4. Instagram Post & Reel Check
+  const instagramMatch = trimmed.match(INSTAGRAM_REGEX);
+  if (instagramMatch) {
+    let matchedUrl = instagramMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'instagram',
+      route: '#tool/instagram-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
+  // 5. Spotify Track Check
+  const spotifyMatch = trimmed.match(SPOTIFY_REGEX);
+  if (spotifyMatch) {
+    let matchedUrl = spotifyMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'spotify',
+      route: '#tool/spotify-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
+  // 6. TikTok / Douyin Video & Photo Check
   const tiktokMatch = trimmed.match(TIKTOK_REGEX) || trimmed.match(DOUYIN_REGEX);
   if (tiktokMatch) {
     let matchedUrl = tiktokMatch[0];

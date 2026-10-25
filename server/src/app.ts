@@ -40,6 +40,9 @@ import { systemRoute } from './api/routes/system.route.js';
 import { adminRoute } from './api/routes/admin.route.js';
 import { tiktokRoute } from './api/routes/tiktok.route.js';
 import { youtubeRoute } from './api/routes/youtube.route.js';
+import { facebookRoute } from './api/routes/facebook.route.js';
+import { instagramRoute } from './api/routes/instagram.route.js';
+import { spotifyRoute } from './api/routes/spotify.route.js';
 import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
 import { ipAccessService } from './services/ip-access.service.js';
 
@@ -201,6 +204,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(adminRoute);
   await app.register(tiktokRoute);
   await app.register(youtubeRoute);
+  await app.register(facebookRoute);
+  await app.register(instagramRoute);
+  await app.register(spotifyRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)

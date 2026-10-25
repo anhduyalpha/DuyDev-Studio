@@ -509,7 +509,6 @@ export const TOOL_ICONS = {
   `,
   'scribd': (className = 'w-6 h-6') => TOOL_ICONS['scribd-archiver'](className),
 
-  // 15. YouTube Downloader (Classic Rounded Red Screen Chassis & Centered Play Arrow)
   'youtube-downloader': (className = 'w-6 h-6') => `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
       <defs>
@@ -532,7 +531,77 @@ export const TOOL_ICONS = {
       <polygon points="10,8.5 16,12 10,15.5" fill="#FFFFFF" />
     </svg>
   `,
-  'youtube': (className = 'w-6 h-6') => TOOL_ICONS['youtube-downloader'](className)
+  'youtube': (className = 'w-6 h-6') => TOOL_ICONS['youtube-downloader'](className),
+
+  // 16. Facebook Downloader (Deep Blue Enamel Chassis & Stylized Video Play)
+  'facebook-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-fb-base" x1="2" y1="3" x2="22" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1877F2" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#0E5AC0" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-fb-body" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1877F2" />
+          <stop offset="100%" stop-color="#0E5AC0" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Shadow Sheet -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="url(#ds-fb-base)" class="stroke-[#1877F2]/40" stroke-width="1.2" />
+      <!-- Layer 2: Rounded Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-fb-body)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M7 3h10c2.2 0 3.5 1.2 3.8 2.5H3.2C3.5 4.2 4.8 3 7 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Facebook 'f' with video reel notch -->
+      <path d="M14 8h2V5h-3c-2.2 0-3.5 1.5-3.5 3.5V11H7v3h2.5v7h3.5v-7h2.5l.5-3h-3V8.8c0-.6.4-.8 1-.8z" fill="#FFFFFF" />
+    </svg>
+  `,
+  'facebook': (className = 'w-6 h-6') => TOOL_ICONS['facebook-downloader'](className),
+
+  // 17. Instagram Downloader (Radial Sunset Glow & Precision Camera Lens Ring)
+  'instagram-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-ig-grad" x1="2" y1="21" x2="22" y2="3" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFDC80" />
+          <stop offset="25%" stop-color="#F77737" />
+          <stop offset="50%" stop-color="#F56040" />
+          <stop offset="75%" stop-color="#FD1D1D" />
+          <stop offset="100%" stop-color="#833AB4" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="url(#ds-ig-grad)" fill-opacity="0.25" stroke="url(#ds-ig-grad)" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Gradient Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-ig-grad)" />
+      <!-- Layer 3: Camera Outline & Lens -->
+      <rect x="5.5" y="5.5" width="13" height="13" rx="3.5" stroke="#FFFFFF" stroke-width="1.8" />
+      <circle cx="12" cy="12" r="3.2" stroke="#FFFFFF" stroke-width="1.8" />
+      <circle cx="15.8" cy="8.2" r="0.9" fill="#FFFFFF" />
+    </svg>
+  `,
+  'instagram': (className = 'w-6 h-6') => TOOL_ICONS['instagram-downloader'](className),
+
+  // 18. Spotify Downloader (Vibrant Jade Acoustic Disc & Soundwaves)
+  'spotify-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-sp-body" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1ED760" />
+          <stop offset="100%" stop-color="#1DB954" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Jade Shadow -->
+      <circle cx="12" cy="12" r="10" fill="#1DB954" fill-opacity="0.20" stroke="#1DB954" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Circular Disc Chassis -->
+      <circle cx="12" cy="12" r="9.5" fill="url(#ds-sp-body)" />
+      <!-- Layer 3: Concentric Soundwave Beams -->
+      <path d="M6.5 9.5c3.2-1.2 7.8-1 11 .8" stroke="#121212" stroke-width="1.9" stroke-linecap="round" />
+      <path d="M7.2 12.5c2.6-.9 6.4-.8 9 .6" stroke="#121212" stroke-width="1.7" stroke-linecap="round" />
+      <path d="M8 15.3c2-.7 4.8-.6 6.8.5" stroke="#121212" stroke-width="1.5" stroke-linecap="round" />
+    </svg>
+  `,
+  'spotify': (className = 'w-6 h-6') => TOOL_ICONS['spotify-downloader'](className)
 };
 
 /**

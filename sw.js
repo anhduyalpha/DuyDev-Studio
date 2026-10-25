@@ -3,7 +3,7 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v24.02';
+const CACHE_NAME = 'duydev-studio-v24.05';
 
 const ASSETS_TO_PRECACHE = [
   './',
@@ -20,7 +20,7 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
-  './src/app.js?v=23.97',
+  './src/app.js?v=24.05',
   './src/utilities/soundEngine.js?v=23.70',
   './src/utilities/releaseNotes.js?v=23.70',
   './src/utilities/notificationHelper.js?v=23.70',

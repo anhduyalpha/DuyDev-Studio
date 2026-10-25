@@ -6,6 +6,7 @@ export const CATEGORIES = [
   { id: 'convert', label: 'Chuyển đổi', color: '#8B5CF6' },
   { id: 'archive', label: 'File nén', color: '#0EA5E9' },
   { id: 'qr', label: 'Mã QR', color: '#10B981' },
+  { id: 'media', label: 'Media', color: '#E11D48' },
   { id: 'system', label: 'Tiện ích', color: '#6366F1' },
   { id: 'advanced', label: 'Nâng cao', color: '#EC4899' }
 ];

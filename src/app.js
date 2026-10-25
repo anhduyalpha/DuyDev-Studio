@@ -479,7 +479,7 @@ class App {
   renderCurrentView(isSoftUpdate = false) {
     this.cleanupCurrentView();
     const hash = window.location.hash;
-    if (hash === '#image' || hash === '#media' || hash === '#tool/image-converter' || hash === '#tool/video-audio') {
+    if (hash === '#image' || hash === '#tool/image-converter' || hash === '#tool/video-audio') {
       window.location.replace('#tool/universal-converter');
       return;
     }
@@ -535,6 +535,48 @@ class App {
             youtubeManager.resolve(targetUrl);
           });
         }
+      } else if (parts[0] === 'facebook-downloader' || parts[0] === 'facebook') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('fbUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.querySelector('[data-action="resolve"]');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
+      } else if (parts[0] === 'instagram-downloader' || parts[0] === 'instagram') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('igUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.querySelector('[data-action="resolve"]');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
+      } else if (parts[0] === 'spotify-downloader' || parts[0] === 'spotify') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('spUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.querySelector('[data-action="resolve"]');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
       }
     } else if (hash === '#qr' || hash.startsWith('#qr/')) {
       dispatchTool('qr-multi', hash.startsWith('#qr/') ? hash.replace('#qr/', '') : null);
@@ -573,6 +615,54 @@ class App {
           youtubeManager.setUrl(targetUrl);
           youtubeManager.resolve(targetUrl);
         });
+      }
+    } else if (hash === '#facebook' || hash === '#facebook-downloader' || hash.startsWith('#facebook?') || hash.startsWith('#facebook-downloader?')) {
+      dispatchTool('facebook-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('fbUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.querySelector('[data-action="resolve"]');
+            if (btn) btn.click();
+          }
+        }, 100);
+      }
+    } else if (hash === '#instagram' || hash === '#instagram-downloader' || hash.startsWith('#instagram?') || hash.startsWith('#instagram-downloader?')) {
+      dispatchTool('instagram-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('igUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.querySelector('[data-action="resolve"]');
+            if (btn) btn.click();
+          }
+        }, 100);
+      }
+    } else if (hash === '#spotify' || hash === '#spotify-downloader' || hash.startsWith('#spotify?') || hash.startsWith('#spotify-downloader?')) {
+      dispatchTool('spotify-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('spUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.querySelector('[data-action="resolve"]');
+            if (btn) btn.click();
+          }
+        }, 100);
       }
     } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {
       dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);

@@ -9,7 +9,7 @@ import { getStorageAuthHeaders } from '../../utilities/adminAuth.js';
 import { showToast } from '../../utilities/toast.js';
 import { soundEngine } from '../../utilities/soundEngine.js';
 
-export const SYSTEM_CATEGORY_IDS = new Set(['pdf', 'convert', 'archive', 'qr', 'system', 'advanced']);
+export const SYSTEM_CATEGORY_IDS = new Set(['pdf', 'convert', 'archive', 'qr', 'media', 'system', 'advanced']);
 
 export const PRESET_TAB_COLORS = [
   '#F59E0B', // Amber

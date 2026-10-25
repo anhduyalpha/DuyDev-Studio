@@ -28,6 +28,9 @@ import { renderQuizWorkspace, attachQuizListeners } from '../components/tools/qu
 import { renderViewSplitWorkspace, attachViewSplitWorkspaceListeners } from '../components/tools/viewsplit/ViewSplitWorkspace.js?v=22.11';
 import { renderTiktokWorkspace, attachTiktokWorkspaceListeners } from '../components/tools/tiktok/TiktokWorkspace.js';
 import { renderYoutubeWorkspace, attachYoutubeWorkspaceListeners } from '../components/tools/youtube/YoutubeWorkspace.js';
+import { renderFacebookWorkspace, attachFacebookWorkspaceListeners } from '../components/tools/facebook/FacebookWorkspace.js';
+import { renderInstagramWorkspace, attachInstagramWorkspaceListeners } from '../components/tools/instagram/InstagramWorkspace.js';
+import { renderSpotifyWorkspace, attachSpotifyWorkspaceListeners } from '../components/tools/spotify/SpotifyWorkspace.js';
 import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
@@ -86,6 +89,18 @@ export function renderToolPage(toolId = 'pdf-convert', subTab = null) {
     case 'youtube-downloader':
     case 'youtube':
       return renderYoutubeWorkspace();
+
+    case 'facebook-downloader':
+    case 'facebook':
+      return renderFacebookWorkspace();
+
+    case 'instagram-downloader':
+    case 'instagram':
+      return renderInstagramWorkspace();
+
+    case 'spotify-downloader':
+    case 'spotify':
+      return renderSpotifyWorkspace();
 
     case 'pdf-studio':
     case 'pdf-merge':
@@ -158,6 +173,18 @@ export function attachToolPageListeners(onReRender) {
     case 'youtube-downloader':
     case 'youtube':
       return attachYoutubeWorkspaceListeners(onReRender);
+
+    case 'facebook-downloader':
+    case 'facebook':
+      return attachFacebookWorkspaceListeners(onReRender);
+
+    case 'instagram-downloader':
+    case 'instagram':
+      return attachInstagramWorkspaceListeners(onReRender);
+
+    case 'spotify-downloader':
+    case 'spotify':
+      return attachSpotifyWorkspaceListeners(onReRender);
 
     case 'pdf-studio':
     case 'pdf-merge':

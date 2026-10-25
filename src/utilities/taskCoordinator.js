@@ -46,6 +46,8 @@ class TaskCoordinator {
     this.subscribers = new Set();
     /** @type {Map<string, string>} */
     this.lastStatuses = new Map();
+    /** @type {Map<string, ActiveTask>} */
+    this.directTasks = new Map();
     /** @type {ActiveTask[]} */
     this.cachedTasks = [];
     /** @type {number|null} */
@@ -216,6 +218,13 @@ class TaskCoordinator {
       }
     });
 
+    // Merge ad-hoc direct tasks dispatched from workspaces
+    this.directTasks.forEach((t) => {
+      if (t && t.id) {
+        currentTasks.push({ ...t });
+      }
+    });
+
     // Detect status transitions (e.g. running -> completed / error)
     currentTasks.forEach((task) => {
       const prevStatus = this.lastStatuses.get(task.id);
@@ -313,6 +322,58 @@ class TaskCoordinator {
         tag: `task_${task.id || Date.now()}`
       }
     );
+  }
+
+  /**
+   * Directly creates or registers an ad-hoc active task for GlobalTaskDock.
+   * @param {string} id
+   * @param {Partial<ActiveTask>} taskData
+   */
+  createTask(id, taskData = {}) {
+    if (!id || !taskData) return;
+    this.directTasks.set(id, {
+      id,
+      moduleId: taskData.moduleId || 'media',
+      moduleTitle: taskData.moduleTitle || 'Media',
+      title: taskData.title || id,
+      status: taskData.status || 'running',
+      progress: typeof taskData.progress === 'number' ? taskData.progress : 15,
+      stage: taskData.stage || 'Đang xử lý...',
+      route: taskData.route || '#',
+      ...taskData
+    });
+    this.syncTasks(true);
+  }
+
+  /**
+   * Updates an existing ad-hoc task in GlobalTaskDock.
+   * @param {string} id
+   * @param {Partial<ActiveTask>} updates
+   */
+  updateTask(id, updates = {}) {
+    if (!id || !this.directTasks.has(id)) return;
+    const task = this.directTasks.get(id);
+    Object.assign(task, updates);
+    this.syncTasks(true);
+
+    if (task.status === 'completed' || task.status === 'error' || task.status === 'failed') {
+      setTimeout(() => {
+        if (this.directTasks.has(id)) {
+          this.directTasks.delete(id);
+          this.syncTasks(true);
+        }
+      }, 5000);
+    }
+  }
+
+  /**
+   * Removes an ad-hoc task from GlobalTaskDock.
+   * @param {string} id
+   */
+  removeTask(id) {
+    if (!id) return;
+    this.directTasks.delete(id);
+    this.syncTasks(true);
   }
 
   /**
