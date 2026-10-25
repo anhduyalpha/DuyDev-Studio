@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.06': {
+    version: 'v24.06',
+    title: 'Bản cập nhật v24.06 (APK v24.6.0)',
+    date: '25/10/2026',
+    features: [
+      'Nâng Cấp Thiết Kế Thông Báo Android: Loại bỏ hoàn toàn biểu tượng ứng dụng kép trùng lặp, căn chỉnh tiêu đề ngắn gọn "Tải xuống hoàn tất" chống tràn chữ, hiển thị tên tệp thanh lịch và bổ sung nút thao tác "Mở tệp" trực tiếp trên thanh thông báo hệ thống',
+      'Chuẩn Hóa Tên Tệp Tải Về: Tự động trích xuất tiêu đề video TikTok thực tế thay vì chuỗi mã số ID thô, giúp quản lý tệp trực quan trong Thư viện và ứng dụng Tệp'
+    ],
+    fixes: [
+      'Khắc Phục Triệt Để Lỗi Tải Trùng Tệp (Double Download): Chặn hiện tượng sự kiện nhấp chuột lan truyền (event bubbling) kích hoạt tải hai lần đồng thời, bổ sung bộ đệm chống trùng đa luồng trượt 2000ms trong DownloadHelper bản địa',
+      'Đồng Bộ Thông Báo Hoàn Tất: Ngăn chặn việc bắn thông báo trùng lặp giữa tầng Web và Native Bridge khi tải tệp đa phương tiện'
+    ]
+  },
   'v24.01': {
     version: 'v24.01',
     title: 'Bản cập nhật v24.01',

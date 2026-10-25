@@ -287,10 +287,12 @@ export class YoutubeManager {
       this.notify();
       try { soundEngine?.play('complete'); } catch {}
       showToast(`Tải xuống thành công: ${result.fileName}`, 'success');
-      notifyJobComplete('Tải xuống YouTube hoàn tất', `"${result.fileName}" đã được tải về máy của bạn!`, {
-        url: window.location.href,
-        tag: `yt_${result.fileName || Date.now()}`
-      });
+      if (!window.AndroidBridge) {
+        notifyJobComplete('Tải xuống YouTube hoàn tất', `"${result.fileName}" đã được tải về máy của bạn!`, {
+          url: window.location.href,
+          tag: `yt_${result.fileName || Date.now()}`
+        });
+      }
     } catch (err) {
       this.state.isDownloading = false;
       this.state.downloadStatusText = '';

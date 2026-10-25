@@ -628,6 +628,7 @@ export function attachQuizListeners() {
 
     if (window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
       e.preventDefault();
+      e.stopPropagation();
       try {
         window.AndroidBridge.downloadFile(fileUrl, fileName, mimeType);
         return;

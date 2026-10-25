@@ -26,15 +26,42 @@ object DownloadHelper {
         .followSslRedirects(true)
         .build()
 
+    private val recentDownloads = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val DEBOUNCE_WINDOW_MS = 2000L
+
+    private fun isDuplicateDownload(key: String): Boolean {
+        val now = System.currentTimeMillis()
+        val iterator = recentDownloads.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (now - entry.value > 30000L) {
+                iterator.remove()
+            }
+        }
+        val lastTime = recentDownloads[key]
+        if (lastTime != null && (now - lastTime) < DEBOUNCE_WINDOW_MS) {
+            return true
+        }
+        recentDownloads[key] = now
+        return false
+    }
+
     fun saveBase64(
         context: Context,
         base64Data: String,
         suggestedFileName: String,
         mimeType: String
     ) {
-        val notificationId = (System.currentTimeMillis() % 100000).toInt()
         val cleanName = sanitizeFileName(suggestedFileName, mimeType)
         val finalMime = normalizeMimeType(cleanName, mimeType)
+
+        val dedupeKey = "base64_${cleanName.trim()}_${base64Data.length}"
+        if (isDuplicateDownload(dedupeKey)) {
+            android.util.Log.w("DownloadHelper", "Ignoring duplicate saveBase64 request for $cleanName")
+            return
+        }
+
+        val notificationId = (cleanName.hashCode() and 0x7FFFFFFF) % 100000
 
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 
@@ -128,8 +155,14 @@ object DownloadHelper {
             return
         }
 
-        val notificationId = (System.currentTimeMillis() % 100000).toInt()
         var cleanName = sanitizeFileName(suggestedFileName, mimeType)
+        val dedupeKey = "url_${url.trim()}_${cleanName.trim()}"
+        if (isDuplicateDownload(dedupeKey)) {
+            android.util.Log.w("DownloadHelper", "Ignoring duplicate download request for $cleanName ($url)")
+            return
+        }
+
+        val notificationId = ((url.hashCode() xor cleanName.hashCode()) and 0x7FFFFFFF) % 100000
 
         DownloadNotificationManager.showDownloadProgress(context, notificationId, cleanName, 0)
 

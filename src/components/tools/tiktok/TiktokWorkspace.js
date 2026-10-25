@@ -962,12 +962,20 @@ export function attachTiktokWorkspaceListeners() {
 
     // Native Android APK Gallery Download Interceptor
     if (window.AndroidBridge?.downloadFile) {
+      const cleanCaption = (video.title || '').trim()
+        .replace(/[\n\r]+/g, ' ')
+        .replace(/[\\/:*?"<>|#]/g, '')
+        .slice(0, 30)
+        .trim();
+      const safeShortId = (video.id || Date.now()).toString().slice(-8);
+
       const btnStandard = document.getElementById('btnDownloadStandard');
       if (btnStandard) {
         btnStandard.onclick = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           const href = btnStandard.getAttribute('href');
-          const fileName = `tiktok_${video.id || Date.now()}.mp4`;
+          const fileName = cleanCaption ? `TikTok_${cleanCaption}.mp4` : `TikTok_${safeShortId}.mp4`;
           window.AndroidBridge.downloadFile(href, fileName, 'video/mp4');
           showToast('Đang tải video về máy...', 'info');
         };
@@ -977,8 +985,9 @@ export function attachTiktokWorkspaceListeners() {
       if (btnHd) {
         btnHd.onclick = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           const href = btnHd.getAttribute('href');
-          const fileName = `tiktok_${video.id || Date.now()}_HD.mp4`;
+          const fileName = cleanCaption ? `TikTok_${cleanCaption}_HD.mp4` : `TikTok_${safeShortId}_HD.mp4`;
           window.AndroidBridge.downloadFile(href, fileName, 'video/mp4');
           showToast('Đang tải video HD về máy...', 'info');
         };
@@ -988,8 +997,9 @@ export function attachTiktokWorkspaceListeners() {
       if (btnAudio) {
         btnAudio.onclick = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           const href = btnAudio.getAttribute('href');
-          const fileName = `tiktok_${video.id || Date.now()}_audio.mp3`;
+          const fileName = cleanCaption ? `TikTok_${cleanCaption}_audio.mp3` : `TikTok_${safeShortId}_audio.mp3`;
           window.AndroidBridge.downloadFile(href, fileName, 'audio/mpeg');
           showToast('Đang tải nhạc TikTok về máy...', 'info');
         };
@@ -999,8 +1009,9 @@ export function attachTiktokWorkspaceListeners() {
       if (btnSlideAudio) {
         btnSlideAudio.onclick = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           const href = btnSlideAudio.getAttribute('href');
-          const fileName = `tiktok_${video.id || Date.now()}_audio.mp3`;
+          const fileName = cleanCaption ? `TikTok_${cleanCaption}_audio.mp3` : `TikTok_${safeShortId}_audio.mp3`;
           window.AndroidBridge.downloadFile(href, fileName, 'audio/mpeg');
           showToast('Đang tải nhạc TikTok về máy...', 'info');
         };
@@ -1010,8 +1021,9 @@ export function attachTiktokWorkspaceListeners() {
       if (btnSlideDl) {
         btnSlideDl.onclick = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           const href = btnSlideDl.getAttribute('href');
-          const fileName = btnSlideDl.getAttribute('download') || `tiktok_slide_${Date.now()}.jpg`;
+          const fileName = btnSlideDl.getAttribute('download') || `TikTok_slide_${Date.now()}.jpg`;
           window.AndroidBridge.downloadFile(href, fileName, 'image/jpeg');
           showToast('Đang tải ảnh về máy...', 'info');
         };

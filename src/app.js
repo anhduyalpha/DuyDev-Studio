@@ -701,12 +701,26 @@ if (typeof window !== 'undefined') {
   };
 
   // Android Native bridge: Intercept any <a download> clicks to route through AndroidBridge.downloadFile
+  let lastNativeDownloadTimestamp = 0;
+  let lastNativeDownloadHref = '';
   document.addEventListener('click', (e) => {
+    if (e.defaultPrevented) return;
+
     const link = e.target.closest('a[download]');
     if (link && window.AndroidBridge && typeof window.AndroidBridge.downloadFile === 'function') {
       const href = link.getAttribute('href');
       if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        const now = Date.now();
+        if (now - lastNativeDownloadTimestamp < 1500 && lastNativeDownloadHref === href) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        lastNativeDownloadTimestamp = now;
+        lastNativeDownloadHref = href;
+
         e.preventDefault();
+        e.stopPropagation();
         const fileName = link.getAttribute('download') || link.download || href.split('/').pop()?.split('?')[0] || 'download';
         window.AndroidBridge.downloadFile(href, fileName);
       }

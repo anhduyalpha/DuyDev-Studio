@@ -94,18 +94,16 @@ object UploadNotificationManager {
         val speedStr = formatSpeed(speedBytesPerSec)
         val uploadedStr = formatBytes(uploadedBytes)
         val totalStr = formatBytes(totalBytes)
-        val contentText = "$progress% • $uploadedStr / $totalStr • $speedStr"
-
-        val appIcon = android.graphics.BitmapFactory.decodeResource(context.resources, vn.alphadaniel.duydevstudio.R.mipmap.ic_launcher)
+        val contentText = "$fileName • $progress% • $speedStr"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_PROGRESS_ID)
             .setSmallIcon(vn.alphadaniel.duydevstudio.R.drawable.ic_notification)
-            .setLargeIcon(appIcon)
-            .setContentTitle("Đang tải lên: $fileName")
+            .setContentTitle("Đang tải tệp lên...")
             .setContentText(contentText)
             .setProgress(100, progress, false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setColor(0xFF4F46E5.toInt())
             .setContentIntent(openAppPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Hủy", cancelPendingIntent)
             .build()
@@ -140,20 +138,19 @@ object UploadNotificationManager {
             flags
         )
 
-        val title = if (isSuccess) "Tải lên thành công" else "Tải lên thất bại"
+        val title = if (isSuccess) "Tải lên hoàn tất" else "Tải lên thất bại"
         val text = if (isSuccess) {
             "$fileName ($sizeFormatted) đã được nạp an toàn vào máy chủ"
         } else {
             "$fileName: ${errorMsg ?: "Lỗi không xác định"}"
         }
-        val appIcon = android.graphics.BitmapFactory.decodeResource(context.resources, vn.alphadaniel.duydevstudio.R.mipmap.ic_launcher)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_STATUS_ID)
             .setSmallIcon(vn.alphadaniel.duydevstudio.R.drawable.ic_notification)
-            .setLargeIcon(appIcon)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setColor(0xFF4F46E5.toInt())
             .setAutoCancel(true)
             .setOngoing(false)
             .setContentIntent(openAppPendingIntent)

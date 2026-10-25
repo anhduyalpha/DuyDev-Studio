@@ -80,18 +80,45 @@ object DownloadNotificationManager {
         }
     }
 
+    /**
+     * Cleanly formats filenames for notification displays, transforming raw numeric hashes
+     * (e.g. tiktok_7700222954541508891.mp4) into elegant, human-readable labels.
+     */
+    fun formatDisplayFileName(fileName: String): String {
+        val trimmed = fileName.trim()
+        val dotIndex = trimmed.lastIndexOf('.')
+        val ext = if (dotIndex != -1) trimmed.substring(dotIndex) else ""
+        val nameWithoutExt = if (dotIndex != -1) trimmed.substring(0, dotIndex) else trimmed
+
+        if (nameWithoutExt.startsWith("tiktok_", ignoreCase = true) && nameWithoutExt.length > 15) {
+            val suffix = nameWithoutExt.takeLast(6)
+            return "TikTok Video ($suffix)$ext"
+        }
+        if (nameWithoutExt.startsWith("youtube_", ignoreCase = true) && nameWithoutExt.length > 20) {
+            val suffix = nameWithoutExt.takeLast(6)
+            return "YouTube Media ($suffix)$ext"
+        }
+
+        if (trimmed.length > 40) {
+            val prefix = nameWithoutExt.take(22)
+            val suffix = nameWithoutExt.takeLast(8)
+            return "$prefix...$suffix$ext"
+        }
+        return trimmed
+    }
+
     fun showDownloadProgress(context: Context, notificationId: Int, fileName: String, progress: Int) {
         createChannels(context)
-        val appIcon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
+        val cleanDisplayName = formatDisplayFileName(fileName)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOAD_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(appIcon)
-            .setContentTitle("Đang tải: $fileName")
-            .setContentText("$progress%")
+            .setContentTitle("Đang tải tệp xuống...")
+            .setContentText("$cleanDisplayName • $progress%")
             .setProgress(100, progress, progress <= 0)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setColor(0xFF4F46E5.toInt())
             .build()
 
         try {
@@ -109,7 +136,6 @@ object DownloadNotificationManager {
         mimeType: String
     ) {
         createChannels(context)
-        val appIcon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
 
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
 
@@ -134,17 +160,23 @@ object DownloadNotificationManager {
             flags
         )
 
+        val cleanDisplayName = formatDisplayFileName(fileName)
         val sizeFormatted = formatBytes(if (fileSize > 0) fileSize else (file?.length() ?: 0L))
-        val text = "$fileName ($sizeFormatted) đã được lưu vào máy"
+        val shortSummary = if (sizeFormatted.isNotBlank() && sizeFormatted != "0 B") {
+            "$cleanDisplayName • $sizeFormatted"
+        } else {
+            cleanDisplayName
+        }
+        val detailedText = "$shortSummary\nĐã lưu an toàn vào thiết bị. Chạm để mở."
 
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOAD_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(appIcon)
-            .setContentTitle("DuyDev Studio • Đã tải về thành công")
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentTitle("Tải xuống hoàn tất")
+            .setContentText(shortSummary)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(detailedText))
             .setContentIntent(pendingIntent)
+            .addAction(android.R.drawable.ic_menu_view, "Mở tệp", pendingIntent)
             .setAutoCancel(true)
             .setOngoing(false)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -173,7 +205,6 @@ object DownloadNotificationManager {
 
     fun showPushNotification(context: Context, title: String, message: String, type: String = "general") {
         createChannels(context)
-        val appIcon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
         val notificationId = (System.currentTimeMillis() % 100000).toInt()
 
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
@@ -191,11 +222,17 @@ object DownloadNotificationManager {
             flags
         )
 
+        // Strip redundant app name prefix from title
+        val cleanTitle = title.removePrefix("DuyDev Studio • ")
+            .removePrefix("DuyDev Studio: ")
+            .removePrefix("DuyDev Studio - ")
+            .trim()
+            .ifBlank { "Thông báo hệ thống" }
+
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notification = NotificationCompat.Builder(context, CHANNEL_PUSH_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(appIcon)
-            .setContentTitle(title)
+            .setContentTitle(cleanTitle)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setContentIntent(pendingIntent)
