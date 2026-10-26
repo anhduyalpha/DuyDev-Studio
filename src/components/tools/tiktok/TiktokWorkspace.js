@@ -29,6 +29,7 @@ function formatDuration(sec) {
 }
 
 function escapeHtml(str = '') {
+  if (str == null) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -174,16 +175,18 @@ export function renderTiktokWorkspace() {
 }
 
 function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriveParam, isForceResave = false) {
+  if (!video) return '';
   const existingInDrive = existingInDriveParam || video.existingInDrive;
   const isSlideshow = Boolean(video.isSlideshow && video.images && video.images.length > 0);
   const images = isSlideshow ? video.images : [];
 
-  const streamUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${video.id}.mp4`);
-  const streamHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${video.id}_HD.mp4`) : '';
-  const downloadUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${video.id}.mp4`, true);
-  const downloadHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${video.id}_HD.mp4`, true) : '';
-  const audioDownloadUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${video.id}_audio.mp3`, true) : '';
-  const audioStreamUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${video.id}_audio.mp3`) : '';
+  const safeId = video?.id || Date.now();
+  const streamUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${safeId}.mp4`);
+  const streamHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${safeId}_HD.mp4`) : '';
+  const downloadUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${safeId}.mp4`, true);
+  const downloadHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${safeId}_HD.mp4`, true) : '';
+  const audioDownloadUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${safeId}_audio.mp3`, true) : '';
+  const audioStreamUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${safeId}_audio.mp3`) : '';
 
   const firstSlideStream = images.length > 0 ? tiktokApi.getStreamUrl(images[0], `slide_01.jpg`) : '';
   const firstSlideDownload = images.length > 0 ? tiktokApi.getStreamUrl(images[0], `slide_01.jpg`, true) : '';
@@ -328,7 +331,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
 
           <!-- Video Title / Caption -->
           <div class="p-3 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-zinc-800/60 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed max-h-24 overflow-y-auto">
-            ${escapeHtml(video.title)}
+            ${escapeHtml(video.title || 'Video TikTok')}
           </div>
 
           <!-- Metrics Row -->
@@ -643,6 +646,7 @@ async function ensureJSZip() {
  * Bundle all slideshow images + background MP3 audio into a single client-side .ZIP
  */
 async function downloadSlideshowZip(video) {
+  if (!video) return;
   const btn = document.getElementById('btnDownloadSlideshowZip');
   const textSpan = btn?.querySelector('.zip-progress-text');
   const originalHtml = btn?.innerHTML || '';
@@ -694,8 +698,8 @@ async function downloadSlideshowZip(video) {
     });
 
     // 4. Trigger browser download or native Android APK save
-    const cleanTitle = (video.title || 'tiktok_album').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40).trim();
-    const zipFileName = `[TikTok]_${cleanTitle || 'album'}_${video.id || Date.now()}.zip`;
+    const cleanTitle = (video?.title || 'tiktok_album').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40).trim();
+    const zipFileName = `[TikTok]_${cleanTitle || 'album'}_${video?.id || Date.now()}.zip`;
 
     if (window.AndroidBridge?.saveBase64File) {
       const reader = new FileReader();
@@ -760,6 +764,8 @@ export function attachTiktokWorkspaceListeners() {
   function attachResultCardListeners() {
     const state = tiktokManager.getState();
     const video = state.videoData;
+    if (!video) return;
+
     const btnSaveDrive = document.getElementById('btnSaveTiktokDrive');
     const btnForceResave = document.getElementById('btnForceResaveTiktok');
     const btnCopyDirect = document.getElementById('btnCopyTiktokDirectLink');
@@ -961,13 +967,13 @@ export function attachTiktokWorkspaceListeners() {
     }
 
     // Native Android APK Gallery Download Interceptor
-    if (window.AndroidBridge?.downloadFile) {
-      const cleanCaption = (video.title || '').trim()
+    if (window.AndroidBridge?.downloadFile && video) {
+      const cleanCaption = (video?.title ? String(video.title) : '').trim()
         .replace(/[\n\r]+/g, ' ')
         .replace(/[\\/:*?"<>|#]/g, '')
         .slice(0, 30)
         .trim();
-      const safeShortId = (video.id || Date.now()).toString().slice(-8);
+      const safeShortId = (video?.id || Date.now()).toString().slice(-8);
 
       const btnStandard = document.getElementById('btnDownloadStandard');
       if (btnStandard) {
