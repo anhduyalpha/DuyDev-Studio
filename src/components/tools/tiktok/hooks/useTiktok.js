@@ -8,6 +8,7 @@ import { tiktokApi } from '../services/tiktokApi.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
+import { storage } from '../../../../utilities/storage.js';
 
 const STORAGE_KEY = 'ds_tiktok_history_v1';
 
@@ -96,6 +97,24 @@ export class TiktokManager {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       this.state.recentHistory = updated;
       this.notify({ type: 'history' });
+
+      storage.recordCompletedJob({
+        id: `tiktok-${item.id || Date.now()}`,
+        toolId: 'tiktok-downloader',
+        toolTitle: 'TikTok Downloader',
+        tool: 'TikTok Downloader',
+        fileName: item.title || (item.isSlideshow ? 'TikTok Album' : 'TikTok Video'),
+        title: item.title,
+        author: item.author,
+        cover: item.cover,
+        thumbnail: item.cover,
+        duration: item.duration,
+        downloadUrl: item.url,
+        originalUrl: item.url,
+        quality: item.isSlideshow ? `${item.slideCount || 0} Ảnh` : 'HD Video',
+        mediaType: item.isSlideshow ? 'carousel' : 'video',
+        driveRelPath: item.driveRelPath
+      });
     } catch (e) {
       console.warn('[TikTokManager] Failed to persist history:', e);
     }
@@ -118,6 +137,7 @@ export class TiktokManager {
         this.state.recentHistory = history;
         this.notify({ type: 'history' });
       }
+      storage.updateItemDrivePath(videoId, normalizedPath);
     } catch (e) {
       console.warn('[TikTokManager] Failed to update history drive path:', e);
     }
@@ -128,6 +148,7 @@ export class TiktokManager {
       localStorage.removeItem(STORAGE_KEY);
       this.state.recentHistory = [];
       this.notify({ type: 'history' });
+      storage.clearToolHistoryToTrash('tiktok-downloader');
     } catch {}
   }
 

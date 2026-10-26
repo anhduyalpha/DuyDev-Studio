@@ -11,6 +11,8 @@ import { showToast } from '../../../utilities/toast.js';
 import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
+import { storage } from '../../../utilities/storage.js';
+import { renderMediaHistorySection, attachMediaHistoryListeners } from '../common/MediaHistorySection.js';
 
 export class FacebookWorkspace {
   constructor(containerEl) {
@@ -23,6 +25,7 @@ export class FacebookWorkspace {
     this.savingToDrive = false;
     this.saveResult = null;
     this.handlePendingEvent = null;
+    this.historyTab = 'history';
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -31,6 +34,10 @@ export class FacebookWorkspace {
 
   mount() {
     this.render();
+
+    storage.fetchHistory().then(() => {
+      this.render();
+    }).catch(() => {});
 
     const pendingUrl = consumePendingAutoStart('facebook');
     if (pendingUrl) {
@@ -92,6 +99,33 @@ export class FacebookWorkspace {
       this.selectedQuality = data.videoHdUrl ? 'hd' : 'sd';
       soundEngine?.play('success');
       showToast('Trích xuất video Facebook thành công!', 'success');
+
+      const targetMediaUrl = (this.selectedQuality === 'hd' && data.videoHdUrl) ? data.videoHdUrl : (data.videoSdUrl || data.videoHdUrl || '');
+      const streamUrl = targetMediaUrl
+        ? facebookApi.getStreamUrl(targetMediaUrl, `${data.title || 'facebook_video'}.mp4`, false)
+        : '';
+
+      storage.recordCompletedJob({
+        id: `fb-${data.id || Date.now()}`,
+        toolId: 'facebook-downloader',
+        toolTitle: 'Facebook Downloader',
+        tool: 'Facebook Downloader',
+        fileName: `${data.title || 'facebook_video'}.mp4`,
+        title: data.title || 'Facebook Video',
+        author: data.author || 'facebook',
+        cover: data.cover || null,
+        thumbnail: data.cover || null,
+        duration: data.duration || null,
+        downloadUrl: targetMediaUrl,
+        videoHdUrl: data.videoHdUrl || null,
+        videoSdUrl: data.videoSdUrl || null,
+        viewUrl: streamUrl,
+        originalUrl: cleanUrl,
+        quality: data.videoHdUrl ? 'HD Video' : 'SD Video',
+        mediaType: 'video',
+        driveRelPath: data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null,
+        resultSize: data.sizeBytes || 0
+      });
     } catch (err) {
       this.error = err.message || 'Lỗi khi trích xuất video Facebook';
       soundEngine?.play('error');
@@ -150,6 +184,10 @@ export class FacebookWorkspace {
           sizeBytes: res.data.sizeBytes
         };
       }
+
+      if (res.data?.relPath) {
+        storage.updateItemDrivePath(targetMediaUrl, res.data.relPath);
+      }
     } catch (err) {
       soundEngine?.play('error');
       showToast(err.message || 'Lỗi khi lưu video vào Drive', 'error');
@@ -157,6 +195,31 @@ export class FacebookWorkspace {
     } finally {
       this.savingToDrive = false;
       this.render();
+    }
+  }
+
+  async saveHistoryItemToDrive(historyItem) {
+    if (!historyItem || !historyItem.downloadUrl) return;
+    try {
+      showToast('Đang lưu video vào Studio Drive...', 'info');
+      const res = await facebookApi.saveToDrive({
+        url: historyItem.downloadUrl,
+        title: historyItem.title || historyItem.fileName,
+        id: historyItem.id,
+        originalUrl: historyItem.originalUrl || this.url,
+        cover: historyItem.cover,
+        author: historyItem.author,
+        duration: historyItem.duration,
+        quality: historyItem.quality?.includes('HD') ? 'HD' : 'SD',
+        overwrite: true
+      });
+      if (res.data?.relPath) {
+        storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
+        showToast('Đã lưu video vào Studio Drive!', 'success');
+        this.render();
+      }
+    } catch (e) {
+      showToast(e.message || 'Lỗi khi lưu vào Drive', 'error');
     }
   }
 
@@ -437,6 +500,16 @@ export class FacebookWorkspace {
           </div>
         ` : ''}
 
+        <!-- Media History Section -->
+        ${renderMediaHistorySection({
+          toolId: 'facebook-downloader',
+          title: 'Lịch Sử Tải Video Facebook',
+          activeTab: this.historyTab,
+          fallbackIcon: 'facebook',
+          accentColor: '#1877F2',
+          driveFolderPath: '/facebook'
+        })}
+
       </div>
     `;
 
@@ -451,6 +524,29 @@ export class FacebookWorkspace {
 
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
+
+    attachMediaHistoryListeners({
+      container: this.container,
+      toolId: 'facebook-downloader',
+      accentColor: '#1877F2',
+      onTabChange: (tab) => {
+        this.historyTab = tab;
+        this.render();
+      },
+      onReResolve: (url) => {
+        this.url = url;
+        const inp = this.container.querySelector('#fbUrlInput');
+        if (inp) inp.value = url;
+        this.resolveVideo();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+      onSaveDrive: (item) => {
+        this.saveHistoryItemToDrive(item);
+      },
+      onHistoryChange: () => {
+        this.render();
+      }
+    });
 
     if (window.lucide?.createIcons) {
       window.lucide.createIcons({ root: this.container });

@@ -4,17 +4,36 @@
 import { formatBytes, formatRelativeTime } from '../../utilities/formatters.js';
 
 export function renderHistoryItemRow(item, isTrash) {
-  const downloadHref = item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null);
-  const hasPreview = Boolean(downloadHref);
+  const hasDrive = Boolean(item.driveRelPath);
+  const downloadHref = hasDrive
+    ? `/api/v1/storage/download?path=${encodeURIComponent(item.driveRelPath)}`
+    : (item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null));
+  const hasPreview = Boolean(downloadHref || hasDrive);
 
   return `
     <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition text-sm">
       <div class="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
-        <div class="w-10 h-10 rounded-xl ${isTrash ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'} border flex items-center justify-center shrink-0">
-          <i data-lucide="${isTrash ? 'trash' : 'check'}" class="w-5 h-5"></i>
-        </div>
+        ${(item.cover || item.thumbnail) ? `
+          <div class="relative w-10 h-10 rounded-xl overflow-hidden bg-zinc-800 shrink-0 border border-zinc-200 dark:border-white/10 flex items-center justify-center">
+            <img src="${item.cover || item.thumbnail}" alt="" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+            <div style="display:none;" class="w-full h-full items-center justify-center text-zinc-500">
+              <i data-lucide="${isTrash ? 'trash' : 'check'}" class="w-4 h-4"></i>
+            </div>
+          </div>
+        ` : `
+          <div class="w-10 h-10 rounded-xl ${isTrash ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'} border flex items-center justify-center shrink-0">
+            <i data-lucide="${isTrash ? 'trash' : 'check'}" class="w-5 h-5"></i>
+          </div>
+        `}
         <div class="min-w-0 flex-1">
-          <p class="font-semibold text-zinc-900 dark:text-white truncate text-sm sm:text-base">${item.fileName || 'Tài liệu'}</p>
+          <div class="flex items-center gap-1.5 min-w-0">
+            <p class="font-semibold text-zinc-900 dark:text-white truncate text-sm sm:text-base">${item.fileName || 'Tài liệu'}</p>
+            ${hasDrive ? `
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 inline-flex items-center gap-0.5">
+                <i data-lucide="check" class="w-2.5 h-2.5"></i> Drive
+              </span>
+            ` : ''}
+          </div>
           <p class="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
             Công cụ: <span class="text-indigo-600 dark:text-indigo-300 font-medium">${item.toolTitle || item.tool || 'Xử lý'}</span>
             ${item.resultSize ? ` • ${formatBytes(item.resultSize)}` : ''}

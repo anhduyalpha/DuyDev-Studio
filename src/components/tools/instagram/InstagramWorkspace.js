@@ -11,6 +11,8 @@ import { showToast } from '../../../utilities/toast.js';
 import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
+import { storage } from '../../../utilities/storage.js';
+import { renderMediaHistorySection, attachMediaHistoryListeners } from '../common/MediaHistorySection.js';
 
 export class InstagramWorkspace {
   constructor(containerEl) {
@@ -22,6 +24,7 @@ export class InstagramWorkspace {
     this.savingToDrive = false;
     this.selectedMediaIndex = 0;
     this.handlePendingEvent = null;
+    this.historyTab = 'history';
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -30,6 +33,10 @@ export class InstagramWorkspace {
 
   mount() {
     this.render();
+
+    storage.fetchHistory().then(() => {
+      this.render();
+    }).catch(() => {});
 
     const pendingUrl = consumePendingAutoStart('instagram');
     if (pendingUrl) {
@@ -90,6 +97,37 @@ export class InstagramWorkspace {
       this.mediaData = data;
       soundEngine?.play('success');
       showToast('Trích xuất nội dung Instagram thành công!', 'success');
+
+      const firstMedia = data.medias?.[0];
+      const isVideo = firstMedia?.type === 'video' || (!firstMedia?.type && Boolean(data.videoUrl));
+      const targetUrl = firstMedia?.url || data.videoUrl || '';
+      const isCarousel = Boolean(data.medias && data.medias.length > 1);
+      const mediaType = isCarousel ? 'carousel' : (isVideo ? 'video' : 'photo');
+      const quality = isCarousel ? `${data.medias.length} Tệp` : (isVideo ? 'HD Video' : 'HQ Photo');
+
+      const streamUrl = targetUrl
+        ? instagramApi.getStreamUrl(targetUrl, `${data.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`, false)
+        : '';
+
+      storage.recordCompletedJob({
+        id: `ig-${data.id || Date.now()}`,
+        toolId: 'instagram-downloader',
+        toolTitle: 'Instagram Downloader',
+        tool: 'Instagram Downloader',
+        fileName: `${data.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`,
+        title: data.title || 'Instagram Media',
+        author: data.author || 'instagram',
+        cover: data.cover || (data.medias && data.medias[0]?.thumbnail) || null,
+        thumbnail: data.cover || (data.medias && data.medias[0]?.thumbnail) || null,
+        duration: data.duration || null,
+        downloadUrl: targetUrl,
+        viewUrl: streamUrl,
+        originalUrl: cleanUrl,
+        quality,
+        mediaType,
+        driveRelPath: data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null,
+        resultSize: data.sizeBytes || 0
+      });
     } catch (err) {
       this.error = err.message || 'Lỗi khi trích xuất video Instagram';
       soundEngine?.play('error');
@@ -144,6 +182,10 @@ export class InstagramWorkspace {
           sizeBytes: res.data.sizeBytes
         };
       }
+
+      if (res.data?.relPath) {
+        storage.updateItemDrivePath(targetUrl, res.data.relPath);
+      }
     } catch (err) {
       soundEngine?.play('error');
       showToast(err.message || 'Lỗi khi lưu vào Drive', 'error');
@@ -151,6 +193,30 @@ export class InstagramWorkspace {
     } finally {
       this.savingToDrive = false;
       this.render();
+    }
+  }
+
+  async saveHistoryItemToDrive(historyItem) {
+    if (!historyItem || !historyItem.downloadUrl) return;
+    try {
+      showToast('Đang lưu nội dung vào Studio Drive...', 'info');
+      const res = await instagramApi.saveToDrive({
+        url: historyItem.downloadUrl,
+        title: historyItem.title || historyItem.fileName,
+        id: historyItem.id,
+        originalUrl: historyItem.originalUrl || this.url,
+        cover: historyItem.cover,
+        author: historyItem.author,
+        duration: historyItem.duration,
+        overwrite: true
+      });
+      if (res.data?.relPath) {
+        storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
+        showToast('Đã lưu nội dung vào Studio Drive!', 'success');
+        this.render();
+      }
+    } catch (e) {
+      showToast(e.message || 'Lỗi khi lưu vào Drive', 'error');
     }
   }
 
@@ -449,6 +515,16 @@ export class InstagramWorkspace {
           </div>
         ` : ''}
 
+        <!-- Media History Section -->
+        ${renderMediaHistorySection({
+          toolId: 'instagram-downloader',
+          title: 'Lịch Sử Tải Instagram',
+          activeTab: this.historyTab,
+          fallbackIcon: 'instagram',
+          accentColor: '#E1306C',
+          driveFolderPath: '/instagram'
+        })}
+
       </div>
     `;
 
@@ -463,6 +539,29 @@ export class InstagramWorkspace {
 
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
+
+    attachMediaHistoryListeners({
+      container: this.container,
+      toolId: 'instagram-downloader',
+      accentColor: '#E1306C',
+      onTabChange: (tab) => {
+        this.historyTab = tab;
+        this.render();
+      },
+      onReResolve: (url) => {
+        this.url = url;
+        const inp = this.container.querySelector('#igUrlInput');
+        if (inp) inp.value = url;
+        this.resolveMedia();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+      onSaveDrive: (item) => {
+        this.saveHistoryItemToDrive(item);
+      },
+      onHistoryChange: () => {
+        this.render();
+      }
+    });
 
     if (window.lucide?.createIcons) {
       window.lucide.createIcons({ root: this.container });

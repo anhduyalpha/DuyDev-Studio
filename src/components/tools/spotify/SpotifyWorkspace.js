@@ -11,6 +11,8 @@ import { showToast } from '../../../utilities/toast.js';
 import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
+import { storage } from '../../../utilities/storage.js';
+import { renderMediaHistorySection, attachMediaHistoryListeners } from '../common/MediaHistorySection.js';
 
 export class SpotifyWorkspace {
   constructor(containerEl) {
@@ -22,6 +24,7 @@ export class SpotifyWorkspace {
     this.savingToDrive = false;
     this.saveResult = null;
     this.handlePendingEvent = null;
+    this.historyTab = 'history';
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -30,6 +33,10 @@ export class SpotifyWorkspace {
 
   mount() {
     this.render();
+
+    storage.fetchHistory().then(() => {
+      this.render();
+    }).catch(() => {});
 
     const pendingUrl = consumePendingAutoStart('spotify');
     if (pendingUrl) {
@@ -90,6 +97,32 @@ export class SpotifyWorkspace {
       this.trackData = data;
       soundEngine?.play('success');
       showToast('Trích xuất bài hát Spotify thành công!', 'success');
+
+      const streamUrl = spotifyApi.getStreamUrl(
+        data.downloadUrl,
+        `${data.artist} - ${data.title}.mp3`,
+        false
+      );
+
+      storage.recordCompletedJob({
+        id: `sp-${data.id || Date.now()}`,
+        toolId: 'spotify-downloader',
+        toolTitle: 'Spotify Downloader',
+        tool: 'Spotify Downloader',
+        fileName: `${data.artist} - ${data.title}.mp3`,
+        title: data.title,
+        artist: data.artist,
+        cover: data.cover,
+        thumbnail: data.cover,
+        duration: data.duration,
+        downloadUrl: data.downloadUrl,
+        viewUrl: streamUrl,
+        originalUrl: cleanUrl,
+        quality: '320kbps MP3',
+        mediaType: 'audio',
+        driveRelPath: data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null,
+        resultSize: data.sizeBytes || (data.fileSizeInMb ? Math.round(data.fileSizeInMb * 1024 * 1024) : 0)
+      });
     } catch (err) {
       this.error = err.message || 'Lỗi khi trích xuất bài hát Spotify';
       soundEngine?.play('error');
@@ -139,6 +172,10 @@ export class SpotifyWorkspace {
           fileSizeInMb: res.data.fileSizeInMb
         };
       }
+
+      if (res.data?.relPath) {
+        storage.updateItemDrivePath(this.trackData.downloadUrl, res.data.relPath);
+      }
     } catch (err) {
       soundEngine?.play('error');
       showToast(err.message || 'Lỗi khi lưu bài hát vào Drive', 'error');
@@ -146,6 +183,30 @@ export class SpotifyWorkspace {
     } finally {
       this.savingToDrive = false;
       this.render();
+    }
+  }
+
+  async saveHistoryItemToDrive(historyItem) {
+    if (!historyItem || !historyItem.downloadUrl) return;
+    try {
+      showToast('Đang lưu bài hát vào Studio Drive...', 'info');
+      const res = await spotifyApi.saveToDrive({
+        url: historyItem.originalUrl || this.url,
+        title: historyItem.title || historyItem.fileName,
+        artist: historyItem.artist || '',
+        album: historyItem.album || '',
+        cover: historyItem.cover || '',
+        duration: historyItem.duration || 0,
+        audioUrl: historyItem.downloadUrl,
+        overwrite: true
+      });
+      if (res.data?.relPath) {
+        storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
+        showToast('Đã lưu bài hát vào Studio Drive!', 'success');
+        this.render();
+      }
+    } catch (e) {
+      showToast(e.message || 'Lỗi khi lưu vào Drive', 'error');
     }
   }
 
@@ -400,6 +461,16 @@ export class SpotifyWorkspace {
           </div>
         ` : ''}
 
+        <!-- Media History Section -->
+        ${renderMediaHistorySection({
+          toolId: 'spotify-downloader',
+          title: 'Lịch Sử Tải Nhạc Spotify',
+          activeTab: this.historyTab,
+          fallbackIcon: 'music',
+          accentColor: '#1DB954',
+          driveFolderPath: '/spotify'
+        })}
+
       </div>
     `;
 
@@ -414,6 +485,29 @@ export class SpotifyWorkspace {
 
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
+
+    attachMediaHistoryListeners({
+      container: this.container,
+      toolId: 'spotify-downloader',
+      accentColor: '#1DB954',
+      onTabChange: (tab) => {
+        this.historyTab = tab;
+        this.render();
+      },
+      onReResolve: (url) => {
+        this.url = url;
+        const inp = this.container.querySelector('#spUrlInput');
+        if (inp) inp.value = url;
+        this.resolveTrack();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+      onSaveDrive: (item) => {
+        this.saveHistoryItemToDrive(item);
+      },
+      onHistoryChange: () => {
+        this.render();
+      }
+    });
 
     if (window.lucide?.createIcons) {
       window.lucide.createIcons({ root: this.container });

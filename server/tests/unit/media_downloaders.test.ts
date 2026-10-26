@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FacebookService } from '../../src/services/facebook.service.js';
 import { InstagramService } from '../../src/services/instagram.service.js';
 import { SpotifyService } from '../../src/services/spotify.service.js';
@@ -6,6 +6,8 @@ import { facebookResolveBodySchema } from '../../src/schemas/facebook.schema.js'
 import { instagramResolveBodySchema } from '../../src/schemas/instagram.schema.js';
 import { spotifyResolveBodySchema } from '../../src/schemas/spotify.schema.js';
 import { BadRequestError } from '../../src/lib/errors.js';
+import { renderMediaHistorySection, escapeHtml, formatDuration } from '../../../src/components/tools/common/MediaHistorySection.js';
+import { storage } from '../../../src/utilities/storage.js';
 
 describe('Media Downloaders Unit Test Suite', () => {
   describe('1. Facebook Downloader Service & Schemas', () => {
@@ -111,6 +113,99 @@ describe('Media Downloaders Unit Test Suite', () => {
     it('handles Drive duplicate check gracefully for non-existent track', async () => {
       const result = await SpotifyService.checkExistingInDrive('non_existent_track_77777');
       expect(result).toHaveProperty('exists', false);
+    });
+  });
+
+  describe('4. Media History Section & Storage Lifecycle', () => {
+    it('escapes HTML strings and formats durations correctly', () => {
+      expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(escapeHtml(null)).toBe('');
+      expect(escapeHtml('')).toBe('');
+
+      expect(formatDuration(0)).toBe('0:00');
+      expect(formatDuration(65)).toBe('1:05');
+      expect(formatDuration(185)).toBe('3:05');
+      expect(formatDuration(null as any)).toBe('0:00');
+    });
+
+    it('renderMediaHistorySection renders empty state cleanly when no history items exist', () => {
+      vi.spyOn(storage, 'getToolHistory').mockReturnValue([]);
+      vi.spyOn(storage, 'getToolTrash').mockReturnValue([]);
+
+      const html = renderMediaHistorySection({
+        toolId: 'spotify-downloader',
+        title: 'Lịch sử Spotify',
+        activeTab: 'history'
+      });
+
+      expect(html).toContain('id="mediaHistorySection"');
+      expect(html).toContain('Lịch sử Spotify');
+      expect(html).toContain('Chưa có lịch sử tải xuống');
+    });
+
+    it('renderMediaHistorySection renders item cards with playback, download, and Drive badges', () => {
+      const mockItems = [
+        {
+          id: 'sp_test_1',
+          toolId: 'spotify-downloader',
+          toolTitle: 'Spotify Downloader',
+          title: 'Never Gonna Give You Up',
+          thumbnail: 'https://image.spotify.com/cover.jpg',
+          author: 'Rick Astley',
+          duration: 213,
+          downloadUrl: 'https://stream.spotify.com/audio.mp3',
+          fileName: 'Never Gonna Give You Up - Rick Astley.mp3',
+          timestamp: Date.now() - 60000,
+          driveRelPath: '/spotify/Never_Gonna_Give_You_Up.mp3'
+        }
+      ];
+
+      vi.spyOn(storage, 'getToolHistory').mockReturnValue(mockItems as any);
+      vi.spyOn(storage, 'getToolTrash').mockReturnValue([]);
+
+      const html = renderMediaHistorySection({
+        toolId: 'spotify-downloader',
+        title: 'Lịch sử Spotify',
+        activeTab: 'history'
+      });
+
+      expect(html).toContain('Never Gonna Give You Up');
+      expect(html).toContain('Rick Astley');
+      expect(html).toContain('Đã lưu Drive');
+      expect(html).toContain('data-action-preview="sp_test_1"');
+      expect(html).toContain('data-action-download="sp_test_1"');
+      expect(html).toContain('data-action-delete="sp_test_1"');
+    });
+
+    it('renderMediaHistorySection supports Instagram and Facebook tool titles and dual SD/HD downloads', () => {
+      const fbItems = [
+        {
+          id: 'fb_test_1',
+          toolId: 'facebook-downloader',
+          toolTitle: 'Facebook Downloader',
+          title: 'Awesome Reel',
+          thumbnail: 'https://fb.com/thumb.jpg',
+          downloadUrl: 'https://fb.com/video.mp4',
+          videoHdUrl: 'https://fb.com/video_hd.mp4',
+          videoSdUrl: 'https://fb.com/video_sd.mp4',
+          fileName: 'Awesome_Reel.mp4',
+          timestamp: Date.now()
+        }
+      ];
+
+      vi.spyOn(storage, 'getToolHistory').mockReturnValue(fbItems as any);
+      vi.spyOn(storage, 'getToolTrash').mockReturnValue([]);
+
+      const html = renderMediaHistorySection({
+        toolId: 'facebook-downloader',
+        title: 'Lịch sử Facebook',
+        activeTab: 'history'
+      });
+
+      expect(html).toContain('Lịch sử Facebook');
+      expect(html).toContain('Awesome Reel');
+      expect(html).toContain('<span>HD</span>');
+      expect(html).toContain('<span>SD</span>');
     });
   });
 });

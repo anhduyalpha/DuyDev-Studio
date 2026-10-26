@@ -333,7 +333,7 @@ export function resolveViewerUrls(item) {
   let fileId = item.fileId || item.resultFileId;
   let viewUrl = item.viewUrl || item.url || item.downloadUrl || '';
   let downloadUrl = item.downloadUrl || item.url || '';
-  const drivePath = item.path || item.drivePath || null;
+  const drivePath = item.path || item.drivePath || item.driveRelPath || null;
   const fileName = extractFileName(item, viewUrl, downloadUrl);
   const ext = extractFileExtension(fileName, item.mimeType || item.mime || item.type, viewUrl);
   const isServerConvertedDoc = SERVER_CONVERTED_EXTS.includes(ext);
@@ -343,7 +343,7 @@ export function resolveViewerUrls(item) {
   const devParam = deviceId ? `&deviceId=${encodeURIComponent(deviceId)}` : '';
 
   // 1. Storage Drive items with relative path
-  if (drivePath && !viewUrl && !fileId) {
+  if (drivePath && (!viewUrl || item.driveRelPath) && !fileId) {
     viewUrl = StorageService.getDownloadUrl(drivePath, true);
     downloadUrl = StorageService.getDownloadUrl(drivePath, false);
   }

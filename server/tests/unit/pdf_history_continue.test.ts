@@ -90,7 +90,7 @@ describe('PDF Studio History & Result Card Continuation Test Suite', () => {
       // Verify background POST /api/v1/history was called
       expect(global.fetch).toHaveBeenCalledWith('/api/v1/history', expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' })
       }));
     });
 

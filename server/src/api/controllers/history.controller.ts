@@ -97,12 +97,20 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
       }
     });
     if (existing) {
+      const updateData: any = {};
       if (!existing.deviceId && targetDeviceId) {
+        updateData.deviceId = targetDeviceId;
+        existing.deviceId = targetDeviceId;
+      }
+      if (body.detailsJson && body.detailsJson !== existing.detailsJson) {
+        updateData.detailsJson = body.detailsJson;
+        existing.detailsJson = body.detailsJson;
+      }
+      if (Object.keys(updateData).length > 0) {
         await prisma.historyRecord.update({
           where: { id: existing.id },
-          data: { deviceId: targetDeviceId }
+          data: updateData
         }).catch(() => {});
-        existing.deviceId = targetDeviceId;
       }
       return reply.send({
         success: true,

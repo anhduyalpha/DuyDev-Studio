@@ -3,6 +3,8 @@
  * Synchronizes with Fastify /api/v1/history & /api/v1/trash with deduplication
  */
 
+import { getDeviceId } from './deviceId.js';
+
 export const STORAGE_KEYS = {
   HISTORY: 'ds_job_history_v2',
   TRASH: 'ds_trash_v2',
@@ -11,23 +13,71 @@ export const STORAGE_KEYS = {
 
 function normalizeHistoryItem(item) {
   if (!item) return item;
+  if (!item.toolId && item.tool) item.toolId = item.tool;
+  if (!item.toolTitle && item.tool) item.toolTitle = item.tool;
   if ((!item.resultSize || item.resultSize === 0) && item.downloadUrl && item.downloadUrl.startsWith('data:image')) {
     const b64 = item.downloadUrl.split(',')[1] || '';
     item.resultSize = Math.round(b64.length * 0.75) || 1200;
   }
+  if (item.detailsJson && typeof item.detailsJson === 'string') {
+    try {
+      const details = JSON.parse(item.detailsJson);
+      if (details && typeof details === 'object') {
+        if (!item.cover && details.cover) item.cover = details.cover;
+        if (!item.thumbnail && details.thumbnail) item.thumbnail = details.thumbnail;
+        if (!item.author && details.author) item.author = details.author;
+        if (!item.artist && details.artist) item.artist = details.artist;
+        if (!item.duration && details.duration) item.duration = details.duration;
+        if (!item.driveRelPath && details.driveRelPath) item.driveRelPath = details.driveRelPath;
+        if (!item.originalUrl && details.originalUrl) item.originalUrl = details.originalUrl;
+        if (!item.quality && details.quality) item.quality = details.quality;
+        if (!item.mediaType && details.mediaType) item.mediaType = details.mediaType;
+        if (!item.viewUrl && details.viewUrl) item.viewUrl = details.viewUrl;
+        if (!item.videoHdUrl && details.videoHdUrl) item.videoHdUrl = details.videoHdUrl;
+        if (!item.videoSdUrl && details.videoSdUrl) item.videoSdUrl = details.videoSdUrl;
+      }
+    } catch {}
+  }
   return item;
+}
+
+function mergeHistoryItems(primary, secondary) {
+  if (!secondary) return primary;
+  if (!primary) return secondary;
+  return {
+    ...secondary,
+    ...primary,
+    cover: primary.cover || secondary.cover || null,
+    thumbnail: primary.thumbnail || secondary.thumbnail || primary.cover || secondary.cover || null,
+    author: primary.author || secondary.author || null,
+    artist: primary.artist || secondary.artist || null,
+    duration: primary.duration || secondary.duration || null,
+    driveRelPath: primary.driveRelPath || secondary.driveRelPath || null,
+    originalUrl: primary.originalUrl || secondary.originalUrl || null,
+    quality: primary.quality || secondary.quality || null,
+    mediaType: primary.mediaType || secondary.mediaType || null,
+    viewUrl: primary.viewUrl || secondary.viewUrl || null,
+    videoHdUrl: primary.videoHdUrl || secondary.videoHdUrl || null,
+    videoSdUrl: primary.videoSdUrl || secondary.videoSdUrl || null,
+    detailsJson: primary.detailsJson || secondary.detailsJson || null
+  };
 }
 
 function deduplicateList(items) {
   if (!Array.isArray(items)) return [];
-  const seen = new Set();
-  return items.map(normalizeHistoryItem).filter(item => {
-    if (!item) return false;
+  const map = new Map();
+  for (const raw of items) {
+    const item = normalizeHistoryItem(raw);
+    if (!item) continue;
     const key = item.downloadUrl || item.id;
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    if (!key) continue;
+    if (map.has(key)) {
+      map.set(key, mergeHistoryItems(map.get(key), item));
+    } else {
+      map.set(key, item);
+    }
+  }
+  return Array.from(map.values());
 }
 
 export const storage = {
@@ -40,6 +90,11 @@ export const storage = {
 
   getHistory() { return this.getLocalHistory(); },
 
+  getToolHistory(toolId) {
+    if (!toolId) return this.getLocalHistory();
+    return this.getLocalHistory().filter(item => item.toolId === toolId || item.tool === toolId);
+  },
+
   getLocalTrash() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TRASH);
@@ -47,73 +102,218 @@ export const storage = {
     } catch { return []; }
   },
 
+  getToolTrash(toolId) {
+    if (!toolId) return this.getLocalTrash();
+    return this.getLocalTrash().filter(item => item.toolId === toolId || item.tool === toolId);
+  },
+
+  updateItemDrivePath(idOrUrl, relPath) {
+    if (!idOrUrl || !relPath) return;
+    const normalizedPath = relPath.startsWith('/') ? relPath : `/${relPath}`;
+    try {
+      const history = this.getLocalHistory();
+      let changed = false;
+      let matchedItem = null;
+      history.forEach(item => {
+        const idMatches = String(item.id) === String(idOrUrl) ||
+          String(item.id).includes(String(idOrUrl)) ||
+          String(idOrUrl).includes(String(item.id));
+        const urlMatches = (item.downloadUrl && (item.downloadUrl === idOrUrl || item.downloadUrl.includes(String(idOrUrl)))) ||
+          (item.originalUrl && (item.originalUrl === idOrUrl || item.originalUrl.includes(String(idOrUrl))));
+        const fileMatches = item.fileName && (String(idOrUrl).includes(item.fileName) || item.fileName.includes(String(idOrUrl)));
+
+        if (idMatches || urlMatches || fileMatches) {
+          item.driveRelPath = normalizedPath;
+          if (item.detailsJson) {
+            try {
+              const details = JSON.parse(item.detailsJson);
+              details.driveRelPath = normalizedPath;
+              item.detailsJson = JSON.stringify(details);
+            } catch {}
+          }
+          changed = true;
+          matchedItem = item;
+        }
+      });
+      if (changed) {
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+        // Synchronize updated drive link to Fastify backend history
+        if (matchedItem) {
+          const deviceId = getDeviceId();
+          fetch('/api/v1/history', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-device-id': deviceId
+            },
+            body: JSON.stringify({
+              deviceId,
+              toolId: matchedItem.toolId || 'general',
+              toolTitle: matchedItem.toolTitle || matchedItem.tool || 'Công cụ',
+              fileName: matchedItem.fileName || 'Tài liệu',
+              downloadUrl: matchedItem.downloadUrl || null,
+              status: matchedItem.status || 'success',
+              detailsJson: matchedItem.detailsJson || JSON.stringify({ driveRelPath: normalizedPath })
+            })
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('[storage] Failed to update history drive path:', e);
+    }
+  },
+
+  async clearToolHistoryToTrash(toolId) {
+    const items = this.getToolHistory(toolId);
+    if (!items.length) return;
+    this.moveItemsToTrashSync(items.map(i => i.id));
+    try {
+      const deviceId = getDeviceId();
+      await Promise.all(items.map(async item => {
+        const res = await fetch(`/api/v1/history/${encodeURIComponent(item.id)}`, {
+          method: 'DELETE',
+          headers: { 'x-device-id': deviceId }
+        }).catch(() => null);
+        if ((!res || !res.ok) && item.downloadUrl) {
+          await fetch(`/api/v1/history/${encodeURIComponent(item.downloadUrl)}`, {
+            method: 'DELETE',
+            headers: { 'x-device-id': deviceId }
+          }).catch(() => {});
+        }
+      }));
+    } catch {}
+  },
+
   async fetchHistory() {
     try {
-      const res = await fetch('/api/v1/history?limit=50');
+      const deviceId = getDeviceId();
+      const res = await fetch(`/api/v1/history?limit=50&deviceId=${encodeURIComponent(deviceId)}`, {
+        headers: { 'x-device-id': deviceId }
+      });
       if (res.ok) {
         const json = await res.json();
         const serverItems = deduplicateList(json.data?.items || []);
         const localItems = this.getLocalHistory();
-        const merged = deduplicateList([...serverItems, ...localItems]);
+        const merged = deduplicateList([...localItems, ...serverItems]);
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged.slice(0, 50)));
         return merged;
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to fetch history from server', e);
+    }
     return this.getLocalHistory();
   },
 
   recordCompletedJob(record) {
     if (!record) return;
+    let size = record.resultSize || 0;
+    if (!size && record.downloadUrl?.startsWith('data:image')) {
+      size = Math.round((record.downloadUrl.split(',')[1] || '').length * 0.75) || 1200;
+    }
+
+    const detailsObj = {
+      mode: record.mode,
+      savedPct: record.savedPct,
+      targetFormat: record.targetFormat,
+      cover: record.cover || record.thumbnail || null,
+      thumbnail: record.thumbnail || record.cover || null,
+      author: record.author || record.artist || null,
+      artist: record.artist || record.author || null,
+      duration: record.duration || null,
+      driveRelPath: record.driveRelPath || null,
+      originalUrl: record.originalUrl || record.url || null,
+      quality: record.quality || null,
+      mediaType: record.mediaType || null,
+      viewUrl: record.viewUrl || null,
+      videoHdUrl: record.videoHdUrl || null,
+      videoSdUrl: record.videoSdUrl || null
+    };
+
+    const detailsJsonString = typeof record.detailsJson === 'string'
+      ? record.detailsJson
+      : JSON.stringify(detailsObj);
+
+    const itemPayload = {
+      id: record.id || `job-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      tool: record.tool || record.toolTitle || 'Công cụ',
+      toolTitle: record.toolTitle || record.tool || 'Công cụ',
+      toolId: record.toolId || 'general',
+      fileName: record.fileName || 'Tài liệu',
+      originalSize: record.originalSize || 0,
+      resultSize: size,
+      savedPct: record.savedPct || 0,
+      mode: record.mode || null,
+      targetFormat: record.targetFormat || null,
+      downloadUrl: record.downloadUrl || null,
+      resultFileId: record.resultFileId || null,
+      status: record.status || 'success',
+      createdAt: record.createdAt || new Date().toISOString(),
+      cover: detailsObj.cover,
+      thumbnail: detailsObj.thumbnail,
+      author: detailsObj.author,
+      artist: detailsObj.artist,
+      duration: detailsObj.duration,
+      driveRelPath: detailsObj.driveRelPath,
+      originalUrl: detailsObj.originalUrl,
+      quality: detailsObj.quality,
+      mediaType: detailsObj.mediaType,
+      viewUrl: detailsObj.viewUrl,
+      videoHdUrl: detailsObj.videoHdUrl,
+      videoSdUrl: detailsObj.videoSdUrl,
+      detailsJson: detailsJsonString
+    };
+
     try {
       const list = this.getLocalHistory();
-      const exists = list.some(i => (record.id && i.id === record.id) || (record.downloadUrl && i.downloadUrl === record.downloadUrl));
-      if (!exists) {
-        let size = record.resultSize || 0;
-        if (!size && record.downloadUrl?.startsWith('data:image')) {
-          size = Math.round((record.downloadUrl.split(',')[1] || '').length * 0.75) || 1200;
-        }
-        list.unshift({
-          id: record.id || `job-${Date.now()}`,
-          tool: record.tool || record.toolTitle || 'Công cụ',
-          toolTitle: record.toolTitle || record.tool || 'Công cụ',
-          toolId: record.toolId || 'general',
-          fileName: record.fileName || 'Tài liệu',
-          originalSize: record.originalSize || 0,
-          resultSize: size,
-          savedPct: record.savedPct || 0,
-          mode: record.mode || null,
-          targetFormat: record.targetFormat || null,
-          downloadUrl: record.downloadUrl || null,
-          resultFileId: record.resultFileId || null,
-          status: record.status || 'success',
-          createdAt: record.createdAt || new Date().toISOString()
-        });
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, 50)));
+      const existingIndex = list.findIndex(i =>
+        (record.id && i.id === record.id) ||
+        (record.downloadUrl && i.downloadUrl === record.downloadUrl) ||
+        (record.originalUrl && i.originalUrl && i.originalUrl === record.originalUrl)
+      );
+
+      if (existingIndex !== -1) {
+        list[existingIndex] = { ...list[existingIndex], ...itemPayload };
+      } else {
+        list.unshift(itemPayload);
       }
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, 50)));
     } catch (e) {
       console.warn('Failed to record completed job locally', e);
     }
 
     // Sync to Fastify backend /api/v1/history with user's X-Device-Id
     try {
+      const deviceId = getDeviceId();
       fetch('/api/v1/history', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-id': deviceId
+        },
         body: JSON.stringify({
+          deviceId,
           toolId: record.toolId || 'general',
           toolTitle: record.toolTitle || record.tool || 'Công cụ',
           fileName: record.fileName || 'Tài liệu',
           originalSize: record.originalSize || 0,
-          resultSize: record.resultSize || 0,
+          resultSize: size,
           downloadUrl: record.downloadUrl || null,
           resultFileId: record.resultFileId || null,
           status: record.status || 'success',
-          detailsJson: JSON.stringify({
-            mode: record.mode,
-            savedPct: record.savedPct,
-            targetFormat: record.targetFormat
-          })
+          detailsJson: detailsJsonString
         })
+      }).then(async res => {
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          if (json?.data?.id) {
+            const list = this.getLocalHistory();
+            const target = list.find(x => x.id === itemPayload.id || (x.downloadUrl && x.downloadUrl === itemPayload.downloadUrl));
+            if (target) {
+              target.id = json.data.id;
+              localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(list));
+            }
+          }
+        }
       }).catch(() => {});
     } catch {}
   },
@@ -145,10 +345,15 @@ export const storage = {
     } catch {}
 
     try {
+      const deviceId = getDeviceId();
       const res = await fetch('/api/v1/history', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-id': deviceId
+        },
         body: JSON.stringify({
+          deviceId,
           toolId: item.toolId || 'general',
           toolTitle: item.toolTitle || item.tool || 'Công cụ',
           fileName: item.fileName || 'Tài liệu',
@@ -217,8 +422,18 @@ export const storage = {
   async moveToTrash(id) {
     const trashedItem = this.moveToTrashSync(id);
     try {
+      const deviceId = getDeviceId();
       const targetId = trashedItem?.id || id;
-      await fetch(`/api/v1/history/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/v1/history/${encodeURIComponent(targetId)}`, {
+        method: 'DELETE',
+        headers: { 'x-device-id': deviceId }
+      });
+      if (!res.ok && trashedItem?.downloadUrl && trashedItem.downloadUrl !== targetId) {
+        await fetch(`/api/v1/history/${encodeURIComponent(trashedItem.downloadUrl)}`, {
+          method: 'DELETE',
+          headers: { 'x-device-id': deviceId }
+        }).catch(() => {});
+      }
     } catch {}
     return trashedItem;
   },
@@ -237,13 +452,20 @@ export const storage = {
   async clearHistoryToTrash() {
     this.clearHistoryToTrashSync();
     try {
-      await fetch('/api/v1/history', { method: 'DELETE' });
+      const deviceId = getDeviceId();
+      await fetch('/api/v1/history', {
+        method: 'DELETE',
+        headers: { 'x-device-id': deviceId }
+      });
     } catch {}
   },
 
   async fetchTrash() {
     try {
-      const res = await fetch('/api/v1/trash?limit=50');
+      const deviceId = getDeviceId();
+      const res = await fetch(`/api/v1/trash?limit=50&deviceId=${encodeURIComponent(deviceId)}`, {
+        headers: { 'x-device-id': deviceId }
+      });
       if (res.ok) {
         const json = await res.json();
         const items = deduplicateList(json.data?.items || []);
@@ -300,8 +522,18 @@ export const storage = {
   async restoreTrashItem(id) {
     const restored = this.restoreTrashItemSync(id);
     try {
+      const deviceId = getDeviceId();
       const targetId = restored?.id || id;
-      const res = await fetch(`/api/v1/trash/${encodeURIComponent(targetId)}/restore`, { method: 'POST' });
+      let res = await fetch(`/api/v1/trash/${encodeURIComponent(targetId)}/restore`, {
+        method: 'POST',
+        headers: { 'x-device-id': deviceId }
+      });
+      if (!res.ok && restored?.downloadUrl && restored.downloadUrl !== targetId) {
+        res = await fetch(`/api/v1/trash/${encodeURIComponent(restored.downloadUrl)}/restore`, {
+          method: 'POST',
+          headers: { 'x-device-id': deviceId }
+        });
+      }
       return res.ok;
     } catch { return false; }
   },
@@ -317,7 +549,11 @@ export const storage = {
   async restoreAllTrash() {
     this.restoreAllTrashSync();
     try {
-      const res = await fetch('/api/v1/trash/restore-all', { method: 'POST' });
+      const deviceId = getDeviceId();
+      const res = await fetch('/api/v1/trash/restore-all', {
+        method: 'POST',
+        headers: { 'x-device-id': deviceId }
+      });
       return res.ok;
     } catch { return false; }
   },
@@ -338,9 +574,21 @@ export const storage = {
   },
 
   async permanentlyDeleteTrashItem(id) {
+    const trashList = this.getLocalTrash();
+    const item = trashList.find(x => x.id === id || x.downloadUrl === id);
     this.permanentlyDeleteTrashItemSync(id);
     try {
-      const res = await fetch(`/api/v1/trash/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const deviceId = getDeviceId();
+      let res = await fetch(`/api/v1/trash/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'x-device-id': deviceId }
+      });
+      if (!res.ok && item?.downloadUrl && item.downloadUrl !== id) {
+        await fetch(`/api/v1/trash/${encodeURIComponent(item.downloadUrl)}`, {
+          method: 'DELETE',
+          headers: { 'x-device-id': deviceId }
+        });
+      }
       return res.ok;
     } catch { return false; }
   },
@@ -354,7 +602,11 @@ export const storage = {
   async emptyTrash() {
     this.emptyTrashSync();
     try {
-      const res = await fetch('/api/v1/trash', { method: 'DELETE' });
+      const deviceId = getDeviceId();
+      const res = await fetch('/api/v1/trash', {
+        method: 'DELETE',
+        headers: { 'x-device-id': deviceId }
+      });
       return res.ok;
     } catch { return false; }
   }
