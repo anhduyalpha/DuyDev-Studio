@@ -431,6 +431,16 @@ export function attachDashboardListeners(onReRender) {
   };
   window.addEventListener('keydown', handleEscapeKey);
 
+  // Real-time synchronization for Dashboard Recent Activity
+  const handleGlobalHistoryUpdated = () => {
+    const container = document.getElementById('recentActivityContainer');
+    if (container) {
+      container.innerHTML = renderRecentActivity();
+      if (window.lucide) window.lucide.createIcons({ root: container });
+    }
+  };
+  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+
   return () => {
     if (typeof unsubscribeRegistry === 'function') unsubscribeRegistry();
     if (toolsGridContainer) toolsGridContainer.removeEventListener('click', handleToolsGridClick);
@@ -443,5 +453,6 @@ export function attachDashboardListeners(onReRender) {
     }
     window.removeEventListener('keydown', handleEscapeKey);
     window.removeEventListener('paste', handleGlobalPaste);
+    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
   };
 }

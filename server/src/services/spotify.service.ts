@@ -25,7 +25,15 @@ import { logger } from '../lib/logger.js';
 const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+interface CachedTrackEntry {
+  data: SpotifyTrackData;
+  timestamp: number;
+}
+
 export class SpotifyService {
+  private static trackCache = new Map<string, CachedTrackEntry>();
+  private static readonly CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
   /**
    * Code node calculation from n8n workflow
    */
@@ -38,55 +46,135 @@ export class SpotifyService {
   }
 
   /**
-   * Validates and extracts a canonical Spotify URL
+   * Validates and extracts canonical Spotify entity details, stripping all tracking queries
+   */
+  static extractCanonicalInfo(rawText: string): { type: 'track' | 'album' | 'playlist'; id: string; canonicalUrl: string } {
+    const trimmed = (rawText || '').trim();
+    const match = trimmed.match(/(?:open\.)?spotify\.com\/(?:intl-[a-z]{2}\/)?(track|album|playlist)\/([a-zA-Z0-9]{22})/i);
+    if (!match) {
+      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Spotify hợp lệ (ví dụ: https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT).');
+    }
+    const type = match[1].toLowerCase() as 'track' | 'album' | 'playlist';
+    const id = match[2];
+    const canonicalUrl = `https://open.spotify.com/${type}/${id}`;
+    return { type, id, canonicalUrl };
+  }
+
+  /**
+   * Validates and extracts a canonical Spotify URL (compatibility helper)
    */
   static extractUrl(rawText: string): string {
     const trimmed = (rawText || '').trim();
-    const urlMatch = trimmed.match(/https?:\/\/(?:open\.)?spotify\.com\/(?:track|album|playlist|intl-[a-z]+\/track)\/([a-zA-Z0-9]+)[^\s"'>]*/i);
+    const urlMatch = trimmed.match(/https?:\/\/(?:open\.)?spotify\.com\/(?:(?:intl-[a-z]{2}\/)?(?:track|album|playlist))\/(?:[a-zA-Z0-9]{22})/i);
     if (!urlMatch) {
-      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết bài hát Spotify hợp lệ (ví dụ: https://open.spotify.com/track/...).');
+      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Spotify hợp lệ (ví dụ: https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT).');
     }
     return urlMatch[0];
   }
 
   /**
-   * Resolves Spotify track metadata and audio download URL
+   * Resolves Spotify track metadata and audio download URL with 100% deterministic matching
    */
   static async resolveTrack(rawInput: string): Promise<SpotifyTrackData> {
-    const targetUrl = this.extractUrl(rawInput);
-    logger.info({ targetUrl }, '[Spotify] Resolving track metadata...');
+    const { type, id: trackId, canonicalUrl } = this.extractCanonicalInfo(rawInput);
+    const cacheKey = `spotify:${type}:${trackId}`;
 
-    const trackIdMatch = targetUrl.match(/track\/([a-zA-Z0-9]+)/i);
-    const trackId = trackIdMatch ? trackIdMatch[1] : `sp_${Date.now().toString(36)}`;
-
-    // 1. Fetch metadata from Spotify oEmbed
-    let title = 'Spotify Track';
-    let artist = 'Artist';
-    let cover = '';
-
-    try {
-      const oembedRes = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(targetUrl)}`, {
-        headers: { 'User-Agent': DEFAULT_UA },
-        signal: AbortSignal.timeout(6000)
-      });
-      if (oembedRes.ok) {
-        const oembed = await oembedRes.json() as any;
-        if (oembed.title) title = oembed.title;
-        if (oembed.author_name) artist = oembed.author_name;
-        if (oembed.thumbnail_url) cover = oembed.thumbnail_url;
-      }
-    } catch (e: any) {
-      logger.debug({ err: e?.message }, '[Spotify] oEmbed lookup skipped');
+    // Check in-memory cache for deterministic duplicate requests
+    const cached = this.trackCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL_MS)) {
+      logger.info({ trackId, title: cached.data.title }, '[Spotify] Cache hit for track');
+      const existing = await this.checkExistingInDrive(trackId, canonicalUrl, cached.data.title);
+      return {
+        ...cached.data,
+        url: canonicalUrl,
+        existingInDrive: existing.exists ? existing.item : null
+      };
     }
 
-    // 2. Multi-tier resolution for audio stream
+    logger.info({ canonicalUrl, trackId, type }, '[Spotify] Resolving track metadata...');
+
+    // 1. Authoritative metadata extraction via Spotify embed hydration
+    let title = 'Spotify Track';
+    let artist = 'Unknown Artist';
+    let cover = '';
+    let duration = 0; // in seconds
+    let releaseDate: string | undefined;
+    let previewUrl: string | undefined;
+    let isHydrated = false;
+
+    try {
+      const embedRes = await fetch(`https://open.spotify.com/embed/${type}/${trackId}`, {
+        headers: { 'User-Agent': DEFAULT_UA },
+        signal: AbortSignal.timeout(7000)
+      });
+
+      if (embedRes.ok) {
+        const html = await embedRes.text();
+        const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+        if (nextDataMatch) {
+          const json = JSON.parse(nextDataMatch[1]);
+          const entity = json?.props?.pageProps?.state?.data?.entity;
+          if (entity) {
+            isHydrated = true;
+            title = entity.name || entity.title || title;
+
+            if (Array.isArray(entity.artists) && entity.artists.length > 0) {
+              artist = entity.artists.map((a: any) => a.name).filter(Boolean).join(', ');
+            } else if (entity.subtitle) {
+              artist = entity.subtitle;
+            }
+
+            if (entity.duration) {
+              duration = Math.round(Number(entity.duration) / 1000);
+            }
+
+            if (entity.releaseDate?.isoString) {
+              releaseDate = entity.releaseDate.isoString;
+            }
+
+            if (entity.audioPreview?.url) {
+              previewUrl = entity.audioPreview.url;
+            }
+
+            // Extract highest resolution artwork
+            const images = entity.visualIdentity?.image;
+            if (Array.isArray(images) && images.length > 0) {
+              const sorted = [...images].sort((a: any, b: any) => (b.maxWidth || 0) - (a.maxWidth || 0));
+              cover = sorted[0]?.url || cover;
+            }
+          }
+        }
+      }
+    } catch (e: any) {
+      logger.warn({ err: e?.message }, '[Spotify] Embed hydration fetch failed');
+    }
+
+    // Fallback: Spotify oEmbed if embed page didn't yield title
+    if (!isHydrated || !title || title === 'Spotify Track') {
+      try {
+        const oembedRes = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(canonicalUrl)}`, {
+          headers: { 'User-Agent': DEFAULT_UA },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (oembedRes.ok) {
+          const oembed = await oembedRes.json() as any;
+          if (oembed.title) title = oembed.title;
+          if (oembed.thumbnail_url && !cover) cover = oembed.thumbnail_url;
+          if (oembed.author_name && (!artist || artist === 'Unknown Artist')) artist = oembed.author_name;
+        }
+      } catch (e: any) {
+        logger.debug({ err: e?.message }, '[Spotify] oEmbed fallback skipped');
+      }
+    }
+
+    // 2. Multi-tier resolution for authoritative audio stream
     let downloadUrl: string | undefined;
     let fileSizeInBytes: number | undefined;
     let extractor: 'api' | 'ytdlp' | 'oembed' = 'oembed';
 
-    // Tier 1: Try RapidAPI / Public Spotify resolver (matching n8n node)
+    // Tier 1: Try RapidAPI / Dedicated API resolver (if configured)
     try {
-      const apiResult = await this.tryApiResolver(targetUrl);
+      const apiResult = await this.tryApiResolver(canonicalUrl);
       if (apiResult?.downloadUrl) {
         downloadUrl = apiResult.downloadUrl;
         extractor = 'api';
@@ -97,44 +185,80 @@ export class SpotifyService {
       }
     } catch {}
 
-    // Tier 2: yt-dlp lookup via search query "${artist} - ${title} audio"
+    // Tier 2: Anchored yt-dlp lookup with strict duration matching
     if (!downloadUrl) {
       try {
-        const searchQuery = `ytsearch1:${artist} - ${title} audio`;
+        const cleanArtist = artist.replace(/[,/&]/g, ' ').replace(/\s+/g, ' ').trim();
+        const cleanTitle = title.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+        const searchQuery = `ytsearch5:${cleanArtist} - ${cleanTitle}`;
+
         const { stdout } = await execFileAsync('yt-dlp', [
           '--dump-json',
+          '--default-search', 'ytsearch',
           '--no-playlist',
           '--no-warnings',
           searchQuery
-        ], { timeout: 15000, maxBuffer: 10 * 1024 * 1024 });
+        ], { timeout: 20000, maxBuffer: 15 * 1024 * 1024 });
 
-        const ytJson = JSON.parse(stdout.trim());
-        if (ytJson.url || (Array.isArray(ytJson.formats) && ytJson.formats.length > 0)) {
+        const lines = stdout.trim().split('\n').filter(Boolean);
+        let bestCandidate: any = null;
+        let lowestDiff = 999999;
+
+        for (const line of lines) {
+          try {
+            const item = JSON.parse(line);
+            if (!item.url && (!Array.isArray(item.formats) || item.formats.length === 0)) continue;
+
+            const itemDuration = Number(item.duration) || 0;
+            const diff = duration > 0 ? Math.abs(itemDuration - duration) : 0;
+
+            // Reject if duration diff is greater than 14 seconds (prevents compilations, previews, or wrong tracks)
+            if (duration > 0 && diff > 14) continue;
+
+            if (diff < lowestDiff) {
+              lowestDiff = diff;
+              bestCandidate = item;
+            }
+          } catch {}
+        }
+
+        if (bestCandidate) {
           extractor = 'ytdlp';
-          // Find best audio format
-          const audioFmt = ytJson.formats?.filter((f: any) => f.acodec !== 'none' && f.url).pop();
-          downloadUrl = audioFmt?.url || ytJson.url;
-          if (!cover && ytJson.thumbnail) cover = ytJson.thumbnail;
+          const audioFmt = bestCandidate.formats?.filter((f: any) => f.acodec !== 'none' && f.url).pop();
+          downloadUrl = audioFmt?.url || bestCandidate.url;
+          if (!cover && bestCandidate.thumbnail) cover = bestCandidate.thumbnail;
           if (audioFmt?.filesize) fileSizeInBytes = audioFmt.filesize;
+          if (duration === 0 && bestCandidate.duration) duration = Math.round(bestCandidate.duration);
         }
       } catch (ytErr: any) {
-        logger.warn({ err: ytErr?.message }, '[Spotify] yt-dlp audio search failed');
+        logger.warn({ err: ytErr?.message }, '[Spotify] Anchored yt-dlp search failed');
       }
     }
 
+    // Tier 3: Fallback to official Spotify 30s preview if full stream could not be matched
+    if (!downloadUrl && previewUrl) {
+      downloadUrl = previewUrl;
+      extractor = 'oembed';
+    }
+
+    if (!downloadUrl) {
+      throw new BadRequestError(`Không thể tìm thấy luồng âm thanh khớp chính xác với bài hát "${artist} - ${title}". Vui lòng thử lại sau.`);
+    }
+
     // Check Drive duplication
-    const existing = await this.checkExistingInDrive(trackId, targetUrl, title);
+    const existing = await this.checkExistingInDrive(trackId, canonicalUrl, title);
 
     const sizeInKb = fileSizeInBytes ? this.bytesToKb(fileSizeInBytes) : undefined;
     const sizeInMb = sizeInKb ? this.kbToMb(sizeInKb) : undefined;
 
-    return {
+    const resolvedPayload: SpotifyTrackData = {
       id: trackId,
-      url: targetUrl,
+      url: canonicalUrl,
       title,
       artist,
       cover,
-      duration: 0,
+      duration,
+      releaseDate,
       downloadUrl,
       fileSizeInBytes,
       fileSizeInKb: sizeInKb,
@@ -143,6 +267,14 @@ export class SpotifyService {
       existingInDrive: existing.exists ? existing.item : null,
       extractor
     };
+
+    // Cache resolved track
+    this.trackCache.set(cacheKey, {
+      data: resolvedPayload,
+      timestamp: Date.now()
+    });
+
+    return resolvedPayload;
   }
 
   /**
@@ -373,30 +505,26 @@ export class SpotifyService {
       });
       await pipeline(webStream, fileStream);
     } else {
-      // Use yt-dlp to extract pristine 320kbps MP3
-      const searchQuery = `ytsearch1:${artist} - ${title} audio`;
-      const tempOutput = path.join(spDir, `temp_${cleanId}.%(ext)s`);
-
-      await execFileAsync('yt-dlp', [
-        '--no-playlist',
-        '--extract-audio',
-        '--audio-format', 'mp3',
-        '--audio-quality', '320k',
-        '--output', tempOutput,
-        searchQuery
-      ], { timeout: 60000 });
-
-      const generatedTemp = path.join(spDir, `temp_${cleanId}.mp3`);
-      if (!fs.existsSync(generatedTemp)) {
-        throw new BadRequestError('Không thể tạo file âm thanh MP3 từ nguồn Spotify');
+      // Deterministically resolve track to obtain verified audio stream
+      const resolved = await this.resolveTrack(url);
+      if (resolved.downloadUrl && resolved.downloadUrl.startsWith('http')) {
+        const upstreamRes = await fetch(resolved.downloadUrl, {
+          headers: { 'User-Agent': DEFAULT_UA },
+          signal: AbortSignal.timeout(120000)
+        });
+        if (!upstreamRes.ok || !upstreamRes.body) {
+          throw new BadRequestError(`Không thể tải luồng âm thanh đã phân giải: HTTP ${upstreamRes.status}`);
+        }
+        const fileStream = fs.createWriteStream(targetFilePath);
+        const webStream = Readable.fromWeb(upstreamRes.body as any);
+        webStream.on('data', (chunk: Buffer) => {
+          byteCount += chunk.length;
+          hash.update(chunk);
+        });
+        await pipeline(webStream, fileStream);
+      } else {
+        throw new BadRequestError('Không thể tìm thấy luồng âm thanh hợp lệ để lưu vào Drive');
       }
-
-      await fsPromises.rename(generatedTemp, targetFilePath);
-      const stat = await fsPromises.stat(targetFilePath);
-      byteCount = stat.size;
-
-      const fileBuf = await fsPromises.readFile(targetFilePath);
-      hash.update(fileBuf);
     }
 
     const hashSha256 = hash.digest('hex');

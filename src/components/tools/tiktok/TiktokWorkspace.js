@@ -1333,8 +1333,22 @@ export function attachTiktokWorkspaceListeners() {
   }
   window.addEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
 
+  function handleGlobalHistoryUpdated(e) {
+    if (!e.detail?.toolId || e.detail.toolId === 'tiktok-downloader' || e.detail.toolId === 'tiktok') {
+      const history = tiktokManager.loadHistory();
+      tiktokManager.state.recentHistory = history;
+      if (historyContainer) {
+        historyContainer.innerHTML = history.length > 0 ? renderRecentHistoryCard(history) : '';
+        attachHistoryListeners();
+        if (window.lucide?.createIcons) window.lucide.createIcons();
+      }
+    }
+  }
+  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+
   return () => {
     unsubscribe();
     window.removeEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
+    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
   };
 }

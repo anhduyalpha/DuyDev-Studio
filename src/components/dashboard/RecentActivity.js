@@ -41,7 +41,8 @@ export function toggleRecentActivity(forceState) {
 }
 
 export function renderRecentActivity() {
-  const history = storage.getHistory().slice(0, 3);
+  const allHistory = storage.getHistory();
+  const history = allHistory.slice(0, 3);
 
   if (history.length === 0) return '';
 
@@ -59,7 +60,7 @@ export function renderRecentActivity() {
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">Tác vụ gần đây</span>
             <span id="recentActivityCountBadge" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
-              ${history.length} mục
+              ${allHistory.length} mục
             </span>
           </div>
         </button>

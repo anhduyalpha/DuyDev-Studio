@@ -69,8 +69,26 @@ function deduplicateList(items) {
   for (const raw of items) {
     const item = normalizeHistoryItem(raw);
     if (!item) continue;
-    const key = item.downloadUrl || item.id;
+    // Strict deduplication key:
+    // 1) Match by toolId + clean originalUrl
+    // 2) Match by non-data downloadUrl
+    // 3) Match by fileName + 60s creation timestamp
+    // 4) Fallback to id
+    let key = '';
+    if (item.toolId && item.originalUrl) {
+      const cleanUrl = String(item.originalUrl).split('?')[0].replace(/\/$/, '').toLowerCase();
+      key = `${item.toolId.toLowerCase().replace(/-downloader$/, '')}:${cleanUrl}`;
+    } else if (item.downloadUrl && !item.downloadUrl.startsWith('data:')) {
+      const cleanUrl = String(item.downloadUrl).split('?')[0].replace(/\/$/, '').toLowerCase();
+      key = cleanUrl;
+    } else if (item.fileName && item.createdAt) {
+      const timeBucket = Math.floor(new Date(item.createdAt).getTime() / 60000);
+      key = `${(item.toolId || 'job').toLowerCase()}:${item.fileName}:${timeBucket}`;
+    } else if (item.id) {
+      key = String(item.id);
+    }
     if (!key) continue;
+
     if (map.has(key)) {
       map.set(key, mergeHistoryItems(map.get(key), item));
     } else {
@@ -78,6 +96,21 @@ function deduplicateList(items) {
     }
   }
   return Array.from(map.values());
+}
+
+export function dispatchHistoryUpdated(toolId, action, item = null) {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent('dd:history-updated', {
+        detail: {
+          toolId: toolId || null,
+          action: action || 'update',
+          item: item || null,
+          timestamp: Date.now()
+        }
+      }));
+    } catch (_) {}
+  }
 }
 
 export const storage = {
@@ -92,7 +125,12 @@ export const storage = {
 
   getToolHistory(toolId) {
     if (!toolId) return this.getLocalHistory();
-    return this.getLocalHistory().filter(item => item.toolId === toolId || item.tool === toolId);
+    const target = String(toolId).toLowerCase().replace(/-downloader$/, '').trim();
+    return this.getLocalHistory().filter(item => {
+      if (!item) return false;
+      const tid = String(item.toolId || item.tool || '').toLowerCase().replace(/-downloader$/, '').trim();
+      return tid === target || tid === `${target}-downloader` || target === `${tid}-downloader`;
+    });
   },
 
   getLocalTrash() {
@@ -104,7 +142,12 @@ export const storage = {
 
   getToolTrash(toolId) {
     if (!toolId) return this.getLocalTrash();
-    return this.getLocalTrash().filter(item => item.toolId === toolId || item.tool === toolId);
+    const target = String(toolId).toLowerCase().replace(/-downloader$/, '').trim();
+    return this.getLocalTrash().filter(item => {
+      if (!item) return false;
+      const tid = String(item.toolId || item.tool || '').toLowerCase().replace(/-downloader$/, '').trim();
+      return tid === target || tid === `${target}-downloader` || target === `${tid}-downloader`;
+    });
   },
 
   updateItemDrivePath(idOrUrl, relPath) {
@@ -137,6 +180,7 @@ export const storage = {
       });
       if (changed) {
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+        dispatchHistoryUpdated(matchedItem?.toolId, 'update-drive', matchedItem);
         // Synchronize updated drive link to Fastify backend history
         if (matchedItem) {
           const deviceId = getDeviceId();
@@ -167,6 +211,7 @@ export const storage = {
     const items = this.getToolHistory(toolId);
     if (!items.length) return;
     this.moveItemsToTrashSync(items.map(i => i.id));
+    dispatchHistoryUpdated(toolId, 'clear-tool');
     try {
       const deviceId = getDeviceId();
       await Promise.all(items.map(async item => {
@@ -277,6 +322,7 @@ export const storage = {
         list.unshift(itemPayload);
       }
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, 50)));
+      dispatchHistoryUpdated(itemPayload.toolId, 'record', itemPayload);
     } catch (e) {
       console.warn('Failed to record completed job locally', e);
     }
@@ -342,6 +388,7 @@ export const storage = {
       const list = this.getLocalHistory();
       list.unshift(localRecord);
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, 50)));
+      dispatchHistoryUpdated(localRecord.toolId, 'add', localRecord);
     } catch {}
 
     try {
@@ -392,6 +439,7 @@ export const storage = {
         const trashList = this.getLocalTrash();
         trashList.unshift(trashedItem);
         localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList(trashList).slice(0, 50)));
+        dispatchHistoryUpdated(trashedItem?.toolId, 'trash', trashedItem);
       }
     } catch {}
     return trashedItem;
@@ -416,6 +464,7 @@ export const storage = {
 
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(remainingHistory));
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList([...newlyTrashed, ...trashList]).slice(0, 50)));
+      dispatchHistoryUpdated(null, 'trash-multiple');
     } catch {}
   },
 
@@ -446,6 +495,7 @@ export const storage = {
       const newlyTrashed = historyList.map(h => ({ ...h, deletedAt: now }));
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList([...newlyTrashed, ...trashList]).slice(0, 50)));
       localStorage.removeItem(STORAGE_KEYS.HISTORY);
+      dispatchHistoryUpdated(null, 'clear-all-trash');
     } catch {}
   },
 
@@ -491,6 +541,7 @@ export const storage = {
         const historyList = this.getLocalHistory();
         historyList.unshift(restored);
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(historyList).slice(0, 50)));
+        dispatchHistoryUpdated(restored?.toolId, 'restore', restored);
       }
     } catch {}
     return restored;
@@ -516,6 +567,7 @@ export const storage = {
 
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(remainingTrash));
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList([...restored, ...historyList]).slice(0, 50)));
+      dispatchHistoryUpdated(null, 'restore-multiple');
     } catch {}
   },
 
@@ -543,6 +595,7 @@ export const storage = {
       const restored = this.getLocalTrash().map(t => { const c = { ...t }; delete c.deletedAt; return c; });
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList([...restored, ...this.getLocalHistory()]).slice(0, 50)));
       localStorage.removeItem(STORAGE_KEYS.TRASH);
+      dispatchHistoryUpdated(null, 'restore-all');
     } catch {}
   },
 
@@ -562,6 +615,7 @@ export const storage = {
     try {
       const trashList = this.getLocalTrash().filter(item => item.id !== id && item.downloadUrl !== id);
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(trashList));
+      dispatchHistoryUpdated(null, 'delete-permanent');
     } catch {}
   },
 
@@ -570,6 +624,7 @@ export const storage = {
       const idSet = new Set(ids);
       const trashList = this.getLocalTrash().filter(item => !idSet.has(item.id) && !idSet.has(item.downloadUrl));
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(trashList));
+      dispatchHistoryUpdated(null, 'delete-multiple');
     } catch {}
   },
 
@@ -596,6 +651,7 @@ export const storage = {
   emptyTrashSync() {
     try {
       localStorage.removeItem(STORAGE_KEYS.TRASH);
+      dispatchHistoryUpdated(null, 'empty-trash');
     } catch {}
   },
 

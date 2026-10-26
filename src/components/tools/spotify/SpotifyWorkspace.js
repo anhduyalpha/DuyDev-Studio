@@ -62,6 +62,10 @@ export class SpotifyWorkspace {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
       this.handlePendingEvent = null;
     }
+    if (this.historyCleanup) {
+      this.historyCleanup();
+      this.historyCleanup = null;
+    }
     this.container.innerHTML = '';
   }
 
@@ -283,21 +287,24 @@ export class SpotifyWorkspace {
     this.container.innerHTML = `
       <div class="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
         
-        <!-- Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-white/10">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-[#1DB954]/10 dark:bg-[#1DB954]/20 flex items-center justify-center text-[#1DB954]">
-              <i data-lucide="music" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h1 class="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Spotify Downloader</h1>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Tải bài hát Spotify sang MP3 chất lượng cao 320kbps, kèm ảnh bìa album và lưu trực tiếp vào Drive</p>
-            </div>
+        <!-- Breadcrumb Bar -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
+            <a href="#" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs min-h-[44px]">
+              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
+            </a>
+            <span class="text-zinc-400 dark:text-zinc-600">/</span>
+            <span class="text-zinc-900 dark:text-zinc-200 font-semibold truncate flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-[#1DB954]"></span>
+              Spotify Downloader
+            </span>
           </div>
-          <a href="#" class="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors flex items-center gap-1.5">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-            <span>Quay lại</span>
-          </a>
+
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-[#1DB954] border border-emerald-500/20">
+              <i data-lucide="check" class="w-3 h-3"></i> MP3 320kbps & Bìa Album
+            </span>
+          </div>
         </div>
 
         <!-- Input Box -->
@@ -486,7 +493,12 @@ export class SpotifyWorkspace {
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
 
-    attachMediaHistoryListeners({
+    if (this.historyCleanup) {
+      this.historyCleanup();
+      this.historyCleanup = null;
+    }
+
+    this.historyCleanup = attachMediaHistoryListeners({
       container: this.container,
       toolId: 'spotify-downloader',
       accentColor: '#1DB954',

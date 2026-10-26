@@ -574,4 +574,20 @@ export function attachMediaHistoryListeners({
   if (window.lucide?.createIcons) {
     window.lucide.createIcons({ root: container });
   }
+
+  // 13. Real-time global synchronization listener
+  const handleGlobalHistoryUpdated = (e) => {
+    const detailTool = e.detail?.toolId ? String(e.detail.toolId).toLowerCase().replace(/-downloader$/, '') : null;
+    const currentTool = String(toolId).toLowerCase().replace(/-downloader$/, '');
+    if (!detailTool || detailTool === currentTool) {
+      if (typeof onHistoryChange === 'function') {
+        onHistoryChange();
+      }
+    }
+  };
+  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+
+  return () => {
+    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+  };
 }

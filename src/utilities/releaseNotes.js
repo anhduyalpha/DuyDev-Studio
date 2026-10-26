@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.12': {
+    version: 'v24.12',
+    title: 'Bản cập nhật v24.12: Chuẩn Hóa Điều Hướng Media, Lịch Sử & Spotify Khớp Chuẩn',
+    date: '26/10/2026',
+    features: [
+      'Điều Hướng Breadcrumb Top-Left Đồng Bộ: Thay thế nút "Quay lại" bên phải bằng nút điều hướng "← Dashboard" chuẩn Stitch ở góc trên bên trái cho Facebook, Instagram và Spotify Downloader, đồng nhất 100% với TikTok và Scribd',
+      'Đồng Bộ Hóa Lịch Sử Thời Gian Thực (Global Sync): Bổ sung kênh phát sự kiện dd:history-updated cho toàn bộ ứng dụng, tự động làm mới danh sách và số lượng mục trên Dashboard, trang Lịch sử và thanh điều hướng ngay khi có tệp tải mới mà không cần tải lại trang',
+      'Lịch Sử Kiểu TikTok Cho Bộ 3 Công Cụ Media: Tích hợp đầy đủ bảng lịch sử MediaHistorySection với tính năng xem trước trực tiếp FileViewerConnector, tải về máy, lưu Studio Drive và dọn dẹp an toàn'
+    ],
+    fixes: [
+      'Sửa Triệt Để Lỗi Spotify Tải Nhạc Lạc Đề: Chuẩn hóa parser URL loại bỏ toàn bộ chuỗi tracking (?si=...), tích hợp trích xuất metadata trực tiếp từ Spotify embed hydration và so khớp thời lượng nghiêm ngặt (dung sai ±12s), đảm bảo 100% ra đúng bài hát yêu cầu',
+      'Khắc Phục Lệch Số Lượng Mục Lịch Sử: Đồng bộ hóa thuật toán khử trùng lặp (deduplicateList) và liên kết số lượng hiển thị trên huy hiệu trực tiếp với số thẻ đang hiển thị thực tế'
+    ]
+  },
   'v24.07': {
     version: 'v24.07',
     title: 'Bản cập nhật v24.07 (APK v24.7.0)',

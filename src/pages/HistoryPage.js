@@ -254,5 +254,16 @@ export function attachHistoryPageListeners(rerender) {
     });
   });
 
-  return () => {};
+  // Real-time synchronization with background tasks and other workspaces
+  const handleGlobalHistoryUpdated = () => {
+    historyState.historyItems = storage.getLocalHistory();
+    historyState.trashItems = storage.getLocalTrash();
+    updateHeaderTrashIndicator();
+    if (rerender) rerender();
+  };
+  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+
+  return () => {
+    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+  };
 }
