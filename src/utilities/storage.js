@@ -256,14 +256,22 @@ export const storage = {
       size = Math.round((record.downloadUrl.split(',')[1] || '').length * 0.75) || 1200;
     }
 
+    const authorVal = typeof record.author === 'string'
+      ? record.author
+      : (record.author?.name || record.author?.username || record.author?.channel || (typeof record.artist === 'string' ? record.artist : null));
+
+    const artistVal = typeof record.artist === 'string'
+      ? record.artist
+      : (record.artist?.name || authorVal || null);
+
     const detailsObj = {
       mode: record.mode,
       savedPct: record.savedPct,
       targetFormat: record.targetFormat,
       cover: record.cover || record.thumbnail || null,
       thumbnail: record.thumbnail || record.cover || null,
-      author: record.author || record.artist || null,
-      artist: record.artist || record.author || null,
+      author: authorVal,
+      artist: artistVal,
       duration: record.duration || null,
       driveRelPath: record.driveRelPath || null,
       originalUrl: record.originalUrl || record.url || null,

@@ -113,6 +113,10 @@ export class InstagramWorkspace {
         ? instagramApi.getStreamUrl(targetUrl, `${data.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`, false)
         : '';
 
+      const authorStr = typeof data.author === 'string'
+        ? data.author
+        : (data.author?.username || data.author?.name || 'instagram');
+
       storage.recordCompletedJob({
         id: `ig-${data.id || Date.now()}`,
         toolId: 'instagram-downloader',
@@ -120,7 +124,7 @@ export class InstagramWorkspace {
         tool: 'Instagram Downloader',
         fileName: `${data.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`,
         title: data.title || 'Instagram Media',
-        author: data.author || 'instagram',
+        author: authorStr,
         cover: data.cover || (data.medias && data.medias[0]?.thumbnail) || null,
         thumbnail: data.cover || (data.medias && data.medias[0]?.thumbnail) || null,
         duration: data.duration || null,

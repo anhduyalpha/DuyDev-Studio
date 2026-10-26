@@ -109,6 +109,10 @@ export class FacebookWorkspace {
         ? facebookApi.getStreamUrl(targetMediaUrl, `${data.title || 'facebook_video'}.mp4`, false)
         : '';
 
+      const authorStr = typeof data.author === 'string'
+        ? data.author
+        : (data.author?.name || data.author?.username || data.author?.channel || 'facebook');
+
       storage.recordCompletedJob({
         id: `fb-${data.id || Date.now()}`,
         toolId: 'facebook-downloader',
@@ -116,7 +120,7 @@ export class FacebookWorkspace {
         tool: 'Facebook Downloader',
         fileName: `${data.title || 'facebook_video'}.mp4`,
         title: data.title || 'Facebook Video',
-        author: data.author || 'facebook',
+        author: authorStr,
         cover: data.cover || null,
         thumbnail: data.cover || null,
         duration: data.duration || null,

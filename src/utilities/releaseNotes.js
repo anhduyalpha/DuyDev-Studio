@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.14': {
+    version: 'v24.14',
+    title: 'Bản cập nhật v24.14: Tinh Gọn Lịch Sử Media Android & Hộp Thả Collapsible',
+    date: '27/10/2026',
+    features: [
+      'Kiến Trúc Hộp Thả Lịch Sử Thu Gọn (KI-CON-006): Chuyển đổi toàn bộ khu vực lịch sử của bộ 3 công cụ Media (Facebook, Instagram, Spotify) sang dạng Collapsible Dropbox thu gọn thanh thoát (~52px), loại bỏ hoàn toàn tình trạng chiếm trọn màn hình và rối mắt trên Android',
+      'Thanh Thao Tác Đơn Dòng Cân Đối (Single-Line Mobile Toolbar): Tái thiết kế toàn bộ hàng nút thao tác thành thanh công cụ 1 dòng thẳng thớm, tách bạch nhóm Phát/Tải về bên trái và nhóm Tiện ích Drive/Mở lại/Sao chép/Xóa bên phải, triệt tiêu 100% lỗi nút nhảy hàng so le'
+    ],
+    fixes: [
+      'Sửa Triệt Để Lỗi [object Object] Trong Thông Tin Tác Giả: Tự động trích xuất chuỗi định danh người đăng (uploader/channel/username) từ dữ liệu đối tượng, khắc phục hiện tượng hiển thị lỗi [object Object] trên thẻ lịch sử',
+      'Tối Ưu Giao Diện Thẻ Lịch Sử Micro-Card: Tăng độ tương phản, bo góc chuẩn mực, bọc thẻ độc lập và bảo toàn trạng thái mở/đóng khi xóa hoặc khôi phục tệp'
+    ]
+  },
   'v24.13': {
     version: 'v24.13',
     title: 'Bản cập nhật v24.13: Cố Định Avatar & Hồ Sơ Người Dùng Zero-Flash',
