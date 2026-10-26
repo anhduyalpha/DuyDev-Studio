@@ -26,7 +26,7 @@ export function getAdjacentCategory(currentCatId, direction = 'next', categories
 export function renderCategoryFilters(activeCategory = 'all', counts = {}, categoriesList = CATEGORIES) {
   const list = Array.isArray(categoriesList) && categoriesList.length > 0 ? categoriesList : CATEGORIES;
   return `
-    <div class="inline-flex max-w-full p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-[16px] border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto custom-scrollbar select-none">
+    <div class="inline-flex max-w-full p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-[16px] border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto custom-scrollbar select-none touch-pan-x">
       <div id="categoryFilterBar" role="tablist" aria-label="Bộ lọc phân loại công cụ" class="flex items-center gap-1 min-w-max">
         ${list.map(cat => {
           const isActive = cat.id === activeCategory;
@@ -93,16 +93,18 @@ export function updateCategoryFilterPills(activeCategory = 'all', counts = {}, c
 }
 
 export function attachCategoryFilterListeners(onSelect) {
-  const pills = Array.from(document.querySelectorAll('.filter-pill'));
-  pills.forEach((btn, idx) => {
-    if (btn.__hasCategoryListener) return;
-    btn.__hasCategoryListener = true;
+  const bar = document.getElementById('categoryFilterBar') || document.getElementById('dashboardCategoryBarContainer');
+  const scrollContainer = bar ? (bar.closest('.overflow-x-auto') || bar) : null;
+
+  if (scrollContainer && !scrollContainer.__hasDragSuppressor) {
+    scrollContainer.__hasDragSuppressor = true;
 
     let touchStartX = 0;
     let touchStartY = 0;
     let isDragging = false;
+    let suppressUntil = 0;
 
-    btn.addEventListener('touchstart', (e) => {
+    scrollContainer.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
@@ -110,36 +112,45 @@ export function attachCategoryFilterListeners(onSelect) {
       }
     }, { passive: true });
 
-    btn.addEventListener('touchmove', (e) => {
+    scrollContainer.addEventListener('touchmove', (e) => {
       if (e.touches.length === 1 && !isDragging) {
         const dx = Math.abs(e.touches[0].clientX - touchStartX);
         const dy = Math.abs(e.touches[0].clientY - touchStartY);
-        if (dx > 8 || dy > 8) {
+        if (dx > 6 || dy > 6) {
           isDragging = true;
         }
       }
     }, { passive: true });
 
-    btn.addEventListener('touchend', () => {
+    scrollContainer.addEventListener('touchend', () => {
       if (isDragging) {
-        btn.__suppressClick = true;
-        setTimeout(() => {
-          btn.__suppressClick = false;
-          isDragging = false;
-        }, 120);
+        suppressUntil = Date.now() + 400;
+        isDragging = false;
       }
     }, { passive: true });
 
-    btn.addEventListener('touchcancel', () => {
+    scrollContainer.addEventListener('touchcancel', () => {
       isDragging = false;
     }, { passive: true });
 
-    btn.addEventListener('click', (e) => {
-      if (btn.__suppressClick) {
+    // Capture phase click interceptor: if user dragged or swiped past boundary on tab bar,
+    // suppress accidental synthetic click dispatch across any pill in the bar
+    scrollContainer.addEventListener('click', (e) => {
+      if (Date.now() < suppressUntil || isDragging) {
         e.preventDefault();
         e.stopPropagation();
-        return;
+        suppressUntil = 0;
+        isDragging = false;
       }
+    }, true);
+  }
+
+  const pills = Array.from(document.querySelectorAll('.filter-pill'));
+  pills.forEach((btn, idx) => {
+    if (btn.__hasCategoryListener) return;
+    btn.__hasCategoryListener = true;
+
+    btn.addEventListener('click', () => {
       soundEngine.playToggle();
       const cat = btn.getAttribute('data-category');
       onSelect(cat, btn);

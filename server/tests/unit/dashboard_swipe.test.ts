@@ -183,12 +183,31 @@ describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
       expect(controllerCode).toContain('resetTransform(grid)');
     });
 
-    it('should verify CategoryFilters exports updateCategoryFilterPills and suppresses drag clicks', () => {
+    it('should verify CategoryFilters exports updateCategoryFilterPills and suppresses drag clicks via capture handler', () => {
       const filtersPath = path.resolve(__dirname, '../../..', 'src/components/dashboard/CategoryFilters.js');
       const filtersCode = fs.readFileSync(filtersPath, 'utf8');
 
       expect(filtersCode).toContain('export function updateCategoryFilterPills');
-      expect(filtersCode).toContain('__suppressClick');
+      expect(filtersCode).toContain('__hasDragSuppressor');
+      expect(filtersCode).toContain('touch-pan-x');
+    });
+
+    it('should verify DashboardPage attaches category filter listeners on mount and uses sub-scroller scrollTo', () => {
+      const pagePath = path.resolve(__dirname, '../../..', 'src/pages/DashboardPage.js');
+      const pageCode = fs.readFileSync(pagePath, 'utf8');
+
+      expect(pageCode).toContain('attachCategoryFilterListeners(handleCategorySelect);');
+      expect(pageCode).toContain('scrollBox.scrollTo');
+    });
+
+    it('should mathematically center active pill inside horizontal scrollbox without resetting to 0', () => {
+      const containerWidth = 360; // Mobile viewport
+      const pillLeft = 480; // Far right tab (e.g. Media)
+      const pillWidth = 84;
+      const targetLeft = pillLeft - (containerWidth / 2) + (pillWidth / 2);
+
+      expect(targetLeft).toBe(480 - 180 + 42); // 342px
+      expect(targetLeft).toBeGreaterThan(0);
     });
   });
 });

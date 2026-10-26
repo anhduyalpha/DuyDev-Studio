@@ -30,11 +30,11 @@ describe('Tool Registry Categories & Advanced Tab Suite', () => {
     expect(content).toMatch(/id:\s*'scribd-archiver'[\s\S]*?category:\s*'system'/);
   });
 
-  it('3. DashboardPage.js tracks counts for advanced category', () => {
+  it('3. DashboardPage.js tracks counts for all categories including advanced', () => {
     const dashboardPath = path.join(rootDir, 'src/pages/DashboardPage.js');
     const content = fs.readFileSync(dashboardPath, 'utf-8');
 
-    expect(content).toContain("advanced: toolRegistry.tools.filter(t => t.category === 'advanced').length");
+    expect(content).toContain("counts[c.id] = toolRegistry.tools.filter(t => t.category === c.id).length;");
   });
 
   it('4. ToolCard.js maps advanced category label to Nâng cao', () => {

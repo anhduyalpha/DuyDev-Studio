@@ -139,6 +139,64 @@ export function attachDashboardListeners(onReRender) {
 
   observeTierCards();
 
+  // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
+  const switchCategory = (cat, direction = null, clickedBtn = null, isSwipe = false) => {
+    if (!cat || cat === toolRegistry.currentCategory) return;
+    toolRegistry.setCategory(cat);
+
+    // 1. Smooth scroll clicked tab into center view of horizontal scrollbar (no window/ancestor jumping, no snapping back to 0!)
+    const targetBtn = clickedBtn || document.querySelector(`.filter-pill[data-category="${cat}"]`);
+    if (targetBtn) {
+      const scrollBox = targetBtn.closest('.overflow-x-auto');
+      if (scrollBox) {
+        const targetLeft = targetBtn.offsetLeft - (scrollBox.clientWidth / 2) + (targetBtn.offsetWidth / 2);
+        scrollBox.scrollTo({
+          left: Math.max(0, targetLeft),
+          behavior: 'smooth'
+        });
+      } else {
+        targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+
+    // 2. Perform slide transition on tools grid
+    const gridEl = document.getElementById('toolsGridContainer');
+    if (gridEl && direction) {
+      if (direction === 'next') {
+        gridEl.classList.remove('animate-tab-slide-left');
+        gridEl.classList.add('animate-tab-slide-right');
+      } else if (direction === 'prev') {
+        gridEl.classList.remove('animate-tab-slide-right');
+        gridEl.classList.add('animate-tab-slide-left');
+      }
+
+      gridEl.addEventListener('animationend', () => {
+        gridEl.classList.remove('animate-tab-slide-right', 'animate-tab-slide-left');
+      }, { once: true });
+    }
+
+    // 3. Subtle acoustic & haptic response ONLY on horizontal swipe gestures (button click already triggered playToggle)
+    if (isSwipe) {
+      soundEngine.playToggle();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(10); } catch {}
+      }
+    }
+  };
+
+  const handleCategorySelect = (cat, clickedBtn) => {
+    if (!cat || cat === toolRegistry.currentCategory) return;
+    const currentCat = toolRegistry.currentCategory;
+    const cats = toolRegistry.getCategories();
+    const currentIdx = cats.findIndex(c => c.id === currentCat);
+    const targetIdx = cats.findIndex(c => c.id === cat);
+    const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
+    switchCategory(cat, dir, clickedBtn);
+  };
+
+  // Attach category filter listeners unconditionally for initial pills
+  attachCategoryFilterListeners(handleCategorySelect);
+
   // Subscribe to toolRegistry so layout reordering and category updates dynamically sync to DOM in real-time
   const unsubscribeRegistry = toolRegistry.subscribe((filteredTools, category, query) => {
     const gridEl = document.getElementById('toolsGridContainer');
@@ -180,14 +238,7 @@ export function attachDashboardListeners(onReRender) {
         barContainer.innerHTML = renderCategoryFilters(category, counts, cats);
         const newScrollBox = barContainer.querySelector('.overflow-x-auto');
         if (newScrollBox) newScrollBox.scrollLeft = prevScrollLeft;
-        attachCategoryFilterListeners((cat, clickedBtn) => {
-          if (!cat || cat === toolRegistry.currentCategory) return;
-          const currentCat = toolRegistry.currentCategory;
-          const currentIdx = cats.findIndex(c => c.id === currentCat);
-          const targetIdx = cats.findIndex(c => c.id === cat);
-          const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
-          switchCategory(cat, dir, clickedBtn);
-        });
+        attachCategoryFilterListeners(handleCategorySelect);
       } else {
         updateCategoryFilterPills(category, counts, cats);
       }
@@ -201,42 +252,6 @@ export function attachDashboardListeners(onReRender) {
       });
     }
   });
-
-  // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
-  const switchCategory = (cat, direction = null, clickedBtn = null, isSwipe = false) => {
-    if (!cat || cat === toolRegistry.currentCategory) return;
-    toolRegistry.setCategory(cat);
-
-    // 1. Smooth scroll clicked tab into center view (no snapping back to 0!)
-    const targetBtn = clickedBtn || document.querySelector(`.filter-pill[data-category="${cat}"]`);
-    if (targetBtn) {
-      targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-
-    // 2. Perform slide transition on tools grid
-    const gridEl = document.getElementById('toolsGridContainer');
-    if (gridEl && direction) {
-      if (direction === 'next') {
-        gridEl.classList.remove('animate-tab-slide-left');
-        gridEl.classList.add('animate-tab-slide-right');
-      } else if (direction === 'prev') {
-        gridEl.classList.remove('animate-tab-slide-right');
-        gridEl.classList.add('animate-tab-slide-left');
-      }
-
-      gridEl.addEventListener('animationend', () => {
-        gridEl.classList.remove('animate-tab-slide-right', 'animate-tab-slide-left');
-      }, { once: true });
-    }
-
-    // 3. Subtle acoustic & haptic response ONLY on horizontal swipe gestures (button click already triggered playToggle)
-    if (isSwipe) {
-      soundEngine.playToggle();
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try { navigator.vibrate(10); } catch {}
-      }
-    }
-  };
 
   // Mobile & Android Swipe Gesture Controller (Swipe Left -> Next Tab, Swipe Right -> Prev Tab)
   const dashboardRoot = document.getElementById('dashboardRoot');
