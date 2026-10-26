@@ -163,14 +163,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.12">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.12">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=24.12">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=24.12">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.12">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.13">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.13">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=24.13">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=24.13">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.13">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=24.12">
+  <link rel="modulepreload" href="src/app.js?v=24.13">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -654,6 +654,58 @@
     </header>
   
       </div>
+
+      <!-- Frame-0 Fast-Path Profile Restoration (Zero Flash) -->
+      <script>
+        (function() {
+          try {
+            var raw = localStorage.getItem('ds_user_profile') || localStorage.getItem('ds_user_profile_backup');
+            if (raw) {
+              var p = JSON.parse(raw);
+              if (p && p.name) {
+                var nEl = document.getElementById('headerUserNameText');
+                if (nEl) nEl.textContent = p.name;
+                var aEl = document.getElementById('headerUserAvatar');
+                if (aEl) {
+                  var grads = [
+                    'from-indigo-500 to-purple-600 text-white',
+                    'from-amber-500 to-orange-600 text-white',
+                    'from-emerald-500 to-teal-600 text-white',
+                    'from-sky-500 to-blue-600 text-white',
+                    'from-rose-500 to-pink-600 text-white',
+                    'from-violet-500 to-fuchsia-600 text-white'
+                  ];
+                  var h = 0;
+                  for (var i = 0; i < p.name.length; i++) {
+                    h = ((h << 5) - h) + p.name.charCodeAt(i);
+                    h |= 0;
+                  }
+                  var g = grads[Math.abs(h) % grads.length];
+                  aEl.className = 'relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ' + g;
+
+                  var words = p.name.trim().split(/\s+/);
+                  var target = words[words.length - 1] || words[0] || 'D';
+                  var initLetter = (target[0] || 'D').toUpperCase();
+
+                  if (p.avatar && (p.avatar.indexOf('data:image/') === 0 || p.avatar.indexOf('http') === 0)) {
+                    aEl.innerHTML = '<img src="' + p.avatar + '" alt="' + p.name + '" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null;this.parentElement.innerHTML=\'<span class=\\\'font-bold select-none\\\'>' + initLetter + '</span>\';" />';
+                  } else if (p.avatar && p.avatar.indexOf('preset:') === 0) {
+                    var presets = {
+                      'preset:fox': '🦊', 'preset:cat': '🐱', 'preset:rocket': '🚀', 'preset:lightning': '⚡',
+                      'preset:crown': '👑', 'preset:robot': '🤖', 'preset:owl': '🦉', 'preset:penguin': '🐧',
+                      'preset:art': '🎨', 'preset:game': '🎮', 'preset:coffee': '☕', 'preset:ninja': '🥷'
+                    };
+                    var emoji = presets[p.avatar] || p.avatar.replace('preset:', '');
+                    aEl.innerHTML = '<span class="flex items-center justify-center text-base sm:text-lg select-none leading-none">' + emoji + '</span>';
+                  } else {
+                    aEl.innerHTML = '<span class="font-bold select-none">' + initLetter + '</span>';
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        })();
+      </script>
 
       <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-36 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0 overflow-x-clip">
 
@@ -2796,7 +2848,7 @@
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
-          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v24.12</span>
+          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v24.13</span>
           <span>•</span>
           <span>Studio riêng của Anh Duy</span>
         </div>
@@ -2867,7 +2919,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=24.12"></script>
+  <script type="module" src="src/app.js?v=24.13"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>

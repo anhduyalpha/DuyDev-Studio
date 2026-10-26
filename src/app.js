@@ -10,7 +10,7 @@ import { toolRegistry } from './hooks/useToolRegistry.js';
 import { clearModuleState, clearAllModuleStates } from './utilities/moduleState.js';
 
 // Layout components
-import { renderHeader, attachHeaderListeners } from './components/layout/Header.js';
+import { renderHeader, attachHeaderListeners, syncHeaderUserProfile } from './components/layout/Header.js';
 import { renderBottomNav } from './components/layout/BottomNav.js';
 import { renderFooter } from './components/layout/Footer.js';
 import { initGlobalTaskDock } from './components/layout/GlobalTaskDock.js';
@@ -362,10 +362,7 @@ class App {
     } else {
       // In-place hydration sync for user profile (in case user customized name/avatar in localStorage)
       try {
-        const profile = getUserProfile();
-        if (profile && (profile.name || profile.avatar)) {
-          window.dispatchEvent(new CustomEvent('ds:profile-updated', { detail: profile }));
-        }
+        syncHeaderUserProfile();
       } catch (_) {}
     }
 

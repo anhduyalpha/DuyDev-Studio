@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.13': {
+    version: 'v24.13',
+    title: 'Bản cập nhật v24.13: Cố Định Avatar & Hồ Sơ Người Dùng Zero-Flash',
+    date: '26/10/2026',
+    features: [
+      'Khôi Phục Hồ Sơ Tức Thì (Zero-Flash Profile Restoration): Tích hợp tập lệnh phục hồi avatar và tên người dùng trực tiếp trong DOM ngay tại frame đầu tiên, loại bỏ hoàn toàn hiện tượng nhấp nháy hoặc trở về chữ cái mặc định khi tải lại trang',
+      'Đồng Bộ Hai Chiều & Sao Lưu Kép (Dual-Storage Persistence): Tự động sao lưu hồ sơ sang ds_user_profile_backup và đồng bộ 2 chiều với máy chủ, bảo vệ tuyệt đối thông tin tên và ảnh đại diện khi người dùng thoát và mở lại ứng dụng'
+    ],
+    fixes: [
+      'Sửa Lỗi Mất Avatar & Tên Khi Thoát Ứng Dụng: Khắc phục triệt để race condition khi kích hoạt sự kiện ds:profile-updated trước khi gắn bộ lắng nghe header trên shell tải nhanh',
+      'Hoàn Thiện Hộp Thoại Hồ Sơ (ProfileModal): Kích hoạt nút "Sửa tên" nhanh, hỗ trợ phím Enter lưu ngay lập tức, hiển thị biểu tượng xác nhận ảnh đại diện từ thiết bị và bổ sung cơ chế fallback ảnh lỗi'
+    ]
+  },
   'v24.12': {
     version: 'v24.12',
     title: 'Bản cập nhật v24.12: Chuẩn Hóa Điều Hướng Media, Lịch Sử & Spotify Khớp Chuẩn',

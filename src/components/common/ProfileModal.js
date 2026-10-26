@@ -241,10 +241,10 @@ export function openProfileModal(options = {}) {
               <button 
                 type="button" 
                 id="dsProfileUploadPhotoBtn"
-                class="w-full h-11 px-3.5 rounded-xl border border-dashed border-zinc-300 dark:border-white/20 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition cursor-pointer inline-flex items-center justify-center gap-2"
+                class="w-full h-11 px-3.5 rounded-xl border ${pendingAvatar && (pendingAvatar.startsWith('data:image/') || pendingAvatar.startsWith('http')) ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20' : 'border-dashed border-zinc-300 dark:border-white/20 bg-zinc-50/50 dark:bg-zinc-800/30 text-zinc-700 dark:text-zinc-300'} hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60 text-xs font-semibold transition cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                <i data-lucide="image-plus" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
-                <span>Tải ảnh đại diện từ thiết bị</span>
+                <i data-lucide="${pendingAvatar && (pendingAvatar.startsWith('data:image/') || pendingAvatar.startsWith('http')) ? 'check' : 'image-plus'}" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+                <span>${pendingAvatar && (pendingAvatar.startsWith('data:image/') || pendingAvatar.startsWith('http')) ? '✓ Đã chọn ảnh từ máy (Nhấp để đổi)' : 'Tải ảnh đại diện từ thiết bị'}</span>
               </button>
             </div>
 
@@ -347,6 +347,41 @@ export function openProfileModal(options = {}) {
     } else {
       // Step 2 listeners
       const nameInput2 = modalOverlay.querySelector('#dsProfileNameInput2');
+      const changeNameQuickBtn = modalOverlay.querySelector('#dsProfileChangeNameQuick');
+      const saveBtn = modalOverlay.querySelector('#dsProfileSaveAllBtn');
+
+      const doSave = async () => {
+        const finalName = (nameInput2?.value || pendingName || '').trim();
+        if (!finalName) {
+          showToast('Vui lòng nhập tên của bạn', 'error');
+          nameInput2?.focus();
+          return;
+        }
+
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = `<span class="inline-block animate-spin mr-1">⏳</span> Đang lưu...`;
+        }
+
+        const saved = await saveUserProfile({
+          name: finalName,
+          avatar: pendingAvatar
+        });
+
+        showToast(`Đã lưu hồ sơ: ${saved.name}`, 'success');
+        closeProfileModal();
+        if (typeof options.onComplete === 'function') {
+          options.onComplete(saved);
+        }
+      };
+
+      if (changeNameQuickBtn && nameInput2) {
+        changeNameQuickBtn.onclick = () => {
+          nameInput2.focus();
+          nameInput2.select();
+        };
+      }
+
       if (nameInput2) {
         nameInput2.oninput = (e) => {
           pendingName = e.target.value.trim();
@@ -358,6 +393,13 @@ export function openProfileModal(options = {}) {
             if (avatarPreview) {
               avatarPreview.innerHTML = renderAvatarInnerHtml(pendingAvatar, pendingName);
             }
+          }
+        };
+
+        nameInput2.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            doSave();
           }
         };
       }
@@ -424,30 +466,6 @@ export function openProfileModal(options = {}) {
       if (cancelEditBtn) cancelEditBtn.onclick = closeProfileModal;
 
       // Save all
-      const saveBtn = modalOverlay.querySelector('#dsProfileSaveAllBtn');
-      const doSave = async () => {
-        const finalName = (nameInput2?.value || pendingName || '').trim();
-        if (!finalName) {
-          showToast('Vui lòng nhập tên của bạn', 'error');
-          nameInput2?.focus();
-          return;
-        }
-
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = `<span class="inline-block animate-spin mr-1">⏳</span> Đang lưu...`;
-
-        const saved = await saveUserProfile({
-          name: finalName,
-          avatar: pendingAvatar
-        });
-
-        showToast(`Đã lưu hồ sơ: ${saved.name}`, 'success');
-        closeProfileModal();
-        if (typeof options.onComplete === 'function') {
-          options.onComplete(saved);
-        }
-      };
-
       if (saveBtn) saveBtn.onclick = doSave;
     }
   }

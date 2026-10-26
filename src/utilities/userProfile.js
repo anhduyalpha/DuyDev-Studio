@@ -8,6 +8,7 @@ import { getDeviceId } from './deviceId.js';
 import { isAdminAuthenticated } from './adminAuth.js';
 
 const STORAGE_KEY_PROFILE = 'ds_user_profile';
+const STORAGE_KEY_BACKUP = 'ds_user_profile_backup';
 const STORAGE_KEY_PROMPTED = 'ds_profile_prompted_v1';
 
 export const AVATAR_PRESETS = [
@@ -70,14 +71,15 @@ export function getAvatarGradient(name) {
  * Renders avatar inner HTML (image, emoji preset, or initial letter)
  */
 export function renderAvatarInnerHtml(avatar, name) {
+  const initial = getInitialLetter(name);
   if (avatar && (avatar.startsWith('data:image/') || avatar.startsWith('http://') || avatar.startsWith('https://'))) {
-    return `<img src="${avatar}" alt="${name || 'Avatar'}" class="w-full h-full object-cover rounded-full" />`;
+    return `<img src="${avatar}" alt="${name || 'Avatar'}" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'font-bold select-none\\'>${initial}</span>';" />`;
   }
   if (avatar && (avatar.startsWith('preset:') || /\p{Emoji}/u.test(avatar))) {
     const emoji = getPresetEmoji(avatar);
     return `<span class="flex items-center justify-center text-base sm:text-lg select-none leading-none">${emoji}</span>`;
   }
-  return `<span class="font-bold select-none">${getInitialLetter(name)}</span>`;
+  return `<span class="font-bold select-none">${initial}</span>`;
 }
 
 /**
@@ -96,7 +98,10 @@ export function getUserProfile() {
   };
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PROFILE);
+    let raw = localStorage.getItem(STORAGE_KEY_PROFILE);
+    if (!raw) {
+      raw = localStorage.getItem(STORAGE_KEY_BACKUP);
+    }
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
@@ -106,6 +111,13 @@ export function getUserProfile() {
           deviceId,
           isConfigured: Boolean(parsed.name && parsed.name.trim().length > 0)
         };
+        // Ensure both storage keys remain unified
+        if (!localStorage.getItem(STORAGE_KEY_PROFILE)) {
+          localStorage.setItem(STORAGE_KEY_PROFILE, raw);
+        }
+        if (!localStorage.getItem(STORAGE_KEY_BACKUP)) {
+          localStorage.setItem(STORAGE_KEY_BACKUP, raw);
+        }
       }
     }
   } catch {}
@@ -142,8 +154,10 @@ export async function saveUserProfile(updates = {}) {
     isConfigured: Boolean(updates.name ? updates.name.trim().length > 0 : current.name.trim().length > 0)
   };
 
+  const serialized = JSON.stringify(newProfile);
   try {
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(newProfile));
+    localStorage.setItem(STORAGE_KEY_PROFILE, serialized);
+    localStorage.setItem(STORAGE_KEY_BACKUP, serialized);
     localStorage.setItem(STORAGE_KEY_PROMPTED, 'true');
   } catch {}
 
@@ -205,10 +219,14 @@ export async function syncProfileWithServer() {
       }
 
       if (hasChanges) {
-        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(merged));
+        const serialized = JSON.stringify(merged);
+        try {
+          localStorage.setItem(STORAGE_KEY_PROFILE, serialized);
+          localStorage.setItem(STORAGE_KEY_BACKUP, serialized);
+        } catch {}
         window.dispatchEvent(new CustomEvent('ds:profile-updated', { detail: merged }));
-      } else if (local.name && !serverData.alias) {
-        // Push local name to server if server was missing it
+      } else if (local.name && (serverData.alias !== local.name || (local.avatar && serverData.avatar !== local.avatar))) {
+        // Push local profile to server if out of sync
         fetch('/api/v1/device/profile', {
           method: 'POST',
           headers: {
@@ -218,7 +236,7 @@ export async function syncProfileWithServer() {
           body: JSON.stringify({
             deviceId,
             alias: local.name,
-            avatar: local.avatar
+            avatar: local.avatar || ''
           })
         }).catch(() => {});
       }

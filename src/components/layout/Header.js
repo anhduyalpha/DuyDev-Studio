@@ -22,6 +22,25 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+export function syncHeaderUserProfile(profile = null) {
+  const updated = profile || getUserProfile();
+  const avatarEl = document.getElementById('headerUserAvatar');
+  const nameEl = document.getElementById('headerUserNameText');
+  const btnEl = document.getElementById('headerProfileBtn');
+  const displayName = updated.name || (isAdminAuthenticated() ? 'Duy' : 'Khách');
+
+  if (avatarEl) {
+    avatarEl.className = `relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
+    avatarEl.innerHTML = renderAvatarInnerHtml(updated.avatar, updated.name);
+  }
+  if (nameEl) {
+    nameEl.textContent = displayName;
+  }
+  if (btnEl) {
+    btnEl.title = updated.name ? `Hồ sơ: ${escapeHtml(updated.name)} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)';
+  }
+}
+
 export function updateHeaderTrashIndicator() {
   const dot = document.getElementById('headerTrashDot');
   if (dot) {
@@ -281,22 +300,12 @@ export function attachHeaderListeners(onSearch) {
     });
   }
 
+  // Initial sync of profile into DOM on listener attach (especially critical for pre-rendered shells)
+  syncHeaderUserProfile();
+
   // Reactive listener for profile updates without reloading
   window.addEventListener('ds:profile-updated', (e) => {
-    const updated = e.detail || getUserProfile();
-    const avatarEl = document.getElementById('headerUserAvatar');
-    const nameEl = document.getElementById('headerUserNameText');
-    const btnEl = document.getElementById('headerProfileBtn');
-    if (avatarEl) {
-      avatarEl.className = `relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
-      avatarEl.innerHTML = renderAvatarInnerHtml(updated.avatar, updated.name);
-    }
-    if (nameEl) {
-      nameEl.textContent = updated.name || (isAdminAuthenticated() ? 'Duy' : 'Khách');
-    }
-    if (btnEl) {
-      btnEl.title = updated.name ? `Hồ sơ: ${updated.name} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)';
-    }
+    syncHeaderUserProfile(e.detail);
   });
 
   // Ensure current theme icon is rendered
