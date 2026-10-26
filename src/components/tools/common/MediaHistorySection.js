@@ -269,7 +269,7 @@ export function renderMediaHistorySection({
                       <div class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 flex-wrap">
                         ${cleanAuthor ? `<span class="font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[120px] sm:max-w-[180px]">${escapeHtml(cleanAuthor)}</span><span>•</span>` : ''}
                         ${item.quality ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 shrink-0">${escapeHtml(item.quality)}</span><span>•</span>` : ''}
-                        ${hasDrive ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 inline-flex items-center gap-0.5">✓ Drive</span><span>•</span>` : ''}
+                        ${hasDrive ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 inline-flex items-center gap-0.5"><i data-lucide="check" class="w-2.5 h-2.5"></i> Đã lưu Drive</span><span>•</span>` : ''}
                         ${item.resultSize ? `<span>${formatBytes(item.resultSize)}</span><span>•</span>` : ''}
                         <span>${formatRelativeTime(item.deletedAt || item.createdAt || Date.now())}</span>
                       </div>
