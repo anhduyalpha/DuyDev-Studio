@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Import category navigation helpers directly
-import { CATEGORIES, getAdjacentCategory } from '../../../src/components/dashboard/CategoryFilters.js';
+import { CATEGORIES, getAdjacentCategory, updateCategoryFilterPills } from '../../../src/components/dashboard/CategoryFilters.js';
 
 describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
   describe('1. Category Adjacent Transition Invariants', () => {
@@ -32,6 +32,22 @@ describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
 
     it('should clamp boundary at the last category when swiping next', () => {
       expect(getAdjacentCategory('advanced', 'next')).toBeNull();
+    });
+
+    it('should clamp boundary when custom list has media at the end (as in mobile screenshot)', () => {
+      const customList = [
+        { id: 'all', label: 'Tất cả' },
+        { id: 'pdf', label: 'PDF' },
+        { id: 'convert', label: 'Chuyển đổi' },
+        { id: 'archive', label: 'File nén' },
+        { id: 'qr', label: 'Mã QR' },
+        { id: 'system', label: 'Tiện ích' },
+        { id: 'advanced', label: 'Nâng cao' },
+        { id: 'media', label: 'Media' }
+      ];
+      expect(getAdjacentCategory('media', 'next', customList)).toBeNull();
+      expect(getAdjacentCategory('advanced', 'next', customList)).toBe('media');
+      expect(getAdjacentCategory('all', 'prev', customList)).toBeNull();
     });
 
     it('should correctly retreat to previous category in reverse order', () => {
@@ -144,13 +160,35 @@ describe('Dashboard Category Swipe & Gesture Navigation Suite', () => {
       expect(bridgeCode).toContain('@JavascriptInterface');
     });
 
-    it('should verify DashboardPage integrates initDashboardSwipe and touch-pan-y', () => {
+    it('should verify DashboardPage integrates initDashboardSwipe, boundary guards, and updateCategoryFilterPills', () => {
       const pagePath = path.resolve(__dirname, '../../..', 'src/pages/DashboardPage.js');
       const pageCode = fs.readFileSync(pagePath, 'utf8');
 
       expect(pageCode).toContain('initDashboardSwipe');
       expect(pageCode).toContain('touch-pan-y');
       expect(pageCode).toContain('stopSwipe()');
+      expect(pageCode).toContain('updateCategoryFilterPills');
+      expect(pageCode).toContain('canSwipeNext');
+      expect(pageCode).toContain('canSwipePrev');
+      expect(pageCode).toContain('isStructureChanged');
+    });
+
+    it('should verify dashboardSwipeController protects category bar and handles boundaries elastically', () => {
+      const controllerPath = path.resolve(__dirname, '../../..', 'src/components/dashboard/dashboardSwipeController.js');
+      const controllerCode = fs.readFileSync(controllerPath, 'utf8');
+
+      expect(controllerCode).toContain('#dashboardCategoryBarContainer');
+      expect(controllerCode).toContain('.filter-pill');
+      expect(controllerCode).toContain('BOUNDARY_RESISTANCE_DISPLACEMENT');
+      expect(controllerCode).toContain('resetTransform(grid)');
+    });
+
+    it('should verify CategoryFilters exports updateCategoryFilterPills and suppresses drag clicks', () => {
+      const filtersPath = path.resolve(__dirname, '../../..', 'src/components/dashboard/CategoryFilters.js');
+      const filtersCode = fs.readFileSync(filtersPath, 'utf8');
+
+      expect(filtersCode).toContain('export function updateCategoryFilterPills');
+      expect(filtersCode).toContain('__suppressClick');
     });
   });
 });

@@ -219,6 +219,7 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     soundEngine.enabled = true;
     soundEngine.completedTaskIds.clear();
     soundEngine.failedTaskIds.clear();
+    (soundEngine as any)._lastToggleTime = 0;
   });
 
   afterEach(() => {
@@ -291,13 +292,22 @@ describe('SoundEngine (Apple/Linear-Grade Procedural Web Audio Sound System)', (
     expect(mockContext.createOscillator).toHaveBeenCalledTimes(2);
   });
 
-  it('7. Curated Sound Palette: playToggle / playSnap produces 12ms crisp micro-click', async () => {
+  it('7. Curated Sound Palette: playToggle / playSnap produces 12ms crisp micro-click with anti-double-click debounce', async () => {
     const { soundEngine } = await import('../../../src/utilities/soundEngine.js');
 
     mockContext.createOscillator.mockClear();
     soundEngine.playToggle();
 
     expect(mockContext.createOscillator).toHaveBeenCalledTimes(1);
+
+    // Rapid second trigger (< 60ms) should be dropped by anti-double-click guard
+    soundEngine.playToggle();
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(1);
+
+    // After 60ms passes, playToggle plays again
+    vi.advanceTimersByTime(70);
+    soundEngine.playToggle();
+    expect(mockContext.createOscillator).toHaveBeenCalledTimes(2);
   });
 
   it('8. Mute / Unmute governance: persists to localStorage and dispatches ds:sound-state-change event', async () => {

@@ -2,7 +2,7 @@
  * DashboardPage View Controller (Dark Professional Minimalism)
  */
 
-import { renderCategoryFilters, attachCategoryFilterListeners, getAdjacentCategory, CATEGORIES } from '../components/dashboard/CategoryFilters.js';
+import { renderCategoryFilters, attachCategoryFilterListeners, updateCategoryFilterPills, getAdjacentCategory, CATEGORIES } from '../components/dashboard/CategoryFilters.js';
 import { initDashboardSwipe } from '../components/dashboard/dashboardSwipeController.js';
 import { renderToolCard } from '../components/dashboard/ToolCard.js';
 import { renderRecentActivity, toggleRecentActivity } from '../components/dashboard/RecentActivity.js';
@@ -99,23 +99,24 @@ export function attachDashboardListeners(onReRender) {
 
   // Handle clear search filter click & tool card acoustic cues
   const toolsGridContainer = document.getElementById('toolsGridContainer');
-  if (toolsGridContainer) {
-    toolsGridContainer.addEventListener('click', (e) => {
-      const btn = e.target.closest('#btnResetSearch');
-      if (btn) {
-        toolRegistry.setSearchQuery('');
-        const searchInput = document.getElementById('globalSearchInput');
-        if (searchInput) searchInput.value = '';
-        if (onReRender) onReRender();
-        return;
-      }
+  const handleToolsGridClick = (e) => {
+    const btn = e.target.closest('#btnResetSearch');
+    if (btn) {
+      toolRegistry.setSearchQuery('');
+      const searchInput = document.getElementById('globalSearchInput');
+      if (searchInput) searchInput.value = '';
+      if (onReRender) onReRender();
+      return;
+    }
 
-      const card = e.target.closest('.tool-card');
-      if (card) {
-        const toolId = card.getAttribute('data-tool-id');
-        soundEngine.playCardClick(toolId);
-      }
-    });
+    const card = e.target.closest('.tool-card');
+    if (card) {
+      const toolId = card.getAttribute('data-tool-id');
+      soundEngine.playCardClick(toolId);
+    }
+  };
+  if (toolsGridContainer) {
+    toolsGridContainer.addEventListener('click', handleToolsGridClick);
   }
 
   // 120Hz & Low-Battery Governor: Suspend offscreen tier card animations
@@ -166,14 +167,30 @@ export function attachDashboardListeners(onReRender) {
     });
 
     if (barContainer) {
-      barContainer.innerHTML = renderCategoryFilters(category, counts, cats);
-      attachCategoryFilterListeners((cat, clickedBtn) => {
-        const currentCat = toolRegistry.currentCategory;
-        const currentIdx = cats.findIndex(c => c.id === currentCat);
-        const targetIdx = cats.findIndex(c => c.id === cat);
-        const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
-        switchCategory(cat, dir, clickedBtn);
-      });
+      // Check if categories list actually changed structure before replacing innerHTML
+      const existingPills = Array.from(barContainer.querySelectorAll('.filter-pill'));
+      const existingCatIds = existingPills.map(p => p.getAttribute('data-category'));
+      const newCatIds = cats.map(c => c.id);
+      const isStructureChanged = existingCatIds.length !== newCatIds.length ||
+        existingCatIds.some((id, idx) => id !== newCatIds[idx]);
+
+      if (isStructureChanged) {
+        const scrollBox = barContainer.querySelector('.overflow-x-auto');
+        const prevScrollLeft = scrollBox ? scrollBox.scrollLeft : 0;
+        barContainer.innerHTML = renderCategoryFilters(category, counts, cats);
+        const newScrollBox = barContainer.querySelector('.overflow-x-auto');
+        if (newScrollBox) newScrollBox.scrollLeft = prevScrollLeft;
+        attachCategoryFilterListeners((cat, clickedBtn) => {
+          if (!cat || cat === toolRegistry.currentCategory) return;
+          const currentCat = toolRegistry.currentCategory;
+          const currentIdx = cats.findIndex(c => c.id === currentCat);
+          const targetIdx = cats.findIndex(c => c.id === cat);
+          const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
+          switchCategory(cat, dir, clickedBtn);
+        });
+      } else {
+        updateCategoryFilterPills(category, counts, cats);
+      }
     } else {
       document.querySelectorAll('.filter-pill').forEach(btn => {
         const catId = btn.getAttribute('data-category');
@@ -186,7 +203,8 @@ export function attachDashboardListeners(onReRender) {
   });
 
   // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
-  const switchCategory = (cat, direction = null, clickedBtn = null) => {
+  const switchCategory = (cat, direction = null, clickedBtn = null, isSwipe = false) => {
+    if (!cat || cat === toolRegistry.currentCategory) return;
     toolRegistry.setCategory(cat);
 
     // 1. Smooth scroll clicked tab into center view (no snapping back to 0!)
@@ -211,28 +229,8 @@ export function attachDashboardListeners(onReRender) {
       }, { once: true });
     }
 
-    // 3. Update active pill styling across all tabs in place
-    document.querySelectorAll('.filter-pill').forEach(btn => {
-      const isThisActive = btn.getAttribute('data-category') === cat;
-      const activeClasses = 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md border-zinc-900 dark:border-white ring-1 ring-black/10 dark:ring-white/20';
-      const inactiveClasses = 'glass-pill text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white font-medium';
-
-      btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[38px] rounded-xl text-xs sm:text-sm border transition-all whitespace-nowrap active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isThisActive ? activeClasses : inactiveClasses}`;
-      btn.setAttribute('aria-selected', String(isThisActive));
-      btn.setAttribute('aria-pressed', String(isThisActive));
-      
-      const badge = btn.querySelector('.filter-count-badge');
-      if (badge) {
-        badge.className = `filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${
-          isThisActive 
-            ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900' 
-            : 'bg-zinc-100/90 text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-zinc-200/50 dark:border-white/[0.06]'
-        }`;
-      }
-    });
-
-    // 4. Subtle acoustic & haptic response on swipe gestures
-    if (direction) {
+    // 3. Subtle acoustic & haptic response ONLY on horizontal swipe gestures (button click already triggered playToggle)
+    if (isSwipe) {
       soundEngine.playToggle();
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try { navigator.vibrate(10); } catch {}
@@ -240,157 +238,155 @@ export function attachDashboardListeners(onReRender) {
     }
   };
 
-  attachCategoryFilterListeners((cat, clickedBtn) => {
-    const currentCat = toolRegistry.currentCategory;
-    const cats = toolRegistry.getCategories();
-    const currentIdx = cats.findIndex(c => c.id === currentCat);
-    const targetIdx = cats.findIndex(c => c.id === cat);
-    const dir = targetIdx > currentIdx ? 'next' : targetIdx < currentIdx ? 'prev' : null;
-    switchCategory(cat, dir, clickedBtn);
-  });
-
   // Mobile & Android Swipe Gesture Controller (Swipe Left -> Next Tab, Swipe Right -> Prev Tab)
   const dashboardRoot = document.getElementById('dashboardRoot');
   const stopSwipe = initDashboardSwipe({
     container: dashboardRoot || document.getElementById('mainContent'),
+    canSwipeNext: () => !!getAdjacentCategory(toolRegistry.currentCategory, 'next', toolRegistry.getCategories()),
+    canSwipePrev: () => !!getAdjacentCategory(toolRegistry.currentCategory, 'prev', toolRegistry.getCategories()),
     onSwipeNext: () => {
       const nextCat = getAdjacentCategory(toolRegistry.currentCategory, 'next', toolRegistry.getCategories());
       if (nextCat) {
-        switchCategory(nextCat, 'next');
+        switchCategory(nextCat, 'next', null, true);
+        return true;
       } else {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate(5); } catch {}
         }
+        return false;
       }
     },
     onSwipePrev: () => {
       const prevCat = getAdjacentCategory(toolRegistry.currentCategory, 'prev', toolRegistry.getCategories());
       if (prevCat) {
-        switchCategory(prevCat, 'prev');
+        switchCategory(prevCat, 'prev', null, true);
+        return true;
       } else {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate(5); } catch {}
         }
+        return false;
       }
     }
   });
 
   const recentContainer = document.getElementById('recentActivityContainer');
-  if (recentContainer) {
-    recentContainer.addEventListener('click', async (e) => {
-      // 0. Toggle Recent Activity Dropbox
-      const toggleTarget = e.target.closest('#btnToggleRecentActivity, #btnToggleRecentActivityChevron, #recentActivityHeader');
-      if (toggleTarget && !e.target.closest('a, .recent-activity-card, button[data-trash-recent], button[data-open-in-tool], button[data-copy-recent], button[data-preview-recent]')) {
-        e.preventDefault();
-        toggleRecentActivity();
-        recentContainer.innerHTML = renderRecentActivity();
-        if (window.lucide) window.lucide.createIcons({ root: recentContainer });
-        try { soundEngine.playToggle(); } catch (_) {}
-        return;
-      }
+  const handleRecentClick = async (e) => {
+    // 0. Toggle Recent Activity Dropbox
+    const toggleTarget = e.target.closest('#btnToggleRecentActivity, #btnToggleRecentActivityChevron, #recentActivityHeader');
+    if (toggleTarget && !e.target.closest('a, .recent-activity-card, button[data-trash-recent], button[data-open-in-tool], button[data-copy-recent], button[data-preview-recent]')) {
+      e.preventDefault();
+      toggleRecentActivity();
+      recentContainer.innerHTML = renderRecentActivity();
+      if (window.lucide) window.lucide.createIcons({ root: recentContainer });
+      try { soundEngine.playToggle(); } catch (_) {}
+      return;
+    }
 
-      // 1. Move to Trash (Optimistic removal)
-      const trashBtn = e.target.closest('.btn-trash-recent');
-      if (trashBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (trashBtn.dataset.deleting === 'true') return;
-        trashBtn.dataset.deleting = 'true';
-        const id = trashBtn.dataset.trashRecent;
-        if (!id) return;
+    // 1. Move to Trash (Optimistic removal)
+    const trashBtn = e.target.closest('.btn-trash-recent');
+    if (trashBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (trashBtn.dataset.deleting === 'true') return;
+      trashBtn.dataset.deleting = 'true';
+      const id = trashBtn.dataset.trashRecent;
+      if (!id) return;
 
-        const card = trashBtn.closest('[data-recent-card-id]');
-        if (card) {
-          card.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-          setTimeout(() => {
-            card.remove();
-            const grid = document.getElementById('recentActivityCardsGrid');
-            if (grid && grid.children.length === 0) {
-              recentContainer.innerHTML = '';
-            } else {
-              const badge = document.getElementById('recentActivityCountBadge');
-              if (badge && grid) {
-                badge.textContent = `${grid.children.length} mục`;
-              }
+      const card = trashBtn.closest('[data-recent-card-id]');
+      if (card) {
+        card.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        setTimeout(() => {
+          card.remove();
+          const grid = document.getElementById('recentActivityCardsGrid');
+          if (grid && grid.children.length === 0) {
+            recentContainer.innerHTML = '';
+          } else {
+            const badge = document.getElementById('recentActivityCountBadge');
+            if (badge && grid) {
+              badge.textContent = `${grid.children.length} mục`;
             }
-          }, 200);
-        }
-
-        soundEngine.playDelete();
-        await storage.moveToTrash(id);
-        updateHeaderTrashIndicator();
-        showToast('Đã chuyển mục vào thùng rác', 'delete', 2500, { silent: true });
-        return;
-      }
-
-      // 2. Open in Corresponding Tool Workspace
-      const openBtn = e.target.closest('.btn-open-in-tool');
-      if (openBtn) {
-        const itemId = openBtn.dataset.openInTool;
-        const toolId = openBtn.dataset.toolId;
-        const all = storage.getLocalHistory();
-        const item = all.find((x) => x.id === itemId);
-        if (!item) return;
-
-        const tool = toolRegistry.getToolById(toolId || item.toolId);
-        const route = tool?.route || '#';
-
-        if (tool.id === 'pdf-studio') {
-          window.location.hash = '#tool/pdf-studio';
-          pdfQueueManager.addFileFromHistory(item).then((ok) => {
-            if (ok) showToast(`Đã nạp ${item.fileName} vào PDF Studio`, 'success');
-          });
-          return;
-        }
-
-        if (tool.id === 'universal-converter') {
-          window.location.hash = '#tool/universal-converter';
-          const url = item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null);
-          if (url) {
-            fetch(url)
-              .then((r) => r.blob())
-              .then((blob) => {
-                const file = new File([blob], item.fileName || 'converted-file', { type: blob.type || 'application/octet-stream' });
-                converterManager.addFiles([file]);
-                showToast(`Đã nạp ${item.fileName} vào File Converter`, 'success');
-              })
-              .catch(() => {});
           }
-          return;
-        }
+        }, 200);
+      }
 
-        window.location.hash = route;
+      soundEngine.playDelete();
+      await storage.moveToTrash(id);
+      updateHeaderTrashIndicator();
+      showToast('Đã chuyển mục vào thùng rác', 'delete', 2500, { silent: true });
+      return;
+    }
+
+    // 2. Open in Corresponding Tool Workspace
+    const openBtn = e.target.closest('.btn-open-in-tool');
+    if (openBtn) {
+      const itemId = openBtn.dataset.openInTool;
+      const toolId = openBtn.dataset.toolId;
+      const all = storage.getLocalHistory();
+      const item = all.find((x) => x.id === itemId);
+      if (!item) return;
+
+      const tool = toolRegistry.getToolById(toolId || item.toolId);
+      const route = tool?.route || '#';
+
+      if (tool.id === 'pdf-studio') {
+        window.location.hash = '#tool/pdf-studio';
+        pdfQueueManager.addFileFromHistory(item).then((ok) => {
+          if (ok) showToast(`Đã nạp ${item.fileName} vào PDF Studio`, 'success');
+        });
         return;
       }
 
-      // 3. Copy Link or Text
-      const copyBtn = e.target.closest('.btn-copy-recent');
-      if (copyBtn) {
-        const id = copyBtn.dataset.copyId;
-        const all = storage.getLocalHistory();
-        const item = all.find((x) => x.id === id);
-        if (!item) return;
-
-        if (item.downloadUrl && item.downloadUrl.startsWith('data:image')) {
-          const res = await copyQrImageOrFallback({ dataUrl: item.downloadUrl, text: item.fileName });
-          showToast(res.success ? (res.mode === 'image' ? 'Đã sao chép ảnh QR' : 'Đã sao chép') : 'Lỗi sao chép', res.success ? 'success' : 'error');
-        } else {
-          const text = item.downloadUrl || item.fileName || '';
-          const ok = await copyText(text);
-          showToast(ok ? 'Đã sao chép liên kết' : 'Lỗi sao chép', ok ? 'success' : 'error');
+      if (tool.id === 'universal-converter') {
+        window.location.hash = '#tool/universal-converter';
+        const url = item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null);
+        if (url) {
+          fetch(url)
+            .then((r) => r.blob())
+            .then((blob) => {
+              const file = new File([blob], item.fileName || 'converted-file', { type: blob.type || 'application/octet-stream' });
+              converterManager.addFiles([file]);
+              showToast(`Đã nạp ${item.fileName} vào File Converter`, 'success');
+            })
+            .catch(() => {});
         }
         return;
       }
 
-      // 4. Preview Modal
-      const prevBtn = e.target.closest('.btn-preview-recent');
-      if (prevBtn) {
-        const url = prevBtn.dataset.previewUrl;
-        const name = prevBtn.dataset.fileName;
-        const size = Number(prevBtn.dataset.fileSize || 0);
-        if (url) ViewerConnector.preview({ fileName: name, downloadUrl: url, resultSize: size });
+      window.location.hash = route;
+      return;
+    }
+
+    // 3. Copy Link or Text
+    const copyBtn = e.target.closest('.btn-copy-recent');
+    if (copyBtn) {
+      const id = copyBtn.dataset.copyId;
+      const all = storage.getLocalHistory();
+      const item = all.find((x) => x.id === id);
+      if (!item) return;
+
+      if (item.downloadUrl && item.downloadUrl.startsWith('data:image')) {
+        const res = await copyQrImageOrFallback({ dataUrl: item.downloadUrl, text: item.fileName });
+        showToast(res.success ? (res.mode === 'image' ? 'Đã sao chép ảnh QR' : 'Đã sao chép') : 'Lỗi sao chép', res.success ? 'success' : 'error');
+      } else {
+        const text = item.downloadUrl || item.fileName || '';
+        const ok = await copyText(text);
+        showToast(ok ? 'Đã sao chép liên kết' : 'Lỗi sao chép', ok ? 'success' : 'error');
       }
-    });
+      return;
+    }
+
+    // 4. Preview Modal
+    const prevBtn = e.target.closest('.btn-preview-recent');
+    if (prevBtn) {
+      const url = prevBtn.dataset.previewUrl;
+      const name = prevBtn.dataset.fileName;
+      const size = Number(prevBtn.dataset.fileSize || 0);
+      if (url) ViewerConnector.preview({ fileName: name, downloadUrl: url, resultSize: size });
+    }
+  };
+  if (recentContainer) {
+    recentContainer.addEventListener('click', handleRecentClick);
   }
 
 
@@ -422,6 +418,8 @@ export function attachDashboardListeners(onReRender) {
 
   return () => {
     if (typeof unsubscribeRegistry === 'function') unsubscribeRegistry();
+    if (toolsGridContainer) toolsGridContainer.removeEventListener('click', handleToolsGridClick);
+    if (recentContainer) recentContainer.removeEventListener('click', handleRecentClick);
     stopGovernor();
     stopSwipe();
     if (tierObserver) {

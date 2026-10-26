@@ -8,7 +8,9 @@ export function initDashboardSwipe({
   container,
   onSwipeNext,
   onSwipePrev,
-  getCanSwipe = () => true
+  getCanSwipe = () => true,
+  canSwipeNext,
+  canSwipePrev
 }) {
   if (!container || typeof window === 'undefined') return () => {};
 
@@ -23,6 +25,7 @@ export function initDashboardSwipe({
   const VELOCITY_THRESHOLD = 0.18; // px/ms
   const ANGLE_RATIO = 1.35; // dx > dy * 1.35 (~53.5 deg)
   const MAX_RESISTANCE_DISPLACEMENT = 32; // px visual damping during drag
+  const BOUNDARY_RESISTANCE_DISPLACEMENT = 12; // px damped resistance at edge boundary
 
   const getTargetGrid = () => document.getElementById('toolsGridContainer');
 
@@ -31,7 +34,7 @@ export function initDashboardSwipe({
     const target = e.target;
 
     // Do NOT intercept if touching horizontal category filter pill bar or interactive form controls
-    if (target.closest('#categoryFilterBar, input, textarea, select, .no-swipe')) {
+    if (target.closest('#dashboardCategoryBarContainer, #categoryFilterBar, .filter-pill, input, textarea, select, .no-swipe')) {
       return;
     }
 
@@ -80,7 +83,11 @@ export function initDashboardSwipe({
 
     if (isHorizontalSwipe) {
       currentDeltaX = dx;
-      const dampedOffset = Math.sign(dx) * Math.min(Math.abs(dx) * 0.22, MAX_RESISTANCE_DISPLACEMENT);
+      const isPastBoundary = (dx < 0 && typeof canSwipeNext === 'function' && !canSwipeNext()) ||
+                             (dx > 0 && typeof canSwipePrev === 'function' && !canSwipePrev());
+      const maxDisplacement = isPastBoundary ? BOUNDARY_RESISTANCE_DISPLACEMENT : MAX_RESISTANCE_DISPLACEMENT;
+      const dampingFactor = isPastBoundary ? 0.08 : 0.22;
+      const dampedOffset = Math.sign(dx) * Math.min(Math.abs(dx) * dampingFactor, maxDisplacement);
       const grid = getTargetGrid();
       if (grid) {
         grid.style.transform = `translate3d(${dampedOffset}px, 0, 0)`;
@@ -118,16 +125,22 @@ export function initDashboardSwipe({
       const isSwipe = (distance >= MIN_HORIZONTAL_THRESHOLD && velocity >= VELOCITY_THRESHOLD) || distance >= 80;
 
       if (isSwipe) {
-        if (grid) {
-          grid.style.transition = '';
-          grid.style.transform = '';
-        }
+        let result = false;
         if (currentDeltaX < 0) {
           // Swipe Left -> Next tab
-          onSwipeNext();
+          result = onSwipeNext ? onSwipeNext() : false;
         } else {
           // Swipe Right -> Prev tab
-          onSwipePrev();
+          result = onSwipePrev ? onSwipePrev() : false;
+        }
+
+        // If swipe was explicitly unhandled (e.g. boundary reached where no adjacent tab exists),
+        // smoothly spring the grid back to rest instead of snapping instantly.
+        if (result === false) {
+          resetTransform(grid);
+        } else if (grid) {
+          grid.style.transition = '';
+          grid.style.transform = '';
         }
       } else {
         resetTransform(grid);

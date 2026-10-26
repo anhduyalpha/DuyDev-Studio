@@ -53,10 +53,93 @@ export function renderCategoryFilters(activeCategory = 'all', counts = {}, categ
   `;
 }
 
+export function updateCategoryFilterPills(activeCategory = 'all', counts = {}, categoriesList = CATEGORIES) {
+  const list = Array.isArray(categoriesList) && categoriesList.length > 0 ? categoriesList : CATEGORIES;
+  const pills = Array.from(document.querySelectorAll('.filter-pill'));
+  pills.forEach(btn => {
+    const catId = btn.getAttribute('data-category');
+    const isActive = catId === activeCategory;
+    const count = counts[catId] !== undefined ? counts[catId] : 0;
+    const cat = list.find(c => c.id === catId);
+
+    const activeClasses = 'bg-[#1D1D1F] text-white font-semibold shadow-xs border-[#1D1D1F] dark:bg-white/[0.14] dark:text-white dark:border-white/[0.16] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]';
+    const inactiveClasses = 'bg-white/80 text-zinc-600 border-black/[0.04] hover:bg-white hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs';
+
+    btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-1.5 min-h-[36px] sm:min-h-[34px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isActive ? activeClasses : inactiveClasses}`;
+    btn.setAttribute('aria-selected', String(isActive));
+    btn.setAttribute('aria-pressed', String(isActive));
+
+    const dot = btn.querySelector('span:first-child');
+    if (dot) {
+      if (isActive) {
+        dot.className = 'w-1.5 h-1.5 rounded-full mr-2 shrink-0 bg-white';
+        dot.style.backgroundColor = '';
+      } else {
+        dot.className = 'w-1.5 h-1.5 rounded-full mr-2 shrink-0';
+        dot.style.backgroundColor = cat?.color || '#A1A1AA';
+      }
+    }
+
+    const badge = btn.querySelector('.filter-count-badge');
+    if (badge) {
+      badge.textContent = count;
+      badge.className = `filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums ${
+        isActive
+          ? 'bg-white/20 text-white dark:bg-white/[0.18] dark:text-white'
+          : 'bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]'
+      }`;
+    }
+  });
+}
+
 export function attachCategoryFilterListeners(onSelect) {
   const pills = Array.from(document.querySelectorAll('.filter-pill'));
   pills.forEach((btn, idx) => {
-    btn.addEventListener('click', () => {
+    if (btn.__hasCategoryListener) return;
+    btn.__hasCategoryListener = true;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isDragging = false;
+
+    btn.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        isDragging = false;
+      }
+    }, { passive: true });
+
+    btn.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && !isDragging) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX);
+        const dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if (dx > 8 || dy > 8) {
+          isDragging = true;
+        }
+      }
+    }, { passive: true });
+
+    btn.addEventListener('touchend', () => {
+      if (isDragging) {
+        btn.__suppressClick = true;
+        setTimeout(() => {
+          btn.__suppressClick = false;
+          isDragging = false;
+        }, 120);
+      }
+    }, { passive: true });
+
+    btn.addEventListener('touchcancel', () => {
+      isDragging = false;
+    }, { passive: true });
+
+    btn.addEventListener('click', (e) => {
+      if (btn.__suppressClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       soundEngine.playToggle();
       const cat = btn.getAttribute('data-category');
       onSelect(cat, btn);

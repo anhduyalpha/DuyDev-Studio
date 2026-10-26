@@ -58,6 +58,9 @@ class SoundEngine {
     /** @type {Record<string, GainNode>} */
     this.cueGainNodes = {};
 
+    /** Anti-double-trigger timestamp tracker for acoustic toggle/click cooldown */
+    this._lastToggleTime = 0;
+
     if (typeof window !== 'undefined' && window.localStorage) {
       const storedMute = window.localStorage.getItem(STORAGE_KEY);
       this.enabled = storedMute === null ? true : storedMute === 'true';
@@ -937,8 +940,15 @@ class SoundEngine {
    * Cue 6: `playToggle()` / `playSnap()` (UI Switch / Tab / Copy)
    * Ultra-short, crisp micro-click:
    * 12ms filtered sine impulse at 1100Hz at 0.18 gain.
+   * Debounced with 60ms acoustic cooldown to prevent double-click / double-trigger artifacts.
    */
   playToggle() {
+    const nowMs = Date.now();
+    if (this._lastToggleTime > 0 && nowMs >= this._lastToggleTime && (nowMs - this._lastToggleTime < 60)) {
+      return;
+    }
+    this._lastToggleTime = nowMs;
+
     const ctx = this._prepareForPlayback();
     if (!ctx) return;
 

@@ -724,6 +724,7 @@ class ToolRegistry {
   }
 
   setCategory(cat) {
+    if (this.currentCategory === cat) return;
     this.currentCategory = cat;
     this.notify();
   }
