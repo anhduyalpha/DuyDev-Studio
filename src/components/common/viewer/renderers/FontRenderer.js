@@ -8,16 +8,17 @@ import { formatBytes } from '../../../../utilities/formatters.js';
 let fontCounter = 0;
 
 export function renderFontViewer(state) {
-  const ext = (state.name.split('.').pop() || 'FONT').toUpperCase();
+  const match = (state.name || '').trim().split(/[?#]/)[0].match(/\.([a-zA-Z0-9]{1,8})$/);
+  const ext = (match ? match[1] : 'FONT').toUpperCase().slice(0, 8);
   return `
     <div id="fontViewerRoot" class="flex-1 flex flex-col min-h-[350px] max-h-[82vh] relative overflow-hidden bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/[0.06]">
       <!-- Toolbar -->
       <div class="px-4 py-2.5 border-b border-zinc-200 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3 bg-zinc-50/80 dark:bg-white/[0.02] shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 shrink-0 max-w-[72px] truncate inline-block text-center">
             ${ext}
           </span>
-          <span class="text-xs font-mono text-zinc-500 dark:text-zinc-400">${state.size > 0 ? formatBytes(state.size) : 'Phông chữ'}</span>
+          <span class="text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0">${state.size > 0 ? formatBytes(state.size) : 'Phông chữ'}</span>
         </div>
 
         <div class="flex items-center gap-2 flex-1 max-w-md ml-auto">

@@ -8,18 +8,19 @@ import { copyText } from '../../../../utilities/clipboard.js';
 import { showToast } from '../../../../utilities/toast.js';
 
 export function renderFallbackViewer(state) {
-  const ext = (state.name.split('.').pop() || 'FILE').toUpperCase();
+  const match = (state.name || '').trim().split(/[?#]/)[0].match(/\.([a-zA-Z0-9]{1,8})$/);
+  const ext = (match ? match[1] : (state.mimeType?.split('/')[1]?.split(';')[0] || 'FILE')).toUpperCase().slice(0, 8);
 
   return `
     <div id="fallbackViewerRoot" class="flex-1 flex flex-col min-h-[350px] max-h-[82vh] relative overflow-hidden bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/[0.06]">
       <!-- Header Bar -->
       <div class="px-4 py-2.5 border-b border-zinc-200 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3 bg-zinc-50/80 dark:bg-white/[0.02] shrink-0">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+        <div class="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20 shrink-0 max-w-[72px] truncate inline-block text-center">
             ${ext}
           </span>
-          <span class="font-mono text-xs text-zinc-700 dark:text-zinc-300 truncate">${state.name}</span>
-          <span class="text-xs font-mono text-zinc-400">(${formatBytes(state.size || 0)})</span>
+          <span class="font-mono text-xs text-zinc-700 dark:text-zinc-300 truncate min-w-0 flex-1">${state.name}</span>
+          <span class="text-xs font-mono text-zinc-400 hidden sm:inline shrink-0">(${formatBytes(state.size || 0)})</span>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">

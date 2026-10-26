@@ -140,6 +140,36 @@ export async function viewerFetch(url, options = {}) {
   });
 }
 
+/**
+ * Safe, robust extension extractor that prevents arbitrary strings/titles (like '6.7M views · 140K reactions')
+ * from overflowing the toolbar badge. Returns an alphanumeric extension string <= 8 chars.
+ */
+export function extractSafeExtension(name = '', mimeType = '', category = '') {
+  if (typeof name === 'string' && name.trim()) {
+    const clean = name.trim().split(/[?#]/)[0];
+    const match = clean.match(/\.([a-zA-Z0-9]{1,8})$/);
+    if (match) {
+      return match[1].toUpperCase();
+    }
+  }
+
+  if (typeof mimeType === 'string' && mimeType.includes('/')) {
+    const sub = mimeType.split('/')[1]?.split(';')[0]?.trim();
+    if (sub && /^[a-zA-Z0-9]{1,8}$/.test(sub)) {
+      return sub.toUpperCase();
+    }
+  }
+
+  if (typeof category === 'string' && category.trim()) {
+    const cleanCat = category.trim().toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+    if (cleanCat) {
+      return cleanCat.slice(0, 8);
+    }
+  }
+
+  return 'FILE';
+}
+
 function getOpenTabDetails(state) {
   const isPdf = state.category === FILE_CATEGORIES.PDF || state.category === FILE_CATEGORIES.PRESENTATION;
   const isArchive = state.category === FILE_CATEGORIES.ARCHIVE;
@@ -222,7 +252,7 @@ if (typeof window !== 'undefined') {
 }
 
 export function renderFallbackErrorCard(state, reason = '', details = '') {
-  const ext = (state.name?.split('.').pop() || 'FILE').toUpperCase();
+  const ext = extractSafeExtension(state?.name, state?.mimeType, state?.category);
   const displayReason = reason || 'Định dạng này không hỗ trợ xem trực tiếp hoặc tệp bị lỗi cấu trúc';
   const downloadUrl = state.downloadUrl || state.viewUrl || '#';
   const fileSizeStr = state.size > 0 ? `(${formatBytes(state.size)})` : '';
@@ -403,9 +433,7 @@ async function probeAndUpgradeCategory(state, sessionId, abortSignal) {
 
     if (detectedCat && detectedCat !== FILE_CATEGORIES.FALLBACK && detectedCat !== state.category) {
       state.category = detectedCat;
-      const ext = state.name && state.name.includes('.')
-        ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
-        : detectedCat.toUpperCase();
+      const ext = extractSafeExtension(state.name, state.mimeType, state.category);
       const badge = document.getElementById('viewerFileExtBadge');
       if (badge) badge.textContent = ext;
 
@@ -492,9 +520,7 @@ export function openFileViewer(state) {
       }
     };
 
-    const ext = state.name && state.name.includes('.')
-      ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
-      : (state.mimeType ? state.mimeType.split('/')[1]?.toUpperCase() : (state.category?.toUpperCase() || 'FILE'));
+    const ext = extractSafeExtension(state.name, state.mimeType, state.category);
     const registerCleanup = (fn) => activeCleanups.push(fn);
 
     if (state.isBlob && state.viewUrl) {
@@ -610,9 +636,7 @@ export function openFileViewer(state) {
     }
   };
 
-  const ext = state.name && state.name.includes('.')
-    ? (state.name.split('.').pop()?.toUpperCase() || 'FILE')
-    : (state.mimeType ? state.mimeType.split('/')[1]?.toUpperCase() : (state.category?.toUpperCase() || 'FILE'));
+  const ext = extractSafeExtension(state.name, state.mimeType, state.category);
   const registerCleanup = (fn) => activeCleanups.push(fn);
 
   if (state.isBlob && state.viewUrl) {
@@ -639,15 +663,15 @@ export function openFileViewer(state) {
         
         <!-- Header Bar -->
         <div class="px-3 sm:px-5 py-2.5 sm:py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-2 sm:gap-3 bg-zinc-50/90 dark:bg-[#16161a] shrink-0">
-          <div class="flex items-center gap-2 min-w-0 flex-1">
-            <span id="viewerFileExtBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
+          <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+            <span id="viewerFileExtBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0 max-w-[72px] truncate inline-block text-center">
               ${ext}
             </span>
             <span id="viewerFileName" class="font-medium text-xs sm:text-sm text-zinc-900 dark:text-white truncate font-mono min-w-0 flex-1">${state.name}</span>
             <span id="viewerFileSize" class="text-xs text-zinc-400 dark:text-zinc-500 font-mono hidden md:inline shrink-0">${state.size > 0 ? `(${formatBytes(state.size)})` : ''}</span>
           </div>
 
-          <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div class="flex items-center gap-1 sm:gap-1.5 shrink-0 z-10 relative">
             <button id="btnCopyViewerLink" type="button" class="w-10 h-10 sm:w-8 sm:h-8 p-2 sm:p-1.5 rounded-lg hover:bg-zinc-200/60 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition cursor-pointer" title="Sao chép liên kết">
               <i data-lucide="link" class="w-4 h-4"></i>
             </button>

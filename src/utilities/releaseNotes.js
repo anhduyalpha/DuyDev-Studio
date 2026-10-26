@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.15': {
+    version: 'v24.15',
+    title: 'Bản cập nhật v24.15: Tối Ưu Thanh Tiện Ích Trình Xem File (Universal Viewer)',
+    date: '27/10/2026',
+    features: [
+      'Trích Xuất Phần Mở Rộng An Toàn (Safe Extension Extraction): Chuẩn hóa thuật ngữ đuôi tệp tối đa 8 ký tự chữ số, ngăn chặn hoàn toàn việc trích xuất nhầm các chuỗi tiêu đề chứa số thập phân (như "6.7M views · 140K reactions") thành đuôi tệp',
+      'Chống Tràn Badge Thanh Tiêu Đề (Viewer Header Protection): Cố định chiều rộng tối đa (max-w-[72px]), cắt ngắn tự động (truncate) và cách ly layout z-index cho hàng nút công cụ xem nhanh, bảo đảm không bị nút chức năng đè lên chữ'
+    ],
+    fixes: [
+      'Sửa Lỗi Nút Thao Tác Bị Đè Trực Tiếp Lên Huy Hiệu File: Khắc phục hiện tượng các nút liên kết, mở tab mới, tải về và nút đóng bị chồng chéo lên huy hiệu định dạng khi xem các video mạng xã hội có tiêu đề dài chứa dấu chấm',
+      'Đồng Bộ Hóa Bộ Nhận Diện Định Dạng Tệp: Chuẩn hóa logic kiểm tra đuôi tệp trên toàn bộ hệ thống FileViewerCore, FileViewerConnector và các trình kết xuất phụ (Fallback, Font, Spreadsheet)'
+    ]
+  },
   'v24.14': {
     version: 'v24.14',
     title: 'Bản cập nhật v24.14: Tinh Gọn Lịch Sử Media Android & Hộp Thả Collapsible',

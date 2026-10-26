@@ -11,6 +11,8 @@ import { AuthService } from '../../src/services/auth.service.js';
 // @ts-ignore
 import { extractFileName, extractFileExtension, detectFileCategory, FILE_CATEGORIES, detectCategoryFromMagicBytes, resolveViewerUrls, ViewerConnector } from '../../../src/components/common/viewer/FileViewerConnector.js';
 // @ts-ignore
+// @ts-ignore
+import { extractSafeExtension } from '../../../src/components/common/viewer/FileViewerCore.js';
 import { clampCanvasDimensions } from '../../../src/components/common/viewer/renderers/pdf/PdfCanvasViewer.js';
 
 describe('Universal File Viewer Subsystem Hardening Tests', () => {
@@ -615,7 +617,7 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
     const swContent = fs.readFileSync(swPath, 'utf-8');
 
     it('sw.js must be bumped to duydev-studio-v23.x', () => {
-      expect(swContent).toMatch(/const CACHE_NAME = 'duydev-studio-v23\.\d+';/);
+      expect(swContent).toMatch(/const CACHE_NAME = 'duydev-studio-v24\.\d+';/);
     });
 
     it('sw.js must explicitly bypass ranges, blob, api, download, viewer, and stream requests', () => {
@@ -639,5 +641,32 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
       expect(res.headers['content-type']).toContain('charset=utf-8');
     });
   });
-});
 
+  describe('10. Safe File Extension Extraction & Toolbar Overflow Prevention', () => {
+    it('extractSafeExtension must reject titles with decimal numbers or spaces', () => {
+      const noisyTitle = '6.7M views · 140K reactions | What is Earth without art';
+      expect(extractSafeExtension(noisyTitle, '', 'video')).toBe('VIDEO');
+      expect(extractSafeExtension(noisyTitle, 'video/mp4', 'video')).toBe('MP4');
+      expect(extractSafeExtension(noisyTitle, '', '')).toBe('FILE');
+    });
+
+    it('extractSafeExtension must accurately extract valid standard file extensions', () => {
+      expect(extractSafeExtension('document.pdf')).toBe('PDF');
+      expect(extractSafeExtension('photo.highres.jpg')).toBe('JPG');
+      expect(extractSafeExtension('music.audio.mp3?token=xyz#play')).toBe('MP3');
+      expect(extractSafeExtension('archive.tar.gz')).toBe('GZ');
+      expect(extractSafeExtension('dataset.csv', 'text/csv')).toBe('CSV');
+    });
+
+    it('extractSafeExtension must enforce maximum length of 8 characters', () => {
+      expect(extractSafeExtension('overflow.verylongextensionname', '', 'toolongcategory')).toBe('TOOLONGC');
+    });
+
+    it('extractFileExtension in Connector must ignore trailing titles with numbers', () => {
+      const noisyTitle = '6.7M views · 140K reactions | What is Earth without art';
+      expect(extractFileExtension(noisyTitle, 'video/mp4')).toBe('mp4');
+      expect(extractFileExtension(noisyTitle, '')).toBe('');
+      expect(extractFileExtension('sample.mp4')).toBe('mp4');
+    });
+  });
+});

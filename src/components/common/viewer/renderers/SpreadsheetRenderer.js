@@ -26,16 +26,17 @@ function colName(n) {
 }
 
 export function renderSpreadsheetViewer(state) {
-  const ext = (state.name.split('.').pop() || 'SHEET').toUpperCase();
+  const match = (state.name || '').trim().split(/[?#]/)[0].match(/\.([a-zA-Z0-9]{1,8})$/);
+  const ext = (match ? match[1] : 'SHEET').toUpperCase().slice(0, 8);
   return `
     <div id="sheetViewerRoot" class="flex-1 flex flex-col min-h-[350px] max-h-[82vh] relative overflow-hidden bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/[0.06]">
       <!-- Top Action & Search Bar -->
       <div class="px-4 py-2.5 border-b border-zinc-200 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2.5 bg-zinc-50/80 dark:bg-white/[0.02] shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 max-w-[72px] truncate inline-block text-center">
             ${ext}
           </span>
-          <span id="sheetTelemetry" class="text-xs font-mono text-zinc-500 dark:text-zinc-400">Đang đọc dữ liệu...</span>
+          <span id="sheetTelemetry" class="text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0">Đang đọc dữ liệu...</span>
         </div>
 
         <div class="flex items-center gap-2">

@@ -125,26 +125,21 @@ export function extractFileName(item = {}, viewUrl = '', downloadUrl = '') {
 export function extractFileExtension(fileName = '', mimeType = '', viewUrl = '') {
   let cleanName = (fileName || '').split('?')[0].split('#')[0].trim();
   try { cleanName = decodeURIComponent(cleanName); } catch {}
-  if (cleanName.includes('.')) {
-    const ext = cleanName.split('.').pop()?.toLowerCase();
-    if (ext && ext.length <= 10) return ext;
-  }
+  const nameMatch = cleanName.match(/\.([a-zA-Z0-9]{1,8})$/);
+  if (nameMatch) return nameMatch[1].toLowerCase();
+
   if (viewUrl) {
     const qMatch = viewUrl.match(/[?&](?:path|file|name|fileName)=([^&#]+)/i);
     if (qMatch) {
       try {
         const decoded = decodeURIComponent(qMatch[1]);
-        if (decoded.includes('.')) {
-          const ext = decoded.split('.').pop()?.toLowerCase();
-          if (ext && ext.length <= 10) return ext;
-        }
+        const dMatch = decoded.split(/[?#]/)[0].match(/\.([a-zA-Z0-9]{1,8})$/);
+        if (dMatch) return dMatch[1].toLowerCase();
       } catch {}
     }
     const cleanUrl = viewUrl.split('?')[0].split('#')[0].trim();
-    if (cleanUrl.includes('.')) {
-      const ext = cleanUrl.split('.').pop()?.toLowerCase();
-      if (ext && ext.length <= 10) return ext;
-    }
+    const uMatch = cleanUrl.match(/\.([a-zA-Z0-9]{1,8})$/);
+    if (uMatch) return uMatch[1].toLowerCase();
   }
   if (mimeType) {
     const lower = mimeType.toLowerCase();
