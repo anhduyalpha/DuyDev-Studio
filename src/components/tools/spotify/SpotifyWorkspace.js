@@ -82,7 +82,7 @@ export class SpotifyWorkspace {
     }
   }
 
-  async resolveTrack() {
+  async resolveTrack(refresh = false) {
     const cleanUrl = (this.url || '').trim();
     if (!cleanUrl) {
       showToast('Vui lòng dán liên kết bài hát Spotify', 'warning');
@@ -97,7 +97,7 @@ export class SpotifyWorkspace {
 
     try {
       soundEngine?.play('click');
-      const data = await spotifyApi.resolveTrack(cleanUrl);
+      const data = await spotifyApi.resolveTrack(cleanUrl, refresh);
       this.trackData = data;
       soundEngine?.play('success');
       showToast('Trích xuất bài hát Spotify thành công!', 'success');
@@ -239,7 +239,11 @@ export class SpotifyWorkspace {
 
     switch (action) {
       case 'resolve':
-        this.resolveTrack();
+        this.resolveTrack(false);
+        break;
+
+      case 're-resolve':
+        this.resolveTrack(true);
         break;
 
       case 'paste-url': {
@@ -382,13 +386,22 @@ export class SpotifyWorkspace {
 
               <!-- Metadata Info -->
               <div class="space-y-1.5 flex-1 min-w-0">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1DB954]/15 text-[#1DB954] uppercase tracking-wider">Spotify Track</span>
                   ${this.trackData.existingInDrive ? `
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <i data-lucide="check" class="w-3 h-3"></i> Đã lưu trong Drive
                     </span>
                   ` : ''}
+                  ${this.trackData.sourceChannel ? `
+                    <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+                      <i data-lucide="disc" class="w-3 h-3 text-[#1DB954]"></i>
+                      ${this.trackData.sourceChannel}
+                    </span>
+                  ` : ''}
+                  <button type="button" data-action="re-resolve" class="px-2 py-0.5 rounded text-[10px] font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition flex items-center gap-1 cursor-pointer" title="Tìm lại bài hát từ đầu bỏ qua bộ nhớ đệm">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Quét lại
+                  </button>
                 </div>
                 <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">${this.trackData.title}</h2>
                 <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5">

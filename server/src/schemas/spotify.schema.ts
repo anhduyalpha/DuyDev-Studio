@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 export const spotifyResolveBodySchema = z.object({
-  url: z.string().min(1, 'Spotify URL is required').trim()
+  url: z.string().min(1, 'Spotify URL is required').trim(),
+  refresh: z.boolean().optional()
 });
 
 export const spotifyDownloadBodySchema = z.object({
@@ -52,4 +53,7 @@ export interface SpotifyTrackData {
   status: 'success' | 'ready';
   existingInDrive?: any;
   extractor: 'api' | 'ytdlp' | 'oembed';
+  sourceTitle?: string;
+  sourceChannel?: string;
+  matchScore?: number;
 }

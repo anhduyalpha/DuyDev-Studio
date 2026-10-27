@@ -8,8 +8,8 @@ import {
 } from '../../schemas/spotify.schema.js';
 
 export async function resolveSpotifyHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url } = spotifyResolveBodySchema.parse(request.body || {});
-  const data = await SpotifyService.resolveTrack(url);
+  const { url, refresh } = spotifyResolveBodySchema.parse(request.body || {});
+  const data = await SpotifyService.resolveTrack(url, refresh);
   return reply.send({
     success: true,
     data

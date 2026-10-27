@@ -46,6 +46,118 @@ export class SpotifyService {
   }
 
   /**
+   * Clears the in-memory Spotify track resolution cache
+   */
+  static clearCache(): void {
+    this.trackCache.clear();
+  }
+
+  /**
+   * Normalizes text by removing accents, non-alphanumeric chars, and lowercasing
+   */
+  static normalizeText(s: string): string {
+    return (s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Multi-factor scoring metric (0-100+) to guarantee exact audio match and eliminate unwanted remixes/covers
+   */
+  static calculateMatchScore(candidate: any, expected: { title: string; artist: string; duration: number }): number {
+    const { title: expTitle, artist: expArtist, duration: expDur } = expected;
+    const candTitle = candidate.title || '';
+    const candChannel = candidate.channel || candidate.uploader || '';
+    const candTrack = candidate.track || '';
+    const candArtist = candidate.artist || '';
+    const candDur = Number(candidate.duration) || 0;
+
+    const normExpTitle = this.normalizeText(expTitle);
+    const normExpArtist = this.normalizeText(expArtist);
+    const normCandTitle = this.normalizeText(candTitle);
+    const normCandChannel = this.normalizeText(candChannel);
+    const normCandTrack = this.normalizeText(candTrack);
+    const normCandArtist = this.normalizeText(candArtist);
+
+    const isIntendedRemix = /\b(remix|vinahouse|dj|mix|rework)\b/i.test(expTitle);
+    const isIntendedLive = /\b(live|concert|tour)\b/i.test(expTitle);
+    const isIntendedCover = /\b(cover|tribute)\b/i.test(expTitle);
+    const isIntendedInstrumental = /\b(instrumental|beat|karaoke)\b/i.test(expTitle);
+
+    let score = 0;
+
+    // 1. Duration check
+    const durDiff = expDur > 0 ? Math.abs(candDur - expDur) : 0;
+    if (expDur > 0) {
+      if (durDiff <= 2) score += 30;
+      else if (durDiff <= 4) score += 25;
+      else if (durDiff <= 7) score += 18;
+      else if (durDiff <= 11) score += 10;
+      else if (durDiff <= 15) score += 2;
+      else return -999; // Disqualify if duration difference is > 15 seconds
+    }
+
+    // 2. Title matching
+    if (normCandTrack && (normCandTrack === normExpTitle || normCandTrack.includes(normExpTitle))) {
+      score += 35; // Perfect track tag from YouTube Music
+    } else if (normCandTitle.includes(normExpTitle)) {
+      score += 30;
+    } else {
+      const expWords = normExpTitle.split(' ').filter(w => w.length > 1);
+      const matchedWords = expWords.filter(w => normCandTitle.includes(w));
+      if (matchedWords.length === expWords.length && expWords.length > 0) {
+        score += 25;
+      } else if (matchedWords.length > 0) {
+        score += Math.round((matchedWords.length / expWords.length) * 20);
+      } else {
+        return -999; // None of the title words matched
+      }
+    }
+
+    // 3. Artist & Channel matching
+    const artistWords = normExpArtist.split(' ').filter(w => w.length > 1);
+    const isArtistInChannel = normCandChannel.includes(normExpArtist) || (artistWords.length > 0 && artistWords.every(w => normCandChannel.includes(w)));
+    const isArtistInTitle = normCandTitle.includes(normExpArtist) || (artistWords.length > 0 && artistWords.every(w => normCandTitle.includes(w)));
+    const isArtistInTag = normCandArtist.includes(normExpArtist);
+
+    if (isArtistInTag || (normCandChannel.endsWith('topic') && isArtistInChannel)) {
+      score += 25; // Official Topic release
+    } else if (isArtistInChannel) {
+      score += 20; // Official channel
+    } else if (isArtistInTitle) {
+      score += 12;
+    }
+
+    // 4. Official badges & indicators
+    if (/official\s*(audio|music\s*video|mv|video)/i.test(candTitle)) score += 10;
+    if (/master\s*audio|audio\s*lyrics/i.test(candTitle)) score += 8;
+    if (normCandChannel.endsWith('topic')) score += 10;
+
+    // 5. Strict Negative Filters (shield against unwanted remixes/covers)
+    if (!isIntendedRemix && /\b(remix|vinahouse|dj|bass\s*boost|speed\s*up|slowed|nightcore|reverb)\b/i.test(candTitle)) {
+      score -= 100;
+    }
+    if (!isIntendedLive && /\b(live|stage|concert|fancam|liveshow)\b/i.test(candTitle)) {
+      score -= 60;
+    }
+    if (!isIntendedCover && /\b(cover|ai\s*cover)\b/i.test(candTitle)) {
+      score -= 80;
+    }
+    if (!isIntendedInstrumental && /\b(karaoke|beat|tone\s*nam|tone\s*nu|instrumental)\b/i.test(candTitle)) {
+      score -= 80;
+    }
+    if (/\b(parody|nhac\s*che|reaction|review|podcast|tap\s*\d+|trailer)\b/i.test(candTitle)) {
+      score -= 100;
+    }
+
+    return score;
+  }
+
+  /**
    * Validates and extracts canonical Spotify entity details, stripping all tracking queries
    */
   static extractCanonicalInfo(rawText: string): { type: 'track' | 'album' | 'playlist'; id: string; canonicalUrl: string } {
@@ -75,13 +187,17 @@ export class SpotifyService {
   /**
    * Resolves Spotify track metadata and audio download URL with 100% deterministic matching
    */
-  static async resolveTrack(rawInput: string): Promise<SpotifyTrackData> {
+  static async resolveTrack(rawInput: string, refresh = false): Promise<SpotifyTrackData> {
     const { type, id: trackId, canonicalUrl } = this.extractCanonicalInfo(rawInput);
     const cacheKey = `spotify:${type}:${trackId}`;
 
+    if (refresh) {
+      this.trackCache.delete(cacheKey);
+    }
+
     // Check in-memory cache for deterministic duplicate requests
     const cached = this.trackCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL_MS)) {
+    if (!refresh && cached && (Date.now() - cached.timestamp < this.CACHE_TTL_MS)) {
       logger.info({ trackId, title: cached.data.title }, '[Spotify] Cache hit for track');
       const existing = await this.checkExistingInDrive(trackId, canonicalUrl, cached.data.title);
       return {
@@ -171,6 +287,9 @@ export class SpotifyService {
     let downloadUrl: string | undefined;
     let fileSizeInBytes: number | undefined;
     let extractor: 'api' | 'ytdlp' | 'oembed' = 'oembed';
+    let sourceTitle: string | undefined;
+    let sourceChannel: string | undefined;
+    let matchScore: number | undefined;
 
     // Tier 1: Try RapidAPI / Dedicated API resolver (if configured)
     try {
@@ -185,50 +304,96 @@ export class SpotifyService {
       }
     } catch {}
 
-    // Tier 2: Anchored yt-dlp lookup with strict duration matching
+    // Tier 2: Anchored multi-staged yt-dlp lookup with strict deterministic scoring
     if (!downloadUrl) {
       try {
-        const cleanArtist = artist.replace(/[,/&]/g, ' ').replace(/\s+/g, ' ').trim();
+        const primaryArtist = artist.split(',')[0].replace(/[,/&]/g, ' ').replace(/\s+/g, ' ').trim();
         const cleanTitle = title.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
-        const searchQuery = `ytsearch5:${cleanArtist} - ${cleanTitle}`;
 
-        const { stdout } = await execFileAsync('yt-dlp', [
-          '--dump-json',
-          '--default-search', 'ytsearch',
-          '--no-playlist',
-          '--no-warnings',
-          searchQuery
-        ], { timeout: 20000, maxBuffer: 15 * 1024 * 1024 });
+        const searchQueries = [
+          `ytsearch8:${primaryArtist} ${cleanTitle} Topic`,
+          `ytsearch8:${primaryArtist} ${cleanTitle} Official Audio`,
+          `ytsearch10:${primaryArtist} ${cleanTitle}`
+        ];
 
-        const lines = stdout.trim().split('\n').filter(Boolean);
-        let bestCandidate: any = null;
-        let lowestDiff = 999999;
+        const candidateMap = new Map<string, any>();
 
-        for (const line of lines) {
+        for (const searchQuery of searchQueries) {
           try {
-            const item = JSON.parse(line);
-            if (!item.url && (!Array.isArray(item.formats) || item.formats.length === 0)) continue;
+            const { stdout } = await execFileAsync('yt-dlp', [
+              '--dump-json',
+              '--default-search', 'ytsearch',
+              '--no-playlist',
+              '--no-warnings',
+              searchQuery
+            ], { timeout: 18000, maxBuffer: 15 * 1024 * 1024 });
 
-            const itemDuration = Number(item.duration) || 0;
-            const diff = duration > 0 ? Math.abs(itemDuration - duration) : 0;
-
-            // Reject if duration diff is greater than 14 seconds (prevents compilations, previews, or wrong tracks)
-            if (duration > 0 && diff > 14) continue;
-
-            if (diff < lowestDiff) {
-              lowestDiff = diff;
-              bestCandidate = item;
+            const lines = stdout.trim().split('\n').filter(Boolean);
+            for (const line of lines) {
+              try {
+                const item = JSON.parse(line);
+                if (item.id && !candidateMap.has(item.id)) {
+                  candidateMap.set(item.id, item);
+                }
+              } catch {}
             }
-          } catch {}
+
+            // Early exit if authoritative official match found (score >= 80)
+            let highConfidenceFound = false;
+            for (const item of candidateMap.values()) {
+              if (this.calculateMatchScore(item, { title, artist, duration }) >= 80) {
+                highConfidenceFound = true;
+                break;
+              }
+            }
+            if (highConfidenceFound) break;
+          } catch (qErr: any) {
+            logger.debug({ query: searchQuery, err: qErr?.message }, '[Spotify] Staged search query skipped');
+          }
         }
 
-        if (bestCandidate) {
+        // Score all candidates
+        const scoredCandidates: Array<{ item: any; score: number; durDiff: number }> = [];
+        for (const item of candidateMap.values()) {
+          const itemFormats = item.formats?.filter((f: any) => f.acodec !== 'none' && f.url);
+          if (!item.url && (!itemFormats || itemFormats.length === 0)) continue;
+
+          const score = this.calculateMatchScore(item, { title, artist, duration });
+          const itemDuration = Number(item.duration) || 0;
+          const durDiff = duration > 0 ? Math.abs(itemDuration - duration) : 0;
+          scoredCandidates.push({ item, score, durDiff });
+        }
+
+        // Sort by score descending, then by lowest duration diff
+        scoredCandidates.sort((a, b) => b.score !== a.score ? b.score - a.score : a.durDiff - b.durDiff);
+
+        const best = scoredCandidates[0];
+        // Must have positive score (or at least valid duration if score is marginal)
+        if (best && (best.score >= 40 || (best.score > 0 && best.durDiff <= 8))) {
+          const bestCandidate = best.item;
           extractor = 'ytdlp';
-          const audioFmt = bestCandidate.formats?.filter((f: any) => f.acodec !== 'none' && f.url).pop();
+          sourceTitle = bestCandidate.title;
+          sourceChannel = bestCandidate.channel || bestCandidate.uploader;
+          matchScore = best.score;
+
+          // Pick best audio format by bitrate
+          const audioFormats = (bestCandidate.formats || [])
+            .filter((f: any) => f.acodec !== 'none' && f.url)
+            .sort((a: any, b: any) => (b.abr || b.tbr || 0) - (a.abr || a.tbr || 0));
+
+          const audioFmt = audioFormats[0];
           downloadUrl = audioFmt?.url || bestCandidate.url;
           if (!cover && bestCandidate.thumbnail) cover = bestCandidate.thumbnail;
           if (audioFmt?.filesize) fileSizeInBytes = audioFmt.filesize;
           if (duration === 0 && bestCandidate.duration) duration = Math.round(bestCandidate.duration);
+
+          logger.info({
+            trackId,
+            selectedTitle: sourceTitle,
+            selectedChannel: sourceChannel,
+            score: matchScore,
+            durDiff: best.durDiff
+          }, '[Spotify] Resolved authoritative audio match');
         }
       } catch (ytErr: any) {
         logger.warn({ err: ytErr?.message }, '[Spotify] Anchored yt-dlp search failed');
@@ -265,7 +430,10 @@ export class SpotifyService {
       fileSizeInMb: sizeInMb,
       status: 'success',
       existingInDrive: existing.exists ? existing.item : null,
-      extractor
+      extractor,
+      sourceTitle,
+      sourceChannel,
+      matchScore
     };
 
     // Cache resolved track
@@ -483,51 +651,58 @@ export class SpotifyService {
 
     logger.info({ fileName, targetFilePath }, '[Spotify] Saving MP3 track directly to Studio Drive...');
 
-    // If direct audioUrl is provided, download it
     let byteCount = 0;
-    const hash = crypto.createHash('sha256');
+    const tempInputPath = path.join(resolvedStoragePaths.temp, `sp_raw_${Date.now()}_${cleanId}.tmp`);
 
-    if (audioUrl && audioUrl.startsWith('http')) {
-      const upstreamRes = await fetch(audioUrl, {
+    try {
+      let sourceUrl = audioUrl;
+      if (!sourceUrl || !sourceUrl.startsWith('http')) {
+        const resolved = await this.resolveTrack(url, overwrite);
+        sourceUrl = resolved.downloadUrl;
+      }
+
+      if (!sourceUrl || !sourceUrl.startsWith('http')) {
+        throw new BadRequestError('Không thể tìm thấy luồng âm thanh hợp lệ để lưu vào Drive');
+      }
+
+      const upstreamRes = await fetch(sourceUrl, {
         headers: { 'User-Agent': DEFAULT_UA },
         signal: AbortSignal.timeout(120000)
       });
 
       if (!upstreamRes.ok || !upstreamRes.body) {
-        throw new BadRequestError(`Không thể tải âm thanh từ Spotify: HTTP ${upstreamRes.status}`);
+        throw new BadRequestError(`Không thể tải luồng âm thanh: HTTP ${upstreamRes.status}`);
       }
 
-      const fileStream = fs.createWriteStream(targetFilePath);
+      const rawFileStream = fs.createWriteStream(tempInputPath);
       const webStream = Readable.fromWeb(upstreamRes.body as any);
-      webStream.on('data', (chunk: Buffer) => {
-        byteCount += chunk.length;
-        hash.update(chunk);
-      });
-      await pipeline(webStream, fileStream);
-    } else {
-      // Deterministically resolve track to obtain verified audio stream
-      const resolved = await this.resolveTrack(url);
-      if (resolved.downloadUrl && resolved.downloadUrl.startsWith('http')) {
-        const upstreamRes = await fetch(resolved.downloadUrl, {
-          headers: { 'User-Agent': DEFAULT_UA },
-          signal: AbortSignal.timeout(120000)
-        });
-        if (!upstreamRes.ok || !upstreamRes.body) {
-          throw new BadRequestError(`Không thể tải luồng âm thanh đã phân giải: HTTP ${upstreamRes.status}`);
-        }
-        const fileStream = fs.createWriteStream(targetFilePath);
-        const webStream = Readable.fromWeb(upstreamRes.body as any);
-        webStream.on('data', (chunk: Buffer) => {
-          byteCount += chunk.length;
-          hash.update(chunk);
-        });
-        await pipeline(webStream, fileStream);
-      } else {
-        throw new BadRequestError('Không thể tìm thấy luồng âm thanh hợp lệ để lưu vào Drive');
+      await pipeline(webStream, rawFileStream);
+
+      // Transcode cleanly with ffmpeg to genuine 320kbps MP3 with embedded metadata
+      try {
+        await execFileAsync('ffmpeg', [
+          '-y',
+          '-i', tempInputPath,
+          '-vn',
+          '-ar', '44100',
+          '-b:a', '320k',
+          '-metadata', `title=${title || 'Spotify Track'}`,
+          '-metadata', `artist=${artist || 'Artist'}`,
+          '-metadata', `album=${album || ''}`,
+          targetFilePath
+        ], { timeout: 60000 });
+      } catch (ffErr: any) {
+        logger.warn({ err: ffErr?.message }, '[Spotify] FFmpeg 320k transcode fallback to direct copy');
+        await fsPromises.copyFile(tempInputPath, targetFilePath);
       }
+    } finally {
+      await StorageManager.unlinkSafe(tempInputPath);
     }
 
-    const hashSha256 = hash.digest('hex');
+    const fileStat = await fsPromises.stat(targetFilePath);
+    byteCount = fileStat.size;
+    const fileBuf = await fsPromises.readFile(targetFilePath);
+    const hashSha256 = crypto.createHash('sha256').update(fileBuf).digest('hex');
 
     // Download cover thumbnail
     let thumbnailDataUri = '';

@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.19': {
+    version: 'v24.19',
+    title: 'Bản cập nhật v24.19: Khắc Phục Triệt Để Lệch Bài Hát & Khử Nhạc Remix Lạ Trong Spotify Downloader',
+    date: '27/10/2026',
+    features: [
+      'Công Thức Chấm Điểm Chuẩn Xác Đa Yếu Tố (Multi-Factor Match Scoring): Triệt tiêu hoàn toàn tình trạng tải nhầm nhạc remix, Vinahouse, bản thu AI cover hoặc clip hát live khi người dùng tải bài hát gốc (như bài "Định Mệnh"), áp dụng hệ số điểm 0-100+ ưu tiên tuyệt đối bản phát hành studio chính thức',
+      'Chiến Lược Tìm Kiếm Phân Tầng Thông Minh (Staged Topic Search): Tự động nhắm trực tiếp vào kênh Topic của hãng đĩa và các bản Official Audio trên YouTube Music trước khi tìm kiếm tổng quát',
+      'Chuyển Mã Chuẩn Studio 320kbps CBR & ID3 Tags Qua FFmpeg: Đảm bảo âm thanh lưu vào Studio Drive là tệp MP3 320kbps nguyên bản có nhúng metadata ID3 (Tên bài, Nghệ sĩ, Bìa album) phát mượt mà trên mọi thiết bị'
+    ],
+    fixes: [
+      'Sửa Lỗi Khóa Cứng Bài Remix Trong Bộ Nhớ Đệm: Bổ sung cơ chế làm mới cache khi quét lại và thêm nút Quét lại 1-chạm trên giao diện Spotify Downloader',
+      'Lưới Lọc Khử Remix & Cover Tự Động: Trừ điểm nặng (-60 đến -100đ) các bản remix, live stage, cover hoặc karaoke nếu liên kết Spotify không chủ đích yêu cầu remix'
+    ]
+  },
   'v24.18': {
     version: 'v24.18',
     title: 'Bản cập nhật v24.18: Thiết Lập Bộ Quy Chuẩn Kiến Trúc Module Chuẩn Hoá (Universal Module Standard)',

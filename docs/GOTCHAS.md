@@ -130,6 +130,11 @@
 - **What**: Python engine termination timeout may race with final JSON result writing to stdout.
 - **Impact**: Could produce truncated output on slow systems.
 
+### [CONFIRMED] Spotify Track Matching & Remix Elimination
+- **Location**: `server/src/services/spotify.service.ts` (`KI-FIX-041`)
+- **What**: Naive YouTube search using duration-only diff selection ranks viral remixes/covers over studio tracks.
+- **Rule**: Always use `calculateMatchScore()` with heavy negative penalties (-100 for remix/vinahouse, -80 for cover/karaoke, -60 for live stage) and query official Topic channels (`... - Topic`) or `Official Audio` first. Provide `refresh=true` to flush in-memory track cache.
+
 ---
 
 ## File Co-dependencies

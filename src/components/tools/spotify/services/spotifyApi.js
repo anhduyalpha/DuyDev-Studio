@@ -6,13 +6,14 @@ export const spotifyApi = {
   /**
    * Resolves a Spotify track URL to metadata and audio stream
    * @param {string} url 
+   * @param {boolean} [refresh=false]
    * @returns {Promise<any>}
    */
-  async resolveTrack(url) {
+  async resolveTrack(url, refresh = false) {
     const res = await fetch('/api/v1/spotify/resolve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url, refresh })
     });
 
     const json = await res.json().catch(() => ({}));

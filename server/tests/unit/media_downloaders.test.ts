@@ -114,6 +114,80 @@ describe('Media Downloaders Unit Test Suite', () => {
       const result = await SpotifyService.checkExistingInDrive('non_existent_track_77777');
       expect(result).toHaveProperty('exists', false);
     });
+
+    it('calculates deterministic match scores and heavily penalizes unwanted remixes, covers, and karaoke', () => {
+      const expected = { title: 'Định Mệnh', artist: 'Noo Phước Thịnh', duration: 296 };
+
+      // 1. Exact studio track on official artist channel
+      const exactCandidate = {
+        title: 'Định Mệnh',
+        channel: 'Noo Phước Thịnh',
+        track: 'Định Mệnh',
+        artist: 'Noo Phước Thịnh',
+        duration: 296
+      };
+      const exactScore = SpotifyService.calculateMatchScore(exactCandidate, expected);
+      expect(exactScore).toBeGreaterThanOrEqual(80);
+
+      // 2. Official Topic release from record label
+      const topicCandidate = {
+        title: 'Định Mệnh',
+        channel: 'Noo Phước Thịnh - Topic',
+        track: 'Định Mệnh',
+        artist: 'Noo Phước Thịnh',
+        duration: 296
+      };
+      const topicScore = SpotifyService.calculateMatchScore(topicCandidate, expected);
+      expect(topicScore).toBeGreaterThanOrEqual(85);
+
+      // 3. Unwanted remix (same duration, but remix keyword)
+      const remixCandidate = {
+        title: 'Định Mệnh (Vinahouse Remix 2024 Cực Căng)',
+        channel: 'DJ Viet Nam',
+        duration: 296
+      };
+      const remixScore = SpotifyService.calculateMatchScore(remixCandidate, expected);
+      expect(remixScore).toBeLessThan(0);
+
+      // 4. Unwanted Karaoke / Beat
+      const karaokeCandidate = {
+        title: '[KARAOKE TONE CHUẨN CÓ BÈ] Định Mệnh - Noo Phước Thịnh',
+        channel: 'Phát Hứa',
+        duration: 298
+      };
+      const karaokeScore = SpotifyService.calculateMatchScore(karaokeCandidate, expected);
+      expect(karaokeScore).toBeLessThan(0);
+
+      // 5. Unwanted AI Cover
+      const coverCandidate = {
+        title: 'ĐỊNH MỆNH / ST: Song Ngọc / Ca sĩ AI cover',
+        channel: 'LLe AI cover',
+        duration: 296
+      };
+      const coverScore = SpotifyService.calculateMatchScore(coverCandidate, expected);
+      expect(coverScore).toBeLessThan(0);
+
+      // 6. Excessive duration mismatch (> 15s) is completely rejected (-999)
+      const durationMismatch = {
+        title: 'Định Mệnh',
+        channel: 'Noo Phước Thịnh',
+        duration: 350
+      };
+      expect(SpotifyService.calculateMatchScore(durationMismatch, expected)).toBe(-999);
+
+      // 7. Track that explicitly requested a remix is NOT penalized for remix keywords
+      const intendedRemix = { title: 'Định Mệnh (Remix)', artist: 'Noo Phước Thịnh', duration: 240 };
+      const legitimateRemixCandidate = {
+        title: 'Định Mệnh (Remix Official Audio)',
+        channel: 'Noo Phước Thịnh',
+        duration: 240
+      };
+      expect(SpotifyService.calculateMatchScore(legitimateRemixCandidate, intendedRemix)).toBeGreaterThan(40);
+    });
+
+    it('clears in-memory resolution cache via clearCache()', () => {
+      expect(() => SpotifyService.clearCache()).not.toThrow();
+    });
   });
 
   describe('4. Media History Section & Storage Lifecycle', () => {
