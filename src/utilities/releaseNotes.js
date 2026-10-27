@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.21': {
+    version: 'v24.21',
+    title: 'Bản cập nhật v24.21: Khắc Phục Triệt Để Tràn Kích Thước Avatar & Chuẩn Hoá Header Di Động / APK',
+    date: '27/10/2026',
+    features: [
+      'Khóa Kích Thước Khung Avatar Bất Biến (Strict Avatar Bounding Box): Thiết lập min/max ràng buộc 30px (mobile) / 32px (desktop) và gắn max-w-full max-h-full pointer-events-none lên ảnh người dùng, loại bỏ 100% tình trạng ảnh phân giải cao làm phình to thanh tiêu đề',
+      'Độ Thoáng & Tỷ Lệ Hoàn Hảo Cho Màn Hình Hẹp (Mobile Header Ergonomics): Tối ưu đệm lề header px-2.5 py-2.5, nút dock w-[30px] h-[30px] cùng cỡ chữ thương hiệu text-xs, đảm bảo hiển thị liền mạch không tràn viền trên mọi độ rộng màn hình (>=360px)'
+    ],
+    fixes: [
+      'Sửa Lỗi Phình To Header Trên APK & Thiết Bị Android: Khắc phục sự cố avatar tùy chỉnh chiếm dụng 160px+ chiều cao, trả lại thanh công cụ chuẩn 57px thanh thoát theo phong cách Apple Control Center'
+    ]
+  },
   'v24.20': {
     version: 'v24.20',
     title: 'Bản cập nhật v24.20: Tinh Chỉnh Không Gian & Độ Thoáng Thanh Điều Khiển Và Hồ Sơ (Ergonomic Header Spacing)',

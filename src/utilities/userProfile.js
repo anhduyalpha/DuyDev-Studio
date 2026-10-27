@@ -73,7 +73,7 @@ export function getAvatarGradient(name) {
 export function renderAvatarInnerHtml(avatar, name) {
   const initial = getInitialLetter(name);
   if (avatar && (avatar.startsWith('data:image/') || avatar.startsWith('http://') || avatar.startsWith('https://'))) {
-    return `<img src="${avatar}" alt="${name || 'Avatar'}" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'font-bold select-none\\'>${initial}</span>';" />`;
+    return `<img src="${avatar}" alt="${name || 'Avatar'}" class="w-full h-full max-w-full max-h-full object-cover rounded-full pointer-events-none" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'font-bold select-none\\'>${initial}</span>';" />`;
   }
   if (avatar && (avatar.startsWith('preset:') || /\p{Emoji}/u.test(avatar))) {
     const emoji = getPresetEmoji(avatar);
