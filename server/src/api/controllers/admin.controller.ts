@@ -714,6 +714,71 @@ export async function pruneStaleDevicesHandler(request: FastifyRequest, reply: F
 }
 
 /**
+ * POST /api/v1/admin/traffic/devices/purge-guests
+ * Completely removes all anonymous guest devices that have no configured alias/name
+ */
+export async function purgeGuestDevicesHandler(_request: FastifyRequest, reply: FastifyReply) {
+  const { purgedCount, purgedDeviceIds } = deviceRegistryService.purgeAllGuestDevices();
+  for (const id of purgedDeviceIds) {
+    visitorSessionManager.removeDeviceSessions(id);
+  }
+
+  return reply.send({
+    success: true,
+    message: `Đã loại bỏ toàn bộ ${purgedCount} user khách vãng lai khỏi hệ thống`,
+    purgedCount
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/batch-toggle-block
+ * Batch blocks or unblocks multiple users/devices
+ */
+export async function batchToggleDeviceBlockHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { userIdentifiers, blocked } = (request.body as any) || {};
+  if (!Array.isArray(userIdentifiers) || userIdentifiers.length === 0) {
+    throw new BadRequestError('Danh sách người dùng cần thao tác không hợp lệ');
+  }
+  const isBlocked = typeof blocked === 'boolean' ? blocked : true;
+  const count = deviceRegistryService.batchToggleBlock(userIdentifiers, isBlocked);
+
+  return reply.send({
+    success: true,
+    message: `Đã ${isBlocked ? 'chặn' : 'bỏ chặn'} ${count} thiết bị của ${userIdentifiers.length} người dùng đã chọn`,
+    modifiedCount: count
+  });
+}
+
+/**
+ * POST /api/v1/admin/traffic/devices/batch-delete
+ * Batch deletes multiple users and all their associated devices
+ */
+export async function batchDeleteDevicesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { userIdentifiers } = (request.body as any) || {};
+  if (!Array.isArray(userIdentifiers) || userIdentifiers.length === 0) {
+    throw new BadRequestError('Danh sách người dùng cần xóa không hợp lệ');
+  }
+
+  const { deletedCount, deletedUsers } = deviceRegistryService.batchDeleteUsers(userIdentifiers);
+
+  for (const ident of userIdentifiers) {
+    const raw = String(ident).trim();
+    if (raw.startsWith('guest:')) {
+      visitorSessionManager.removeDeviceSessions(raw.slice('guest:'.length).trim());
+    } else {
+      visitorSessionManager.removeDeviceSessions(raw);
+    }
+  }
+
+  return reply.send({
+    success: true,
+    message: `Đã xóa thành công ${deletedCount} thiết bị của ${deletedUsers} người dùng`,
+    deletedCount,
+    deletedUsers
+  });
+}
+
+/**
  * GET /api/v1/admin/traffic/events
  * Returns rolling log of visitor session lifecycle events (enter, route_change, leave, timeout)
  */

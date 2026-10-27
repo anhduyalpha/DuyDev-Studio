@@ -280,6 +280,11 @@ export class DeviceRegistryService {
           deletedCount++;
         }
       }
+    } else if (ident.startsWith('guest:')) {
+      const targetDeviceId = userIdentifier.slice('guest:'.length).trim();
+      if (this.devices.delete(targetDeviceId)) {
+        deletedCount++;
+      }
     } else {
       if (this.devices.delete(userIdentifier)) {
         deletedCount++;
@@ -290,6 +295,92 @@ export class DeviceRegistryService {
       this.scheduleSave();
     }
     return deletedCount;
+  }
+
+  /**
+   * Completely removes all anonymous guest devices that have no alias/name configured
+   * Owner devices are strictly preserved.
+   */
+  public purgeAllGuestDevices(): { purgedCount: number; purgedDeviceIds: string[] } {
+    const purgedDeviceIds: string[] = [];
+    for (const [id, dev] of this.devices.entries()) {
+      if (!dev.isOwner && (!dev.alias || !dev.alias.trim())) {
+        this.devices.delete(id);
+        purgedDeviceIds.push(id);
+      }
+    }
+
+    if (purgedDeviceIds.length > 0) {
+      this.scheduleSave();
+      logger.info({ purgedCount: purgedDeviceIds.length }, 'Purged anonymous guest devices from registry');
+    }
+
+    return { purgedCount: purgedDeviceIds.length, purgedDeviceIds };
+  }
+
+  /**
+   * Batch toggles block state for an array of user/device identifiers
+   */
+  public batchToggleBlock(userIdentifiers: string[], blocked: boolean): number {
+    let modifiedCount = 0;
+    for (const rawIdent of userIdentifiers) {
+      if (!rawIdent || typeof rawIdent !== 'string') continue;
+      const ident = rawIdent.trim().toLowerCase();
+
+      if (ident === 'owner:duy' || ident === 'owner') {
+        for (const dev of this.devices.values()) {
+          if (dev.isOwner) {
+            dev.isBlocked = blocked;
+            modifiedCount++;
+          }
+        }
+      } else if (ident.startsWith('alias:')) {
+        const targetAlias = ident.replace('alias:', '').trim();
+        for (const dev of this.devices.values()) {
+          if (dev.alias && dev.alias.toLowerCase() === targetAlias) {
+            dev.isBlocked = blocked;
+            modifiedCount++;
+          }
+        }
+      } else if (ident.startsWith('guest:')) {
+        const devId = rawIdent.slice('guest:'.length).trim();
+        const dev = this.devices.get(devId);
+        if (dev) {
+          dev.isBlocked = blocked;
+          modifiedCount++;
+        }
+      } else {
+        const dev = this.devices.get(rawIdent);
+        if (dev) {
+          dev.isBlocked = blocked;
+          modifiedCount++;
+        }
+      }
+    }
+
+    if (modifiedCount > 0) {
+      this.scheduleSave();
+    }
+    return modifiedCount;
+  }
+
+  /**
+   * Batch deletes multiple users/devices and all associated devices
+   */
+  public batchDeleteUsers(userIdentifiers: string[]): { deletedCount: number; deletedUsers: number } {
+    let totalDevicesDeleted = 0;
+    let usersDeleted = 0;
+
+    for (const ident of userIdentifiers) {
+      if (!ident || typeof ident !== 'string') continue;
+      const count = this.deleteUserDevices(ident);
+      if (count > 0) {
+        totalDevicesDeleted += count;
+        usersDeleted++;
+      }
+    }
+
+    return { deletedCount: totalDevicesDeleted, deletedUsers: usersDeleted };
   }
 
   public pruneDuplicateDevices(keepLatestPerUser = 3): number {

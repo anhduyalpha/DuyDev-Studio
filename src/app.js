@@ -234,17 +234,22 @@ class App {
   checkAndPromptOnboardingProfile() {
     if (isProfileConfigured()) return;
 
-    if (document.getElementById('dsMigrationNoticeModal') || document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
+    if (document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
+      return;
+    }
+
+    if (document.getElementById('dsMigrationNoticeModal')) {
+      window.addEventListener('ds:modal-closed', () => this.checkAndPromptOnboardingProfile(), { once: true });
       return;
     }
 
     setTimeout(() => {
       if (isProfileConfigured()) return;
-      if (document.getElementById('dsMigrationNoticeModal') || document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
+      if (document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
         return;
       }
       openProfileModal({ isOnboarding: true });
-    }, 600);
+    }, 150);
   }
 
   async checkAndOpenShareTarget() {
@@ -385,6 +390,7 @@ class App {
         closeFileViewer();
       }
       this.cleanupCurrentView();
+      this.checkAndPromptOnboardingProfile();
 
       // Web Share Target route — open modal over base dashboard view
       if (hash === '#share-target' || hash.startsWith('#share-target?')) {

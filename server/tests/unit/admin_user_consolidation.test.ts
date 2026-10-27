@@ -246,4 +246,142 @@ describe('Admin User & Device Consolidation', () => {
     expect(deviceRegistryService.getDevice('dev_sib_1')?.alias).toBe('New Brand Name');
     expect(deviceRegistryService.getDevice('dev_sib_2')?.alias).toBe('New Brand Name');
   });
+
+  it('should purge all anonymous guest devices while preserving owners and named users', () => {
+    // 1. Owner device (no alias)
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_owner_preserve',
+      isOwner: true,
+      lastIp: '192.168.2.1',
+      deviceSummary: 'Owner PC',
+      userAgent: 'Chrome',
+      country: 'VN'
+    });
+
+    // 2. Named user
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_named_preserve',
+      alias: 'Hải Nam',
+      isOwner: false,
+      lastIp: '115.76.93.10',
+      deviceSummary: 'Windows / Chrome',
+      userAgent: 'Chrome',
+      country: 'VN'
+    });
+
+    // 3. Guest device 1 (no alias, not owner)
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_guest_1',
+      isOwner: false,
+      lastIp: '14.254.28.12',
+      deviceSummary: 'iOS Safari',
+      userAgent: 'Safari',
+      country: 'VN'
+    });
+
+    // 4. Guest device 2 (empty whitespace alias, not owner)
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_guest_2',
+      alias: '   ',
+      isOwner: false,
+      lastIp: '115.73.237.190',
+      deviceSummary: 'iPhone',
+      userAgent: 'Safari',
+      country: 'VN'
+    });
+
+    // Register active sessions
+    VisitorSessionManager.registerEnter({
+      sessionId: 'sess_guest_1',
+      deviceId: 'dev_guest_1',
+      ip: '14.254.28.12',
+      userAgent: 'Safari',
+      entryRoute: '#dashboard',
+      deviceSummary: 'iOS Safari',
+      country: 'VN'
+    });
+
+    const result = deviceRegistryService.purgeAllGuestDevices();
+    expect(result.purgedCount).toBe(2);
+    expect(result.purgedDeviceIds).toContain('dev_guest_1');
+    expect(result.purgedDeviceIds).toContain('dev_guest_2');
+
+    // Clean active sessions like controller does
+    result.purgedDeviceIds.forEach(id => VisitorSessionManager.removeDeviceSessions(id));
+
+    // Verify preservation
+    expect(deviceRegistryService.getDevice('dev_owner_preserve')).toBeDefined();
+    expect(deviceRegistryService.getDevice('dev_named_preserve')).toBeDefined();
+    expect(deviceRegistryService.getDevice('dev_guest_1')).toBeUndefined();
+    expect(deviceRegistryService.getDevice('dev_guest_2')).toBeUndefined();
+  });
+
+  it('should batch block and unblock multiple users across different identifier formats', () => {
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_batch_1',
+      alias: 'User One',
+      isOwner: false,
+      lastIp: '1.1.1.1',
+      deviceSummary: 'PC',
+      userAgent: 'Chrome',
+      country: 'VN'
+    });
+
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_batch_guest',
+      isOwner: false,
+      lastIp: '2.2.2.2',
+      deviceSummary: 'Phone',
+      userAgent: 'Safari',
+      country: 'VN'
+    });
+
+    // Batch block both: one with alias: format, one with guest: format
+    const blockedCount = deviceRegistryService.batchToggleBlock(['alias:user one', 'guest:dev_batch_guest'], true);
+    expect(blockedCount).toBe(2);
+    expect(deviceRegistryService.getDevice('dev_batch_1')?.isBlocked).toBe(true);
+    expect(deviceRegistryService.getDevice('dev_batch_guest')?.isBlocked).toBe(true);
+
+    // Batch unblock
+    const unblockedCount = deviceRegistryService.batchToggleBlock(['alias:user one', 'guest:dev_batch_guest'], false);
+    expect(unblockedCount).toBe(2);
+    expect(deviceRegistryService.getDevice('dev_batch_1')?.isBlocked).toBe(false);
+    expect(deviceRegistryService.getDevice('dev_batch_guest')?.isBlocked).toBe(false);
+  });
+
+  it('should batch delete multiple users and their associated devices', () => {
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_del_a1',
+      alias: 'Group A',
+      isOwner: false,
+      lastIp: '1.1.1.1',
+      deviceSummary: 'PC',
+      userAgent: 'Chrome',
+      country: 'VN'
+    });
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_del_a2',
+      alias: 'Group A',
+      isOwner: false,
+      lastIp: '1.1.1.2',
+      deviceSummary: 'Phone',
+      userAgent: 'Chrome',
+      country: 'VN'
+    });
+    deviceRegistryService.upsertDevice({
+      deviceId: 'dev_del_guest',
+      isOwner: false,
+      lastIp: '3.3.3.3',
+      deviceSummary: 'Guest',
+      userAgent: 'Safari',
+      country: 'VN'
+    });
+
+    const result = deviceRegistryService.batchDeleteUsers(['alias:group a', 'guest:dev_del_guest']);
+    expect(result.deletedUsers).toBe(2);
+    expect(result.deletedCount).toBe(3);
+    expect(deviceRegistryService.getDevice('dev_del_a1')).toBeUndefined();
+    expect(deviceRegistryService.getDevice('dev_del_a2')).toBeUndefined();
+    expect(deviceRegistryService.getDevice('dev_del_guest')).toBeUndefined();
+  });
 });

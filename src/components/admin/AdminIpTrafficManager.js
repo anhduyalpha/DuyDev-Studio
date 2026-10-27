@@ -21,6 +21,7 @@ let activeSessionFilter = 'all'; // 'all' | 'online' | 'owner' | 'lan' | 'wan'
 let currentSearch = '';
 let currentSessionSearch = '';
 let activeInspectedIp = null;
+let selectedUserIdentifiers = new Set();
 
 function formatCompactIp(ip) {
   if (!ip) return '--';
@@ -207,8 +208,10 @@ function renderSessionCardsMarkup(devices) {
     const pastSessions = Array.isArray(d.pastSessions) ? d.pastSessions : [];
     const hasPastSessions = pastSessions.length > 0;
     const drawerId = `pastSessions_${escapeHtml((d.deviceId || '').replace(/[^a-zA-Z0-9_-]/g, '_'))}`;
+    const userIdentifier = d.userId || d.deviceId;
+    const isSelected = selectedUserIdentifiers.has(userIdentifier);
 
-    const cardBorder = isBlocked
+    let cardBorder = isBlocked
       ? 'border-rose-500/40 bg-rose-500/5'
       : (isOnline
         ? 'border-emerald-500/30 shadow-emerald-500/5 bg-zinc-50/80 dark:bg-zinc-950/60'
@@ -216,11 +219,24 @@ function renderSessionCardsMarkup(devices) {
           ? 'border-amber-500/20 bg-zinc-50/80 dark:bg-zinc-950/60'
           : 'border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-950/60'));
 
+    if (isSelected) {
+      cardBorder += ' ring-2 ring-orange-500/50 border-orange-500/60 bg-orange-500/[0.04] dark:bg-orange-500/[0.06]';
+    }
+
     return `
       <div class="p-3.5 sm:p-4 rounded-2xl border ${cardBorder} space-y-2.5 transition shadow-xs">
         <!-- Card Header: Device Identity & Badges & Top Actions -->
         <div class="flex flex-wrap items-center justify-between gap-2.5">
           <div class="flex flex-wrap items-center gap-2 min-w-0">
+            <!-- Multi-Select Checkbox -->
+            <label class="flex items-center gap-1.5 cursor-pointer shrink-0 py-0.5 select-none" title="Chọn người dùng này">
+              <input
+                type="checkbox"
+                class="cb-select-user w-4 h-4 rounded-md border-zinc-300 dark:border-white/20 text-orange-500 focus:ring-orange-500/30 cursor-pointer"
+                data-user-identifier="${escapeHtml(userIdentifier)}"
+                ${isSelected ? 'checked' : ''}
+              />
+            </label>
             ${statusBadge}
             <span class="text-base leading-none">${flag}</span>
             ${avatarHtml}
@@ -500,6 +516,7 @@ function renderSessionsView() {
   const lanCount = cachedDevices.filter(d => d.isLan).length;
   const wanCount = cachedDevices.filter(d => !d.isLan).length;
   const totalCount = cachedDevices.length;
+  const guestCount = cachedDevices.filter(d => !d.isOwner && (!d.alias || !d.alias.trim())).length;
 
   let filtered = cachedDevices;
   if (activeSessionFilter === 'online') filtered = cachedDevices.filter(d => d.status === 'ONLINE');
@@ -600,12 +617,81 @@ function renderSessionsView() {
           </button>
           <button
             type="button"
+            id="btnPurgeGuests"
+            class="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs active:scale-95 border border-rose-500/20"
+            title="Loại bỏ toàn bộ người dùng khách (chưa đặt tên) khỏi hệ thống"
+          >
+            <i data-lucide="user-x" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Xoá tất cả khách</span>
+            <span class="font-mono font-bold">(${guestCount})</span>
+          </button>
+          <button
+            type="button"
             id="btnRefreshSessions"
             class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs active:scale-95"
             title="Làm mới danh sách thiết bị"
           >
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Làm mới</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Batch Multi-Select Action Toolbar -->
+      <div id="sessionsBatchToolbar" class="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-900/70 border border-zinc-200 dark:border-white/10 shadow-xs backdrop-blur-md">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="cbSelectAllUsers"
+              class="w-4 h-4 rounded-md border-zinc-300 dark:border-white/20 text-orange-500 focus:ring-orange-500/30 cursor-pointer"
+              ${filtered.length > 0 && filtered.every(d => selectedUserIdentifiers.has(d.userId || d.deviceId)) ? 'checked' : ''}
+            />
+            <span id="selectAllUsersLabel" class="text-xs font-bold text-zinc-800 dark:text-zinc-200">Chọn tất cả (${filtered.length})</span>
+          </label>
+          <span id="selectedCountBadge" class="${selectedUserIdentifiers.size > 0 ? 'inline-flex' : 'hidden'} items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-orange-500/15 text-orange-500 border border-orange-500/25">
+            Đã chọn ${selectedUserIdentifiers.size}
+          </span>
+        </div>
+
+        <div id="batchActionGroup" class="${selectedUserIdentifiers.size > 0 ? 'flex' : 'hidden'} items-center gap-1.5 flex-wrap">
+          <button
+            type="button"
+            id="btnBatchBlock"
+            class="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/25 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+            title="Chặn tất cả người dùng đã chọn"
+          >
+            <i data-lucide="shield-ban" class="w-3.5 h-3.5"></i>
+            <span>Chặn đã chọn</span>
+          </button>
+
+          <button
+            type="button"
+            id="btnBatchUnblock"
+            class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/25 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+            title="Bỏ chặn tất cả người dùng đã chọn"
+          >
+            <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+            <span>Bỏ chặn</span>
+          </button>
+
+          <button
+            type="button"
+            id="btnBatchDelete"
+            class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+            title="Xóa vĩnh viễn tất cả người dùng đã chọn và thiết bị liên kết"
+          >
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Xóa đã chọn</span>
+          </button>
+
+          <button
+            type="button"
+            id="btnDeselectAll"
+            class="px-2.5 py-1.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-zinc-800/60 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs font-medium transition cursor-pointer"
+            title="Bỏ chọn tất cả"
+          >
+            Hủy chọn
           </button>
         </div>
       </div>
@@ -1955,7 +2041,7 @@ export function attachIpTrafficListeners(containerEl) {
     }
   };
 
-  const applySessionFiltersAndRender = () => {
+  const getFilteredDevices = () => {
     let filtered = cachedDevices;
     if (activeSessionFilter === 'online') filtered = cachedDevices.filter(d => d.status === 'ONLINE');
     else if (activeSessionFilter === 'owner') filtered = cachedDevices.filter(d => d.isOwner);
@@ -1974,9 +2060,57 @@ export function attachIpTrafficListeners(containerEl) {
         (d.country && d.country.toLowerCase().includes(q))
       );
     }
+    return filtered;
+  };
+
+  const applySessionFiltersAndRender = () => {
+    const filtered = getFilteredDevices();
 
     if (sessionsCardsContainer) {
       sessionsCardsContainer.innerHTML = renderSessionCardsMarkup(filtered);
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // Sync multi-select state
+    const selectAllLabel = containerEl.querySelector('#selectAllUsersLabel');
+    if (selectAllLabel) {
+      selectAllLabel.textContent = `Chọn tất cả (${filtered.length})`;
+    }
+
+    const cbSelectAll = containerEl.querySelector('#cbSelectAllUsers');
+    if (cbSelectAll) {
+      const allSelected = filtered.length > 0 && filtered.every(d => selectedUserIdentifiers.has(d.userId || d.deviceId));
+      const someSelected = filtered.some(d => selectedUserIdentifiers.has(d.userId || d.deviceId));
+      cbSelectAll.checked = allSelected;
+      cbSelectAll.indeterminate = !allSelected && someSelected;
+    }
+
+    const batchGroup = containerEl.querySelector('#batchActionGroup');
+    const countBadge = containerEl.querySelector('#selectedCountBadge');
+    if (batchGroup) {
+      if (selectedUserIdentifiers.size > 0) {
+        batchGroup.classList.remove('hidden');
+        batchGroup.classList.add('flex');
+      } else {
+        batchGroup.classList.add('hidden');
+        batchGroup.classList.remove('flex');
+      }
+    }
+    if (countBadge) {
+      countBadge.textContent = `Đã chọn ${selectedUserIdentifiers.size}`;
+      if (selectedUserIdentifiers.size > 0) {
+        countBadge.classList.remove('hidden');
+        countBadge.classList.add('inline-flex');
+      } else {
+        countBadge.classList.add('hidden');
+        countBadge.classList.remove('inline-flex');
+      }
+    }
+
+    const btnPurge = containerEl.querySelector('#btnPurgeGuests');
+    if (btnPurge) {
+      const guestCount = cachedDevices.filter(d => !d.isOwner && (!d.alias || !d.alias.trim())).length;
+      btnPurge.innerHTML = `<i data-lucide="user-x" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Xoá tất cả khách</span> <span class="font-mono font-bold">(${guestCount})</span>`;
       if (window.lucide) window.lucide.createIcons();
     }
   };
@@ -2016,6 +2150,142 @@ export function attachIpTrafficListeners(containerEl) {
       btnRefreshSessions.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Làm mới</span>';
       if (window.lucide) window.lucide.createIcons();
       showToast('Đã làm mới danh sách thiết bị và phiên truy cập', 'info');
+    };
+  }
+
+  // Purge All Guest Users (Users with no alias configured)
+  const btnPurgeGuests = containerEl.querySelector('#btnPurgeGuests');
+  if (btnPurgeGuests) {
+    btnPurgeGuests.onclick = async () => {
+      const guestCount = cachedDevices.filter(d => !d.isOwner && (!d.alias || !d.alias.trim())).length;
+      if (guestCount === 0) {
+        showToast('Hiện không có user khách nào trong hệ thống', 'info');
+        return;
+      }
+      if (!confirm(`Bạn có chắc chắn muốn LOẠI BỎ TOÀN BỘ ${guestCount} user khách vãng lai (chưa đặt tên)?\n\nKhi họ truy cập lại web, hệ thống sẽ tự động yêu cầu nhập tên để định danh 100% người dùng.`)) return;
+
+      btnPurgeGuests.disabled = true;
+      btnPurgeGuests.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>';
+      if (window.lucide) window.lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/v1/admin/traffic/devices/purge-guests', {
+          method: 'POST',
+          headers: { ...getStorageAuthHeaders(), Accept: 'application/json' }
+        });
+        const json = await res.json();
+        showToast(json.message || 'Đã loại bỏ toàn bộ user khách', json.success ? 'success' : 'error');
+        selectedUserIdentifiers.clear();
+        await fetchAndRenderSessionsData();
+      } catch (err) {
+        showToast(`Lỗi loại bỏ khách: ${err.message}`, 'error');
+      } finally {
+        btnPurgeGuests.disabled = false;
+        const remainingGuests = cachedDevices.filter(d => !d.isOwner && (!d.alias || !d.alias.trim())).length;
+        btnPurgeGuests.innerHTML = `<i data-lucide="user-x" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Xoá tất cả khách</span> <span class="font-mono font-bold">(${remainingGuests})</span>`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    };
+  }
+
+  // Multi-Select: Select All Checkbox
+  const cbSelectAllUsers = containerEl.querySelector('#cbSelectAllUsers');
+  if (cbSelectAllUsers) {
+    cbSelectAllUsers.onchange = (e) => {
+      const filtered = getFilteredDevices();
+      if (e.target.checked) {
+        filtered.forEach(d => selectedUserIdentifiers.add(d.userId || d.deviceId));
+      } else {
+        filtered.forEach(d => selectedUserIdentifiers.delete(d.userId || d.deviceId));
+      }
+      applySessionFiltersAndRender();
+    };
+  }
+
+  // Multi-Select: Batch Block
+  const btnBatchBlock = containerEl.querySelector('#btnBatchBlock');
+  if (btnBatchBlock) {
+    btnBatchBlock.onclick = async () => {
+      if (selectedUserIdentifiers.size === 0) return;
+      if (!confirm(`Bạn có chắc muốn CHẶN toàn bộ ${selectedUserIdentifiers.size} người dùng đã chọn?`)) return;
+
+      btnBatchBlock.disabled = true;
+      try {
+        const res = await fetch('/api/v1/admin/traffic/devices/batch-toggle-block', {
+          method: 'POST',
+          headers: { ...getStorageAuthHeaders(), 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ userIdentifiers: Array.from(selectedUserIdentifiers), blocked: true })
+        });
+        const json = await res.json();
+        showToast(json.message || 'Đã chặn các người dùng đã chọn', json.success ? 'success' : 'error');
+        selectedUserIdentifiers.clear();
+        await fetchAndRenderSessionsData();
+      } catch (err) {
+        showToast(`Lỗi chặn người dùng: ${err.message}`, 'error');
+      } finally {
+        btnBatchBlock.disabled = false;
+      }
+    };
+  }
+
+  // Multi-Select: Batch Unblock
+  const btnBatchUnblock = containerEl.querySelector('#btnBatchUnblock');
+  if (btnBatchUnblock) {
+    btnBatchUnblock.onclick = async () => {
+      if (selectedUserIdentifiers.size === 0) return;
+      if (!confirm(`Bạn có chắc muốn BỎ CHẶN toàn bộ ${selectedUserIdentifiers.size} người dùng đã chọn?`)) return;
+
+      btnBatchUnblock.disabled = true;
+      try {
+        const res = await fetch('/api/v1/admin/traffic/devices/batch-toggle-block', {
+          method: 'POST',
+          headers: { ...getStorageAuthHeaders(), 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ userIdentifiers: Array.from(selectedUserIdentifiers), blocked: false })
+        });
+        const json = await res.json();
+        showToast(json.message || 'Đã bỏ chặn các người dùng đã chọn', json.success ? 'success' : 'error');
+        selectedUserIdentifiers.clear();
+        await fetchAndRenderSessionsData();
+      } catch (err) {
+        showToast(`Lỗi bỏ chặn: ${err.message}`, 'error');
+      } finally {
+        btnBatchUnblock.disabled = false;
+      }
+    };
+  }
+
+  // Multi-Select: Batch Delete
+  const btnBatchDelete = containerEl.querySelector('#btnBatchDelete');
+  if (btnBatchDelete) {
+    btnBatchDelete.onclick = async () => {
+      if (selectedUserIdentifiers.size === 0) return;
+      if (!confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${selectedUserIdentifiers.size} người dùng đã chọn cùng toàn bộ thiết bị liên kết? Thao tác này không thể hoàn tác.`)) return;
+
+      btnBatchDelete.disabled = true;
+      try {
+        const res = await fetch('/api/v1/admin/traffic/devices/batch-delete', {
+          method: 'POST',
+          headers: { ...getStorageAuthHeaders(), 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ userIdentifiers: Array.from(selectedUserIdentifiers) })
+        });
+        const json = await res.json();
+        showToast(json.message || 'Đã xóa các người dùng đã chọn', json.success ? 'success' : 'error');
+        selectedUserIdentifiers.clear();
+        await fetchAndRenderSessionsData();
+      } catch (err) {
+        showToast(`Lỗi xóa người dùng: ${err.message}`, 'error');
+      } finally {
+        btnBatchDelete.disabled = false;
+      }
+    };
+  }
+
+  // Multi-Select: Deselect All
+  const btnDeselectAll = containerEl.querySelector('#btnDeselectAll');
+  if (btnDeselectAll) {
+    btnDeselectAll.onclick = () => {
+      selectedUserIdentifiers.clear();
+      applySessionFiltersAndRender();
     };
   }
 
@@ -2063,7 +2333,23 @@ export function attachIpTrafficListeners(containerEl) {
   }
 
   if (sessionsCardsContainer) {
+    sessionsCardsContainer.onchange = (e) => {
+      const cb = e.target.closest('.cb-select-user');
+      if (cb) {
+        const id = cb.dataset.userIdentifier;
+        if (cb.checked) {
+          selectedUserIdentifiers.add(id);
+        } else {
+          selectedUserIdentifiers.delete(id);
+        }
+        applySessionFiltersAndRender();
+      }
+    };
+
     sessionsCardsContainer.onclick = async (e) => {
+      if (e.target.closest('.cb-select-user') || e.target.closest('label')?.querySelector('.cb-select-user')) {
+        return;
+      }
       // 1. Rename Device Alias
       const renameBtn = e.target.closest('[data-action="rename-device"]');
       if (renameBtn) {

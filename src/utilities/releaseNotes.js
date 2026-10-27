@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.23': {
+    version: 'v24.23',
+    title: 'Bản cập nhật v24.23: Quản Trị Chọn Nhiều Người Dùng & Dọn Dẹp Triệt Để Khách Vãng Lai (Multi-Select & Guest Purge)',
+    date: '27/10/2026',
+    features: [
+      'Thao Tác Hàng Loạt Với Tính Năng Chọn Nhiều (Multi-Select Batch Actions): Bổ sung hộp kiểm (checkbox) cho từng thẻ thiết bị/người dùng và nút "Chọn tất cả", kèm thanh công cụ thao tác hàng loạt giúp Chặn, Bỏ chặn hoặc Xóa nhiều người dùng chỉ bằng 1 thao tác duy nhất',
+      'Nút Dọn Dẹp Toàn Bộ Khách Vãng Lai (1-Click Purge All Guests): Tích hợp tính năng xóa sạch toàn bộ thiết bị khách chưa đặt tên trong hệ thống, đảm bảo 100% người dùng khi vào lại trang web đều được kích hoạt prompt bắt buộc nhập tên định danh'
+    ],
+    fixes: [
+      'Khắc Phục Tình Trạng Tích Tụ Khách Vãng Lai Vô Danh: Loại bỏ hoàn toàn các bản ghi khách rác không có định danh, đồng thời siết chặt luồng Onboarding trên mọi điều hướng'
+    ]
+  },
   'v24.22': {
     version: 'v24.22',
     title: 'Bản cập nhật v24.22: Hỗ Trợ Toàn Diện Tải Bài Viết & Album Ảnh Facebook (Facebook Post Downloader)',

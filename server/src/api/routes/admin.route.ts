@@ -47,6 +47,9 @@ import {
   deleteUserDevicesHandler,
   pruneDuplicateDevicesHandler,
   pruneStaleDevicesHandler,
+  purgeGuestDevicesHandler,
+  batchToggleDeviceBlockHandler,
+  batchDeleteDevicesHandler,
   getSessionLifecycleEventsHandler,
   clearSessionLifecycleEventsHandler,
   getEngineTimeoutsHandler,
@@ -143,6 +146,9 @@ export async function adminRoute(app: FastifyInstance) {
   app.delete('/api/v1/admin/traffic/users/:userIdentifier', { preHandler: adminAuthGuard }, deleteUserDevicesHandler);
   app.post('/api/v1/admin/traffic/devices/prune-duplicates', { preHandler: adminAuthGuard }, pruneDuplicateDevicesHandler);
   app.post('/api/v1/admin/traffic/devices/prune-stale', { preHandler: adminAuthGuard }, pruneStaleDevicesHandler);
+  app.post('/api/v1/admin/traffic/devices/purge-guests', { preHandler: adminAuthGuard }, purgeGuestDevicesHandler);
+  app.post('/api/v1/admin/traffic/devices/batch-toggle-block', { preHandler: adminAuthGuard }, batchToggleDeviceBlockHandler);
+  app.post('/api/v1/admin/traffic/devices/batch-delete', { preHandler: adminAuthGuard }, batchDeleteDevicesHandler);
   app.get('/api/v1/admin/traffic/events', { preHandler: adminAuthGuard }, getSessionLifecycleEventsHandler);
   app.post('/api/v1/admin/traffic/events/clear', { preHandler: adminAuthGuard }, clearSessionLifecycleEventsHandler);
   app.get('/api/v1/admin/traffic/rules', { preHandler: adminAuthGuard }, getIpRulesHandler);
