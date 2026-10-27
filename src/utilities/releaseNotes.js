@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.17': {
+    version: 'v24.17',
+    title: 'Bản cập nhật v24.17: Triệt Tiêu Nhấp Nháy Hộp Lịch Sử Media (Zero-Flicker Collapsible History)',
+    date: '27/10/2026',
+    features: [
+      'Đóng Mở Lịch Sử Tại Chỗ Siêu Mượt (In-Place Collapsible Toggle): Chuyển đổi toàn bộ thao tác bấm mở/thu gọn hộp lịch sử Media (Facebook, Instagram, Spotify) sang cơ chế cập nhật trực tiếp tại chỗ (In-Place DOM Mutation), triệt tiêu 100% hiện tượng nhấp nháy, chớp sáng hoặc cảm giác tải lại trang',
+      'Cách Ly Phân Vùng Lịch Sử (Isolated History Rendering Container): Thiết lập container riêng biệt (#mediaHistoryContainer) cho khu vực lịch sử, đảm bảo các thao tác chuyển tab Lịch sử / Thùng rác, xóa tệp hay lưu vào Drive chỉ cập nhật cục bộ và giữ nguyên trạng thái thanh nhập liệu và toàn bộ giao diện phía trên'
+    ],
+    fixes: [
+      'Sửa Lỗi Nhấp Nháy Toàn Trang Khi Bấm Vào Dropbox Lịch Sử: Khắc phục triệt để việc gọi render toàn bộ workspace kèm hiệu ứng animate-fadeIn khi người dùng click vào thanh toggle lịch sử ở bộ 3 công cụ Media',
+      'Bảo Toàn Tiêu Điểm Con Trỏ & Vị Trí Cuộn: Ngăn chặn mất focus con trỏ trên thanh dán liên kết và không làm giật khung nhìn khi danh sách lịch sử được tải ngầm từ máy chủ'
+    ]
+  },
   'v24.16': {
     version: 'v24.16',
     title: 'Bản cập nhật v24.16: Hỗ Trợ Đầy Đủ & Nhận Diện Toàn Diện Chia Sẻ Mọi Module Trên APK & Web',

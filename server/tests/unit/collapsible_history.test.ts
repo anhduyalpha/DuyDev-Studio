@@ -28,6 +28,12 @@ import {
   isRecentActivityExpanded,
   toggleRecentActivity
 } from '../../../src/components/dashboard/RecentActivity.js';
+import {
+  renderMediaHistorySection,
+  attachMediaHistoryListeners,
+  isMediaHistoryExpanded,
+  setMediaHistoryExpanded
+} from '../../../src/components/tools/common/MediaHistorySection.js';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const store = new Map<string, string>();
@@ -198,6 +204,93 @@ describe('Collapsible History Dropboxes Across All Modules', () => {
 
       toggleRecentActivity();
       expect(isRecentActivityExpanded()).toBe(false);
+    });
+  });
+
+  describe('6. Media Downloaders Collapsible History Section (Facebook, Instagram, Spotify)', () => {
+    it('is collapsed by default and renders clickable toggle button with dedicated labels and icon IDs', () => {
+      setMediaHistoryExpanded('facebook-downloader', false);
+      expect(isMediaHistoryExpanded('facebook-downloader')).toBe(false);
+
+      const html = renderMediaHistorySection({
+        toolId: 'facebook-downloader',
+        title: 'Lịch Sử Tải Video Facebook',
+        accentColor: '#1877F2'
+      });
+
+      expect(html).toContain('id="btnToggleMediaHistory"');
+      expect(html).toContain('id="lblToggleMediaHistory"');
+      expect(html).toContain('id="iconChevronMediaHistory"');
+      expect(html).toContain('id="mediaHistoryBody" class="hidden');
+      expect(html).toContain('Xem lịch sử');
+    });
+
+    it('expands cleanly and reveals body when isMediaHistoryExpanded is true', () => {
+      setMediaHistoryExpanded('facebook-downloader', true);
+      expect(isMediaHistoryExpanded('facebook-downloader')).toBe(true);
+
+      const html = renderMediaHistorySection({
+        toolId: 'facebook-downloader',
+        title: 'Lịch Sử Tải Video Facebook',
+        accentColor: '#1877F2'
+      });
+
+      expect(html).toContain('id="mediaHistoryBody" class="block');
+      expect(html).toContain('Thu gọn');
+    });
+
+    it('toggles body in-place when toggle button is clicked without invoking onHistoryChange', () => {
+      setMediaHistoryExpanded('instagram-downloader', false);
+
+      const mockBody = {
+        classList: {
+          contains: (cls: string) => cls === 'hidden',
+          remove: (cls: string) => {},
+          add: (cls: string) => {}
+        }
+      };
+      const mockLabel = { textContent: 'Xem lịch sử' };
+      const mockChevron = {
+        classList: {
+          add: (...cls: string[]) => {},
+          remove: (...cls: string[]) => {}
+        }
+      };
+
+      let btnToggleHandler: any = null;
+      const mockBtnToggle = {
+        setAttribute: (k: string, v: string) => {},
+        set onclick(fn: any) { btnToggleHandler = fn; },
+        get onclick() { return btnToggleHandler; }
+      };
+
+      const mockContainer = {
+        querySelector: (sel: string) => {
+          if (sel === '#btnToggleMediaHistory') return mockBtnToggle;
+          if (sel === '#mediaHistoryBody') return mockBody;
+          if (sel === '#lblToggleMediaHistory') return mockLabel;
+          if (sel === '#iconChevronMediaHistory') return mockChevron;
+          return null;
+        },
+        querySelectorAll: () => []
+      };
+
+      let historyChangeCalled = false;
+      attachMediaHistoryListeners({
+        container: mockContainer as any,
+        toolId: 'instagram-downloader',
+        onHistoryChange: () => {
+          historyChangeCalled = true;
+        }
+      });
+
+      expect(typeof mockBtnToggle.onclick).toBe('function');
+      const fakeEvent = { preventDefault: () => {} };
+      mockBtnToggle.onclick(fakeEvent);
+
+      expect(isMediaHistoryExpanded('instagram-downloader')).toBe(true);
+      expect(mockLabel.textContent).toBe('Thu gọn');
+      expect(historyChangeCalled).toBe(false); // Ironclad verification: Must NOT call onHistoryChange on toggle click!
     });
   });
 });

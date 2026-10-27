@@ -131,10 +131,10 @@ export function renderMediaHistorySection({
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
-          <span class="text-xs text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline">
+          <span id="lblToggleMediaHistory" class="text-xs text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline">
             ${isOpen ? 'Thu gọn' : 'Xem lịch sử'}
           </span>
-          <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 text-zinc-900 dark:text-zinc-100' : ''}">
+          <div id="iconChevronMediaHistory" class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 text-zinc-900 dark:text-zinc-100' : ''}">
             <i data-lucide="chevron-down" class="w-4 h-4"></i>
           </div>
         </div>
@@ -437,16 +437,39 @@ export function attachMediaHistoryListeners({
 }) {
   if (!container) return;
 
-  // 0. Toggle Master Collapsible Dropbox (KI-CON-006)
+  // 0. Toggle Master Collapsible Dropbox (KI-CON-006) - In-place smooth toggle without full re-render
   const btnToggle = container.querySelector('#btnToggleMediaHistory');
   if (btnToggle) {
     btnToggle.onclick = (e) => {
       e.preventDefault();
       const current = isMediaHistoryExpanded(toolId);
-      setMediaHistoryExpanded(toolId, !current);
+      const next = !current;
+      setMediaHistoryExpanded(toolId, next);
       soundEngine?.playToggle?.();
-      if (typeof onHistoryChange === 'function') {
-        onHistoryChange();
+
+      btnToggle.setAttribute('aria-expanded', String(next));
+      const body = container.querySelector('#mediaHistoryBody');
+      const label = container.querySelector('#lblToggleMediaHistory');
+      const chevron = container.querySelector('#iconChevronMediaHistory');
+
+      if (body) {
+        if (next) {
+          body.classList.remove('hidden');
+          body.classList.add('block');
+        } else {
+          body.classList.remove('block');
+          body.classList.add('hidden');
+        }
+      }
+      if (label) {
+        label.textContent = next ? 'Thu gọn' : 'Xem lịch sử';
+      }
+      if (chevron) {
+        if (next) {
+          chevron.classList.add('rotate-180', 'text-zinc-900', 'dark:text-zinc-100');
+        } else {
+          chevron.classList.remove('rotate-180', 'text-zinc-900', 'dark:text-zinc-100');
+        }
       }
     };
   }
@@ -643,7 +666,7 @@ export function attachMediaHistoryListeners({
     };
   });
 
-  if (window.lucide?.createIcons) {
+  if (typeof window !== 'undefined' && window.lucide?.createIcons) {
     window.lucide.createIcons({ root: container });
   }
 
@@ -657,9 +680,13 @@ export function attachMediaHistoryListeners({
       }
     }
   };
-  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+  }
 
   return () => {
-    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+    }
   };
 }

@@ -36,7 +36,7 @@ export class FacebookWorkspace {
     this.render();
 
     storage.fetchHistory().then(() => {
-      this.render();
+      this.renderHistory();
     }).catch(() => {});
 
     const pendingUrl = consumePendingAutoStart('facebook');
@@ -224,7 +224,7 @@ export class FacebookWorkspace {
       if (res.data?.relPath) {
         storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
         showToast('Đã lưu video vào Studio Drive!', 'success');
-        this.render();
+        this.renderHistory();
       }
     } catch (e) {
       showToast(e.message || 'Lỗi khi lưu vào Drive', 'error');
@@ -512,14 +512,16 @@ export class FacebookWorkspace {
         ` : ''}
 
         <!-- Media History Section -->
-        ${renderMediaHistorySection({
-          toolId: 'facebook-downloader',
-          title: 'Lịch Sử Tải Video Facebook',
-          activeTab: this.historyTab,
-          fallbackIcon: 'facebook',
-          accentColor: '#1877F2',
-          driveFolderPath: '/facebook'
-        })}
+        <div id="mediaHistoryContainer">
+          ${renderMediaHistorySection({
+            toolId: 'facebook-downloader',
+            title: 'Lịch Sử Tải Video Facebook',
+            activeTab: this.historyTab,
+            fallbackIcon: 'facebook',
+            accentColor: '#1877F2',
+            driveFolderPath: '/facebook'
+          })}
+        </div>
 
       </div>
     `;
@@ -536,18 +538,29 @@ export class FacebookWorkspace {
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
 
+    this.attachHistoryListeners();
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: this.container });
+    }
+  }
+
+  attachHistoryListeners() {
+    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    if (!historyContainer) return;
+
     if (this.historyCleanup) {
       this.historyCleanup();
       this.historyCleanup = null;
     }
 
     this.historyCleanup = attachMediaHistoryListeners({
-      container: this.container,
+      container: historyContainer,
       toolId: 'facebook-downloader',
       accentColor: '#1877F2',
       onTabChange: (tab) => {
         this.historyTab = tab;
-        this.render();
+        this.renderHistory();
       },
       onReResolve: (url) => {
         this.url = url;
@@ -560,13 +573,29 @@ export class FacebookWorkspace {
         this.saveHistoryItemToDrive(item);
       },
       onHistoryChange: () => {
-        this.render();
+        this.renderHistory();
       }
     });
 
     if (window.lucide?.createIcons) {
-      window.lucide.createIcons({ root: this.container });
+      window.lucide.createIcons({ root: historyContainer });
     }
+  }
+
+  renderHistory() {
+    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    if (!historyContainer) return;
+
+    historyContainer.innerHTML = renderMediaHistorySection({
+      toolId: 'facebook-downloader',
+      title: 'Lịch Sử Tải Video Facebook',
+      activeTab: this.historyTab,
+      fallbackIcon: 'facebook',
+      accentColor: '#1877F2',
+      driveFolderPath: '/facebook'
+    });
+
+    this.attachHistoryListeners();
   }
 }
 

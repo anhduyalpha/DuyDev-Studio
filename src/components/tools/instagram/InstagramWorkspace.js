@@ -35,7 +35,7 @@ export class InstagramWorkspace {
     this.render();
 
     storage.fetchHistory().then(() => {
-      this.render();
+      this.renderHistory();
     }).catch(() => {});
 
     const pendingUrl = consumePendingAutoStart('instagram');
@@ -221,7 +221,7 @@ export class InstagramWorkspace {
       if (res.data?.relPath) {
         storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
         showToast('Đã lưu nội dung vào Studio Drive!', 'success');
-        this.render();
+        this.renderHistory();
       }
     } catch (e) {
       showToast(e.message || 'Lỗi khi lưu vào Drive', 'error');
@@ -527,14 +527,16 @@ export class InstagramWorkspace {
         ` : ''}
 
         <!-- Media History Section -->
-        ${renderMediaHistorySection({
-          toolId: 'instagram-downloader',
-          title: 'Lịch Sử Tải Instagram',
-          activeTab: this.historyTab,
-          fallbackIcon: 'instagram',
-          accentColor: '#E1306C',
-          driveFolderPath: '/instagram'
-        })}
+        <div id="mediaHistoryContainer">
+          ${renderMediaHistorySection({
+            toolId: 'instagram-downloader',
+            title: 'Lịch Sử Tải Instagram',
+            activeTab: this.historyTab,
+            fallbackIcon: 'instagram',
+            accentColor: '#E1306C',
+            driveFolderPath: '/instagram'
+          })}
+        </div>
 
       </div>
     `;
@@ -551,18 +553,29 @@ export class InstagramWorkspace {
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
 
+    this.attachHistoryListeners();
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: this.container });
+    }
+  }
+
+  attachHistoryListeners() {
+    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    if (!historyContainer) return;
+
     if (this.historyCleanup) {
       this.historyCleanup();
       this.historyCleanup = null;
     }
 
     this.historyCleanup = attachMediaHistoryListeners({
-      container: this.container,
+      container: historyContainer,
       toolId: 'instagram-downloader',
       accentColor: '#E1306C',
       onTabChange: (tab) => {
         this.historyTab = tab;
-        this.render();
+        this.renderHistory();
       },
       onReResolve: (url) => {
         this.url = url;
@@ -575,13 +588,29 @@ export class InstagramWorkspace {
         this.saveHistoryItemToDrive(item);
       },
       onHistoryChange: () => {
-        this.render();
+        this.renderHistory();
       }
     });
 
     if (window.lucide?.createIcons) {
-      window.lucide.createIcons({ root: this.container });
+      window.lucide.createIcons({ root: historyContainer });
     }
+  }
+
+  renderHistory() {
+    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    if (!historyContainer) return;
+
+    historyContainer.innerHTML = renderMediaHistorySection({
+      toolId: 'instagram-downloader',
+      title: 'Lịch Sử Tải Instagram',
+      activeTab: this.historyTab,
+      fallbackIcon: 'instagram',
+      accentColor: '#E1306C',
+      driveFolderPath: '/instagram'
+    });
+
+    this.attachHistoryListeners();
   }
 }
 

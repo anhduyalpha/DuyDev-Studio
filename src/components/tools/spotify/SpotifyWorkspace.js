@@ -35,7 +35,7 @@ export class SpotifyWorkspace {
     this.render();
 
     storage.fetchHistory().then(() => {
-      this.render();
+      this.renderHistory();
     }).catch(() => {});
 
     const pendingUrl = consumePendingAutoStart('spotify');
@@ -207,7 +207,7 @@ export class SpotifyWorkspace {
       if (res.data?.relPath) {
         storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
         showToast('Đã lưu bài hát vào Studio Drive!', 'success');
-        this.render();
+        this.renderHistory();
       }
     } catch (e) {
       showToast(e.message || 'Lỗi khi lưu vào Drive', 'error');
@@ -469,14 +469,16 @@ export class SpotifyWorkspace {
         ` : ''}
 
         <!-- Media History Section -->
-        ${renderMediaHistorySection({
-          toolId: 'spotify-downloader',
-          title: 'Lịch Sử Tải Nhạc Spotify',
-          activeTab: this.historyTab,
-          fallbackIcon: 'music',
-          accentColor: '#1DB954',
-          driveFolderPath: '/spotify'
-        })}
+        <div id="mediaHistoryContainer">
+          ${renderMediaHistorySection({
+            toolId: 'spotify-downloader',
+            title: 'Lịch Sử Tải Nhạc Spotify',
+            activeTab: this.historyTab,
+            fallbackIcon: 'music',
+            accentColor: '#1DB954',
+            driveFolderPath: '/spotify'
+          })}
+        </div>
 
       </div>
     `;
@@ -493,18 +495,29 @@ export class SpotifyWorkspace {
     this.container.removeEventListener('click', this.boundHandleClick);
     this.container.addEventListener('click', this.boundHandleClick);
 
+    this.attachHistoryListeners();
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: this.container });
+    }
+  }
+
+  attachHistoryListeners() {
+    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    if (!historyContainer) return;
+
     if (this.historyCleanup) {
       this.historyCleanup();
       this.historyCleanup = null;
     }
 
     this.historyCleanup = attachMediaHistoryListeners({
-      container: this.container,
+      container: historyContainer,
       toolId: 'spotify-downloader',
       accentColor: '#1DB954',
       onTabChange: (tab) => {
         this.historyTab = tab;
-        this.render();
+        this.renderHistory();
       },
       onReResolve: (url) => {
         this.url = url;
@@ -517,13 +530,29 @@ export class SpotifyWorkspace {
         this.saveHistoryItemToDrive(item);
       },
       onHistoryChange: () => {
-        this.render();
+        this.renderHistory();
       }
     });
 
     if (window.lucide?.createIcons) {
-      window.lucide.createIcons({ root: this.container });
+      window.lucide.createIcons({ root: historyContainer });
     }
+  }
+
+  renderHistory() {
+    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    if (!historyContainer) return;
+
+    historyContainer.innerHTML = renderMediaHistorySection({
+      toolId: 'spotify-downloader',
+      title: 'Lịch Sử Tải Nhạc Spotify',
+      activeTab: this.historyTab,
+      fallbackIcon: 'music',
+      accentColor: '#1DB954',
+      driveFolderPath: '/spotify'
+    });
+
+    this.attachHistoryListeners();
   }
 }
 
