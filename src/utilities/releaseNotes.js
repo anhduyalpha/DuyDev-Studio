@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.20': {
+    version: 'v24.20',
+    title: 'Bản cập nhật v24.20: Tinh Chỉnh Không Gian & Độ Thoáng Thanh Điều Khiển Và Hồ Sơ (Ergonomic Header Spacing)',
+    date: '27/10/2026',
+    features: [
+      'Thanh Hồ Sơ Người Dùng Dạng Capsule Ngang Đẳng Cấp: Tái thiết kế nút hồ sơ thành thanh capsule ngang đồng điệu với Control Dock, avatar bo tròn trang nhã và tên hiển thị cân đối cạnh nhau',
+      'Đường Phân Cách Tinh Tế & Thích Ứng Di Động: Bổ sung vạch phân cách quang học tinh tế giữa Control Dock và nút hồ sơ; tự động co gọn tên trên màn hình siêu nhỏ (<420px) chống tràn tuyệt đối'
+    ],
+    fixes: [
+      'Mở Rộng Không Gian Thanh Tiện Ích Điều Khiển: Tăng khoảng cách đệm (padding) và khoảng cách giữa các nút (gap), bổ sung không gian thở cho đèn trạng thái hệ thống, xóa bỏ triệt để cảm giác chật chội'
+    ]
+  },
   'v24.19': {
     version: 'v24.19',
     title: 'Bản cập nhật v24.19: Khắc Phục Triệt Để Lệch Bài Hát & Khử Nhạc Remix Lạ Trong Spotify Downloader',

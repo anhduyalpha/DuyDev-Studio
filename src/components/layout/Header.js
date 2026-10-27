@@ -30,7 +30,7 @@ export function syncHeaderUserProfile(profile = null) {
   const displayName = updated.name || (isAdminAuthenticated() ? 'Duy' : 'Khách');
 
   if (avatarEl) {
-    avatarEl.className = `relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
+    avatarEl.className = `relative flex w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
     avatarEl.innerHTML = renderAvatarInnerHtml(updated.avatar, updated.name);
   }
   if (nameEl) {
@@ -89,8 +89,8 @@ export function renderHeader() {
         </div>
 
         <!-- Right: Controls (Ergonomic Apple Control Center Dock) -->
-        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div class="flex items-center gap-0.5 sm:gap-1 p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06]">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div class="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
             <!-- Storage Drive Link -->
             <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-8.5 h-8.5 sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
@@ -112,7 +112,7 @@ export function renderHeader() {
                  role="status"
                  aria-label="Trạng thái hệ thống"
                  title="Trực tuyến" 
-                 class="inline-flex items-center justify-center w-6 h-6 select-none">
+                 class="inline-flex items-center justify-center w-6 h-6 px-1 mx-0.5 select-none">
               <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
             </div>
 
@@ -130,18 +130,20 @@ export function renderHeader() {
             </button>
           </div>
 
-          <!-- User Profile Avatar with Small Name Underneath -->
+          <div class="h-5 w-px bg-zinc-200 dark:bg-white/10 mx-0.5 hidden xs:block"></div>
+
+          <!-- User Profile Avatar Pill -->
           <button 
             type="button" 
             id="headerProfileBtn" 
             title="${userProfile.name ? `Hồ sơ: ${escapeHtml(userProfile.name)} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)'}" 
             aria-label="Hồ sơ người dùng & Đổi avatar" 
-            class="flex flex-col items-center justify-center px-1 py-0.5 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            class="flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
           >
-            <div id="headerUserAvatar" class="relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ${gradientClass}">
+            <div id="headerUserAvatar" class="relative flex w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${gradientClass}">
               ${avatarHtml}
             </div>
-            <span id="headerUserNameText" class="text-[9px] sm:text-[9.5px] font-medium text-zinc-600 dark:text-zinc-400 max-w-[46px] sm:max-w-[54px] truncate leading-tight mt-0.5 text-center">
+            <span id="headerUserNameText" class="hidden xs:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[60px] sm:max-w-[85px] truncate leading-none text-left">
               ${escapeHtml(displayName)}
             </span>
           </button>

@@ -163,14 +163,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.19">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.19">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=24.19">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=24.19">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.19">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.20">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.20">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=24.20">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=24.20">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.20">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=24.19">
+  <link rel="modulepreload" href="src/app.js?v=24.20">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -591,8 +591,8 @@
         </div>
 
         <!-- Right: Controls (Ergonomic Apple Control Center Dock) -->
-        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div class="flex items-center gap-0.5 sm:gap-1 p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06]">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div class="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
             <!-- Storage Drive Link -->
             <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-8.5 h-8.5 sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
@@ -614,7 +614,7 @@
                  role="status"
                  aria-label="Trạng thái hệ thống"
                  title="Trực tuyến" 
-                 class="inline-flex items-center justify-center w-6 h-6 select-none">
+                 class="inline-flex items-center justify-center w-6 h-6 px-1 mx-0.5 select-none">
               <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
             </div>
 
@@ -632,18 +632,20 @@
             </button>
           </div>
 
-          <!-- User Profile Avatar with Small Name Underneath -->
+          <div class="h-5 w-px bg-zinc-200 dark:bg-white/10 mx-0.5 hidden xs:block"></div>
+
+          <!-- User Profile Avatar Pill -->
           <button 
             type="button" 
             id="headerProfileBtn" 
             title="Hồ sơ người dùng (Nhấp để đổi avatar / tên)" 
             aria-label="Hồ sơ người dùng & Đổi avatar" 
-            class="flex flex-col items-center justify-center px-1 py-0.5 rounded-xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            class="flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
           >
-            <div id="headerUserAvatar" class="relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr from-indigo-500 to-purple-600 text-white">
+            <div id="headerUserAvatar" class="relative flex w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shrink-0">
               <span class="font-bold select-none">D</span>
             </div>
-            <span id="headerUserNameText" class="text-[9px] sm:text-[9.5px] font-medium text-zinc-600 dark:text-zinc-400 max-w-[46px] sm:max-w-[54px] truncate leading-tight mt-0.5 text-center">
+            <span id="headerUserNameText" class="hidden xs:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[60px] sm:max-w-[85px] truncate leading-none text-left">
               Khách
             </span>
           </button>
@@ -681,7 +683,7 @@
                     h |= 0;
                   }
                   var g = grads[Math.abs(h) % grads.length];
-                  aEl.className = 'relative flex w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full overflow-hidden items-center justify-center font-bold text-xs sm:text-sm shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 bg-gradient-to-tr ' + g;
+                  aEl.className = 'relative flex w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ' + g;
 
                   var words = p.name.trim().split(/\s+/);
                   var target = words[words.length - 1] || words[0] || 'D';
@@ -2848,7 +2850,7 @@
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
-          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v24.19</span>
+          <span id="footerVersionBadge" class="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">v24.20</span>
           <span>•</span>
           <span>Studio riêng của Anh Duy</span>
         </div>
@@ -2919,7 +2921,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=24.19"></script>
+  <script type="module" src="src/app.js?v=24.20"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
