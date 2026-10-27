@@ -14,6 +14,7 @@
 5. **Token-Miser & RTK Protocol** ([.agents/rules/token-miser.md](.agents/rules/token-miser.md)): Always prefix CLI commands with `rtk` (`rtk git`, `rtk err`, `rtk vitest`) to compress terminal noise by 60–90%; no full reads >120 lines; no redundant re-reads; batch tool calls; zero chatter; no code echoes.
 6. **Karpathy Coding & Premortem Thinking** ([.agents/rules/deep-coder.md](.agents/rules/deep-coder.md)): 3-point premortem (edge cases, lifecycle/orphans, backward compatibility); simplicity first (minimum code, anti-bloat); surgical precision; surface assumptions early.
 7. **On-Demand Diagnostic Skills**: `sqlite-prisma-inspector` ([.agents/skills/sqlite-prisma-inspector/SKILL.md](.agents/skills/sqlite-prisma-inspector/SKILL.md)) for SQLite (`server/dev.db`) & Prisma schema inspection without MCP overhead.
+8. **Universal Tool Module Standard** ([.agents/rules/module-standard-protocol.md](.agents/rules/module-standard-protocol.md) · [docs/MODULE_STANDARD.md](docs/MODULE_STANDARD.md)): Follow 10 Pillars when creating/updating modules; isolated history container (`#xxxHistoryContainer`) with in-place mutation; dual-platform share handoff; audit via `python scripts/audit_module_compliance.py <tool_path>`.
 
 ### Mandatory 1-Line Micro-Receipt
 Every response modifying or checking code MUST end with:

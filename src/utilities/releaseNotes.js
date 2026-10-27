@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.18': {
+    version: 'v24.18',
+    title: 'Bản cập nhật v24.18: Thiết Lập Bộ Quy Chuẩn Kiến Trúc Module Chuẩn Hoá (Universal Module Standard)',
+    date: '27/10/2026',
+    features: [
+      'Bộ Quy Chuẩn Kiến Trúc Module 10 Trụ Cột (Universal Module Standard): Thiết lập tài liệu đặc tả kỹ thuật toàn diện docs/MODULE_STANDARD.md định nghĩa rõ ràng giải phẫu thư mục, đăng ký công cụ & 10 cấp bậc Card Rarity, vòng đời mount/unmount chống rò rỉ bộ nhớ, cơ chế lịch sử cách ly không nhấp nháy, và liên kết chia sẻ đa nền tảng',
+      'Mẫu Module Chuẩn Hoá Sẵn Dùng (Turnkey Scaffolding Template): Cung cấp mã nguồn mẫu src/components/tools/_template/TemplateWorkspace.js kế thừa trọn vẹn mọi hành vi chuẩn hóa (auto-start handoff, dán clipboard an toàn, điều phối tác vụ nền, và phản hồi âm thanh Impeccable)',
+      'Công Cụ Kiểm Toán Tuân Thủ Tự Động (Automated Compliance Auditor): Phát triển công cụ scripts/audit_module_compliance.py tự động kiểm tra 9 tiêu chí sống còn của mọi module trước khi triển khai'
+    ],
+    fixes: [
+      'Đồng Bộ Hóa Kiến Trúc Chống Hồi Quy (Zero-Regression Architecture): Ngăn ngừa vĩnh viễn các lỗi nhấp nháy toàn trang khi mở lịch sử, lỗi rò rỉ EventSource/SSE/timer, lỗi nuốt URL khi chia sẻ từ Android APK hoặc Web PWA',
+      'Chuẩn Hóa Nguyên Tắc Thiết Kế Giao Diện: Ban hành bộ quy tắc kiểm soát token màu sắc, loại bỏ hoàn toàn câu chữ AI slop và chú thích dư thừa theo tiêu chuẩn Impeccable Design'
+    ]
+  },
   'v24.17': {
     version: 'v24.17',
     title: 'Bản cập nhật v24.17: Triệt Tiêu Nhấp Nháy Hộp Lịch Sử Media (Zero-Flicker Collapsible History)',
