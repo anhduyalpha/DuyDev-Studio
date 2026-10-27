@@ -41,7 +41,7 @@ export function renderDocumentItem(doc, isTrash = false, options = {}) {
   if (isJustDownloaded) itemClasses.push('file-item-just-downloaded');
 
   return `
-    <div class="${itemClasses.join(' ')}" data-doc-name="${escapeHtml(docName)}">
+    <div class="${itemClasses.join(' ')}" data-doc-name="${escapeHtml(docName)}" data-doc-id="${escapeHtml(doc.id || docId)}">
       <!-- Left: File Badge & Info -->
       <div class="file-item-left">
         <div class="file-type-badge ${isPdf ? 'badge-type-pdf' : 'badge-type-md'}">

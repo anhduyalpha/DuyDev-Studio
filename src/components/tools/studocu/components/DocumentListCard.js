@@ -17,8 +17,9 @@ export function renderDocumentItemsHtml(items, isTrash, options = {}) {
   if (items.length > 0) {
     return items.map(doc => {
       const docName = doc.name || doc.title || '';
-      const isDownloaded = doc.isDownloaded || (typeof options.isDocDownloaded === 'function' && options.isDocDownloaded(docName));
-      const isJustDownloaded = doc.isJustDownloaded || (typeof options.isDocJustDownloaded === 'function' && options.isDocJustDownloaded(docName));
+      const docId = doc.id || '';
+      const isDownloaded = doc.isDownloaded || (typeof options.isDocDownloaded === 'function' && options.isDocDownloaded(docName, docId));
+      const isJustDownloaded = doc.isJustDownloaded || (typeof options.isDocJustDownloaded === 'function' && options.isDocJustDownloaded(docName, docId));
       return renderDocumentItem(doc, isTrash, { isDownloaded, isJustDownloaded });
     }).join('');
   }
@@ -41,13 +42,21 @@ export function renderDocumentListCard(state) {
   const justDownloadedName = state.justDownloadedDocName || null;
 
   const itemOptions = {
-    isDocDownloaded: (name) => {
-      const norm = (s) => (s || '').normalize('NFC').trim();
+    isDocDownloaded: (name, id) => {
+      const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+      const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
+      const n = norm(name);
+      if (justDownloadedName && (n === norm(justDownloadedName) || cleanExt(n) === cleanExt(justDownloadedName))) return true;
+      if (state.justDownloadedDocId && id && String(id).trim() === String(state.justDownloadedDocId).trim()) return true;
       return downloadedSet.has(norm(name));
     },
-    isDocJustDownloaded: (name) => {
-      const norm = (s) => (s || '').normalize('NFC').trim();
-      return Boolean(justDownloadedName && norm(name) === justDownloadedName);
+    isDocJustDownloaded: (name, id) => {
+      const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+      const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
+      const n = norm(name);
+      if (justDownloadedName && (n === norm(justDownloadedName) || cleanExt(n) === cleanExt(justDownloadedName))) return true;
+      if (state.justDownloadedDocId && id && String(id).trim() === String(state.justDownloadedDocId).trim()) return true;
+      return false;
     }
   };
 

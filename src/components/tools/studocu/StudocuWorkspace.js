@@ -87,6 +87,36 @@ export function attachStudocuListeners() {
   let prevStructureKey = '';
   let prevSearchQuery = '';
   let prevJustDownloadedDocName = '';
+  let prevJustDownloadedDocId = '';
+
+  function scrollToDocument(identifier, docId = null) {
+    if (!identifier && !docId) return;
+    const itemsEl = document.getElementById('studocuItemsContainer');
+    if (!itemsEl) return;
+    const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+    const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
+    const targetNorm = identifier ? norm(identifier) : null;
+    const targetClean = identifier ? cleanExt(identifier) : null;
+    const targetDocId = docId ? String(docId).trim() : null;
+
+    let targetEl = null;
+    itemsEl.querySelectorAll('.file-item').forEach(el => {
+      if (targetEl) return;
+      const itemDocName = norm(el.getAttribute('data-doc-name'));
+      const itemDocId = el.getAttribute('data-doc-id');
+      const isMatch = Boolean(
+        (targetNorm && (itemDocName === targetNorm || cleanExt(itemDocName) === targetClean)) ||
+        (targetDocId && itemDocId && itemDocId === targetDocId)
+      );
+      if (isMatch) targetEl = el;
+    });
+
+    if (targetEl) {
+      requestAnimationFrame(() => {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+  }
 
   function attachHeroHandlers() {
     const heroCancel = document.getElementById('studocuHeroCancelBtn');
@@ -355,28 +385,42 @@ export function attachStudocuListeners() {
     const topItemId = state.filteredItems?.[0]?.name || state.filteredItems?.[0]?.id || '';
     const layoutKey = `${state.currentTab}:${state.sortOption}:${state.counts.pdf}:${state.counts.trash}:${topItemId}`;
     const highlightKey = state.justDownloadedDocName || '';
+    const highlightId = state.justDownloadedDocId || '';
 
     if (listEl && layoutKey !== prevStructureKey) {
       prevStructureKey = layoutKey;
       prevJustDownloadedDocName = highlightKey;
+      prevJustDownloadedDocId = highlightId;
       prevSearchQuery = state.searchQuery;
       listEl.innerHTML = renderDocumentListCard(state);
       if (window.lucide?.createIcons) window.lucide.createIcons();
       attachListHandlers();
+      if (highlightKey || highlightId) {
+        scrollToDocument(highlightKey, highlightId);
+      }
     } else if (itemsEl && state.searchQuery !== prevSearchQuery) {
       prevSearchQuery = state.searchQuery;
       prevJustDownloadedDocName = highlightKey;
+      prevJustDownloadedDocId = highlightId;
       const isTrash = state.currentTab === 'trash';
       const downloadedSet = state.downloadedDocNames || new Set();
       const justDownloadedName = state.justDownloadedDocName || null;
       const itemOptions = {
-        isDocDownloaded: (name) => {
-          const norm = (s) => (s || '').normalize('NFC').trim();
+        isDocDownloaded: (name, id) => {
+          const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+          const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
+          const n = norm(name);
+          if (justDownloadedName && (n === norm(justDownloadedName) || cleanExt(n) === cleanExt(justDownloadedName))) return true;
+          if (highlightId && id && String(id).trim() === highlightId) return true;
           return downloadedSet.has(norm(name));
         },
-        isDocJustDownloaded: (name) => {
-          const norm = (s) => (s || '').normalize('NFC').trim();
-          return Boolean(justDownloadedName && norm(name) === justDownloadedName);
+        isDocJustDownloaded: (name, id) => {
+          const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+          const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
+          const n = norm(name);
+          if (justDownloadedName && (n === norm(justDownloadedName) || cleanExt(n) === cleanExt(justDownloadedName))) return true;
+          if (highlightId && id && String(id).trim() === highlightId) return true;
+          return false;
         }
       };
       itemsEl.innerHTML = renderDocumentItemsHtml(state.filteredItems || [], isTrash, itemOptions);
@@ -386,16 +430,38 @@ export function attachStudocuListeners() {
       if (clearBtn) clearBtn.classList.toggle('hidden', !state.searchQuery);
       const countBadge = document.getElementById('studocuItemCountBadge');
       if (countBadge) countBadge.textContent = `${(state.filteredItems || []).length} tệp`;
-    } else if (itemsEl && highlightKey !== prevJustDownloadedDocName) {
+      if (highlightKey || highlightId) {
+        scrollToDocument(highlightKey, highlightId);
+      }
+    } else if (itemsEl && (highlightKey !== prevJustDownloadedDocName || highlightId !== prevJustDownloadedDocId)) {
       prevJustDownloadedDocName = highlightKey;
-      const norm = (s) => (s || '').normalize('NFC').trim();
+      prevJustDownloadedDocId = highlightId;
+      const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+      const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
       const targetNorm = highlightKey ? norm(highlightKey) : null;
+      const targetClean = highlightKey ? cleanExt(highlightKey) : null;
+      const targetId = highlightId ? String(highlightId).trim() : null;
+
+      let matchedEl = null;
       itemsEl.querySelectorAll('.file-item').forEach(el => {
         const itemDocName = norm(el.getAttribute('data-doc-name'));
-        const isMatch = Boolean(targetNorm && itemDocName === targetNorm);
+        const itemDocId = el.getAttribute('data-doc-id');
+        const isMatch = Boolean(
+          (targetNorm && (itemDocName === targetNorm || cleanExt(itemDocName) === targetClean)) ||
+          (targetId && itemDocId && itemDocId === targetId)
+        );
         el.classList.toggle('file-item-downloaded', isMatch);
         el.classList.toggle('file-item-just-downloaded', isMatch);
+        if (isMatch && !matchedEl) {
+          matchedEl = el;
+        }
       });
+
+      if (matchedEl && (highlightKey || highlightId)) {
+        requestAnimationFrame(() => {
+          matchedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      }
     }
   });
 

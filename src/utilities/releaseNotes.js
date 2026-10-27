@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.24': {
+    version: 'v24.24',
+    title: 'Bản cập nhật v24.24: Tối Ưu Tự Động Cuộn & Bắt Sáng Tài Liệu Đã Tải Tức Thì (Instant Highlight & Smooth Auto-Scroll)',
+    date: '27/10/2026',
+    features: [
+      'Tự Động Cuộn Mượt Đến Tài Liệu (Smooth Viewport Auto-Scroll): Khi phát hiện tài liệu đã có sẵn hoặc vừa tải xong, giao diện tự động cuộn mượt và căn giữa đúng mục tài liệu trong danh sách, giúp người dùng định vị ngay lập tức mà không cần tìm kiếm thủ công',
+      'Phát Sáng Xanh Lục Tức Thì Cho Toàn Bộ Tài Liệu Cũ & Mới (Instant Emerald Pulse & Cache Hit): Tối ưu luồng kiểm tra bộ nhớ đệm (< 20ms), loại bỏ hoàn toàn độ trễ polling 800ms khi tài liệu đã có sẵn trên máy chủ, đồng thời nhận diện chính xác 100% tài liệu cũ trong kho lưu trữ qua Document ID'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Tài Liệu Quá Cũ Không Highlight & Không Scroll: Chuẩn hóa cơ chế truy vết Document ID đa tầng (URL, filename, title, metadata) và gắn định danh data-doc-id lên thẻ tài liệu, loại bỏ triệt để lỗi tài liệu cũ bị bỏ qua'
+    ]
+  },
   'v24.23': {
     version: 'v24.23',
     title: 'Bản cập nhật v24.23: Quản Trị Chọn Nhiều Người Dùng & Dọn Dẹp Triệt Để Khách Vãng Lai (Multi-Select & Guest Purge)',
@@ -1277,7 +1289,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.76'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.24'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -1285,7 +1297,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v23.76'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v23.76';
+  if (!rawVer) return 'v24.24';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

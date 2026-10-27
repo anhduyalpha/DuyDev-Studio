@@ -47,6 +47,9 @@ class StudocuManager {
     this.justDownloadedTimeout = null;
     this.downloadedDocNames = this.loadDownloadedDocs();
     this.justDownloadedDocName = null;
+    this.justDownloadedDocId = null;
+    this.activeDownloadUrl = null;
+    this.activeTargetDocId = null;
     this.prevDownloadSnapshot = null;
   }
 
@@ -64,6 +67,7 @@ class StudocuManager {
       this.justDownloadedTimeout = null;
     }
     this.justDownloadedDocName = null;
+    this.justDownloadedDocId = null;
     this.downloadedDocNames.clear();
     try { sessionStorage.removeItem('ds_studocu_downloaded_docs'); } catch (_) {}
   }
@@ -78,10 +82,10 @@ class StudocuManager {
     this.stopPolling();
   }
 
-  markAsDownloaded(docName, isJust = false) {
-    if (!docName) return;
+  markAsDownloaded(docName, isJust = false, docId = null) {
+    if (!docName && !docId) return;
     const norm = (s) => (s || '').normalize('NFC').trim();
-    const key = norm(docName);
+    const key = docName ? norm(docName) : '';
 
     // Cancel existing timeout if active
     if (this.justDownloadedTimeout) {
@@ -91,14 +95,16 @@ class StudocuManager {
 
     // Only highlight the newest file (clear previous highlights to prevent stacking)
     this.downloadedDocNames.clear();
-    this.downloadedDocNames.add(key);
+    if (key) this.downloadedDocNames.add(key);
     this.justDownloadedDocName = key;
+    this.justDownloadedDocId = docId ? String(docId).trim() : null;
 
     // Automatically remove the highlight after 8 seconds ("rồi mất")
     this.justDownloadedTimeout = setTimeout(() => {
       if (this.justDownloadedDocName === key) {
         this.justDownloadedDocName = null;
-        this.downloadedDocNames.delete(key);
+        this.justDownloadedDocId = null;
+        if (key) this.downloadedDocNames.delete(key);
         this.notify();
       }
     }, 8000);
@@ -106,16 +112,20 @@ class StudocuManager {
     this.notify();
   }
 
-  isDocDownloaded(docName) {
-    if (!docName) return false;
+  isDocDownloaded(docName, docId = null) {
+    if (!docName && !docId) return false;
     const norm = (s) => (s || '').normalize('NFC').trim();
-    return this.downloadedDocNames.has(norm(docName));
+    if (docName && this.downloadedDocNames.has(norm(docName))) return true;
+    if (docId && this.justDownloadedDocId && String(docId).trim() === this.justDownloadedDocId) return true;
+    return false;
   }
 
-  isDocJustDownloaded(docName) {
-    if (!docName) return false;
+  isDocJustDownloaded(docName, docId = null) {
+    if (!docName && !docId) return false;
     const norm = (s) => (s || '').normalize('NFC').trim();
-    return this.justDownloadedDocName === norm(docName);
+    if (docName && this.justDownloadedDocName === norm(docName)) return true;
+    if (docId && this.justDownloadedDocId && String(docId).trim() === this.justDownloadedDocId) return true;
+    return false;
   }
 
   subscribe(fn) {
@@ -143,7 +153,8 @@ class StudocuManager {
       filteredItems: this.getFilteredItems(),
       counts: { pdf: this.files.length, trash: this.trash.length },
       downloadedDocNames: this.downloadedDocNames,
-      justDownloadedDocName: this.justDownloadedDocName
+      justDownloadedDocName: this.justDownloadedDocName,
+      justDownloadedDocId: this.justDownloadedDocId
     };
   }
 
@@ -188,6 +199,60 @@ class StudocuManager {
     this.notify();
   }
 
+  findFileMatch(identifier = null, targetDocId = null, targetUrl = null) {
+    if (!Array.isArray(this.files) || this.files.length === 0) return null;
+    const norm = (s) => (s || '').normalize('NFC').trim().toLowerCase();
+    const cleanExt = (s) => norm(s).replace(/\.(pdf|md)$/i, '');
+
+    const idNorm = identifier ? norm(identifier) : '';
+    const idClean = identifier ? cleanExt(identifier) : '';
+    const docId = targetDocId ? String(targetDocId).trim() : null;
+
+    // 1. Direct match by Studocu numeric doc ID across all metadata properties
+    if (docId) {
+      const byDocId = this.files.find(f => {
+        if (f.id && String(f.id) === docId) return true;
+        const urls = [f.original_url, f.source_url, f.url, f.download_url].filter(Boolean);
+        for (const u of urls) {
+          if (typeof u === 'string') {
+            const m = u.match(/\/(\d{5,15})(?:[/?#]|$)/);
+            if (m && m[1] === docId) return true;
+            if (u.includes(`/${docId}`)) return true;
+          }
+        }
+        if (f.name && new RegExp(`(^|\\D)${docId}(\\D|$)`).test(f.name)) return true;
+        if (f.title && new RegExp(`(^|\\D)${docId}(\\D|$)`).test(f.title)) return true;
+        return false;
+      });
+      if (byDocId) return byDocId;
+    }
+
+    // 2. Direct or normalized match by filename / title / internal ID
+    if (idNorm) {
+      const byName = this.files.find(f => {
+        const fnNorm = norm(f.name);
+        const ftNorm = norm(f.title);
+        const fId = norm(f.id);
+        if (fnNorm === idNorm || ftNorm === idNorm || fId === idNorm) return true;
+        if (idClean && (cleanExt(f.name) === idClean || cleanExt(f.title) === idClean)) return true;
+        return false;
+      });
+      if (byName) return byName;
+    }
+
+    // 3. Match by target URL
+    if (targetUrl) {
+      const urlNorm = norm(targetUrl);
+      const byUrl = this.files.find(f => {
+        const urls = [f.original_url, f.source_url, f.url].filter(Boolean);
+        return urls.some(u => norm(u) === urlNorm);
+      });
+      if (byUrl) return byUrl;
+    }
+
+    return null;
+  }
+
   getFilteredItems() {
     let list = this.currentTab === 'trash' ? [...this.trash] : [...this.files];
     if (this.searchQuery.trim()) {
@@ -220,6 +285,13 @@ class StudocuManager {
       return;
     }
     const targetUrl = check.url || url;
+    this.activeDownloadUrl = targetUrl;
+    const docIdMatch = targetUrl.match(/\/(\d{5,15})(?:[/?#]|$)/);
+    this.activeTargetDocId = docIdMatch ? docIdMatch[1] : null;
+
+    // Fast check: is this document already in local memory (e.g. downloaded previously)?
+    const existingFile = this.findFileMatch(null, this.activeTargetDocId, targetUrl);
+
     this.clearDownloadedHighlight();
     this.prevDownloadSnapshot = new Set(this.files.map(f => (f.name || f.title || '').normalize('NFC').trim()));
     this.isDownloading = true;
@@ -245,6 +317,19 @@ class StudocuManager {
         },
         body: JSON.stringify(payload)
       });
+
+      // INSTANT CACHE HIT: Server returned completed result directly (< 20ms)
+      if (data && (data.status === 'completed' || data.from_cache)) {
+        const docName = data.result?.pdf?.name || data.result?.name || data.result?.title || existingFile?.name || existingFile?.title;
+        const resolvedDocId = data.result?.pdf?.id || data.result?.id || this.activeTargetDocId || existingFile?.id;
+        this.finishJob(true, 'Tài liệu đã có sẵn trên máy chủ', docName, {
+          fromCache: true,
+          targetDocId: resolvedDocId,
+          targetUrl,
+          matchedFile: existingFile
+        });
+        return;
+      }
 
       this.currentJobId = data.job_id || data.id;
       saveActiveJob({ jobId: this.currentJobId, jobStartTime: this.jobStartTime, url });
@@ -352,8 +437,13 @@ class StudocuManager {
         if (job.status === 'completed' || job.status === 'success') {
           this.progress = 100;
           this.stopPolling();
-          const downloadedName = job?.result?.pdf?.name || job?.result?.name || null;
-          this.finishJob(true, 'Tải hoàn tất', downloadedName);
+          const downloadedName = job?.result?.pdf?.name || job?.result?.name || job?.result?.filename || job?.result?.title || null;
+          const resolvedDocId = job?.result?.pdf?.id || job?.result?.id || this.activeTargetDocId || null;
+          this.finishJob(true, job?.from_cache ? 'Tài liệu đã có sẵn trên máy chủ' : 'Tải hoàn tất', downloadedName, {
+            fromCache: Boolean(job?.from_cache),
+            targetDocId: resolvedDocId,
+            targetUrl: this.activeDownloadUrl
+          });
           return;
         } else if (job.status === 'error' || job.status === 'failed') {
           this.stopPolling();
@@ -401,8 +491,8 @@ class StudocuManager {
     this.pollTimeout = setTimeout(pollTick, 800);
   }
 
-  finishJob(isSuccess, message, downloadedName = null) {
-    if (!this.isDownloading && !this.currentJobId) return;
+  finishJob(isSuccess, message, downloadedName = null, options = {}) {
+    if (!this.isDownloading && !this.currentJobId && !options.fromCache) return;
     this.isDownloading = false;
     this.currentJobId = null;
     this.stopPolling();
@@ -417,14 +507,37 @@ class StudocuManager {
     if (isSuccess) {
       showToast(message || 'Tải hoàn tất', 'success');
       playCompleteSound();
+
+      const targetDocId = options.targetDocId || this.activeTargetDocId || null;
+      const targetUrl = options.targetUrl || this.activeDownloadUrl || null;
+
+      // Ensure active tab is 'pdf' and clear search so the document is visible
+      if (this.currentTab === 'trash') {
+        this.currentTab = 'pdf';
+      }
+      if (this.searchQuery) {
+        this.searchQuery = '';
+      }
+
+      // Step 1: Instant match if file is already in memory
+      let immediateMatch = options.matchedFile || this.findFileMatch(downloadedName, targetDocId, targetUrl);
+      if (immediateMatch) {
+        const canonicalName = immediateMatch.name || immediateMatch.title;
+        const canonicalId = immediateMatch.id || targetDocId;
+        this.markAsDownloaded(canonicalName, true, canonicalId);
+      }
+
+      // Step 2: Background refresh to capture new downloads or disk changes
       this.fetchFiles().then(() => {
-        let targetName = downloadedName;
-        if (!targetName && this.files.length > 0) {
+        let finalMatch = this.findFileMatch(downloadedName, targetDocId, targetUrl);
+        if (!finalMatch && this.files.length > 0) {
           const newlyAdded = this.files.find(f => !this.prevDownloadSnapshot?.has((f.name || f.title || '').normalize('NFC').trim()));
-          targetName = newlyAdded ? (newlyAdded.name || newlyAdded.title) : (this.files[0]?.name || this.files[0]?.title);
+          finalMatch = newlyAdded || this.files[0];
         }
-        if (targetName) {
-          this.markAsDownloaded(targetName, true);
+        if (finalMatch) {
+          const canonicalName = finalMatch.name || finalMatch.title;
+          const canonicalId = finalMatch.id || targetDocId;
+          this.markAsDownloaded(canonicalName, true, canonicalId);
         }
       });
     } else {

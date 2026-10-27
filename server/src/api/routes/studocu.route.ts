@@ -35,22 +35,19 @@ function matchesDocumentId(file: any, targetDocId: string): boolean {
   if (file.id === targetDocId) return true;
 
   // 2. Exact doc ID match from source/original URL
-  const urlsToCheck = [file.original_url, file.source_url];
-  if (typeof file.url === 'string' && (file.url.startsWith('http://') || file.url.startsWith('https://'))) {
-    urlsToCheck.push(file.url);
-  }
+  const urlsToCheck = [file.original_url, file.source_url, file.url, file.download_url, file.stream_url];
   for (const u of urlsToCheck) {
-    if (typeof u === 'string') {
+    if (typeof u === 'string' && u) {
       const m = u.match(/\/(\d{5,15})(?:[/?#]|$)/);
       if (m && m[1] === targetDocId) return true;
+      if (u.includes(`/${targetDocId}`)) return true;
     }
   }
 
-  // 3. Exact bounded numeric match in filename (prevents substring collisions like 12345 in 12345678)
-  if (typeof file.name === 'string') {
-    const boundaryRegex = new RegExp(`(^|\\D)${targetDocId}(\\D|$)`);
-    if (boundaryRegex.test(file.name)) return true;
-  }
+  // 3. Exact bounded numeric match in filename or title (prevents substring collisions like 12345 in 12345678)
+  const boundaryRegex = new RegExp(`(^|\\D)${targetDocId}(\\D|$)`);
+  if (typeof file.name === 'string' && boundaryRegex.test(file.name)) return true;
+  if (typeof file.title === 'string' && boundaryRegex.test(file.title)) return true;
 
   return false;
 }
