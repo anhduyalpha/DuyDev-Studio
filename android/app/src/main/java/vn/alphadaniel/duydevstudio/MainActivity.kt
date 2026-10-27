@@ -873,7 +873,14 @@ class MainActivity : AppCompatActivity() {
             detectedUrl.contains("tiktok.com", ignoreCase = true) ||
             detectedUrl.contains("douyin.com", ignoreCase = true) ||
             detectedUrl.contains("youtube.com", ignoreCase = true) ||
-            detectedUrl.contains("youtu.be", ignoreCase = true)
+            detectedUrl.contains("youtu.be", ignoreCase = true) ||
+            detectedUrl.contains("facebook.com", ignoreCase = true) ||
+            detectedUrl.contains("fb.watch", ignoreCase = true) ||
+            detectedUrl.contains("fb.com", ignoreCase = true) ||
+            detectedUrl.contains("instagram.com", ignoreCase = true) ||
+            detectedUrl.contains("instagr.am", ignoreCase = true) ||
+            detectedUrl.contains("spotify.com", ignoreCase = true) ||
+            detectedUrl.contains("spotify.link", ignoreCase = true)
         )
         // In Android 10+, browsers (like Chrome) share links as text/plain and populate ClipData with a tiny
         // preview thumbnail image for the system ShareSheet preview header. If this is a web link share,
@@ -950,8 +957,13 @@ class MainActivity : AppCompatActivity() {
                 val cleanUrl = detectedUrl.replace("\\", "\\\\").replace("'", "\\'")
                 if (!targetRoute.isNullOrBlank()) {
                     val toolId = when {
+                        targetRoute.contains("facebook") -> "facebook"
+                        targetRoute.contains("instagram") -> "instagram"
+                        targetRoute.contains("spotify") -> "spotify"
+                        targetRoute.contains("youtube") -> "youtube"
                         targetRoute.contains("tiktok") -> "tiktok"
                         targetRoute.contains("scribd") -> "scribd"
+                        targetRoute.contains("studocu") -> "studocu"
                         targetRoute.contains("qr") -> "qr"
                         targetRoute.contains("hash") -> "hash"
                         else -> "share"
@@ -964,16 +976,46 @@ class MainActivity : AppCompatActivity() {
                     """.trimIndent()
                 } else {
                     when {
-                        cleanUrl.contains("scribd.com") -> """
+                        cleanUrl.contains("facebook.com", ignoreCase = true) || cleanUrl.contains("fb.watch", ignoreCase = true) || cleanUrl.contains("fb.com", ignoreCase = true) -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'facebook', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/facebook-downloader';
+                            } catch (_) {}
+                        """.trimIndent()
+                        cleanUrl.contains("instagram.com", ignoreCase = true) || cleanUrl.contains("instagr.am", ignoreCase = true) -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'instagram', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/instagram-downloader';
+                            } catch (_) {}
+                        """.trimIndent()
+                        cleanUrl.contains("spotify.com", ignoreCase = true) || cleanUrl.contains("spotify.link", ignoreCase = true) -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'spotify', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/spotify-downloader';
+                            } catch (_) {}
+                        """.trimIndent()
+                        cleanUrl.contains("youtube.com", ignoreCase = true) || cleanUrl.contains("youtu.be", ignoreCase = true) -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'youtube', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/youtube-downloader';
+                            } catch (_) {}
+                        """.trimIndent()
+                        cleanUrl.contains("scribd.com", ignoreCase = true) -> """
                             try {
                                 sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'scribd', url: '$cleanUrl', ts: Date.now() }));
                                 window.location.hash = '#tool/scribd';
                             } catch (_) {}
                         """.trimIndent()
-                        cleanUrl.contains("tiktok.com") || cleanUrl.contains("douyin.com") -> """
+                        cleanUrl.contains("tiktok.com", ignoreCase = true) || cleanUrl.contains("douyin.com", ignoreCase = true) -> """
                             try {
                                 sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'tiktok', url: '$cleanUrl', ts: Date.now() }));
                                 window.location.hash = '#tool/tiktok';
+                            } catch (_) {}
+                        """.trimIndent()
+                        cleanUrl.contains("studocu.", ignoreCase = true) -> """
+                            try {
+                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'studocu', url: '$cleanUrl', ts: Date.now() }));
+                                window.location.hash = '#tool/studocu-dl';
                             } catch (_) {}
                         """.trimIndent()
                         else -> ""

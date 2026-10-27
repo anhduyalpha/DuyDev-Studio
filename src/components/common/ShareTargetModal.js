@@ -12,6 +12,10 @@ import { detectSmartRoute, handoffSmartUrl } from '../../utilities/smartUrlRoute
 let cleanupFn = null;
 
 const TYPE_LABELS = {
+  [SharePayloadType.FACEBOOK_URL]: 'Video Facebook',
+  [SharePayloadType.INSTAGRAM_URL]: 'Bài đăng Instagram',
+  [SharePayloadType.SPOTIFY_URL]: 'Nhạc Spotify',
+  [SharePayloadType.YOUTUBE_URL]: 'Video YouTube',
   [SharePayloadType.TIKTOK_URL]: 'Video TikTok',
   [SharePayloadType.SCRIBD_URL]: 'Tài liệu Scribd',
   [SharePayloadType.STUDOCU_URL]: 'Tài liệu Studocu',
@@ -25,6 +29,10 @@ const TYPE_LABELS = {
 };
 
 const TYPE_ICONS = {
+  [SharePayloadType.FACEBOOK_URL]: 'facebook',
+  [SharePayloadType.INSTAGRAM_URL]: 'instagram',
+  [SharePayloadType.SPOTIFY_URL]: 'music',
+  [SharePayloadType.YOUTUBE_URL]: 'youtube',
   [SharePayloadType.TIKTOK_URL]: 'video',
   [SharePayloadType.SCRIBD_URL]: 'book-open',
   [SharePayloadType.STUDOCU_URL]: 'book-open',
@@ -65,6 +73,9 @@ function renderPayloadPreview(payload, classification) {
   const isUrlType = [
     SharePayloadType.STUDOCU_URL,
     SharePayloadType.SCRIBD_URL,
+    SharePayloadType.FACEBOOK_URL,
+    SharePayloadType.INSTAGRAM_URL,
+    SharePayloadType.SPOTIFY_URL,
     SharePayloadType.YOUTUBE_URL,
     SharePayloadType.TIKTOK_URL,
     SharePayloadType.GENERIC_URL,
@@ -409,6 +420,38 @@ async function dispatchSharedPayloadToTool(action, payload) {
 
   try {
     switch (action.route) {
+      case '#tool/facebook':
+      case '#tool/facebook-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'facebook', route: '#tool/facebook-downloader', url: targetUrl });
+        }
+        break;
+      }
+      case '#tool/instagram':
+      case '#tool/instagram-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'instagram', route: '#tool/instagram-downloader', url: targetUrl });
+        }
+        break;
+      }
+      case '#tool/spotify':
+      case '#tool/spotify-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'spotify', route: '#tool/spotify-downloader', url: targetUrl });
+        }
+        break;
+      }
+      case '#tool/youtube':
+      case '#tool/youtube-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'youtube', route: '#tool/youtube-downloader', url: targetUrl });
+        }
+        break;
+      }
       case '#tool/tiktok':
       case '#tool/tiktok-downloader': {
         const { tiktokManager } = await import('../tools/tiktok/hooks/useTiktok.js');

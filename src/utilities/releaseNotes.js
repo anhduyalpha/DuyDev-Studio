@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.16': {
+    version: 'v24.16',
+    title: 'Bản cập nhật v24.16: Hỗ Trợ Đầy Đủ & Nhận Diện Toàn Diện Chia Sẻ Mọi Module Trên APK & Web',
+    date: '27/10/2026',
+    features: [
+      'Bộ Điều Phối Chia Sẻ Mở Rộng (Universal Share Target Registry): Hỗ trợ nhận diện và mở trực tiếp mọi nền tảng Media trên ứng dụng Android APK (Facebook, Instagram, Spotify, YouTube, TikTok, Scribd, Studocu), không còn bị rơi vào nhóm Liên kết web thông thường',
+      'Kiến Trúc Đăng Ký Mở (Pluggable Handler Architecture): Thiết kế hệ thống nhận diện URL dạng danh sách động (ShareUrlHandler) trên cả tầng Native Android và tầng Web PWA, cho phép dễ dàng mở rộng thêm bất kỳ module mới nào trong tương lai mà không làm vỡ kiến trúc cũ'
+    ],
+    fixes: [
+      'Bổ Sung Module Facebook Downloader Khi Chia Sẻ Link FB: Nhận diện chính xác các định dạng liên kết từ ứng dụng Facebook Android (/share/r/, /share/v/, /share/p/, /reel/, fb.watch) và tự động kích hoạt Facebook Downloader',
+      'Đồng Bộ Hóa Handoff & Auto-Start Toàn Diện: Hỗ trợ tự động trích xuất và chuyển tiếp dữ liệu chia sẻ mượt mà trên cả Instagram, Spotify, YouTube Downloader và các công cụ tiện ích PWA'
+    ]
+  },
   'v24.15': {
     version: 'v24.15',
     title: 'Bản cập nhật v24.15: Tối Ưu Thanh Tiện Ích Trình Xem File (Universal Viewer)',

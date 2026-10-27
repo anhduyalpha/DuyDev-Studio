@@ -259,6 +259,64 @@ describe('Web Share Target & Classifier Suite', () => {
       };
       const tiktokResult = classifySharedPayload(tiktokPayload);
       expect(tiktokResult.type).toBe(SharePayloadType.TIKTOK_URL);
+
+      const fbPayload = {
+        url: 'https://www.facebook.com/share/r/1CSQRnwyAi/',
+        files: [{ name: 'fb_thumb.jpg', size: 4096, type: 'image/jpeg' } as any]
+      };
+      const fbResult = classifySharedPayload(fbPayload);
+      expect(fbResult.type).toBe(SharePayloadType.FACEBOOK_URL);
+      expect(fbResult.recommendations[0].route).toBe('#tool/facebook-downloader');
+
+      const igPayload = {
+        url: 'https://www.instagram.com/reel/C-123456789/',
+        files: [{ name: 'ig_thumb.jpg', size: 3500, type: 'image/jpeg' } as any]
+      };
+      const igResult = classifySharedPayload(igPayload);
+      expect(igResult.type).toBe(SharePayloadType.INSTAGRAM_URL);
+      expect(igResult.recommendations[0].route).toBe('#tool/instagram-downloader');
+
+      const spotifyPayload = {
+        url: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+        files: [{ name: 'cover.jpg', size: 7000, type: 'image/jpeg' } as any]
+      };
+      const spotifyResult = classifySharedPayload(spotifyPayload);
+      expect(spotifyResult.type).toBe(SharePayloadType.SPOTIFY_URL);
+      expect(spotifyResult.recommendations[0].route).toBe('#tool/spotify-downloader');
+    });
+
+    it('should classify Facebook, Instagram, and Spotify URLs with mobile links', () => {
+      const fbLinks = [
+        'https://www.facebook.com/share/r/1CSQRnwyAi/',
+        'https://fb.watch/vBxyz123/',
+        'https://facebook.com/reel/987654321'
+      ];
+      for (const link of fbLinks) {
+        const res = classifySharedPayload({ url: link });
+        expect(res.type).toBe(SharePayloadType.FACEBOOK_URL);
+        expect(res.recommendations[0].route).toBe('#tool/facebook-downloader');
+      }
+
+      const igLinks = [
+        'https://www.instagram.com/reel/C-123456789/',
+        'https://instagram.com/p/DFxyz123/',
+        'https://instagr.am/reel/12345'
+      ];
+      for (const link of igLinks) {
+        const res = classifySharedPayload({ url: link });
+        expect(res.type).toBe(SharePayloadType.INSTAGRAM_URL);
+        expect(res.recommendations[0].route).toBe('#tool/instagram-downloader');
+      }
+
+      const spotifyLinks = [
+        'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+        'https://spotify.link/AbCdEf123'
+      ];
+      for (const link of spotifyLinks) {
+        const res = classifySharedPayload({ url: link });
+        expect(res.type).toBe(SharePayloadType.SPOTIFY_URL);
+        expect(res.recommendations[0].route).toBe('#tool/spotify-downloader');
+      }
     });
 
     it('should prioritize generic URLs over Chrome preview thumbnail', () => {

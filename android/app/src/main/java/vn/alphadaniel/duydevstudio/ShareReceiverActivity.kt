@@ -27,6 +27,123 @@ class ShareReceiverActivity : AppCompatActivity() {
         val mode: String? = null
     )
 
+    data class ShareUrlHandler(
+        val id: String,
+        val metaLabel: String,
+        val primaryActionLabel: String,
+        val primaryRoute: String,
+        val matches: (url: String, text: String) -> Boolean,
+        val extractUrl: ((url: String, text: String) -> String)? = null
+    )
+
+    private val urlHandlers = listOf(
+        ShareUrlHandler(
+            id = "facebook",
+            metaLabel = "VIDEO & BÀI VIẾT FACEBOOK",
+            primaryActionLabel = "Tải Video & Reel Facebook (HD/SD)",
+            primaryRoute = "#tool/facebook-downloader",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("facebook.com") || combined.contains("fb.watch") || combined.contains("fb.com")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.com)/[^\s"'<>()]+""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        ),
+        ShareUrlHandler(
+            id = "instagram",
+            metaLabel = "BÀI ĐĂNG & REEL INSTAGRAM",
+            primaryActionLabel = "Tải Video & Ảnh Reel Instagram",
+            primaryRoute = "#tool/instagram-downloader",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("instagram.com") || combined.contains("instagr.am")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:[a-zA-Z0-9_-]+\.)?(?:instagram\.com|instagr\.am)/[^\s"'<>()]+""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        ),
+        ShareUrlHandler(
+            id = "spotify",
+            metaLabel = "NHẠC & BÀI HÁT SPOTIFY",
+            primaryActionLabel = "Tải Bài Hát / Playlist Spotify MP3",
+            primaryRoute = "#tool/spotify-downloader",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("spotify.com") || combined.contains("spotify.link")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:(?:open\.)?spotify\.com|spotify\.link)/[^\s"'<>()]+""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        ),
+        ShareUrlHandler(
+            id = "youtube",
+            metaLabel = "VIDEO & ÂM THANH YOUTUBE",
+            primaryActionLabel = "Tải Video & Nhạc YouTube (1080p/MP3)",
+            primaryRoute = "#tool/youtube-downloader",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("youtube.com") || combined.contains("youtu.be")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:[a-zA-Z0-9_-]+\.)?(?:youtube\.com|youtu\.be)/[^\s"'<>()]+""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        ),
+        ShareUrlHandler(
+            id = "tiktok",
+            metaLabel = "VIDEO / ALBUM ẢNH TIKTOK",
+            primaryActionLabel = "Tải Video & Album Ảnh TikTok Không Logo",
+            primaryRoute = "#tool/tiktok",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("tiktok.com") || combined.contains("douyin.com")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:(?:vt|vm|m|www|v)\.)?(?:tiktok\.com|douyin\.com)/[^\s"'<>()]+""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        ),
+        ShareUrlHandler(
+            id = "scribd",
+            metaLabel = "TÀI LIỆU SCRIBD",
+            primaryActionLabel = "Tải tài liệu Scribd",
+            primaryRoute = "#tool/scribd",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("scribd.com")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:www\.)?scribd\.com/(?:document|doc|presentation|embeds)/\d+[^\s"'<>()]*""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        ),
+        ShareUrlHandler(
+            id = "studocu",
+            metaLabel = "TÀI LIỆU STUDOCU",
+            primaryActionLabel = "Tải tài liệu Studocu",
+            primaryRoute = "#tool/studocu-dl",
+            matches = { url, text ->
+                val combined = "$url $text".lowercase(Locale.ROOT)
+                combined.contains("studocu.com") || combined.contains("studocu.vn")
+            },
+            extractUrl = { url, text ->
+                val combined = if (url.isNotBlank()) url else text
+                Regex("""https?://(?:www\.)?studocu\.(?:com|vn)/[^\s"'<>()]+""").find(combined)?.value
+                    ?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
+            }
+        )
+    )
+
     private val collectedUris = mutableListOf<Uri>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,28 +202,6 @@ class ShareReceiverActivity : AppCompatActivity() {
         }
 
         showNativeShareDialog(collectedUris, text, url)
-    }
-
-    private fun isScribdContent(url: String, text: String): Boolean {
-        val combined = "$url $text".lowercase(Locale.ROOT)
-        return combined.contains("scribd.com")
-    }
-
-    private fun extractScribdUrl(url: String, text: String): String {
-        val combined = if (url.isNotBlank()) url else text
-        val match = Regex("""https?://(?:www\.)?scribd\.com/(?:document|doc|presentation|embeds)/\d+[^\s"'<>()]*""").find(combined)
-        return match?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
-    }
-
-    private fun isTikTokContent(url: String, text: String): Boolean {
-        val combined = "$url $text".lowercase(Locale.ROOT)
-        return combined.contains("tiktok.com") || combined.contains("douyin.com")
-    }
-
-    private fun extractTikTokUrl(url: String, text: String): String {
-        val combined = if (url.isNotBlank()) url else text
-        val match = Regex("""https?://(?:(?:vt|vm|m|www|v)\.)?(?:tiktok\.com|douyin\.com)/[^\s"'<>()]+""").find(combined)
-        return match?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: (if (url.isNotBlank()) url else text)
     }
 
     private fun showNativeShareDialog(sharedUris: List<Uri>, text: String, url: String) {
@@ -172,19 +267,13 @@ class ShareReceiverActivity : AppCompatActivity() {
             val isLink = url.isNotEmpty()
             tvFileName.text = if (isLink) url else text
 
-            if (isTikTokContent(url, text)) {
-                tvFileMeta.text = "VIDEO / ALBUM ẢNH TIKTOK"
-                actions.add(ShareAction("Tải Video & Album Ảnh TikTok Không Logo", "#tool/tiktok"))
+            val matchedHandler = if (isLink) urlHandlers.firstOrNull { it.matches(url, text) } else null
+
+            if (matchedHandler != null) {
+                tvFileMeta.text = matchedHandler.metaLabel
+                actions.add(ShareAction(matchedHandler.primaryActionLabel, matchedHandler.primaryRoute))
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
                 actions.add(ShareAction("Tính mã băm toàn vẹn", "#tool/hash-checksum"))
-            } else if (isScribdContent(url, text)) {
-                tvFileMeta.text = "TÀI LIỆU SCRIBD"
-                actions.add(ShareAction("Tải tài liệu Scribd", "#tool/scribd"))
-                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
-            } else if (url.contains("studocu.com") || url.contains("studocu.vn")) {
-                tvFileMeta.text = "TÀI LIỆU STUDOCU"
-                actions.add(ShareAction("Tải tài liệu Studocu", "#tool/studocu-dl"))
-                actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
             } else if (isImageExtension(url)) {
                 tvFileMeta.text = "LIÊN KẾT HÌNH ẢNH"
                 actions.add(ShareAction("Quét mã QR từ ảnh", "#tool/qr-scan"))
@@ -195,33 +284,45 @@ class ShareReceiverActivity : AppCompatActivity() {
                 tvFileMeta.text = "LIÊN KẾT WEB"
                 actions.add(ShareAction("Tạo mã QR cho liên kết", "#tool/qr-multi"))
                 actions.add(ShareAction("Quét mã QR từ trang web", "#tool/qr-scan"))
-                actions.add(ShareAction("Thử tải Video / Media (TikTok, v.v.)", "#tool/tiktok"))
+                actions.add(ShareAction("Thử tải Video Facebook / TikTok / Instagram", "#tool/facebook-downloader"))
+                actions.add(ShareAction("Thử tải Video & Nhạc YouTube", "#tool/youtube-downloader"))
+                actions.add(ShareAction("Thử tải Nhạc Spotify", "#tool/spotify-downloader"))
                 actions.add(ShareAction("Tính mã băm toàn vẹn", "#tool/hash-checksum"))
             } else {
                 tvFileMeta.text = "VĂN BẢN THUẦN"
                 actions.add(ShareAction("Tạo mã QR cho văn bản", "#tool/qr-multi"))
                 actions.add(ShareAction("Tính mã băm chuỗi", "#tool/hash-checksum"))
             }
+
+            // Render action items
+            val inflater = LayoutInflater.from(this)
+            for (item in actions) {
+                val itemView = inflater.inflate(R.layout.item_share_action, actionsContainer, false)
+                val tvLabel = itemView.findViewById<TextView>(R.id.tvActionLabel)
+                tvLabel.text = item.label
+
+                itemView.setOnClickListener {
+                    dialog.dismiss()
+                    val targetUrl = matchedHandler?.extractUrl?.invoke(url, text) ?: if (url.isNotBlank()) url else text
+                    forwardToMainActivity(item, targetUrl)
+                }
+                actionsContainer.addView(itemView)
+            }
         }
 
-        // Render action items
-        val inflater = LayoutInflater.from(this)
-        for (item in actions) {
-            val itemView = inflater.inflate(R.layout.item_share_action, actionsContainer, false)
-            val tvLabel = itemView.findViewById<TextView>(R.id.tvActionLabel)
-            tvLabel.text = item.label
+        if (sharedUris.isNotEmpty()) {
+            val inflater = LayoutInflater.from(this)
+            for (item in actions) {
+                val itemView = inflater.inflate(R.layout.item_share_action, actionsContainer, false)
+                val tvLabel = itemView.findViewById<TextView>(R.id.tvActionLabel)
+                tvLabel.text = item.label
 
-            itemView.setOnClickListener {
-                dialog.dismiss()
-                val targetUrl = when {
-                    isTikTokContent(url, text) -> extractTikTokUrl(url, text)
-                    isScribdContent(url, text) -> extractScribdUrl(url, text)
-                    url.isNotBlank() -> url
-                    else -> text
+                itemView.setOnClickListener {
+                    dialog.dismiss()
+                    forwardToMainActivity(item, null)
                 }
-                forwardToMainActivity(item, targetUrl)
+                actionsContainer.addView(itemView)
             }
-            actionsContainer.addView(itemView)
         }
 
         dialog.show()

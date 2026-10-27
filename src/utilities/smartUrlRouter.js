@@ -19,16 +19,16 @@ const TIKTOK_REGEX = /(?:https?:\/\/)?(?:(?:vt|vm|www|m|v)\.)?tiktok\.com\/[^\s"
 const DOUYIN_REGEX = /(?:https?:\/\/)?(?:(?:v|www|m)\.)?douyin\.com\/[^\s"']+/i;
 
 // YouTube video / shorts / youtu.be URL patterns
-const YOUTUBE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|v\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}[^\s"'>]*/i;
+const YOUTUBE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:youtube\.com|youtu\.be)\/[^\s"'>]*/i;
 
-// Facebook video / reel / watch URL patterns
-const FACEBOOK_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com\/(?:[a-zA-Z0-9._-]+\/videos|reel|watch)|fb\.watch)[^\s"'>]*/i;
+// Facebook video / reel / watch / share URL patterns
+const FACEBOOK_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.com)\/[^\s"'>]*/i;
 
 // Instagram post / reel / story URL patterns
-const INSTAGRAM_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?instagram\.com\/(?:p|reel|reels|tv|stories)\/[a-zA-Z0-9_-]+[^\s"'>]*/i;
+const INSTAGRAM_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:instagram\.com|instagr\.am)\/[^\s"'>]*/i;
 
-// Spotify track / album URL patterns
-const SPOTIFY_REGEX = /(?:https?:\/\/)?(?:open\.)?spotify\.com\/(?:track|album|playlist|intl-[a-z]+\/track)\/([a-zA-Z0-9]+)[^\s"'>]*/i;
+// Spotify track / album / playlist / shortlink URL patterns
+const SPOTIFY_REGEX = /(?:https?:\/\/)?(?:(?:open\.)?spotify\.com|spotify\.link)\/[^\s"'>]*/i;
 
 /**
  * Detect if text contains a supported tool URL.
@@ -153,7 +153,15 @@ export function handoffSmartUrl(smartResult) {
     console.warn('[SmartUrlRouter] Failed to set sessionStorage:', err);
   }
 
-  const targetRoute = smartResult.route || (smartResult.toolId === 'scribd' ? '#tool/scribd' : smartResult.toolId === 'youtube' ? '#tool/youtube-downloader' : '#tool/tiktok');
+  const routeMap = {
+    scribd: '#tool/scribd',
+    youtube: '#tool/youtube-downloader',
+    facebook: '#tool/facebook-downloader',
+    instagram: '#tool/instagram-downloader',
+    spotify: '#tool/spotify-downloader',
+    tiktok: '#tool/tiktok'
+  };
+  const targetRoute = smartResult.route || routeMap[smartResult.toolId] || '#tool/tiktok';
   if (window.location.hash === targetRoute) {
     window.dispatchEvent(new CustomEvent('ds:pending-autostart-ready', { detail: smartResult }));
   } else {

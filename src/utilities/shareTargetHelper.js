@@ -6,6 +6,9 @@
 
 /** @enum {string} Payload classification types */
 export const SharePayloadType = {
+  FACEBOOK_URL: 'FACEBOOK_URL',
+  INSTAGRAM_URL: 'INSTAGRAM_URL',
+  SPOTIFY_URL: 'SPOTIFY_URL',
   YOUTUBE_URL: 'YOUTUBE_URL',
   TIKTOK_URL: 'TIKTOK_URL',
   SCRIBD_URL: 'SCRIBD_URL',
@@ -54,6 +57,24 @@ function isStudocuHost(hostname) {
   if (!hostname) return false;
   const host = hostname.toLowerCase();
   return host === 'studocu.com' || host.endsWith('.studocu.com') || host === 'studocu.vn' || host.endsWith('.studocu.vn');
+}
+
+function isFacebookHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'facebook.com' || host.endsWith('.facebook.com') || host === 'fb.watch' || host === 'fb.com' || host.endsWith('.fb.com');
+}
+
+function isInstagramHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'instagram.com' || host.endsWith('.instagram.com') || host === 'instagr.am' || host.endsWith('.instagr.am');
+}
+
+function isSpotifyHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'spotify.com' || host.endsWith('.spotify.com') || host === 'spotify.link' || host.endsWith('.spotify.link');
 }
 
 /**
@@ -449,7 +470,10 @@ export function isBrowserThumbnailFile(file, effectiveUrl) {
     isStudocuHost(hostname) ||
     isScribdHost(hostname) ||
     isYouTubeHost(hostname) ||
-    isTikTokHost(hostname);
+    isTikTokHost(hostname) ||
+    isFacebookHost(hostname) ||
+    isInstagramHost(hostname) ||
+    isSpotifyHost(hostname);
 
   return isSmallThumb && (isSpecializedService || isNumericOrThumbPattern);
 }
@@ -546,6 +570,39 @@ export function classifySharedPayload(payload) {
   if (effectiveUrl) {
     try {
       const parsed = new URL(effectiveUrl);
+      if (isFacebookHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.FACEBOOK_URL,
+          recommendations: [
+            { label: 'Tải Video & Reel Facebook (HD/SD)', route: '#tool/facebook-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+            { label: 'Tính mã băm toàn vẹn', route: '#tool/hash-checksum' },
+          ],
+        };
+      }
+
+      if (isInstagramHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.INSTAGRAM_URL,
+          recommendations: [
+            { label: 'Tải Video & Ảnh Reel Instagram', route: '#tool/instagram-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+            { label: 'Tính mã băm toàn vẹn', route: '#tool/hash-checksum' },
+          ],
+        };
+      }
+
+      if (isSpotifyHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.SPOTIFY_URL,
+          recommendations: [
+            { label: 'Tải Bài Hát / Playlist Spotify MP3', route: '#tool/spotify-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+            { label: 'Tính mã băm toàn vẹn', route: '#tool/hash-checksum' },
+          ],
+        };
+      }
+
       if (isYouTubeHost(parsed.hostname)) {
         return {
           type: SharePayloadType.YOUTUBE_URL,
@@ -593,7 +650,10 @@ export function classifySharedPayload(payload) {
       recommendations: [
         { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi', isPrimary: true },
         { label: 'Quét mã QR từ trang web này', route: '#tool/qr-scan' },
-        { label: 'Rút gọn liên kết', route: '#tool/qr-multi' },
+        { label: 'Thử tải Video Facebook / TikTok / Instagram', route: '#tool/facebook-downloader' },
+        { label: 'Thử tải Video & Nhạc YouTube', route: '#tool/youtube-downloader' },
+        { label: 'Thử tải Nhạc Spotify', route: '#tool/spotify-downloader' },
+        { label: 'Tính mã băm toàn vẹn', route: '#tool/hash-checksum' },
       ],
     };
   }

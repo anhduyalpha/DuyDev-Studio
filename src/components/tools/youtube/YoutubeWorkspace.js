@@ -10,11 +10,13 @@ import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { soundEngine } from '../../../utilities/soundEngine.js';
 import { showToast } from '../../../utilities/toast.js';
 import { readText } from '../../../utilities/clipboard.js';
+import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 
 export class YoutubeWorkspace {
   constructor(containerEl) {
     this.container = containerEl;
     this.unsubscribe = null;
+    this.handlePendingEvent = null;
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
     this.boundHandlePaste = this.handlePaste.bind(this);
@@ -26,9 +28,28 @@ export class YoutubeWorkspace {
       this.render();
     });
     this.render();
+
+    const pendingUrl = consumePendingAutoStart('youtube');
+    if (pendingUrl) {
+      youtubeManager.setUrl(pendingUrl);
+      setTimeout(() => youtubeManager.resolve(pendingUrl), 60);
+    }
+
+    this.handlePendingEvent = (e) => {
+      if (e.detail?.toolId === 'youtube' && e.detail.url) {
+        const url = e.detail.url.trim();
+        youtubeManager.setUrl(url);
+        setTimeout(() => youtubeManager.resolve(url), 60);
+      }
+    };
+    window.addEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
   }
 
   unmount() {
+    if (this.handlePendingEvent) {
+      window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
+      this.handlePendingEvent = null;
+    }
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;
