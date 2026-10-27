@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.22': {
+    version: 'v24.22',
+    title: 'Bản cập nhật v24.22: Hỗ Trợ Toàn Diện Tải Bài Viết & Album Ảnh Facebook (Facebook Post Downloader)',
+    date: '27/10/2026',
+    features: [
+      'Hỗ Trợ Tải Bài Viết & Ảnh Facebook Đầy Đủ (Facebook Post & Photo Extraction): Tích hợp cơ chế trích xuất bài viết Facebook (facebook.com/share/..., /posts/..., /photos/...) qua crawler chuyên dụng, tự động lấy tác giả, nội dung bài viết và ảnh gốc độ phân giải cao Full HD (1080p)',
+      'Giao Diện Tương Tác Đa Định Dạng (Multi-Media Post Workspace): Hiển thị trích dẫn bài viết, trình xem ảnh trực quan, bộ chọn album ảnh và nút tải ảnh trực tiếp (.JPG) hoặc lưu vào Studio Drive'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Từ Chối Liên Kết Post Facebook: Loại bỏ hoàn toàn lỗi Cannot parse data khi dán liên kết bài viết Facebook dạng share link'
+    ]
+  },
   'v24.21': {
     version: 'v24.21',
     title: 'Bản cập nhật v24.21: Khắc Phục Triệt Để Tràn Kích Thước Avatar & Chuẩn Hoá Header Di Động / APK',

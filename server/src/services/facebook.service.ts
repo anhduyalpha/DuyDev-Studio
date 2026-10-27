@@ -37,29 +37,88 @@ export class FacebookService {
   }
 
   /**
-   * Resolves Facebook video metadata using multi-tier strategy
+   * Helper to decode HTML entities (including 32-bit emojis)
+   */
+  private static decodeHtmlEntities(str: string): string {
+    if (!str) return '';
+    return str
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+        try {
+          return String.fromCodePoint(parseInt(hex, 16));
+        } catch {
+          return '';
+        }
+      })
+      .replace(/&#(\d+);/g, (_, dec) => {
+        try {
+          return String.fromCodePoint(parseInt(dec, 10));
+        } catch {
+          return '';
+        }
+      })
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&#064;/g, '@');
+  }
+
+  /**
+   * Resolves Facebook video or post metadata using multi-tier strategy
    */
   static async resolveVideo(rawInput: string): Promise<FacebookVideoData> {
     const targetUrl = this.extractUrl(rawInput);
-    logger.info({ targetUrl }, '[Facebook] Resolving video metadata...');
+    logger.info({ targetUrl }, '[Facebook] Resolving media metadata...');
 
     // Extract fallback ID
+    const shareMatch = targetUrl.match(/share\/(?:p\/|v\/|r\/)?([a-zA-Z0-9_-]+)/i);
     const reelMatch = targetUrl.match(/reel(?:s)?\/([a-zA-Z0-9_-]+)/i);
     const watchMatch = targetUrl.match(/[?&]v=(\d+)/i);
-    const postMatch = targetUrl.match(/videos\/(\d+)/i);
-    const fallbackId = (reelMatch?.[1] || watchMatch?.[1] || postMatch?.[1] || `fb_${Date.now()}`);
+    const postMatch = targetUrl.match(/(?:posts|videos|photos)\/([a-zA-Z0-9_-]+)/i);
+    const photoMatch = targetUrl.match(/[?&]fbid=(\d+)/i);
+    const fallbackId = (shareMatch?.[1] || reelMatch?.[1] || watchMatch?.[1] || postMatch?.[1] || photoMatch?.[1] || `fb_${Date.now()}`);
 
     let resolvedData: FacebookVideoData | null = null;
 
-    // --- Tier 1: Open Resolver / RapidAPI if configured ---
-    try {
-      const apiResult = await this.tryApiExtraction(targetUrl, fallbackId);
-      if (apiResult) {
-        resolvedData = apiResult;
-        logger.info({ id: resolvedData.id }, '[Facebook] Resolved via Tier 1 API');
+    const isExplicitPostOrShare = targetUrl.includes('/share/') || targetUrl.includes('/posts/') || targetUrl.includes('/photos/') || targetUrl.includes('fbid=') || targetUrl.includes('/photo.php');
+
+    // If it's a post/share link, try post extraction first
+    if (isExplicitPostOrShare) {
+      try {
+        const postResult = await this.tryPostExtraction(targetUrl, fallbackId);
+        if (postResult) {
+          resolvedData = postResult;
+          logger.info({ id: resolvedData.id, mediaType: resolvedData.mediaType }, '[Facebook] Resolved via Post Extractor');
+
+          // If the post has video, try yt-dlp to enrich formats if possible
+          if (resolvedData.mediaType === 'video' && (!resolvedData.videoHdUrl || resolvedData.formats.length <= 1)) {
+            try {
+              const ytResult = await this.tryYtdlpExtraction(targetUrl, fallbackId);
+              if (ytResult && ytResult.formats.length > 0) {
+                resolvedData.formats = ytResult.formats;
+                resolvedData.videoHdUrl = ytResult.videoHdUrl || resolvedData.videoHdUrl;
+                resolvedData.videoSdUrl = ytResult.videoSdUrl || resolvedData.videoSdUrl;
+              }
+            } catch {}
+          }
+        }
+      } catch (postErr: any) {
+        logger.debug({ err: postErr?.message }, '[Facebook] Post extraction skipped');
       }
-    } catch (e: any) {
-      logger.debug({ err: e?.message }, '[Facebook] Tier 1 API skipped');
+    }
+
+    // --- Tier 1: Open Resolver / RapidAPI if configured ---
+    if (!resolvedData) {
+      try {
+        const apiResult = await this.tryApiExtraction(targetUrl, fallbackId);
+        if (apiResult) {
+          resolvedData = apiResult;
+          logger.info({ id: resolvedData.id }, '[Facebook] Resolved via Tier 1 API');
+        }
+      } catch (e: any) {
+        logger.debug({ err: e?.message }, '[Facebook] Tier 1 API skipped');
+      }
     }
 
     // --- Tier 2: yt-dlp CLI ---
@@ -75,8 +134,21 @@ export class FacebookService {
       }
     }
 
+    // --- Tier 3 Fallback: Post Extractor for any unhandled URLs ---
     if (!resolvedData) {
-      throw new BadRequestError('Không thể lấy thông tin video Facebook này. Video có thể đang ở chế độ riêng tư, trong nhóm kín hoặc đã bị xóa.');
+      try {
+        const postResult = await this.tryPostExtraction(targetUrl, fallbackId);
+        if (postResult) {
+          resolvedData = postResult;
+          logger.info({ id: resolvedData.id, mediaType: resolvedData.mediaType }, '[Facebook] Resolved via Tier 3 Post Extractor fallback');
+        }
+      } catch (postErr: any) {
+        logger.warn({ err: postErr?.message }, '[Facebook] Tier 3 Post Extractor fallback failed');
+      }
+    }
+
+    if (!resolvedData) {
+      throw new BadRequestError('Không thể lấy thông tin bài viết hoặc video Facebook này. Nội dung có thể đang ở chế độ riêng tư, trong nhóm kín hoặc đã bị xóa.');
     }
 
     // Check Drive duplication
@@ -218,12 +290,139 @@ export class FacebookService {
       formats,
       videoHdUrl: videoHdUrl || undefined,
       videoSdUrl: videoSdUrl || videoHdUrl,
+      mediaType: 'video',
       extractor: 'ytdlp'
     };
   }
 
   /**
-   * Proxies Facebook video stream to client with HTTP 206 Partial Content support
+   * Tier 3 / Post Extractor: Extracts Facebook Posts, Photos, Albums and embedded Video Posts
+   */
+  private static async tryPostExtraction(targetUrl: string, fallbackId: string): Promise<FacebookVideoData | null> {
+    try {
+      logger.info({ targetUrl }, '[Facebook] Attempting post metadata extraction via Facebook crawler UA...');
+      const res = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'
+        },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!res.ok) {
+        logger.warn({ status: res.status }, '[Facebook] Post crawler request failed');
+        return null;
+      }
+
+      const html = await res.text();
+      const finalUrl = res.url || targetUrl;
+
+      const getMeta = (prop: string): string => {
+        const m = html.match(new RegExp(`<meta\\s+(?:property|name)=["'](?:og:|twitter:)?${prop}["']\\s+content=["']([^"']+)["']`, 'i'))
+          || html.match(new RegExp(`<meta\\s+content=["']([^"']+)["']\\s+(?:property|name)=["'](?:og:|twitter:)?${prop}["']`, 'i'));
+        return m ? this.decodeHtmlEntities(m[1]) : '';
+      };
+
+      const ogTitle = getMeta('title');
+      const ogDesc = getMeta('description');
+      const ogImage = getMeta('image');
+      const ogVideo = getMeta('video') || getMeta('video:url') || getMeta('video:secure_url');
+
+      if (!ogTitle && !ogDesc && !ogImage && !ogVideo) {
+        return null;
+      }
+
+      // Check ID from finalUrl or fallbackId
+      const idMatch = finalUrl.match(/(?:posts|videos|photos|share|reel|fbid=)\/?([0-9a-zA-Z_-]+)/i);
+      const postId = idMatch?.[1] || fallbackId;
+
+      // Author extraction
+      const authorName = ogTitle || 'Facebook User';
+      const cleanDesc = ogDesc || '';
+      const displayTitle = cleanDesc 
+        ? (cleanDesc.length > 80 ? cleanDesc.slice(0, 77) + '...' : cleanDesc)
+        : (ogTitle ? `${ogTitle} - Bài viết` : 'Facebook Post');
+
+      // Check for attached photos
+      const fbidMatches = Array.from(new Set(Array.from(html.matchAll(/fbid=(\d+)/g)).map(m => m[1])));
+      const images: Array<{ id?: string; url: string; label?: string }> = [];
+
+      if (fbidMatches.length > 0) {
+        for (let i = 0; i < fbidMatches.length; i++) {
+          const fid = fbidMatches[i];
+          images.push({
+            id: fid,
+            url: `https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=${fid}`,
+            label: `Ảnh ${i + 1}`
+          });
+        }
+      } else if (ogImage) {
+        images.push({
+          url: ogImage,
+          label: 'Ảnh đại diện bài viết'
+        });
+      }
+
+      // If video exists in og tags
+      if (ogVideo && ogVideo.startsWith('http')) {
+        const formats: FacebookMediaFormat[] = [
+          {
+            quality: 'hd',
+            label: 'Video Post',
+            url: ogVideo,
+            ext: 'mp4'
+          }
+        ];
+
+        return {
+          id: postId,
+          title: displayTitle,
+          caption: cleanDesc,
+          author: { name: authorName },
+          cover: ogImage,
+          duration: 0,
+          formats,
+          videoHdUrl: ogVideo,
+          videoSdUrl: ogVideo,
+          mediaType: 'video',
+          extractor: 'scraper'
+        };
+      }
+
+      // If no video, it's an image/photo post
+      if (images.length > 0) {
+        const formats: FacebookMediaFormat[] = images.map((img, idx) => ({
+          quality: `photo_${idx + 1}`,
+          label: img.label || `Ảnh ${idx + 1}`,
+          url: img.url,
+          ext: 'jpg'
+        }));
+
+        return {
+          id: postId,
+          title: displayTitle,
+          caption: cleanDesc,
+          author: { name: authorName },
+          cover: ogImage || images[0].url,
+          duration: 0,
+          formats,
+          mediaType: 'image',
+          images,
+          extractor: 'scraper'
+        };
+      }
+
+      return null;
+    } catch (err: any) {
+      logger.warn({ err: err?.message }, '[Facebook] Post extraction encountered an error');
+      return null;
+    }
+  }
+
+  /**
+   * Proxies Facebook video or image stream to client with HTTP 206 Partial Content support
    */
   static async proxyStream(
     targetUrl: string,
@@ -232,8 +431,9 @@ export class FacebookService {
     rangeHeader: string | undefined,
     reply: FastifyReply
   ): Promise<any> {
+    const isFbLookaside = targetUrl.includes('lookaside.fbsbx.com');
     const headers: Record<string, string> = {
-      'User-Agent': DEFAULT_UA,
+      'User-Agent': isFbLookaside ? 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' : DEFAULT_UA,
       'Referer': 'https://www.facebook.com/'
     };
     if (rangeHeader) {
@@ -246,11 +446,15 @@ export class FacebookService {
     });
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
-      throw new BadRequestError(`Không thể kết nối đến luồng video: HTTP ${upstreamRes.status}`);
+      throw new BadRequestError(`Không thể kết nối đến nội dung Facebook: HTTP ${upstreamRes.status}`);
     }
 
+    const upstreamType = upstreamRes.headers.get('content-type');
+    const isImage = isFbLookaside || upstreamType?.startsWith('image/') || filename.endsWith('.jpg') || filename.endsWith('.png');
+    const defaultMime = isImage ? 'image/jpeg' : 'video/mp4';
+
     reply.status(upstreamRes.status);
-    reply.header('Content-Type', upstreamRes.headers.get('content-type') || 'video/mp4');
+    reply.header('Content-Type', upstreamType || defaultMime);
     reply.header('Accept-Ranges', 'bytes');
 
     const contentLength = upstreamRes.headers.get('content-length');
@@ -260,7 +464,7 @@ export class FacebookService {
     if (contentRange) reply.header('Content-Range', contentRange);
 
     if (download) {
-      const safeName = filename || 'facebook_video.mp4';
+      const safeName = filename || (isImage ? 'facebook_photo.jpg' : 'facebook_video.mp4');
       const encodedName = encodeURIComponent(safeName);
       const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
       reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
@@ -295,10 +499,10 @@ export class FacebookService {
     try {
       const files = await fsPromises.readdir(fbDir, { withFileTypes: true });
       for (const file of files) {
-        if (file.isDirectory() || !file.name.endsWith('.mp4')) continue;
+        if (file.isDirectory() || (!file.name.endsWith('.mp4') && !file.name.endsWith('.jpg') && !file.name.endsWith('.png'))) continue;
 
-        const videoDiskPath = path.join(fbDir, file.name);
-        if (!fs.existsSync(videoDiskPath)) continue;
+        const mediaDiskPath = path.join(fbDir, file.name);
+        if (!fs.existsSync(mediaDiskPath)) continue;
 
         let isMatch = false;
         let meta: any = null;
@@ -320,7 +524,7 @@ export class FacebookService {
         }
 
         if (isMatch) {
-          const stat = await fsPromises.stat(videoDiskPath);
+          const stat = await fsPromises.stat(mediaDiskPath);
           return {
             exists: true,
             item: {
@@ -341,21 +545,23 @@ export class FacebookService {
   }
 
   /**
-   * Saves video stream directly into DD Studio Drive (`/data/storage/drive/facebook/`)
+   * Saves video or image stream directly into DD Studio Drive (`/data/storage/drive/facebook/`)
    */
   static async saveToDrive(
     mediaUrl: string,
-    title = 'facebook_video',
+    title = 'facebook_media',
     id = '',
     originalUrl = '',
     cover = '',
     author?: any,
     duration?: number,
     quality = 'HD',
-    overwrite = false
+    overwrite = false,
+    mediaType = 'video',
+    ext?: string
   ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
     if (!mediaUrl) {
-      throw new BadRequestError('Không tìm thấy đường dẫn video để lưu');
+      throw new BadRequestError('Không tìm thấy đường dẫn nội dung để lưu');
     }
 
     const fbDir = path.join(resolvedStoragePaths.drive, 'facebook');
@@ -363,7 +569,10 @@ export class FacebookService {
       await fsPromises.mkdir(fbDir, { recursive: true });
     }
 
-    const sanitizedTitle = (title || 'video')
+    const isImage = mediaType === 'image' || mediaUrl.includes('lookaside.fbsbx.com') || ext === 'jpg' || ext === 'png';
+    const resolvedExt = (ext || (isImage ? 'jpg' : 'mp4')).replace(/^\./, '');
+
+    const sanitizedTitle = (title || (isImage ? 'photo' : 'video'))
       .replace(/[\\/:*?"<>|#@$%^&*]/g, '_')
       .replace(/\s+/g, '_')
       .slice(0, 60)
@@ -371,7 +580,7 @@ export class FacebookService {
       .replace(/^_+|_+$/g, '');
 
     const cleanId = (id || Date.now().toString(36)).slice(-10);
-    const fileName = `[Facebook]_${sanitizedTitle || 'clip'}_${cleanId}.mp4`;
+    const fileName = `[Facebook]_${sanitizedTitle || (isImage ? 'photo' : 'clip')}_${cleanId}.${resolvedExt}`;
     const targetFilePath = path.join(fbDir, fileName);
 
     if (overwrite && fs.existsSync(targetFilePath)) {
@@ -380,28 +589,27 @@ export class FacebookService {
       await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg'));
     }
 
-    logger.info({ fileName, targetFilePath }, '[Facebook] Saving video directly to Studio Drive...');
+    logger.info({ fileName, targetFilePath }, '[Facebook] Saving media directly to Studio Drive...');
 
     // Download stream to disk
+    const isFbLookaside = mediaUrl.includes('lookaside.fbsbx.com');
+    const downloadHeaders: Record<string, string> = {
+      'User-Agent': isFbLookaside ? 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' : DEFAULT_UA,
+      'Referer': 'https://www.facebook.com/'
+    };
+
     const upstreamRes = await fetch(mediaUrl, {
-      headers: {
-        'User-Agent': DEFAULT_UA,
-        'Referer': 'https://www.facebook.com/'
-      },
+      headers: downloadHeaders,
       signal: AbortSignal.timeout(120000)
     });
 
     if (!upstreamRes.ok || !upstreamRes.body) {
-      throw new BadRequestError(`Không thể tải video từ nguồn Facebook: HTTP ${upstreamRes.status}`);
+      throw new BadRequestError(`Không thể tải nội dung từ nguồn Facebook: HTTP ${upstreamRes.status}`);
     }
 
     const fileStream = fs.createWriteStream(targetFilePath);
     const hash = crypto.createHash('sha256');
     let byteCount = 0;
-
-    const meter = new (class extends Readable {
-      _read() {}
-    })();
 
     const webStream = Readable.fromWeb(upstreamRes.body as any);
     webStream.on('data', (chunk: Buffer) => {
@@ -417,13 +625,14 @@ export class FacebookService {
     let thumbnailDataUri = '';
     if (cover && cover.startsWith('http')) {
       try {
+        const coverUa = cover.includes('lookaside.fbsbx.com') ? 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' : DEFAULT_UA;
         const coverRes = await fetch(cover, {
-          headers: { 'User-Agent': DEFAULT_UA },
+          headers: { 'User-Agent': coverUa },
           signal: AbortSignal.timeout(10000)
         });
         if (coverRes.ok) {
           const coverBuffer = Buffer.from(await coverRes.arrayBuffer());
-          const contentType = coverRes.headers.get('content-type') || 'image/jpeg';
+          const contentType = coverRes.headers.get('content-type') || (isImage ? 'image/jpeg' : 'image/jpeg');
           thumbnailDataUri = `data:${contentType};base64,${coverBuffer.toString('base64')}`;
           const thumbPath = targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg');
           await fsPromises.writeFile(thumbPath, coverBuffer).catch(() => {});
@@ -436,11 +645,12 @@ export class FacebookService {
     const metadata = {
       facebookVideoId: id || cleanId,
       originalUrl: originalUrl || '',
-      title: title || 'Facebook Video',
+      title: title || (isImage ? 'Facebook Photo' : 'Facebook Video'),
       author: authorName,
       thumbnail: thumbnailDataUri || cover || '',
       duration: duration || 0,
-      quality: quality || 'HD',
+      quality: quality || (isImage ? 'HD Photo' : 'HD'),
+      mediaType: isImage ? 'image' : 'video',
       savedAt: new Date().toISOString()
     };
 
@@ -449,6 +659,7 @@ export class FacebookService {
 
     // Register file in Prisma SQLite
     const fileId = crypto.randomUUID();
+    const mimeType = isImage ? (resolvedExt === 'png' ? 'image/png' : 'image/jpeg') : 'video/mp4';
     try {
       await prisma.fileRecord.create({
         data: {
@@ -456,7 +667,7 @@ export class FacebookService {
           purpose: 'PROCESSED',
           originalName: fileName,
           storagePath: targetFilePath,
-          mimeType: 'video/mp4',
+          mimeType,
           sizeBytes: BigInt(byteCount),
           hashSha256,
           isPurged: false,

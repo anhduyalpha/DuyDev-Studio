@@ -125,14 +125,14 @@ const DEFAULT_TOOLS = [
   {
     id: 'facebook-downloader',
     title: 'Facebook Downloader',
-    description: 'Tải video Reel, bài viết Facebook chất lượng HD/SD, lưu trực tiếp vào Drive.',
+    description: 'Tải video Reel, bài viết và ảnh Facebook chất lượng gốc HD, lưu trực tiếp vào Drive.',
     category: 'media',
     icon: 'video',
     featured: true,
-    specs: ['Video Reel', 'HD & SD MP4', 'Lưu Drive'],
+    specs: ['Video, Reel & Bài viết', 'MP4 & Ảnh HD', 'Lưu Drive'],
     color: '#1877F2',
     route: '#tool/facebook-downloader',
-    tags: ['facebook', 'fb', 'video', 'reel', 'tải video facebook', 'media']
+    tags: ['facebook', 'fb', 'video', 'reel', 'post', 'bài viết', 'ảnh', 'tải video facebook', 'media']
   },
   {
     id: 'instagram-downloader',

@@ -12,7 +12,7 @@ export const facebookStreamQuerySchema = z.object({
 
 export const facebookSaveDriveBodySchema = z.object({
   url: z.string().optional().default(''),
-  title: z.string().optional().default('facebook_video'),
+  title: z.string().optional().default('facebook_media'),
   id: z.string().optional().default(''),
   originalUrl: z.string().optional(),
   cover: z.string().optional(),
@@ -25,6 +25,8 @@ export const facebookSaveDriveBodySchema = z.object({
   ]).optional(),
   duration: z.number().optional(),
   quality: z.string().optional(),
+  mediaType: z.enum(['video', 'image', 'post']).optional().default('video'),
+  ext: z.string().optional(),
   overwrite: z.boolean().optional().default(false)
 });
 
@@ -56,4 +58,7 @@ export interface FacebookVideoData {
   audioUrl?: string;
   existingInDrive?: any;
   extractor: 'resolver' | 'ytdlp' | 'scraper';
+  mediaType?: 'video' | 'image' | 'post';
+  caption?: string;
+  images?: Array<{ id?: string; url: string; label?: string }>;
 }

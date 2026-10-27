@@ -40,7 +40,7 @@ export async function streamFacebookHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function saveToDriveFacebookHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, title, id, originalUrl, cover, author, duration, quality, overwrite } =
+  const { url, title, id, originalUrl, cover, author, duration, quality, overwrite, mediaType, ext } =
     facebookSaveDriveBodySchema.parse(request.body || {});
   const result = await FacebookService.saveToDrive(
     url,
@@ -51,7 +51,9 @@ export async function saveToDriveFacebookHandler(request: FastifyRequest, reply:
     author,
     duration,
     quality,
-    overwrite
+    overwrite,
+    mediaType,
+    ext
   );
   return reply.send({
     success: true,

@@ -15,10 +15,24 @@ describe('Media Downloaders Unit Test Suite', () => {
       const reelUrl = 'https://www.facebook.com/reel/1234567890?s=yWDuG2&fs=e';
       const watchUrl = 'https://www.facebook.com/watch/?v=9876543210';
       const fbWatchUrl = 'https://fb.watch/mXz8123abc/';
+      const sharePostUrl = 'https://www.facebook.com/share/1bWGSWjXVX/';
 
       expect(FacebookService.extractUrl(reelUrl)).toContain('facebook.com/reel/1234567890');
       expect(FacebookService.extractUrl(watchUrl)).toContain('facebook.com/watch/?v=9876543210');
       expect(FacebookService.extractUrl(fbWatchUrl)).toContain('fb.watch/mXz8123abc/');
+      expect(FacebookService.extractUrl(sharePostUrl)).toContain('facebook.com/share/1bWGSWjXVX');
+    });
+
+    it('successfully extracts Facebook Post with photos/images (e.g. share link)', async () => {
+      const shareUrl = 'https://www.facebook.com/share/1bWGSWjXVX/';
+      const data = await FacebookService.resolveVideo(shareUrl);
+      expect(data).toBeDefined();
+      expect(data.id).toBeTruthy();
+      expect(data.author?.name).toContain('Duy Thông');
+      expect(data.mediaType).toBe('image');
+      expect(data.formats.length).toBeGreaterThan(0);
+      expect(data.formats[0].ext).toBe('jpg');
+      expect(data.cover).toBeTruthy();
     });
 
     it('rejects invalid or non-Facebook URLs with BadRequestError', () => {
