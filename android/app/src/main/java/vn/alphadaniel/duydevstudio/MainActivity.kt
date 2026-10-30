@@ -3,6 +3,7 @@ package vn.alphadaniel.duydevstudio
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -16,6 +17,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.PermissionRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -430,7 +432,16 @@ class MainActivity : AppCompatActivity() {
         settings.databaseEnabled = true
         settings.allowFileAccess = true
         settings.allowContentAccess = true
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+        val isConnected = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val net = cm?.activeNetwork
+            val caps = cm?.getNetworkCapabilities(net)
+            caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } else {
+            @Suppress("DEPRECATION")
+            cm?.activeNetworkInfo?.isConnected == true
+        }
+        settings.cacheMode = if (isConnected) WebSettings.LOAD_DEFAULT else WebSettings.LOAD_CACHE_ELSE_NETWORK
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         settings.mediaPlaybackRequiresUserGesture = false
         settings.safeBrowsingEnabled = false
@@ -759,6 +770,20 @@ class MainActivity : AppCompatActivity() {
                 if (request?.isForMainFrame == true) {
                     showOffline(true)
                 }
+            }
+
+            override fun onRenderProcessGone(
+                view: WebView?,
+                detail: RenderProcessGoneDetail?
+            ): Boolean {
+                try {
+                    (view?.parent as? ViewGroup)?.removeView(view)
+                    view?.destroy()
+                } catch (_: Exception) {}
+                runOnUiThread {
+                    recreate()
+                }
+                return true
             }
         }
     }

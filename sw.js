@@ -20,6 +20,7 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/jszip.min.js',
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
+  './src/vendor/lucide.min.js',
   './src/app.js?v=24.24',
   './src/utilities/soundEngine.js?v=24.10',
   './src/utilities/releaseNotes.js?v=24.23',

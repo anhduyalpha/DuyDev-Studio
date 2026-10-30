@@ -163,8 +163,9 @@
     }
   </script>
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Lucide Icons (Local Zero-Latency Precache with CDN Fallback) -->
+  <script src="src/vendor/lucide.min.js"></script>
+  <script>if (typeof lucide === 'undefined') { document.write('<script src="https://unpkg.com/lucide@latest"><\/script>'); }</script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
   <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.24">
