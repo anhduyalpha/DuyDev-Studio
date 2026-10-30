@@ -6,7 +6,6 @@
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowDisablePreview">true</item>
         <item name="colorPrimary">@color/accent_indigo</item>
         <item name="colorSurface">@color/surface_dark</item>
         <item name="android:colorBackground">@color/bg_dark</item>

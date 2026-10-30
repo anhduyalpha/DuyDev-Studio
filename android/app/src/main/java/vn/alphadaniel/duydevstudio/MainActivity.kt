@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var offlineContainer: View
     private lateinit var customViewContainer: FrameLayout
+    private lateinit var splashOverlay: View
     private lateinit var btnRetry: Button
     private lateinit var btnOpenTailscale: Button
     private lateinit var btnOpenLan: Button
@@ -185,8 +186,8 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
 
         if (savedInstanceState == null) {
-            val prefs = getSharedPreferences("ds_prefs", MODE_PRIVATE)
-            val baseHost = prefs.getString(PREF_KEY_ACTIVE_HOST, PRIMARY_HOST) ?: PRIMARY_HOST
+            splashOverlay.visibility = View.VISIBLE
+            val baseHost = getActiveHost()
             val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
             val launchUrl = if (!targetRoute.isNullOrBlank()) {
                 val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
@@ -196,6 +197,7 @@ class MainActivity : AppCompatActivity() {
             }
             webView.loadUrl(launchUrl)
         } else {
+            splashOverlay.visibility = View.GONE
             webView.restoreState(savedInstanceState)
             val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
             if (!targetRoute.isNullOrBlank()) {
@@ -211,18 +213,48 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        ensureWebViewActive()
         handleIntent(intent)
 
         val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
         if (!targetRoute.isNullOrBlank()) {
             val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
-            val destUrl = "$PRIMARY_HOST$cleanRoute"
-            if (webView.url?.startsWith(PRIMARY_HOST) == true) {
-                val jsRoute = cleanRoute.replace("'", "\\'")
+            val jsRoute = cleanRoute.replace("'", "\\'")
+            val currentUrl = webView.url ?: ""
+            val isAppLoaded = currentUrl.isNotBlank() && currentUrl != "about:blank" && (
+                currentUrl.startsWith(PRIMARY_HOST) ||
+                currentUrl.startsWith(LAN_HOST) ||
+                currentUrl.startsWith(TAILSCALE_HOST) ||
+                currentUrl.startsWith(WIREGUARD_HOST) ||
+                currentUrl.contains("192.168.") ||
+                currentUrl.contains("100.90.") ||
+                currentUrl.contains("10.7.") ||
+                currentUrl.contains("duydevstudio") ||
+                currentUrl.contains("studio.duydev.cloud") ||
+                currentUrl.startsWith("http://localhost") ||
+                currentUrl.startsWith("http://10.0.2.2")
+            )
+
+            if (isAppLoaded) {
+                // Instantly navigate via hash in 0ms without full-page teardown or black flash
                 webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
             } else {
+                val activeHost = getActiveHost()
+                val destUrl = "$activeHost$cleanRoute"
                 webView.loadUrl(destUrl)
             }
+        }
+    }
+
+    fun ensureWebViewActive() {
+        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
+        if (::webView.isInitialized && isWebViewFrozen) {
+            try {
+                webView.resumeTimers()
+                webView.onResume()
+            } catch (_: Exception) {}
+            isWebViewFrozen = false
         }
     }
 
@@ -291,17 +323,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         isAppPaused = false
-        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
-        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
-
+        ensureWebViewActive()
         unlockHighRefreshRate()
-        if (::webView.isInitialized) {
-            if (isWebViewFrozen) {
-                webView.resumeTimers()
-                webView.onResume()
-                isWebViewFrozen = false
-            }
-        }
         currentInstance = this
         evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-app-resumed')); }")
     }
@@ -334,6 +357,7 @@ class MainActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBar)
         offlineContainer = findViewById(R.id.offlineContainer)
         customViewContainer = findViewById(R.id.customViewContainer)
+        splashOverlay = findViewById(R.id.splashOverlay)
         btnRetry = findViewById(R.id.btnRetry)
         btnOpenTailscale = findViewById(R.id.btnOpenTailscale)
         btnOpenLan = findViewById(R.id.btnOpenLan)
@@ -386,6 +410,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun hideSplashOverlay() {
+        if (!::splashOverlay.isInitialized || splashOverlay.visibility == View.GONE) return
+        splashOverlay.animate()
+            .alpha(0f)
+            .setDuration(160L)
+            .withEndAction {
+                splashOverlay.visibility = View.GONE
+                splashOverlay.alpha = 1f
+            }
+            .start()
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -412,6 +448,7 @@ class MainActivity : AppCompatActivity() {
         webView.isHorizontalScrollBarEnabled = false
         // Default LAYER_TYPE_NONE enables Chromium multi-threaded tiled GPU compositor without offscreen FBO thrashing
         webView.setLayerType(View.LAYER_TYPE_NONE, null)
+        webView.setBackgroundColor(Color.parseColor("#09090B"))
 
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
@@ -686,6 +723,11 @@ class MainActivity : AppCompatActivity() {
                 return super.shouldInterceptRequest(view, request)
             }
 
+            override fun onPageCommitVisible(view: WebView?, url: String?) {
+                super.onPageCommitVisible(view, url)
+                hideSplashOverlay()
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 showOffline(false)
@@ -693,6 +735,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                hideSplashOverlay()
                 swipeRefreshLayout.isRefreshing = false
                 progressBar.visibility = View.GONE
 
@@ -929,8 +972,8 @@ class MainActivity : AppCompatActivity() {
                     put("type", contentResolver.getType(uri) ?: "application/octet-stream")
                     put("fetchUrl", "/__android_share_file__/$i")
 
-                    // Embed Base64 for files up to 10MB for instant zero-fetch memory transfer
-                    if (meta.second in 1..10_485_760) {
+                    // Embed Base64 ONLY for tiny lightweight previews (<= 128 KB) to guarantee 0ms Main-Thread responsiveness
+                    if (meta.second in 1..131_072) {
                         try {
                             contentResolver.openInputStream(uri)?.use { stream ->
                                 val bytes = stream.readBytes()
@@ -955,72 +998,23 @@ class MainActivity : AppCompatActivity() {
 
             val autoStartScript = if (uris.isEmpty() && !detectedUrl.isNullOrBlank()) {
                 val cleanUrl = detectedUrl.replace("\\", "\\\\").replace("'", "\\'")
-                if (!targetRoute.isNullOrBlank()) {
-                    val toolId = when {
-                        targetRoute.contains("facebook") -> "facebook"
-                        targetRoute.contains("instagram") -> "instagram"
-                        targetRoute.contains("spotify") -> "spotify"
-                        targetRoute.contains("youtube") -> "youtube"
-                        targetRoute.contains("tiktok") -> "tiktok"
-                        targetRoute.contains("scribd") -> "scribd"
-                        targetRoute.contains("studocu") -> "studocu"
-                        targetRoute.contains("qr") -> "qr"
-                        targetRoute.contains("hash") -> "hash"
-                        else -> "share"
-                    }
-                    """
-                        try {
-                            sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: '$toolId', url: '$cleanUrl', ts: Date.now() }));
-                            window.location.hash = '$targetRoute';
-                        } catch (_) {}
-                    """.trimIndent()
-                } else {
-                    when {
-                        cleanUrl.contains("facebook.com", ignoreCase = true) || cleanUrl.contains("fb.watch", ignoreCase = true) || cleanUrl.contains("fb.com", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'facebook', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/facebook-downloader';
-                            } catch (_) {}
-                        """.trimIndent()
-                        cleanUrl.contains("instagram.com", ignoreCase = true) || cleanUrl.contains("instagr.am", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'instagram', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/instagram-downloader';
-                            } catch (_) {}
-                        """.trimIndent()
-                        cleanUrl.contains("spotify.com", ignoreCase = true) || cleanUrl.contains("spotify.link", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'spotify', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/spotify-downloader';
-                            } catch (_) {}
-                        """.trimIndent()
-                        cleanUrl.contains("youtube.com", ignoreCase = true) || cleanUrl.contains("youtu.be", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'youtube', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/youtube-downloader';
-                            } catch (_) {}
-                        """.trimIndent()
-                        cleanUrl.contains("scribd.com", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'scribd', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/scribd';
-                            } catch (_) {}
-                        """.trimIndent()
-                        cleanUrl.contains("tiktok.com", ignoreCase = true) || cleanUrl.contains("douyin.com", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'tiktok', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/tiktok';
-                            } catch (_) {}
-                        """.trimIndent()
-                        cleanUrl.contains("studocu.", ignoreCase = true) -> """
-                            try {
-                                sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: 'studocu', url: '$cleanUrl', ts: Date.now() }));
-                                window.location.hash = '#tool/studocu-dl';
-                            } catch (_) {}
-                        """.trimIndent()
-                        else -> ""
-                    }
+                val toolId = when {
+                    targetRoute?.contains("facebook") == true || cleanUrl.contains("facebook.com", ignoreCase = true) || cleanUrl.contains("fb.watch", ignoreCase = true) || cleanUrl.contains("fb.com", ignoreCase = true) -> "facebook"
+                    targetRoute?.contains("instagram") == true || cleanUrl.contains("instagram.com", ignoreCase = true) || cleanUrl.contains("instagr.am", ignoreCase = true) -> "instagram"
+                    targetRoute?.contains("spotify") == true || cleanUrl.contains("spotify.com", ignoreCase = true) || cleanUrl.contains("spotify.link", ignoreCase = true) -> "spotify"
+                    targetRoute?.contains("youtube") == true || cleanUrl.contains("youtube.com", ignoreCase = true) || cleanUrl.contains("youtu.be", ignoreCase = true) -> "youtube"
+                    targetRoute?.contains("tiktok") == true || cleanUrl.contains("tiktok.com", ignoreCase = true) || cleanUrl.contains("douyin.com", ignoreCase = true) -> "tiktok"
+                    targetRoute?.contains("scribd") == true || cleanUrl.contains("scribd.com", ignoreCase = true) -> "scribd"
+                    targetRoute?.contains("studocu") == true || cleanUrl.contains("studocu.", ignoreCase = true) -> "studocu"
+                    targetRoute?.contains("qr") == true -> "qr"
+                    targetRoute?.contains("hash") == true -> "hash"
+                    else -> "share"
                 }
+                """
+                    try {
+                        sessionStorage.setItem('dd_pending_autostart_url', JSON.stringify({ toolId: '$toolId', url: '$cleanUrl', ts: Date.now() }));
+                    } catch (_) {}
+                """.trimIndent()
             } else ""
 
             if (autoStartScript.isNotBlank()) {

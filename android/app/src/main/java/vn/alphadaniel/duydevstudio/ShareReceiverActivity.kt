@@ -302,8 +302,11 @@ class ShareReceiverActivity : AppCompatActivity() {
                 tvLabel.text = item.label
 
                 itemView.setOnClickListener {
-                    dialog.dismiss()
                     val targetUrl = matchedHandler?.extractUrl?.invoke(url, text) ?: if (url.isNotBlank()) url else text
+                    try {
+                        dialog.setOnDismissListener(null)
+                        dialog.dismiss()
+                    } catch (_: Exception) {}
                     forwardToMainActivity(item, targetUrl)
                 }
                 actionsContainer.addView(itemView)
@@ -318,7 +321,10 @@ class ShareReceiverActivity : AppCompatActivity() {
                 tvLabel.text = item.label
 
                 itemView.setOnClickListener {
-                    dialog.dismiss()
+                    try {
+                        dialog.setOnDismissListener(null)
+                        dialog.dismiss()
+                    } catch (_: Exception) {}
                     forwardToMainActivity(item, null)
                 }
                 actionsContainer.addView(itemView)
@@ -356,10 +362,11 @@ class ShareReceiverActivity : AppCompatActivity() {
             }
 
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         }
         startActivity(targetIntent)
         finish()
+        overridePendingTransition(0, 0)
     }
 
     private fun getUriMetadata(uri: Uri): Pair<String, Long> {

@@ -116,4 +116,30 @@
         android:background="#000000"
         android:visibility="gone" />
 
+    <!-- Instant Native Splash Overlay for Zero-Flicker Cold Boot -->
+    <LinearLayout
+        android:id="@+id/splashOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:background="@color/bg_dark"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="@null"
+            android:layout_marginBottom="24dp" />
+
+        <ProgressBar
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:indeterminateTint="@color/accent_indigo" />
+
+    </LinearLayout>
+
 </FrameLayout>
