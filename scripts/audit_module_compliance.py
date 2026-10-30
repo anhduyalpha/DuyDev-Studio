@@ -42,17 +42,18 @@ def load_registry():
     content = REGISTRY_FILE.read_text(encoding="utf-8")
     tools = {}
     
-    # Simple regex extraction of tool blocks
-    blocks = re.findall(r'\{\s*id:\s*[\'"]([^\'"]+)[\'"].*?\}', content, re.DOTALL)
-    for tool_id in blocks:
-        # Extract fields for this tool
-        m_name = re.search(rf'id:\s*[\'"]{re.escape(tool_id)}[\'"].*?name:\s*[\'"]([^\'"]+)[\'"]', content, re.DOTALL)
-        m_desc = re.search(rf'id:\s*[\'"]{re.escape(tool_id)}[\'"].*?desc:\s*[\'"]([^\'"]+)[\'"]', content, re.DOTALL)
-        m_tier = re.search(rf'id:\s*[\'"]{re.escape(tool_id)}[\'"].*?tier:\s*[\'"]([^\'"]+)[\'"]', content, re.DOTALL)
+    # Match each object { id: '...', ... } accurately inside DEFAULT_TOOLS
+    blocks = re.finditer(r'\{\s*id:\s*[\'"]([^\'"]+)[\'"](.*?)(?=\n\s*\{|\n\s*\];)', content, re.DOTALL)
+    for m in blocks:
+        tool_id = m.group(1)
+        block_text = m.group(2)
+        m_name = re.search(r'(?:title|name):\s*[\'"]([^\'"]+)[\'"]', block_text)
+        m_desc = re.search(r'(?:description|desc):\s*[\'"]([^\'"]+)[\'"]', block_text)
+        m_tier = re.search(r'tier:\s*[\'"]([^\'"]+)[\'"]', block_text)
         tools[tool_id] = {
             "name": m_name.group(1) if m_name else "",
             "desc": m_desc.group(1) if m_desc else "",
-            "tier": m_tier.group(1) if m_tier else ""
+            "tier": m_tier.group(1) if m_tier else "Standard"
         }
     return tools
 

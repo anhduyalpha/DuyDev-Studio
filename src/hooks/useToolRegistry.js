@@ -131,7 +131,6 @@ const DEFAULT_TOOLS = [
     featured: true,
     specs: ['Video, Reel & Bài viết', 'MP4 & Ảnh HD', 'Lưu Drive'],
     color: '#1877F2',
-    tier: 'UR',
     route: '#tool/facebook-downloader',
     tags: ['facebook', 'fb', 'video', 'reel', 'post', 'bài viết', 'ảnh', 'tải video facebook', 'media']
   },
@@ -144,7 +143,6 @@ const DEFAULT_TOOLS = [
     featured: true,
     specs: ['Reels & Story', 'MP4 Full HD', 'Lưu Drive'],
     color: '#E1306C',
-    tier: 'UR',
     route: '#tool/instagram-downloader',
     tags: ['instagram', 'ig', 'reels', 'story', 'tải video instagram', 'media']
   },
@@ -157,7 +155,6 @@ const DEFAULT_TOOLS = [
     featured: true,
     specs: ['MP3 320kbps', 'Ảnh bìa Album', 'Lưu Drive'],
     color: '#1DB954',
-    tier: 'UR',
     route: '#tool/spotify-downloader',
     tags: ['spotify', 'nhạc', 'mp3', 'âm thanh', 'tải nhạc spotify', 'audio', 'media']
   },

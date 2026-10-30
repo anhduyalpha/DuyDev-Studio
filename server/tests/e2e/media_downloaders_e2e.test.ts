@@ -1002,7 +1002,7 @@ describe('Media Downloaders E2E Test Suite (Facebook, Spotify, Instagram)', () =
       expect(spDef?.route).toBe('#tool/spotify-downloader');
       expect(igDef?.route).toBe('#tool/instagram-downloader');
 
-      expect(fbDef?.tier).toBe('UR');
+      expect(fbDef?.tier).toBeUndefined();
       expect(spDef?.specs).toContain('MP3 320kbps');
       expect(igDef?.specs).toContain('Reels & Story');
     });

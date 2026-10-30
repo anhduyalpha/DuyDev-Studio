@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.28': {
+    version: 'v24.28',
+    title: 'Bản cập nhật v24.28: Khôi Phục Giao Diện Thẻ Tiêu Chuẩn & Triệt Tiêu Đơ Lag Web',
+    date: '30/10/2026',
+    features: [
+      'Khôi Phục Giao Diện Tiêu Chuẩn Cho Bộ 3 Downloader: Gỡ bỏ toàn bộ hiệu ứng hoạt họa UR nặng nề trên thẻ công cụ Facebook, Instagram, Spotify về giao diện phẳng tối giản, triệt tiêu tải GPU',
+      'Đại Tu Toàn Diện Bộ 3 Downloader: Bóc tách OpenGraph siêu tốc (~300ms), chống remix Spotify (KI-FIX-041), bóc tách album Carousel Instagram không lỗi'
+    ],
+    fixes: [
+      'Giải Phóng Tải GPU & Khắc Phục Đơ Lag: Loại bỏ hoàn toàn các layer hạt và hiệu ứng quay liên tục gây treo trình duyệt trên Dashboard',
+      'Chuẩn Hóa Bộ Kiểm Định Module: Tinh chỉnh regex tránh gán nhầm tier UR từ các module lân cận'
+    ]
+  },
   'v24.27': {
     version: 'v24.27',
     title: 'Bản cập nhật v24.27: Đại Tu & Chuẩn Hóa Toàn Diện Bộ 3 Downloader (Facebook, Spotify, Instagram)',
