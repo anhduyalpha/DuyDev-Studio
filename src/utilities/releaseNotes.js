@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.25': {
+    version: 'v24.25',
+    title: 'Bản cập nhật v24.25 (APK Native v24.8.0): Khởi Động Siêu Tốc & Khắc Phục Màn Hình Đen Khi Chia Sẻ',
+    date: '30/10/2026',
+    features: [
+      'Khởi Động Tức Thì (<16ms) & Native Splash Overlay: Hiển thị ngay tức thì logo app và spinner khi cold boot, tự động fade-out mượt mà ngay khi trang web vẽ frame đầu tiên; loại bỏ triệt để hiện tượng đơ/chậm khi mở app từ màn hình chính',
+      'Vendor Cục Bộ Lucide Icons & Cache Thông Minh: Precache bộ icon cục bộ thay vì tải đồng bộ từ CDN, tự động kích hoạt LOAD_CACHE_ELSE_NETWORK khi ngoại tuyến hoặc mạng yếu'
+    ],
+    fixes: [
+      'Khắc Phục Triệt Để Màn Hình Đen Khi Chia Sẻ: Loại bỏ race condition và xung đột SurfaceFlinger khi nhận dữ liệu từ Android Share Sheet, điều hướng tức thì bằng route hash trong 0ms mà không reload trang',
+      'Tối Ưu Hóa Luồng I/O & Ngăn Ngừa Nghẽn Main Thread: Chuyển việc nạp tệp chia sẻ sang luồng stream trực tiếp thay vì mã hóa Base64 10MB đồng bộ trên Main Thread gây đơ UI (ANR)',
+      'Bảo Vệ Tiến Trình Render (onRenderProcessGone): Tự động phục hồi sạch sẽ khi hệ thống Android giải phóng bộ nhớ dưới tải nặng, chống đơ chết giao diện'
+    ]
+  },
   'v24.24': {
     version: 'v24.24',
     title: 'Bản cập nhật v24.24: Tối Ưu Tự Động Cuộn & Bắt Sáng Tài Liệu Đã Tải Tức Thì (Instant Highlight & Smooth Auto-Scroll)',
