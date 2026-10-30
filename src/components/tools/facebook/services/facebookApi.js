@@ -6,13 +6,15 @@ export const facebookApi = {
   /**
    * Resolves a Facebook URL to metadata and direct stream URLs
    * @param {string} url 
+   * @param {{ signal?: AbortSignal }} [options]
    * @returns {Promise<any>}
    */
-  async resolveVideo(url) {
+  async resolveVideo(url, options = {}) {
     const res = await fetch('/api/v1/facebook/resolve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url }),
+      signal: options.signal
     });
 
     const json = await res.json().catch(() => ({}));
@@ -28,14 +30,16 @@ export const facebookApi = {
   /**
    * Checks if video already exists in Studio Drive
    * @param {{ url?: string, id?: string }} payload
+   * @param {{ signal?: AbortSignal }} [options]
    * @returns {Promise<{ exists: boolean, item?: any }>}
    */
-  async checkDuplicate(payload) {
+  async checkDuplicate(payload, options = {}) {
     try {
       const res = await fetch('/api/v1/facebook/check-duplicate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: options.signal
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) return { exists: false };
@@ -65,13 +69,15 @@ export const facebookApi = {
   /**
    * Saves the video stream directly into DD Studio Drive
    * @param {{ url: string, title?: string, id?: string, quality?: string }} payload 
+   * @param {{ signal?: AbortSignal }} [options]
    * @returns {Promise<{ success: boolean, data: { fileName: string, relPath: string, sizeBytes: number, fileId: string } }>}
    */
-  async saveToDrive(payload) {
+  async saveToDrive(payload, options = {}) {
     const res = await fetch('/api/v1/facebook/save-drive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: options.signal
     });
 
     const json = await res.json().catch(() => ({}));

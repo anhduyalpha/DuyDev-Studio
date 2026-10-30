@@ -7,13 +7,18 @@ export const spotifyApi = {
    * Resolves a Spotify track URL to metadata and audio stream
    * @param {string} url 
    * @param {boolean} [refresh=false]
+   * @param {Object} [options={}]
+   * @param {AbortSignal} [options.signal]
    * @returns {Promise<any>}
    */
-  async resolveTrack(url, refresh = false) {
+  async resolveTrack(url, refresh = false, options = {}) {
+    const signal = options?.signal || (refresh && typeof refresh === 'object' && refresh.signal ? refresh.signal : undefined);
+    const isRefresh = typeof refresh === 'boolean' ? refresh : false;
     const res = await fetch('/api/v1/spotify/resolve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, refresh })
+      body: JSON.stringify({ url, refresh: isRefresh }),
+      signal
     });
 
     const json = await res.json().catch(() => ({}));
@@ -29,14 +34,17 @@ export const spotifyApi = {
   /**
    * Checks if audio track already exists in Studio Drive
    * @param {{ url?: string, id?: string, title?: string }} payload
+   * @param {Object} [options={}]
+   * @param {AbortSignal} [options.signal]
    * @returns {Promise<{ exists: boolean, item?: any }>}
    */
-  async checkDuplicate(payload) {
+  async checkDuplicate(payload, options = {}) {
     try {
       const res = await fetch('/api/v1/spotify/check-duplicate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: options?.signal
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) return { exists: false };
@@ -66,13 +74,16 @@ export const spotifyApi = {
   /**
    * Saves the MP3 track directly into DD Studio Drive
    * @param {{ url: string, title?: string, artist?: string, album?: string, cover?: string, audioUrl?: string }} payload 
+   * @param {Object} [options={}]
+   * @param {AbortSignal} [options.signal]
    * @returns {Promise<{ success: boolean, data: { fileName: string, relPath: string, sizeBytes: number, fileSizeInMb: string, fileId: string } }>}
    */
-  async saveToDrive(payload) {
+  async saveToDrive(payload, options = {}) {
     const res = await fetch('/api/v1/spotify/save-drive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: options?.signal
     });
 
     const json = await res.json().catch(() => ({}));

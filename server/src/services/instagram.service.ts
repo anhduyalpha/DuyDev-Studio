@@ -28,12 +28,42 @@ export class InstagramService {
    * Cleans and validates raw text to a valid Instagram URL
    */
   static extractUrl(rawText: string): string {
-    const trimmed = (rawText || '').trim();
-    const urlMatch = trimmed.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?instagram\.com\/(?:p|reel|reels|tv|stories)\/[a-zA-Z0-9_-]+[^\s"'>]*/i);
+    let trimmed = (rawText || '').trim();
+    if (!trimmed) {
+      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Instagram Post, Reel hoặc Story hợp lệ.');
+    }
+
+    // Auto-prepend https:// if protocol-less
+    if (/^(?:[a-zA-Z0-9_-]+\.)?instagram\.com(?:\/|$)/i.test(trimmed)) {
+      trimmed = `https://${trimmed}`;
+    }
+
+    const urlMatch = trimmed.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?instagram\.com\/(?:p|reel|reels|tv|stories)\/[a-zA-Z0-9_-]+[^\s"'<>]+/i);
     if (!urlMatch) {
       throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Instagram Post, Reel hoặc Story hợp lệ.');
     }
-    return urlMatch[0];
+
+    let matched = urlMatch[0];
+    if (!/^https?:\/\//i.test(matched)) {
+      matched = `https://${matched}`;
+    }
+
+    // Strip trailing punctuation
+    let cleanUrl = matched.replace(/[.,;!?)"'\]>]+$/, '');
+
+    // Strip tracking parameters
+    try {
+      const parsed = new URL(cleanUrl);
+      const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'igsh', 'igshid', 'mibextid'];
+      for (const p of trackingParams) {
+        parsed.searchParams.delete(p);
+      }
+      cleanUrl = parsed.toString();
+    } catch {
+      // Keep cleanUrl as is
+    }
+
+    return cleanUrl;
   }
 
   /**
@@ -117,7 +147,18 @@ export class InstagramService {
         thumbnail: m.thumbnail || data.thumbnail
       }));
 
+      const isCarousel = items.length > 1;
+      let mediaType: 'carousel' | 'video' | 'image' = 'video';
+      if (isCarousel) {
+        mediaType = 'carousel';
+      } else if (items.length === 1 && items[0].type === 'image') {
+        mediaType = 'image';
+      } else {
+        mediaType = 'video';
+      }
+
       const primaryVideo = items.find(i => i.type === 'video');
+      const primaryImage = items.find(i => i.type === 'image');
 
       return {
         id: String(data.id || fallbackId),
@@ -128,14 +169,41 @@ export class InstagramService {
         },
         cover: data.thumbnail || (items[0]?.thumbnail || items[0]?.url || ''),
         duration: Number(data.duration || 0),
-        videoUrl: primaryVideo?.url || items[0]?.url,
+        mediaType,
+        videoUrl: primaryVideo?.url || (mediaType === 'video' ? items[0]?.url : undefined),
+        imageUrl: primaryImage?.url || (mediaType === 'image' ? items[0]?.url : undefined),
         medias: items,
-        isCarousel: items.length > 1,
+        isCarousel,
         extractor: 'resolver'
       };
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Helper to parse yt-dlp stdout supporting single JSON, multi-line NDJSON, and entries array
+   */
+  static parseYtdlpOutput(stdout: string): any[] {
+    const rawLines = (stdout || '').trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const parsedEntries: any[] = [];
+
+    for (const line of rawLines) {
+      try {
+        const item = JSON.parse(line);
+        if (item && Array.isArray(item.entries)) {
+          for (const subItem of item.entries) {
+            if (subItem) parsedEntries.push(subItem);
+          }
+        } else if (item) {
+          parsedEntries.push(item);
+        }
+      } catch (err: any) {
+        logger.debug({ err: err?.message }, '[Instagram] Failed parsing yt-dlp stdout line as JSON');
+      }
+    }
+
+    return parsedEntries;
   }
 
   /**
@@ -149,41 +217,74 @@ export class InstagramService {
       targetUrl
     ], { timeout: 20000, maxBuffer: 15 * 1024 * 1024 });
 
-    const json = JSON.parse(stdout.trim());
-    const id = String(json.id || fallbackId);
-    const caption = (json.description || json.title || `Instagram Reel ${id}`).substring(0, 200);
+    const entries = this.parseYtdlpOutput(stdout);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const firstEntry = entries[0];
+    const id = String(firstEntry.id || fallbackId);
+    const caption = (firstEntry.description || firstEntry.title || `Instagram Reel ${id}`).substring(0, 200);
     const title = caption.replace(/\r?\n/g, ' ').slice(0, 100);
-    const cover = json.thumbnail || '';
-    const duration = Number(json.duration || 0);
+    const cover = firstEntry.thumbnail || '';
+    const duration = Number(firstEntry.duration || 0);
     const author = {
-      username: json.uploader || json.channel || 'Instagram User',
-      fullName: json.uploader_id
+      username: firstEntry.uploader || firstEntry.channel || 'Instagram User',
+      fullName: firstEntry.uploader_id
     };
 
     const medias: InstagramMediaItem[] = [];
 
-    // Check if it's a playlist/carousel or single media
-    if (json.url) {
-      medias.push({
-        type: json.ext === 'mp4' || json.vcodec !== 'none' ? 'video' : 'image',
-        url: json.url,
-        thumbnail: cover
-      });
-    } else if (Array.isArray(json.formats) && json.formats.length > 0) {
-      const bestFmt = json.formats
-        .filter((f: any) => f.url && f.ext === 'mp4')
-        .pop() || json.formats[json.formats.length - 1];
+    for (const entry of entries) {
+      let mediaItemUrl = '';
+      let isVideo = false;
+      const entryCover = entry.thumbnail || cover;
 
-      if (bestFmt?.url) {
+      if (entry.url) {
+        mediaItemUrl = entry.url;
+        isVideo = entry.ext === 'mp4' || (Boolean(entry.vcodec) && entry.vcodec !== 'none');
+      } else if (Array.isArray(entry.formats) && entry.formats.length > 0) {
+        const videoFmt = entry.formats
+          .filter((f: any) => f.url && (f.ext === 'mp4' || (f.vcodec && f.vcodec !== 'none')))
+          .pop();
+
+        if (videoFmt?.url) {
+          mediaItemUrl = videoFmt.url;
+          isVideo = true;
+        } else {
+          const anyFmt = entry.formats.filter((f: any) => f.url).pop() || entry.formats[entry.formats.length - 1];
+          if (anyFmt?.url) {
+            mediaItemUrl = anyFmt.url;
+            isVideo = anyFmt.ext === 'mp4' || (Boolean(anyFmt.vcodec) && anyFmt.vcodec !== 'none');
+          }
+        }
+      }
+
+      if (mediaItemUrl) {
         medias.push({
-          type: 'video',
-          url: bestFmt.url,
-          thumbnail: cover
+          type: isVideo ? 'video' : 'image',
+          url: mediaItemUrl,
+          thumbnail: entryCover
         });
       }
     }
 
+    if (medias.length === 0) {
+      return null;
+    }
+
+    const isCarousel = medias.length > 1;
+    let mediaType: 'carousel' | 'video' | 'image' = 'video';
+    if (isCarousel) {
+      mediaType = 'carousel';
+    } else if (medias.length === 1 && medias[0].type === 'image') {
+      mediaType = 'image';
+    } else {
+      mediaType = 'video';
+    }
+
     const primaryVideo = medias.find(m => m.type === 'video');
+    const primaryImage = medias.find(m => m.type === 'image');
 
     return {
       id,
@@ -192,9 +293,11 @@ export class InstagramService {
       author,
       cover,
       duration,
-      videoUrl: primaryVideo?.url || medias[0]?.url,
+      mediaType,
+      videoUrl: primaryVideo?.url || (mediaType === 'video' ? medias[0]?.url : undefined),
+      imageUrl: primaryImage?.url || (mediaType === 'image' ? medias[0]?.url : undefined),
       medias,
-      isCarousel: medias.length > 1,
+      isCarousel,
       extractor: 'ytdlp'
     };
   }
@@ -318,20 +421,21 @@ export class InstagramService {
   }
 
   /**
-   * Saves video stream directly into DD Studio Drive (`/data/storage/drive/instagram/`)
+   * Saves media stream directly into DD Studio Drive (`/data/storage/drive/instagram/`)
    */
   static async saveToDrive(
     mediaUrl: string,
-    title = 'instagram_video',
+    title = 'instagram_media',
     id = '',
     originalUrl = '',
     cover = '',
     author?: any,
     duration?: number,
-    overwrite = false
+    overwrite = false,
+    mediaType?: 'video' | 'image' | 'carousel'
   ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
     if (!mediaUrl) {
-      throw new BadRequestError('Không tìm thấy đường dẫn video để lưu');
+      throw new BadRequestError('Không tìm thấy đường dẫn tệp để lưu');
     }
 
     const igDir = path.join(resolvedStoragePaths.drive, 'instagram');
@@ -339,24 +443,7 @@ export class InstagramService {
       await fsPromises.mkdir(igDir, { recursive: true });
     }
 
-    const sanitizedTitle = (title || 'video')
-      .replace(/[\\/:*?"<>|#@$%^&*]/g, '_')
-      .replace(/\s+/g, '_')
-      .slice(0, 60)
-      .trim()
-      .replace(/^_+|_+$/g, '');
-
-    const cleanId = (id || Date.now().toString(36)).slice(-10);
-    const fileName = `[Instagram]_${sanitizedTitle || 'reel'}_${cleanId}.mp4`;
-    const targetFilePath = path.join(igDir, fileName);
-
-    if (overwrite && fs.existsSync(targetFilePath)) {
-      await StorageManager.unlinkSafe(targetFilePath);
-      await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.meta.json'));
-      await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg'));
-    }
-
-    logger.info({ fileName, targetFilePath }, '[Instagram] Saving video directly to Studio Drive...');
+    logger.info({ mediaUrl, title }, '[Instagram] Saving media directly to Studio Drive...');
 
     const upstreamRes = await fetch(mediaUrl, {
       headers: {
@@ -367,7 +454,32 @@ export class InstagramService {
     });
 
     if (!upstreamRes.ok || !upstreamRes.body) {
-      throw new BadRequestError(`Không thể tải video từ Instagram: HTTP ${upstreamRes.status}`);
+      throw new BadRequestError(`Không thể tải nội dung từ Instagram: HTTP ${upstreamRes.status}`);
+    }
+
+    const upstreamContentType = upstreamRes.headers.get('content-type') || '';
+    const isImage = (mediaType === 'image') ||
+      upstreamContentType.startsWith('image/') ||
+      /\.(jpe?g|png|webp)($|\?)/i.test(mediaUrl);
+
+    const ext = isImage ? 'jpg' : 'mp4';
+    const mimeType = isImage ? 'image/jpeg' : 'video/mp4';
+
+    const sanitizedTitle = (title || (isImage ? 'photo' : 'video'))
+      .replace(/[\\/:*?"<>|#@$%^&*]/g, '_')
+      .replace(/\s+/g, '_')
+      .slice(0, 60)
+      .trim()
+      .replace(/^_+|_+$/g, '');
+
+    const cleanId = (id || Date.now().toString(36)).slice(-10);
+    const fileName = `[Instagram]_${sanitizedTitle || (isImage ? 'photo' : 'reel')}_${cleanId}.${ext}`;
+    const targetFilePath = path.join(igDir, fileName);
+
+    if (overwrite && fs.existsSync(targetFilePath)) {
+      await StorageManager.unlinkSafe(targetFilePath);
+      await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.meta.json'));
+      await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg'));
     }
 
     const fileStream = fs.createWriteStream(targetFilePath);
@@ -407,10 +519,11 @@ export class InstagramService {
     const metadata = {
       instagramId: id || cleanId,
       originalUrl: originalUrl || '',
-      title: title || 'Instagram Video',
+      title: title || (isImage ? 'Instagram Photo' : 'Instagram Video'),
       author: authorUsername,
       thumbnail: thumbnailDataUri || cover || '',
       duration: duration || 0,
+      mediaType: isImage ? 'image' : 'video',
       savedAt: new Date().toISOString()
     };
 
@@ -426,7 +539,7 @@ export class InstagramService {
           purpose: 'PROCESSED',
           originalName: fileName,
           storagePath: targetFilePath,
-          mimeType: 'video/mp4',
+          mimeType,
           sizeBytes: BigInt(byteCount),
           hashSha256,
           isPurged: false,
@@ -442,7 +555,7 @@ export class InstagramService {
     return {
       success: true,
       fileName,
-      relPath: `instagram/${fileName}`,
+      relPath: `/instagram/${fileName}`,
       sizeBytes: byteCount,
       fileId,
       metadata

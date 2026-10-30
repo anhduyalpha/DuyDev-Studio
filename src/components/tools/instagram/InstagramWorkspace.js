@@ -12,7 +12,7 @@ import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
-import { renderMediaHistorySection, attachMediaHistoryListeners } from '../common/MediaHistorySection.js';
+import { renderMediaHistorySection, attachMediaHistoryListeners, escapeHtml } from '../common/MediaHistorySection.js';
 
 export class InstagramWorkspace {
   constructor(containerEl) {
@@ -25,6 +25,8 @@ export class InstagramWorkspace {
     this.selectedMediaIndex = 0;
     this.handlePendingEvent = null;
     this.historyTab = 'history';
+    this.historyCleanup = null;
+    this.abortController = null;
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -40,17 +42,19 @@ export class InstagramWorkspace {
 
     const pendingUrl = consumePendingAutoStart('instagram');
     if (pendingUrl) {
-      this.url = pendingUrl;
+      this.url = this.sanitizeUrl(pendingUrl) || pendingUrl.trim();
       const input = this.container.querySelector('#igUrlInput');
-      if (input) input.value = pendingUrl;
+      if (input) input.value = this.url;
+      this.updateInputActions();
       setTimeout(() => this.resolveMedia(), 60);
     }
 
     this.handlePendingEvent = (e) => {
       if (e.detail?.toolId === 'instagram' && e.detail.url) {
-        this.url = e.detail.url.trim();
+        this.url = this.sanitizeUrl(e.detail.url) || e.detail.url.trim();
         const input = this.container.querySelector('#igUrlInput');
         if (input) input.value = this.url;
+        this.updateInputActions();
         setTimeout(() => this.resolveMedia(), 60);
       }
     };
@@ -58,20 +62,62 @@ export class InstagramWorkspace {
   }
 
   unmount() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
       this.handlePendingEvent = null;
     }
+
     if (this.historyCleanup) {
       this.historyCleanup();
       this.historyCleanup = null;
     }
+
+    const input = this.container.querySelector('#igUrlInput');
+    if (input) {
+      input.removeEventListener('input', this.boundHandleInput);
+      input.removeEventListener('keydown', this.boundHandleKeyDown);
+    }
+
+    this.container.removeEventListener('click', this.boundHandleClick);
     this.container.innerHTML = '';
+  }
+
+  /**
+   * Sanitizes pasted text to a valid Instagram URL, stripping query tracking tags
+   */
+  sanitizeUrl(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    let text = raw.trim();
+
+    if (/^(?:[a-zA-Z0-9_-]+\.)?instagram\.com(?:\/|$)/i.test(text)) {
+      text = `https://${text}`;
+    }
+
+    const match = text.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?instagram\.com\/(?:p|reel|reels|tv|stories)\/[a-zA-Z0-9_-]+[^\s"'<>]+/i);
+    if (!match) return '';
+
+    let clean = match[0].replace(/[.,;!?)"'\]>]+$/, '');
+    try {
+      const u = new URL(clean);
+      const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'igsh', 'igshid', 'mibextid'];
+      for (const p of trackingParams) {
+        u.searchParams.delete(p);
+      }
+      return u.toString();
+    } catch {
+      return clean;
+    }
   }
 
   handleInput(e) {
     if (e.target.id === 'igUrlInput') {
       this.url = e.target.value;
+      this.updateInputActions();
     }
   }
 
@@ -82,29 +128,226 @@ export class InstagramWorkspace {
     }
   }
 
+  updateInputActions() {
+    const actionContainer = this.container.querySelector('#igInputActionBtn');
+    if (!actionContainer) return;
+
+    if (this.url && this.url.trim().length > 0) {
+      actionContainer.innerHTML = `
+        <button
+          type="button"
+          data-action="clear-input"
+          class="min-h-[44px] min-w-[44px] p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-white/10 transition cursor-pointer flex items-center justify-center"
+          title="Xóa"
+        >
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      `;
+    } else {
+      actionContainer.innerHTML = `
+        <button
+          type="button"
+          data-action="paste-url"
+          class="min-h-[44px] px-3 py-1.5 text-xs font-semibold text-[#E1306C] hover:bg-[#E1306C]/10 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+        >
+          <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+          <span>Dán</span>
+        </button>
+      `;
+    }
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: actionContainer });
+    }
+  }
+
+  clearInput() {
+    this.url = '';
+    this.mediaData = null;
+    this.error = null;
+
+    const input = this.container.querySelector('#igUrlInput');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+
+    this.updateInputActions();
+
+    const alertContainer = this.container.querySelector('#instagramAlertContainer');
+    if (alertContainer) alertContainer.innerHTML = '';
+
+    const resultContainer = this.container.querySelector('#instagramResultContainer');
+    if (resultContainer) resultContainer.innerHTML = '';
+  }
+
+  renderAlert(errorMsg) {
+    const alertContainer = this.container.querySelector('#instagramAlertContainer');
+    if (!alertContainer) return;
+    if (!errorMsg) {
+      alertContainer.innerHTML = '';
+      return;
+    }
+    alertContainer.innerHTML = `
+      <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span class="break-words">${escapeHtml(errorMsg)}</span>
+        </div>
+        <button type="button" data-action="dismiss-alert" class="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-red-500 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition cursor-pointer shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    `;
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: alertContainer });
+    }
+  }
+
+  updateSubmitBtn(loading) {
+    this.loading = loading;
+    const btn = this.container.querySelector('#igSubmitBtn');
+    if (!btn) return;
+
+    btn.disabled = loading;
+    if (loading) {
+      btn.innerHTML = `
+        <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+        <span>Đang trích xuất...</span>
+      `;
+    } else {
+      btn.innerHTML = `
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
+        <span>Trích xuất nội dung</span>
+      `;
+    }
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: btn });
+    }
+  }
+
+  updateSelectedMedia(newIndex) {
+    if (!this.mediaData || !this.mediaData.medias || !this.mediaData.medias[newIndex]) return;
+    this.selectedMediaIndex = newIndex;
+
+    const currentItem = this.mediaData.medias[this.selectedMediaIndex];
+    const isVideo = currentItem.type === 'video';
+    const activeUrl = currentItem.url;
+
+    const ext = isVideo ? 'mp4' : 'jpg';
+    const defaultFileName = `${this.mediaData.title || (isVideo ? 'instagram_video' : 'instagram_photo')}.${ext}`;
+    const proxyStreamUrl = activeUrl ? instagramApi.getStreamUrl(activeUrl, defaultFileName, false) : '';
+    const proxyDownloadUrl = activeUrl ? instagramApi.getStreamUrl(activeUrl, defaultFileName, true) : '';
+
+    // Update carousel tabs in place
+    const tabs = this.container.querySelectorAll('[data-action="select-media"]');
+    tabs.forEach((tab) => {
+      const idx = parseInt(tab.dataset.index, 10);
+      if (idx === this.selectedMediaIndex) {
+        tab.className = 'min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold border shrink-0 transition cursor-pointer flex items-center gap-2 border-[#E1306C] bg-[#E1306C]/10 text-[#E1306C] shadow-xs';
+      } else {
+        tab.className = 'min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold border shrink-0 transition cursor-pointer flex items-center gap-2 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5';
+      }
+    });
+
+    // Update preview area in place
+    const previewArea = this.container.querySelector('#igPreviewArea');
+    if (previewArea) {
+      previewArea.innerHTML = isVideo ? `
+        <video
+          src="${proxyStreamUrl}"
+          controls
+          playsinline
+          poster="${currentItem.thumbnail || this.mediaData.cover || ''}"
+          class="w-full h-full object-contain"
+        ></video>
+      ` : `
+        <img
+          src="${proxyStreamUrl}"
+          alt="Instagram Post"
+          class="w-full h-full object-contain"
+        />
+      `;
+    }
+
+    // Update media type label
+    const mediaTypeLabel = this.container.querySelector('#igMediaTypeLabel');
+    if (mediaTypeLabel) {
+      mediaTypeLabel.textContent = isVideo ? 'Video MP4 (H.264 / AAC)' : 'Hình ảnh JPEG';
+    }
+
+    // Update download button
+    const downloadBtn = this.container.querySelector('#igDownloadBtn');
+    if (downloadBtn) {
+      downloadBtn.href = proxyDownloadUrl;
+      downloadBtn.download = defaultFileName;
+      const downloadText = downloadBtn.querySelector('span');
+      if (downloadText) {
+        downloadText.textContent = isVideo ? 'Tải về máy (.MP4)' : 'Tải về máy (.JPG)';
+      }
+    }
+
+    // Update save to drive button text
+    const saveDriveBtn = this.container.querySelector('#igSaveDriveBtn');
+    if (saveDriveBtn && !this.savingToDrive) {
+      const driveText = saveDriveBtn.querySelector('span');
+      if (driveText) {
+        driveText.textContent = isVideo ? 'Lưu vào Studio Drive' : 'Lưu ảnh vào Studio Drive';
+      }
+    }
+
+    // Update fullscreen preview button text
+    const previewBtn = this.container.querySelector('#igPreviewBtn');
+    if (previewBtn) {
+      const previewText = previewBtn.querySelector('span');
+      if (previewText) {
+        previewText.textContent = isVideo ? 'Xem toàn màn hình' : 'Xem ảnh trong Studio';
+      }
+    }
+
+    const resultCard = this.container.querySelector('#instagramResultContainer');
+    if (resultCard && window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: resultCard });
+    }
+  }
+
   async resolveMedia() {
-    const cleanUrl = (this.url || '').trim();
-    if (!cleanUrl) {
+    const raw = (this.url || '').trim();
+    if (!raw) {
       showToast('Vui lòng dán liên kết Instagram Post, Reel hoặc Story', 'warning');
       return;
     }
 
+    const cleanUrl = this.sanitizeUrl(raw);
+    if (!cleanUrl) {
+      this.error = 'Liên kết không hợp lệ. Vui lòng dán liên kết Instagram Post, Reel hoặc Story hợp lệ.';
+      this.renderAlert(this.error);
+      showToast(this.error, 'error');
+      return;
+    }
+
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+
     this.loading = true;
     this.error = null;
-    this.mediaData = null;
     this.selectedMediaIndex = 0;
-    this.render();
+    this.renderAlert(null);
+    this.updateSubmitBtn(true);
 
     try {
       soundEngine?.play('click');
-      const data = await instagramApi.resolveVideo(cleanUrl);
+      const data = await instagramApi.resolveVideo(cleanUrl, { signal: this.abortController.signal });
       this.mediaData = data;
       soundEngine?.play('success');
       showToast('Trích xuất nội dung Instagram thành công!', 'success');
 
       const firstMedia = data.medias?.[0];
       const isVideo = firstMedia?.type === 'video' || (!firstMedia?.type && Boolean(data.videoUrl));
-      const targetUrl = firstMedia?.url || data.videoUrl || '';
+      const targetUrl = firstMedia?.url || data.videoUrl || data.imageUrl || '';
       const isCarousel = Boolean(data.medias && data.medias.length > 1);
       const mediaType = isCarousel ? 'carousel' : (isVideo ? 'video' : 'photo');
       const quality = isCarousel ? `${data.medias.length} Tệp` : (isVideo ? 'HD Video' : 'HQ Photo');
@@ -115,7 +358,7 @@ export class InstagramWorkspace {
 
       const authorStr = typeof data.author === 'string'
         ? data.author
-        : (data.author?.username || data.author?.name || 'instagram');
+        : (data.author?.username || data.author?.fullName || 'instagram');
 
       storage.recordCompletedJob({
         id: `ig-${data.id || Date.now()}`,
@@ -136,28 +379,47 @@ export class InstagramWorkspace {
         driveRelPath: data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null,
         resultSize: data.sizeBytes || 0
       });
+
+      this.renderResult();
+      this.renderHistory();
     } catch (err) {
+      if (err.name === 'AbortError') return;
       this.error = err.message || 'Lỗi khi trích xuất video Instagram';
+      this.renderAlert(this.error);
       soundEngine?.play('error');
       showToast(this.error, 'error');
     } finally {
       this.loading = false;
-      this.render();
+      this.updateSubmitBtn(false);
     }
   }
 
   async saveToDrive() {
     if (!this.mediaData) return;
-    const currentItem = this.mediaData.medias?.[this.selectedMediaIndex] || { url: this.mediaData.videoUrl, type: 'video' };
-    const targetUrl = currentItem.url || this.mediaData.videoUrl;
+    const currentItem = this.mediaData.medias?.[this.selectedMediaIndex] || {
+      url: this.mediaData.videoUrl || this.mediaData.imageUrl,
+      type: this.mediaData.mediaType === 'image' ? 'image' : 'video'
+    };
+    const targetUrl = currentItem.url || this.mediaData.videoUrl || this.mediaData.imageUrl;
 
     if (!targetUrl) {
       showToast('Không tìm thấy đường dẫn tệp để lưu', 'error');
       return;
     }
 
+    const isImage = currentItem.type === 'image' || (!currentItem.type && this.mediaData.mediaType === 'image');
     this.savingToDrive = true;
-    this.render();
+
+    // Mutate save drive button in place
+    const saveBtn = this.container.querySelector('#igSaveDriveBtn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `
+        <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#E1306C]"></i>
+        <span>Đang lưu vào Drive...</span>
+      `;
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveBtn });
+    }
 
     const taskId = `ig_save_${Date.now()}`;
     taskCoordinator?.createTask?.(taskId, {
@@ -176,6 +438,7 @@ export class InstagramWorkspace {
         cover: this.mediaData.cover,
         author: this.mediaData.author,
         duration: this.mediaData.duration,
+        mediaType: isImage ? 'image' : 'video',
         overwrite: true
       });
 
@@ -189,18 +452,37 @@ export class InstagramWorkspace {
           relPath: res.data.relPath,
           sizeBytes: res.data.sizeBytes
         };
+
+        const badgeContainer = this.container.querySelector('#igDriveBadgeContainer');
+        if (badgeContainer) {
+          badgeContainer.innerHTML = `
+            <div class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 self-start sm:self-auto min-h-[36px] animate-fadeIn">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Đã lưu trong Drive</span>
+            </div>
+          `;
+          if (window.lucide?.createIcons) window.lucide.createIcons({ root: badgeContainer });
+        }
       }
 
       if (res.data?.relPath) {
         storage.updateItemDrivePath(targetUrl, res.data.relPath);
       }
+      this.renderHistory();
     } catch (err) {
       soundEngine?.play('error');
       showToast(err.message || 'Lỗi khi lưu vào Drive', 'error');
       taskCoordinator?.updateTask?.(taskId, { status: 'failed', error: err.message });
     } finally {
       this.savingToDrive = false;
-      this.render();
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = `
+          <i data-lucide="hard-drive" class="w-4 h-4 text-[#E1306C]"></i>
+          <span>${isImage ? 'Lưu ảnh vào Studio Drive' : 'Lưu vào Studio Drive'}</span>
+        `;
+        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveBtn });
+      }
     }
   }
 
@@ -208,6 +490,7 @@ export class InstagramWorkspace {
     if (!historyItem || !historyItem.downloadUrl) return;
     try {
       showToast('Đang lưu nội dung vào Studio Drive...', 'info');
+      const isImage = historyItem.mediaType === 'image' || historyItem.fileName?.endsWith('.jpg');
       const res = await instagramApi.saveToDrive({
         url: historyItem.downloadUrl,
         title: historyItem.title || historyItem.fileName,
@@ -216,8 +499,10 @@ export class InstagramWorkspace {
         cover: historyItem.cover,
         author: historyItem.author,
         duration: historyItem.duration,
+        mediaType: isImage ? 'image' : 'video',
         overwrite: true
       });
+
       if (res.data?.relPath) {
         storage.updateItemDrivePath(historyItem.id || historyItem.downloadUrl, res.data.relPath);
         showToast('Đã lưu nội dung vào Studio Drive!', 'success');
@@ -230,19 +515,23 @@ export class InstagramWorkspace {
 
   previewInApp() {
     if (!this.mediaData) return;
-    const currentItem = this.mediaData.medias?.[this.selectedMediaIndex] || { url: this.mediaData.videoUrl, type: 'video' };
-    const isVideo = currentItem.type === 'video' || (!currentItem.type && this.mediaData.videoUrl);
-    const targetUrl = currentItem.url || this.mediaData.videoUrl;
+    const currentItem = this.mediaData.medias?.[this.selectedMediaIndex] || {
+      url: this.mediaData.videoUrl || this.mediaData.imageUrl,
+      type: this.mediaData.mediaType === 'image' ? 'image' : 'video'
+    };
+    const isVideo = currentItem.type === 'video' || (!currentItem.type && Boolean(this.mediaData.videoUrl));
+    const targetUrl = currentItem.url || this.mediaData.videoUrl || this.mediaData.imageUrl;
 
+    const ext = isVideo ? 'mp4' : 'jpg';
     const streamUrl = instagramApi.getStreamUrl(
       targetUrl,
-      `${this.mediaData.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`,
+      `${this.mediaData.title || 'instagram_media'}.${ext}`,
       false
     );
 
     ViewerConnector.preview({
-      name: `${this.mediaData.title || 'Instagram Media'}.${isVideo ? 'mp4' : 'jpg'}`,
-      fileName: `${this.mediaData.title || 'Instagram Media'}.${isVideo ? 'mp4' : 'jpg'}`,
+      name: `${this.mediaData.title || 'Instagram Media'}.${ext}`,
+      fileName: `${this.mediaData.title || 'Instagram Media'}.${ext}`,
       category: isVideo ? 'video' : 'image',
       mimeType: isVideo ? 'video/mp4' : 'image/jpeg',
       viewUrl: streamUrl,
@@ -263,26 +552,27 @@ export class InstagramWorkspace {
       case 'paste-url': {
         const text = await readText();
         if (text) {
-          this.url = text.trim();
+          this.url = this.sanitizeUrl(text) || text.trim();
           const input = this.container.querySelector('#igUrlInput');
           if (input) input.value = this.url;
+          this.updateInputActions();
           this.resolveMedia();
         }
         break;
       }
 
       case 'clear-input':
-        this.url = '';
-        this.mediaData = null;
-        this.error = null;
-        this.render();
+        this.clearInput();
+        break;
+
+      case 'dismiss-alert':
+        this.renderAlert(null);
         break;
 
       case 'select-media': {
         const idx = parseInt(btn.dataset.index, 10);
         if (!isNaN(idx)) {
-          this.selectedMediaIndex = idx;
-          this.render();
+          this.updateSelectedMedia(idx);
         }
         break;
       }
@@ -297,22 +587,187 @@ export class InstagramWorkspace {
     }
   }
 
-  render() {
-    const currentItem = this.mediaData?.medias?.[this.selectedMediaIndex] || {
-      url: this.mediaData?.videoUrl,
-      type: 'video'
+  renderResult() {
+    const resultContainer = this.container.querySelector('#instagramResultContainer');
+    if (!resultContainer) return;
+
+    if (!this.mediaData) {
+      resultContainer.innerHTML = '';
+      return;
+    }
+
+    const currentItem = this.mediaData.medias?.[this.selectedMediaIndex] || {
+      url: this.mediaData.videoUrl || this.mediaData.imageUrl,
+      type: this.mediaData.mediaType === 'image' ? 'image' : 'video'
     };
-    const isVideo = currentItem?.type === 'video' || (!currentItem?.type && this.mediaData?.videoUrl);
-    const activeUrl = currentItem?.url || this.mediaData?.videoUrl || '';
+    const isVideo = currentItem?.type === 'video' || (!currentItem?.type && Boolean(this.mediaData.videoUrl));
+    const activeUrl = currentItem?.url || this.mediaData.videoUrl || this.mediaData.imageUrl || '';
+
+    const ext = isVideo ? 'mp4' : 'jpg';
+    const defaultFileName = `${this.mediaData.title || (isVideo ? 'instagram_video' : 'instagram_photo')}.${ext}`;
 
     const proxyStreamUrl = activeUrl
-      ? instagramApi.getStreamUrl(activeUrl, `${this.mediaData?.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`, false)
+      ? instagramApi.getStreamUrl(activeUrl, defaultFileName, false)
       : '';
 
     const proxyDownloadUrl = activeUrl
-      ? instagramApi.getStreamUrl(activeUrl, `${this.mediaData?.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}`, true)
+      ? instagramApi.getStreamUrl(activeUrl, defaultFileName, true)
       : '';
 
+    const authorUsername = typeof this.mediaData.author === 'string'
+      ? this.mediaData.author
+      : (this.mediaData.author?.username || this.mediaData.author?.fullName || 'instagram_user');
+
+    resultContainer.innerHTML = `
+      <div class="linear-card p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-zinc-200 dark:border-white/10 shadow-xs space-y-5 animate-fadeIn">
+        
+        <!-- Video Title & Author Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/5">
+          <div class="space-y-1 min-w-0">
+            <h2 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white line-clamp-2">${escapeHtml(this.mediaData.title)}</h2>
+            <div class="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
+              <span class="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
+                <i data-lucide="instagram" class="w-3.5 h-3.5 text-[#E1306C]"></i>
+                @${escapeHtml(authorUsername)}
+              </span>
+              ${this.mediaData.duration ? `
+                <span>•</span>
+                <span>${Math.floor(this.mediaData.duration / 60)}:${String(Math.floor(this.mediaData.duration % 60)).padStart(2, '0')}</span>
+              ` : ''}
+            </div>
+          </div>
+
+          <div id="igDriveBadgeContainer" class="shrink-0">
+            ${this.mediaData.existingInDrive ? `
+              <div class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 self-start sm:self-auto min-h-[36px]">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                <span>Đã lưu trong Drive</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Post Caption (if present) -->
+        ${this.mediaData.caption ? `
+          <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-sans">
+            ${escapeHtml(this.mediaData.caption)}
+          </div>
+        ` : ''}
+
+        <!-- Carousel Gallery Selector if multiple items -->
+        ${this.mediaData.medias?.length > 1 ? `
+          <div class="space-y-2">
+            <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Album đa phương tiện (${this.mediaData.medias.length} tệp):</span>
+            <div id="igCarouselTabs" class="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+              ${this.mediaData.medias.map((m, idx) => `
+                <button
+                  type="button"
+                  data-action="select-media"
+                  data-index="${idx}"
+                  class="min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold border shrink-0 transition cursor-pointer flex items-center gap-2 ${
+                    idx === this.selectedMediaIndex
+                      ? 'border-[#E1306C] bg-[#E1306C]/10 text-[#E1306C] shadow-xs'
+                      : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5'
+                  }"
+                >
+                  <i data-lucide="${m.type === 'video' ? 'play' : 'image'}" class="w-3.5 h-3.5"></i>
+                  <span>Mục ${idx + 1}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Player & Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+          
+          <!-- Video / Image Preview Area -->
+          <div id="igPreviewArea" class="md:col-span-7 bg-black rounded-xl overflow-hidden shadow-inner aspect-[4/5] sm:aspect-video flex items-center justify-center relative group">
+            ${isVideo ? `
+              <video
+                src="${proxyStreamUrl}"
+                controls
+                playsinline
+                poster="${currentItem.thumbnail || this.mediaData.cover || ''}"
+                class="w-full h-full object-contain"
+              ></video>
+            ` : `
+              <img
+                src="${proxyStreamUrl}"
+                alt="Instagram Post"
+                class="w-full h-full object-contain"
+              />
+            `}
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="md:col-span-5 flex flex-col justify-between space-y-4">
+            
+            <div class="space-y-3">
+              <span class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Định dạng trích xuất:</span>
+              <div class="p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-xs space-y-1.5">
+                <div class="flex justify-between text-zinc-500 dark:text-zinc-400">
+                  <span>Loại nội dung</span>
+                  <span id="igMediaTypeLabel" class="font-medium text-zinc-800 dark:text-white">${isVideo ? 'Video MP4 (H.264 / AAC)' : 'Hình ảnh JPEG'}</span>
+                </div>
+                <div class="flex justify-between text-zinc-500 dark:text-zinc-400">
+                  <span>Chất lượng</span>
+                  <span class="font-medium text-emerald-600 dark:text-emerald-400 font-semibold">Gốc (Không nén)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Primary Action Buttons -->
+            <div class="space-y-2 pt-2">
+              <a
+                id="igDownloadBtn"
+                href="${proxyDownloadUrl}"
+                download="${defaultFileName}"
+                class="w-full min-h-[44px] py-2.5 rounded-xl bg-gradient-to-r from-[#E1306C] to-[#FD1D1D] hover:opacity-90 text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-98 transition flex items-center justify-center gap-2 no-underline cursor-pointer"
+              >
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Tải về máy (.${isVideo ? 'MP4' : 'JPG'})</span>
+              </a>
+
+              <button
+                type="button"
+                id="igSaveDriveBtn"
+                data-action="save-drive"
+                ${this.savingToDrive ? 'disabled' : ''}
+                class="w-full min-h-[44px] py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                ${this.savingToDrive ? `
+                  <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#E1306C]"></i>
+                  <span>Đang lưu vào Drive...</span>
+                ` : `
+                  <i data-lucide="hard-drive" class="w-4 h-4 text-[#E1306C]"></i>
+                  <span>${isVideo ? 'Lưu vào Studio Drive' : 'Lưu ảnh vào Studio Drive'}</span>
+                `}
+              </button>
+
+              <button
+                type="button"
+                id="igPreviewBtn"
+                data-action="preview"
+                class="w-full min-h-[44px] py-2.5 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                <span>${isVideo ? 'Xem toàn màn hình' : 'Xem ảnh trong Studio'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: resultContainer });
+    }
+  }
+
+  render() {
     this.container.innerHTML = `
       <div class="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
         
@@ -345,17 +800,26 @@ export class InstagramWorkspace {
             <input
               type="text"
               id="igUrlInput"
-              value="${this.url}"
+              value="${escapeHtml(this.url)}"
               placeholder="https://www.instagram.com/reel/... hoặc https://www.instagram.com/p/..."
-              class="w-full pl-3.5 pr-24 py-2.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-300 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E1306C]/60 focus:border-transparent transition"
+              class="w-full min-h-[44px] pl-3.5 pr-20 sm:pr-24 py-2.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-300 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E1306C]/60 focus:border-transparent transition"
             />
-            <div class="absolute right-1.5 flex items-center gap-1">
+            <div id="igInputActionBtn" class="absolute right-1.5 flex items-center gap-1">
               ${this.url ? `
-                <button type="button" data-action="clear-input" class="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-white/10 transition cursor-pointer" title="Xóa">
+                <button
+                  type="button"
+                  data-action="clear-input"
+                  class="min-h-[44px] min-w-[44px] p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-white/10 transition cursor-pointer flex items-center justify-center"
+                  title="Xóa"
+                >
                   <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
               ` : `
-                <button type="button" data-action="paste-url" class="px-2 py-1 text-xs font-medium text-[#E1306C] hover:bg-[#E1306C]/10 rounded-lg transition cursor-pointer flex items-center gap-1">
+                <button
+                  type="button"
+                  data-action="paste-url"
+                  class="min-h-[44px] px-3 py-1.5 text-xs font-semibold text-[#E1306C] hover:bg-[#E1306C]/10 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+                >
                   <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                   <span>Dán</span>
                 </button>
@@ -363,16 +827,17 @@ export class InstagramWorkspace {
             </div>
           </div>
 
-          <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
             <span class="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
               <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-500"></i>
               Bảo mật, tải trực tiếp không cần đăng nhập
             </span>
             <button
               type="button"
+              id="igSubmitBtn"
               data-action="resolve"
               ${this.loading ? 'disabled' : ''}
-              class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#E1306C] to-[#FD1D1D] hover:opacity-90 text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="min-h-[44px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#E1306C] to-[#FD1D1D] hover:opacity-90 text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ${this.loading ? `
                 <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
@@ -385,149 +850,14 @@ export class InstagramWorkspace {
           </div>
         </div>
 
-        <!-- Error Alert -->
-        ${this.error ? `
-          <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs sm:text-sm flex items-center gap-2.5">
-            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
-            <span>${this.error}</span>
-          </div>
-        ` : ''}
+        <!-- Alert Container (in-place) -->
+        <div id="instagramAlertContainer"></div>
 
-        <!-- Resolved Media Workspace -->
-        ${this.mediaData ? `
-          <div class="linear-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-zinc-200 dark:border-white/10 shadow-xs space-y-5">
-            
-            <!-- Video Title & Author Bar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/5">
-              <div class="space-y-1 min-w-0">
-                <h2 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white line-clamp-2">${this.mediaData.title}</h2>
-                <div class="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
-                  <span class="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
-                    <i data-lucide="instagram" class="w-3.5 h-3.5 text-[#E1306C]"></i>
-                    @${this.mediaData.author?.username || 'instagram_user'}
-                  </span>
-                  ${this.mediaData.duration ? `
-                    <span>•</span>
-                    <span>${Math.floor(this.mediaData.duration / 60)}:${String(Math.floor(this.mediaData.duration % 60)).padStart(2, '0')}</span>
-                  ` : ''}
-                </div>
-              </div>
+        <!-- Resolved Media Workspace (in-place) -->
+        <div id="instagramResultContainer"></div>
 
-              ${this.mediaData.existingInDrive ? `
-                <div class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
-                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-                  <span>Đã lưu trong Drive</span>
-                </div>
-              ` : ''}
-            </div>
-
-            <!-- Carousel Gallery Selector if multiple items -->
-            ${this.mediaData.medias?.length > 1 ? `
-              <div class="space-y-2">
-                <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Album đa phương tiện (${this.mediaData.medias.length} tệp):</span>
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                  ${this.mediaData.medias.map((m, idx) => `
-                    <button
-                      type="button"
-                      data-action="select-media"
-                      data-index="${idx}"
-                      class="px-3 py-1.5 rounded-lg text-xs font-medium border shrink-0 transition cursor-pointer flex items-center gap-1.5 ${
-                        idx === this.selectedMediaIndex
-                          ? 'border-[#E1306C] bg-[#E1306C]/10 text-[#E1306C] font-semibold'
-                          : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5'
-                      }"
-                    >
-                      <i data-lucide="${m.type === 'video' ? 'play' : 'image'}" class="w-3 h-3"></i>
-                      <span>Mục ${idx + 1}</span>
-                    </button>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- Player & Controls Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-              
-              <!-- Video / Image Preview Area -->
-              <div class="md:col-span-7 bg-black rounded-xl overflow-hidden shadow-inner aspect-[4/5] sm:aspect-video flex items-center justify-center relative group">
-                ${isVideo ? `
-                  <video
-                    src="${proxyStreamUrl}"
-                    controls
-                    playsinline
-                    poster="${this.mediaData.cover || ''}"
-                    class="w-full h-full object-contain"
-                  ></video>
-                ` : `
-                  <img
-                    src="${proxyStreamUrl}"
-                    alt="Instagram Post"
-                    class="w-full h-full object-contain"
-                  />
-                `}
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="md:col-span-5 flex flex-col justify-between space-y-4">
-                
-                <div class="space-y-3">
-                  <span class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Định dạng trích xuất:</span>
-                  <div class="p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 text-xs space-y-1.5">
-                    <div class="flex justify-between text-zinc-500 dark:text-zinc-400">
-                      <span>Loại nội dung</span>
-                      <span class="font-medium text-zinc-800 dark:text-white">${isVideo ? 'Video MP4 (H.264 / AAC)' : 'Hình ảnh JPEG'}</span>
-                    </div>
-                    <div class="flex justify-between text-zinc-500 dark:text-zinc-400">
-                      <span>Chất lượng</span>
-                      <span class="font-medium text-emerald-600 dark:text-emerald-400 font-semibold">Gốc (Không nén)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Primary Action Buttons -->
-                <div class="space-y-2 pt-2">
-                  <a
-                    href="${proxyDownloadUrl}"
-                    download="${this.mediaData.title || 'instagram_media'}.${isVideo ? 'mp4' : 'jpg'}"
-                    class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#E1306C] to-[#FD1D1D] hover:opacity-90 text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-98 transition flex items-center justify-center gap-2 no-underline cursor-pointer"
-                  >
-                    <i data-lucide="download" class="w-4 h-4"></i>
-                    <span>Tải về máy (.${isVideo ? 'MP4' : 'JPG'})</span>
-                  </a>
-
-                  <button
-                    type="button"
-                    data-action="save-drive"
-                    ${this.savingToDrive ? 'disabled' : ''}
-                    class="w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    ${this.savingToDrive ? `
-                      <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#E1306C]"></i>
-                      <span>Đang lưu vào Drive...</span>
-                    ` : `
-                      <i data-lucide="hard-drive" class="w-4 h-4 text-[#E1306C]"></i>
-                      <span>Lưu vào Studio Drive</span>
-                    `}
-                  </button>
-
-                  <button
-                    type="button"
-                    data-action="preview"
-                    class="w-full py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                    <span>Xem toàn màn hình</span>
-                  </button>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        ` : ''}
-
-        <!-- Media History Section -->
-        <div id="mediaHistoryContainer">
+        <!-- Media History Section (isolated) -->
+        <div id="instagramHistoryContainer">
           ${renderMediaHistorySection({
             toolId: 'instagram-downloader',
             title: 'Lịch Sử Tải Instagram',
@@ -541,7 +871,7 @@ export class InstagramWorkspace {
       </div>
     `;
 
-    // Attach listeners
+    // Attach input listeners
     const input = this.container.querySelector('#igUrlInput');
     if (input) {
       input.removeEventListener('input', this.boundHandleInput);
@@ -561,7 +891,7 @@ export class InstagramWorkspace {
   }
 
   attachHistoryListeners() {
-    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    const historyContainer = this.container.querySelector('#instagramHistoryContainer');
     if (!historyContainer) return;
 
     if (this.historyCleanup) {
@@ -578,9 +908,10 @@ export class InstagramWorkspace {
         this.renderHistory();
       },
       onReResolve: (url) => {
-        this.url = url;
+        this.url = this.sanitizeUrl(url) || url.trim();
         const inp = this.container.querySelector('#igUrlInput');
-        if (inp) inp.value = url;
+        if (inp) inp.value = this.url;
+        this.updateInputActions();
         this.resolveMedia();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
@@ -598,7 +929,7 @@ export class InstagramWorkspace {
   }
 
   renderHistory() {
-    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    const historyContainer = this.container.querySelector('#instagramHistoryContainer');
     if (!historyContainer) return;
 
     historyContainer.innerHTML = renderMediaHistorySection({

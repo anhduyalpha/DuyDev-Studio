@@ -1,26 +1,23 @@
-# Progress: Purge AI UI Annotations & Enforce Production Minimalism
+# Progress: Audit & Remediate Facebook, Spotify, and Instagram Downloader Modules
 
-Last visited: 2026-09-24T16:20:00Z
+Last visited: 2026-10-30T16:12:00Z
 
 ## Current Status
 - [x] Read and registered `ORIGINAL_REQUEST.md` and user constraints
-- [x] Initialized `DISPATCH.md`, `BRIEFING.md`, `plan.md`, and `progress.md`
-- [x] Scheduled recurring heartbeat cron (task-25, terminated upon completion)
-- [x] Prepared subagent directories and dispatch files
-- [x] Milestone 1: Subagent A (Tools Specialist) completed with verified handoff (0 fluff errors, TS 0 errors, Vitest 74/74 pass)
-- [x] Milestone 2: Subagent B (Pages & Shell Specialist) completed with verified handoff (0 fluff errors, TS 0 errors, Vitest 74/74 pass)
-- [x] Milestone 3: Subagent C (QA, Layout Hygiene & Verification Specialist) completed with verified handoff (110 files scanned, 0 fluff errors, TS 0 errors, Vitest 76/76 pass)
-- [x] Milestone 4: Final Synthesis, handoff documentation, and victory claim report to Sentinel
+- [x] Initialized `DISPATCH.md`, `BRIEFING.md`, and `progress.md`
+- [x] Phase 0: Survey & Architecture Mapping (3 Explorers completed)
+- [x] Phase 1: Synthesize Survey into `PROJECT.md` & Decompose Milestones
+- [x] Phase 2: Dual-Track Implementation & Testing
+  - [x] E2E Testing Track: `test_writer_e2e` completed 4-tier test suite (41/41 passing), published `TEST_INFRA.md` & `TEST_READY.md`
+  - [x] Milestone 1: Facebook Downloader Remediation (PASSED GATE, ALL VERIFIED)
+  - [x] Milestone 2: Spotify Downloader Remediation (PASSED GATE, ALL VERIFIED)
+  - [x] Milestone 3: Instagram Downloader Remediation (PASSED GATE, ALL VERIFIED)
+  - [x] Milestone 4: Cross-Platform Ergonomics & Final E2E Gate (PASSED GATE, ALL VERIFIED)
 
 ## Iteration Status
-Current iteration: 1 / 32 (Complete - Gate Passed on Iteration 1)
+Current iteration: 4 / 32 (Project Completed — 100% Gates Passed)
 
-## Subagent Tracking
-- Subagent A (Tools Specialist): COMPLETED (Conv ID: `264eb29a-757b-4891-bb34-29df1de01ca6`)
-- Subagent B (Pages & Shell Specialist): COMPLETED (Conv ID: `26f95e16-75dc-45ab-9258-48026bd51b52`)
-- Subagent C (QA Specialist): COMPLETED (Conv ID: `7e773eff-adcc-49e4-887e-ebd25dbce750`)
-
-## Retrospective Notes
-- Decomposition into distinct functional scopes (Tools vs Pages/Shell) allowed parallel execution without code collisions.
-- Cross-cutting specialist (Subagent C) was crucial for catching shared registries (`useToolRegistry.js`), unassigned modules (`studocu`), and toast notifications spanning multiple files.
-- Backward compatibility logic in history filters ensured old stored jobs remain visible after tool titles were normalized.
+## Succession Status
+- Gen 1 Spawn count: 16 / 16 (Complete)
+- Soft handoff written to `orchestrator/handoff.md`
+- Transitioning to Gen 2 Orchestrator to execute Spotify regex remediation, Milestone 3 (Instagram), and Milestone 4 (Final E2E Gate).

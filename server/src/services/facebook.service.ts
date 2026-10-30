@@ -8,7 +8,7 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { pipeline } from 'stream/promises';
-import { Readable } from 'stream';
+import { Readable, Transform } from 'stream';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { FastifyReply } from 'fastify';
@@ -28,12 +28,47 @@ export class FacebookService {
    * Cleans and validates raw text to a valid Facebook URL
    */
   static extractUrl(rawText: string): string {
-    const trimmed = (rawText || '').trim();
-    const urlMatch = trimmed.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.gg)[^\s"'>]*/i);
+    let trimmed = (rawText || '').trim();
+    if (!trimmed) {
+      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Facebook hoặc FB Watch hợp lệ.');
+    }
+
+    // Auto-prepend https:// if protocol-less
+    if (/^(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.com|fb\.gg)(?:\/|$)/i.test(trimmed)) {
+      trimmed = `https://${trimmed}`;
+    }
+
+    const urlMatch = trimmed.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.com|fb\.gg)[^\s"'<>]+/i);
     if (!urlMatch) {
       throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Facebook hoặc FB Watch hợp lệ.');
     }
-    return urlMatch[0];
+
+    // Strip trailing punctuation
+    let cleanUrl = urlMatch[0].replace(/[.,;!?)"'\]>]+$/, '');
+
+    // Strip tracking parameters
+    try {
+      const parsed = new URL(cleanUrl);
+      const trackingParams = [
+        'fbclid',
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_term',
+        'utm_content',
+        'mibextid',
+        'rdid',
+        'hrc',
+        'refsrc',
+        '_rdr'
+      ];
+      for (const p of trackingParams) {
+        parsed.searchParams.delete(p);
+      }
+      return parsed.toString();
+    } catch {
+      return cleanUrl;
+    }
   }
 
   /**
@@ -81,69 +116,40 @@ export class FacebookService {
 
     let resolvedData: FacebookVideoData | null = null;
 
-    const isExplicitPostOrShare = targetUrl.includes('/share/') || targetUrl.includes('/posts/') || targetUrl.includes('/photos/') || targetUrl.includes('fbid=') || targetUrl.includes('/photo.php');
-
-    // If it's a post/share link, try post extraction first
-    if (isExplicitPostOrShare) {
-      try {
-        const postResult = await this.tryPostExtraction(targetUrl, fallbackId);
-        if (postResult) {
-          resolvedData = postResult;
-          logger.info({ id: resolvedData.id, mediaType: resolvedData.mediaType }, '[Facebook] Resolved via Post Extractor');
-
-          // If the post has video, try yt-dlp to enrich formats if possible
-          if (resolvedData.mediaType === 'video' && (!resolvedData.videoHdUrl || resolvedData.formats.length <= 1)) {
-            try {
-              const ytResult = await this.tryYtdlpExtraction(targetUrl, fallbackId);
-              if (ytResult && ytResult.formats.length > 0) {
-                resolvedData.formats = ytResult.formats;
-                resolvedData.videoHdUrl = ytResult.videoHdUrl || resolvedData.videoHdUrl;
-                resolvedData.videoSdUrl = ytResult.videoSdUrl || resolvedData.videoSdUrl;
-              }
-            } catch {}
-          }
-        }
-      } catch (postErr: any) {
-        logger.debug({ err: postErr?.message }, '[Facebook] Post extraction skipped');
+    // Fast-path Tier 1: Try fast OpenGraph crawler (~300ms) for all links first
+    try {
+      const postResult = await this.tryPostExtraction(targetUrl, fallbackId);
+      if (postResult && (postResult.videoHdUrl || postResult.formats.length > 0 || postResult.images?.length)) {
+        resolvedData = postResult;
+        logger.info({ id: resolvedData.id, mediaType: resolvedData.mediaType }, '[Facebook] Resolved via Fast OpenGraph Extractor');
       }
+    } catch (postErr: any) {
+      logger.debug({ err: postErr?.message }, '[Facebook] Fast OpenGraph extraction skipped');
     }
 
-    // --- Tier 1: Open Resolver / RapidAPI if configured ---
+    // Fallback Tier 2: Open Resolver / RapidAPI if configured
     if (!resolvedData) {
       try {
         const apiResult = await this.tryApiExtraction(targetUrl, fallbackId);
         if (apiResult) {
           resolvedData = apiResult;
-          logger.info({ id: resolvedData.id }, '[Facebook] Resolved via Tier 1 API');
+          logger.info({ id: resolvedData.id }, '[Facebook] Resolved via Tier 2 API');
         }
       } catch (e: any) {
-        logger.debug({ err: e?.message }, '[Facebook] Tier 1 API skipped');
+        logger.debug({ err: e?.message }, '[Facebook] Tier 2 API skipped');
       }
     }
 
-    // --- Tier 2: yt-dlp CLI ---
+    // Fallback Tier 3: yt-dlp CLI (with --no-playlist)
     if (!resolvedData) {
       try {
         const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, fallbackId);
         if (ytdlpResult) {
           resolvedData = ytdlpResult;
-          logger.info({ id: resolvedData.id }, '[Facebook] Resolved via Tier 2 yt-dlp');
+          logger.info({ id: resolvedData.id }, '[Facebook] Resolved via Tier 3 yt-dlp');
         }
       } catch (ytErr: any) {
-        logger.warn({ err: ytErr?.message }, '[Facebook] Tier 2 yt-dlp failed');
-      }
-    }
-
-    // --- Tier 3 Fallback: Post Extractor for any unhandled URLs ---
-    if (!resolvedData) {
-      try {
-        const postResult = await this.tryPostExtraction(targetUrl, fallbackId);
-        if (postResult) {
-          resolvedData = postResult;
-          logger.info({ id: resolvedData.id, mediaType: resolvedData.mediaType }, '[Facebook] Resolved via Tier 3 Post Extractor fallback');
-        }
-      } catch (postErr: any) {
-        logger.warn({ err: postErr?.message }, '[Facebook] Tier 3 Post Extractor fallback failed');
+        logger.warn({ err: ytErr?.message }, '[Facebook] Tier 3 yt-dlp failed');
       }
     }
 
@@ -221,6 +227,7 @@ export class FacebookService {
   private static async tryYtdlpExtraction(targetUrl: string, fallbackId: string): Promise<FacebookVideoData | null> {
     const { stdout } = await execFileAsync('yt-dlp', [
       '--dump-json',
+      '--no-playlist',
       '--no-warnings',
       '--no-check-certificates',
       targetUrl
@@ -365,16 +372,38 @@ export class FacebookService {
         });
       }
 
-      // If video exists in og tags
-      if (ogVideo && ogVideo.startsWith('http')) {
-        const formats: FacebookMediaFormat[] = [
-          {
+      // If video exists in og tags or inline script sources
+      let hdUrl = (ogVideo && ogVideo.startsWith('http')) ? ogVideo : '';
+      let sdUrl = '';
+
+      const hdMatch = html.match(/(?:hd_src|browser_native_hd_url)["']?:\s*["'](https:[^"']+)["']/i);
+      const sdMatch = html.match(/(?:sd_src|browser_native_sd_url)["']?:\s*["'](https:[^"']+)["']/i);
+
+      if (hdMatch) {
+        hdUrl = hdMatch[1].replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+      }
+      if (sdMatch) {
+        sdUrl = sdMatch[1].replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+      }
+
+      if (hdUrl || sdUrl) {
+        const formats: FacebookMediaFormat[] = [];
+        if (hdUrl) {
+          formats.push({
             quality: 'hd',
-            label: 'Video Post',
-            url: ogVideo,
+            label: 'HD Video',
+            url: hdUrl,
             ext: 'mp4'
-          }
-        ];
+          });
+        }
+        if (sdUrl && sdUrl !== hdUrl) {
+          formats.push({
+            quality: 'sd',
+            label: 'SD Video',
+            url: sdUrl,
+            ext: 'mp4'
+          });
+        }
 
         return {
           id: postId,
@@ -384,8 +413,8 @@ export class FacebookService {
           cover: ogImage,
           duration: 0,
           formats,
-          videoHdUrl: ogVideo,
-          videoSdUrl: ogVideo,
+          videoHdUrl: hdUrl || sdUrl,
+          videoSdUrl: sdUrl || hdUrl,
           mediaType: 'video',
           extractor: 'scraper'
         };
@@ -498,45 +527,87 @@ export class FacebookService {
 
     try {
       const files = await fsPromises.readdir(fbDir, { withFileTypes: true });
-      for (const file of files) {
-        if (file.isDirectory() || (!file.name.endsWith('.mp4') && !file.name.endsWith('.jpg') && !file.name.endsWith('.png'))) continue;
+      const mediaFiles = files.filter(f => !f.isDirectory() && (f.name.endsWith('.mp4') || f.name.endsWith('.jpg') || f.name.endsWith('.png')));
 
-        const mediaDiskPath = path.join(fbDir, file.name);
-        if (!fs.existsSync(mediaDiskPath)) continue;
-
-        let isMatch = false;
-        let meta: any = null;
-        const metaPath = path.join(fbDir, `${file.name.replace(/\.[^.]+$/, '')}.meta.json`);
-
-        if (fs.existsSync(metaPath)) {
-          try {
-            meta = JSON.parse(await fsPromises.readFile(metaPath, 'utf8'));
-          } catch {}
+      // Fast check: direct filename match on videoId
+      for (const file of mediaFiles) {
+        if (cleanId && (file.name.includes(cleanId) || (cleanId.length >= 8 && file.name.includes(cleanId.slice(-8))))) {
+          const mediaDiskPath = path.join(fbDir, file.name);
+          const stat = await fsPromises.stat(mediaDiskPath).catch(() => null);
+          if (stat) {
+            const metaPath = path.join(fbDir, `${file.name.replace(/\.[^.]+$/, '')}.meta.json`);
+            let meta: any = null;
+            if (fs.existsSync(metaPath)) {
+              try {
+                meta = JSON.parse(await fsPromises.readFile(metaPath, 'utf8'));
+              } catch {}
+            }
+            return {
+              exists: true,
+              item: {
+                fileName: file.name,
+                relPath: `/facebook/${file.name}`,
+                sizeBytes: stat.size,
+                title: meta?.title || file.name,
+                thumbnail: meta?.thumbnail,
+                duration: meta?.duration,
+                updatedAt: stat.mtime.toISOString()
+              }
+            };
+          }
         }
+      }
 
-        if (cleanId && ((meta?.facebookVideoId && String(meta.facebookVideoId) === cleanId) || file.name.includes(cleanId.slice(-10)))) {
+      // Parallel batch check for metadata files
+      const metaEntries = files
+        .filter(f => !f.isDirectory() && f.name.endsWith('.meta.json'))
+        .slice(0, 40);
+
+      const loadedMetas = await Promise.all(
+        metaEntries.map(async (me) => {
+          try {
+            const raw = await fsPromises.readFile(path.join(fbDir, me.name), 'utf8');
+            return { name: me.name, meta: JSON.parse(raw) };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      for (const entry of loadedMetas) {
+        if (!entry || !entry.meta) continue;
+        const meta = entry.meta;
+        let isMatch = false;
+
+        if (cleanId && String(meta.facebookVideoId) === cleanId) {
           isMatch = true;
         }
 
-        if (!isMatch && normInputUrl && meta?.originalUrl) {
+        if (!isMatch && normInputUrl && meta.originalUrl) {
           const normMetaUrl = meta.originalUrl.split('?')[0].replace(/\/$/, '').toLowerCase();
           if (normMetaUrl === normInputUrl) isMatch = true;
         }
 
         if (isMatch) {
-          const stat = await fsPromises.stat(mediaDiskPath);
-          return {
-            exists: true,
-            item: {
-              fileName: file.name,
-              relPath: `/facebook/${file.name}`,
-              sizeBytes: stat.size,
-              title: meta?.title || file.name,
-              thumbnail: meta?.thumbnail,
-              duration: meta?.duration,
-              updatedAt: stat.mtime.toISOString()
+          const baseName = entry.name.replace(/\.meta\.json$/, '');
+          for (const ext of ['.mp4', '.jpg', '.png']) {
+            const candidatePath = path.join(fbDir, `${baseName}${ext}`);
+            if (fs.existsSync(candidatePath)) {
+              const stat = await fsPromises.stat(candidatePath);
+              return {
+                exists: true,
+                item: {
+                  fileName: `${baseName}${ext}`,
+                  relPath: `/facebook/${baseName}${ext}`,
+                  sizeBytes: stat.size,
+                  title: meta.title || `${baseName}${ext}`,
+                  thumbnail: meta.thumbnail,
+                  duration: meta.duration,
+                  updatedAt: stat.mtime.toISOString()
+                }
+              };
             }
-          };
+          }
         }
       }
     } catch {}
@@ -611,13 +682,15 @@ export class FacebookService {
     const hash = crypto.createHash('sha256');
     let byteCount = 0;
 
-    const webStream = Readable.fromWeb(upstreamRes.body as any);
-    webStream.on('data', (chunk: Buffer) => {
-      byteCount += chunk.length;
-      hash.update(chunk);
+    const tracker = new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        byteCount += chunk.length;
+        hash.update(chunk);
+        callback(null, chunk);
+      }
     });
 
-    await pipeline(webStream, fileStream);
+    await pipeline(Readable.fromWeb(upstreamRes.body as any), tracker, fileStream);
 
     const hashSha256 = hash.digest('hex');
 

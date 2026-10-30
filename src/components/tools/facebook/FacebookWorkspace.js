@@ -1,7 +1,7 @@
 /**
  * Facebook Downloader Workspace Component
- * High-performance UI for resolving, playing, and downloading Facebook videos and Reels
- * Native port of n8n Facebook Downloader workflow
+ * High-performance UI for resolving, playing, and downloading Facebook videos, Reels, Posts & Photos
+ * Fully compliant with Universal Tool Module Standard (Pillars 1-10, KI-CON-019, KI-FIX-040)
  */
 
 import { facebookApi } from './services/facebookApi.js';
@@ -12,7 +12,12 @@ import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
-import { renderMediaHistorySection, attachMediaHistoryListeners, escapeHtml } from '../common/MediaHistorySection.js';
+import {
+  renderMediaHistorySection,
+  attachMediaHistoryListeners,
+  triggerDownload,
+  escapeHtml
+} from '../common/MediaHistorySection.js';
 
 export class FacebookWorkspace {
   constructor(containerEl) {
@@ -26,6 +31,8 @@ export class FacebookWorkspace {
     this.saveResult = null;
     this.handlePendingEvent = null;
     this.historyTab = 'history';
+    this.abortController = null;
+    this.historyCleanup = null;
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -41,17 +48,19 @@ export class FacebookWorkspace {
 
     const pendingUrl = consumePendingAutoStart('facebook');
     if (pendingUrl) {
-      this.url = pendingUrl;
+      this.url = this.sanitizeUrl(pendingUrl) || pendingUrl;
       const input = this.container.querySelector('#fbUrlInput');
-      if (input) input.value = pendingUrl;
+      if (input) input.value = this.url;
+      this.updateInputActions();
       setTimeout(() => this.resolveVideo(), 60);
     }
 
     this.handlePendingEvent = (e) => {
       if (e.detail?.toolId === 'facebook' && e.detail.url) {
-        this.url = e.detail.url.trim();
+        this.url = this.sanitizeUrl(e.detail.url) || e.detail.url.trim();
         const input = this.container.querySelector('#fbUrlInput');
         if (input) input.value = this.url;
+        this.updateInputActions();
         setTimeout(() => this.resolveVideo(), 60);
       }
     };
@@ -59,20 +68,62 @@ export class FacebookWorkspace {
   }
 
   unmount() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
       this.handlePendingEvent = null;
     }
+
     if (this.historyCleanup) {
       this.historyCleanup();
       this.historyCleanup = null;
     }
+
+    const input = this.container.querySelector('#fbUrlInput');
+    if (input) {
+      input.removeEventListener('input', this.boundHandleInput);
+      input.removeEventListener('keydown', this.boundHandleKeyDown);
+    }
+
+    this.container.removeEventListener('click', this.boundHandleClick);
     this.container.innerHTML = '';
+  }
+
+  /**
+   * Sanitizes pasted text to a valid Facebook URL, stripping query tracking tags
+   */
+  sanitizeUrl(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    let text = raw.trim();
+
+    if (/^(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.com|fb\.gg)(?:\/|$)/i.test(text)) {
+      text = `https://${text}`;
+    }
+
+    const match = text.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?(?:facebook\.com|fb\.watch|fb\.com|fb\.gg)[^\s"'<>]+/i);
+    if (!match) return '';
+
+    let clean = match[0].replace(/[.,;!?)"'\]>]+$/, '');
+    try {
+      const u = new URL(clean);
+      const trackingParams = ['fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'mibextid', 'rdid', 'hrc', 'refsrc', '_rdr'];
+      for (const p of trackingParams) {
+        u.searchParams.delete(p);
+      }
+      return u.toString();
+    } catch {
+      return clean;
+    }
   }
 
   handleInput(e) {
     if (e.target.id === 'fbUrlInput') {
       this.url = e.target.value;
+      this.updateInputActions();
     }
   }
 
@@ -83,27 +134,95 @@ export class FacebookWorkspace {
     }
   }
 
+  updateInputActions() {
+    const actionContainer = this.container.querySelector('#fbInputActionBtn');
+    if (!actionContainer) return;
+
+    if (this.url && this.url.trim().length > 0) {
+      actionContainer.innerHTML = `
+        <button
+          type="button"
+          data-action="clear-input"
+          class="min-h-[44px] min-w-[44px] p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-white/10 transition cursor-pointer flex items-center justify-center"
+          title="Xóa"
+        >
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      `;
+    } else {
+      actionContainer.innerHTML = `
+        <button
+          type="button"
+          data-action="paste-url"
+          class="min-h-[44px] px-3 py-1.5 text-xs font-medium text-[#1877F2] hover:bg-[#1877F2]/10 rounded-lg transition cursor-pointer flex items-center gap-1.5"
+        >
+          <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+          <span>Dán</span>
+        </button>
+      `;
+    }
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: actionContainer });
+    }
+  }
+
+  clearInput() {
+    this.url = '';
+    this.videoData = null;
+    this.error = null;
+    this.saveResult = null;
+
+    const input = this.container.querySelector('#fbUrlInput');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+
+    this.updateInputActions();
+
+    const alertContainer = this.container.querySelector('#facebookAlertContainer');
+    if (alertContainer) alertContainer.innerHTML = '';
+
+    const resultContainer = this.container.querySelector('#facebookResultContainer');
+    if (resultContainer) resultContainer.innerHTML = '';
+  }
+
   async resolveVideo() {
-    const cleanUrl = (this.url || '').trim();
-    if (!cleanUrl) {
+    const raw = (this.url || '').trim();
+    if (!raw) {
       showToast('Vui lòng dán liên kết Facebook, Reel hoặc bài viết', 'warning');
       return;
     }
 
+    const cleanUrl = this.sanitizeUrl(raw);
+    if (!cleanUrl) {
+      this.error = 'Liên kết không hợp lệ. Vui lòng dán liên kết Facebook, FB Watch hoặc bài viết hợp lệ.';
+      this.renderAlert(this.error);
+      showToast(this.error, 'error');
+      return;
+    }
+
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+
     this.loading = true;
     this.error = null;
-    this.videoData = null;
     this.saveResult = null;
-    this.render();
+    this.renderAlert(null);
+    this.updateSubmitBtn(true);
 
     try {
       soundEngine?.play('click');
-      const data = await facebookApi.resolveVideo(cleanUrl);
+      const data = await facebookApi.resolveVideo(cleanUrl, { signal: this.abortController.signal });
       this.videoData = data;
       const isImage = data.mediaType === 'image';
       this.selectedQuality = isImage
         ? (data.formats?.[0]?.quality || 'photo_1')
         : (data.videoHdUrl ? 'hd' : 'sd');
+
       soundEngine?.play('success');
       showToast(isImage ? 'Trích xuất bài viết Facebook thành công!' : 'Trích xuất video Facebook thành công!', 'success');
 
@@ -145,13 +264,329 @@ export class FacebookWorkspace {
         driveRelPath: data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null,
         resultSize: data.sizeBytes || 0
       });
+
+      this.renderResult();
+      this.renderHistory();
     } catch (err) {
+      if (err.name === 'AbortError') return;
       this.error = err.message || 'Lỗi khi trích xuất nội dung Facebook';
       soundEngine?.play('error');
       showToast(this.error, 'error');
+      this.renderAlert(this.error);
     } finally {
       this.loading = false;
-      this.render();
+      this.updateSubmitBtn(false);
+    }
+  }
+
+  updateSubmitBtn(isLoading) {
+    const btn = this.container.querySelector('#fbSubmitBtn');
+    if (!btn) return;
+    btn.disabled = isLoading;
+    if (isLoading) {
+      btn.innerHTML = `
+        <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+        <span>Đang trích xuất...</span>
+      `;
+    } else {
+      btn.innerHTML = `
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
+        <span>Trích xuất nội dung</span>
+      `;
+    }
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: btn });
+    }
+  }
+
+  renderAlert(errorMsg) {
+    const alertContainer = this.container.querySelector('#facebookAlertContainer');
+    if (!alertContainer) return;
+    if (!errorMsg) {
+      alertContainer.innerHTML = '';
+      return;
+    }
+    alertContainer.innerHTML = `
+      <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span class="break-words">${escapeHtml(errorMsg)}</span>
+        </div>
+        <button type="button" data-action="dismiss-alert" class="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-red-500 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition cursor-pointer shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    `;
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: alertContainer });
+    }
+  }
+
+  updateSelectedQuality(newQuality) {
+    this.selectedQuality = newQuality;
+    const isImage = this.videoData?.mediaType === 'image';
+    let targetMediaUrl = '';
+    let fileExt = isImage ? 'jpg' : 'mp4';
+
+    if (isImage) {
+      const selFmt = this.videoData?.formats?.find(f => f.quality === this.selectedQuality) || this.videoData?.formats?.[0];
+      targetMediaUrl = selFmt?.url || this.videoData?.cover || '';
+      fileExt = selFmt?.ext || 'jpg';
+    } else if (this.videoData) {
+      targetMediaUrl = (this.selectedQuality === 'hd' && this.videoData.videoHdUrl)
+        ? this.videoData.videoHdUrl
+        : (this.videoData.videoSdUrl || this.videoData.videoHdUrl || '');
+    }
+
+    const defaultFileName = `${this.videoData?.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`;
+    const proxyStreamUrl = targetMediaUrl ? facebookApi.getStreamUrl(targetMediaUrl, defaultFileName, false) : '';
+    const proxyDownloadUrl = targetMediaUrl ? facebookApi.getStreamUrl(targetMediaUrl, defaultFileName, true) : '';
+
+    // Update quality buttons UI in place
+    const qualityBtns = this.container.querySelectorAll('[data-action="select-quality"]');
+    qualityBtns.forEach((btn) => {
+      const q = btn.dataset.quality;
+      if (q === this.selectedQuality) {
+        btn.className = 'min-h-[44px] p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex flex-col items-center justify-center gap-1 border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs';
+      } else {
+        btn.className = 'min-h-[44px] p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex flex-col items-center justify-center gap-1 border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400';
+      }
+    });
+
+    // Update primary download button
+    const downloadBtn = this.container.querySelector('#fbPrimaryDownloadBtn');
+    if (downloadBtn) {
+      downloadBtn.dataset.url = proxyDownloadUrl;
+      downloadBtn.dataset.filename = defaultFileName;
+      downloadBtn.dataset.mime = isImage ? 'image/jpeg' : 'video/mp4';
+    }
+
+    // Update image preview src if image
+    if (isImage) {
+      const imgEl = this.container.querySelector('#fbPreviewImg');
+      if (imgEl && proxyStreamUrl) {
+        imgEl.src = proxyStreamUrl;
+      }
+    }
+  }
+
+  renderResult() {
+    const resultContainer = this.container.querySelector('#facebookResultContainer');
+    if (!resultContainer) return;
+
+    if (!this.videoData) {
+      resultContainer.innerHTML = '';
+      return;
+    }
+
+    const isImage = this.videoData.mediaType === 'image';
+    let activeStreamUrl = '';
+    let fileExt = isImage ? 'jpg' : 'mp4';
+
+    if (isImage) {
+      const selFmt = this.videoData.formats?.find(f => f.quality === this.selectedQuality) || this.videoData.formats?.[0];
+      activeStreamUrl = selFmt?.url || this.videoData.cover || '';
+      fileExt = selFmt?.ext || 'jpg';
+    } else {
+      activeStreamUrl = (this.selectedQuality === 'hd' && this.videoData.videoHdUrl)
+        ? this.videoData.videoHdUrl
+        : (this.videoData.videoSdUrl || this.videoData.videoHdUrl || '');
+    }
+
+    const defaultFileName = `${this.videoData.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`;
+    const proxyStreamUrl = activeStreamUrl ? facebookApi.getStreamUrl(activeStreamUrl, defaultFileName, false) : '';
+    const proxyDownloadUrl = activeStreamUrl ? facebookApi.getStreamUrl(activeStreamUrl, defaultFileName, true) : '';
+
+    resultContainer.innerHTML = `
+      <div class="linear-card p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-zinc-200 dark:border-white/10 shadow-xs space-y-5 animate-fadeIn">
+        
+        <!-- Video/Post Title & Author Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/5">
+          <div class="space-y-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${isImage ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'}">
+                ${isImage ? 'Bài viết / Ảnh' : 'Video / Reel'}
+              </span>
+              <h2 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white line-clamp-2">${escapeHtml(this.videoData.title)}</h2>
+            </div>
+            <div class="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
+              <span class="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-[#1877F2]"></i>
+                ${escapeHtml(this.videoData.author?.name || 'Facebook User')}
+              </span>
+              ${this.videoData.duration ? `
+                <span>•</span>
+                <span>${Math.floor(this.videoData.duration / 60)}:${String(Math.floor(this.videoData.duration % 60)).padStart(2, '0')}</span>
+              ` : ''}
+            </div>
+          </div>
+
+          ${this.videoData.existingInDrive ? `
+            <div class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 self-start sm:self-auto min-h-[36px]">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Đã lưu trong Drive</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Post Caption (if present) -->
+        ${this.videoData.caption ? `
+          <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-sans">
+            ${escapeHtml(this.videoData.caption)}
+          </div>
+        ` : ''}
+
+        <!-- Player & Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+          
+          <!-- Media Player / Image Display -->
+          ${isImage ? `
+            <div class="md:col-span-7 bg-zinc-950/80 rounded-xl overflow-hidden shadow-inner aspect-[4/3] sm:aspect-video flex items-center justify-center relative group p-2">
+              <img
+                id="fbPreviewImg"
+                src="${proxyStreamUrl}"
+                alt="${escapeHtml(this.videoData.title)}"
+                class="w-full h-full object-contain rounded-lg"
+              />
+              <button
+                type="button"
+                data-action="preview"
+                class="absolute bottom-3 right-3 min-h-[44px] px-3 py-1.5 rounded-xl bg-black/75 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-md transition flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                <span>Xem ảnh đầy đủ</span>
+              </button>
+            </div>
+          ` : `
+            <div class="md:col-span-7 bg-black rounded-xl overflow-hidden shadow-inner aspect-video flex items-center justify-center relative group">
+              <video
+                id="fbPreviewVideo"
+                src="${proxyStreamUrl}"
+                controls
+                playsinline
+                poster="${this.videoData.cover || ''}"
+                class="w-full h-full object-contain"
+              ></video>
+            </div>
+          `}
+
+          <!-- Quality / Photo Selector & Actions -->
+          <div class="md:col-span-5 flex flex-col justify-between space-y-4">
+            
+            <div class="space-y-3">
+              ${isImage ? `
+                ${this.videoData.formats && this.videoData.formats.length > 1 ? `
+                  <span class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Chọn ảnh (${this.videoData.formats.length} ảnh):</span>
+                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    ${this.videoData.formats.map((fmt, idx) => `
+                      <button
+                        type="button"
+                        data-action="select-quality"
+                        data-quality="${fmt.quality}"
+                        class="min-h-[44px] p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          this.selectedQuality === fmt.quality
+                            ? 'border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs'
+                            : 'border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400'
+                        }"
+                      >
+                        <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                        <span>${fmt.label || `Ảnh ${idx + 1}`}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                ` : `
+                  <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium flex items-center gap-2">
+                    <i data-lucide="image" class="w-4 h-4 shrink-0"></i>
+                    <span>Ảnh bài viết chất lượng gốc Full HD</span>
+                  </div>
+                `}
+              ` : `
+                <span class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Chọn chất lượng tải về:</span>
+                <div class="grid grid-cols-2 gap-2" id="qualitySelector">
+                  ${this.videoData.videoHdUrl ? `
+                    <button
+                      type="button"
+                      data-action="select-quality"
+                      data-quality="hd"
+                      class="min-h-[44px] p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                        this.selectedQuality === 'hd'
+                          ? 'border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs'
+                          : 'border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400'
+                      }"
+                    >
+                      <span class="font-bold">HD 720p / 1080p</span>
+                      <span class="text-[10px] opacity-75">Độ nét cao</span>
+                    </button>
+                  ` : ''}
+
+                  ${this.videoData.videoSdUrl || !this.videoData.videoHdUrl ? `
+                    <button
+                      type="button"
+                      data-action="select-quality"
+                      data-quality="sd"
+                      class="min-h-[44px] p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                        this.selectedQuality === 'sd' || !this.videoData.videoHdUrl
+                          ? 'border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs'
+                          : 'border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400'
+                      }"
+                    >
+                      <span class="font-bold">SD 360p / 480p</span>
+                      <span class="text-[10px] opacity-75">Tiết kiệm dữ liệu</span>
+                    </button>
+                  ` : ''}
+                </div>
+              `}
+            </div>
+
+            <!-- Primary Action Buttons -->
+            <div class="space-y-2 pt-2">
+              <button
+                type="button"
+                id="fbPrimaryDownloadBtn"
+                data-action="download-media"
+                data-url="${proxyDownloadUrl}"
+                data-filename="${defaultFileName}"
+                data-mime="${isImage ? 'image/jpeg' : 'video/mp4'}"
+                class="w-full min-h-[44px] py-2.5 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>${isImage ? 'Tải ảnh về máy (.JPG)' : 'Tải về máy (.MP4)'}</span>
+              </button>
+
+              <button
+                type="button"
+                id="fbSaveDriveBtn"
+                data-action="save-drive"
+                ${this.savingToDrive ? 'disabled' : ''}
+                class="w-full min-h-[44px] py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                ${this.savingToDrive ? `
+                  <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#1877F2]"></i>
+                  <span>Đang lưu vào Drive...</span>
+                ` : `
+                  <i data-lucide="hard-drive" class="w-4 h-4 text-[#1877F2]"></i>
+                  <span>${isImage ? 'Lưu ảnh vào Studio Drive' : 'Lưu vào Studio Drive'}</span>
+                `}
+              </button>
+
+              <button
+                type="button"
+                data-action="preview"
+                class="w-full min-h-[44px] py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                <span>${isImage ? 'Xem ảnh trong Studio' : 'Xem toàn màn hình'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: resultContainer });
     }
   }
 
@@ -177,7 +612,15 @@ export class FacebookWorkspace {
     }
 
     this.savingToDrive = true;
-    this.render();
+    const saveDriveBtn = this.container.querySelector('#fbSaveDriveBtn');
+    if (saveDriveBtn) {
+      saveDriveBtn.disabled = true;
+      saveDriveBtn.innerHTML = `
+        <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#1877F2]"></i>
+        <span>Đang lưu vào Drive...</span>
+      `;
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
+    }
 
     const taskId = `fb_save_${Date.now()}`;
     taskCoordinator?.createTask?.(taskId, {
@@ -219,13 +662,31 @@ export class FacebookWorkspace {
       if (res.data?.relPath) {
         storage.updateItemDrivePath(targetMediaUrl, res.data.relPath);
       }
+
+      if (saveDriveBtn) {
+        saveDriveBtn.disabled = false;
+        saveDriveBtn.innerHTML = `
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+          <span>Đã lưu vào Studio Drive</span>
+        `;
+        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
+      }
+
+      this.renderHistory();
     } catch (err) {
       soundEngine?.play('error');
       showToast(err.message || 'Lỗi khi lưu vào Drive', 'error');
       taskCoordinator?.updateTask?.(taskId, { status: 'failed', error: err.message });
+      if (saveDriveBtn) {
+        saveDriveBtn.disabled = false;
+        saveDriveBtn.innerHTML = `
+          <i data-lucide="hard-drive" class="w-4 h-4 text-[#1877F2]"></i>
+          <span>${isImage ? 'Lưu ảnh vào Studio Drive' : 'Lưu vào Studio Drive'}</span>
+        `;
+        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
+      }
     } finally {
       this.savingToDrive = false;
-      this.render();
     }
   }
 
@@ -300,26 +761,30 @@ export class FacebookWorkspace {
       case 'paste-url': {
         const text = await readText();
         if (text) {
-          this.url = text.trim();
+          this.url = this.sanitizeUrl(text) || text.trim();
           const input = this.container.querySelector('#fbUrlInput');
           if (input) input.value = this.url;
+          this.updateInputActions();
           this.resolveVideo();
         }
         break;
       }
 
       case 'clear-input':
-        this.url = '';
-        this.videoData = null;
-        this.error = null;
-        this.saveResult = null;
-        this.render();
+        this.clearInput();
         break;
 
       case 'select-quality':
-        this.selectedQuality = btn.dataset.quality;
-        this.render();
+        this.updateSelectedQuality(btn.dataset.quality);
         break;
+
+      case 'download-media': {
+        const mediaUrl = btn.dataset.url;
+        const fileName = btn.dataset.filename || 'facebook_media.mp4';
+        const mime = btn.dataset.mime || 'application/octet-stream';
+        triggerDownload(mediaUrl, fileName, mime);
+        break;
+      }
 
       case 'save-drive':
         this.saveToDrive();
@@ -328,46 +793,32 @@ export class FacebookWorkspace {
       case 'preview':
         this.previewInApp();
         break;
+
+      case 'dismiss-alert':
+        this.renderAlert(null);
+        break;
     }
   }
 
   render() {
-    const isImage = this.videoData?.mediaType === 'image';
-    let activeStreamUrl = '';
-    let fileExt = isImage ? 'jpg' : 'mp4';
-
-    if (isImage) {
-      const selFmt = this.videoData.formats?.find(f => f.quality === this.selectedQuality) || this.videoData.formats?.[0];
-      activeStreamUrl = selFmt?.url || this.videoData.cover || '';
-      fileExt = selFmt?.ext || 'jpg';
-    } else if (this.videoData) {
-      activeStreamUrl = (this.selectedQuality === 'hd' && this.videoData.videoHdUrl)
-        ? this.videoData.videoHdUrl
-        : (this.videoData.videoSdUrl || this.videoData.videoHdUrl || '');
-    }
-
-    const defaultFileName = `${this.videoData?.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`;
-    const proxyStreamUrl = activeStreamUrl ? facebookApi.getStreamUrl(activeStreamUrl, defaultFileName, false) : '';
-    const proxyDownloadUrl = activeStreamUrl ? facebookApi.getStreamUrl(activeStreamUrl, defaultFileName, true) : '';
-
     this.container.innerHTML = `
-      <div class="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
+      <div class="max-w-4xl mx-auto space-y-6 pb-12">
         
         <!-- Breadcrumb Bar -->
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-            <a href="#" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs min-h-[44px]">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 flex-wrap">
+            <a href="#" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs min-h-[44px]">
               <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
             </a>
             <span class="text-zinc-400 dark:text-zinc-600">/</span>
-            <span class="text-zinc-900 dark:text-zinc-200 font-semibold truncate flex items-center gap-1.5">
+            <span class="text-zinc-900 dark:text-zinc-200 font-semibold truncate flex items-center gap-1.5 min-h-[44px]">
               <span class="w-2 h-2 rounded-full bg-[#1877F2]"></span>
               Facebook Downloader
             </span>
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 min-h-[32px]">
               <i data-lucide="check" class="w-3 h-3"></i> Video, Reel & Bài viết
             </span>
           </div>
@@ -384,15 +835,15 @@ export class FacebookWorkspace {
               id="fbUrlInput"
               value="${escapeHtml(this.url)}"
               placeholder="Dán liên kết bài viết, video hoặc Reel Facebook (https://www.facebook.com/...)"
-              class="w-full pl-3.5 pr-24 py-2.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-300 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#1877F2]/60 focus:border-transparent transition"
+              class="w-full pl-3.5 pr-20 py-3 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-300 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#1877F2]/60 focus:border-transparent transition min-h-[48px]"
             />
-            <div class="absolute right-1.5 flex items-center gap-1">
+            <div id="fbInputActionBtn" class="absolute right-1 flex items-center">
               ${this.url ? `
-                <button type="button" data-action="clear-input" class="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-white/10 transition cursor-pointer" title="Xóa">
+                <button type="button" data-action="clear-input" class="min-h-[44px] min-w-[44px] p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-200/50 dark:hover:bg-white/10 transition cursor-pointer flex items-center justify-center" title="Xóa">
                   <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
               ` : `
-                <button type="button" data-action="paste-url" class="px-2 py-1 text-xs font-medium text-[#1877F2] hover:bg-[#1877F2]/10 rounded-lg transition cursor-pointer flex items-center gap-1">
+                <button type="button" data-action="paste-url" class="min-h-[44px] px-3 py-1.5 text-xs font-medium text-[#1877F2] hover:bg-[#1877F2]/10 rounded-lg transition cursor-pointer flex items-center gap-1.5">
                   <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
                   <span>Dán</span>
                 </button>
@@ -400,16 +851,17 @@ export class FacebookWorkspace {
             </div>
           </div>
 
-          <div class="flex items-center justify-between pt-1">
-            <span class="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <span class="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 min-h-[32px]">
               <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-500"></i>
               Bảo mật, không lưu cookie tài khoản
             </span>
             <button
               type="button"
+              id="fbSubmitBtn"
               data-action="resolve"
               ${this.loading ? 'disabled' : ''}
-              class="px-4 py-2 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ${this.loading ? `
                 <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
@@ -422,198 +874,14 @@ export class FacebookWorkspace {
           </div>
         </div>
 
-        <!-- Error Alert -->
-        ${this.error ? `
-          <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs sm:text-sm flex items-center gap-2.5">
-            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
-            <span>${escapeHtml(this.error)}</span>
-          </div>
-        ` : ''}
+        <!-- Alert Container -->
+        <div id="facebookAlertContainer"></div>
 
-        <!-- Resolved Media Workspace -->
-        ${this.videoData ? `
-          <div class="linear-card p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-zinc-200 dark:border-white/10 shadow-xs space-y-5">
-            
-            <!-- Video/Post Title & Author Bar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/5">
-              <div class="space-y-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${isImage ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'}">
-                    ${isImage ? 'Bài viết / Ảnh' : 'Video / Reel'}
-                  </span>
-                  <h2 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white line-clamp-2">${escapeHtml(this.videoData.title)}</h2>
-                </div>
-                <div class="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
-                  <span class="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
-                    <i data-lucide="user" class="w-3.5 h-3.5 text-[#1877F2]"></i>
-                    ${escapeHtml(this.videoData.author?.name || 'Facebook User')}
-                  </span>
-                  ${this.videoData.duration ? `
-                    <span>•</span>
-                    <span>${Math.floor(this.videoData.duration / 60)}:${String(Math.floor(this.videoData.duration % 60)).padStart(2, '0')}</span>
-                  ` : ''}
-                </div>
-              </div>
+        <!-- Media Result Container -->
+        <div id="facebookResultContainer"></div>
 
-              ${this.videoData.existingInDrive ? `
-                <div class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
-                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-                  <span>Đã lưu trong Drive</span>
-                </div>
-              ` : ''}
-            </div>
-
-            <!-- Post Caption (if present) -->
-            ${this.videoData.caption ? `
-              <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-sans">
-                ${escapeHtml(this.videoData.caption)}
-              </div>
-            ` : ''}
-
-            <!-- Player & Controls Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-              
-              <!-- Media Player / Image Display -->
-              ${isImage ? `
-                <div class="md:col-span-7 bg-zinc-950/80 rounded-xl overflow-hidden shadow-inner aspect-[4/3] sm:aspect-video flex items-center justify-center relative group p-2">
-                  <img
-                    src="${proxyStreamUrl}"
-                    alt="${escapeHtml(this.videoData.title)}"
-                    class="w-full h-full object-contain rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    data-action="preview"
-                    class="absolute bottom-3 right-3 px-2.5 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-md transition flex items-center gap-1.5 cursor-pointer shadow-md"
-                  >
-                    <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                    <span>Xem ảnh đầy đủ</span>
-                  </button>
-                </div>
-              ` : `
-                <div class="md:col-span-7 bg-black rounded-xl overflow-hidden shadow-inner aspect-video flex items-center justify-center relative group">
-                  <video
-                    src="${proxyStreamUrl}"
-                    controls
-                    playsinline
-                    poster="${this.videoData.cover || ''}"
-                    class="w-full h-full object-contain"
-                  ></video>
-                </div>
-              `}
-
-              <!-- Quality / Photo Selector & Actions -->
-              <div class="md:col-span-5 flex flex-col justify-between space-y-4">
-                
-                <div class="space-y-3">
-                  ${isImage ? `
-                    ${this.videoData.formats && this.videoData.formats.length > 1 ? `
-                      <span class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Chọn ảnh (${this.videoData.formats.length} ảnh):</span>
-                      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        ${this.videoData.formats.map((fmt, idx) => `
-                          <button
-                            type="button"
-                            data-action="select-quality"
-                            data-quality="${fmt.quality}"
-                            class="p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                              this.selectedQuality === fmt.quality
-                                ? 'border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs'
-                                : 'border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400'
-                            }"
-                          >
-                            <i data-lucide="image" class="w-3.5 h-3.5"></i>
-                            <span>${fmt.label || `Ảnh ${idx + 1}`}</span>
-                          </button>
-                        `).join('')}
-                      </div>
-                    ` : `
-                      <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium flex items-center gap-2">
-                        <i data-lucide="image" class="w-4 h-4 shrink-0"></i>
-                        <span>Ảnh bài viết chất lượng gốc Full HD (1080p)</span>
-                      </div>
-                    `}
-                  ` : `
-                    <span class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Chọn chất lượng tải về:</span>
-                    <div class="grid grid-cols-2 gap-2">
-                      ${this.videoData.videoHdUrl ? `
-                        <button
-                          type="button"
-                          data-action="select-quality"
-                          data-quality="hd"
-                          class="p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                            this.selectedQuality === 'hd'
-                              ? 'border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs'
-                              : 'border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400'
-                          }"
-                        >
-                          <span class="font-bold">HD 720p / 1080p</span>
-                          <span class="text-[10px] opacity-75">Độ nét cao</span>
-                        </button>
-                      ` : ''}
-
-                      ${this.videoData.videoSdUrl ? `
-                        <button
-                          type="button"
-                          data-action="select-quality"
-                          data-quality="sd"
-                          class="p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                            this.selectedQuality === 'sd' || !this.videoData.videoHdUrl
-                              ? 'border-[#1877F2] bg-[#1877F2]/10 text-[#1877F2] shadow-xs'
-                              : 'border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400'
-                          }"
-                        >
-                          <span class="font-bold">SD 360p / 480p</span>
-                          <span class="text-[10px] opacity-75">Tiết kiệm dữ liệu</span>
-                        </button>
-                      ` : ''}
-                    </div>
-                  `}
-                </div>
-
-                <!-- Primary Action Buttons -->
-                <div class="space-y-2 pt-2">
-                  <a
-                    href="${proxyDownloadUrl}"
-                    download="${defaultFileName}"
-                    class="w-full py-2.5 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs sm:text-sm font-semibold shadow-xs active:scale-98 transition flex items-center justify-center gap-2 no-underline cursor-pointer"
-                  >
-                    <i data-lucide="download" class="w-4 h-4"></i>
-                    <span>${isImage ? 'Tải ảnh về máy (.JPG)' : 'Tải về máy (.MP4)'}</span>
-                  </a>
-
-                  <button
-                    type="button"
-                    data-action="save-drive"
-                    ${this.savingToDrive ? 'disabled' : ''}
-                    class="w-full py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    ${this.savingToDrive ? `
-                      <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#1877F2]"></i>
-                      <span>Đang lưu vào Drive...</span>
-                    ` : `
-                      <i data-lucide="hard-drive" class="w-4 h-4 text-[#1877F2]"></i>
-                      <span>${isImage ? 'Lưu ảnh vào Studio Drive' : 'Lưu vào Studio Drive'}</span>
-                    `}
-                  </button>
-
-                  <button
-                    type="button"
-                    data-action="preview"
-                    class="w-full py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                    <span>${isImage ? 'Xem ảnh trong Studio' : 'Xem toàn màn hình'}</span>
-                  </button>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        ` : ''}
-
-        <!-- Media History Section -->
-        <div id="mediaHistoryContainer">
+        <!-- Isolated Media History Section -->
+        <div id="facebookHistoryContainer">
           ${renderMediaHistorySection({
             toolId: 'facebook-downloader',
             title: 'Lịch Sử Tải Facebook',
@@ -647,7 +915,7 @@ export class FacebookWorkspace {
   }
 
   attachHistoryListeners() {
-    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    const historyContainer = this.container.querySelector('#facebookHistoryContainer');
     if (!historyContainer) return;
 
     if (this.historyCleanup) {
@@ -664,9 +932,10 @@ export class FacebookWorkspace {
         this.renderHistory();
       },
       onReResolve: (url) => {
-        this.url = url;
+        this.url = this.sanitizeUrl(url) || url;
         const inp = this.container.querySelector('#fbUrlInput');
-        if (inp) inp.value = url;
+        if (inp) inp.value = this.url;
+        this.updateInputActions();
         this.resolveVideo();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
@@ -684,7 +953,7 @@ export class FacebookWorkspace {
   }
 
   renderHistory() {
-    const historyContainer = this.container.querySelector('#mediaHistoryContainer');
+    const historyContainer = this.container.querySelector('#facebookHistoryContainer');
     if (!historyContainer) return;
 
     historyContainer.innerHTML = renderMediaHistorySection({
@@ -698,30 +967,4 @@ export class FacebookWorkspace {
 
     this.attachHistoryListeners();
   }
-}
-
-let activeFacebookWorkspace = null;
-
-export function renderFacebookWorkspace() {
-  return '<div id="facebookWorkspaceContainer" class="w-full"></div>';
-}
-
-export function attachFacebookWorkspaceListeners(onReRender) {
-  const container = document.getElementById('facebookWorkspaceContainer');
-  if (!container) return;
-
-  if (activeFacebookWorkspace) {
-    activeFacebookWorkspace.unmount();
-    activeFacebookWorkspace = null;
-  }
-
-  activeFacebookWorkspace = new FacebookWorkspace(container);
-  activeFacebookWorkspace.mount();
-
-  return () => {
-    if (activeFacebookWorkspace) {
-      activeFacebookWorkspace.unmount();
-      activeFacebookWorkspace = null;
-    }
-  };
 }

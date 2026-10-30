@@ -8,11 +8,12 @@ export const instagramApi = {
    * @param {string} url 
    * @returns {Promise<any>}
    */
-  async resolveVideo(url) {
+  async resolveVideo(url, options = {}) {
     const res = await fetch('/api/v1/instagram/resolve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url }),
+      signal: options.signal
     });
 
     const json = await res.json().catch(() => ({}));

@@ -66,6 +66,18 @@ export class SpotifyService {
   }
 
   /**
+   * Surgical cleaning of track title: strips metadata brackets/parentheses
+   * (e.g. remaster, feat, deluxe, official, bonus, edition, anniversary, mono, stereo, explicit)
+   * while preserving essential song title parentheses like "(Don't Fear) The Reaper" or "(I Can't Get No) Satisfaction".
+   */
+  static cleanTitle(title: string): string {
+    if (!title || typeof title !== 'string') return '';
+    const metadataBracketPattern = /\s*[\(\[][^\)\]]*\b(?:remaster(?:ed)?|feat(?:\.|\b)|ft(?:\.|\b)|deluxe|official|bonus|edition|anniversary|mono|stereo|explicit)\b[^\)\]]*[\)\]]/gi;
+    let cleaned = title.replace(metadataBracketPattern, '').replace(/\s+/g, ' ').trim();
+    return cleaned || title.trim();
+  }
+
+  /**
    * Multi-factor scoring metric (0-100+) to guarantee exact audio match and eliminate unwanted remixes/covers
    */
   static calculateMatchScore(candidate: any, expected: { title: string; artist: string; duration: number }): number {
@@ -308,7 +320,7 @@ export class SpotifyService {
     if (!downloadUrl) {
       try {
         const primaryArtist = artist.split(',')[0].replace(/[,/&]/g, ' ').replace(/\s+/g, ' ').trim();
-        const cleanTitle = title.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+        const cleanTitle = this.cleanTitle(title);
 
         const searchQueries = [
           `ytsearch8:${primaryArtist} ${cleanTitle} Topic`,

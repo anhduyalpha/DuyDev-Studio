@@ -23,6 +23,27 @@ describe('Media Downloaders Unit Test Suite', () => {
       expect(FacebookService.extractUrl(sharePostUrl)).toContain('facebook.com/share/1bWGSWjXVX');
     });
 
+    it('supports fb.com, fb.gg, protocol-less URLs and strips tracking parameters & trailing punctuation', () => {
+      const fbDotComUrl = 'https://fb.com/watch?v=123456';
+      const protocolLessUrl = 'facebook.com/reel/9876543210';
+      const protocolLessFbWatch = 'fb.watch/test123abc/';
+      const trackedUrl = 'https://www.facebook.com/reel/1234567890?utm_source=fb&fbclid=abc123xyz&mibextid=wwXIfr.';
+      const trailingPunctuationUrl = 'https://www.facebook.com/share/1bWGSWjXVX/),';
+
+      expect(FacebookService.extractUrl(fbDotComUrl)).toContain('fb.com/watch?v=123456');
+      expect(FacebookService.extractUrl(protocolLessUrl)).toBe('https://facebook.com/reel/9876543210');
+      expect(FacebookService.extractUrl(protocolLessFbWatch)).toBe('https://fb.watch/test123abc/');
+
+      const cleanedTracked = FacebookService.extractUrl(trackedUrl);
+      expect(cleanedTracked).not.toContain('fbclid');
+      expect(cleanedTracked).not.toContain('utm_source');
+      expect(cleanedTracked).not.toContain('mibextid');
+      expect(cleanedTracked.endsWith('.')).toBe(false);
+
+      const cleanedPunctuation = FacebookService.extractUrl(trailingPunctuationUrl);
+      expect(cleanedPunctuation).toBe('https://www.facebook.com/share/1bWGSWjXVX/');
+    });
+
     it('successfully extracts Facebook Post with photos/images (e.g. share link)', async () => {
       const shareUrl = 'https://www.facebook.com/share/1bWGSWjXVX/';
       const data = await FacebookService.resolveVideo(shareUrl);
@@ -79,6 +100,150 @@ describe('Media Downloaders Unit Test Suite', () => {
     it('handles Drive duplicate check gracefully for non-existent media', async () => {
       const result = await InstagramService.checkExistingInDrive('non_existent_ig_id_88888');
       expect(result).toHaveProperty('exists', false);
+    });
+
+    it('cleans dirty Instagram URLs with surrounding text and tracking tags', () => {
+      const dirtyUrl = 'Check this out https://www.instagram.com/reel/C123abcXYZ/?igsh=MWZ4eHQ3&utm_medium=copy_link! amazing';
+      const cleaned = InstagramService.extractUrl(dirtyUrl);
+      expect(cleaned).toBe('https://www.instagram.com/reel/C123abcXYZ/');
+
+      const postWithPunctuation = 'Look at https://www.instagram.com/p/D987cba123/), wow';
+      const cleanedPost = InstagramService.extractUrl(postWithPunctuation);
+      expect(cleanedPost).toBe('https://www.instagram.com/p/D987cba123/');
+
+      const protocolLess = 'instagram.com/reel/C123abcXYZ/';
+      expect(InstagramService.extractUrl(protocolLess)).toBe('https://instagram.com/reel/C123abcXYZ/');
+    });
+
+    it('correctly parses multi-line NDJSON from yt-dlp representing a multi-item carousel', () => {
+      const ndjson = [
+        JSON.stringify({
+          id: 'slide_1',
+          title: 'Carousel Slide 1',
+          url: 'https://cdn.instagram.com/slide1.jpg',
+          ext: 'jpg',
+          vcodec: 'none',
+          thumbnail: 'https://cdn.instagram.com/thumb1.jpg',
+          uploader: 'insta_creator'
+        }),
+        JSON.stringify({
+          id: 'slide_2',
+          title: 'Carousel Slide 2',
+          url: 'https://cdn.instagram.com/slide2.mp4',
+          ext: 'mp4',
+          vcodec: 'h264',
+          thumbnail: 'https://cdn.instagram.com/thumb2.jpg',
+          uploader: 'insta_creator'
+        }),
+        JSON.stringify({
+          id: 'slide_3',
+          title: 'Carousel Slide 3',
+          url: 'https://cdn.instagram.com/slide3.jpg',
+          ext: 'jpg',
+          vcodec: 'none',
+          thumbnail: 'https://cdn.instagram.com/thumb3.jpg',
+          uploader: 'insta_creator'
+        })
+      ].join('\n');
+
+      const parsed = InstagramService.parseYtdlpOutput(ndjson);
+      expect(parsed).toHaveLength(3);
+      expect(parsed[0].id).toBe('slide_1');
+      expect(parsed[1].id).toBe('slide_2');
+      expect(parsed[2].id).toBe('slide_3');
+    });
+
+    it('correctly parses yt-dlp playlist output containing an entries array', () => {
+      const playlistJson = JSON.stringify({
+        _type: 'playlist',
+        id: 'carousel_root',
+        title: 'Post Album',
+        entries: [
+          { id: 'item_1', url: 'https://cdn.instagram.com/item1.jpg', ext: 'jpg', vcodec: 'none' },
+          { id: 'item_2', url: 'https://cdn.instagram.com/item2.mp4', ext: 'mp4', vcodec: 'h264' }
+        ]
+      });
+
+      const parsed = InstagramService.parseYtdlpOutput(playlistJson);
+      expect(parsed).toHaveLength(2);
+      expect(parsed[0].id).toBe('item_1');
+      expect(parsed[1].id).toBe('item_2');
+    });
+
+    it('saves image with .jpg extension, image/jpeg mimeType and leading slash relPath', async () => {
+      const mockBuffer = Buffer.from('fake image data');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'image/jpeg' }),
+          body: new ReadableStream({
+            start(controller) {
+              controller.enqueue(mockBuffer);
+              controller.close();
+            }
+          }),
+          arrayBuffer: async () => mockBuffer
+        } as any;
+      });
+
+      const res = await InstagramService.saveToDrive(
+        'https://scontent.cdninstagram.com/v/t51.2885-15/test_photo.jpg',
+        'Test Photo Title',
+        'img123',
+        'https://instagram.com/p/test',
+        '',
+        'test_user',
+        0,
+        true,
+        'image'
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.fileName).toMatch(/\.jpg$/);
+      expect(res.relPath).toBe(`/instagram/${res.fileName}`);
+      expect(res.relPath.startsWith('/instagram/')).toBe(true);
+      expect(res.metadata.mediaType).toBe('image');
+
+      fetchSpy.mockRestore();
+    });
+
+    it('saves video with .mp4 extension, video/mp4 mimeType and leading slash relPath', async () => {
+      const mockBuffer = Buffer.from('fake video data');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'video/mp4' }),
+          body: new ReadableStream({
+            start(controller) {
+              controller.enqueue(mockBuffer);
+              controller.close();
+            }
+          }),
+          arrayBuffer: async () => mockBuffer
+        } as any;
+      });
+
+      const res = await InstagramService.saveToDrive(
+        'https://scontent.cdninstagram.com/v/t50.2886-16/test_video.mp4',
+        'Test Video Reel',
+        'vid456',
+        'https://instagram.com/reel/test',
+        '',
+        'test_user',
+        30,
+        true,
+        'video'
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.fileName).toMatch(/\.mp4$/);
+      expect(res.relPath).toBe(`/instagram/${res.fileName}`);
+      expect(res.relPath.startsWith('/instagram/')).toBe(true);
+      expect(res.metadata.mediaType).toBe('video');
+
+      fetchSpy.mockRestore();
     });
   });
 
@@ -197,6 +362,29 @@ describe('Media Downloaders Unit Test Suite', () => {
         duration: 240
       };
       expect(SpotifyService.calculateMatchScore(legitimateRemixCandidate, intendedRemix)).toBeGreaterThan(40);
+    });
+
+    it('surgically cleans track titles by stripping metadata brackets without destroying essential parentheses (KI-FIX-041)', () => {
+      // 1. Preserves essential parentheses in song titles (including words ending in 'ft' like Shaft, Swift, Shift)
+      expect(SpotifyService.cleanTitle("(Don't Fear) The Reaper")).toBe("(Don't Fear) The Reaper");
+      expect(SpotifyService.cleanTitle("(I Can't Get No) Satisfaction")).toBe("(I Can't Get No) Satisfaction");
+      expect(SpotifyService.cleanTitle("(Sittin' On) The Dock of the Bay")).toBe("(Sittin' On) The Dock of the Bay");
+      expect(SpotifyService.cleanTitle("Theme From (Shaft)")).toBe("Theme From (Shaft)");
+      expect(SpotifyService.cleanTitle("Love (Taylor Swift)")).toBe("Love (Taylor Swift)");
+      expect(SpotifyService.cleanTitle("Night (Shift)")).toBe("Night (Shift)");
+
+      // 2. Strips metadata tags inside brackets / parentheses
+      expect(SpotifyService.cleanTitle("Hotel California (2013 Remaster)")).toBe("Hotel California");
+      expect(SpotifyService.cleanTitle("Starboy (feat. Daft Punk)")).toBe("Starboy");
+      expect(SpotifyService.cleanTitle("Bad Guy [Official Audio]")).toBe("Bad Guy");
+      expect(SpotifyService.cleanTitle("Thriller (Deluxe Edition)")).toBe("Thriller");
+      expect(SpotifyService.cleanTitle("Billie Jean (Anniversary Edition)")).toBe("Billie Jean");
+      expect(SpotifyService.cleanTitle("Hey Jude (Mono Version)")).toBe("Hey Jude");
+      expect(SpotifyService.cleanTitle("Lose Yourself (Explicit)")).toBe("Lose Yourself");
+
+      // 3. Combined essential parentheses + metadata tag
+      expect(SpotifyService.cleanTitle("(Don't Fear) The Reaper (Remastered 2020)")).toBe("(Don't Fear) The Reaper");
+      expect(SpotifyService.cleanTitle("(I Can't Get No) Satisfaction [Official Music Video]")).toBe("(I Can't Get No) Satisfaction");
     });
 
     it('clears in-memory resolution cache via clearCache()', () => {

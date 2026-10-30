@@ -1,108 +1,78 @@
-# Orchestrator Handoff Report: Purge AI UI Annotations & Enforce Production Minimalism
+# Orchestrator Final Handoff & Project Completion Report
 
-**Timestamp**: 2026-09-24T16:21:00Z  
-**Project**: DuyDev Studio (DS)  
-**Role**: Project Orchestrator  
-**Working Directory**: `c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\orchestrator`
-
----
-
-## 1. Observation
-
-The project objective was to thoroughly eliminate all AI-generated UI annotations ("AI-ified" UI), promotional/marketing fluff, parenthetical explanations in options, and coaching subtitles across `src/`, establishing a clean, high-density, developer-grade production minimalism standard (Linear/Vercel aesthetic) compliant with `.agents/rules/ui-standards.md` and `docs/knowledge-base/KI-CON-001-ui-production-minimalism.md`.
-
-Three specialist subagents were coordinated:
-1. **Subagent A: Tools Specialist** (Conv ID: `264eb29a-757b-4891-bb34-29df1de01ca6`)
-   - Scope: `src/components/tools/{qr, pdf, archive, converter, hash}/`
-   - Refactored 14 core components across QR, PDF, Archive, Converter, and Hash tools.
-   - Purged parenthetical abbreviations (`(VCB)`, `(CTG)`, `(px)`, `(nếu có)`), eliminated coaching subtitles, and condensed all dropzones into 1-line technical prompts with accepted extensions.
-   - Initial verification: 60 files scanned, 0 fluff violations.
-2. **Subagent B: Pages & Shell Specialist** (Conv ID: `26f95e16-75dc-45ab-9258-48026bd51b52`)
-   - Scope: `src/components/layout/`, `src/components/dashboard/`, `src/components/common/`, `src/pages/`
-   - Refactored 22 components across navigation bars, dashboard cards, history tables, settings panel, file viewers (PDF, archive, audio, video, text, fallback), and common dropzones.
-   - Purged tutorial paragraphs, marketing hype, exclamatory toasts, and redundant tooltips.
-   - Initial verification: 4 directories scanned, 0 fluff violations.
-3. **Subagent C: QA, Layout Hygiene & Verification Specialist** (Conv ID: `7e773eff-adcc-49e4-887e-ebd25dbce750`)
-   - Scope: Full codebase sweep across `src/`.
-   - Identified and refactored unassigned modules and central registries: `src/hooks/useToolRegistry.js` (purged `"Pro"` suffixes and bloated titles), `src/components/tools/studocu/` (purged hero descriptions, parenthetical sort options, and loud button titles), breadcrumbs, and shared hooks (`useQrActions.js`, `useConverterBatch.js`, `usePdfQueue.js`, `useTheme.js`, `useFileQueue.js`).
-   - Implemented backward compatibility filters in history lists so historical job entries remain accessible.
-   - Audited and eliminated orphaned margins (`mt-1.5`, `mt-2`, `space-y-*`).
-   - Verified 100% preservation of `aria-label`, `title`, DOM IDs, shortcuts (⌘K), and dark canvas (`#0B0F17`).
+**Project**: DD Studio Media Downloaders Remediation (Facebook, Spotify, Instagram)  
+**Date**: 2026-10-30T16:15:00Z  
+**Author**: Orchestrator (`b9bad500-fa17-4b46-9615-0e9b5b4e5267`)  
+**Parent Agent**: Sentinel (`b131143d-9e97-485f-be64-21740611935b`)  
+**Final Status**: 🟢 **100% COMPLETE — ALL 4 MILESTONES VERIFIED & APPROVED**
 
 ---
 
-## 2. Logic Chain
+## 1. Milestone State
 
-1. **Strict File Ownership Partitioning**: To eliminate merge conflicts and concurrent write hazards, Subagents A and B were given mutually exclusive directory boundaries. Subagent C acted as the unifying QA and integration layer.
-2. **Adherence to Core Principles**:
-   - *Self-Evident UI*: Labels and format selectors stripped of parentheticals (`PNG`, `SVG`, `Word (.docx)`, `WPA / WPA2 / WPA3`).
-   - *Zero Marketing Fluff*: Slogans and coaching paragraphs beneath buttons completely deleted.
-   - *Action-Oriented Typography*: Direct imperative verbs (`Cấu hình`, `Bắt đầu`, `Tải về`, `Đặt lại`, `Sao chép`).
-   - *Dropzone Unification*: Single prompt (`"Kéo thả hoặc tải tệp lên"`) + technical badge list.
-3. **Defense Against Regressions**: Subagent C inspected cross-module dependencies (registry -> breadcrumb -> queue toolTitle -> history filter), ensuring that renaming tools did not break history record retrieval or active queue processing.
-
----
-
-## 3. Caveats & Assumptions
-
-- **PWA Service Worker Cache**: Users with previously cached PWA assets should perform a hard refresh (Ctrl+F5 or Clear Site Data) to load the new frontend bundles.
-- **Historical Storage Compatibility**: Legacy job items saved with `"PDF Studio Pro"` or `"File Converter Pro"` are fully preserved and mapped in history lists.
+| # | Milestone Name | Scope | Gate Verdict | Test Coverage |
+|---|----------------|-------|--------------|---------------|
+| **M1** | Facebook Downloader Remediation | Frontend `FacebookWorkspace.js`, backend route, service, schema, `#facebookHistoryContainer`, OpenGraph fast crawler (~300ms), `fb.com` regex, touch targets $\ge 44$px | **PASS** | 8/8 Compliance 🟢, tsc 0 errors, 62 unit/e2e tests pass, Auditor CLEAN |
+| **M2** | Spotify Downloader Remediation | Frontend `SpotifyWorkspace.js`, backend route, service, schema, `#spotifyHistoryContainer`, 3-tier staged search with anti-remix scoring (-100 to -60 penalty, duration $\le 15$s per KI-FIX-041), cleanTitle regex preserving essential parentheses, in-app audio preservation, touch targets $\ge 44$px | **PASS** | 8/8 Compliance 🟢, 66 adversarial test cases pass, Auditor CLEAN |
+| **M3** | Instagram Downloader Remediation | Frontend `InstagramWorkspace.js`, backend route, service, schema, `#instagramHistoryContainer`, yt-dlp multi-line NDJSON & entries parser, image drive MIME resolution (`.jpg`/`image/jpeg`), leading-slash `relPath: /instagram/...`, in-place carousel preview, touch targets $\ge 44$px | **PASS** | 8/8 Compliance 🟢, 12 challenger tests pass, 27 unit tests pass, Auditor CLEAN |
+| **M4** | Cross-Platform Ergonomics & Final E2E Gate | PWA Web Share Target + Android Native APK routing parity, 41-case opaque-box E2E suite pass, project-wide forensic audit, Studocu non-interference | **PASS** | 109/109 primary tests pass, 48/48 adversarial tests pass (157 total tests), 3/3 Compliance 🟢, Victory Auditor CLEAN |
 
 ---
 
-## 4. Conclusion & Acceptance Criteria Verification
+## 2. Key Accomplishments & Deliverables
 
-All acceptance criteria defined in `ORIGINAL_REQUEST.md` have been met with 100% passing automated verification:
-
-| Criterion | Target | Result | Status |
-|-----------|--------|--------|--------|
-| Parenthetical explanations | 0 in `src/` | 0 (`(Ảnh số)`, `(Vector)`, `(Phổ biến)`, `(Mặc định)` completely purged) | PASS |
-| Marketing copy & coaching subtitles | 0 in `src/` | 0 (all coaching `<p>` and marketing hype deleted) | PASS |
-| Concise dropzones | 1 line + formats | All dropzones standardized to `"Kéo thả hoặc tải tệp lên"` + badges | PASS |
-| Concise labels & placeholders | Utility standard | Direct technical labels, no conversational bot tone | PASS |
-| Layout & Spacing Hygiene | 0 orphaned margins | Cleaned `mt-*` / `space-y-*`, tight information density | PASS |
-| Accessibility & DOM Integrity | 100% preserved | All `aria-label`, `title`, shortcuts (⌘K), and DOM IDs intact | PASS |
-| Design System Consistency | Dark Canvas `#0B0F17` | Consistent dark surfaces (`#18181B`) and contrast | PASS |
-| Diagnostic Fluff Scanner | 0 violations exit 0 | 110 files scanned, 0 violations detected | PASS |
-| Backend TypeScript Compilation | 0 errors | `npx tsc --noEmit` passed with 0 errors | PASS |
-| Backend Vitest Test Suite | 100% pass | 14/14 test suites, 76/76 unit & integration tests passed | PASS |
-
----
-
-## 5. Verification Method
-
-To reproduce and independently verify:
-
-1. **UI Fluff Scanner**:
-   ```bash
-   python "C:\Users\AnhDuy\.gemini\config\skills\ui-annotation-purger\scripts\scan_ui_fluff.py" "c:\Users\AnhDuy\Code\Project\DD Studio\src"
-   ```
-   *Expected output*: `Files scanned: 110 | Fluff instances detected: 0` (Exit code 0).
-
-2. **JavaScript Syntax Verification**:
-   ```bash
-   node -e "const fs = require('fs'); const path = require('path'); function walk(d){let r=[]; fs.readdirSync(d).forEach(f=>{const p=path.join(d,f); if(fs.statSync(p).isDirectory()) r=r.concat(walk(p)); else if(f.endsWith('.js')) r.push(p);}); return r;} walk('src').forEach(f=>{ try{ new Function(fs.readFileSync(f,'utf8')); }catch(e){ if(!e.message.includes('import') && !e.message.includes('export')) console.error(f, e.message); } }); console.log('Syntax OK');"
-   ```
-   *Expected output*: `Syntax OK`.
-
-3. **Server TypeScript Compilation**:
-   ```bash
-   cd "c:\Users\AnhDuy\Code\Project\DD Studio\server" && npx tsc --noEmit
-   ```
-   *Expected output*: Exited with code 0 (0 errors).
-
-4. **Server Vitest Suite**:
-   ```bash
-   cd "c:\Users\AnhDuy\Code\Project\DD Studio\server" && npx vitest run
-   ```
-   *Expected output*: 14 test files passed, 76 tests passed.
+1. **Elimination of Page Flickering & Isolated History Containers (`KI-FIX-040`)**:
+   - Replaced shared `#mediaHistoryContainer` with three isolated, dedicated DOM containers: `#facebookHistoryContainer`, `#spotifyHistoryContainer`, `#instagramHistoryContainer`.
+   - Eliminated all full-page `this.render()` calls on user interactions (carousel tab switching, drive saving, audio playback, clear input). All previews, buttons, badges, and history panels now mutate DOM in place with single-item animations.
+2. **Audio Playback Preservation During Studio Drive Saves**:
+   - In `SpotifyWorkspace.js`, saving tracks to Studio Drive previously wiped the root container and aborted `<audio>` playback. Mutating the button state and drive badge in place preserves uninterrupted 320kbps MP3 playback.
+3. **Multi-Slide Instagram Carousel NDJSON Support**:
+   - In `server/src/services/instagram.service.ts`, added robust multi-line NDJSON and `entries` playlist parsing, completely eliminating `SyntaxError` crashes on multi-photo/video Instagram posts.
+4. **Studio Drive Image File Integrity**:
+   - Prevented photos and carousel slides from being saved as corrupted `.mp4`/`video/mp4` files. Dynamically routes images to `.jpg` and `image/jpeg` with `.meta.json` sidecars, returning unified leading-slash paths (`/instagram/...`).
+5. **Robust Dirty URL Sanitization Across All Modules**:
+   - Normalized protocol-less URLs (`facebook.com/...`, `instagram.com/...`, `spotify.com/...` -> prepends `https://`).
+   - Cleaned trailing punctuation (`),`, `!`, `>`).
+   - Stripped tracking query parameters (`fbclid`, `igsh`, `igshid`, `utm_*`, `mibextid`).
+6. **Mobile Ergonomics & 10-Pillar Universal Module Standard**:
+   - All interactive controls (buttons, tabs, inputs) enforce touch targets $\ge 44$px (`min-h-[44px] min-w-[44px]`).
+   - Responsive grid layouts wrap cleanly down to 360px viewports without horizontal overflow.
+   - All 3 tools registered as `tier: 'UR'` in `src/hooks/useToolRegistry.js`.
+7. **Strict Non-Interference with Studocu (Requirement R5)**:
+   - `git status --porcelain src/components/tools/studocu server/src/services/studocu server/src/api/routes/studocu.route.ts` returned exactly 0 lines.
 
 ---
 
-## 6. Key Artifacts
+## 3. Active Subagents & Timers
 
-- Subagent A Handoff: `c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\subagent_a_tools\handoff.md`
-- Subagent B Handoff: `c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\subagent_b_pages\handoff.md`
-- Subagent C Handoff: `c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\subagent_c_qa\handoff.md`
-- Orchestrator Plan: `c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\orchestrator\plan.md`
-- Orchestrator Progress: `c:\Users\AnhDuy\Code\Project\DD Studio\.agents\teamwork\orchestrator\progress.md`
+- **Active Subagents**: None (all 30 subagents completed and retired).
+- **Background Timers**: Heartbeat cron task (`task-364`) killed cleanly.
+- **Pending Decisions**: None.
+
+---
+
+## 4. Key Artifacts
+
+- `PROJECT.md` — Global architecture, feature inventory, milestone tracking.
+- `TEST_INFRA.md` — E2E test suite architecture and methodology.
+- `TEST_READY.md` — Opaque-box E2E test runner specification.
+- `.agents/teamwork/orchestrator/GATE_STATUS.md` — Multi-iteration gate verdict ledger.
+- `.agents/teamwork/orchestrator/BRIEFING.md` — Persistent orchestration state and team roster.
+- `.agents/teamwork/orchestrator/progress.md` — Milestone progress tracking.
+- `.agents/teamwork/victory_auditor/handoff.md` — Final project-wide forensic audit report (CLEAN).
+
+---
+
+## 5. Verification Summary
+
+- **Server Build**: `npm.cmd --prefix server run build` (Exit code: 0)
+- **Server Typecheck**: `tsc -p server/tsconfig.json --noEmit` (Exit code: 0)
+- **Module Compliance**: `python scripts/audit_module_compliance.py` -> 3/3 Modules 🟢 ĐẠT (8/8 checks each)
+- **Total Tests Passed**: **157 / 157 passed (100% pass rate, 0 failed, 0 skipped)**
+  * 41 Opaque-Box E2E Tests (`media_downloaders_e2e.test.ts`)
+  * 27 Media Downloaders Unit Tests (`media_downloaders.test.ts`)
+  * 15 Spotify Challenger Tests (`challenger_spotify.test.ts`)
+  * 12 Instagram Challenger Tests (`challenger_instagram.test.ts`)
+  * 14 Collapsible History Tests (`collapsible_history.test.ts`)
+  * 48 Additional Adversarial Tests (`facebook_adversarial.test.ts`, `spotify_adversarial.test.ts`, `challenger_facebook.test.ts`)
+- **Forensic Audit**: **CLEAN (0 integrity violations, 0 facades, 0 cheats)**

@@ -26,6 +26,7 @@ export const instagramSaveDriveBodySchema = z.object({
   duration: z.number().optional(),
   isCarousel: z.boolean().optional().default(false),
   mediaUrls: z.array(z.string()).optional(),
+  mediaType: z.enum(['video', 'image', 'carousel']).optional(),
   overwrite: z.boolean().optional().default(false)
 });
 
@@ -53,6 +54,8 @@ export interface InstagramVideoData {
   cover: string;
   duration: number;
   videoUrl?: string;
+  imageUrl?: string;
+  mediaType?: 'video' | 'image' | 'carousel';
   medias: InstagramMediaItem[];
   isCarousel?: boolean;
   existingInDrive?: any;

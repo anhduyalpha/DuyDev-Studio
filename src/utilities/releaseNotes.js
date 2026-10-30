@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.27': {
+    version: 'v24.27',
+    title: 'Bản cập nhật v24.27: Đại Tu & Chuẩn Hóa Toàn Diện Bộ 3 Downloader (Facebook, Spotify, Instagram)',
+    date: '30/10/2026',
+    features: [
+      'Facebook Downloader UR: Tích hợp OpenGraph Fast Crawler phản hồi tức thì (~300ms), mở rộng nhận diện URL bài viết, video Reels & Story đa dạng',
+      'Spotify Downloader UR: Tìm kiếm phân tầng Staged Search kết hợp thuật toán tính điểm đa nhân tố chống remix/cover rác (KI-FIX-041), bảo toàn phát nhạc liên tục khi thao tác tải',
+      'Instagram Downloader UR: Sửa lỗi phân tách dữ liệu album Carousel NDJSON đa ảnh/video, bảo toàn định dạng MIME-type khi lưu Studio Drive và tự động chuẩn hóa URL chia sẻ'
+    ],
+    fixes: [
+      'Xóa Bỏ Hoàn Toàn Giật Lag Giao Diện (Zero-Flicker): Chuẩn hóa container lịch sử độc lập (#facebookHistoryContainer, #spotifyHistoryContainer, #instagramHistoryContainer) với cơ chế in-place DOM mutation',
+      'Công Thái Học Đa Nền Tảng: Chuẩn hóa kích thước bấm >= 44px, tương thích hoàn hảo Web PWA, Android Native APK và Android Share Sheet'
+    ]
+  },
   'v24.26': {
     version: 'v24.26',
     title: 'Bản cập nhật v24.26: Đồng Bộ Tuyệt Đối Cache PWA & Triệt Tiêu Lặp Thông Báo Cập Nhật',

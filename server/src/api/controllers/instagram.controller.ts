@@ -40,7 +40,7 @@ export async function streamInstagramHandler(request: FastifyRequest, reply: Fas
 }
 
 export async function saveToDriveInstagramHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, title, id, originalUrl, cover, author, duration, overwrite } =
+  const { url, title, id, originalUrl, cover, author, duration, overwrite, mediaType } =
     instagramSaveDriveBodySchema.parse(request.body || {});
   const result = await InstagramService.saveToDrive(
     url,
@@ -50,7 +50,8 @@ export async function saveToDriveInstagramHandler(request: FastifyRequest, reply
     cover,
     author,
     duration,
-    overwrite
+    overwrite,
+    mediaType
   );
   return reply.send({
     success: true,
