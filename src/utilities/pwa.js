@@ -23,7 +23,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v24.24';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v24.26';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -558,6 +558,12 @@ export function showUpdateNotificationCenter(waitingWorker, options = {}) {
       window.removeEventListener('ds-theme-change', handleThemeChange);
     }
     userRequestedReload = true;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('ds_update_capsule_dismissed', 'true');
+        sessionStorage.setItem('ds_updating_to_version', targetVersion);
+      }
+    } catch {}
     capsule.remove();
 
     const activeWorker = worker || waitingWorker;
@@ -760,6 +766,15 @@ export async function fastCheckAppUpdate() {
   if (typeof fetch !== 'function') return;
 
   try {
+    // 0. Defense-in-depth: Skip if recently reloaded from update (<15s) or dismissed in current session
+    const lastReload = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ds_sw_just_reloaded') : null;
+    if (lastReload && Date.now() - Number(lastReload) < 15000) {
+      return;
+    }
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ds_update_capsule_dismissed') === 'true') {
+      return;
+    }
+
     // 1. Immediate check: If registration or window has a waiting worker, prompt immediately
     const reg = swRegistration || (await navigator.serviceWorker.getRegistration?.());
     const waitingWorker = reg?.waiting || (typeof window !== 'undefined' ? window.__ds_waiting_worker : null);
@@ -777,6 +792,15 @@ export async function fastCheckAppUpdate() {
 
     const serverVersion = match[1];
     if (serverVersion && serverVersion !== CURRENT_PWA_VERSION) {
+      // Check if this serverVersion is already present in CacheStorage
+      const cacheStorage = typeof caches !== 'undefined' ? caches : (typeof window !== 'undefined' ? window.caches : null);
+      if (cacheStorage && typeof cacheStorage.has === 'function') {
+        try {
+          const hasCache = await cacheStorage.has(serverVersion);
+          if (hasCache) return;
+        } catch {}
+      }
+
       latestDiscoveredServerVersion = serverVersion;
       if (reg) reg.update().catch(() => {});
       showUpdateCapsule(reg?.waiting || reg?.installing || null, {

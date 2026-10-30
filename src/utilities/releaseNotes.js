@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.26': {
+    version: 'v24.26',
+    title: 'Bản cập nhật v24.26: Đồng Bộ Tuyệt Đối Cache PWA & Triệt Tiêu Lặp Thông Báo Cập Nhật',
+    date: '30/10/2026',
+    features: [
+      'Đồng Bộ Tuyệt Đối Cache PWA & Triệt Tiêu Lặp Thông Báo (PWA Update Loop Fix): Chuẩn hóa đồng bộ 100% phiên bản giữa Service Worker, PWA Runtime và Cache-Buster bundles, loại bỏ hoàn toàn hiện tượng hiển thị lại thông báo sau khi bấm Làm mới',
+      'Tối Ưu Album TikTok & Trình Phát Nhạc Nền: Trượt ảnh tức thì (<0ms) bằng GPU hardware-accelerated carousel và thanh điều khiển nhạc phản hồi tức thì với 3 trạng thái mượt mà'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Lặp Lại Thông Báo Cập Nhật: Bổ sung cơ chế bảo vệ đa tầng (Triple-Lock Guard & Cache-State Inspector), ngăn chặn trình duyệt hiển thị lại hộp thoại cập nhật cho phiên bản vừa được nạp',
+      'Khắc Phục Triệt Để Màn Hình Đen Khi Chia Sẻ & Khởi Động Tức Thì APK (v24.8.0)'
+    ]
+  },
   'v24.25': {
     version: 'v24.25',
     title: 'Bản cập nhật v24.25 (APK Native v24.8.0): Khởi Động Siêu Tốc & Khắc Phục Màn Hình Đen Khi Chia Sẻ',
@@ -1303,7 +1316,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.24'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.26'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -1311,7 +1324,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.24'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v24.24';
+  if (!rawVer) return 'v24.26';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {
