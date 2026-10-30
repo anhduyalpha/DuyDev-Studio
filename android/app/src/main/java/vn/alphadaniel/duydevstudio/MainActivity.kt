@@ -248,6 +248,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun getActiveHost(): String {
+        val prefs = getSharedPreferences("ds_prefs", MODE_PRIVATE)
+        return prefs.getString(PREF_KEY_ACTIVE_HOST, PRIMARY_HOST) ?: PRIMARY_HOST
+    }
+
     fun ensureWebViewActive() {
         lifecycleHandler.removeCallbacks(deepFreezeRunnable)
         lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
