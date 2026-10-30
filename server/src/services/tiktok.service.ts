@@ -437,6 +437,7 @@ export class TikTokService {
       reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
     } else {
       reply.header('Content-Disposition', 'inline');
+      reply.header('Cache-Control', 'public, max-age=86400, immutable');
     }
 
     if (!upstreamRes.body) {

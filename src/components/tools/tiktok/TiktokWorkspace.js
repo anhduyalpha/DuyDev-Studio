@@ -197,15 +197,31 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
         <!-- Column 1: Media Preview (5 cols) -->
         <div class="md:col-span-5 flex flex-col items-center w-full">
           ${isSlideshow ? `
-            <div class="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-lg border border-zinc-200/60 dark:border-zinc-800/80 group select-none flex items-center justify-center">
-              <img
-                id="tiktokSlideImage"
-                src="${firstSlideStream}"
-                alt="TikTok Slide"
-                data-current-index="0"
-                decoding="async"
-                class="w-full h-full object-contain transition-opacity duration-200"
-              />
+            <div id="tiktokSlideGalleryContainer" class="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-lg border border-zinc-200/60 dark:border-zinc-800/80 group select-none flex items-center justify-center">
+              <!-- Carousel Slider Track with instant hardware-accelerated translation -->
+              <div
+                id="tiktokSlideTrack"
+                class="w-full h-full flex transition-transform duration-300 ease-out will-change-transform"
+                style="transform: translateX(0%);"
+              >
+                ${images.map((img, idx) => {
+                  const pad = String(idx + 1).padStart(2, '0');
+                  const sUrl = tiktokApi.getStreamUrl(img, `slide_${pad}.jpg`);
+                  return `
+                    <div class="w-full h-full shrink-0 flex items-center justify-center p-0 select-none overflow-hidden">
+                      <img
+                        id="${idx === 0 ? 'tiktokSlideImage' : ''}"
+                        src="${sUrl}"
+                        alt="TikTok Slide ${idx + 1}"
+                        data-slide-index="${idx}"
+                        decoding="async"
+                        loading="eager"
+                        class="w-full h-full object-contain select-none pointer-events-none"
+                      />
+                    </div>
+                  `;
+                }).join('')}
+              </div>
 
               <!-- Top badges -->
               <span id="tiktokSlideCounterBadge" class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-mono font-semibold border border-white/10 z-10">
@@ -257,7 +273,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
                       data-slide-index="${idx}"
                       class="tiktok-thumb-btn w-6 h-9 rounded-md overflow-hidden border ${idx === 0 ? 'border-rose-500 ring-1 ring-rose-500 scale-105' : 'border-white/30 opacity-60 hover:opacity-100'} transition shrink-0 cursor-pointer"
                     >
-                      <img src="${tiktokApi.getStreamUrl(img, `slide_${idx + 1}.jpg`)}" class="w-full h-full object-cover" loading="lazy" decoding="async" />
+                      <img src="${tiktokApi.getStreamUrl(img, `slide_${idx + 1}.jpg`)}" class="w-full h-full object-cover pointer-events-none" loading="eager" decoding="async" />
                     </button>
                   `).join('')}
                 </div>
@@ -266,31 +282,48 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
 
             <!-- Background Music Player for Slideshow -->
             ${video.audioUrl ? `
-              <div class="w-full max-w-[280px] sm:max-w-[320px] mt-3 p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-between gap-2.5">
-                <div class="flex items-center gap-2 min-w-0">
-                  <button
-                    id="btnToggleTiktokAudio"
-                    type="button"
-                    class="w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-xs active:scale-95"
-                    title="Phát / Dừng nhạc nền"
-                  >
-                    <i id="tiktokAudioIcon" data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>
-                  </button>
-                  <div class="min-w-0">
-                    <p class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate">Nhạc nền TikTok</p>
-                    <p id="tiktokAudioTimeText" class="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">0:00 / ${formatDuration(video.duration)}</p>
+              <div class="w-full max-w-[280px] sm:max-w-[320px] mt-3 p-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2.5">
+                  <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <button
+                      id="btnToggleTiktokAudio"
+                      type="button"
+                      class="w-8 h-8 rounded-full bg-rose-600 hover:bg-rose-500 active:scale-95 text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-xs"
+                      title="Phát / Dừng nhạc nền"
+                    >
+                      <span id="tiktokAudioPlayIcon" class="flex items-center justify-center">
+                        <i data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>
+                      </span>
+                      <span id="tiktokAudioPauseIcon" class="hidden items-center justify-center">
+                        <i data-lucide="pause" class="w-3.5 h-3.5"></i>
+                      </span>
+                      <span id="tiktokAudioLoadingIcon" class="hidden items-center justify-center animate-spin">
+                        <i data-lucide="loader-2" class="w-3.5 h-3.5"></i>
+                      </span>
+                    </button>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate">Nhạc nền TikTok</p>
+                      <p id="tiktokAudioTimeText" class="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">0:00 / ${formatDuration(video.duration)}</p>
+                    </div>
                   </div>
+
+                  <audio id="tiktokAudioPlayer" src="${audioStreamUrl}" preload="auto" class="hidden"></audio>
+
+                  <a
+                    id="btnDownloadSlideshowAudio"
+                    href="${audioDownloadUrl}"
+                    download
+                    class="p-1.5 rounded-lg text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition cursor-pointer shrink-0"
+                    title="Tải audio (mp3)"
+                  >
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                  </a>
                 </div>
-                <audio id="tiktokAudioPlayer" src="${audioStreamUrl}" preload="none" class="hidden"></audio>
-                <a
-                  id="btnDownloadSlideshowAudio"
-                  href="${audioDownloadUrl}"
-                  download
-                  class="p-1.5 rounded-lg text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition cursor-pointer shrink-0"
-                  title="Tải audio (mp3)"
-                >
-                  <i data-lucide="download" class="w-4 h-4"></i>
-                </a>
+
+                <!-- Mini Seekable Audio Track -->
+                <div id="tiktokAudioProgressContainer" class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden cursor-pointer" title="Tua nhạc nền">
+                  <div id="tiktokAudioProgressBar" class="h-full bg-rose-600 rounded-full transition-all duration-75" style="width: 0%;"></div>
+                </div>
               </div>
             ` : ''}
           ` : `
@@ -816,26 +849,36 @@ export function attachTiktokWorkspaceListeners() {
     if (video?.isSlideshow && Array.isArray(video.images) && video.images.length > 0) {
       let currentSlideIndex = 0;
       const totalSlides = video.images.length;
+      const slideTrack = document.getElementById('tiktokSlideTrack');
+      const counterBadge = document.getElementById('tiktokSlideCounterBadge');
+      const btnSingleDl = document.getElementById('btnDownloadSingleSlide');
+      const btnViewFull = document.getElementById('btnViewFullSlide');
+      const slideContainer = document.getElementById('tiktokSlideGalleryContainer') || slideTrack?.parentElement;
+
+      // Preload all slide images into browser cache immediately for 0ms transitions
+      const proxiedStreamUrls = video.images.map((targetImgUrl, idx) => {
+        const pad = String(idx + 1).padStart(2, '0');
+        const sUrl = tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`);
+        const preImg = new Image();
+        preImg.src = sUrl;
+        return sUrl;
+      });
 
       function goToSlide(idx) {
         if (idx < 0) idx = totalSlides - 1;
         if (idx >= totalSlides) idx = 0;
         currentSlideIndex = idx;
 
-        const slideImg = document.getElementById('tiktokSlideImage');
-        const counterBadge = document.getElementById('tiktokSlideCounterBadge');
-        const btnSingleDl = document.getElementById('btnDownloadSingleSlide');
-        const btnViewFull = document.getElementById('btnViewFullSlide');
+        // Instant hardware-accelerated CSS translation
+        if (slideTrack) {
+          slideTrack.style.transform = `translateX(-${idx * 100}%)`;
+        }
 
         const pad = String(idx + 1).padStart(2, '0');
         const targetImgUrl = video.images[idx];
-        const proxiedStreamUrl = tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`);
+        const proxiedStreamUrl = proxiedStreamUrls[idx] || tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`);
         const proxiedDownloadUrl = tiktokApi.getStreamUrl(targetImgUrl, `slide_${pad}.jpg`, true);
 
-        if (slideImg) {
-          slideImg.src = proxiedStreamUrl;
-          slideImg.setAttribute('data-current-index', String(idx));
-        }
         if (counterBadge) {
           counterBadge.textContent = `${idx + 1} / ${totalSlides}`;
         }
@@ -886,8 +929,6 @@ export function attachTiktokWorkspaceListeners() {
       });
 
       // Mobile touch swipe gestures (left/right) on slide gallery
-      const slideImgEl = document.getElementById('tiktokSlideImage');
-      const slideContainer = slideImgEl?.parentElement;
       if (slideContainer) {
         let touchStartX = 0;
         let touchStartY = 0;
@@ -919,42 +960,79 @@ export function attachTiktokWorkspaceListeners() {
         }, { passive: true });
       }
 
-      // Background audio toggle & time update
+      // Background audio toggle, progress bar & time update
       const audioPlayer = document.getElementById('tiktokAudioPlayer');
       const btnToggleAudio = document.getElementById('btnToggleTiktokAudio');
-      const audioIcon = document.getElementById('tiktokAudioIcon');
       const audioTimeText = document.getElementById('tiktokAudioTimeText');
+      const progressBar = document.getElementById('tiktokAudioProgressBar');
+      const progressContainer = document.getElementById('tiktokAudioProgressContainer');
 
       if (audioPlayer && btnToggleAudio) {
+        const setAudioUiState = (state) => {
+          const playIcon = document.getElementById('tiktokAudioPlayIcon');
+          const pauseIcon = document.getElementById('tiktokAudioPauseIcon');
+          const loadingIcon = document.getElementById('tiktokAudioLoadingIcon');
+          if (playIcon) playIcon.classList.toggle('hidden', state !== 'paused');
+          if (pauseIcon) pauseIcon.classList.toggle('hidden', state !== 'playing');
+          if (loadingIcon) loadingIcon.classList.toggle('hidden', state !== 'loading');
+        };
+
+        const updateTimeDisplay = () => {
+          if (!audioTimeText) return;
+          const current = formatDuration(audioPlayer.currentTime || 0);
+          const totalDur = audioPlayer.duration && !isNaN(audioPlayer.duration) && isFinite(audioPlayer.duration)
+            ? formatDuration(audioPlayer.duration)
+            : formatDuration(video.duration || 0);
+          audioTimeText.textContent = `${current} / ${totalDur}`;
+
+          if (progressBar && audioPlayer.duration && !isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
+            const pct = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progressBar.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+          }
+        };
+
         btnToggleAudio.onclick = () => {
           if (audioPlayer.paused) {
+            setAudioUiState('loading');
             audioPlayer.play().catch((err) => {
               console.warn('[TikTok] Audio play error:', err);
+              setAudioUiState('paused');
             });
           } else {
             audioPlayer.pause();
+            setAudioUiState('paused');
           }
         };
 
-        audioPlayer.onplay = () => {
-          if (audioIcon) {
-            audioIcon.setAttribute('data-lucide', 'pause');
-            if (window.lucide?.createIcons) window.lucide.createIcons();
-          }
+        audioPlayer.onwaiting = () => setAudioUiState('loading');
+        audioPlayer.onplaying = () => setAudioUiState('playing');
+        audioPlayer.onplay = () => setAudioUiState('playing');
+        audioPlayer.onpause = () => setAudioUiState('paused');
+
+        audioPlayer.onended = () => {
+          setAudioUiState('paused');
+          audioPlayer.currentTime = 0;
+          if (progressBar) progressBar.style.width = '0%';
+          updateTimeDisplay();
         };
 
-        audioPlayer.onpause = () => {
-          if (audioIcon) {
-            audioIcon.setAttribute('data-lucide', 'play');
-            if (window.lucide?.createIcons) window.lucide.createIcons();
-          }
+        audioPlayer.onloadedmetadata = () => {
+          updateTimeDisplay();
         };
 
         audioPlayer.ontimeupdate = () => {
-          if (audioTimeText && audioPlayer.duration) {
-            audioTimeText.textContent = `${formatDuration(audioPlayer.currentTime)} / ${formatDuration(audioPlayer.duration)}`;
-          }
+          updateTimeDisplay();
         };
+
+        if (progressContainer) {
+          progressContainer.onclick = (e) => {
+            if (!audioPlayer.duration || isNaN(audioPlayer.duration)) return;
+            const rect = progressContainer.getBoundingClientRect();
+            const clickPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            audioPlayer.currentTime = clickPos * audioPlayer.duration;
+            updateTimeDisplay();
+          };
+        }
       }
 
       // Download Slideshow ZIP button
@@ -1350,5 +1428,21 @@ export function attachTiktokWorkspaceListeners() {
     unsubscribe();
     window.removeEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
     window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+    const audio = document.getElementById('tiktokAudioPlayer');
+    if (audio) {
+      try {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+      } catch (_) {}
+    }
+    const video = document.getElementById('tiktokPlayer');
+    if (video) {
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch (_) {}
+    }
   };
 }
