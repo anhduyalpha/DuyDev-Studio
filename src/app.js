@@ -233,6 +233,9 @@ class App {
 
   checkAndPromptOnboardingProfile() {
     if (isProfileConfigured()) return;
+    try {
+      if (sessionStorage.getItem('ds_profile_prompt_dismissed') === '1') return;
+    } catch {}
 
     if (document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
       return;

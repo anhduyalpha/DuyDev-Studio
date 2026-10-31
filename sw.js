@@ -3,17 +3,17 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v24.28';
+const CACHE_NAME = 'duydev-studio-v24.29';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/stitch-tokens.css?v=24.28',
-  './src/styles/card-tiers-10.css?v=24.28',
-  './src/styles/studocu.css?v=24.28',
-  './src/styles/scribd.css?v=24.28',
-  './src/styles/highlight-theme.css?v=24.28',
+  './src/styles/stitch-tokens.css?v=24.29',
+  './src/styles/card-tiers-10.css?v=24.29',
+  './src/styles/studocu.css?v=24.29',
+  './src/styles/scribd.css?v=24.29',
+  './src/styles/highlight-theme.css?v=24.29',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
@@ -21,7 +21,7 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
   './src/vendor/lucide.min.js',
-  './src/app.js?v=24.28',
+  './src/app.js?v=24.29',
   './src/utilities/soundEngine.js?v=24.10',
   './src/utilities/releaseNotes.js?v=24.23',
   './src/utilities/notificationHelper.js?v=23.70',

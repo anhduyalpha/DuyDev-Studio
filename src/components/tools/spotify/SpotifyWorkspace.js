@@ -869,3 +869,24 @@ export function unmountSpotifyWorkspace() {
     activeSpotifyWorkspace = null;
   }
 }
+
+export function attachSpotifyWorkspaceListeners(onReRender) {
+  const container = document.getElementById('spotifyWorkspaceContainer');
+  if (!container) return;
+
+  if (activeSpotifyWorkspace) {
+    activeSpotifyWorkspace.unmount();
+    activeSpotifyWorkspace = null;
+  }
+
+  activeSpotifyWorkspace = new SpotifyWorkspace(container);
+  activeSpotifyWorkspace.mount();
+
+  return () => {
+    if (activeSpotifyWorkspace) {
+      activeSpotifyWorkspace.unmount();
+      activeSpotifyWorkspace = null;
+    }
+  };
+}
+

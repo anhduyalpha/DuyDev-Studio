@@ -124,8 +124,8 @@
         android:gravity="center"
         android:orientation="vertical"
         android:background="@color/bg_dark"
-        android:clickable="true"
-        android:focusable="true"
+        android:clickable="false"
+        android:focusable="false"
         android:visibility="gone">
 
         <ImageView

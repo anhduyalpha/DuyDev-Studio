@@ -63,17 +63,15 @@ export function openProfileModal(options = {}) {
         <!-- Top Apple Specular Sheen -->
         <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/40 dark:via-indigo-400/50 to-transparent"></div>
 
-        <!-- Close Button (Only when NOT in mandatory onboarding mode) -->
-        ${!isOnboarding ? `
-          <button 
-            type="button" 
-            id="dsProfileCloseBtn"
-            class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition cursor-pointer"
-            aria-label="Đóng"
-          >
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-        ` : ''}
+        <!-- Close Button -->
+        <button 
+          type="button" 
+          id="dsProfileCloseBtn"
+          class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition cursor-pointer"
+          aria-label="Đóng"
+        >
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
 
         ${isStep1 ? `
           <!-- ================= STEP 1: NHẬP TÊN PROFILE ================= -->
@@ -121,32 +119,21 @@ export function openProfileModal(options = {}) {
 
             <!-- Action Buttons for Step 1 -->
             <div class="flex items-center gap-2.5 pt-2">
-              ${isOnboarding ? `
-                <button 
-                  type="button" 
-                  id="dsProfileNextStepBtn"
-                  class="w-full h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-2"
-                >
-                  <span>Xác nhận & Tiếp tục (Chọn Avatar)</span>
-                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
-              ` : `
-                <button 
-                  type="button" 
-                  id="dsProfileSkipBtn"
-                  class="flex-1 h-12 px-4 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button 
-                  type="button" 
-                  id="dsProfileNextStepBtn"
-                  class="flex-[1.4] h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
-                >
-                  <span>Tiếp tục</span>
-                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
-              `}
+              <button 
+                type="button" 
+                id="dsProfileSkipBtn"
+                class="px-4 h-12 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
+              >
+                ${isOnboarding ? 'Để sau' : 'Hủy'}
+              </button>
+              <button 
+                type="button" 
+                id="dsProfileNextStepBtn"
+                class="flex-1 h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
+              >
+                <span>${isOnboarding ? 'Tiếp tục (Chọn Avatar)' : 'Tiếp tục'}</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
             </div>
           </div>
         ` : `
@@ -296,14 +283,20 @@ export function openProfileModal(options = {}) {
   }
 
   function attachListeners() {
+    const handleDismiss = () => {
+      if (isOnboarding) {
+        try { sessionStorage.setItem('ds_profile_prompt_dismissed', '1'); } catch {}
+      }
+      closeProfileModal();
+    };
+
     // Close button
     const closeBtn = modalOverlay.querySelector('#dsProfileCloseBtn');
-    if (closeBtn) closeBtn.onclick = closeProfileModal;
+    if (closeBtn) closeBtn.onclick = handleDismiss;
 
-    // Overlay click to close (Strictly forbidden during mandatory onboarding)
+    // Overlay click to close
     modalOverlay.onclick = (e) => {
-      if (isOnboarding) return;
-      if (e.target === modalOverlay) closeProfileModal();
+      if (e.target === modalOverlay) handleDismiss();
     };
 
     if (currentStep === 1) {
@@ -339,10 +332,7 @@ export function openProfileModal(options = {}) {
       }
 
       if (skipBtn) {
-        skipBtn.onclick = () => {
-          // Skip onboarding: set temporary guest flag and close
-          closeProfileModal();
-        };
+        skipBtn.onclick = handleDismiss;
       }
     } else {
       // Step 2 listeners

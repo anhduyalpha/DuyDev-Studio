@@ -419,6 +419,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun hideSplashOverlay() {
         if (!::splashOverlay.isInitialized || splashOverlay.visibility == View.GONE) return
+        splashOverlay.isClickable = false
+        splashOverlay.isFocusable = false
         splashOverlay.animate()
             .alpha(0f)
             .setDuration(160L)
@@ -427,6 +429,13 @@ class MainActivity : AppCompatActivity() {
                 splashOverlay.alpha = 1f
             }
             .start()
+        splashOverlay.postDelayed({
+            if (::splashOverlay.isInitialized) {
+                splashOverlay.visibility = View.GONE
+                splashOverlay.isClickable = false
+                splashOverlay.isFocusable = false
+            }
+        }, 300L)
     }
 
     @SuppressLint("SetJavaScriptEnabled")

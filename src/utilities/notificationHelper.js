@@ -191,3 +191,14 @@ export function notifyJobFailed(title, message, options = {}) {
     type: 'job_failed'
   });
 }
+
+export const notificationHelper = {
+  isSupported: isNotificationSupported,
+  getPermission: getNotificationPermission,
+  requestPermission: requestNotificationPermission,
+  openSettings: openNotificationSettings,
+  send: showNotification,
+  notifyComplete: notifyJobComplete,
+  notifyFailed: notifyJobFailed
+};
+

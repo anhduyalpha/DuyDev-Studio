@@ -968,3 +968,30 @@ export class FacebookWorkspace {
     this.attachHistoryListeners();
   }
 }
+
+let activeFacebookWorkspace = null;
+
+export function renderFacebookWorkspace() {
+  return '<div id="facebookWorkspaceContainer" class="w-full"></div>';
+}
+
+export function attachFacebookWorkspaceListeners(onReRender) {
+  const container = document.getElementById('facebookWorkspaceContainer');
+  if (!container) return;
+
+  if (activeFacebookWorkspace) {
+    activeFacebookWorkspace.unmount();
+    activeFacebookWorkspace = null;
+  }
+
+  activeFacebookWorkspace = new FacebookWorkspace(container);
+  activeFacebookWorkspace.mount();
+
+  return () => {
+    if (activeFacebookWorkspace) {
+      activeFacebookWorkspace.unmount();
+      activeFacebookWorkspace = null;
+    }
+  };
+}
+

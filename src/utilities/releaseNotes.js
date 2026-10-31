@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.29': {
+    version: 'v24.29',
+    title: 'Bản cập nhật v24.29: Khắc Phục Triệt Để Lỗi Đơ Giao Diện & Mở Khóa Tương Tác',
+    date: '31/10/2026',
+    features: [
+      'Khôi Phục Toàn Diện Module Exports: Bổ sung đầy đủ hàm render & attach listeners cho Facebook Downloader và Spotify Downloader, bảo đảm ES module tải thông suốt 100%',
+      'Cải Tiến Modal Định Danh Hồ Sơ (Profile Modal): Bổ sung nút "Để sau" và nút đóng "✕", cho phép người dùng lướt và tương tác toàn bộ công cụ mà không bị chặn màn hình'
+    ],
+    fixes: [
+      'Triệt Tiêu Hoàn Toàn Hiện Tượng Đơ Web: Khắc phục lỗi SyntaxError khi import ES Module khiến toàn bộ JavaScript ngừng thực thi',
+      'Loại Bỏ Splash Overlay Click Trap Trên Android: Đảm bảo native splash overlay không chặn sự kiện chạm (pointer events) khi trang web đã hiển thị'
+    ]
+  },
   'v24.28': {
     version: 'v24.28',
     title: 'Bản cập nhật v24.28: Khôi Phục Giao Diện Thẻ Tiêu Chuẩn & Triệt Tiêu Đơ Lag Web',
