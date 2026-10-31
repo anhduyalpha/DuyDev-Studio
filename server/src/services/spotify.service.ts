@@ -32,6 +32,7 @@ interface CachedTrackEntry {
 
 export class SpotifyService {
   private static trackCache = new Map<string, CachedTrackEntry>();
+  private static activeDownloads = new Map<string, Promise<string>>();
   private static readonly CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
   /**
@@ -394,7 +395,8 @@ export class SpotifyService {
             .sort((a: any, b: any) => (b.abr || b.tbr || 0) - (a.abr || a.tbr || 0));
 
           const audioFmt = audioFormats[0];
-          downloadUrl = audioFmt?.url || bestCandidate.url;
+          const ytWatchUrl = bestCandidate.webpage_url || (bestCandidate.id ? `https://www.youtube.com/watch?v=${bestCandidate.id}` : undefined);
+          downloadUrl = ytWatchUrl || audioFmt?.url || bestCandidate.url;
           if (!cover && bestCandidate.thumbnail) cover = bestCandidate.thumbnail;
           if (audioFmt?.filesize) fileSizeInBytes = audioFmt.filesize;
           if (duration === 0 && bestCandidate.duration) duration = Math.round(bestCandidate.duration);
@@ -454,6 +456,11 @@ export class SpotifyService {
       timestamp: Date.now()
     });
 
+    // Background pre-warm audio cache (fire-and-forget, non-blocking)
+    if (downloadUrl) {
+      this.ensureTrackCached(downloadUrl, `${artist} - ${title}.mp3`, `${artist} ${title}`).catch(() => {});
+    }
+
     return resolvedPayload;
   }
 
@@ -494,7 +501,195 @@ export class SpotifyService {
   }
 
   /**
-   * Proxies audio stream with HTTP 206 Partial Content support
+   * Streams a local file with RFC 7233 byte-range support (HTTP 206)
+   */
+  static async streamLocalFile(
+    filePath: string,
+    rangeHeader: string | undefined,
+    download: boolean,
+    filename: string,
+    reply: FastifyReply
+  ): Promise<any> {
+    const stat = await fsPromises.stat(filePath);
+    const fileSize = stat.size;
+
+    reply.header('Accept-Ranges', 'bytes');
+    reply.header('Content-Type', 'audio/mpeg');
+
+    if (download) {
+      const safeName = filename || path.basename(filePath);
+      const encodedName = encodeURIComponent(safeName);
+      const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+      reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
+    } else {
+      reply.header('Content-Disposition', 'inline');
+    }
+
+    if (rangeHeader) {
+      const parts = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (isNaN(start) || start >= fileSize || (parts[1] && end < start)) {
+        reply.status(416);
+        reply.header('Content-Range', `bytes */${fileSize}`);
+        return reply.send();
+      }
+
+      const clampedEnd = Math.min(end, fileSize - 1);
+      const chunkSize = (clampedEnd - start) + 1;
+
+      reply.status(206);
+      reply.header('Content-Range', `bytes ${start}-${clampedEnd}/${fileSize}`);
+      reply.header('Content-Length', chunkSize);
+
+      const stream = fs.createReadStream(filePath, { start, end: clampedEnd });
+      return reply.send(stream);
+    } else {
+      reply.status(200);
+      reply.header('Content-Length', fileSize);
+      const stream = fs.createReadStream(filePath);
+      return reply.send(stream);
+    }
+  }
+
+  /**
+   * Ensures high-quality audio is cached on disk in `data/storage/temp/spotify/`
+   * Handles YouTube URLs, search queries, and self-heals expired Google Video links
+   */
+  static async ensureTrackCached(
+    targetUrl: string,
+    filename = 'track.mp3',
+    fallbackQuery = ''
+  ): Promise<string> {
+    const spTempDir = path.join(resolvedStoragePaths.temp, 'spotify');
+    if (!fs.existsSync(spTempDir)) {
+      await fsPromises.mkdir(spTempDir, { recursive: true });
+    }
+
+    let cacheKey = '';
+    const ytMatch = targetUrl.match(/(?:v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+      cacheKey = `yt_${ytMatch[1]}`;
+    } else if (targetUrl.includes('spotify.com/track/')) {
+      const spMatch = targetUrl.match(/track\/([a-zA-Z0-9]+)/i);
+      cacheKey = `sp_${spMatch ? spMatch[1] : 'track'}`;
+    } else {
+      cacheKey = crypto.createHash('md5').update(targetUrl + (fallbackQuery || '')).digest('hex').slice(0, 16);
+    }
+
+    const cachedFilePath = path.join(spTempDir, `${cacheKey}.mp3`);
+    if (fs.existsSync(cachedFilePath)) {
+      try {
+        const stat = await fsPromises.stat(cachedFilePath);
+        if (stat.size > 10240) {
+          return cachedFilePath;
+        }
+      } catch {}
+    }
+
+    // Check deduplication
+    if (this.activeDownloads.has(cacheKey)) {
+      return this.activeDownloads.get(cacheKey)!;
+    }
+
+    const downloadPromise = (async () => {
+      const tempOutput = path.join(spTempDir, `${cacheKey}_part_${Date.now()}.mp3`);
+      try {
+        const isYouTube = ytMatch !== null || targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be');
+        const isGoogleVideo = targetUrl.includes('googlevideo.com');
+
+        if (isYouTube) {
+          const downloadSource = ytMatch ? `https://www.youtube.com/watch?v=${ytMatch[1]}` : targetUrl;
+          await execFileAsync('yt-dlp', [
+            '-f', 'ba[ext=m4a]/ba',
+            '-x', '--audio-format', 'mp3',
+            '--audio-quality', '0',
+            '--no-playlist',
+            '--no-warnings',
+            '-o', tempOutput,
+            downloadSource
+          ], { timeout: 120000 });
+        } else if (isGoogleVideo) {
+          let fetchedOk = false;
+          try {
+            const testRes = await fetch(targetUrl, {
+              headers: { 'User-Agent': DEFAULT_UA },
+              signal: AbortSignal.timeout(6000)
+            });
+            if (testRes.ok && testRes.body) {
+              const fileStream = fs.createWriteStream(tempOutput);
+              const webStream = Readable.fromWeb(testRes.body as any);
+              await pipeline(webStream, fileStream);
+              fetchedOk = true;
+            }
+          } catch {}
+
+          if (!fetchedOk) {
+            const cleanQuery = (fallbackQuery || filename || '')
+              .replace(/\.mp3$/i, '')
+              .replace(/\[Spotify\]/gi, '')
+              .replace(/[_\-]+/g, ' ')
+              .trim();
+
+            if (cleanQuery) {
+              logger.info({ cleanQuery }, '[Spotify] Re-resolving expired stream via search query');
+              await execFileAsync('yt-dlp', [
+                `ytsearch1:${cleanQuery}`,
+                '-f', 'ba[ext=m4a]/ba',
+                '-x', '--audio-format', 'mp3',
+                '--audio-quality', '0',
+                '--no-playlist',
+                '--no-warnings',
+                '-o', tempOutput
+              ], { timeout: 120000 });
+            } else {
+              throw new BadRequestError('Liên kết âm thanh đã hết hạn và không thể tự phục hồi.');
+            }
+          }
+        } else if (targetUrl.startsWith('http')) {
+          const res = await fetch(targetUrl, {
+            headers: { 'User-Agent': DEFAULT_UA },
+            signal: AbortSignal.timeout(60000)
+          });
+          if (!res.ok || !res.body) {
+            throw new BadRequestError(`Không thể tải luồng âm thanh: HTTP ${res.status}`);
+          }
+          const fileStream = fs.createWriteStream(tempOutput);
+          const webStream = Readable.fromWeb(res.body as any);
+          await pipeline(webStream, fileStream);
+        } else {
+          throw new BadRequestError('Liên kết âm thanh không hợp lệ');
+        }
+
+        if (!fs.existsSync(tempOutput)) {
+          const files = await fsPromises.readdir(spTempDir);
+          const matched = files.find(f => f.startsWith(`${cacheKey}_part_`));
+          if (matched) {
+            await fsPromises.rename(path.join(spTempDir, matched), cachedFilePath);
+            return cachedFilePath;
+          }
+          throw new BadRequestError('Không tạo được tệp âm thanh đệm');
+        }
+
+        await fsPromises.rename(tempOutput, cachedFilePath);
+        return cachedFilePath;
+      } catch (err: any) {
+        await StorageManager.unlinkSafe(tempOutput);
+        throw err;
+      }
+    })();
+
+    this.activeDownloads.set(cacheKey, downloadPromise);
+    try {
+      return await downloadPromise;
+    } finally {
+      this.activeDownloads.delete(cacheKey);
+    }
+  }
+
+  /**
+   * Proxies audio stream with HTTP 206 Partial Content support & disk-backed cache
    */
   static async proxyStream(
     targetUrl: string,
@@ -503,47 +698,87 @@ export class SpotifyService {
     rangeHeader: string | undefined,
     reply: FastifyReply
   ): Promise<any> {
-    const headers: Record<string, string> = {
-      'User-Agent': DEFAULT_UA
-    };
-    if (rangeHeader) {
-      headers['Range'] = rangeHeader;
+    if (!targetUrl) {
+      throw new BadRequestError('Thiếu liên kết âm thanh để phát.');
     }
 
-    const upstreamRes = await fetch(targetUrl, {
-      headers,
-      signal: AbortSignal.timeout(60000)
-    });
-
-    if (!upstreamRes.ok && upstreamRes.status !== 206) {
-      throw new BadRequestError(`Không thể kết nối đến luồng âm thanh: HTTP ${upstreamRes.status}`);
+    // 1. Check if targetUrl points to an existing file on disk
+    const resolvedPath = path.isAbsolute(targetUrl)
+      ? targetUrl
+      : path.join(resolvedStoragePaths.root, targetUrl);
+    if (fs.existsSync(resolvedPath)) {
+      return this.streamLocalFile(resolvedPath, rangeHeader, download, filename, reply);
     }
 
-    reply.status(upstreamRes.status);
-    reply.header('Content-Type', upstreamRes.headers.get('content-type') || 'audio/mpeg');
-    reply.header('Accept-Ranges', 'bytes');
+    // 2. Check if cached version exists in temp/spotify or drive/spotify
+    const ytMatch = targetUrl.match(/(?:v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    const isYouTube = ytMatch !== null || targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be');
+    const isGoogleVideo = targetUrl.includes('googlevideo.com');
 
-    const contentLength = upstreamRes.headers.get('content-length');
-    if (contentLength) reply.header('Content-Length', contentLength);
-
-    const contentRange = upstreamRes.headers.get('content-range');
-    if (contentRange) reply.header('Content-Range', contentRange);
-
-    if (download) {
-      const safeName = filename || 'spotify_track.mp3';
-      const encodedName = encodeURIComponent(safeName);
-      const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
-      reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
-    } else {
-      reply.header('Content-Disposition', 'inline');
+    if (isYouTube || isGoogleVideo) {
+      try {
+        const cachedPath = await this.ensureTrackCached(targetUrl, filename);
+        return this.streamLocalFile(cachedPath, rangeHeader, download, filename, reply);
+      } catch (err: any) {
+        logger.warn({ err: err?.message, targetUrl }, '[Spotify] Cache stream failed, falling back to direct proxy if possible');
+        if (!isGoogleVideo) throw err;
+      }
     }
 
-    if (!upstreamRes.body) {
-      return reply.send(Buffer.alloc(0));
-    }
+    // 3. Direct fetch proxy (for mock CDN, p.scdn.co, RapidAPI direct mp3)
+    try {
+      const headers: Record<string, string> = {
+        'User-Agent': DEFAULT_UA
+      };
+      if (rangeHeader) {
+        headers['Range'] = rangeHeader;
+      }
 
-    const nodeReadable = Readable.fromWeb(upstreamRes.body as any);
-    return reply.send(nodeReadable);
+      const upstreamRes = await fetch(targetUrl, {
+        headers,
+        signal: AbortSignal.timeout(60000)
+      });
+
+      if (!upstreamRes.ok && upstreamRes.status !== 206) {
+        if (targetUrl.includes('googlevideo.com') || upstreamRes.status === 403) {
+          const cachedPath = await this.ensureTrackCached(targetUrl, filename);
+          return this.streamLocalFile(cachedPath, rangeHeader, download, filename, reply);
+        }
+        throw new BadRequestError(`Không thể kết nối đến luồng âm thanh: HTTP ${upstreamRes.status}`);
+      }
+
+      reply.status(upstreamRes.status);
+      reply.header('Content-Type', upstreamRes.headers.get('content-type') || 'audio/mpeg');
+      reply.header('Accept-Ranges', 'bytes');
+
+      const contentLength = upstreamRes.headers.get('content-length');
+      if (contentLength) reply.header('Content-Length', contentLength);
+
+      const contentRange = upstreamRes.headers.get('content-range');
+      if (contentRange) reply.header('Content-Range', contentRange);
+
+      if (download) {
+        const safeName = filename || 'spotify_track.mp3';
+        const encodedName = encodeURIComponent(safeName);
+        const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+        reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
+      } else {
+        reply.header('Content-Disposition', 'inline');
+      }
+
+      if (!upstreamRes.body) {
+        return reply.send(Buffer.alloc(0));
+      }
+
+      const nodeReadable = Readable.fromWeb(upstreamRes.body as any);
+      return reply.send(nodeReadable);
+    } catch (err: any) {
+      if (targetUrl.includes('googlevideo.com')) {
+        const cachedPath = await this.ensureTrackCached(targetUrl, filename);
+        return this.streamLocalFile(cachedPath, rangeHeader, download, filename, reply);
+      }
+      throw err;
+    }
   }
 
   /**
@@ -664,7 +899,8 @@ export class SpotifyService {
     logger.info({ fileName, targetFilePath }, '[Spotify] Saving MP3 track directly to Studio Drive...');
 
     let byteCount = 0;
-    const tempInputPath = path.join(resolvedStoragePaths.temp, `sp_raw_${Date.now()}_${cleanId}.tmp`);
+    let tempInputPath = '';
+    let isTempInputFromCache = false;
 
     try {
       let sourceUrl = audioUrl;
@@ -677,18 +913,13 @@ export class SpotifyService {
         throw new BadRequestError('Không thể tìm thấy luồng âm thanh hợp lệ để lưu vào Drive');
       }
 
-      const upstreamRes = await fetch(sourceUrl, {
-        headers: { 'User-Agent': DEFAULT_UA },
-        signal: AbortSignal.timeout(120000)
-      });
-
-      if (!upstreamRes.ok || !upstreamRes.body) {
-        throw new BadRequestError(`Không thể tải luồng âm thanh: HTTP ${upstreamRes.status}`);
+      if (fs.existsSync(sourceUrl)) {
+        tempInputPath = sourceUrl;
+        isTempInputFromCache = true;
+      } else {
+        tempInputPath = await this.ensureTrackCached(sourceUrl, fileName, `${artist} ${title}`);
+        isTempInputFromCache = true;
       }
-
-      const rawFileStream = fs.createWriteStream(tempInputPath);
-      const webStream = Readable.fromWeb(upstreamRes.body as any);
-      await pipeline(webStream, rawFileStream);
 
       // Transcode cleanly with ffmpeg to genuine 320kbps MP3 with embedded metadata
       try {
@@ -708,7 +939,9 @@ export class SpotifyService {
         await fsPromises.copyFile(tempInputPath, targetFilePath);
       }
     } finally {
-      await StorageManager.unlinkSafe(tempInputPath);
+      if (!isTempInputFromCache && tempInputPath) {
+        await StorageManager.unlinkSafe(tempInputPath);
+      }
     }
 
     const fileStat = await fsPromises.stat(targetFilePath);
