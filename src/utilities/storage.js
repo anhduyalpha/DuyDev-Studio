@@ -214,6 +214,12 @@ export const storage = {
     dispatchHistoryUpdated(toolId, 'clear-tool');
     try {
       const deviceId = getDeviceId();
+      const queryParam = toolId ? `?toolId=${encodeURIComponent(toolId)}` : '';
+      await fetch(`/api/v1/history${queryParam}`, {
+        method: 'DELETE',
+        headers: { 'x-device-id': deviceId }
+      }).catch(() => null);
+
       await Promise.all(items.map(async item => {
         const res = await fetch(`/api/v1/history/${encodeURIComponent(item.id)}`, {
           method: 'DELETE',
@@ -239,7 +245,31 @@ export const storage = {
         const json = await res.json();
         const serverItems = deduplicateList(json.data?.items || []);
         const localItems = this.getLocalHistory();
-        const merged = deduplicateList([...localItems, ...serverItems]);
+        const trashItems = this.getLocalTrash();
+
+        // Build a set of trashed identifiers to prevent resurrecting deleted items
+        const trashedIds = new Set();
+        trashItems.forEach(t => {
+          if (t.id) trashedIds.add(String(t.id));
+          if (t.downloadUrl) trashedIds.add(String(t.downloadUrl));
+          if (t.originalUrl) trashedIds.add(String(t.originalUrl));
+        });
+
+        // Filter out any server or local items that are currently in trash
+        const validServerItems = serverItems.filter(item => {
+          if (trashedIds.has(String(item.id))) return false;
+          if (item.downloadUrl && trashedIds.has(String(item.downloadUrl))) return false;
+          if (item.originalUrl && trashedIds.has(String(item.originalUrl))) return false;
+          return true;
+        });
+
+        const merged = deduplicateList([...localItems, ...validServerItems]).filter(item => {
+          if (trashedIds.has(String(item.id))) return false;
+          if (item.downloadUrl && trashedIds.has(String(item.downloadUrl))) return false;
+          if (item.originalUrl && trashedIds.has(String(item.originalUrl))) return false;
+          return true;
+        });
+
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged.slice(0, 50)));
         return merged;
       }
@@ -345,6 +375,7 @@ export const storage = {
           'x-device-id': deviceId
         },
         body: JSON.stringify({
+          id: itemPayload.id,
           deviceId,
           toolId: record.toolId || 'general',
           toolTitle: record.toolTitle || record.tool || 'Công cụ',
@@ -526,14 +557,74 @@ export const storage = {
       });
       if (res.ok) {
         const json = await res.json();
-        const items = deduplicateList(json.data?.items || []);
-        localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(items.slice(0, 50)));
-        return items;
+        const serverTrash = deduplicateList(json.data?.items || []);
+        const localTrash = this.getLocalTrash();
+        const mergedTrash = deduplicateList([...localTrash, ...serverTrash]);
+        localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(mergedTrash.slice(0, 50)));
+        return mergedTrash;
       }
     } catch (e) {
       console.warn('Failed to fetch trash from server', e);
     }
     return this.getLocalTrash();
+  },
+
+  async restoreToolTrash(toolId) {
+    const trashItems = this.getToolTrash(toolId);
+    if (!trashItems.length) return;
+    this.restoreItemsFromTrashSync(trashItems.map(i => i.id));
+    dispatchHistoryUpdated(toolId, 'restore-tool');
+    try {
+      const deviceId = getDeviceId();
+      const queryParam = toolId ? `?toolId=${encodeURIComponent(toolId)}` : '';
+      await fetch(`/api/v1/trash/restore-all${queryParam}`, {
+        method: 'POST',
+        headers: { 'x-device-id': deviceId }
+      }).catch(() => null);
+
+      await Promise.all(trashItems.map(async item => {
+        const targetId = item.id;
+        let res = await fetch(`/api/v1/trash/${encodeURIComponent(targetId)}/restore`, {
+          method: 'POST',
+          headers: { 'x-device-id': deviceId }
+        }).catch(() => null);
+        if ((!res || !res.ok) && item.downloadUrl && item.downloadUrl !== targetId) {
+          await fetch(`/api/v1/trash/${encodeURIComponent(item.downloadUrl)}/restore`, {
+            method: 'POST',
+            headers: { 'x-device-id': deviceId }
+          }).catch(() => {});
+        }
+      }));
+    } catch {}
+  },
+
+  async emptyToolTrash(toolId) {
+    const trashItems = this.getToolTrash(toolId);
+    if (!trashItems.length) return;
+    this.permanentlyDeleteItemsSync(trashItems.map(i => i.id));
+    dispatchHistoryUpdated(toolId, 'empty-tool');
+    try {
+      const deviceId = getDeviceId();
+      const queryParam = toolId ? `?toolId=${encodeURIComponent(toolId)}` : '';
+      await fetch(`/api/v1/trash${queryParam}`, {
+        method: 'DELETE',
+        headers: { 'x-device-id': deviceId }
+      }).catch(() => null);
+
+      await Promise.all(trashItems.map(async item => {
+        const targetId = item.id;
+        let res = await fetch(`/api/v1/trash/${encodeURIComponent(targetId)}`, {
+          method: 'DELETE',
+          headers: { 'x-device-id': deviceId }
+        }).catch(() => null);
+        if ((!res || !res.ok) && item.downloadUrl && item.downloadUrl !== targetId) {
+          await fetch(`/api/v1/trash/${encodeURIComponent(item.downloadUrl)}`, {
+            method: 'DELETE',
+            headers: { 'x-device-id': deviceId }
+          }).catch(() => {});
+        }
+      }));
+    } catch {}
   },
 
   restoreTrashItemSync(id) {

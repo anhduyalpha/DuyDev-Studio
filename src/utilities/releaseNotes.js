@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.30': {
+    version: 'v24.30',
+    title: 'Bản cập nhật v24.30: Đồng Bộ Hóa Lịch Sử & Thùng Rác Đa Nền Tảng',
+    date: '31/10/2026',
+    features: [
+      'Đồng Bộ Hóa Thùng Rác Hai Chiều: Nạp và đồng bộ danh sách Thùng rác và Lịch sử khi tải trang và chuyển tab, bảo đảm dữ liệu luôn nhất quán',
+      'Xóa & Khôi Phục Theo Từng Công Cụ: Bổ sung API dọn sạch và khôi phục thùng rác được phân loại chính xác theo từng công cụ tải xuống'
+    ],
+    fixes: [
+      'Triệt Tiêu Hoàn Toàn Lỗi Sống Lại Sau Khi Xóa: Đồng bộ mã định danh ID giữa máy chủ và trình duyệt, loại bỏ tình trạng tệp xuất hiện lại sau khi F5/refresh',
+      'Lọc Chặn Mục Đã Nằm Trong Thùng Rác: Bộ đệm lịch sử tự động đối soát với danh sách thùng rác cục bộ và máy chủ để không bao giờ đưa ngược mục đã xóa vào danh sách lịch sử'
+    ]
+  },
   'v24.29': {
     version: 'v24.29',
     title: 'Bản cập nhật v24.29: Khắc Phục Triệt Để Lỗi Đơ Giao Diện & Mở Khóa Tương Tác',

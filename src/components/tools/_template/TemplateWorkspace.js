@@ -59,7 +59,7 @@ export class TemplateWorkspace {
     this.render();
 
     // 2. Nạp ngầm dữ liệu lịch sử từ máy chủ, CHỈ cập nhật history container (không flash trang)
-    storage.fetchHistory().then(() => {
+    Promise.all([storage.fetchHistory(), storage.fetchTrash()]).then(() => {
       this.renderHistory();
     }).catch(() => {});
 

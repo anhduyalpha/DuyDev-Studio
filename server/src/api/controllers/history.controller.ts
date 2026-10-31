@@ -58,6 +58,11 @@ export async function getHistory(req: FastifyRequest, reply: FastifyReply) {
     whereClause.deviceId = query.deviceId;
   }
 
+  if (query.toolId) {
+    const baseTool = String(query.toolId).replace(/-downloader$/, '');
+    whereClause.toolId = { in: [query.toolId, baseTool, `${baseTool}-downloader`] };
+  }
+
   const [items, total] = await Promise.all([
     prisma.historyRecord.findMany({
       where: whereClause,
@@ -82,13 +87,14 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
   const { deviceId } = extractDeviceAndAdmin(req);
   const targetDeviceId = deviceId || body.deviceId || null;
 
-  if (body.resultFileId || body.downloadUrl) {
+  if (body.id || body.resultFileId || body.downloadUrl) {
     const existing = await prisma.historyRecord.findFirst({
       where: {
         ...(targetDeviceId ? { OR: [{ deviceId: targetDeviceId }, { deviceId: null }] } : {}),
         AND: [
           {
             OR: [
+              ...(body.id ? [{ id: body.id }] : []),
               ...(body.resultFileId ? [{ resultFileId: body.resultFileId }] : []),
               ...(body.downloadUrl ? [{ downloadUrl: body.downloadUrl }] : [])
             ]
@@ -106,6 +112,13 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
         updateData.detailsJson = body.detailsJson;
         existing.detailsJson = body.detailsJson;
       }
+      // If re-recorded or re-downloaded, ensure it's not marked as deleted
+      if (existing.isDeleted) {
+        updateData.isDeleted = false;
+        updateData.deletedAt = null;
+        existing.isDeleted = false;
+        existing.deletedAt = null;
+      }
       if (Object.keys(updateData).length > 0) {
         await prisma.historyRecord.update({
           where: { id: existing.id },
@@ -121,6 +134,7 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
 
   const created = await prisma.historyRecord.create({
     data: {
+      ...(body.id ? { id: body.id } : {}),
       deviceId: targetDeviceId,
       toolId: body.toolId,
       toolTitle: body.toolTitle,
@@ -141,6 +155,7 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
 }
 
 async function findHistoryRecordByIdOrUrl(id: string) {
+  if (!id) return null;
   let existing = await prisma.historyRecord.findUnique({ where: { id } }).catch(() => null);
   if (!existing) {
     existing = await prisma.historyRecord.findFirst({
@@ -148,7 +163,9 @@ async function findHistoryRecordByIdOrUrl(id: string) {
         OR: [
           { resultFileId: id },
           { downloadUrl: id },
-          { downloadUrl: `/api/v1/files/download/${id}` }
+          { downloadUrl: `/api/v1/files/download/${id}` },
+          { downloadUrl: { contains: id } },
+          { detailsJson: { contains: id } }
         ]
       }
     });
@@ -180,9 +197,14 @@ export async function softDeleteHistoryItem(req: FastifyRequest, reply: FastifyR
 
 export async function clearHistoryToTrash(req: FastifyRequest, reply: FastifyReply) {
   const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: false };
   if (!isAdmin) {
     whereClause.deviceId = deviceId || '__unidentified_guest__';
+  }
+  if (toolId) {
+    const baseTool = String(toolId).replace(/-downloader$/, '');
+    whereClause.toolId = { in: [toolId, baseTool, `${baseTool}-downloader`] };
   }
 
   const res = await prisma.historyRecord.updateMany({
@@ -209,6 +231,11 @@ export async function getTrashItems(req: FastifyRequest, reply: FastifyReply) {
     }
   } else if (query.deviceId) {
     whereClause.deviceId = query.deviceId;
+  }
+
+  if (query.toolId) {
+    const baseTool = String(query.toolId).replace(/-downloader$/, '');
+    whereClause.toolId = { in: [query.toolId, baseTool, `${baseTool}-downloader`] };
   }
 
   const [items, total] = await Promise.all([
@@ -253,9 +280,14 @@ export async function restoreTrashItem(req: FastifyRequest, reply: FastifyReply)
 
 export async function restoreAllTrash(req: FastifyRequest, reply: FastifyReply) {
   const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: true };
   if (!isAdmin) {
     whereClause.deviceId = deviceId || '__unidentified_guest__';
+  }
+  if (toolId) {
+    const baseTool = String(toolId).replace(/-downloader$/, '');
+    whereClause.toolId = { in: [toolId, baseTool, `${baseTool}-downloader`] };
   }
 
   const res = await prisma.historyRecord.updateMany({
@@ -292,9 +324,14 @@ export async function permanentlyDeleteTrashItem(req: FastifyRequest, reply: Fas
 
 export async function emptyTrash(req: FastifyRequest, reply: FastifyReply) {
   const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: true };
   if (!isAdmin) {
     whereClause.deviceId = deviceId || '__unidentified_guest__';
+  }
+  if (toolId) {
+    const baseTool = String(toolId).replace(/-downloader$/, '');
+    whereClause.toolId = { in: [toolId, baseTool, `${baseTool}-downloader`] };
   }
 
   const trashedItems = await prisma.historyRecord.findMany({

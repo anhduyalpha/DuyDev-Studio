@@ -478,6 +478,11 @@ export function attachMediaHistoryListeners({
   container.querySelectorAll('[data-media-tab]').forEach((btn) => {
     btn.onclick = () => {
       const tab = btn.getAttribute('data-media-tab');
+      if (tab === 'trash') {
+        storage.fetchTrash().then(() => {
+          onHistoryChange?.();
+        }).catch(() => {});
+      }
       if (typeof onTabChange === 'function') {
         onTabChange(tab);
       }
@@ -511,7 +516,7 @@ export function attachMediaHistoryListeners({
       const trashItems = storage.getToolTrash(toolId);
       if (trashItems.length > 0) {
         soundEngine?.playSuccess?.();
-        storage.restoreItemsFromTrashSync(trashItems.map((i) => i.id));
+        await storage.restoreToolTrash(toolId);
         showToast(`Đã khôi phục ${trashItems.length} mục vào lịch sử`, 'success');
         onHistoryChange?.();
       }
@@ -530,8 +535,7 @@ export function attachMediaHistoryListeners({
         confirmingText: 'Đang dọn sạch...',
         onConfirm: async () => {
           soundEngine?.playDeleteAll?.();
-          const trashItems = storage.getToolTrash(toolId);
-          storage.permanentlyDeleteItemsSync(trashItems.map((i) => i.id));
+          await storage.emptyToolTrash(toolId);
           showToast('Đã dọn sạch thùng rác', 'delete');
           onHistoryChange?.();
         }

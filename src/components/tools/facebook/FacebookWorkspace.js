@@ -42,7 +42,7 @@ export class FacebookWorkspace {
   mount() {
     this.render();
 
-    storage.fetchHistory().then(() => {
+    Promise.all([storage.fetchHistory(), storage.fetchTrash()]).then(() => {
       this.renderHistory();
     }).catch(() => {});
 

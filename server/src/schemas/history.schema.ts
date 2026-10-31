@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const createHistorySchema = z.object({
+  id: z.string().optional().nullable(),
   deviceId: z.string().optional().nullable(),
   toolId: z.string().min(1, 'toolId is required'),
   toolTitle: z.string().min(1, 'toolTitle is required'),
@@ -18,7 +19,8 @@ export type CreateHistoryInput = z.infer<typeof createHistorySchema>;
 export const historyQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional().default(50),
   offset: z.coerce.number().int().nonnegative().optional().default(0),
-  deviceId: z.string().optional()
+  deviceId: z.string().optional(),
+  toolId: z.string().optional()
 });
 
 export type HistoryQueryInput = z.infer<typeof historyQuerySchema>;
