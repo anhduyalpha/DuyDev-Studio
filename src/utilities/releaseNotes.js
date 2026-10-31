@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.32': {
+    version: 'v24.32',
+    title: 'Bản cập nhật v24.32: Khắc Phục Triệt Để Vòng Lặp Cập Nhật PWA, Đồng Bộ Lịch Sử & Phát Âm Thanh Tức Thì',
+    date: '31/10/2026',
+    features: [
+      'Đồng Bộ Lịch Sử Tức Thì Trong Spotify Downloader: Tự động cập nhật danh sách bài hát đã trích xuất vào container lịch sử ngay trong 0ms khi hoàn tất mà không cần chuyển tab hay tải lại trang',
+      'Nạp Âm Thanh Trực Tiếp & Tự Phục Hồi Luồng Phát: Bổ sung nạp trước metadata (preload metadata), loại bỏ thời gian chờ 0:00 và tự động tìm kiếm phục hồi khi liên kết âm thanh gốc bị chặn hoặc hết hạn'
+    ],
+    fixes: [
+      'Triệt Tiêu Hoàn Toàn Lỗi Lặp Thông Báo Cập Nhật (PWA Loop Guard): Cân bằng tuyệt đối phiên bản Tri-Point giữa Service Worker, Cache Storage và Runtime bundle; điều hướng làm mới cưỡng bức (_ds_fresh) loại bỏ hoàn toàn việc hiển thị lại thông báo sau khi bấm Làm mới',
+      'Khắc Phục Lỗi HTTP 400 Khi Mở Trình Phát Toàn Màn Hình: Nhận diện liên kết âm thanh an toàn, giải quyết xung đột đường truyền và loại bỏ thông báo lỗi khi nghe thử'
+    ]
+  },
   'v24.31': {
     version: 'v24.31',
     title: 'Bản cập nhật v24.31: Tăng Tốc Xử Lý Spotify Gấp 5 Lần & Đa Nhiệm Chạy Ngầm Bền Vững',
@@ -1382,7 +1395,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.26'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.32'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -1390,7 +1403,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.26'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v24.26';
+  if (!rawVer) return 'v24.32';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

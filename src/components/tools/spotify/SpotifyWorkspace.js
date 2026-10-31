@@ -118,6 +118,7 @@ export class SpotifyWorkspace {
     this.updateSubmitBtn(this.loading);
     this.renderAlert(this.error);
     this.renderResult();
+    this.renderHistory();
 
     const saveDriveBtn = this.container.querySelector('#spSaveDriveBtn');
     if (saveDriveBtn) {
@@ -374,7 +375,9 @@ export class SpotifyWorkspace {
               <span class="font-mono text-[11px] text-[#1DB954]">HQ Streaming</span>
             </div>
             <audio
+              id="spotifyInlineAudio"
               src="${streamUrl}"
+              preload="metadata"
               controls
               class="w-full h-10 focus:outline-none"
             ></audio>
@@ -428,6 +431,13 @@ export class SpotifyWorkspace {
 
     if (window.lucide?.createIcons) {
       window.lucide.createIcons({ root: resultContainer });
+    }
+
+    const inlineAudio = resultContainer.querySelector('#spotifyInlineAudio');
+    if (inlineAudio) {
+      try {
+        inlineAudio.load();
+      } catch (_) {}
     }
   }
 
@@ -494,6 +504,8 @@ export class SpotifyWorkspace {
         driveRelPath: data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null,
         resultSize: data.sizeBytes || (data.fileSizeInMb ? Math.round(Number(data.fileSizeInMb) * 1024 * 1024) : 0)
       });
+
+      this.renderHistory();
 
       taskCoordinator?.updateTask?.(taskId, {
         title: `${data.artist} - ${data.title}`,
@@ -646,8 +658,13 @@ export class SpotifyWorkspace {
 
   previewInApp() {
     if (!this.trackData) return;
+    const audioTarget = this.trackData.downloadUrl || this.trackData.url;
+    if (!audioTarget) {
+      showToast('Không có liên kết âm thanh để phát toàn màn hình', 'warning');
+      return;
+    }
     const streamUrl = spotifyApi.getStreamUrl(
-      this.trackData.downloadUrl || '',
+      audioTarget,
       `${this.trackData.artist} - ${this.trackData.title}.mp3`,
       false
     );

@@ -23,7 +23,7 @@ export function isStandaloneMode() {
   );
 }
 
-export const CURRENT_PWA_VERSION = 'duydev-studio-v24.29';
+export const CURRENT_PWA_VERSION = 'duydev-studio-v24.32';
 
 /**
  * Read the current local version from CacheStorage or fallback constant.
@@ -123,8 +123,14 @@ export function performSafeReload(reason = 'App update', isUserConfirmed = false
     }
   } catch {}
   console.log(`[PWA] ${reason} -> Reloading to apply new assets...`);
-  if (typeof window !== 'undefined' && window.location?.reload) {
-    window.location.reload();
+  if (typeof window !== 'undefined') {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_ds_fresh', String(Date.now()));
+      window.location.replace(url.toString());
+    } catch {
+      if (window.location?.reload) window.location.reload();
+    }
   }
 }
 
@@ -791,6 +797,19 @@ export async function fastCheckAppUpdate() {
     if (!match) return;
 
     const serverVersion = match[1];
+    const updatingTo = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ds_updating_to_version') : null;
+    if (serverVersion && serverVersion === updatingTo) {
+      return;
+    }
+    if (serverVersion === CURRENT_PWA_VERSION) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.removeItem('ds_updating_to_version');
+        }
+      } catch {}
+      return;
+    }
+
     if (serverVersion && serverVersion !== CURRENT_PWA_VERSION) {
       // Check if this serverVersion is already present in CacheStorage
       const cacheStorage = typeof caches !== 'undefined' ? caches : (typeof window !== 'undefined' ? window.caches : null);

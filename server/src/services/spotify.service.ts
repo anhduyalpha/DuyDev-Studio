@@ -612,7 +612,19 @@ export class SpotifyService {
         const isYouTube = ytMatch !== null || targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be');
         const isGoogleVideo = targetUrl.includes('googlevideo.com');
 
-        if (isYouTube) {
+        if (fallbackQuery && !targetUrl) {
+          logger.info({ fallbackQuery }, '[Spotify] Resolving track via fallback search query');
+          await execFileAsync('yt-dlp', [
+            `ytsearch1:${fallbackQuery}`,
+            '-f', 'ba[ext=m4a]/ba',
+            '-x', '--audio-format', 'mp3',
+            '--audio-quality', '0',
+            '--no-playlist',
+            '--no-warnings',
+            '--no-check-certificates',
+            '-o', tempOutput
+          ], { timeout: 120000 });
+        } else if (isYouTube) {
           const downloadSource = ytMatch ? `https://www.youtube.com/watch?v=${ytMatch[1]}` : targetUrl;
           await execFileAsync('yt-dlp', [
             '-f', 'ba[ext=m4a]/ba',
@@ -718,6 +730,18 @@ export class SpotifyService {
       throw new BadRequestError('Thiếu liên kết âm thanh để phát.');
     }
 
+    // 0. Auto-resolve if targetUrl is a Spotify track link
+    if (targetUrl.includes('spotify.com/track/') || targetUrl.includes('open.spotify.com')) {
+      try {
+        const resolved = await this.resolveTrack(targetUrl, false);
+        if (resolved?.downloadUrl) {
+          targetUrl = resolved.downloadUrl;
+        }
+      } catch (resolveErr: any) {
+        logger.warn({ err: resolveErr?.message, targetUrl }, '[Spotify] Direct URL resolve fallback failed');
+      }
+    }
+
     // 1. Check if targetUrl points to an existing file on disk
     const resolvedPath = path.isAbsolute(targetUrl)
       ? targetUrl
@@ -736,8 +760,23 @@ export class SpotifyService {
         const cachedPath = await this.ensureTrackCached(targetUrl, filename);
         return this.streamLocalFile(cachedPath, rangeHeader, download, filename, reply);
       } catch (err: any) {
-        logger.warn({ err: err?.message, targetUrl }, '[Spotify] Cache stream failed, falling back to direct proxy if possible');
-        if (!isGoogleVideo) throw err;
+        logger.warn({ err: err?.message, targetUrl }, '[Spotify] Cache stream failed, attempting self-healing fallback');
+        if (!isGoogleVideo) {
+          const cleanQuery = (filename || '')
+            .replace(/\.mp3$/i, '')
+            .replace(/\[Spotify\]/gi, '')
+            .replace(/[_\-]+/g, ' ')
+            .trim();
+          if (cleanQuery) {
+            try {
+              const healedPath = await this.ensureTrackCached('', filename, cleanQuery);
+              return this.streamLocalFile(healedPath, rangeHeader, download, filename, reply);
+            } catch (healErr: any) {
+              logger.warn({ err: healErr?.message }, '[Spotify] Self-healing search query failed');
+            }
+          }
+          throw err;
+        }
       }
     }
 
