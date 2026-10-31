@@ -68,10 +68,8 @@ export class FacebookWorkspace {
   }
 
   unmount() {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    // Decouple background network tasks from SPA DOM teardown (KI-FIX-015)
+    this.abortController = null;
 
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);

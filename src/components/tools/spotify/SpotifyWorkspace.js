@@ -18,19 +18,51 @@ import {
   escapeHtml
 } from '../common/MediaHistorySection.js';
 
-export class SpotifyWorkspace {
-  constructor(containerEl) {
-    this.container = containerEl;
+export const spotifyStore = {
+  url: '',
+  loading: false,
+  error: null,
+  trackData: null,
+  savingToDrive: false,
+  saveResult: null,
+  activeTaskId: null,
+  listeners: new Set(),
+
+  subscribe(fn) {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  },
+
+  notify() {
+    for (const fn of this.listeners) {
+      try { fn(this); } catch (e) { console.warn('[spotifyStore]', e); }
+    }
+  },
+
+  clear() {
     this.url = '';
     this.loading = false;
     this.error = null;
     this.trackData = null;
     this.savingToDrive = false;
     this.saveResult = null;
+    this.notify();
+  }
+};
+
+export class SpotifyWorkspace {
+  constructor(containerEl) {
+    this.container = containerEl;
+    this.url = spotifyStore.url || '';
+    this.loading = spotifyStore.loading || false;
+    this.error = spotifyStore.error || null;
+    this.trackData = spotifyStore.trackData || null;
+    this.savingToDrive = spotifyStore.savingToDrive || false;
+    this.saveResult = spotifyStore.saveResult || null;
     this.handlePendingEvent = null;
     this.historyTab = 'history';
-    this.abortController = null;
     this.historyCleanup = null;
+    this.unsubscribeStore = null;
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -39,6 +71,11 @@ export class SpotifyWorkspace {
 
   mount() {
     this.render();
+
+    this.unsubscribeStore = spotifyStore.subscribe(() => {
+      this.syncFromStore();
+    });
+    this.syncFromStore();
 
     Promise.all([storage.fetchHistory(), storage.fetchTrash()]).then(() => {
       this.renderHistory();
@@ -65,10 +102,47 @@ export class SpotifyWorkspace {
     window.addEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
   }
 
+  syncFromStore() {
+    this.url = spotifyStore.url;
+    this.loading = spotifyStore.loading;
+    this.error = spotifyStore.error;
+    this.trackData = spotifyStore.trackData;
+    this.savingToDrive = spotifyStore.savingToDrive;
+    this.saveResult = spotifyStore.saveResult;
+
+    const input = this.container.querySelector('#spUrlInput');
+    if (input && input.value !== this.url) {
+      input.value = this.url;
+    }
+    this.updateInputActions();
+    this.updateSubmitBtn(this.loading);
+    this.renderAlert(this.error);
+    this.renderResult();
+
+    const saveDriveBtn = this.container.querySelector('#spSaveDriveBtn');
+    if (saveDriveBtn) {
+      if (this.savingToDrive) {
+        saveDriveBtn.disabled = true;
+        saveDriveBtn.innerHTML = `
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#1DB954]"></i>
+          <span>Đang lưu vào Drive...</span>
+        `;
+        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
+      } else if (this.trackData?.existingInDrive || this.saveResult) {
+        saveDriveBtn.disabled = false;
+        saveDriveBtn.innerHTML = `
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+          <span>Đã lưu vào Studio Drive</span>
+        `;
+        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
+      }
+    }
+  }
+
   unmount() {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
+    if (this.unsubscribeStore) {
+      this.unsubscribeStore();
+      this.unsubscribeStore = null;
     }
 
     if (this.handlePendingEvent) {
@@ -157,10 +231,7 @@ export class SpotifyWorkspace {
   }
 
   clearInput() {
-    this.url = '';
-    this.trackData = null;
-    this.error = null;
-    this.saveResult = null;
+    spotifyStore.clear();
 
     const input = this.container.querySelector('#spUrlInput');
     if (input) {
@@ -367,22 +438,35 @@ export class SpotifyWorkspace {
       return;
     }
 
-    if (this.abortController) {
-      this.abortController.abort();
-    }
-    this.abortController = new AbortController();
+    spotifyStore.url = cleanUrl;
+    spotifyStore.loading = true;
+    spotifyStore.error = null;
+    spotifyStore.saveResult = null;
+    spotifyStore.notify();
 
-    this.loading = true;
-    this.error = null;
-    this.saveResult = null;
-    this.updateSubmitBtn(true);
-    this.renderAlert(null);
+    const taskId = `sp_resolve_${Date.now()}`;
+    spotifyStore.activeTaskId = taskId;
+
+    taskCoordinator?.createTask?.(taskId, {
+      id: taskId,
+      moduleId: 'spotify-downloader',
+      moduleTitle: 'Spotify Downloader',
+      title: cleanUrl,
+      type: 'resolve',
+      status: 'running',
+      progress: 35,
+      stage: 'Đang trích xuất bài hát Spotify...',
+      route: '#tool/spotify'
+    });
 
     try {
-      soundEngine?.play('click');
-      const data = await spotifyApi.resolveTrack(cleanUrl, refresh, { signal: this.abortController.signal });
-      this.trackData = data;
-      soundEngine?.play('success');
+      soundEngine?.play?.('click');
+      const data = await spotifyApi.resolveTrack(cleanUrl, refresh);
+      spotifyStore.trackData = data;
+      spotifyStore.loading = false;
+      spotifyStore.error = null;
+
+      soundEngine?.play?.('success');
       showToast('Trích xuất bài hát Spotify thành công!', 'success');
 
       const streamUrl = spotifyApi.getStreamUrl(
@@ -411,17 +495,26 @@ export class SpotifyWorkspace {
         resultSize: data.sizeBytes || (data.fileSizeInMb ? Math.round(Number(data.fileSizeInMb) * 1024 * 1024) : 0)
       });
 
-      this.renderResult();
-      this.renderHistory();
+      taskCoordinator?.updateTask?.(taskId, {
+        title: `${data.artist} - ${data.title}`,
+        progress: 100,
+        status: 'completed',
+        stage: 'Đã hoàn tất trích xuất bài hát'
+      });
+
+      spotifyStore.notify();
     } catch (err) {
-      if (err.name === 'AbortError') return;
-      this.error = err.message || 'Lỗi khi trích xuất bài hát Spotify';
-      soundEngine?.play('error');
-      showToast(this.error, 'error');
-      this.renderAlert(this.error);
-    } finally {
-      this.loading = false;
-      this.updateSubmitBtn(false);
+      spotifyStore.loading = false;
+      spotifyStore.error = err?.message || 'Lỗi khi trích xuất bài hát Spotify';
+      soundEngine?.play?.('error');
+      showToast(spotifyStore.error, 'error');
+
+      taskCoordinator?.updateTask?.(taskId, {
+        status: 'failed',
+        stage: spotifyStore.error
+      });
+
+      spotifyStore.notify();
     }
   }
 
@@ -431,26 +524,24 @@ export class SpotifyWorkspace {
   async saveToDrive() {
     if (!this.trackData) return;
 
-    this.savingToDrive = true;
-    const saveDriveBtn = this.container.querySelector('#spSaveDriveBtn');
-    if (saveDriveBtn) {
-      saveDriveBtn.disabled = true;
-      saveDriveBtn.innerHTML = `
-        <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-[#1DB954]"></i>
-        <span>Đang lưu vào Drive...</span>
-      `;
-      if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
-    }
+    spotifyStore.savingToDrive = true;
+    spotifyStore.notify();
 
     const taskId = `sp_save_${Date.now()}`;
     taskCoordinator?.createTask?.(taskId, {
+      id: taskId,
+      moduleId: 'spotify-downloader',
+      moduleTitle: 'Spotify Downloader',
       title: `Lưu Spotify: ${this.trackData.artist} - ${this.trackData.title}`,
       type: 'drive-upload',
-      progress: 20
+      status: 'running',
+      progress: 30,
+      stage: 'Đang lưu bài hát vào Studio Drive...',
+      route: '#tool/spotify'
     });
 
     try {
-      soundEngine?.play('click');
+      soundEngine?.play?.('click');
       const res = await spotifyApi.saveToDrive({
         url: this.trackData.url,
         title: this.trackData.title,
@@ -462,13 +553,14 @@ export class SpotifyWorkspace {
         overwrite: true
       });
 
-      this.saveResult = res.data;
-      soundEngine?.play('success');
+      spotifyStore.savingToDrive = false;
+      spotifyStore.saveResult = res.data;
+      soundEngine?.play?.('success');
       showToast('Đã lưu bài hát vào Studio Drive thành công!', 'success');
       taskCoordinator?.updateTask?.(taskId, { progress: 100, status: 'completed' });
 
-      if (this.trackData) {
-        this.trackData.existingInDrive = {
+      if (spotifyStore.trackData) {
+        spotifyStore.trackData.existingInDrive = {
           fileName: res.data.fileName,
           relPath: res.data.relPath,
           sizeBytes: res.data.sizeBytes,
@@ -480,42 +572,14 @@ export class SpotifyWorkspace {
         storage.updateItemDrivePath(this.trackData.downloadUrl, res.data.relPath);
       }
 
-      if (saveDriveBtn) {
-        saveDriveBtn.disabled = false;
-        saveDriveBtn.innerHTML = `
-          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
-          <span>Đã lưu vào Studio Drive</span>
-        `;
-        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
-      }
-
-      // In-place drive badge update in the track header
-      const trackHeaderBadges = this.container.querySelector('#spotifyTrackBadges');
-      if (trackHeaderBadges && !trackHeaderBadges.querySelector('#spotifyDriveBadge')) {
-        const badgeSpan = document.createElement('span');
-        badgeSpan.id = 'spotifyDriveBadge';
-        badgeSpan.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-1';
-        badgeSpan.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Đã lưu trong Drive';
-        trackHeaderBadges.appendChild(badgeSpan);
-        if (window.lucide?.createIcons) window.lucide.createIcons({ root: badgeSpan });
-      }
-
-      this.renderHistory();
+      spotifyStore.notify();
     } catch (err) {
-      soundEngine?.play('error');
-      showToast(err.message || 'Lỗi khi lưu bài hát vào Drive', 'error');
-      taskCoordinator?.updateTask?.(taskId, { status: 'failed', error: err.message });
-      if (saveDriveBtn) {
-        saveDriveBtn.disabled = false;
-        saveDriveBtn.innerHTML = `
-          <i data-lucide="hard-drive" class="w-4 h-4 text-[#1DB954]"></i>
-          <span>Lưu vào Studio Drive</span>
-        `;
-        if (window.lucide?.createIcons) window.lucide.createIcons({ root: saveDriveBtn });
-      }
-    } finally {
-      this.savingToDrive = false;
-      // CRITICAL: DO NOT call this.render() here! That would destroy the playing <audio> element!
+      spotifyStore.savingToDrive = false;
+      soundEngine?.play?.('error');
+      const errMsg = err?.message || 'Lỗi khi lưu bài hát vào Drive';
+      showToast(errMsg, 'error');
+      taskCoordinator?.updateTask?.(taskId, { status: 'failed', error: errMsg });
+      spotifyStore.notify();
     }
   }
 

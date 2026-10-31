@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.31': {
+    version: 'v24.31',
+    title: 'Bản cập nhật v24.31: Tăng Tốc Xử Lý Spotify Gấp 5 Lần & Đa Nhiệm Chạy Ngầm Bền Vững',
+    date: '31/10/2026',
+    features: [
+      'Tối Ưu Hóa Tốc Độ Trích Xuất Spotify: Áp dụng tra cứu danh sách phẳng (`--flat-playlist`), giảm thời gian tìm kiếm từ 15-25s xuống chỉ còn 1.5 - 2.5s',
+      'Đa Nhiệm Chạy Ngầm Toàn Diện (KI-CON-003): Tách rời tác vụ khỏi vòng đời giao diện DOM, tích hợp GlobalTaskDock cho phép chuyển tab hoặc làm việc khác mà không bị gián đoạn'
+    ],
+    fixes: [
+      'Triệt Tiêu Ngắt Quãng Tác Vụ Khi Thoát Tab: Loại bỏ việc hủy tiến trình (AbortController) khi rời trang, duy trì trạng thái qua Singleton Store và tự động đồng bộ khi quay lại',
+      'Tăng Tốc Tải Luồng Âm Thanh Đa Phân Đoạn: Thêm cờ tăng tốc song song (-N 4) và bỏ qua kiểm tra chứng chỉ giúp nạp âm thanh nhanh hơn rõ rệt'
+    ]
+  },
   'v24.30': {
     version: 'v24.30',
     title: 'Bản cập nhật v24.30: Đồng Bộ Hóa Lịch Sử & Thùng Rác Đa Nền Tảng',

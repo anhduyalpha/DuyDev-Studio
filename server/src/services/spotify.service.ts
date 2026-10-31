@@ -324,9 +324,9 @@ export class SpotifyService {
         const cleanTitle = this.cleanTitle(title);
 
         const searchQueries = [
-          `ytsearch8:${primaryArtist} ${cleanTitle} Topic`,
-          `ytsearch8:${primaryArtist} ${cleanTitle} Official Audio`,
-          `ytsearch10:${primaryArtist} ${cleanTitle}`
+          `ytsearch5:${primaryArtist} ${cleanTitle} Topic`,
+          `ytsearch5:${primaryArtist} ${cleanTitle} Official Audio`,
+          `ytsearch6:${primaryArtist} ${cleanTitle}`
         ];
 
         const candidateMap = new Map<string, any>();
@@ -334,12 +334,15 @@ export class SpotifyService {
         for (const searchQuery of searchQueries) {
           try {
             const { stdout } = await execFileAsync('yt-dlp', [
+              '--flat-playlist',
               '--dump-json',
               '--default-search', 'ytsearch',
               '--no-playlist',
               '--no-warnings',
+              '--no-check-certificates',
+              '--geo-bypass',
               searchQuery
-            ], { timeout: 18000, maxBuffer: 15 * 1024 * 1024 });
+            ], { timeout: 15000, maxBuffer: 15 * 1024 * 1024 });
 
             const lines = stdout.trim().split('\n').filter(Boolean);
             for (const line of lines) {
@@ -351,10 +354,10 @@ export class SpotifyService {
               } catch {}
             }
 
-            // Early exit if authoritative official match found (score >= 80)
+            // Early exit if authoritative official match found (score >= 70)
             let highConfidenceFound = false;
             for (const item of candidateMap.values()) {
-              if (this.calculateMatchScore(item, { title, artist, duration }) >= 80) {
+              if (this.calculateMatchScore(item, { title, artist, duration }) >= 70) {
                 highConfidenceFound = true;
                 break;
               }
@@ -368,8 +371,9 @@ export class SpotifyService {
         // Score all candidates
         const scoredCandidates: Array<{ item: any; score: number; durDiff: number }> = [];
         for (const item of candidateMap.values()) {
+          const hasValidIdOrUrl = Boolean(item.id || item.url || item.webpage_url);
           const itemFormats = item.formats?.filter((f: any) => f.acodec !== 'none' && f.url);
-          if (!item.url && (!itemFormats || itemFormats.length === 0)) continue;
+          if (!hasValidIdOrUrl && (!itemFormats || itemFormats.length === 0)) continue;
 
           const score = this.calculateMatchScore(item, { title, artist, duration });
           const itemDuration = Number(item.duration) || 0;
@@ -389,15 +393,24 @@ export class SpotifyService {
           sourceChannel = bestCandidate.channel || bestCandidate.uploader;
           matchScore = best.score;
 
-          // Pick best audio format by bitrate
+          // Pick best audio format by bitrate if full format dump was available
           const audioFormats = (bestCandidate.formats || [])
             .filter((f: any) => f.acodec !== 'none' && f.url)
             .sort((a: any, b: any) => (b.abr || b.tbr || 0) - (a.abr || a.tbr || 0));
 
           const audioFmt = audioFormats[0];
-          const ytWatchUrl = bestCandidate.webpage_url || (bestCandidate.id ? `https://www.youtube.com/watch?v=${bestCandidate.id}` : undefined);
-          downloadUrl = ytWatchUrl || audioFmt?.url || bestCandidate.url;
-          if (!cover && bestCandidate.thumbnail) cover = bestCandidate.thumbnail;
+          const ytWatchUrl = (bestCandidate.id ? `https://www.youtube.com/watch?v=${bestCandidate.id}` : undefined) ||
+            bestCandidate.webpage_url ||
+            bestCandidate.url;
+          downloadUrl = ytWatchUrl || audioFmt?.url;
+          if (!cover) {
+            if (Array.isArray(bestCandidate.thumbnails) && bestCandidate.thumbnails.length > 0) {
+              const sortedThumbs = [...bestCandidate.thumbnails].sort((a: any, b: any) => (b.height || 0) - (a.height || 0));
+              cover = sortedThumbs[0]?.url || bestCandidate.thumbnail;
+            } else if (bestCandidate.thumbnail) {
+              cover = bestCandidate.thumbnail;
+            }
+          }
           if (audioFmt?.filesize) fileSizeInBytes = audioFmt.filesize;
           if (duration === 0 && bestCandidate.duration) duration = Math.round(bestCandidate.duration);
 
@@ -607,6 +620,9 @@ export class SpotifyService {
             '--audio-quality', '0',
             '--no-playlist',
             '--no-warnings',
+            '--no-check-certificates',
+            '--geo-bypass',
+            '-N', '4',
             '-o', tempOutput,
             downloadSource
           ], { timeout: 120000 });
