@@ -92,6 +92,23 @@ export class FacebookWorkspace {
   }
 
   /**
+   * Builds a clean single-line filename without newlines or illegal OS path characters
+   */
+  buildSafeFileName(rawTitle, ext = 'mp4', quality = '') {
+    const cleanBase = String(rawTitle || (ext === 'jpg' ? 'facebook_photo' : 'facebook_video'))
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 70)
+      .trim() || (ext === 'jpg' ? 'facebook_photo' : 'facebook_video');
+
+    const photoIdxMatch = String(quality || '').match(/^photo_(\d+)$/i);
+    const suffix = (photoIdxMatch && Number(photoIdxMatch[1]) > 1) ? `_anh_${photoIdxMatch[1]}` : '';
+    return `${cleanBase}${suffix}.${ext}`;
+  }
+
+  /**
    * Sanitizes pasted text to a valid Facebook URL, stripping query tracking tags
    */
   sanitizeUrl(raw) {
@@ -233,8 +250,9 @@ export class FacebookWorkspace {
       }
 
       const fileExt = isImage ? 'jpg' : 'mp4';
+      const safeFileName = this.buildSafeFileName(data.title, fileExt, this.selectedQuality);
       const streamUrl = targetMediaUrl
-        ? facebookApi.getStreamUrl(targetMediaUrl, `${data.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`, false)
+        ? facebookApi.getStreamUrl(targetMediaUrl, safeFileName, false)
         : '';
 
       const authorStr = typeof data.author === 'string'
@@ -246,8 +264,8 @@ export class FacebookWorkspace {
         toolId: 'facebook-downloader',
         toolTitle: 'Facebook Downloader',
         tool: 'Facebook Downloader',
-        fileName: `${data.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`,
-        title: data.title || (isImage ? 'Facebook Post' : 'Facebook Video'),
+        fileName: safeFileName,
+        title: (data.title || (isImage ? 'Facebook Post' : 'Facebook Video')).replace(/[\r\n\t]+/g, ' ').trim(),
         author: authorStr,
         cover: data.cover || null,
         thumbnail: data.cover || null,
@@ -336,7 +354,7 @@ export class FacebookWorkspace {
         : (this.videoData.videoSdUrl || this.videoData.videoHdUrl || '');
     }
 
-    const defaultFileName = `${this.videoData?.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`;
+    const defaultFileName = this.buildSafeFileName(this.videoData?.title, fileExt, this.selectedQuality);
     const proxyStreamUrl = targetMediaUrl ? facebookApi.getStreamUrl(targetMediaUrl, defaultFileName, false) : '';
     const proxyDownloadUrl = targetMediaUrl ? facebookApi.getStreamUrl(targetMediaUrl, defaultFileName, true) : '';
 
@@ -391,7 +409,7 @@ export class FacebookWorkspace {
         : (this.videoData.videoSdUrl || this.videoData.videoHdUrl || '');
     }
 
-    const defaultFileName = `${this.videoData.title || (isImage ? 'facebook_photo' : 'facebook_video')}.${fileExt}`;
+    const defaultFileName = this.buildSafeFileName(this.videoData.title, fileExt, this.selectedQuality);
     const proxyStreamUrl = activeStreamUrl ? facebookApi.getStreamUrl(activeStreamUrl, defaultFileName, false) : '';
     const proxyDownloadUrl = activeStreamUrl ? facebookApi.getStreamUrl(activeStreamUrl, defaultFileName, true) : '';
 
@@ -429,8 +447,22 @@ export class FacebookWorkspace {
 
         <!-- Post Caption (if present) -->
         ${this.videoData.caption ? `
-          <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-sans">
-            ${escapeHtml(this.videoData.caption)}
+          <div class="rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/5 overflow-hidden">
+            <div class="flex items-center justify-between px-3.5 py-2 border-b border-zinc-200/70 dark:border-white/5 bg-zinc-100/60 dark:bg-white/[0.02]">
+              <span class="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-[#1877F2]"></i>
+                <span>Nội dung bài viết</span>
+              </span>
+              <button
+                type="button"
+                data-action="copy-caption"
+                class="min-h-[32px] px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#1877F2] hover:bg-[#1877F2]/10 transition flex items-center gap-1 cursor-pointer"
+              >
+                <i data-lucide="copy" class="w-3 h-3"></i>
+                <span>Sao chép</span>
+              </button>
+            </div>
+            <div class="p-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words leading-relaxed max-h-56 overflow-y-auto font-sans">${escapeHtml(this.videoData.caption.trim())}</div>
           </div>
         ` : ''}
 
@@ -732,8 +764,7 @@ export class FacebookWorkspace {
         : (this.videoData.videoSdUrl || this.videoData.videoHdUrl);
     }
 
-    const safeTitle = this.videoData.title || (isImage ? 'Facebook Photo' : 'Facebook Video');
-    const fileName = `${safeTitle}.${ext}`;
+    const fileName = this.buildSafeFileName(this.videoData.title, ext, this.selectedQuality);
     const streamUrl = facebookApi.getStreamUrl(targetMediaUrl, fileName, false);
 
     ViewerConnector.preview({
@@ -792,6 +823,20 @@ export class FacebookWorkspace {
         this.previewInApp();
         break;
 
+      case 'copy-caption': {
+        const captionText = (this.videoData?.caption || this.videoData?.title || '').trim();
+        if (captionText) {
+          try {
+            await navigator.clipboard.writeText(captionText);
+            soundEngine?.play('click');
+            showToast('Đã sao chép nội dung bài viết!', 'success');
+          } catch {
+            showToast('Không thể sao chép tự động', 'warning');
+          }
+        }
+        break;
+      }
+
       case 'dismiss-alert':
         this.renderAlert(null);
         break;
@@ -800,7 +845,7 @@ export class FacebookWorkspace {
 
   render() {
     this.container.innerHTML = `
-      <div class="max-w-4xl mx-auto space-y-6 pb-12">
+      <div class="max-w-4xl mx-auto space-y-6 pb-28 sm:pb-16">
         
         <!-- Breadcrumb Bar -->
         <div class="flex flex-wrap items-center justify-between gap-3">

@@ -24,6 +24,30 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 export class FacebookService {
+  private static photoFallbackUrls = new Map<string, string>();
+
+  private static rememberPhotoFallback(mediaId: string, scontentUri: string): void {
+    if (!mediaId || !scontentUri) return;
+    if (this.photoFallbackUrls.size >= 500) {
+      const oldestKey = this.photoFallbackUrls.keys().next().value;
+      if (oldestKey) this.photoFallbackUrls.delete(oldestKey);
+    }
+    this.photoFallbackUrls.set(mediaId, scontentUri);
+  }
+
+  private static formatCleanTitle(rawText: string, authorName: string, defaultLabel = 'Bài viết'): string {
+    const singleLine = (rawText || '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (singleLine) {
+      return singleLine.length > 85 ? `${singleLine.slice(0, 82).trim()}...` : singleLine;
+    }
+    return authorName && authorName !== 'Facebook User'
+      ? `${authorName} - ${defaultLabel}`
+      : `Facebook ${defaultLabel}`;
+  }
+
   /**
    * Cleans and validates raw text to a valid Facebook URL
    */
@@ -235,11 +259,13 @@ export class FacebookService {
 
     const json = JSON.parse(stdout.trim());
     const id = String(json.id || fallbackId);
-    const title = (json.title || json.description || `Facebook Video ${id}`).substring(0, 150);
+    const authorName = json.uploader || json.channel || 'Facebook User';
+    const rawCaption = (json.description || json.title || '').trim();
+    const title = this.formatCleanTitle(json.title || rawCaption, authorName, 'Video');
     const cover = json.thumbnail || '';
     const duration = Number(json.duration || 0);
     const author = {
-      name: json.uploader || json.channel || 'Facebook User',
+      name: authorName,
       id: json.uploader_id
     };
 
@@ -291,6 +317,7 @@ export class FacebookService {
     return {
       id,
       title,
+      caption: rawCaption || undefined,
       author,
       cover,
       duration,
@@ -303,87 +330,243 @@ export class FacebookService {
   }
 
   /**
-   * Tier 3 / Post Extractor: Extracts Facebook Posts, Photos, Albums and embedded Video Posts
+   * Tier 1 / Universal Post, Album, Reel & Video Extractor:
+   * Combines Facebook OpenGraph crawler and Desktop Comet SSR JSON extraction in parallel.
    */
   private static async tryPostExtraction(targetUrl: string, fallbackId: string): Promise<FacebookVideoData | null> {
     try {
-      logger.info({ targetUrl }, '[Facebook] Attempting post metadata extraction via Facebook crawler UA...');
-      const res = await fetch(targetUrl, {
-        headers: {
-          'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'
-        },
-        redirect: 'follow',
-        signal: AbortSignal.timeout(10000)
-      });
+      logger.info({ targetUrl }, '[Facebook] Attempting dual OpenGraph + Comet SSR extraction...');
 
-      if (!res.ok) {
-        logger.warn({ status: res.status }, '[Facebook] Post crawler request failed');
+      const [ogSettled, cometSettled] = await Promise.allSettled([
+        fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(10000)
+        }).then(async (r) => ({ ok: r.ok, url: r.url, html: r.ok ? await r.text() : '' })),
+        fetch(targetUrl, {
+          headers: {
+            'User-Agent': DEFAULT_UA,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(10000)
+        }).then(async (r) => ({ ok: r.ok, url: r.url, html: r.ok ? await r.text() : '' }))
+      ]);
+
+      const ogRes = ogSettled.status === 'fulfilled' ? ogSettled.value : { ok: false, url: '', html: '' };
+      const cometRes = cometSettled.status === 'fulfilled' ? cometSettled.value : { ok: false, url: '', html: '' };
+
+      if (!ogRes.html && !cometRes.html) {
         return null;
       }
 
-      const html = await res.text();
-      const finalUrl = res.url || targetUrl;
+      const finalUrl = cometRes.url || ogRes.url || targetUrl;
+      const html = ogRes.html || cometRes.html;
 
-      const getMeta = (prop: string): string => {
-        const m = html.match(new RegExp(`<meta\\s+(?:property|name)=["'](?:og:|twitter:)?${prop}["']\\s+content=["']([^"']+)["']`, 'i'))
-          || html.match(new RegExp(`<meta\\s+content=["']([^"']+)["']\\s+(?:property|name)=["'](?:og:|twitter:)?${prop}["']`, 'i'));
+      const isVideoOrReelUrl =
+        /(?:\/reel(?:s)?\/|\/watch(?:\/|\?|$)|\/videos\/|\/share\/(?:r|v)\/|fb\.watch)/i.test(targetUrl) ||
+        /(?:\/reel(?:s)?\/|\/watch(?:\/|\?|$)|\/videos\/)/i.test(finalUrl);
+
+      // Extract story_fbid so we NEVER mistake a story/post ID for a photo media_id
+      const storyFbidMatch =
+        finalUrl.match(/story_fbid=(\d+)/i) ||
+        targetUrl.match(/story_fbid=(\d+)/i) ||
+        html.match(/story_fbid=(\d+)/i);
+      const storyFbid = storyFbidMatch?.[1] || '';
+
+      const getMeta = (sourceHtml: string, prop: string): string => {
+        if (!sourceHtml) return '';
+        const m =
+          sourceHtml.match(new RegExp(`<meta\\s+(?:property|name)=["'](?:og:|twitter:)?${prop}["']\\s+content=["']([^"']+)["']`, 'i')) ||
+          sourceHtml.match(new RegExp(`<meta\\s+content=["']([^"']+)["']\\s+(?:property|name)=["'](?:og:|twitter:)?${prop}["']`, 'i'));
         return m ? this.decodeHtmlEntities(m[1]) : '';
       };
 
-      const ogTitle = getMeta('title');
-      const ogDesc = getMeta('description');
-      const ogImage = getMeta('image');
-      const ogVideo = getMeta('video') || getMeta('video:url') || getMeta('video:secure_url');
+      const ogTitle = getMeta(ogRes.html, 'title') || getMeta(cometRes.html, 'title');
+      const ogDesc = getMeta(ogRes.html, 'description') || getMeta(cometRes.html, 'description');
+      const ogImage = getMeta(ogRes.html, 'image') || getMeta(cometRes.html, 'image');
+      const ogVideo =
+        getMeta(ogRes.html, 'video') ||
+        getMeta(ogRes.html, 'video:url') ||
+        getMeta(ogRes.html, 'video:secure_url') ||
+        getMeta(cometRes.html, 'video');
 
-      if (!ogTitle && !ogDesc && !ogImage && !ogVideo) {
+      // Parse Comet SSR JSON blocks for full untruncated caption, exact author, album photos, and progressive video URLs
+      const cometAuthors: string[] = [];
+      const storyMessages: string[] = [];
+      const fallbackMessages: string[] = [];
+      const storyPhotosMap = new Map<string, string>();
+      const fallbackPhotosMap = new Map<string, string>();
+      const cometVideosMap = new Map<string, { id?: string; hd?: string; sd?: string; durationSec?: number; thumb?: string }>();
+      let hasVideoAttachment = false;
+
+      if (cometRes.html) {
+        const scriptBlocks = Array.from(
+          cometRes.html.matchAll(/<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi)
+        ).map((m) => m[1]);
+
+        const walkComet = (obj: any, inComment = false, inMainAttachment = false): void => {
+          if (!obj || typeof obj !== 'object') return;
+          if (Array.isArray(obj)) {
+            for (const item of obj) walkComet(item, inComment, inMainAttachment);
+            return;
+          }
+
+          // Comment attachments in Facebook Relay use style_type_renderer; skip them for post photos
+          const nextInComment = inComment || Boolean(obj.style_type_renderer);
+          const hasStoryActors = Array.isArray(obj.actors) && Boolean(obj.actors[0]?.name);
+
+          if (hasStoryActors && !nextInComment) {
+            cometAuthors.push(String(obj.actors[0].name));
+            if (obj.message && typeof obj.message.text === 'string' && obj.message.text.trim()) {
+              storyMessages.push(obj.message.text.trim());
+            }
+          } else if (!nextInComment && obj.message && typeof obj.message.text === 'string' && obj.message.text.trim()) {
+            fallbackMessages.push(obj.message.text.trim());
+          }
+
+          // Photo node extraction (strictly outside comment attachments)
+          if (!nextInComment && (obj.__typename === 'Photo' || obj.__isMedia === 'Photo')) {
+            const pid = obj.id ? String(obj.id) : '';
+            const imgUri =
+              obj.photo_image?.uri ||
+              obj.viewer_image?.uri ||
+              obj.massive_image?.uri ||
+              obj.image?.uri ||
+              obj.large_share_image?.uri ||
+              '';
+            if (pid && /^\d+$/.test(pid) && pid !== storyFbid && imgUri) {
+              this.rememberPhotoFallback(pid, imgUri);
+              if (inMainAttachment) {
+                if (!storyPhotosMap.has(pid)) storyPhotosMap.set(pid, imgUri);
+              } else {
+                if (!fallbackPhotosMap.has(pid)) fallbackPhotosMap.set(pid, imgUri);
+              }
+            }
+          }
+
+          // Video node extraction
+          if (!nextInComment && (obj.__typename === 'Video' || obj.__isMedia === 'Video')) {
+            if (inMainAttachment || isVideoOrReelUrl) {
+              hasVideoAttachment = true;
+            }
+            const vid = obj.id ? String(obj.id) : 'default_video';
+            const hd = obj.browser_native_hd_url || obj.playable_url_quality_hd || obj.hd_src || undefined;
+            const sd = obj.browser_native_sd_url || obj.playable_url || obj.sd_src || undefined;
+            const durationSec = obj.playable_duration_in_ms
+              ? Math.round(Number(obj.playable_duration_in_ms) / 1000)
+              : undefined;
+            const thumb = obj.preferred_thumbnail?.image?.uri || obj.thumbnailImage?.uri || undefined;
+
+            if (hd || sd || durationSec || thumb) {
+              const prev = cometVideosMap.get(vid) || { id: vid };
+              cometVideosMap.set(vid, {
+                id: vid,
+                hd: prev.hd || hd,
+                sd: prev.sd || sd,
+                durationSec: prev.durationSec || durationSec,
+                thumb: prev.thumb || thumb
+              });
+            }
+          }
+
+          // Comet videoDeliveryLegacyFields / videoDeliveryResponseFragment
+          if (obj.videoDeliveryLegacyFields || obj.videoDeliveryResponseFragment) {
+            const vdf = obj.videoDeliveryLegacyFields || obj.videoDeliveryResponseFragment;
+            const vid = vdf.id ? String(vdf.id) : 'default_video';
+            const hd = vdf.browser_native_hd_url || vdf.hd_src || undefined;
+            const sd = vdf.browser_native_sd_url || vdf.sd_src || undefined;
+            let durationSec: number | undefined;
+            if (typeof vdf.dash_manifest_xml_string === 'string') {
+              const durMatch = vdf.dash_manifest_xml_string.match(/mediaPresentationDuration="PT([\d.]+)S"/i);
+              if (durMatch) durationSec = Math.round(parseFloat(durMatch[1]));
+            }
+            if (hd || sd) {
+              const prev = cometVideosMap.get(vid) || { id: vid };
+              cometVideosMap.set(vid, {
+                id: vid,
+                hd: prev.hd || hd,
+                sd: prev.sd || sd,
+                durationSec: prev.durationSec || durationSec,
+                thumb: prev.thumb
+              });
+            }
+          }
+
+          for (const key of Object.keys(obj)) {
+            const childInMainAttachment = inMainAttachment || (key === 'attachments' && (hasStoryActors || Boolean(obj.message)));
+            walkComet(obj[key], nextInComment, childInMainAttachment);
+          }
+        };
+
+        for (const block of scriptBlocks) {
+          try {
+            walkComet(JSON.parse(block));
+          } catch {}
+        }
+      }
+
+      if (!ogTitle && !ogDesc && !ogImage && !ogVideo && cometAuthors.length === 0 && storyPhotosMap.size === 0 && cometVideosMap.size === 0) {
         return null;
       }
 
-      // Check ID from finalUrl or fallbackId
-      const idMatch = finalUrl.match(/(?:posts|videos|photos|share|reel|fbid=)\/?([0-9a-zA-Z_-]+)/i);
-      const postId = idMatch?.[1] || fallbackId;
+      // Resolve primary ID from URL
+      const reelOrVideoIdMatch =
+        finalUrl.match(/(?:reel(?:s)?|videos)\/(\d+)/i) ||
+        targetUrl.match(/(?:reel(?:s)?|videos)\/(\d+)/i) ||
+        finalUrl.match(/[?&]v=(\d+)/i) ||
+        targetUrl.match(/[?&]v=(\d+)/i);
+      const idMatch =
+        reelOrVideoIdMatch ||
+        finalUrl.match(/(?:posts|photos|share\/(?:p|v|r)|share)\/([0-9a-zA-Z_-]+)/i) ||
+        finalUrl.match(/(?:[?&]|&amp;)fbid=(\d+)/i);
+      const postId = idMatch?.[1] || storyFbid || fallbackId;
 
-      // Author extraction
-      const authorName = ogTitle || 'Facebook User';
-      const cleanDesc = ogDesc || '';
-      const displayTitle = cleanDesc 
-        ? (cleanDesc.length > 80 ? cleanDesc.slice(0, 77) + '...' : cleanDesc)
-        : (ogTitle ? `${ogTitle} - Bài viết` : 'Facebook Post');
+      const authorName = cometAuthors[0] || ogTitle || 'Facebook User';
+      const fullCaption = (storyMessages[0] || ( !isVideoOrReelUrl && fallbackMessages[0] ) || ogDesc || '').trim();
+      const displayTitle = this.formatCleanTitle(
+        fullCaption || ogDesc,
+        authorName,
+        isVideoOrReelUrl ? 'Video' : 'Bài viết'
+      );
 
-      // Check for attached photos
-      const fbidMatches = Array.from(new Set(Array.from(html.matchAll(/fbid=(\d+)/g)).map(m => m[1])));
-      const images: Array<{ id?: string; url: string; label?: string }> = [];
-
-      if (fbidMatches.length > 0) {
-        for (let i = 0; i < fbidMatches.length; i++) {
-          const fid = fbidMatches[i];
-          images.push({
-            id: fid,
-            url: `https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=${fid}`,
-            label: `Ảnh ${i + 1}`
-          });
-        }
-      } else if (ogImage) {
-        images.push({
-          url: ogImage,
-          label: 'Ảnh đại diện bài viết'
-        });
-      }
-
-      // If video exists in og tags or inline script sources
-      let hdUrl = (ogVideo && ogVideo.startsWith('http')) ? ogVideo : '';
+      // 1. Check for Video streams (from Comet SSR, OpenGraph, or regex in HTML)
+      let hdUrl = ogVideo && ogVideo.startsWith('http') ? ogVideo : '';
       let sdUrl = '';
+      let videoDuration = 0;
+      let videoThumb = ogImage || '';
 
-      const hdMatch = html.match(/(?:hd_src|browser_native_hd_url)["']?:\s*["'](https:[^"']+)["']/i);
-      const sdMatch = html.match(/(?:sd_src|browser_native_sd_url)["']?:\s*["'](https:[^"']+)["']/i);
+      const matchedCometVideo =
+        cometVideosMap.get(postId) ||
+        cometVideosMap.get(fallbackId) ||
+        Array.from(cometVideosMap.values()).find((v) => v.hd || v.sd);
 
-      if (hdMatch) {
-        hdUrl = hdMatch[1].replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+      if (matchedCometVideo && (isVideoOrReelUrl || hasVideoAttachment || storyPhotosMap.size === 0)) {
+        hdUrl = matchedCometVideo.hd || hdUrl;
+        sdUrl = matchedCometVideo.sd || sdUrl;
+        videoDuration = matchedCometVideo.durationSec || 0;
+        videoThumb = videoThumb || matchedCometVideo.thumb || '';
       }
-      if (sdMatch) {
-        sdUrl = sdMatch[1].replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+
+      if (!hdUrl && !sdUrl) {
+        const combinedHtml = `${ogRes.html}\n${cometRes.html}`;
+        const hdMatch = combinedHtml.match(/(?:hd_src|browser_native_hd_url)["']?:\s*["'](https:[^"']+)["']/i);
+        const sdMatch = combinedHtml.match(/(?:sd_src|browser_native_sd_url)["']?:\s*["'](https:[^"']+)["']/i);
+        if (hdMatch) {
+          hdUrl = hdMatch[1].replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+        }
+        if (sdMatch) {
+          sdUrl = sdMatch[1].replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+        }
       }
 
       if (hdUrl || sdUrl) {
@@ -406,12 +589,12 @@ export class FacebookService {
         }
 
         return {
-          id: postId,
+          id: matchedCometVideo?.id && matchedCometVideo.id !== 'default_video' ? matchedCometVideo.id : postId,
           title: displayTitle,
-          caption: cleanDesc,
+          caption: fullCaption,
           author: { name: authorName },
-          cover: ogImage,
-          duration: 0,
+          cover: videoThumb,
+          duration: videoDuration,
           formats,
           videoHdUrl: hdUrl || sdUrl,
           videoSdUrl: sdUrl || hdUrl,
@@ -420,7 +603,51 @@ export class FacebookService {
         };
       }
 
-      // If no video, it's an image/photo post
+      // CRITICAL GUARD: If the link is a Reel/Video URL or has a Video attachment, NEVER return a static thumbnail image!
+      // Returning null here allows Tier 2 (API) and Tier 3 (yt-dlp) to extract the actual video stream.
+      if (isVideoOrReelUrl || hasVideoAttachment) {
+        logger.info({ targetUrl, finalUrl }, '[Facebook] Video/Reel link detected without direct SSR stream; deferring to yt-dlp');
+        return null;
+      }
+
+      // 2. Photo / Post Extraction
+      const activePhotosMap = storyPhotosMap.size > 0 ? storyPhotosMap : fallbackPhotosMap;
+      const images: Array<{ id?: string; url: string; label?: string }> = [];
+
+      if (activePhotosMap.size > 0) {
+        let idx = 1;
+        for (const [fid] of activePhotosMap.entries()) {
+          images.push({
+            id: fid,
+            url: `https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=${fid}`,
+            label: `Ảnh ${idx++}`
+          });
+        }
+      } else {
+        // Fallback to OpenGraph media_id or query ?fbid= (strictly excluding story_fbid!)
+        const rawPhotoIds = [
+          ...Array.from(html.matchAll(/media_id=(\d+)/gi)).map((m) => m[1]),
+          ...Array.from(html.matchAll(/(?:[?&]|&amp;)fbid=(\d+)/gi)).map((m) => m[1])
+        ].filter((fid) => fid && fid !== storyFbid);
+
+        const uniquePhotoIds = Array.from(new Set(rawPhotoIds));
+        if (uniquePhotoIds.length > 0) {
+          for (let i = 0; i < uniquePhotoIds.length; i++) {
+            const fid = uniquePhotoIds[i];
+            images.push({
+              id: fid,
+              url: `https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=${fid}`,
+              label: `Ảnh ${i + 1}`
+            });
+          }
+        } else if (ogImage && !ogImage.includes(`media_id=${storyFbid}`)) {
+          images.push({
+            url: ogImage,
+            label: 'Ảnh bài viết'
+          });
+        }
+      }
+
       if (images.length > 0) {
         const formats: FacebookMediaFormat[] = images.map((img, idx) => ({
           quality: `photo_${idx + 1}`,
@@ -429,12 +656,17 @@ export class FacebookService {
           ext: 'jpg'
         }));
 
+        const safeCover =
+          ogImage && (!storyFbid || !ogImage.includes(`media_id=${storyFbid}`))
+            ? ogImage
+            : images[0].url;
+
         return {
           id: postId,
           title: displayTitle,
-          caption: cleanDesc,
+          caption: fullCaption,
           author: { name: authorName },
-          cover: ogImage || images[0].url,
+          cover: safeCover,
           duration: 0,
           formats,
           mediaType: 'image',
@@ -469,21 +701,41 @@ export class FacebookService {
       headers['Range'] = rangeHeader;
     }
 
-    const upstreamRes = await fetch(targetUrl, {
+    let upstreamRes = await fetch(targetUrl, {
       headers,
       signal: AbortSignal.timeout(60000)
     });
+
+    const initialContentType = upstreamRes.headers.get('content-type') || '';
+    if (isFbLookaside && (!upstreamRes.ok || initialContentType.includes('text/html'))) {
+      const mediaIdMatch = targetUrl.match(/media_id=(\d+)/i);
+      const fallbackUrl = mediaIdMatch ? this.photoFallbackUrls.get(mediaIdMatch[1]) : undefined;
+      if (fallbackUrl) {
+        logger.info({ mediaId: mediaIdMatch?.[1] }, '[Facebook] Lookaside returned HTML/error; falling back to scontent CDN URI');
+        upstreamRes = await fetch(fallbackUrl, {
+          headers: {
+            'User-Agent': DEFAULT_UA,
+            'Referer': 'https://www.facebook.com/'
+          },
+          signal: AbortSignal.timeout(60000)
+        });
+      } else if (initialContentType.includes('text/html')) {
+        throw new BadRequestError('Không thể tải hình ảnh từ Facebook (liên kết media_id không phải là ảnh hợp lệ).');
+      }
+    }
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
       throw new BadRequestError(`Không thể kết nối đến nội dung Facebook: HTTP ${upstreamRes.status}`);
     }
 
     const upstreamType = upstreamRes.headers.get('content-type');
-    const isImage = isFbLookaside || upstreamType?.startsWith('image/') || filename.endsWith('.jpg') || filename.endsWith('.png');
+    const cleanFilename = (filename || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const isImage = isFbLookaside || upstreamType?.startsWith('image/') || cleanFilename.endsWith('.jpg') || cleanFilename.endsWith('.png');
     const defaultMime = isImage ? 'image/jpeg' : 'video/mp4';
+    const responseMime = upstreamType && !upstreamType.includes('text/html') ? upstreamType : defaultMime;
 
     reply.status(upstreamRes.status);
-    reply.header('Content-Type', upstreamType || defaultMime);
+    reply.header('Content-Type', responseMime);
     reply.header('Accept-Ranges', 'bytes');
 
     const contentLength = upstreamRes.headers.get('content-length');
@@ -493,7 +745,7 @@ export class FacebookService {
     if (contentRange) reply.header('Content-Range', contentRange);
 
     if (download) {
-      const safeName = filename || (isImage ? 'facebook_photo.jpg' : 'facebook_video.mp4');
+      const safeName = cleanFilename || (isImage ? 'facebook_photo.jpg' : 'facebook_video.mp4');
       const encodedName = encodeURIComponent(safeName);
       const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
       reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
@@ -669,10 +921,27 @@ export class FacebookService {
       'Referer': 'https://www.facebook.com/'
     };
 
-    const upstreamRes = await fetch(mediaUrl, {
+    let upstreamRes = await fetch(mediaUrl, {
       headers: downloadHeaders,
       signal: AbortSignal.timeout(120000)
     });
+
+    const saveContentType = upstreamRes.headers.get('content-type') || '';
+    if (isFbLookaside && (!upstreamRes.ok || saveContentType.includes('text/html'))) {
+      const mediaIdMatch = mediaUrl.match(/media_id=(\d+)/i);
+      const fallbackUrl = mediaIdMatch ? this.photoFallbackUrls.get(mediaIdMatch[1]) : undefined;
+      if (fallbackUrl) {
+        upstreamRes = await fetch(fallbackUrl, {
+          headers: {
+            'User-Agent': DEFAULT_UA,
+            'Referer': 'https://www.facebook.com/'
+          },
+          signal: AbortSignal.timeout(120000)
+        });
+      } else if (saveContentType.includes('text/html')) {
+        throw new BadRequestError('Không thể tải hình ảnh từ nguồn Facebook (media_id không hợp lệ).');
+      }
+    }
 
     if (!upstreamRes.ok || !upstreamRes.body) {
       throw new BadRequestError(`Không thể tải nội dung từ nguồn Facebook: HTTP ${upstreamRes.status}`);

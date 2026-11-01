@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.33': {
+    version: 'v24.33',
+    title: 'Bản cập nhật v24.33: Nâng Cấp Toàn Diện Facebook Downloader (Bài Viết, Album Ảnh, Reel & Video)',
+    date: '01/11/2026',
+    features: [
+      'Bộ Trích Xuất Kép (Comet SSR JSON + OpenGraph): Lấy trọn vẹn 100% nội dung văn bản bài viết không bị cắt ngắn, tên tác giả chính xác, danh sách ảnh chất lượng gốc và luồng phát trực tiếp HD/SD cho cả Bài viết, Album, Reel và Video',
+      'Nút Sao Chép Nhanh Nội Dung Bài Viết: Tích hợp thanh tiêu đề kèm nút sao chép toàn bộ văn bản và liên kết trong bài viết Facebook chỉ với một chạm'
+    ],
+    fixes: [
+      'Khắc Phục Triệt Để Lỗi Vỡ Ảnh 1 & Dư Ảnh Ảo Trong Bài Viết: Loại bỏ hoàn toàn việc nhận nhầm mã bài viết (story_fbid) thành mã ảnh (media_id), đồng thời cô lập ảnh bình luận khỏi ảnh bài viết chính và tự động dự phòng sang CDN scontent',
+      'Khắc Phục Lỗi Nhận Diện Nhầm Reel/Video Thành Ảnh Tĩnh: Phân luồng thông minh bảo đảm liên kết Reel và Video luôn tải đúng tệp MP4 chất lượng HD/SD kèm âm thanh',
+      'Tối Ưu Hiển Thị Trên Di Động: Xóa khoảng trắng thụt lề dòng đầu trong khung nội dung bài viết và tăng khoảng đệm dưới để nút Lưu vào Studio Drive không bị thanh điều hướng che khuất'
+    ]
+  },
   'v24.32': {
     version: 'v24.32',
     title: 'Bản cập nhật v24.32: Khắc Phục Triệt Để Vòng Lặp Cập Nhật PWA, Đồng Bộ Lịch Sử & Phát Âm Thanh Tức Thì',
@@ -1395,7 +1409,7 @@ export const RELEASE_NOTES_MAP = {
   }
 };
 
-export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.32'];
+export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.33'];
 
 /**
  * Normalizes any version string into standard 'vX.XX' key
@@ -1403,7 +1417,7 @@ export const LATEST_RELEASE = RELEASE_NOTES_MAP['v24.32'];
  * @returns {string}
  */
 export function normalizeVersionKey(rawVer) {
-  if (!rawVer) return 'v24.32';
+  if (!rawVer) return 'v24.33';
   const str = String(rawVer).trim();
   const match = str.match(/v?\d+\.\d+/i);
   if (match) {

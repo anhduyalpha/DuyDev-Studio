@@ -56,6 +56,25 @@ describe('Media Downloaders Unit Test Suite', () => {
       expect(data.cover).toBeTruthy();
     });
 
+    it('excludes story_fbid from photo list and extracts full untruncated caption on share/p/ post', async () => {
+      const postUrl = 'https://www.facebook.com/share/p/1MrDCgpkuq/';
+      const data = await FacebookService.resolveVideo(postUrl);
+      expect(data.mediaType).toBe('image');
+      expect(data.formats.length).toBe(1);
+      expect(data.formats[0].url).toContain('122131708695458501');
+      expect(data.formats[0].url).not.toContain('122131708863458501');
+      expect(data.title).not.toMatch(/[\r\n]/);
+      expect(data.caption).toContain('https://github.com/kentjuno/chanh-dien-online');
+    });
+
+    it('resolves Facebook Reel as video with HD/SD streams instead of static thumbnail image', async () => {
+      const reelUrl = 'https://www.facebook.com/reel/1768843621079569/';
+      const data = await FacebookService.resolveVideo(reelUrl);
+      expect(data.mediaType).toBe('video');
+      expect(data.videoHdUrl || data.videoSdUrl).toBeTruthy();
+      expect(data.formats.some((f) => f.ext === 'mp4')).toBe(true);
+    });
+
     it('rejects invalid or non-Facebook URLs with BadRequestError', () => {
       expect(() => FacebookService.extractUrl('')).toThrow(BadRequestError);
       expect(() => FacebookService.extractUrl('https://example.com/video.mp4')).toThrow(BadRequestError);
