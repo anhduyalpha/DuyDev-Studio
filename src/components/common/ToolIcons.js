@@ -603,79 +603,83 @@ export const TOOL_ICONS = {
   `,
   'spotify': (className = 'w-6 h-6') => TOOL_ICONS['spotify-downloader'](className),
 
-  // 19. SlideShare Downloader (Projection Screen Canvas & Presentation Slide Flow)
+  // 19. SlideShare Downloader (Vibrant Blue Chassis & High-Contrast White Presentation Screen)
   'slideshare-downloader': (className = 'w-6 h-6') => `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
       <defs>
-        <linearGradient id="ds-ss-body" x1="2" y1="3" x2="22" y2="19" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#0284C7" stop-opacity="0.30" />
-          <stop offset="100%" stop-color="#0077B5" stop-opacity="0.10" />
-        </linearGradient>
-        <linearGradient id="ds-ss-accent" x1="5" y1="4" x2="19" y2="16" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#38BDF8" />
-          <stop offset="100%" stop-color="#0077B5" />
+        <linearGradient id="ds-ss-chassis" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0284C7" />
+          <stop offset="100%" stop-color="#00669C" />
         </linearGradient>
       </defs>
-      <!-- Layer 1: Ambient Base Glass -->
-      <rect x="2.5" y="3.5" width="19" height="13" rx="2.5" fill="url(#ds-ss-body)" stroke="#0077B5" stroke-opacity="0.5" stroke-width="1.3" />
-      <!-- Layer 2: Projection Stand & Roller Bar -->
-      <line x1="2" y1="4" x2="22" y2="4" stroke="#0284C7" stroke-width="1.6" stroke-linecap="round" />
-      <path d="M12 16.5v4M8 20.5h8" stroke="#0077B5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-      <!-- Layer 3: Presentation Slide Deck Bar Charts & Arrow -->
-      <rect x="5.5" y="7" width="3.5" height="6.5" rx="1" fill="url(#ds-ss-accent)" />
-      <rect x="10.5" y="9" width="3.5" height="4.5" rx="1" fill="#38BDF8" fill-opacity="0.8" />
-      <path d="M16 8l2.5 2.5L16 13" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#0077B5" fill-opacity="0.25" stroke="#0077B5" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Solid SlideShare Blue Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-ss-chassis)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M6 3h12c2.2 0 3.3 1 3.6 2.2H2.4C2.7 4 3.8 3 6 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Solid White Presentation Projector Screen -->
+      <rect x="4.5" y="5.5" width="15" height="10" rx="1.8" fill="#FFFFFF" />
+      <!-- Layer 5: Slide Deck Analytics & Growth Bar Charts -->
+      <rect x="6.5" y="10" width="2.2" height="4" rx="0.6" fill="#0284C7" />
+      <rect x="9.8" y="8" width="2.2" height="6" rx="0.6" fill="#0077B5" />
+      <rect x="13.1" y="6.8" width="2.2" height="7.2" rx="0.6" fill="#F59E0B" />
+      <!-- Layer 6: Dynamic Forward Slide Arrow -->
+      <path d="M16.5 8.2l1.8 1.8-1.8 1.8" stroke="#0077B5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Layer 7: Projector Tripod Stand -->
+      <path d="M12 15.5v3M9.5 20.5l2.5-2 2.5 2" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   `,
   'slideshare': (className = 'w-6 h-6') => TOOL_ICONS['slideshare-downloader'](className),
 
-  // 20. Academia Downloader (Scholarly Scroll, Mortarboard & Academic Seal)
+  // 20. Academia Downloader (Deep Academic Indigo Chassis & Solid Crisp White Mortarboard Cap)
   'academia-downloader': (className = 'w-6 h-6') => `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
       <defs>
-        <linearGradient id="ds-ac-body" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#6366F1" stop-opacity="0.30" />
-          <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.10" />
-        </linearGradient>
-        <linearGradient id="ds-ac-cap" x1="3" y1="7" x2="21" y2="12" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#818CF8" />
-          <stop offset="100%" stop-color="#4F46E5" />
+        <linearGradient id="ds-ac-chassis" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#4F46E5" />
+          <stop offset="100%" stop-color="#3730A3" />
         </linearGradient>
       </defs>
-      <!-- Layer 1: Academic Manuscript Frame -->
-      <rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="url(#ds-ac-body)" stroke="#4F46E5" stroke-opacity="0.4" stroke-width="1.3" />
-      <!-- Layer 2: Mortarboard Graduation Diamond -->
-      <polygon points="12,5 20.5,9.5 12,14 3.5,9.5" fill="url(#ds-ac-cap)" stroke="#C7D2FE" stroke-width="1.2" stroke-linejoin="round" />
-      <!-- Layer 3: Skull Cap Arch & Tassel Ribbon -->
-      <path d="M6.5 11.5v3.5c0 2 2.5 3.5 5.5 3.5s5.5-1.5 5.5-3.5v-3.5" stroke="#4F46E5" stroke-width="1.5" stroke-linecap="round" />
-      <path d="M20.5 9.5v5.5" stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round" />
-      <circle cx="20.5" cy="15.5" r="1" fill="#F59E0B" />
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#4F46E5" fill-opacity="0.25" stroke="#4F46E5" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Solid Academic Indigo Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-ac-chassis)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M6 3h12c2.2 0 3.3 1 3.6 2.2H2.4C2.7 4 3.8 3 6 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Solid Pure White Mortarboard Cap Diamond -->
+      <polygon points="12,5 20.5,9.5 12,14 3.5,9.5" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.8" stroke-linejoin="round" />
+      <!-- Layer 5: Skull Crown Arch under Diamond -->
+      <path d="M6.5 11.8v3c0 2 2.5 3.5 5.5 3.5s5.5-1.5 5.5-3.5v-3" fill="#E0E7FF" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Layer 6: Center Golden Button on Cap -->
+      <circle cx="12" cy="9.5" r="1.3" fill="#F59E0B" />
+      <!-- Layer 7: Golden Honor Tassel & Pendant -->
+      <path d="M20.5 9.5v5.5" stroke="#FDE047" stroke-width="1.6" stroke-linecap="round" />
+      <circle cx="20.5" cy="15.8" r="1.3" fill="#F59E0B" />
     </svg>
   `,
   'academia': (className = 'w-6 h-6') => TOOL_ICONS['academia-downloader'](className),
 
-  // 21. ResearchGate Downloader (Scientific Molecule Lattice & Research Publication)
+  // 21. ResearchGate Downloader (ResearchGate Mint Teal Chassis & Crisp White Scientific Hexagon Badge)
   'researchgate-downloader': (className = 'w-6 h-6') => `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
       <defs>
-        <linearGradient id="ds-rg-body" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#14B8A6" stop-opacity="0.30" />
-          <stop offset="100%" stop-color="#0D9488" stop-opacity="0.10" />
+        <linearGradient id="ds-rg-chassis" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#00CCBB" />
+          <stop offset="100%" stop-color="#0F766E" />
         </linearGradient>
       </defs>
-      <!-- Layer 1: Hexagonal Research Shield -->
-      <path d="M12 2.5l7.5 4.3v8.6L12 19.7l-7.5-4.3V6.8z" fill="url(#ds-rg-body)" stroke="#0D9488" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
-      <!-- Layer 2: Molecular Bonds / Research Lattice -->
-      <line x1="12" y1="7" x2="7" y2="12" stroke="#2DD4BF" stroke-width="1.5" />
-      <line x1="12" y1="7" x2="17" y2="12" stroke="#2DD4BF" stroke-width="1.5" />
-      <line x1="7" y1="12" x2="12" y2="16" stroke="#2DD4BF" stroke-width="1.5" />
-      <line x1="17" y1="12" x2="12" y2="16" stroke="#2DD4BF" stroke-width="1.5" />
-      <!-- Layer 3: High-Contrast Nucleus Nodes -->
-      <circle cx="12" cy="7" r="2.2" fill="#0D9488" stroke="#FFFFFF" stroke-width="1" />
-      <circle cx="7" cy="12" r="2" fill="#14B8A6" stroke="#FFFFFF" stroke-width="1" />
-      <circle cx="17" cy="12" r="2" fill="#14B8A6" stroke="#FFFFFF" stroke-width="1" />
-      <circle cx="12" cy="16" r="2.2" fill="#0D9488" stroke="#FFFFFF" stroke-width="1" />
-      <text x="12" y="12.5" font-size="5" font-family="sans-serif" font-weight="bold" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">R</text>
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#0D9488" fill-opacity="0.25" stroke="#0D9488" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Solid Mint Teal Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-rg-chassis)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M6 3h12c2.2 0 3.3 1 3.6 2.2H2.4C2.7 4 3.8 3 6 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Solid Pure White Scientific Hexagon Shield -->
+      <path d="M12 4.5l6.5 3.8v7.4L12 19.5l-6.5-3.8V8.3z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round" />
+      <!-- Layer 5: ResearchGate Monogram Brand Mark & Molecular Orbit -->
+      <text x="11.8" y="12.3" font-size="7.5" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="900" fill="#0D9488" text-anchor="middle" dominant-baseline="central" letter-spacing="-0.3px">RG</text>
+      <circle cx="16.2" cy="7.8" r="1.3" fill="#00CCBB" stroke="#FFFFFF" stroke-width="0.8" />
     </svg>
   `,
   'researchgate': (className = 'w-6 h-6') => TOOL_ICONS['researchgate-downloader'](className)

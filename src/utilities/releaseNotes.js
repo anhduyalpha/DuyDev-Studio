@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.44': {
+    version: 'v24.44',
+    title: 'Bản cập nhật v24.44: Thiết Kế Lại Biểu Tượng 3 Module Học Thuật Đạt Độ Tương Phản Tối Đa',
+    date: '02/11/2026',
+    features: [
+      'Biểu Tượng Độc Bản & Nổi Bật: Tái thiết kế 3 biểu tượng SlideShare (Màn chiếu trắng & biểu đồ tăng trưởng), Academia (Mũ cử nhân trắng tinh & tua vàng), ResearchGate (Khiên lục giác trắng & chữ RG thương hiệu)',
+      'Khung Đỡ Tương Phản Đa Lớp: Hộp chứa biểu tượng tích hợp khung gầm tráng men đặc sắc và sắc trắng tinh khôi, hoàn toàn không bị chìm hay hòa vào màu tím của khung viền Tier S'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Hòa Màu Icon: Loại bỏ cấu trúc kính mờ trong suốt (opacity 10%) gây chìm màu trên nền tối/tím, đảm bảo độ rõ nét 100% trên cả giao diện Sáng và Tối'
+    ]
+  },
   'v24.43': {
     version: 'v24.43',
     title: 'Bản cập nhật v24.43: Chuẩn Hóa Khung Viền Thẻ Cấp Độ S Khớp Tuyệt Đối Bản Mẫu',
