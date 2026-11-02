@@ -1,16 +1,13 @@
 /**
  * securityShield.js - Enterprise Client-Side Hardening & Anti-Tamper Shield
  * Provides hotkey blocking, context-menu protection, anti-clickjacking,
- * and permanent DevTools lockout displaying "ÂU NÂU ĐỪNG PHÁ WEB" requiring page reload.
+ * and unconditional permanent DevTools lockout displaying "ÂU NÂU ĐỪNG PHÁ WEB" requiring page reload.
  */
-
-import { isAdminAuthenticated } from './adminAuth.js';
 
 let isWebLocked = false;
 let checkIntervalId = null;
 let consoleProbeIntervalId = null;
 let probeElement = null;
-let bypassActive = false;
 let blockerObserver = null;
 
 /**
@@ -35,8 +32,11 @@ function isDockedDevToolsOpen() {
   // DevTools docked to right or left takes > 100px width (typically 300px - 800px)
   if (widthDiff > 100) return true;
 
-  // DevTools docked to bottom takes > 250px height
-  if (heightDiff > 250) return true;
+  // DevTools docked to bottom takes > 200px height (unless virtual keyboard is active on mobile input)
+  const isInputFocused = typeof document !== 'undefined' &&
+    document.activeElement &&
+    ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+  if (heightDiff > 200 && !isInputFocused) return true;
 
   return false;
 }
@@ -61,7 +61,7 @@ function isTimingDevToolsOpen() {
  * Requires the user to close DevTools and reload the page.
  */
 export function lockWebPermanently() {
-  if (isWebLocked || bypassActive || typeof document === 'undefined') return;
+  if (isWebLocked || typeof document === 'undefined') return;
   isWebLocked = true;
 
   // Stop polling once locked to latch the screen permanently
@@ -81,7 +81,7 @@ export function lockWebPermanently() {
  * Shows the full-screen "ÂU NÂU ĐỪNG PHÁ WEB" DevTools blocker overlay
  */
 export function showDevToolsBlockScreen() {
-  if (bypassActive || typeof document === 'undefined') return;
+  if (typeof document === 'undefined') return;
 
   const blockerId = 'ds-devtools-blocker';
   let blocker = document.getElementById(blockerId);
@@ -137,7 +137,7 @@ export function showDevToolsBlockScreen() {
 }
 
 /**
- * Hides the blocker screen once unlocked by admin
+ * Hides the blocker screen
  */
 export function hideDevToolsBlockScreen() {
   if (typeof document === 'undefined') return;
@@ -155,7 +155,7 @@ export function hideDevToolsBlockScreen() {
  * Inspection step to check DevTools status
  */
 function checkDevToolsStatus() {
-  if (isWebLocked || bypassActive || typeof window === 'undefined') return;
+  if (isWebLocked || typeof window === 'undefined') return;
 
   if (isDockedDevToolsOpen() || isTimingDevToolsOpen()) {
     lockWebPermanently();
@@ -189,21 +189,21 @@ export function startAntiDebugger() {
   // Run initial check on load
   checkDevToolsStatus();
 
-  // Polling check every 250ms
-  checkIntervalId = setInterval(checkDevToolsStatus, 250);
+  // Polling check every 150ms for lightning-fast lockout (<0.2s)
+  checkIntervalId = setInterval(checkDevToolsStatus, 150);
 
-  // Periodic console probe trigger every 1500ms
+  // Periodic console probe trigger every 500ms
   consoleProbeIntervalId = setInterval(() => {
-    if (probeElement && !isWebLocked && !bypassActive) {
+    if (probeElement && !isWebLocked) {
       try {
         console.debug(probeElement);
       } catch {}
     }
-  }, 1500);
+  }, 500);
 
   // Background debugger interrupt loop while locked
   setInterval(() => {
-    if (isWebLocked && !bypassActive) {
+    if (isWebLocked) {
       try {
         (function () {
           return false;
@@ -218,7 +218,7 @@ export function startAntiDebugger() {
   // Anti-tamper DOM observer: re-inject blocker if deleted from Elements tab
   if (typeof MutationObserver !== 'undefined' && document.body) {
     blockerObserver = new MutationObserver(() => {
-      if (isWebLocked && !bypassActive) {
+      if (isWebLocked) {
         const el = document.getElementById('ds-devtools-blocker');
         if (!el) {
           showDevToolsBlockScreen();
@@ -236,11 +236,6 @@ export function initSecurityShield() {
   if (typeof window === 'undefined' || window._dsShieldActive) return;
   window._dsShieldActive = true;
 
-  // If already authenticated as admin before DevTools is opened, allow bypass
-  if (isAdminAuthenticated()) {
-    bypassActive = true;
-  }
-
   // 1. Anti-Clickjacking Frame Buster
   try {
     if (window.top !== window.self) {
@@ -255,8 +250,6 @@ export function initSecurityShield() {
 
   // 2. Keyboard Hotkey Shield (F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+S)
   window.addEventListener('keydown', (e) => {
-    if (bypassActive) return;
-
     const key = (e.key || '').toUpperCase();
     const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
@@ -285,8 +278,6 @@ export function initSecurityShield() {
 
   // 3. Right-Click Context Menu Protection (Permits inputs, textareas, media and .allow-select)
   window.addEventListener('contextmenu', (e) => {
-    if (bypassActive) return;
-
     const target = e.target;
     if (target instanceof HTMLElement) {
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -301,14 +292,4 @@ export function initSecurityShield() {
 
   // 4. Start DevTools Detection & Anti-Debugger
   startAntiDebugger();
-
-  // 5. Listen to Admin authentication state changes
-  window.addEventListener('ds:admin-auth-changed', (e) => {
-    const isAuth = Boolean(e?.detail?.authenticated);
-    if (isAuth) {
-      bypassActive = true;
-      isWebLocked = false;
-      hideDevToolsBlockScreen();
-    }
-  });
 }

@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.40': {
+    version: 'v24.40',
+    title: 'Bản cập nhật v24.40: Chặn Đứng Toàn Diện Mọi DevTools Tuyệt Đối Không Ngoại Lệ',
+    date: '02/11/2026',
+    features: [
+      'Chặn Đứng DevTools Không Ngoại Lệ: Xóa bỏ hoàn toàn toàn bộ cơ chế bypass hoặc miễn trừ (kể cả admin hay bất kỳ phiên nào), chặn 100% mọi hành vi mở DevTools',
+      'Phản Xạ Khóa Tức Thì (<0.15s): Tăng tốc độ polling lên 150ms và console probe 500ms, lập tức kích hoạt màn hình ÂU NÂU ĐỪNG PHÁ WEB khi phát hiện DevTools'
+    ],
+    fixes: [
+      'Loại Bỏ Hoàn Toàn Cờ Bypass: Triệt tiêu mọi biến bypassActive và sự kiện adminAuth khỏi lá chắn bảo mật frontend'
+    ]
+  },
   'v24.39': {
     version: 'v24.39',
     title: 'Bản cập nhật v24.39: Khóa Chặn DevTools Tuyệt Đối (Zero Bypass Prompt)',

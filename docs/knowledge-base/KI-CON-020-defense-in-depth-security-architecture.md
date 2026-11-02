@@ -82,9 +82,8 @@ flowchart TD
   - **Màn Hình Khóa Toàn Diện & Chặn Tuyệt Đối ("ÂU NÂU ĐỪNG PHÁ WEB")**:
     - Khi phát hiện DevTools, hệ thống lập tức phủ toàn màn hình cảnh báo đỏ rực: *"ÂU NÂU ĐỪNG PHÁ WEB"*.
     - **Khóa cố định (Zero-Flicker Latch)**: Gán `isWebLocked = true` vĩnh viễn trong phiên đó; chỉ cho phép vào lại web khi người dùng đã đóng DevTools và bấm **Tải lại trang (F5)** (`window.location.reload()`).
-    - **Không hiển thị nút bypass trên màn hình khóa (Zero Bypass Prompt)**: Loại bỏ hoàn toàn nút mở khóa hoặc gợi ý quyền quản trị trên màn hình cảnh báo công cộng nhằm ngăn chặn mọi hành vi tò mò hoặc vượt rào; Quản trị viên chỉ được bypass nếu đã đăng nhập từ giao diện ứng dụng trước khi mở DevTools.
+    - **Chặn Tuyệt Đối Mọi Phiên Không Ngoại Lệ (Zero Bypass / No Exceptions)**: Xóa bỏ hoàn toàn cờ `bypassActive` và mọi cơ chế miễn trừ (kể cả admin). Mọi hành vi mở DevTools đều bị khóa cứng ngay lập tức.
     - **Bảo Vệ Đa Lớp Trước Hành Vi Xóa DOM**: Kích hoạt `MutationObserver` tự động tái lập màn hình khóa nếu người dùng cố tình xóa thẻ cảnh báo qua Elements tab.
-  - **Tự Động Bỏ Qua Cho Quản Trị Viên & Localhost**: Khi quản trị viên đăng nhập (`isAdminAuthenticated() === true`) hoặc đang chạy trên môi trường phát triển (`localhost`, `127.0.0.1`, LAN IP), hệ thống tự động tắt toàn bộ bẫy chống debugger để phục vụ việc debug và phát triển mượt mà. Lắng nghe qua sự kiện tùy biến `ds:admin-auth-changed`.
 
 ---
 

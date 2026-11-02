@@ -87,6 +87,8 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
       const shieldSource = fs.readFileSync(path.resolve(__dirname, '../../../src/utilities/securityShield.js'), 'utf-8');
       expect(shieldSource).not.toContain('dsBtnBypassDevTools');
       expect(shieldSource).not.toContain('Tôi là Quản trị viên');
+      expect(shieldSource).not.toContain('bypassActive');
+      expect(shieldSource).not.toContain('ds:admin-auth-changed');
     });
   });
 });
