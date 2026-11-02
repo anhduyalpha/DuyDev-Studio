@@ -34,7 +34,8 @@ export async function previewPdfHandler(request: FastifyRequest, reply: FastifyR
   let sourcePath = '';
 
   if (relPath) {
-    if (!verifyStorageAdminAuth(request)) {
+    const isPublicToolPath = /^(?:\/)?(?:slideshare|academia|researchgate|converter|quiz)\//i.test(relPath);
+    if (!verifyStorageAdminAuth(request) && !isPublicToolPath) {
       return reply.status(401).send({
         success: false,
         error: 'UNAUTHORIZED',

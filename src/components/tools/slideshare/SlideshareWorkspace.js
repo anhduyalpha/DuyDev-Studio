@@ -23,6 +23,9 @@ export class SlideshareWorkspace {
     this.savingToDrive = false;
     this.savedDrivePath = null;
     this.savedFileName = null;
+    this.savedPptxDrivePath = null;
+    this.savedPptxFileName = null;
+    this.currentSlideIndex = 0;
     this.handlePendingEvent = null;
     this.historyTab = 'history';
     this.historyCleanup = null;
@@ -44,6 +47,7 @@ export class SlideshareWorkspace {
     }).catch(() => {});
 
     window.addEventListener('paste', this.boundHandleGlobalPaste);
+    window.addEventListener('keydown', this.boundHandleKeyDown);
 
     const pendingUrl = consumePendingAutoStart('slideshare') || consumePendingAutoStart('slideshare-downloader');
     if (pendingUrl) {
@@ -74,6 +78,7 @@ export class SlideshareWorkspace {
     }
 
     window.removeEventListener('paste', this.boundHandleGlobalPaste);
+    window.removeEventListener('keydown', this.boundHandleKeyDown);
 
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
@@ -174,13 +179,119 @@ export class SlideshareWorkspace {
   }
 
   handleKeyDown(e) {
-    if (e.key === 'Enter') {
+    if (e.target?.tagName === 'INPUT' || e.target?.tagName === 'TEXTAREA') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.resolvePresentation();
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
-      this.resolvePresentation();
+      this.prevSlide();
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault();
+      this.nextSlide();
+    }
+  }
+
+  goToSlide(index) {
+    if (!this.data?.slideImages || !this.data.slideImages.length) return;
+    const total = this.data.slideImages.length;
+    if (index < 0 || index >= total) return;
+    this.currentSlideIndex = index;
+
+    const img = this.container.querySelector('#ssActiveSlideImg');
+    if (img) {
+      img.src = this.data.slideImages[index];
+      img.alt = `Slide ${index + 1}`;
+    }
+
+    const counter = this.container.querySelector('#ssSlideCounter');
+    if (counter) {
+      counter.textContent = `Trang ${index + 1} / ${total}`;
+    }
+
+    const thumbs = this.container.querySelectorAll('.ss-thumb-btn');
+    thumbs.forEach((thumb, idx) => {
+      if (idx === index) {
+        thumb.className = 'ss-thumb-btn relative shrink-0 w-24 sm:w-28 aspect-video rounded-xl overflow-hidden border-2 transition-all cursor-pointer border-sky-500 ring-2 ring-sky-500/30 scale-[1.03] shadow-md opacity-100';
+        thumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      } else {
+        thumb.className = 'ss-thumb-btn relative shrink-0 w-24 sm:w-28 aspect-video rounded-xl overflow-hidden border-2 transition-all cursor-pointer border-transparent hover:border-zinc-400 opacity-60 hover:opacity-100';
+      }
+    });
+  }
+
+  prevSlide() {
+    if (!this.data?.slideImages?.length) return;
+    const total = this.data.slideImages.length;
+    const nextIdx = this.currentSlideIndex > 0 ? this.currentSlideIndex - 1 : total - 1;
+    this.goToSlide(nextIdx);
+  }
+
+  nextSlide() {
+    if (!this.data?.slideImages?.length) return;
+    const total = this.data.slideImages.length;
+    const nextIdx = this.currentSlideIndex < total - 1 ? this.currentSlideIndex + 1 : 0;
+    this.goToSlide(nextIdx);
+  }
+
+  toggleFullscreen() {
+    const stage = this.container.querySelector('#ssPresentationStage');
+    if (!stage) return;
+    if (!document.fullscreenElement) {
+      stage.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
     }
   }
 
   async handleClick(e) {
+    const prevSlideBtn = e.target.closest('#btnPrevSlide');
+    if (prevSlideBtn) {
+      e.preventDefault();
+      this.prevSlide();
+      return;
+    }
+
+    const nextSlideBtn = e.target.closest('#btnNextSlide');
+    if (nextSlideBtn) {
+      e.preventDefault();
+      this.nextSlide();
+      return;
+    }
+
+    const fullscreenBtn = e.target.closest('#btnFullscreenSlide');
+    if (fullscreenBtn) {
+      e.preventDefault();
+      this.toggleFullscreen();
+      return;
+    }
+
+    const thumbBtn = e.target.closest('.ss-thumb-btn');
+    if (thumbBtn) {
+      e.preventDefault();
+      const idx = parseInt(thumbBtn.dataset.slideIndex, 10);
+      if (!isNaN(idx)) this.goToSlide(idx);
+      return;
+    }
+
+    const downloadPptxBtn = e.target.closest('#btnDownloadSsPptx');
+    if (downloadPptxBtn) {
+      e.preventDefault();
+      this.downloadPptxDirect();
+      return;
+    }
+
+    const downloadPdfBtn = e.target.closest('#btnDownloadSsPdf') || e.target.closest('#btnDownloadSs');
+    if (downloadPdfBtn) {
+      e.preventDefault();
+      this.downloadPdfDirect();
+      return;
+    }
+
     const pasteBtn = e.target.closest('#btnPasteSsUrl');
     if (pasteBtn) {
       e.preventDefault();
@@ -242,13 +353,6 @@ export class SlideshareWorkspace {
       this.saveToDrive();
       return;
     }
-
-    const downloadBtn = e.target.closest('#btnDownloadSs');
-    if (downloadBtn) {
-      e.preventDefault();
-      this.downloadPdfDirect();
-      return;
-    }
   }
 
   updateInputActions() {
@@ -276,6 +380,9 @@ export class SlideshareWorkspace {
     this.data = null;
     this.savedDrivePath = null;
     this.savedFileName = null;
+    this.savedPptxDrivePath = null;
+    this.savedPptxFileName = null;
+    this.currentSlideIndex = 0;
     this.renderResultArea();
     soundEngine?.play?.('start');
 
@@ -308,6 +415,8 @@ export class SlideshareWorkspace {
         if (dup?.exists) {
           this.savedDrivePath = dup.drivePath;
           this.savedFileName = dup.fileName;
+          this.savedPptxDrivePath = dup.pptxDrivePath || null;
+          this.savedPptxFileName = dup.pptxFileName || null;
         }
       } catch (_) {}
 
@@ -358,19 +467,21 @@ export class SlideshareWorkspace {
 
       this.savedDrivePath = result.drivePath;
       this.savedFileName = result.fileName;
+      this.savedPptxDrivePath = result.pptxDrivePath || null;
+      this.savedPptxFileName = result.pptxFileName || null;
       this.savingToDrive = false;
       taskCoordinator.updateTask(taskId, { status: 'completed', progress: 100 });
       soundEngine?.play?.('bell');
       if (!options.silent) {
-        showToast('Đã lưu tài liệu SlideShare vào Studio Drive (/slideshare)!', 'success');
+        showToast('Đã lưu bài thuyết trình vào Studio Drive (/slideshare)!', 'success');
       }
 
-      // Add to media history
+      // Add PDF to media history
       await storage.addHistoryItem({
-        id: `ss_${this.data.id}_${Date.now()}`,
+        id: `ss_pdf_${this.data.id}_${Date.now()}`,
         toolId: 'slideshare-downloader',
         toolTitle: 'SlideShare Downloader',
-        title: this.data.title,
+        title: `${this.data.title} (PDF)`,
         fileName: result.fileName,
         fileSize: result.size,
         resultSize: result.size,
@@ -381,6 +492,25 @@ export class SlideshareWorkspace {
         sourceUrl: this.data.originalUrl,
         timestamp: Date.now()
       });
+
+      // Add PPTX to media history if compiled
+      if (result.pptxDrivePath) {
+        await storage.addHistoryItem({
+          id: `ss_pptx_${this.data.id}_${Date.now()}`,
+          toolId: 'slideshare-downloader',
+          toolTitle: 'SlideShare Downloader',
+          title: `${this.data.title} (PPTX)`,
+          fileName: result.pptxFileName || `${this.data.title}.pptx`,
+          fileSize: result.pptxSize || result.size,
+          resultSize: result.pptxSize || result.size,
+          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          driveRelPath: result.pptxDrivePath,
+          thumbnail: this.data.coverUrl,
+          cover: this.data.coverUrl,
+          sourceUrl: this.data.originalUrl,
+          timestamp: Date.now()
+        });
+      }
 
       this.renderResultArea();
       this.renderHistory();
@@ -443,9 +573,56 @@ export class SlideshareWorkspace {
     });
   }
 
+  async downloadPptxDirect() {
+    if (!this.data) return;
+    if (!this.savedPptxDrivePath) {
+      showToast('Đang tạo và đóng gói tệp PowerPoint (.pptx)...', 'info');
+      try {
+        await this.saveToDrive({ silent: true });
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (this.savedPptxDrivePath) {
+      const dlUrl = `/api/v1/storage/file?path=${encodeURIComponent(this.savedPptxDrivePath)}&download=true`;
+      const link = document.createElement('a');
+      link.href = dlUrl;
+      link.download = this.savedPptxFileName || `${this.data.title || 'SlideShare'}.pptx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      soundEngine?.play?.('success');
+      showToast('Đang tải tệp PowerPoint (.pptx) về máy...', 'success');
+    } else {
+      showToast('Không thể tạo tệp PowerPoint (.pptx)', 'error');
+    }
+  }
+
   async downloadPdfDirect() {
     if (!this.data) return;
-    await this.saveToDrive();
+    if (!this.savedDrivePath) {
+      showToast('Đang tạo và đóng gói tệp PDF...', 'info');
+      try {
+        await this.saveToDrive({ silent: true });
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (this.savedDrivePath) {
+      const dlUrl = `/api/v1/storage/file?path=${encodeURIComponent(this.savedDrivePath)}&download=true`;
+      const link = document.createElement('a');
+      link.href = dlUrl;
+      link.download = this.savedFileName || `${this.data.title || 'SlideShare'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      soundEngine?.play?.('success');
+      showToast('Đang tải tệp PDF về máy...', 'success');
+    } else {
+      showToast('Không thể tạo tệp PDF', 'error');
+    }
   }
 
   renderResultArea() {
@@ -486,6 +663,9 @@ export class SlideshareWorkspace {
 
     const { title, author, description, coverUrl, slideCount } = this.data;
     const isSaved = Boolean(this.savedDrivePath);
+    const slideImages = Array.isArray(this.data.slideImages) ? this.data.slideImages : [];
+    const hasSlides = slideImages.length > 0;
+    const totalSlides = hasSlides ? slideImages.length : (slideCount || 1);
 
     el.innerHTML = `
       <div class="linear-card p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#121216] shadow-xl space-y-5 animate-fadeIn">
@@ -494,14 +674,20 @@ export class SlideshareWorkspace {
             <div class="relative w-full sm:w-44 h-48 sm:h-32 shrink-0 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-white/5">
               <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" />
               <div class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[11px] font-mono font-bold text-white">
-                ${slideCount} trang
+                ${totalSlides} slide
               </div>
             </div>
           ` : ''}
           <div class="space-y-2 flex-1 min-w-0">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-              <i data-lucide="presentation" class="w-3 h-3"></i>
-              <span>SlideShare Presentation</span>
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                <i data-lucide="presentation" class="w-3 h-3"></i>
+                <span>SlideShare Presentation</span>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+                <span>PPTX & PDF</span>
+              </span>
             </div>
             <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2">${escapeHtml(title)}</h2>
             <p class="text-xs text-zinc-500 dark:text-zinc-400">Tác giả: <strong class="text-zinc-700 dark:text-zinc-300">${escapeHtml(author)}</strong></p>
@@ -509,13 +695,73 @@ export class SlideshareWorkspace {
           </div>
         </div>
 
-        <div class="pt-2 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center gap-3">
-          <button id="btnSaveSsDrive" ${this.savingToDrive ? 'disabled' : ''} class="flex-1 min-h-[44px] px-5 py-2.5 rounded-2xl ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#0077B5] hover:bg-[#0284C7]'} active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
-            ${this.savingToDrive ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang xử lý & Lưu...</span>' : isSaved ? '<i data-lucide="check" class="w-4 h-4"></i><span>Đã lưu vào Studio Drive</span>' : '<i data-lucide="hard-drive" class="w-4 h-4"></i><span>Lưu vào Studio Drive</span>'}
+        <!-- Trình xem Slide trực tiếp trong module -->
+        ${hasSlides ? `
+          <div class="space-y-3 pt-2">
+            <div class="flex items-center justify-between gap-2 px-1">
+              <div class="flex items-center gap-2">
+                <i data-lucide="monitor-play" class="w-4 h-4 text-sky-500"></i>
+                <span class="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">Trình xem Slide trực tiếp</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="ssSlideCounter" class="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10">
+                  Trang ${this.currentSlideIndex + 1} / ${totalSlides}
+                </span>
+                <button id="btnFullscreenSlide" class="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition cursor-pointer" title="Toàn màn hình">
+                  <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Stage -->
+            <div id="ssPresentationStage" class="relative w-full aspect-video rounded-2xl overflow-hidden bg-zinc-950 flex items-center justify-center border border-zinc-800 shadow-2xl group select-none">
+              <img id="ssActiveSlideImg" src="${escapeHtml(slideImages[this.currentSlideIndex] || coverUrl || '')}" alt="Slide ${this.currentSlideIndex + 1}" class="max-w-full max-h-full object-contain transition-opacity duration-200" />
+              
+              <!-- Floating Navigation Controls -->
+              <button id="btnPrevSlide" class="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 active:scale-95 text-white backdrop-blur-md border border-white/20 transition flex items-center justify-center opacity-80 group-hover:opacity-100 cursor-pointer shadow-lg z-10" title="Slide trước (←)">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+              </button>
+              <button id="btnNextSlide" class="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 active:scale-95 text-white backdrop-blur-md border border-white/20 transition flex items-center justify-center opacity-80 group-hover:opacity-100 cursor-pointer shadow-lg z-10" title="Slide sau (→)">
+                <i data-lucide="chevron-right" class="w-6 h-6"></i>
+              </button>
+            </div>
+
+            <!-- Slide Thumbnails Strip -->
+            <div id="ssThumbStrip" class="flex gap-2 overflow-x-auto p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 scrollbar-thin">
+              ${slideImages.map((img, idx) => `
+                <button class="ss-thumb-btn relative shrink-0 w-24 sm:w-28 aspect-video rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${idx === this.currentSlideIndex ? 'border-sky-500 ring-2 ring-sky-500/30 scale-[1.03] shadow-md opacity-100' : 'border-transparent hover:border-zinc-400 opacity-60 hover:opacity-100'}" data-slide-index="${idx}">
+                  <img src="${escapeHtml(img)}" class="w-full h-full object-cover" loading="lazy" />
+                  <span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-mono font-bold text-white leading-none">
+                    ${idx + 1}
+                  </span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="pt-3 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center gap-3">
+          <!-- Tải PPTX (Bản gốc) -->
+          <button id="btnDownloadSsPptx" class="min-h-[44px] px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>Tải bản PPTX</span>
           </button>
+
+          <!-- Tải PDF -->
+          <button id="btnDownloadSsPdf" class="min-h-[44px] px-5 py-2.5 rounded-2xl bg-[#0077B5] hover:bg-[#0284C7] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-sky-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <span>Tải bản PDF</span>
+          </button>
+
+          <!-- Lưu Drive -->
+          <button id="btnSaveSsDrive" ${this.savingToDrive ? 'disabled' : ''} class="min-h-[44px] px-5 py-2.5 rounded-2xl ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600'} active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
+            ${this.savingToDrive ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang đóng gói...</span>' : isSaved ? '<i data-lucide="check" class="w-4 h-4"></i><span>Đã lưu vào Drive</span>' : '<i data-lucide="hard-drive" class="w-4 h-4"></i><span>Lưu cả PPTX & PDF</span>'}
+          </button>
+
+          <!-- Xem PDF trong Viewer -->
           <button id="btnPreviewSs" class="min-h-[44px] px-4 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
             <i data-lucide="eye" class="w-4 h-4"></i>
-            <span>Xem trước</span>
+            <span>Xem PDF Viewer</span>
           </button>
         </div>
       </div>
@@ -542,13 +788,13 @@ export class SlideshareWorkspace {
       },
       onPreview: (item) => {
         const path = item.driveRelPath || undefined;
+        const isPptx = (item.fileName || '').toLowerCase().endsWith('.pptx');
         ViewerConnector.preview({
           name: item.fileName,
           fileName: item.fileName,
           path,
           driveRelPath: path,
-          category: 'pdf',
-          mimeType: 'application/pdf',
+          mimeType: isPptx ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation' : (item.mimeType || 'application/pdf'),
           viewUrl: path ? `/api/v1/storage/file?path=${encodeURIComponent(path)}` : (item.sourceUrl || ''),
           downloadUrl: path ? `/api/v1/storage/file?path=${encodeURIComponent(path)}&download=true` : undefined
         });

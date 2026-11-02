@@ -48,6 +48,19 @@ function resolveSlidesToPdfEngine(): string {
   return candidates[0];
 }
 
+function resolveSlidesToPptxEngine(): string {
+  const candidates = [
+    path.resolve(process.cwd(), 'engines/document/slides_to_pptx.py'),
+    path.resolve(process.cwd(), '../engines/document/slides_to_pptx.py'),
+    path.resolve(process.cwd(), '../../engines/document/slides_to_pptx.py'),
+    '/home/anhduy/dd-studio/engines/document/slides_to_pptx.py'
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
 export interface SlideShareResolveResult {
   id: string;
   title: string;
@@ -219,7 +232,14 @@ export class SlideShareService {
     cover?: string,
     author?: string,
     overwrite?: boolean
-  ): Promise<{ drivePath: string; fileName: string; size: number }> {
+  ): Promise<{
+    drivePath: string;
+    fileName: string;
+    size: number;
+    pptxDrivePath?: string;
+    pptxFileName?: string;
+    pptxSize?: number;
+  }> {
     const driveDir = path.join(resolvedStoragePaths.drive, 'slideshare');
     await fsPromises.mkdir(driveDir, { recursive: true });
 
@@ -227,15 +247,23 @@ export class SlideShareService {
       .replace(/[<>:"/\\|?*]/g, '_')
       .trim()
       .slice(0, 80);
-    const fileName = `[SlideShare]_${cleanTitle}_${id.slice(-8)}.pdf`;
-    const targetPath = path.join(driveDir, fileName);
+    const pdfFileName = `[SlideShare]_${cleanTitle}_${id.slice(-8)}.pdf`;
+    const pptxFileName = `[SlideShare]_${cleanTitle}_${id.slice(-8)}.pptx`;
+    const targetPdfPath = path.join(driveDir, pdfFileName);
+    const targetPptxPath = path.join(driveDir, pptxFileName);
 
-    if (overwrite && fs.existsSync(targetPath)) {
-      await StorageManager.unlinkSafe(targetPath);
-      await StorageManager.unlinkSafe(targetPath.replace(/\.pdf$/, '.meta.json'));
+    if (overwrite) {
+      if (fs.existsSync(targetPdfPath)) {
+        await StorageManager.unlinkSafe(targetPdfPath);
+        await StorageManager.unlinkSafe(targetPdfPath.replace(/\.pdf$/, '.meta.json'));
+      }
+      if (fs.existsSync(targetPptxPath)) {
+        await StorageManager.unlinkSafe(targetPptxPath);
+        await StorageManager.unlinkSafe(targetPptxPath.replace(/\.pptx$/, '.meta.json'));
+      }
     }
 
-    // Resolve slide images to compile PDF
+    // Resolve slide images to compile PDF & PPTX
     const resolved = await this.resolvePresentation(originalUrl || url);
     const tempDir = path.join(resolvedStoragePaths.temp, `slideshare_${Date.now()}_${id}`);
     await fsPromises.mkdir(tempDir, { recursive: true });
@@ -269,48 +297,49 @@ export class SlideShareService {
       downloadedImages.sort();
 
       if (downloadedImages.length === 0) {
-        throw new BadRequestError('Không thể tải các trang slide để ghép thành tệp PDF.');
+        throw new BadRequestError('Không thể tải các trang slide để ghép thành tệp PDF / PPTX.');
       }
 
-      // Compile to PDF using Python PyMuPDF engine
       const manifestPath = path.join(tempDir, 'images.json');
       await fsPromises.writeFile(manifestPath, JSON.stringify(downloadedImages), 'utf8');
 
-      const engineScript = resolveSlidesToPdfEngine();
       const pyCmd = resolvePythonBin();
 
+      // 1. Compile to PDF using PyMuPDF / Pillow
+      const pdfEngineScript = resolveSlidesToPdfEngine();
       await execFileAsync(pyCmd, [
-        engineScript,
+        pdfEngineScript,
         '--images-json', manifestPath,
-        '--output', targetPath,
+        '--output', targetPdfPath,
         '--title', title || resolved.title
       ]);
 
-      const stat = await fsPromises.stat(targetPath);
+      const pdfStat = await fsPromises.stat(targetPdfPath);
 
-      // Write .meta.json sidecar
-      const metadata = {
+      // Write PDF .meta.json sidecar
+      const pdfMetadata = {
         toolId: 'slideshare-downloader',
         id,
         title,
+        format: 'pdf',
         author: author || resolved.author,
         originalUrl: originalUrl || url,
         slideCount: downloadedImages.length,
         thumbnail: cover || resolved.coverUrl,
         savedAt: new Date().toISOString()
       };
-      await fsPromises.writeFile(targetPath.replace(/\.pdf$/, '.meta.json'), JSON.stringify(metadata, null, 2), 'utf8');
+      await fsPromises.writeFile(targetPdfPath.replace(/\.pdf$/, '.meta.json'), JSON.stringify(pdfMetadata, null, 2), 'utf8');
 
-      // Register file in Prisma
+      // Register PDF in Prisma
       try {
         await prisma.fileRecord.create({
           data: {
             id: crypto.randomUUID(),
             purpose: 'PROCESSED',
-            originalName: fileName,
-            storagePath: targetPath,
+            originalName: pdfFileName,
+            storagePath: targetPdfPath,
             mimeType: 'application/pdf',
-            sizeBytes: BigInt(stat.size),
+            sizeBytes: BigInt(pdfStat.size),
             hashSha256: crypto.createHash('sha256').update(String(id)).digest('hex'),
             isPurged: false,
             expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
@@ -318,10 +347,66 @@ export class SlideShareService {
         });
       } catch (_) {}
 
+      // 2. Compile to genuine PowerPoint (.pptx) using python-pptx
+      let pptxDrivePath: string | undefined = undefined;
+      let pptxSize: number | undefined = undefined;
+
+      try {
+        const pptxEngineScript = resolveSlidesToPptxEngine();
+        await execFileAsync(pyCmd, [
+          pptxEngineScript,
+          '--images-json', manifestPath,
+          '--output', targetPptxPath,
+          '--title', title || resolved.title
+        ]);
+
+        if (fs.existsSync(targetPptxPath)) {
+          const pptxStat = await fsPromises.stat(targetPptxPath);
+          pptxDrivePath = `/slideshare/${pptxFileName}`;
+          pptxSize = pptxStat.size;
+
+          // Write PPTX .meta.json sidecar
+          const pptxMetadata = {
+            toolId: 'slideshare-downloader',
+            id,
+            title,
+            format: 'pptx',
+            author: author || resolved.author,
+            originalUrl: originalUrl || url,
+            slideCount: downloadedImages.length,
+            thumbnail: cover || resolved.coverUrl,
+            savedAt: new Date().toISOString()
+          };
+          await fsPromises.writeFile(targetPptxPath.replace(/\.pptx$/, '.meta.json'), JSON.stringify(pptxMetadata, null, 2), 'utf8');
+
+          // Register PPTX in Prisma
+          try {
+            await prisma.fileRecord.create({
+              data: {
+                id: crypto.randomUUID(),
+                purpose: 'PROCESSED',
+                originalName: pptxFileName,
+                storagePath: targetPptxPath,
+                mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                sizeBytes: BigInt(pptxStat.size),
+                hashSha256: crypto.createHash('sha256').update(String(id) + '_pptx').digest('hex'),
+                isPurged: false,
+                expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              }
+            });
+          } catch (_) {}
+        }
+      } catch (err: any) {
+        logger.warn({ err }, '[SlideShareService] Non-critical PPTX compilation warning');
+      }
+
       return {
-        drivePath: `/slideshare/${fileName}`,
-        fileName,
-        size: stat.size
+        drivePath: `/slideshare/${pdfFileName}`,
+        fileName: pdfFileName,
+        size: pdfStat.size,
+        pptxDrivePath,
+        pptxFileName: pptxDrivePath ? pptxFileName : undefined,
+        pptxSize
       };
     } finally {
       // Clean up temp images
@@ -329,18 +414,27 @@ export class SlideShareService {
     }
   }
 
-  static async checkExistingInDrive(id: string, url?: string): Promise<{ exists: boolean; drivePath?: string; fileName?: string }> {
+  static async checkExistingInDrive(id: string, url?: string): Promise<{
+    exists: boolean;
+    drivePath?: string;
+    fileName?: string;
+    pptxDrivePath?: string;
+    pptxFileName?: string;
+  }> {
     const driveDir = path.join(resolvedStoragePaths.drive, 'slideshare');
     if (!fs.existsSync(driveDir)) return { exists: false };
 
     const files = await fsPromises.readdir(driveDir);
-    const targetFile = files.find(f => f.endsWith('.pdf') && f.includes(id.slice(-8)));
+    const pdfFile = files.find(f => f.endsWith('.pdf') && f.includes(id.slice(-8)));
+    const pptxFile = files.find(f => f.endsWith('.pptx') && f.includes(id.slice(-8)));
 
-    if (targetFile) {
+    if (pdfFile || pptxFile) {
       return {
         exists: true,
-        drivePath: `/slideshare/${targetFile}`,
-        fileName: targetFile
+        drivePath: pdfFile ? `/slideshare/${pdfFile}` : (pptxFile ? `/slideshare/${pptxFile}` : undefined),
+        fileName: pdfFile || pptxFile,
+        pptxDrivePath: pptxFile ? `/slideshare/${pptxFile}` : undefined,
+        pptxFileName: pptxFile
       };
     }
 

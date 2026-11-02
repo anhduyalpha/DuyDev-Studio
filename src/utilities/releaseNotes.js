@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.47': {
+    version: 'v24.47',
+    title: 'Bản cập nhật v24.47: Hỗ Trợ Tải Bản Gốc PPTX & Trình Xem Trình Chiếu Trực Tiếp',
+    date: '02/11/2026',
+    features: [
+      'Tải Bản Gốc PowerPoint (.pptx): Tự động tổng hợp và đóng gói các trang slide thành tệp trình chiếu PowerPoint (.pptx) chuẩn 16:9 widescreen sắc nét, cho phép tải về máy chỉ với 1 lần bấm',
+      'Trình Xem Trình Chiếu Trực Tiếp Trong Module: Tích hợp sân khấu trình chiếu trực quan ngay trong SlideShare Workspace, hỗ trợ chuyển slide bằng phím mũi tên, phóng to toàn màn hình và thanh thumbnail chọn slide tức thì',
+      'Đóng Gói Kép Cả PPTX & PDF Vào Drive: Tự động lưu cả hai định dạng vào Studio Drive (/slideshare) và đồng bộ vào lịch sử tải xuống'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Xem Trước & Tải Về: Chuẩn hóa quyền truy cập tệp bộ công cụ cho phép xem trước và tải tệp mượt mà không gặp lỗi fetch'
+    ]
+  },
   'v24.46': {
     version: 'v24.46',
     title: 'Bản cập nhật v24.46: Tự Động Phân Tích Ngay Khi Dán Liên Kết',
