@@ -339,7 +339,7 @@ export const CARD_TIERS = Object.freeze({
     id: 'S',
     code: 'S',
     name: 'Royal Amethyst',
-    titleVi: 'Siêu việt',
+    titleVi: 'Tử Kim Siêu Việt',
     level: 6,
     className: 'tier-s',
     badgeText: 'S · MASTER',

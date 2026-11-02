@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.43': {
+    version: 'v24.43',
+    title: 'Bản cập nhật v24.43: Chuẩn Hóa Khung Viền Thẻ Cấp Độ S Khớp Tuyệt Đối Bản Mẫu',
+    date: '02/11/2026',
+    features: [
+      'Đồng Bộ Thẩm Mỹ Khung Viền Tier S: Chuẩn hóa 100% chi tiết huy hiệu Tử Kim Siêu Việt, bổ sung dòng định danh cấp bậc Master thanh lịch dưới tên công cụ',
+      'Loại Bỏ Hiệu Ứng Thừa & Sai Lệch: Xóa bỏ nút tròn mũi tên thừa ở góc trên bên phải, triệt tiêu hiệu ứng chớp lóa/pulse làm lệch vị trí các viên ngọc rune trên viền thẻ'
+    ],
+    fixes: [
+      'Bảo Toàn Màu Sắc Ngọc Rune Tử Kim: Ngăn chặn màu accent công cụ ghi đè làm đổi màu xanh ngọc rune; khôi phục bảng màu đá quý hoàng gia tím vàng tĩnh chuẩn mẫu',
+      'Đồng Nhất Nút Mở & Hộp Biểu Tượng: Nút hành động Mở và hộp biểu tượng công cụ sử dụng gradient tím vàng hoàng gia chuẩn RPG Tier S'
+    ]
+  },
   'v24.42': {
     version: 'v24.42',
     title: 'Bản cập nhật v24.42: Khắc Phục Triệt Để Tràn Viền UI Module Scribd Downloader',

@@ -18,6 +18,19 @@ const CATEGORY_LABELS = {
   advanced: 'Nâng cao'
 };
 
+const TIER_SUBTITLES = {
+  E: { text: 'Novice • Khởi Nguyên Sắc Đá', color: 'text-zinc-500 dark:text-zinc-400' },
+  D: { text: 'Apprentice • Tân Thủ Thanh Đồng', color: 'text-sky-600 dark:text-sky-400' },
+  C: { text: 'Adept • Bạch Ngân Tinh Anh', color: 'text-emerald-600 dark:text-emerald-400' },
+  B: { text: 'Elite • Hoàng Kim Cao Cấp', color: 'text-blue-600 dark:text-blue-400' },
+  A: { text: 'Expert • Lam Ngọc Huyền Bí', color: 'text-amber-600 dark:text-amber-400' },
+  S: { text: 'Master • Tử Kim Siêu Việt', color: 'text-purple-600 dark:text-purple-400' },
+  SS: { text: 'Grandmaster • Huyết Ma Đại Cao Thủ', color: 'text-rose-600 dark:text-rose-400' },
+  UR: { text: 'Ultra Rare • Thần Thoại Lăng Kính', color: 'text-pink-600 dark:text-pink-400' },
+  LR: { text: 'Legendary • Thái Dương Truyền Thuyết', color: 'text-amber-500 dark:text-amber-400' },
+  EX: { text: 'Transcendent • Hư Không Tối Thượng', color: 'text-cyan-600 dark:text-cyan-400' }
+};
+
 export function renderToolCard(tool) {
   const accent = tool.color || '#6366F1';
   const categoryLabel = CATEGORY_LABELS[tool.category] || tool.category;
@@ -41,6 +54,7 @@ export function renderToolCard(tool) {
   const contrastColor = contrastMap[accent] || accent;
 
   const tierConfig = tool.tier ? getCardTierConfig(tool.tier) : null;
+  const tierSubtitle = tierConfig ? (TIER_SUBTITLES[tierConfig.code] || { text: `${tierConfig.name} • ${tierConfig.titleVi}`, color: 'text-zinc-500 dark:text-zinc-400' }) : null;
   const tierCardClass = tierConfig ? ` tier-card ${tierConfig.className}` : '';
   const tierBadgeHtml = tierConfig ? `
     <div class="tier-crest-badge shadow-xs shrink-0" title="${tierConfig.name} - ${tierConfig.titleVi}">
@@ -61,14 +75,16 @@ export function renderToolCard(tool) {
       
       ${tierOrnamentsHtml}
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
-      
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+      ${!tierConfig ? `
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      ` : ''}
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -81,9 +97,11 @@ export function renderToolCard(tool) {
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             ${tierBadgeHtml}
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
+            ${!tierConfig ? `
+              <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -91,6 +109,11 @@ export function renderToolCard(tool) {
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="${tool.title}">
           ${tool.title}
         </h3>
+        ${tierSubtitle ? `
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 ${tierSubtitle.color}">
+            ${tierSubtitle.text}
+          </p>
+        ` : ''}
         <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           ${tool.description}
         </p>
