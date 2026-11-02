@@ -82,6 +82,20 @@ export function validateScribdUrlOrId(raw) {
   return { valid: true, candidate };
 }
 
+export function formatScribdDisplayTitle(raw) {
+  if (!raw || typeof raw !== 'string') return 'Tài liệu Scribd';
+  let str = raw.trim();
+  try {
+    str = decodeURIComponent(str);
+  } catch {}
+  const match = str.match(/(?:document|doc|presentation|embeds|d)\/\d+(?:\/([^/?#]+))?/i);
+  if (match && match[1]) {
+    const slug = match[1].replace(/[-_]+/g, ' ').trim();
+    if (slug) return slug;
+  }
+  return str;
+}
+
 class ScribdManager {
   constructor() {
     this.moduleId = 'scribd-archiver';
@@ -331,7 +345,7 @@ class ScribdManager {
       this.progress = 5;
       this.stepLabel = 'Đang kết nối máy chủ xử lý...';
       this.logs = [`🚀 Đang xử lý liên kết: ${candidate}`];
-      this.currentDocTitle = 'Tài liệu Scribd ' + candidate;
+      this.currentDocTitle = formatScribdDisplayTitle(candidate);
       this.startTimer();
       this.startThinkingOrbs();
       this.notify();
@@ -568,7 +582,7 @@ class ScribdManager {
       this.isDownloading = true;
       this.hasError = false;
       this.currentJobId = jobId;
-      this.currentDocTitle = 'Tài liệu ' + (url || jobId);
+      this.currentDocTitle = formatScribdDisplayTitle(url || jobId);
       this.jobStartTime = startTime || Date.now();
       this.progress = typeof data.progress === 'number' ? data.progress : 20;
       this.stepLabel = data.step_label || 'Đang tiếp tục theo dõi tiến trình...';

@@ -5,40 +5,46 @@
  * dynamic ID preview, and seamless loading transformation.
  */
 
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+}
+
 export function renderHeroPasteCard(state) {
   const isDownloading = Boolean(state.isDownloading);
 
   if (isDownloading) {
     return `
-      <div class="scribd-command-deck is-processing flex flex-col gap-4 relative overflow-hidden select-none">
+      <div class="scribd-command-deck is-processing flex flex-col gap-4 relative overflow-hidden select-none w-full min-w-0">
         <!-- Deck Header Row (Left-Aligned Editorial Header + Active Status) -->
-        <div class="flex items-center gap-3 pt-0.5">
+        <div class="flex items-center gap-3 pt-0.5 min-w-0">
           <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
             <i data-lucide="book-open" class="w-5 h-5"></i>
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <h2 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 Scribd Downloader
               </h2>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-[#EA580C] dark:text-orange-400 border border-orange-500/30 animate-pulse">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-[#EA580C] dark:text-orange-400 border border-orange-500/30 animate-pulse shrink-0">
                 ĐANG XỬ LÝ
               </span>
             </div>
-            <p id="scribdHeroDocTitle" class="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-md">
-              ${state.currentDocTitle || 'Đang tải tài liệu Scribd...'}
+            <p id="scribdHeroDocTitle" class="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-full" title="${escapeHtml(state.currentDocTitle || '')}">
+              ${escapeHtml(state.currentDocTitle || 'Đang tải tài liệu Scribd...')}
             </p>
           </div>
         </div>
 
         <!-- Recessed Bar in Processing State with Spinner & Integrated Cancel Button -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          <div class="scribd-input-bar flex-1 flex items-center gap-2 px-3.5 py-2 min-h-[48px]">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full min-w-0">
+          <div class="scribd-input-bar flex-1 flex items-center gap-2 px-3.5 py-2 min-h-[48px] min-w-0 overflow-hidden">
             <span id="scribdIdBadge" class="scribd-id-badge active shrink-0">
               ${state.currentJobId ? `ID #${state.currentJobId.slice(0, 8)}` : '#ID'}
             </span>
-            <div class="flex-1 text-xs sm:text-sm font-mono text-zinc-700 dark:text-zinc-300 truncate min-w-0">
-              ${state.currentDocTitle || 'Tiến trình xuất PDF đang hoạt động...'}
+            <div id="scribdProcessingDocTitle" class="flex-1 text-xs sm:text-sm font-mono text-zinc-700 dark:text-zinc-300 truncate min-w-0" title="${escapeHtml(state.currentDocTitle || '')}">
+              ${escapeHtml(state.currentDocTitle || 'Tiến trình xuất PDF đang hoạt động...')}
             </div>
           </div>
           <!-- Integrated Action Buttons: "Đang xử lý..." Alongside "Hủy" Button -->
@@ -66,13 +72,13 @@ export function renderHeroPasteCard(state) {
   }
 
   return `
-    <div class="scribd-command-deck flex flex-col gap-4 relative overflow-hidden">
+    <div class="scribd-command-deck flex flex-col gap-4 relative overflow-hidden w-full min-w-0">
       <!-- Deck Header Row (Sculpted Icon Tile + Editorial Title & Subtitle) -->
-      <div class="flex items-center gap-3 pt-0.5">
+      <div class="flex items-center gap-3 pt-0.5 min-w-0">
         <div class="w-[42px] h-[42px] rounded-xl bg-orange-500/10 dark:bg-orange-500/15 border border-orange-500/25 flex items-center justify-center shrink-0 text-[#EA580C] dark:text-orange-400 shadow-2xs">
           <i data-lucide="book-open" class="w-5 h-5"></i>
         </div>
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
           <h2 class="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
             Scribd Downloader
           </h2>
@@ -83,9 +89,9 @@ export function renderHeroPasteCard(state) {
       </div>
 
       <!-- Unified Stitch Command Omnibar: Stacked on Mobile (< 640px), Inline on Desktop (>= 640px) -->
-      <form id="scribdDownloadForm" class="m-0 p-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5" onsubmit="event.preventDefault(); return false;">
+      <form id="scribdDownloadForm" class="m-0 p-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full min-w-0" onsubmit="event.preventDefault(); return false;">
         <!-- Row 1: Full-Width Clean Input Bar (Height: 48px) -->
-        <div class="scribd-input-bar flex-1 flex items-center min-w-0">
+        <div class="scribd-input-bar flex-1 flex items-center min-w-0 overflow-hidden">
           <i data-lucide="link-2" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0 mr-2"></i>
 
           <!-- Dynamic ID Badge: Only shown if valid ID detected -->

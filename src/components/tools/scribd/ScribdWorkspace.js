@@ -399,6 +399,16 @@ export function attachScribdListeners() {
       const heroDocTitleEl = document.getElementById('scribdHeroDocTitle');
       if (heroDocTitleEl && state.currentDocTitle && heroDocTitleEl.textContent !== state.currentDocTitle) {
         heroDocTitleEl.textContent = state.currentDocTitle;
+        heroDocTitleEl.setAttribute('title', state.currentDocTitle);
+      }
+      const procDocTitleEl = document.getElementById('scribdProcessingDocTitle');
+      if (procDocTitleEl && state.currentDocTitle && procDocTitleEl.textContent !== state.currentDocTitle) {
+        procDocTitleEl.textContent = state.currentDocTitle;
+        procDocTitleEl.setAttribute('title', state.currentDocTitle);
+      }
+      const idBadge = document.getElementById('scribdIdBadge');
+      if (idBadge && state.currentJobId) {
+        idBadge.textContent = `ID #${state.currentJobId.slice(0, 8)}`;
       }
     }
 

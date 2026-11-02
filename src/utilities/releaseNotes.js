@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.42': {
+    version: 'v24.42',
+    title: 'Bản cập nhật v24.42: Khắc Phục Triệt Để Tràn Viền UI Module Scribd Downloader',
+    date: '02/11/2026',
+    features: [
+      'Giao Diện Tải Tài Liệu Scribd Co Giãn Linh Hoạt: Chuẩn hóa bộ khung flexbox với min-w-0 và overflow-hidden trên toàn bộ thanh nhập lệnh và thanh trạng thái tiến trình',
+      'Định Dạng Tiêu Đề Tài Liệu Tự Động: Tự động giải mã URL encoding và trích xuất tên tài liệu thân thiện thay vì hiển thị chuỗi ký tự mã hóa thô'
+    ],
+    fixes: [
+      'Ngăn Chặn Tràn Viền Ngang (Horizontal Overflow): Khắc phục lỗi thanh #ID bị phình to làm đẩy văng cụm nút Hủy / Đang xử lý ra khỏi thẻ thẻ lệnh Scribd'
+    ]
+  },
   'v24.41': {
     version: 'v24.41',
     title: 'Bản cập nhật v24.41: Ra Mắt Bộ 3 Tiện Ích Học Thuật Tier S (SlideShare, Academia, ResearchGate)',

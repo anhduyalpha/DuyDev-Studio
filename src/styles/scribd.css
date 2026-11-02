@@ -30,6 +30,9 @@ html.dark #scribdWorkspaceRoot,
   border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
   padding: 22px 18px;
   overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   box-shadow: 0 4px 20px -2px rgba(234, 88, 12, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -72,6 +75,9 @@ html.dark .scribd-command-deck,
   height: 48px;
   min-height: 48px;
   padding: 0 14px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   background: #F8F9FA;
   border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.12));
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
