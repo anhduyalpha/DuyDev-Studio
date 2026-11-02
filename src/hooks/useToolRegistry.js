@@ -195,6 +195,46 @@ const DEFAULT_TOOLS = [
     route: '#tool/scribd',
     tags: ['scribd', 'scribd downloader', 'tài liệu', 'pdf', 'archiver', 'download', 'sách', 'slide', 'tiện ích']
   },
+  {
+    id: 'slideshare-downloader',
+    title: 'SlideShare Downloader',
+    description: 'Tải bài thuyết trình và tài liệu SlideShare sang tệp PDF rõ nét, lưu trực tiếp vào Drive.',
+    category: 'system',
+    icon: 'presentation',
+    featured: true,
+    specs: ['PDF HD', 'Slides', 'Lưu Drive'],
+    color: '#0077B5',
+    tier: 'S',
+    route: '#tool/slideshare-downloader',
+    tags: ['slideshare', 'slideshare downloader', 'slide', 'thuyết trình', 'pdf', 'download', 'tiện ích', 'tài liệu']
+  },
+  {
+    id: 'academia-downloader',
+    title: 'Academia Downloader',
+    description: 'Tải bài nghiên cứu, luận văn và giáo trình Academia.edu sang PDF, lưu trực tiếp vào Drive.',
+    category: 'system',
+    icon: 'graduation-cap',
+    featured: true,
+    specs: ['PDF Gốc', 'Luận văn', 'Lưu Drive'],
+    color: '#4F46E5',
+    tier: 'S',
+    route: '#tool/academia-downloader',
+    tags: ['academia', 'academia downloader', 'nghiên cứu', 'luận văn', 'bài báo', 'pdf', 'download', 'tiện ích']
+  },
+  {
+    id: 'researchgate-downloader',
+    title: 'ResearchGate Downloader',
+    description: 'Tải công bố khoa học, bài báo và tài liệu ResearchGate sang PDF, lưu trực tiếp vào Drive.',
+    category: 'system',
+    icon: 'microscope',
+    featured: true,
+    specs: ['PDF Khoa học', 'DOI & Full-text', 'Lưu Drive'],
+    color: '#0D9488',
+    tier: 'S',
+    route: '#tool/researchgate-downloader',
+    tags: ['researchgate', 'researchgate downloader', 'khoa học', 'bài báo', 'doi', 'pdf', 'download', 'tiện ích']
+  },
+
 
   // 6. Advanced Tools
   {
@@ -762,6 +802,15 @@ class ToolRegistry {
     }
     if (id === 'spotify' || id === 'spotify-downloader') {
       return this.tools.find(t => t.id === 'spotify-downloader') || this.tools[0];
+    }
+    if (id === 'slideshare' || id === 'slideshare-downloader') {
+      return this.tools.find(t => t.id === 'slideshare-downloader') || this.tools[0];
+    }
+    if (id === 'academia' || id === 'academia-downloader') {
+      return this.tools.find(t => t.id === 'academia-downloader') || this.tools[0];
+    }
+    if (id === 'researchgate' || id === 'researchgate-downloader') {
+      return this.tools.find(t => t.id === 'researchgate-downloader') || this.tools[0];
     }
     return this.tools.find(t => t.id === id) || this.tools[0];
   }

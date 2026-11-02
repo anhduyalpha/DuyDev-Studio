@@ -43,6 +43,9 @@ import { youtubeRoute } from './api/routes/youtube.route.js';
 import { facebookRoute } from './api/routes/facebook.route.js';
 import { instagramRoute } from './api/routes/instagram.route.js';
 import { spotifyRoute } from './api/routes/spotify.route.js';
+import { slideshareRoute } from './api/routes/slideshare.route.js';
+import { academiaRoute } from './api/routes/academia.route.js';
+import { researchgateRoute } from './api/routes/researchgate.route.js';
 import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
 import { ipAccessService } from './services/ip-access.service.js';
 import { cookieSessionIssuerHook, apiSecurityGuard, isAllowedOrigin } from './api/middleware/security.middleware.js';
@@ -243,6 +246,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(facebookRoute);
   await app.register(instagramRoute);
   await app.register(spotifyRoute);
+  await app.register(slideshareRoute);
+  await app.register(academiaRoute);
+  await app.register(researchgateRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)

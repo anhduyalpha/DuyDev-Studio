@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.41': {
+    version: 'v24.41',
+    title: 'Bản cập nhật v24.41: Ra Mắt Bộ 3 Tiện Ích Học Thuật Tier S (SlideShare, Academia, ResearchGate)',
+    date: '02/11/2026',
+    features: [
+      'SlideShare Downloader (Tier S): Trích xuất và biên dịch toàn bộ slide bài giảng từ SlideShare thành tài liệu PDF sắc nét qua vector pipeline',
+      'Academia.edu Downloader (Tier S): Tải tài liệu, luận văn và nghiên cứu khoa học từ Academia.edu trực tiếp với trích dẫn APA/BibTeX chuẩn xác',
+      'ResearchGate Downloader (Tier S): Khám phá bài báo, ấn phẩm khoa học và tải toàn văn PDF từ mạng lưới ResearchGate',
+      'Đồng Bộ Web Share Target & Smart URL: Tự động phát hiện liên kết SlideShare, Academia và ResearchGate từ văn bản clipboard hoặc menu chia sẻ hệ thống'
+    ],
+    fixes: [
+      'Chuẩn Hóa 10 Trụ Cột Module: Đáp ứng 100% kiến trúc Isolated History, In-Place DOM Mutation, và phòng chống AI-slop'
+    ]
+  },
   'v24.40': {
     version: 'v24.40',
     title: 'Bản cập nhật v24.40: Chặn Đứng Toàn Diện Mọi DevTools Tuyệt Đối Không Ngoại Lệ',

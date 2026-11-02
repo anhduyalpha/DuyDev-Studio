@@ -19,6 +19,9 @@ const TYPE_LABELS = {
   [SharePayloadType.TIKTOK_URL]: 'Video TikTok',
   [SharePayloadType.SCRIBD_URL]: 'Tài liệu Scribd',
   [SharePayloadType.STUDOCU_URL]: 'Tài liệu Studocu',
+  [SharePayloadType.SLIDESHARE_URL]: 'Slide SlideShare',
+  [SharePayloadType.ACADEMIA_URL]: 'Luận văn Academia.edu',
+  [SharePayloadType.RESEARCHGATE_URL]: 'Nghiên cứu ResearchGate',
   [SharePayloadType.IMAGE_URL]: 'Liên kết Hình ảnh / QR',
   [SharePayloadType.GENERIC_URL]: 'Liên kết Web',
   [SharePayloadType.PLAIN_TEXT]: 'Văn bản',
@@ -36,6 +39,9 @@ const TYPE_ICONS = {
   [SharePayloadType.TIKTOK_URL]: 'video',
   [SharePayloadType.SCRIBD_URL]: 'book-open',
   [SharePayloadType.STUDOCU_URL]: 'book-open',
+  [SharePayloadType.SLIDESHARE_URL]: 'presentation',
+  [SharePayloadType.ACADEMIA_URL]: 'graduation-cap',
+  [SharePayloadType.RESEARCHGATE_URL]: 'flask-conical',
   [SharePayloadType.IMAGE_URL]: 'image',
   [SharePayloadType.GENERIC_URL]: 'link',
   [SharePayloadType.PLAIN_TEXT]: 'type',
@@ -470,6 +476,30 @@ async function dispatchSharedPayloadToTool(action, payload) {
           const urlInput = document.getElementById('scribdUrlInput');
           if (urlInput) urlInput.value = targetUrl;
           scribdManager.startDownload(targetUrl, false);
+        }
+        break;
+      }
+      case '#tool/slideshare':
+      case '#tool/slideshare-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'slideshare', route: '#tool/slideshare-downloader', url: targetUrl });
+        }
+        break;
+      }
+      case '#tool/academia':
+      case '#tool/academia-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'academia', route: '#tool/academia-downloader', url: targetUrl });
+        }
+        break;
+      }
+      case '#tool/researchgate':
+      case '#tool/researchgate-downloader': {
+        const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
+        if (targetUrl) {
+          handoffSmartUrl({ toolId: 'researchgate', route: '#tool/researchgate-downloader', url: targetUrl });
         }
         break;
       }

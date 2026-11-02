@@ -30,10 +30,19 @@ const INSTAGRAM_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:instagram\.com|
 // Spotify track / album / playlist / shortlink URL patterns
 const SPOTIFY_REGEX = /(?:https?:\/\/)?(?:(?:open\.)?spotify\.com|spotify\.link)\/[^\s"'>]*/i;
 
+// SlideShare presentation URL pattern
+const SLIDESHARE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?slideshare\.net\/[^\s"'>]+/i;
+
+// Academia.edu paper URL pattern
+const ACADEMIA_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?academia\.edu\/[^\s"'>]+/i;
+
+// ResearchGate publication URL pattern
+const RESEARCHGATE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?researchgate\.net\/[^\s"'>]+/i;
+
 /**
  * Detect if text contains a supported tool URL.
  * @param {string} raw
- * @returns {{ toolId: 'scribd'|'tiktok'|'youtube'|'facebook'|'instagram'|'spotify', route: string, url: string, autoStart: boolean }|null}
+ * @returns {{ toolId: 'scribd'|'tiktok'|'youtube'|'facebook'|'instagram'|'spotify'|'slideshare'|'academia'|'researchgate', route: string, url: string, autoStart: boolean }|null}
  */
 export function detectSmartRoute(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -130,6 +139,51 @@ export function detectSmartRoute(raw) {
     };
   }
 
+  // 7. SlideShare Presentation Check
+  const slideshareMatch = trimmed.match(SLIDESHARE_REGEX);
+  if (slideshareMatch) {
+    let matchedUrl = slideshareMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'slideshare',
+      route: '#tool/slideshare-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
+  // 8. Academia.edu Document Check
+  const academiaMatch = trimmed.match(ACADEMIA_REGEX);
+  if (academiaMatch) {
+    let matchedUrl = academiaMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'academia',
+      route: '#tool/academia-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
+  // 9. ResearchGate Publication Check
+  const researchgateMatch = trimmed.match(RESEARCHGATE_REGEX);
+  if (researchgateMatch) {
+    let matchedUrl = researchgateMatch[0];
+    if (!matchedUrl.startsWith('http://') && !matchedUrl.startsWith('https://')) {
+      matchedUrl = 'https://' + matchedUrl;
+    }
+    return {
+      toolId: 'researchgate',
+      route: '#tool/researchgate-downloader',
+      url: matchedUrl,
+      autoStart: true
+    };
+  }
+
   return null;
 }
 
@@ -159,6 +213,9 @@ export function handoffSmartUrl(smartResult) {
     facebook: '#tool/facebook-downloader',
     instagram: '#tool/instagram-downloader',
     spotify: '#tool/spotify-downloader',
+    slideshare: '#tool/slideshare-downloader',
+    academia: '#tool/academia-downloader',
+    researchgate: '#tool/researchgate-downloader',
     tiktok: '#tool/tiktok'
   };
   const targetRoute = smartResult.route || routeMap[smartResult.toolId] || '#tool/tiktok';

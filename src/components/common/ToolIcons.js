@@ -601,7 +601,84 @@ export const TOOL_ICONS = {
       <path d="M8 15.3c2-.7 4.8-.6 6.8.5" stroke="#121212" stroke-width="1.5" stroke-linecap="round" />
     </svg>
   `,
-  'spotify': (className = 'w-6 h-6') => TOOL_ICONS['spotify-downloader'](className)
+  'spotify': (className = 'w-6 h-6') => TOOL_ICONS['spotify-downloader'](className),
+
+  // 19. SlideShare Downloader (Projection Screen Canvas & Presentation Slide Flow)
+  'slideshare-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-ss-body" x1="2" y1="3" x2="22" y2="19" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0284C7" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#0077B5" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-ss-accent" x1="5" y1="4" x2="19" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#38BDF8" />
+          <stop offset="100%" stop-color="#0077B5" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Base Glass -->
+      <rect x="2.5" y="3.5" width="19" height="13" rx="2.5" fill="url(#ds-ss-body)" stroke="#0077B5" stroke-opacity="0.5" stroke-width="1.3" />
+      <!-- Layer 2: Projection Stand & Roller Bar -->
+      <line x1="2" y1="4" x2="22" y2="4" stroke="#0284C7" stroke-width="1.6" stroke-linecap="round" />
+      <path d="M12 16.5v4M8 20.5h8" stroke="#0077B5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Layer 3: Presentation Slide Deck Bar Charts & Arrow -->
+      <rect x="5.5" y="7" width="3.5" height="6.5" rx="1" fill="url(#ds-ss-accent)" />
+      <rect x="10.5" y="9" width="3.5" height="4.5" rx="1" fill="#38BDF8" fill-opacity="0.8" />
+      <path d="M16 8l2.5 2.5L16 13" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  `,
+  'slideshare': (className = 'w-6 h-6') => TOOL_ICONS['slideshare-downloader'](className),
+
+  // 20. Academia Downloader (Scholarly Scroll, Mortarboard & Academic Seal)
+  'academia-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-ac-body" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#6366F1" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.10" />
+        </linearGradient>
+        <linearGradient id="ds-ac-cap" x1="3" y1="7" x2="21" y2="12" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#818CF8" />
+          <stop offset="100%" stop-color="#4F46E5" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Academic Manuscript Frame -->
+      <rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="url(#ds-ac-body)" stroke="#4F46E5" stroke-opacity="0.4" stroke-width="1.3" />
+      <!-- Layer 2: Mortarboard Graduation Diamond -->
+      <polygon points="12,5 20.5,9.5 12,14 3.5,9.5" fill="url(#ds-ac-cap)" stroke="#C7D2FE" stroke-width="1.2" stroke-linejoin="round" />
+      <!-- Layer 3: Skull Cap Arch & Tassel Ribbon -->
+      <path d="M6.5 11.5v3.5c0 2 2.5 3.5 5.5 3.5s5.5-1.5 5.5-3.5v-3.5" stroke="#4F46E5" stroke-width="1.5" stroke-linecap="round" />
+      <path d="M20.5 9.5v5.5" stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="20.5" cy="15.5" r="1" fill="#F59E0B" />
+    </svg>
+  `,
+  'academia': (className = 'w-6 h-6') => TOOL_ICONS['academia-downloader'](className),
+
+  // 21. ResearchGate Downloader (Scientific Molecule Lattice & Research Publication)
+  'researchgate-downloader': (className = 'w-6 h-6') => `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="${className} select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-rg-body" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#14B8A6" stop-opacity="0.30" />
+          <stop offset="100%" stop-color="#0D9488" stop-opacity="0.10" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Hexagonal Research Shield -->
+      <path d="M12 2.5l7.5 4.3v8.6L12 19.7l-7.5-4.3V6.8z" fill="url(#ds-rg-body)" stroke="#0D9488" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
+      <!-- Layer 2: Molecular Bonds / Research Lattice -->
+      <line x1="12" y1="7" x2="7" y2="12" stroke="#2DD4BF" stroke-width="1.5" />
+      <line x1="12" y1="7" x2="17" y2="12" stroke="#2DD4BF" stroke-width="1.5" />
+      <line x1="7" y1="12" x2="12" y2="16" stroke="#2DD4BF" stroke-width="1.5" />
+      <line x1="17" y1="12" x2="12" y2="16" stroke="#2DD4BF" stroke-width="1.5" />
+      <!-- Layer 3: High-Contrast Nucleus Nodes -->
+      <circle cx="12" cy="7" r="2.2" fill="#0D9488" stroke="#FFFFFF" stroke-width="1" />
+      <circle cx="7" cy="12" r="2" fill="#14B8A6" stroke="#FFFFFF" stroke-width="1" />
+      <circle cx="17" cy="12" r="2" fill="#14B8A6" stroke="#FFFFFF" stroke-width="1" />
+      <circle cx="12" cy="16" r="2.2" fill="#0D9488" stroke="#FFFFFF" stroke-width="1" />
+      <text x="12" y="12.5" font-size="5" font-family="sans-serif" font-weight="bold" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">R</text>
+    </svg>
+  `,
+  'researchgate': (className = 'w-6 h-6') => TOOL_ICONS['researchgate-downloader'](className)
 };
 
 /**

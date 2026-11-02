@@ -33,6 +33,9 @@ export function renderToolCard(tool) {
     '#1877F2': '#1D4ED8', // Blue-700 (Facebook)
     '#E1306C': '#BE185D', // Pink-700 (Instagram)
     '#1DB954': '#15803D', // Green-700 (Spotify)
+    '#0077B5': '#0369A1', // SlideShare Blue
+    '#4F46E5': '#3730A3', // Academic Indigo
+    '#0D9488': '#0F766E', // ResearchGate Teal
     '#A1A1AA': '#3F3F46'  // Zinc-700
   };
   const contrastColor = contrastMap[accent] || accent;

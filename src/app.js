@@ -696,6 +696,12 @@ class App {
           }
         }, 100);
       }
+    } else if (hash === '#slideshare' || hash === '#slideshare-downloader' || hash.startsWith('#slideshare?') || hash.startsWith('#slideshare-downloader?')) {
+      dispatchTool('slideshare-downloader');
+    } else if (hash === '#academia' || hash === '#academia-downloader' || hash.startsWith('#academia?') || hash.startsWith('#academia-downloader?')) {
+      dispatchTool('academia-downloader');
+    } else if (hash === '#researchgate' || hash === '#researchgate-downloader' || hash.startsWith('#researchgate?') || hash.startsWith('#researchgate-downloader?')) {
+      dispatchTool('researchgate-downloader');
     } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {
       dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);
     } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {

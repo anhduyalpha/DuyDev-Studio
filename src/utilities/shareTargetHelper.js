@@ -13,6 +13,9 @@ export const SharePayloadType = {
   TIKTOK_URL: 'TIKTOK_URL',
   SCRIBD_URL: 'SCRIBD_URL',
   STUDOCU_URL: 'STUDOCU_URL',
+  SLIDESHARE_URL: 'SLIDESHARE_URL',
+  ACADEMIA_URL: 'ACADEMIA_URL',
+  RESEARCHGATE_URL: 'RESEARCHGATE_URL',
   IMAGE_URL: 'IMAGE_URL',
   GENERIC_URL: 'GENERIC_URL',
   PLAIN_TEXT: 'PLAIN_TEXT',
@@ -75,6 +78,24 @@ function isSpotifyHost(hostname) {
   if (!hostname) return false;
   const host = hostname.toLowerCase();
   return host === 'spotify.com' || host.endsWith('.spotify.com') || host === 'spotify.link' || host.endsWith('.spotify.link');
+}
+
+function isSlideshareHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'slideshare.net' || host.endsWith('.slideshare.net');
+}
+
+function isAcademiaHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'academia.edu' || host.endsWith('.academia.edu');
+}
+
+function isResearchgateHost(hostname) {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase();
+  return host === 'researchgate.net' || host.endsWith('.researchgate.net');
 }
 
 /**
@@ -639,6 +660,36 @@ export function classifySharedPayload(payload) {
           type: SharePayloadType.STUDOCU_URL,
           recommendations: [
             { label: 'Tải tài liệu Studocu', route: '#tool/studocu-dl', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+          ],
+        };
+      }
+
+      if (isSlideshareHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.SLIDESHARE_URL,
+          recommendations: [
+            { label: 'Tải Slide SlideShare', route: '#tool/slideshare-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+          ],
+        };
+      }
+
+      if (isAcademiaHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.ACADEMIA_URL,
+          recommendations: [
+            { label: 'Tải Luận văn Academia.edu', route: '#tool/academia-downloader', isPrimary: true },
+            { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
+          ],
+        };
+      }
+
+      if (isResearchgateHost(parsed.hostname)) {
+        return {
+          type: SharePayloadType.RESEARCHGATE_URL,
+          recommendations: [
+            { label: 'Tải Nghiên cứu ResearchGate', route: '#tool/researchgate-downloader', isPrimary: true },
             { label: 'Tạo mã QR cho liên kết này', route: '#tool/qr-multi' },
           ],
         };
