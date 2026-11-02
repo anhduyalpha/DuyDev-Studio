@@ -87,19 +87,13 @@ export function serializeCookie(
  */
 export function appendSetCookie(reply: FastifyReply, cookieStr: string): void {
   const cookieName = cookieStr.split('=')[0];
-  const existing = reply.getHeader('Set-Cookie');
+  const existing = reply.raw.getHeader('Set-Cookie');
   if (!existing) {
-    reply.header('Set-Cookie', cookieStr);
-  } else if (Array.isArray(existing)) {
-    const filtered = existing.filter((c) => !String(c).startsWith(`${cookieName}=`));
-    reply.header('Set-Cookie', [...filtered, cookieStr]);
+    reply.raw.setHeader('Set-Cookie', [cookieStr]);
   } else {
-    const existingStr = String(existing);
-    if (existingStr.startsWith(`${cookieName}=`)) {
-      reply.header('Set-Cookie', cookieStr);
-    } else {
-      reply.header('Set-Cookie', [existingStr, cookieStr]);
-    }
+    const existingArray = Array.isArray(existing) ? existing.map(String) : [String(existing)];
+    const filtered = existingArray.filter((c) => !c.startsWith(`${cookieName}=`));
+    reply.raw.setHeader('Set-Cookie', [...filtered, cookieStr]);
   }
 }
 
