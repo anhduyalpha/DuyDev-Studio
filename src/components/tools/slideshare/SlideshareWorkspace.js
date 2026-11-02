@@ -11,12 +11,13 @@ import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
-import { renderMediaHistorySection, attachMediaHistoryListeners, escapeHtml } from '../common/MediaHistorySection.js';
+import { renderMediaHistorySection, attachMediaHistoryListeners, setMediaHistoryExpanded, triggerDownload, escapeHtml } from '../common/MediaHistorySection.js';
 
 export class SlideshareWorkspace {
   constructor(containerEl) {
     this.container = containerEl;
     this.url = '';
+    this.lastResolvedUrl = null;
     this.loading = false;
     this.error = null;
     this.data = null;
@@ -131,15 +132,14 @@ export class SlideshareWorkspace {
       this.url = val;
       this.updateInputActions();
 
-      // Debounced auto-resolve if a full SlideShare URL was pasted or inserted
       const clean = this.sanitizeUrl(val);
-      if (clean && clean.includes('slideshare.net') && (val.startsWith('http') || val.startsWith('slideshare.net'))) {
-        clearTimeout(this.inputDebounce);
+      if (clean && clean.includes('slideshare.net') && clean !== this.lastResolvedUrl) {
+        if (this.inputDebounce) clearTimeout(this.inputDebounce);
         this.inputDebounce = setTimeout(() => {
-          if (this.url === val && !this.loading && !this.data) {
+          if (this.url === val && clean !== this.lastResolvedUrl) {
             this.resolvePresentation();
           }
-        }, 300);
+        }, 200);
       }
     }
   }
@@ -155,8 +155,13 @@ export class SlideshareWorkspace {
         this.url = clean;
         this.updateInputActions();
         soundEngine?.play?.('click');
+        if (this.inputDebounce) clearTimeout(this.inputDebounce);
+        if (this.abortController) {
+          this.abortController.abort();
+          this.loading = false;
+        }
         if (clean.includes('slideshare.net')) {
-          setTimeout(() => this.resolvePresentation(), 40);
+          this.resolvePresentation();
         }
       }
     }
@@ -174,7 +179,12 @@ export class SlideshareWorkspace {
       this.url = clean;
       this.updateInputActions();
       soundEngine?.play?.('click');
-      setTimeout(() => this.resolvePresentation(), 40);
+      if (this.inputDebounce) clearTimeout(this.inputDebounce);
+      if (this.abortController) {
+        this.abortController.abort();
+        this.loading = false;
+      }
+      this.resolvePresentation();
     }
   }
 
@@ -304,6 +314,11 @@ export class SlideshareWorkspace {
           if (input) input.value = clean;
           this.updateInputActions();
           soundEngine?.play?.('click');
+          if (this.inputDebounce) clearTimeout(this.inputDebounce);
+          if (this.abortController) {
+            this.abortController.abort();
+            this.loading = false;
+          }
           if (clean.includes('slideshare.net')) {
             this.resolvePresentation();
           } else {
@@ -320,6 +335,7 @@ export class SlideshareWorkspace {
     if (clearBtn) {
       e.preventDefault();
       this.url = '';
+      this.lastResolvedUrl = null;
       const input = this.container.querySelector('#ssUrlInput');
       if (input) {
         input.value = '';
@@ -367,14 +383,19 @@ export class SlideshareWorkspace {
   }
 
   async resolvePresentation() {
-    if (this.loading) return;
-
     const cleanUrl = this.sanitizeUrl(this.url);
     if (!cleanUrl) {
       showToast('Vui lòng nhập liên kết SlideShare hợp lệ', 'warning');
       return;
     }
 
+    if (this.loading) {
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+    }
+
+    this.lastResolvedUrl = cleanUrl;
     this.loading = true;
     this.error = null;
     this.data = null;
@@ -420,7 +441,38 @@ export class SlideshareWorkspace {
         }
       } catch (_) {}
 
+      // Add presentation to history immediately upon get
+      const cleanTitle = (res.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
+      const pptxName = this.savedPptxFileName || `[SlideShare]_${cleanTitle}_${String(res.id).slice(-8)}.pptx`;
+      const pptxDl = `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`;
+
+      await storage.addHistoryItem({
+        id: `ss_${res.id}`,
+        toolId: 'slideshare-downloader',
+        toolTitle: 'SlideShare Downloader',
+        title: res.title,
+        fileName: pptxName,
+        fileSize: (res.slideCount || 1) * 150000,
+        resultSize: (res.slideCount || 1) * 150000,
+        mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        driveRelPath: this.savedPptxDrivePath || `/slideshare/${pptxName}`,
+        downloadUrl: pptxDl,
+        thumbnail: res.coverUrl,
+        cover: res.coverUrl,
+        author: res.author,
+        sourceUrl: cleanUrl,
+        timestamp: Date.now()
+      });
+
+      // Expand history box and render immediately
+      setMediaHistoryExpanded('slideshare-downloader', true);
       this.renderResultArea();
+      this.renderHistory();
+
+      // Background pre-save so files exist on Drive for instant download
+      if (!this.savedDrivePath || !this.savedPptxDrivePath) {
+        this.saveToDrive({ silent: true }).catch(() => {});
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       this.loading = false;
@@ -575,54 +627,74 @@ export class SlideshareWorkspace {
 
   async downloadPptxDirect() {
     if (!this.data) return;
-    if (!this.savedPptxDrivePath) {
-      showToast('Đang tạo và đóng gói tệp PowerPoint (.pptx)...', 'info');
+    const btn = this.container.querySelector('#btnDownloadSsPptx');
+    const origHtml = btn?.innerHTML;
+
+    if (!this.savedPptxFileName) {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang chuẩn bị file PPTX...</span>';
+        if (window.lucide) window.lucide.createIcons({ root: btn });
+      }
+      showToast('Đang tổng hợp các slide thành tệp PowerPoint (.pptx)...', 'info');
       try {
         await this.saveToDrive({ silent: true });
-      } catch (_) {
+      } catch (err) {
+        showToast(err.message || 'Lỗi khi tạo tệp PowerPoint', 'error');
         return;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          btn.innerHTML = origHtml;
+          if (window.lucide) window.lucide.createIcons({ root: btn });
+        }
       }
     }
 
-    if (this.savedPptxDrivePath) {
-      const dlUrl = `/api/v1/storage/file?path=${encodeURIComponent(this.savedPptxDrivePath)}&download=true`;
-      const link = document.createElement('a');
-      link.href = dlUrl;
-      link.download = this.savedPptxFileName || `${this.data.title || 'SlideShare'}.pptx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      soundEngine?.play?.('success');
-      showToast('Đang tải tệp PowerPoint (.pptx) về máy...', 'success');
-    } else {
-      showToast('Không thể tạo tệp PowerPoint (.pptx)', 'error');
-    }
+    const cleanTitle = (this.data.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
+    const pptxName = this.savedPptxFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pptx`;
+    const dlUrl = `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`;
+    triggerDownload(dlUrl, pptxName, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    soundEngine?.play?.('success');
+    showToast('Đang tải tệp PowerPoint (.pptx) về máy...', 'success');
   }
 
   async downloadPdfDirect() {
     if (!this.data) return;
-    if (!this.savedDrivePath) {
-      showToast('Đang tạo và đóng gói tệp PDF...', 'info');
+    const btn = this.container.querySelector('#btnDownloadSsPdf');
+    const origHtml = btn?.innerHTML;
+
+    if (!this.savedFileName) {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang chuẩn bị file PDF...</span>';
+        if (window.lucide) window.lucide.createIcons({ root: btn });
+      }
+      showToast('Đang đóng gói các slide thành tệp PDF...', 'info');
       try {
         await this.saveToDrive({ silent: true });
-      } catch (_) {
+      } catch (err) {
+        showToast(err.message || 'Lỗi khi tạo tệp PDF', 'error');
         return;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          btn.innerHTML = origHtml;
+          if (window.lucide) window.lucide.createIcons({ root: btn });
+        }
       }
     }
 
-    if (this.savedDrivePath) {
-      const dlUrl = `/api/v1/storage/file?path=${encodeURIComponent(this.savedDrivePath)}&download=true`;
-      const link = document.createElement('a');
-      link.href = dlUrl;
-      link.download = this.savedFileName || `${this.data.title || 'SlideShare'}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      soundEngine?.play?.('success');
-      showToast('Đang tải tệp PDF về máy...', 'success');
-    } else {
-      showToast('Không thể tạo tệp PDF', 'error');
-    }
+    const cleanTitle = (this.data.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
+    const pdfName = this.savedFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pdf`;
+    const dlUrl = `/api/v1/slideshare/download?file=${encodeURIComponent(pdfName)}`;
+    triggerDownload(dlUrl, pdfName, 'application/pdf');
+    soundEngine?.play?.('success');
+    showToast('Đang tải tệp PDF về máy...', 'success');
   }
 
   renderResultArea() {
@@ -741,25 +813,25 @@ export class SlideshareWorkspace {
         ` : ''}
 
         <div class="pt-3 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center gap-3">
-          <!-- Tải PPTX (Bản gốc) -->
-          <button id="btnDownloadSsPptx" class="min-h-[44px] px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
-            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-            <span>Tải bản PPTX</span>
+          <!-- Tải PPTX (Bản gốc) - PRIMARY CTA BUTTON -->
+          <button id="btnDownloadSsPptx" class="min-h-[46px] px-6 py-3 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-600 to-orange-600 hover:from-orange-400 hover:to-orange-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="file-presentation" class="w-4 h-4"></i>
+            <span>Tải PowerPoint (.pptx)</span>
           </button>
 
           <!-- Tải PDF -->
-          <button id="btnDownloadSsPdf" class="min-h-[44px] px-5 py-2.5 rounded-2xl bg-[#0077B5] hover:bg-[#0284C7] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-sky-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+          <button id="btnDownloadSsPdf" class="min-h-[46px] px-5 py-3 rounded-2xl bg-[#0077B5] hover:bg-[#0284C7] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-sky-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
             <i data-lucide="file-text" class="w-4 h-4"></i>
-            <span>Tải bản PDF</span>
+            <span>Tải PDF (.pdf)</span>
           </button>
 
           <!-- Lưu Drive -->
-          <button id="btnSaveSsDrive" ${this.savingToDrive ? 'disabled' : ''} class="min-h-[44px] px-5 py-2.5 rounded-2xl ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600'} active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
+          <button id="btnSaveSsDrive" ${this.savingToDrive ? 'disabled' : ''} class="min-h-[46px] px-5 py-3 rounded-2xl ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600'} active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
             ${this.savingToDrive ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang đóng gói...</span>' : isSaved ? '<i data-lucide="check" class="w-4 h-4"></i><span>Đã lưu vào Drive</span>' : '<i data-lucide="hard-drive" class="w-4 h-4"></i><span>Lưu cả PPTX & PDF</span>'}
           </button>
 
           <!-- Xem PDF trong Viewer -->
-          <button id="btnPreviewSs" class="min-h-[44px] px-4 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
+          <button id="btnPreviewSs" class="min-h-[46px] px-4 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
             <i data-lucide="eye" class="w-4 h-4"></i>
             <span>Xem PDF Viewer</span>
           </button>
@@ -775,29 +847,31 @@ export class SlideshareWorkspace {
     if (!el) return;
     el.innerHTML = renderMediaHistorySection({
       toolId: 'slideshare-downloader',
-      historyTab: this.historyTab
+      title: 'Lịch Sử Tải Xuống',
+      activeTab: this.historyTab,
+      fallbackIcon: 'presentation',
+      accentColor: '#0077B5',
+      driveFolderPath: '/slideshare'
     });
     if (this.historyCleanup) this.historyCleanup();
     this.historyCleanup = attachMediaHistoryListeners({
       container: el,
       toolId: 'slideshare-downloader',
-      historyTab: this.historyTab,
       onTabChange: (newTab) => {
         this.historyTab = newTab;
         this.renderHistory();
       },
-      onPreview: (item) => {
-        const path = item.driveRelPath || undefined;
-        const isPptx = (item.fileName || '').toLowerCase().endsWith('.pptx');
-        ViewerConnector.preview({
-          name: item.fileName,
-          fileName: item.fileName,
-          path,
-          driveRelPath: path,
-          mimeType: isPptx ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation' : (item.mimeType || 'application/pdf'),
-          viewUrl: path ? `/api/v1/storage/file?path=${encodeURIComponent(path)}` : (item.sourceUrl || ''),
-          downloadUrl: path ? `/api/v1/storage/file?path=${encodeURIComponent(path)}&download=true` : undefined
-        });
+      onReResolve: (url) => {
+        if (url) {
+          this.url = url;
+          const input = this.container.querySelector('#ssUrlInput');
+          if (input) input.value = url;
+          this.updateInputActions();
+          this.resolvePresentation();
+        }
+      },
+      onHistoryChange: () => {
+        this.renderHistory();
       }
     });
   }

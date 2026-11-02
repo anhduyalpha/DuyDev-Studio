@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.48': {
+    version: 'v24.48',
+    title: 'Bản cập nhật v24.48: Tối Ưu Triệt Để Dán Link 1 Lần, Tự Động Cập Nhật Lịch Sử & Nút Tải PPTX',
+    date: '02/11/2026',
+    features: [
+      'Nút Tải PowerPoint (.pptx) Chuyên Dụng & Nổi Bật: Bổ sung nút tải PPTX gradient cam nổi bật tại vị trí trung tâm, cho phép tải tệp PowerPoint (.pptx) nguyên bản về máy với 1 chạm',
+      'Tự Động Cập Nhật Lịch Sử Ngay Khi Phân Tích: Ngay khi lấy thành công slide, bài thuyết trình được đồng bộ trực tiếp vào danh sách lịch sử tải xuống và tự động mở rộng hộp lịch sử',
+      'Định Tuyến Tải Về Trực Tiếp (/slideshare/download): Mở kênh tải công khai tốc độ cao không bị rào cản xác thực hay lỗi mạng fetch'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Phải Dán Link 2 Lần: Xóa bỏ hoàn toàn tình trạng xung đột debounce và chặn re-entry, nhận diện và kích hoạt phân tích ngay ở lần dán đầu tiên qua mọi phương thức (phím tắt, menu, nút Dán)',
+      'Đồng Bộ Danh Sách Lịch Sử Toàn Diện: Chuẩn hóa tham số gọi MediaHistorySection giúp hiển thị tức thì mọi tệp PowerPoint và PDF đã phân tích'
+    ]
+  },
   'v24.47': {
     version: 'v24.47',
     title: 'Bản cập nhật v24.47: Hỗ Trợ Tải Bản Gốc PPTX & Trình Xem Trình Chiếu Trực Tiếp',

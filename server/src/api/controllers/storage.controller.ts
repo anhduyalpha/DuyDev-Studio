@@ -55,8 +55,16 @@ const copyBodySchema = z.object({
  * Authentication PreHandler Guard for Storage Endpoints
  */
 export async function storageAuthGuard(request: FastifyRequest, reply: FastifyReply) {
+  const query = request.query as Record<string, string>;
+  const relPath = query?.path || '';
+
+  // Whitelist public tool downloads and previews (/slideshare/, /academia/, /researchgate/)
+  if (request.routerPath === '/api/v1/storage/download' && /^(?:\/)?(?:slideshare|academia|researchgate)\//i.test(relPath)) {
+    return;
+  }
+
   const authHeader = (request.headers['x-storage-auth'] as string) || (request.headers.authorization as string) || '';
-  const queryToken = (request.query as Record<string, string>)?.auth || (request.query as Record<string, string>)?.token || '';
+  const queryToken = query?.auth || query?.token || '';
   const candidate = authHeader || queryToken;
 
   if (candidate) {

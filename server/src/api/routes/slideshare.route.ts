@@ -1,5 +1,10 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
+import path from 'path';
 import { SlideShareService } from '../../services/slideshare.service.js';
+import { resolvedStoragePaths } from '../../config/env.config.js';
+import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import {
   academicResolveBodySchema,
   academicStreamQuerySchema,
@@ -32,6 +37,38 @@ export async function slideshareRoute(app: FastifyInstance) {
       rangeHeader,
       reply
     );
+  });
+
+  app.get('/api/v1/slideshare/download', async (request: FastifyRequest, reply: FastifyReply) => {
+    const query = request.query as Record<string, string>;
+    const filePath = query?.file || query?.path || '';
+    if (!filePath) {
+      throw new BadRequestError('Thiếu tham số tệp cần tải');
+    }
+
+    const driveDir = path.join(resolvedStoragePaths.drive, 'slideshare');
+    const safeName = path.basename(filePath);
+    const diskPath = path.join(driveDir, safeName);
+
+    if (!fs.existsSync(diskPath)) {
+      throw new NotFoundError(`Tệp ${safeName} không tồn tại trên hệ thống`);
+    }
+
+    const stat = await fsPromises.stat(diskPath);
+    const ext = path.extname(diskPath).toLowerCase().replace(/^\./, '');
+    const mimeType = ext === 'pptx'
+      ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      : (ext === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+
+    const encodedName = encodeURIComponent(safeName);
+    const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+
+    reply.header('Content-Type', mimeType);
+    reply.header('Content-Length', stat.size);
+    reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
+    reply.header('Cache-Control', 'public, max-age=3600');
+
+    return reply.send(fs.createReadStream(diskPath));
   });
 
   app.post('/api/v1/slideshare/save-drive', async (request: FastifyRequest, reply: FastifyReply) => {
