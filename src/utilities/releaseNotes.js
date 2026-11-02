@@ -6,6 +6,17 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.35': {
+    version: 'v24.35',
+    title: 'Bản cập nhật v24.35: Tinh Chỉnh Chân Trang (Footer Branding & Tagline)',
+    date: '02/11/2026',
+    features: [
+      'Cập Nhật Thông Điệp Chân Trang: Đổi câu tagline thành "Studio của Duy cho mụi người dùng"'
+    ],
+    fixes: [
+      'Tối Giản Hóa Bố Cục Chân Trang: Loại bỏ huy hiệu phiên bản màu xanh lá để giao diện thanh lịch và liền mạch hơn'
+    ]
+  },
   'v24.34': {
     version: 'v24.34',
     title: 'Bản cập nhật v24.34: Tăng Cường Bảo Mật Đa Tầng Toàn Diện (Defense-in-Depth Security Hardening)',

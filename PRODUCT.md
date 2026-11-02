@@ -44,7 +44,7 @@ DuyDev Studio (DS) is a self-hosted progressive web utility hub and high-perform
 
 ## Brand Commitments
 
-- **Identity**: DuyDev Studio (DS), subtitle "Studio riêng của Anh Duy".
+- **Identity**: DuyDev Studio (DS), subtitle "Studio của Duy cho mụi người dùng".
 - **Voice & Copywriting**: Direct, crisp, high-density utility hub tone. Strictly no marketing fluff, tutorial filler, or parenthetical explanations (e.g. banned: `(Ảnh số)`, `(Vector)`, `(Phổ biến)`).
 - **Aesthetic Benchmark**: Production-grade minimalism following Linear, Vercel, and Raycast utility standards, anchored by `.agents/rules/ui-standards.md` and `docs/knowledge-base/KI-CON-001-ui-production-minimalism.md`.
 
