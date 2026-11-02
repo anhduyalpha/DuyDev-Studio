@@ -231,7 +231,8 @@ export class SlideShareService {
     originalUrl?: string,
     cover?: string,
     author?: string,
-    overwrite?: boolean
+    overwrite?: boolean,
+    clientSlideImages?: string[]
   ): Promise<{
     drivePath: string;
     fileName: string;
@@ -263,8 +264,20 @@ export class SlideShareService {
       }
     }
 
-    // Resolve slide images to compile PDF & PPTX
-    const resolved = await this.resolvePresentation(originalUrl || url);
+    // Resolve slide images to compile PDF & PPTX (reuse client images if provided to avoid redundant fetch)
+    let slideImagesToUse = clientSlideImages && clientSlideImages.length > 0 ? clientSlideImages : [];
+    let resolvedAuthor = author;
+    let resolvedCover = cover;
+    let resolvedTitle = title;
+
+    if (slideImagesToUse.length === 0) {
+      const resolved = await this.resolvePresentation(originalUrl || url);
+      slideImagesToUse = resolved.slideImages;
+      if (!resolvedAuthor) resolvedAuthor = resolved.author;
+      if (!resolvedCover) resolvedCover = resolved.coverUrl;
+      if (!resolvedTitle) resolvedTitle = resolved.title;
+    }
+
     const tempDir = path.join(resolvedStoragePaths.temp, `slideshare_${Date.now()}_${id}`);
     await fsPromises.mkdir(tempDir, { recursive: true });
 
@@ -272,7 +285,7 @@ export class SlideShareService {
 
     try {
       // Download slides in parallel batches of 5
-      const imagesToFetch = resolved.slideImages.slice(0, 100);
+      const imagesToFetch = slideImagesToUse.slice(0, 100);
       for (let i = 0; i < imagesToFetch.length; i += 5) {
         const batch = imagesToFetch.slice(i, i + 5);
         await Promise.all(
@@ -311,7 +324,7 @@ export class SlideShareService {
         pdfEngineScript,
         '--images-json', manifestPath,
         '--output', targetPdfPath,
-        '--title', title || resolved.title
+        '--title', resolvedTitle || title
       ]);
 
       const pdfStat = await fsPromises.stat(targetPdfPath);
@@ -320,12 +333,12 @@ export class SlideShareService {
       const pdfMetadata = {
         toolId: 'slideshare-downloader',
         id,
-        title,
+        title: resolvedTitle || title,
         format: 'pdf',
-        author: author || resolved.author,
+        author: resolvedAuthor || author || 'SlideShare Author',
         originalUrl: originalUrl || url,
         slideCount: downloadedImages.length,
-        thumbnail: cover || resolved.coverUrl,
+        thumbnail: resolvedCover || cover,
         savedAt: new Date().toISOString()
       };
       await fsPromises.writeFile(targetPdfPath.replace(/\.pdf$/, '.meta.json'), JSON.stringify(pdfMetadata, null, 2), 'utf8');
@@ -357,7 +370,7 @@ export class SlideShareService {
           pptxEngineScript,
           '--images-json', manifestPath,
           '--output', targetPptxPath,
-          '--title', title || resolved.title
+          '--title', resolvedTitle || title
         ]);
 
         if (fs.existsSync(targetPptxPath)) {
@@ -369,12 +382,12 @@ export class SlideShareService {
           const pptxMetadata = {
             toolId: 'slideshare-downloader',
             id,
-            title,
+            title: resolvedTitle || title,
             format: 'pptx',
-            author: author || resolved.author,
+            author: resolvedAuthor || author || 'SlideShare Author',
             originalUrl: originalUrl || url,
             slideCount: downloadedImages.length,
-            thumbnail: cover || resolved.coverUrl,
+            thumbnail: resolvedCover || cover,
             savedAt: new Date().toISOString()
           };
           await fsPromises.writeFile(targetPptxPath.replace(/\.pptx$/, '.meta.json'), JSON.stringify(pptxMetadata, null, 2), 'utf8');

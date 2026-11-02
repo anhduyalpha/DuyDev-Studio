@@ -404,12 +404,31 @@ export const storage = {
   },
 
   async addHistoryItem(item) {
-    let size = item.resultSize || 0;
+    if (!item) return null;
+
+    // 1. Un-trash item if it previously resided in the trash bin
+    try {
+      const trashList = this.getLocalTrash();
+      const nextTrash = trashList.filter(t => {
+        if (!t) return false;
+        if (item.id && (t.id === item.id || String(t.id).includes(String(item.id)))) return false;
+        if (item.downloadUrl && t.downloadUrl === item.downloadUrl) return false;
+        if (item.sourceUrl && (t.sourceUrl === item.sourceUrl || t.originalUrl === item.sourceUrl)) return false;
+        return true;
+      });
+      if (nextTrash.length !== trashList.length) {
+        localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(nextTrash));
+        dispatchHistoryUpdated(item.toolId, 'untrash');
+      }
+    } catch {}
+
+    let size = item.resultSize || item.fileSize || 0;
     if (!size && item.downloadUrl?.startsWith('data:image')) {
       size = Math.round((item.downloadUrl.split(',')[1] || '').length * 0.75) || 1200;
     }
 
     const localRecord = {
+      ...item,
       id: item.id || `job-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       tool: item.tool || item.toolTitle || 'Công cụ',
       toolTitle: item.toolTitle || item.tool || 'Công cụ',
@@ -417,10 +436,11 @@ export const storage = {
       fileName: item.fileName || 'Tài liệu',
       originalSize: item.originalSize || 0,
       resultSize: size,
+      fileSize: size,
       downloadUrl: item.downloadUrl || null,
       resultFileId: item.resultFileId || null,
       status: item.status || 'success',
-      createdAt: new Date().toISOString()
+      createdAt: item.createdAt || new Date().toISOString()
     };
 
     try {
@@ -432,6 +452,16 @@ export const storage = {
 
     try {
       const deviceId = getDeviceId();
+      const detailsPayload = JSON.stringify({
+        title: item.title,
+        cover: item.cover || item.thumbnail,
+        thumbnail: item.thumbnail || item.cover,
+        author: item.author,
+        driveRelPath: item.driveRelPath,
+        mimeType: item.mimeType,
+        sourceUrl: item.sourceUrl || item.originalUrl
+      });
+
       const res = await fetch('/api/v1/history', {
         method: 'POST',
         headers: {
@@ -439,6 +469,7 @@ export const storage = {
           'x-device-id': deviceId
         },
         body: JSON.stringify({
+          id: localRecord.id,
           deviceId,
           toolId: item.toolId || 'general',
           toolTitle: item.toolTitle || item.tool || 'Công cụ',
@@ -447,15 +478,16 @@ export const storage = {
           resultSize: size,
           downloadUrl: item.downloadUrl || null,
           resultFileId: item.resultFileId || null,
-          status: item.status || 'success'
+          status: item.status || 'success',
+          detailsJson: detailsPayload
         })
       });
       if (res.ok) {
         const json = await res.json();
-        if (json.data?.id) {
+        if (json.data?.id && json.data.id !== localRecord.id) {
           localRecord.id = json.data.id;
           const currentList = this.getLocalHistory();
-          const target = currentList.find(x => x.downloadUrl === localRecord.downloadUrl);
+          const target = currentList.find(x => x.downloadUrl === localRecord.downloadUrl || x.id === item.id);
           if (target) target.id = json.data.id;
           localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(currentList).slice(0, 50)));
         }
@@ -601,8 +633,20 @@ export const storage = {
   async emptyToolTrash(toolId) {
     const trashItems = this.getToolTrash(toolId);
     if (!trashItems.length) return;
-    this.permanentlyDeleteItemsSync(trashItems.map(i => i.id));
+    const targetBase = String(toolId).toLowerCase().replace(/-downloader$/, '').trim();
+
+    // 1. Immediately purge all matching items from local storage trash
+    try {
+      const allTrash = this.getLocalTrash().filter(item => {
+        if (!item) return false;
+        const tid = String(item.toolId || item.tool || '').toLowerCase().replace(/-downloader$/, '').trim();
+        return tid !== targetBase && tid !== `${targetBase}-downloader`;
+      });
+      localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(allTrash));
+    } catch {}
+
     dispatchHistoryUpdated(toolId, 'empty-tool');
+
     try {
       const deviceId = getDeviceId();
       const queryParam = toolId ? `?toolId=${encodeURIComponent(toolId)}` : '';
@@ -711,8 +755,16 @@ export const storage = {
   },
 
   permanentlyDeleteTrashItemSync(id) {
+    if (!id) return;
     try {
-      const trashList = this.getLocalTrash().filter(item => item.id !== id && item.downloadUrl !== id);
+      const targetStr = String(id);
+      const trashList = this.getLocalTrash().filter(item => {
+        if (!item) return false;
+        if (item.id === id || String(item.id) === targetStr) return false;
+        if (item.downloadUrl && (item.downloadUrl === id || item.downloadUrl.includes(targetStr))) return false;
+        if (item.sourceUrl && (item.sourceUrl === id || item.sourceUrl.includes(targetStr))) return false;
+        return true;
+      });
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(trashList));
       dispatchHistoryUpdated(null, 'delete-permanent');
     } catch {}

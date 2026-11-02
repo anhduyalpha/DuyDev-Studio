@@ -476,15 +476,16 @@ export function attachMediaHistoryListeners({
 
   // 1. Tab Switching
   container.querySelectorAll('[data-media-tab]').forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.preventDefault();
       const tab = btn.getAttribute('data-media-tab');
+      if (typeof onTabChange === 'function') {
+        onTabChange(tab);
+      }
       if (tab === 'trash') {
         storage.fetchTrash().then(() => {
           onHistoryChange?.();
         }).catch(() => {});
-      }
-      if (typeof onTabChange === 'function') {
-        onTabChange(tab);
       }
     };
   });

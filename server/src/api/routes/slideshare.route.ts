@@ -72,7 +72,7 @@ export async function slideshareRoute(app: FastifyInstance) {
   });
 
   app.post('/api/v1/slideshare/save-drive', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { url, title, id, originalUrl, cover, author, overwrite } = academicSaveDriveBodySchema.parse(request.body || {});
+    const { url, title, id, originalUrl, cover, author, overwrite, slideImages } = academicSaveDriveBodySchema.parse(request.body || {});
     const result = await SlideShareService.saveToDrive(
       url,
       title,
@@ -80,7 +80,8 @@ export async function slideshareRoute(app: FastifyInstance) {
       originalUrl,
       cover,
       author,
-      overwrite
+      overwrite,
+      slideImages
     );
     return reply.send({ success: true, data: result });
   });

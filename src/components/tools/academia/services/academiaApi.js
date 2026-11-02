@@ -2,6 +2,15 @@
  * academiaApi.js - Academia API Client
  */
 
+function parseApiError(json, fallback) {
+  if (typeof json.message === 'string' && json.message.trim()) return json.message.trim();
+  if (typeof json.error === 'string' && json.error.trim()) return json.error.trim();
+  if (json.error && typeof json.error.message === 'string' && json.error.message.trim()) {
+    return json.error.message.trim();
+  }
+  return fallback;
+}
+
 export const academiaApi = {
   async resolve(url, options = {}) {
     const res = await fetch('/api/v1/academia/resolve', {
@@ -13,7 +22,7 @@ export const academiaApi = {
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) {
-      throw new Error(json.message || json.error || `Lỗi phân tích Academia (HTTP ${res.status})`);
+      throw new Error(parseApiError(json, `Lỗi phân tích Academia (HTTP ${res.status})`));
     }
     return json.data;
   },
@@ -42,7 +51,7 @@ export const academiaApi = {
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.success) {
-      throw new Error(json.message || json.error || 'Lỗi lưu tài liệu vào Studio Drive');
+      throw new Error(parseApiError(json, 'Lỗi lưu tài liệu vào Studio Drive'));
     }
     return json.data;
   },

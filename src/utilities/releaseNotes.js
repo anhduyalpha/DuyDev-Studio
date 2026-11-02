@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.49': {
+    version: 'v24.49',
+    title: 'Bản cập nhật v24.49: Khắc Phục Lỗi Toast [object Object], Sửa Lỗi Hộp Lịch Sử & Thao Tác Thùng Rác',
+    date: '02/11/2026',
+    features: [
+      'Chống Lỗi Đóng Gói PPTX & Xử Lý Đồng Thời: Bổ sung bộ khóa Promise tự động cho saveToDrive, chống xung đột đa luồng khi người dùng tải tệp PPTX trước khi đóng gói xong',
+      'Đồng Bộ Lịch Sử Ngay Khi Khởi Tạo: Khởi tạo tức thì cấu trúc hộp lịch sử trong DOM, gắn kết trình lắng nghe in-place item animation giúp chuyển tab Lịch sử - Thùng rác mượt mà không độ trễ',
+      'Cơ Chế Bóc Tách Lỗi Chuẩn Xác: Thay thế hoàn toàn lỗi [object Object] bằng thông báo lỗi cụ thể, dễ hiểu từ hệ thống API'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Thùng Rác Không Bấm / Không Xóa Được: Tối ưu hóa chuỗi xóa thùng rác vĩnh viễn và đồng bộ thùng rác cục bộ, ngăn chặn tình trạng mục cũ bị phục hồi tự động khi refresh',
+      'Tự Động Mở Khóa Khỏi Thùng Rác Khi Phân Tích Lại: Khi tải hoặc phân tích lại một bài thuyết trình, hệ thống tự động gỡ bỏ định danh khỏi thùng rác để hiển thị ngay trong lịch sử mới'
+    ]
+  },
   'v24.48': {
     version: 'v24.48',
     title: 'Bản cập nhật v24.48: Tối Ưu Triệt Để Dán Link 1 Lần, Tự Động Cập Nhật Lịch Sử & Nút Tải PPTX',

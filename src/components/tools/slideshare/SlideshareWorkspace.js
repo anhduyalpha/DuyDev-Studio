@@ -13,6 +13,17 @@ import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
 import { renderMediaHistorySection, attachMediaHistoryListeners, setMediaHistoryExpanded, triggerDownload, escapeHtml } from '../common/MediaHistorySection.js';
 
+function formatErrorMessage(err, fallback = 'Lỗi xử lý') {
+  if (!err) return fallback;
+  if (typeof err === 'string' && err !== '[object Object]') return err;
+  if (typeof err.message === 'string' && err.message !== '[object Object]') return err.message;
+  if (typeof err.error === 'string' && err.error !== '[object Object]') return err.error;
+  if (err.error && typeof err.error.message === 'string' && err.error.message !== '[object Object]') {
+    return err.error.message;
+  }
+  return fallback;
+}
+
 export class SlideshareWorkspace {
   constructor(containerEl) {
     this.container = containerEl;
@@ -22,6 +33,7 @@ export class SlideshareWorkspace {
     this.error = null;
     this.data = null;
     this.savingToDrive = false;
+    this.saveToDrivePromise = null;
     this.savedDrivePath = null;
     this.savedFileName = null;
     this.savedPptxDrivePath = null;
@@ -491,94 +503,111 @@ export class SlideshareWorkspace {
   }
 
   async saveToDrive(options = {}) {
-    if (!this.data || this.savingToDrive) return;
+    if (!this.data) return null;
 
-    this.savingToDrive = true;
-    soundEngine?.play?.('start');
-    if (!options.silent) {
-      showToast('Đang tải và ghép các trang slide thành PDF...', 'info');
+    // If an operation is already in-flight, return the existing promise to prevent race conditions
+    if (this.saveToDrivePromise) {
+      return await this.saveToDrivePromise;
     }
 
-    const taskId = `ss_drive_${Date.now()}`;
-    taskCoordinator.createTask(taskId, {
-      title: `Lưu Drive: ${this.data.title || 'SlideShare'}`,
-      type: 'pdf-compile',
-      progress: 30
-    });
-
-    try {
-      const result = await slideshareApi.saveToDrive({
-        url: this.data.originalUrl,
-        title: this.data.title,
-        id: this.data.id,
-        originalUrl: this.data.originalUrl,
-        cover: this.data.coverUrl,
-        author: this.data.author,
-        category: 'slideshare'
-      });
-
-      this.savedDrivePath = result.drivePath;
-      this.savedFileName = result.fileName;
-      this.savedPptxDrivePath = result.pptxDrivePath || null;
-      this.savedPptxFileName = result.pptxFileName || null;
-      this.savingToDrive = false;
-      taskCoordinator.updateTask(taskId, { status: 'completed', progress: 100 });
-      soundEngine?.play?.('bell');
+    this.saveToDrivePromise = (async () => {
+      this.savingToDrive = true;
+      soundEngine?.play?.('start');
       if (!options.silent) {
-        showToast('Đã lưu bài thuyết trình vào Studio Drive (/slideshare)!', 'success');
+        showToast('Đang tải và ghép các trang slide thành PDF & PPTX...', 'info');
       }
 
-      // Add PDF to media history
-      await storage.addHistoryItem({
-        id: `ss_pdf_${this.data.id}_${Date.now()}`,
-        toolId: 'slideshare-downloader',
-        toolTitle: 'SlideShare Downloader',
-        title: `${this.data.title} (PDF)`,
-        fileName: result.fileName,
-        fileSize: result.size,
-        resultSize: result.size,
-        mimeType: 'application/pdf',
-        driveRelPath: result.drivePath,
-        thumbnail: this.data.coverUrl,
-        cover: this.data.coverUrl,
-        sourceUrl: this.data.originalUrl,
-        timestamp: Date.now()
+      const taskId = `ss_drive_${Date.now()}`;
+      taskCoordinator.createTask(taskId, {
+        title: `Lưu Drive: ${this.data.title || 'SlideShare'}`,
+        type: 'pdf-compile',
+        progress: 30
       });
 
-      // Add PPTX to media history if compiled
-      if (result.pptxDrivePath) {
+      try {
+        const result = await slideshareApi.saveToDrive({
+          url: this.data.originalUrl,
+          title: this.data.title,
+          id: String(this.data.id),
+          originalUrl: this.data.originalUrl,
+          cover: this.data.coverUrl,
+          author: this.data.author,
+          slideImages: this.data.slideImages || [],
+          category: 'slideshare'
+        });
+
+        this.savedDrivePath = result.drivePath;
+        this.savedFileName = result.fileName;
+        this.savedPptxDrivePath = result.pptxDrivePath || null;
+        this.savedPptxFileName = result.pptxFileName || null;
+        this.savingToDrive = false;
+        taskCoordinator.updateTask(taskId, { status: 'completed', progress: 100 });
+        soundEngine?.play?.('bell');
+        if (!options.silent) {
+          showToast('Đã lưu bài thuyết trình vào Studio Drive (/slideshare)!', 'success');
+        }
+
+        // Add PDF to media history
         await storage.addHistoryItem({
-          id: `ss_pptx_${this.data.id}_${Date.now()}`,
+          id: `ss_pdf_${this.data.id}`,
           toolId: 'slideshare-downloader',
           toolTitle: 'SlideShare Downloader',
-          title: `${this.data.title} (PPTX)`,
-          fileName: result.pptxFileName || `${this.data.title}.pptx`,
-          fileSize: result.pptxSize || result.size,
-          resultSize: result.pptxSize || result.size,
-          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          driveRelPath: result.pptxDrivePath,
+          title: `${this.data.title} (PDF)`,
+          fileName: result.fileName,
+          fileSize: result.size,
+          resultSize: result.size,
+          mimeType: 'application/pdf',
+          driveRelPath: result.drivePath,
+          downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(result.fileName)}`,
           thumbnail: this.data.coverUrl,
           cover: this.data.coverUrl,
+          author: this.data.author,
           sourceUrl: this.data.originalUrl,
           timestamp: Date.now()
         });
-      }
 
-      this.renderResultArea();
-      this.renderHistory();
+        // Add PPTX to media history if compiled
+        const cleanTitle = (this.data.title || 'Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
+        const pptxName = result.pptxFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pptx`;
+        await storage.addHistoryItem({
+          id: `ss_pptx_${this.data.id}`,
+          toolId: 'slideshare-downloader',
+          toolTitle: 'SlideShare Downloader',
+          title: `${this.data.title} (PPTX)`,
+          fileName: pptxName,
+          fileSize: result.pptxSize || result.size,
+          resultSize: result.pptxSize || result.size,
+          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          driveRelPath: result.pptxDrivePath || `/slideshare/${pptxName}`,
+          downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`,
+          thumbnail: this.data.coverUrl,
+          cover: this.data.coverUrl,
+          author: this.data.author,
+          sourceUrl: this.data.originalUrl,
+          timestamp: Date.now()
+        });
 
-      if (options.autoPreview) {
-        this.openPdfViewer(result.fileName, result.drivePath);
+        this.renderResultArea();
+        this.renderHistory();
+
+        if (options.autoPreview) {
+          this.openPdfViewer(result.fileName, result.drivePath);
+        }
+        return result;
+      } catch (err) {
+        this.savingToDrive = false;
+        taskCoordinator.updateTask(taskId, { status: 'failed', progress: 100 });
+        soundEngine?.play?.('error');
+        const errMsg = formatErrorMessage(err, 'Lỗi khi lưu tài liệu vào Studio Drive');
+        showToast(errMsg, 'error');
+        this.renderResultArea();
+        throw err;
       }
-      return result;
-    } catch (err) {
-      this.savingToDrive = false;
-      taskCoordinator.updateTask(taskId, { status: 'failed', progress: 100 });
-      soundEngine?.play?.('error');
-      showToast(err.message || 'Lỗi khi lưu tài liệu vào Studio Drive', 'error');
-      this.renderResultArea();
-      throw err;
-    }
+    })().finally(() => {
+      this.saveToDrivePromise = null;
+    });
+
+    return await this.saveToDrivePromise;
   }
 
   async previewPresentation() {
@@ -641,7 +670,8 @@ export class SlideshareWorkspace {
       try {
         await this.saveToDrive({ silent: true });
       } catch (err) {
-        showToast(err.message || 'Lỗi khi tạo tệp PowerPoint', 'error');
+        const msg = formatErrorMessage(err, 'Lỗi khi tạo tệp PowerPoint (.pptx)');
+        showToast(msg, 'error');
         return;
       } finally {
         if (btn) {
@@ -677,7 +707,8 @@ export class SlideshareWorkspace {
       try {
         await this.saveToDrive({ silent: true });
       } catch (err) {
-        showToast(err.message || 'Lỗi khi tạo tệp PDF', 'error');
+        const msg = formatErrorMessage(err, 'Lỗi khi tạo tệp PDF');
+        showToast(msg, 'error');
         return;
       } finally {
         if (btn) {
@@ -842,21 +873,43 @@ export class SlideshareWorkspace {
     if (window.lucide) window.lucide.createIcons({ root: el });
   }
 
-  renderHistory() {
-    const el = this.container.querySelector('#slideshareHistoryContainer');
-    if (!el) return;
-    el.innerHTML = renderMediaHistorySection({
+  attachHistoryListeners() {
+    const historyContainer = this.container.querySelector('#slideshareHistoryContainer');
+    if (!historyContainer) return;
+
+    if (this.historyCleanup) {
+      this.historyCleanup();
+      this.historyCleanup = null;
+    }
+
+    // Intercept single item delete / restore for smooth in-place DOM item animation and removal
+    const handleInPlaceAction = (e) => {
+      const actionBtn = e.target.closest('[data-action-delete], [data-action-restore], [data-action-perm-delete]');
+      if (!actionBtn) return;
+      const card = actionBtn.closest('.p-3, .p-3\\.5, .rounded-xl');
+      if (card) {
+        card.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.96) translateY(-4px)';
+        card.style.pointerEvents = 'none';
+        setTimeout(() => {
+          card.remove();
+          const countBadge = historyContainer.querySelector('.font-mono.font-bold');
+          if (countBadge) {
+            const currentItems = this.historyTab === 'trash'
+              ? storage.getToolTrash('slideshare-downloader')
+              : storage.getToolHistory('slideshare-downloader');
+            countBadge.textContent = `${currentItems.length} mục`;
+          }
+        }, 260);
+      }
+    };
+    historyContainer.addEventListener('click', handleInPlaceAction);
+
+    const baseCleanup = attachMediaHistoryListeners({
+      container: historyContainer,
       toolId: 'slideshare-downloader',
-      title: 'Lịch Sử Tải Xuống',
-      activeTab: this.historyTab,
-      fallbackIcon: 'presentation',
       accentColor: '#0077B5',
-      driveFolderPath: '/slideshare'
-    });
-    if (this.historyCleanup) this.historyCleanup();
-    this.historyCleanup = attachMediaHistoryListeners({
-      container: el,
-      toolId: 'slideshare-downloader',
       onTabChange: (newTab) => {
         this.historyTab = newTab;
         this.renderHistory();
@@ -871,9 +924,37 @@ export class SlideshareWorkspace {
         }
       },
       onHistoryChange: () => {
-        this.renderHistory();
+        const currentList = this.historyTab === 'trash'
+          ? storage.getToolTrash('slideshare-downloader')
+          : storage.getToolHistory('slideshare-downloader');
+        if (currentList.length === 0) {
+          this.renderHistory();
+        }
       }
     });
+
+    this.historyCleanup = () => {
+      historyContainer.removeEventListener('click', handleInPlaceAction);
+      if (typeof baseCleanup === 'function') baseCleanup();
+    };
+
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: historyContainer });
+    }
+  }
+
+  renderHistory() {
+    const el = this.container.querySelector('#slideshareHistoryContainer');
+    if (!el) return;
+    el.innerHTML = renderMediaHistorySection({
+      toolId: 'slideshare-downloader',
+      title: 'Lịch Sử Tải Xuống',
+      activeTab: this.historyTab,
+      fallbackIcon: 'presentation',
+      accentColor: '#0077B5',
+      driveFolderPath: '/slideshare'
+    });
+    this.attachHistoryListeners();
   }
 
   render() {
@@ -934,8 +1015,17 @@ export class SlideshareWorkspace {
         <!-- Result Container -->
         <div id="ssResultContainer"></div>
 
-        <!-- History Container -->
-        <div id="slideshareHistoryContainer"></div>
+        <!-- History Container (Immediate render) -->
+        <div id="slideshareHistoryContainer">
+          ${renderMediaHistorySection({
+            toolId: 'slideshare-downloader',
+            title: 'Lịch Sử Tải Xuống',
+            activeTab: this.historyTab,
+            fallbackIcon: 'presentation',
+            accentColor: '#0077B5',
+            driveFolderPath: '/slideshare'
+          })}
+        </div>
       </div>
     `.trim();
 
@@ -946,6 +1036,8 @@ export class SlideshareWorkspace {
       input.addEventListener('paste', this.boundHandlePaste);
     }
     this.container.addEventListener('click', this.boundHandleClick);
+
+    this.attachHistoryListeners();
 
     if (window.lucide) window.lucide.createIcons({ root: this.container });
   }

@@ -17,6 +17,7 @@ export const academicSaveDriveBodySchema = z.object({
   originalUrl: z.string().optional(),
   cover: z.string().optional(),
   author: z.string().optional(),
+  slideImages: z.array(z.string()).optional(),
   pageCount: z.number().int().nonnegative().optional(),
   overwrite: z.boolean().optional(),
   category: z.enum(['slideshare', 'academia', 'researchgate']).default('slideshare')
