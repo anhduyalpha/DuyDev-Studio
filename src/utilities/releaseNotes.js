@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.37': {
+    version: 'v24.37',
+    title: 'Bản cập nhật v24.37: Màn Hình Khóa DevTools "ÂU NÂU ĐỪNG PHÁ WEB" & Chống Can Thiệp Toàn Diện',
+    date: '02/11/2026',
+    features: [
+      'Màn Hình Khóa Toàn Phần: Tự động phủ màn hình khóa "ÂU NÂU ĐỪNG PHÁ WEB" ngay trong 0.2s khi phát hiện DevTools (docked bên phải/dưới hoặc cửa sổ rời)',
+      'Tự Động Mở Khóa Khi Đóng DevTools: Ngay khi người dùng đóng cửa sổ DevTools, màn hình sẽ tự động giải phóng và cho phép tiếp tục sử dụng bình thường',
+      'Cơ Chế Mở Khóa Dành Riêng Cho Duy: Nút mở khóa nhanh trực tiếp trên màn hình thông báo dành cho Quản trị viên khi cần kiểm tra kỹ thuật'
+    ],
+    fixes: [
+      'Bảo Vệ Đa Lớp Trước Hành Vi Xóa DOM: Kích hoạt MutationObserver tự động tái lập màn hình khóa nếu người dùng cố tình xóa thẻ cảnh báo qua Elements tab'
+    ]
+  },
   'v24.36': {
     version: 'v24.36',
     title: 'Bản cập nhật v24.36: Tích Hợp Hệ Thống Chống Debugger & Ngăn Chặn DevTools Toàn Diện',

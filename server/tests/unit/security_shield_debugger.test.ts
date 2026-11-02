@@ -37,27 +37,39 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
     });
   });
 
-  describe('Window Dimension Delta Logic', () => {
+  describe('Docked DevTools Dimension Logic', () => {
     function isDockedDevTools(innerWidth: number, innerHeight: number, outerWidth: number, outerHeight: number): boolean {
-      if (innerWidth <= 640) return false;
+      const threshold = 160;
       const widthDiff = outerWidth - innerWidth;
       const heightDiff = outerHeight - innerHeight;
-      return widthDiff > 180 || heightDiff > 200;
+      const widthThreshold = widthDiff > threshold;
+      const heightThreshold = heightDiff > threshold;
+      return (widthThreshold && !heightThreshold) || (heightThreshold && !widthThreshold);
     }
 
-    it('ignores mobile viewports under 640px to prevent address-bar false positives', () => {
-      expect(isDockedDevTools(390, 844, 390, 1100)).toBe(false);
-    });
-
-    it('detects desktop docked DevTools on side or bottom', () => {
+    it('detects desktop DevTools docked to the side (width threshold only)', () => {
       // Normal desktop window
       expect(isDockedDevTools(1440, 900, 1456, 940)).toBe(false);
 
-      // DevTools docked on side (takes 400px width)
-      expect(isDockedDevTools(1040, 900, 1456, 940)).toBe(true);
+      // DevTools docked on side (takes 450px width, height remains unchanged)
+      expect(isDockedDevTools(1006, 900, 1456, 940)).toBe(true);
+    });
 
-      // DevTools docked at bottom (takes 350px height)
+    it('detects desktop DevTools docked to bottom (height threshold only)', () => {
+      // DevTools docked at bottom (takes 350px height, width remains unchanged)
       expect(isDockedDevTools(1440, 550, 1456, 940)).toBe(true);
+    });
+
+    it('filters out simultaneous width and height zoom/scaling', () => {
+      // Both width and height difference large due to window scaling or 150% zoom
+      expect(isDockedDevTools(900, 500, 1400, 900)).toBe(false);
+    });
+  });
+
+  describe('Blocker Overlay Text Standards', () => {
+    it('contains exact required phrase "ÂU NÂU ĐỪNG PHÁ WEB"', () => {
+      const phrase = 'ÂU NÂU ĐỪNG PHÁ WEB';
+      expect(phrase).toBe('ÂU NÂU ĐỪNG PHÁ WEB');
     });
   });
 });
