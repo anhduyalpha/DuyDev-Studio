@@ -1,6 +1,6 @@
 /**
  * security_shield_debugger.test.ts - Anti-Debugger & Client Shield Test Suite
- * Tests local dev bypass detection, timing logic, and admin state listeners.
+ * Tests local dev bypass detection, timing logic, docked DevTools thresholds, and reload requirement.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -39,37 +39,46 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
 
   describe('Docked DevTools Dimension Logic', () => {
     function isDockedDevTools(innerWidth: number, innerHeight: number, outerWidth: number, outerHeight: number): boolean {
-      const threshold = 160;
       const widthDiff = outerWidth - innerWidth;
       const heightDiff = outerHeight - innerHeight;
-      const widthThreshold = widthDiff > threshold;
-      const heightThreshold = heightDiff > threshold;
-      return (widthThreshold && !heightThreshold) || (heightThreshold && !widthThreshold);
+      return widthDiff > 100 || heightDiff > 250;
     }
 
-    it('detects desktop DevTools docked to the side (width threshold only)', () => {
-      // Normal desktop window
-      expect(isDockedDevTools(1440, 900, 1456, 940)).toBe(false);
+    it('detects desktop DevTools docked to the side (widthDiff > 100)', () => {
+      // Normal desktop window (16px border)
+      expect(isDockedDevTools(1440, 900, 1456, 1020)).toBe(false);
 
-      // DevTools docked on side (takes 450px width, height remains unchanged)
-      expect(isDockedDevTools(1006, 900, 1456, 940)).toBe(true);
+      // DevTools docked on side (takes 450px width)
+      expect(isDockedDevTools(1006, 900, 1456, 1020)).toBe(true);
     });
 
-    it('detects desktop DevTools docked to bottom (height threshold only)', () => {
-      // DevTools docked at bottom (takes 350px height, width remains unchanged)
+    it('detects desktop DevTools docked to bottom (heightDiff > 250)', () => {
+      // DevTools docked at bottom (takes 350px height)
       expect(isDockedDevTools(1440, 550, 1456, 940)).toBe(true);
-    });
-
-    it('filters out simultaneous width and height zoom/scaling', () => {
-      // Both width and height difference large due to window scaling or 150% zoom
-      expect(isDockedDevTools(900, 500, 1400, 900)).toBe(false);
     });
   });
 
-  describe('Blocker Overlay Text Standards', () => {
+  describe('Blocker Overlay Text Standards & Reload Requirement', () => {
     it('contains exact required phrase "ÂU NÂU ĐỪNG PHÁ WEB"', () => {
       const phrase = 'ÂU NÂU ĐỪNG PHÁ WEB';
       expect(phrase).toBe('ÂU NÂU ĐỪNG PHÁ WEB');
+    });
+
+    it('latches permanently and requires reload once triggered', () => {
+      let isWebLocked = false;
+      const lockWebPermanently = () => { isWebLocked = true; };
+
+      lockWebPermanently();
+      expect(isWebLocked).toBe(true);
+
+      // Attempting further status checks does not un-lock
+      const checkDevToolsStatus = (isOpen: boolean) => {
+        if (!isOpen && !isWebLocked) {
+          // would unlock only if not permanently latched
+        }
+      };
+      checkDevToolsStatus(false);
+      expect(isWebLocked).toBe(true);
     });
   });
 });

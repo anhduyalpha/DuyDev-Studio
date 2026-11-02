@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.38': {
+    version: 'v24.38',
+    title: 'Bản cập nhật v24.38: Khóa Cố Định "ÂU NÂU ĐỪNG PHÁ WEB" & Yêu Cầu Tải Lại Trang (Reload)',
+    date: '02/11/2026',
+    features: [
+      'Khóa Cố Định Triệt Tiêu Nhấp Nháy (Zero-Flicker Permanent Lock): Khóa chặt màn hình "ÂU NÂU ĐỪNG PHÁ WEB" ngay khi phát hiện DevTools, không bị nhấp nháy hay tự tắt',
+      'Yêu Cầu Tải Lại Trang (Reload to Re-enter): Bổ sung nút thao tác và hướng dẫn đóng DevTools rồi bấm "Tải lại trang (F5)" để tiếp tục truy cập'
+    ],
+    fixes: [
+      'Chuẩn Hóa Ngưỡng Phát Hiện Docked DevTools: Đo vi sai chiều rộng (>100px) và chiều cao (>250px) để nhận diện tức thì thanh DevTools gắn bên phải hoặc đáy màn hình'
+    ]
+  },
   'v24.37': {
     version: 'v24.37',
     title: 'Bản cập nhật v24.37: Màn Hình Khóa DevTools "ÂU NÂU ĐỪNG PHÁ WEB" & Chống Can Thiệp Toàn Diện',
