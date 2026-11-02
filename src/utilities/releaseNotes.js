@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.45': {
+    version: 'v24.45',
+    title: 'Bản cập nhật v24.45: Khắc Phục Triệt Để Trích Xuất SlideShare, Trình Xem Trước & Lịch Sử Tải Xuống',
+    date: '02/11/2026',
+    features: [
+      'Trích Xuất Trọn Vẹn SlideShare Next.js: Tự động giải mã siêu dữ liệu và toàn bộ slide ảnh độ phân giải cao 2048px từ cấu trúc Next.js hiện đại, giải quyết triệt để lỗi chỉ nhận 1 slide thay vì đầy đủ bài thuyết trình',
+      'Trạng Thái Nút Phân Tích Thông Minh: Hiệu ứng xoay tròn và vô hiệu hóa nút trong lúc xử lý, chống bấm nhầm hoặc gửi yêu cầu lặp lại nhiều lần',
+      'Xem Trước Tức Thì & Tự Động Lưu Lịch Sử: Nhấn Xem trước sẽ lập tức chuẩn bị tệp PDF hoàn chỉnh mở trong Trình đọc PDF Studio và đồng bộ lưu vào Lịch sử tải xuống'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Failed to fetch Khi Xem Trước: Thay thế luồng xem trước trực tiếp ảnh CDN SlideShare bằng đường dẫn tài liệu chuẩn qua Trình đọc Studio',
+      'Định Vị Script slides_to_pdf.py & Python venv: Chuẩn hóa đường dẫn tương đối đa nền tảng tránh lỗi tìm script khi thực thi backend'
+    ]
+  },
   'v24.44': {
     version: 'v24.44',
     title: 'Bản cập nhật v24.44: Thiết Kế Lại Biểu Tượng 3 Module Học Thuật Đạt Độ Tương Phản Tối Đa',

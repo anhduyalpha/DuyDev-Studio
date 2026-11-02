@@ -22,6 +22,32 @@ import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+function resolvePythonBin(): string {
+  if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
+  const candidateVenvs = [
+    '/home/anhduy/dd-studio/engines/document/venv/bin/python',
+    '/home/anhduy/dd-studio/engines/document/venv/bin/python3',
+    '/home/anhduy/dd-studio/engines/converter/file_conversor_core/venv/bin/python'
+  ];
+  for (const v of candidateVenvs) {
+    if (fs.existsSync(v)) return v;
+  }
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
+function resolveSlidesToPdfEngine(): string {
+  const candidates = [
+    path.resolve(process.cwd(), 'engines/document/slides_to_pdf.py'),
+    path.resolve(process.cwd(), '../engines/document/slides_to_pdf.py'),
+    path.resolve(process.cwd(), '../../engines/document/slides_to_pdf.py'),
+    '/home/anhduy/dd-studio/engines/document/slides_to_pdf.py'
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
 export interface SlideShareResolveResult {
   id: string;
   title: string;
@@ -72,50 +98,94 @@ export class SlideShareService {
 
       const html = await res.text();
 
-      // 1. Extract Title
+      // 1. Try parsing Next.js __NEXT_DATA__ payload (standard for modern SlideShare)
       let title = '';
-      const titleOg = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-      const titleTag = html.match(/<title>([^<]+)<\/title>/i);
-      if (titleOg && titleOg[1]) title = titleOg[1].trim();
-      else if (titleTag && titleTag[1]) title = titleTag[1].replace(/\s*-\s*SlideShare.*/i, '').trim();
-      if (!title) title = 'SlideShare Presentation';
-
-      // 2. Extract Author
       let author = 'SlideShare Author';
-      const authorMatch = html.match(/<span[^>]*class=["'][^"']*author[^"']*["'][^>]*>([^<]+)<\/span>/i) ||
-                          html.match(/"author":\s*\{[^}]*"name":\s*"([^"]+)"/i) ||
-                          html.match(/by\s+<a[^>]*>([^<]+)<\/a>/i);
-      if (authorMatch && authorMatch[1]) {
-        author = authorMatch[1].trim();
-      }
-
-      // 3. Extract Description
       let description = '';
-      const descOg = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
-                     html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-      if (descOg && descOg[1]) description = descOg[1].trim();
-
-      // 4. Extract Cover / Thumbnail
       let coverUrl = '';
-      const imageOg = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
-      if (imageOg && imageOg[1]) coverUrl = imageOg[1].trim();
-
-      // 5. Extract Slides or Embed Image sequence
       const slideImages: string[] = [];
-      const imgRegex = /https:\/\/image\.slidesharecdn\.com\/[a-zA-Z0-9_\-\.\/]+-slide-\d+-[a-zA-Z0-9_\.]+/g;
-      const matches = html.match(imgRegex);
-      if (matches) {
-        const unique = Array.from(new Set(matches));
-        // Sort slides by index
-        unique.sort((a, b) => {
-          const idxA = parseInt(a.match(/slide-(\d+)/)?.[1] || '0', 10);
-          const idxB = parseInt(b.match(/slide-(\d+)/)?.[1] || '0', 10);
-          return idxA - idxB;
-        });
-        slideImages.push(...unique);
+      let totalSlides = 0;
+
+      const nextDataMatch = html.match(/<script\s+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+      if (nextDataMatch) {
+        try {
+          const nextJson = JSON.parse(nextDataMatch[1]);
+          const slideshow = nextJson.props?.pageProps?.slideshow;
+          if (slideshow) {
+            if (slideshow.title) title = String(slideshow.title).trim();
+            if (slideshow.user?.name || slideshow.user?.login || slideshow.username) {
+              author = String(slideshow.user?.name || slideshow.user?.login || slideshow.username).trim();
+            }
+            if (slideshow.description) description = String(slideshow.description).trim();
+            totalSlides = Number(slideshow.totalSlides) || 0;
+
+            const slides = slideshow.slides;
+            if (slides && slides.host && slides.imageLocation && totalSlides > 0) {
+              const sizes: Array<{ quality?: number; width?: number }> = Array.isArray(slides.imageSizes) ? slides.imageSizes : [];
+              const bestSize = sizes.find(s => s.width === 2048) || sizes.find(s => s.width === 1024) || sizes[sizes.length - 1];
+              const quality = bestSize?.quality || 75;
+              const width = bestSize?.width || 2048;
+              const slideSlug = slides.title || 'slide';
+
+              for (let i = 1; i <= totalSlides; i++) {
+                slideImages.push(`${slides.host}/${slides.imageLocation}/${quality}/${slideSlug}-${i}-${width}.jpg`);
+              }
+
+              if (slideImages.length > 0) {
+                coverUrl = slideImages[0];
+              }
+            }
+          }
+        } catch (e) {
+          logger.warn({ err: e }, '[SlideShareService] Failed to parse __NEXT_DATA__ JSON payload');
+        }
       }
 
-      // Fallback: check picture sources or data-full-url
+      // 2. Fallbacks for Title, Author, Description, Cover if not found in __NEXT_DATA__
+      if (!title) {
+        const titleOg = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+        const titleTag = html.match(/<title>([^<]+)<\/title>/i);
+        if (titleOg && titleOg[1]) title = titleOg[1].trim();
+        else if (titleTag && titleTag[1]) title = titleTag[1].replace(/\s*-\s*SlideShare.*/i, '').trim();
+        if (!title) title = 'SlideShare Presentation';
+      }
+
+      if (author === 'SlideShare Author') {
+        const authorMatch = html.match(/<span[^>]*class=["'][^"']*author[^"']*["'][^>]*>([^<]+)<\/span>/i) ||
+                            html.match(/"author":\s*\{[^}]*"name":\s*"([^"]+)"/i) ||
+                            html.match(/by\s+<a[^>]*>([^<]+)<\/a>/i);
+        if (authorMatch && authorMatch[1]) {
+          author = authorMatch[1].trim();
+        }
+      }
+
+      if (!description) {
+        const descOg = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
+                       html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+        if (descOg && descOg[1]) description = descOg[1].trim();
+      }
+
+      if (!coverUrl) {
+        const imageOg = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+        if (imageOg && imageOg[1]) coverUrl = imageOg[1].trim();
+      }
+
+      // 3. Fallback regex for legacy static HTML slide images
+      if (slideImages.length === 0) {
+        const imgRegex = /https:\/\/image\.slidesharecdn\.com\/[a-zA-Z0-9_\-\.\/]+-slide-\d+-[a-zA-Z0-9_\.]+/g;
+        const matches = html.match(imgRegex);
+        if (matches) {
+          const unique = Array.from(new Set(matches));
+          unique.sort((a, b) => {
+            const idxA = parseInt(a.match(/slide-(\d+)/)?.[1] || '0', 10);
+            const idxB = parseInt(b.match(/slide-(\d+)/)?.[1] || '0', 10);
+            return idxA - idxB;
+          });
+          slideImages.push(...unique);
+        }
+      }
+
+      // 4. Final Fallback: if no slides extracted at all, use cover image
       if (slideImages.length === 0 && coverUrl) {
         slideImages.push(coverUrl);
       }
@@ -130,7 +200,7 @@ export class SlideShareService {
         author,
         description,
         coverUrl,
-        slideCount: Math.max(slideImages.length, 1),
+        slideCount: Math.max(slideImages.length, totalSlides, 1),
         slideImages,
         originalUrl: url
       };
@@ -206,8 +276,8 @@ export class SlideShareService {
       const manifestPath = path.join(tempDir, 'images.json');
       await fsPromises.writeFile(manifestPath, JSON.stringify(downloadedImages), 'utf8');
 
-      const engineScript = path.resolve(process.cwd(), 'engines/document/slides_to_pdf.py');
-      const pyCmd = process.platform === 'win32' ? 'python' : 'python3';
+      const engineScript = resolveSlidesToPdfEngine();
+      const pyCmd = resolvePythonBin();
 
       await execFileAsync(pyCmd, [
         engineScript,

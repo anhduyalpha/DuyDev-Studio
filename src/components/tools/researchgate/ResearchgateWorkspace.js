@@ -204,6 +204,8 @@ export class ResearchgateWorkspace {
   }
 
   async resolvePublication() {
+    if (this.loading) return;
+
     const cleanUrl = this.sanitizeUrl(this.url);
     if (!cleanUrl) {
       showToast('Vui lòng nhập liên kết ResearchGate hợp lệ', 'warning');
@@ -215,6 +217,14 @@ export class ResearchgateWorkspace {
     this.data = null;
     this.renderResultArea();
     soundEngine?.play?.('start');
+
+    const resolveBtn = this.container.querySelector('#btnResolveRg');
+    if (resolveBtn) {
+      resolveBtn.disabled = true;
+      resolveBtn.classList.add('opacity-75', 'cursor-not-allowed');
+      resolveBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang phân tích...</span>';
+      if (window.lucide) window.lucide.createIcons({ root: resolveBtn });
+    }
 
     const taskId = `rg_${Date.now()}`;
     taskCoordinator.createTask(taskId, {
@@ -238,6 +248,13 @@ export class ResearchgateWorkspace {
       taskCoordinator.updateTask(taskId, { status: 'failed', progress: 100 });
       soundEngine?.play?.('error');
       this.renderResultArea();
+    } finally {
+      if (resolveBtn) {
+        resolveBtn.disabled = false;
+        resolveBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        resolveBtn.innerHTML = '<i data-lucide="search" class="w-4 h-4"></i><span>Phân tích bài báo</span>';
+        if (window.lucide) window.lucide.createIcons({ root: resolveBtn });
+      }
     }
   }
 
