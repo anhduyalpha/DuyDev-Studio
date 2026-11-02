@@ -25,9 +25,12 @@ export class AcademiaWorkspace {
     this.historyTab = 'history';
     this.historyCleanup = null;
     this.abortController = null;
+    this.inputDebounce = null;
 
     this.boundHandleInput = this.handleInput.bind(this);
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
+    this.boundHandlePaste = this.handlePaste.bind(this);
+    this.boundHandleGlobalPaste = this.handleGlobalPaste.bind(this);
     this.boundHandleClick = this.handleClick.bind(this);
   }
 
@@ -37,6 +40,8 @@ export class AcademiaWorkspace {
     Promise.all([storage.fetchHistory(), storage.fetchTrash()]).then(() => {
       this.renderHistory();
     }).catch(() => {});
+
+    window.addEventListener('paste', this.boundHandleGlobalPaste);
 
     const pendingUrl = consumePendingAutoStart('academia') || consumePendingAutoStart('academia-downloader');
     if (pendingUrl) {
@@ -61,6 +66,12 @@ export class AcademiaWorkspace {
 
   unmount() {
     this.abortController = null;
+    if (this.inputDebounce) {
+      clearTimeout(this.inputDebounce);
+      this.inputDebounce = null;
+    }
+
+    window.removeEventListener('paste', this.boundHandleGlobalPaste);
 
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
@@ -76,6 +87,7 @@ export class AcademiaWorkspace {
     if (input) {
       input.removeEventListener('input', this.boundHandleInput);
       input.removeEventListener('keydown', this.boundHandleKeyDown);
+      input.removeEventListener('paste', this.boundHandlePaste);
     }
 
     this.container.removeEventListener('click', this.boundHandleClick);
@@ -108,8 +120,53 @@ export class AcademiaWorkspace {
 
   handleInput(e) {
     if (e.target.id === 'acUrlInput') {
-      this.url = e.target.value;
+      const val = e.target.value || '';
+      this.url = val;
       this.updateInputActions();
+
+      const clean = this.sanitizeUrl(val);
+      if (clean && clean.includes('academia.edu') && (val.startsWith('http') || val.startsWith('academia.edu'))) {
+        clearTimeout(this.inputDebounce);
+        this.inputDebounce = setTimeout(() => {
+          if (this.url === val && !this.loading && !this.data) {
+            this.resolvePaper();
+          }
+        }, 300);
+      }
+    }
+  }
+
+  handlePaste(e) {
+    if (e.target.id === 'acUrlInput') {
+      const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      if (!pasted) return;
+      const clean = this.sanitizeUrl(pasted) || pasted.trim();
+      if (clean) {
+        e.preventDefault();
+        e.target.value = clean;
+        this.url = clean;
+        this.updateInputActions();
+        soundEngine?.play?.('click');
+        if (clean.includes('academia.edu')) {
+          setTimeout(() => this.resolvePaper(), 40);
+        }
+      }
+    }
+  }
+
+  handleGlobalPaste(e) {
+    if (['TEXTAREA', 'INPUT'].includes(e.target?.tagName)) return;
+    const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+    if (!pasted) return;
+    const clean = this.sanitizeUrl(pasted);
+    if (clean && clean.includes('academia.edu')) {
+      e.preventDefault();
+      const input = this.container.querySelector('#acUrlInput');
+      if (input) input.value = clean;
+      this.url = clean;
+      this.updateInputActions();
+      soundEngine?.play?.('click');
+      setTimeout(() => this.resolvePaper(), 40);
     }
   }
 
@@ -482,6 +539,7 @@ export class AcademiaWorkspace {
     if (input) {
       input.addEventListener('input', this.boundHandleInput);
       input.addEventListener('keydown', this.boundHandleKeyDown);
+      input.addEventListener('paste', this.boundHandlePaste);
     }
     this.container.addEventListener('click', this.boundHandleClick);
 

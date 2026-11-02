@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.46': {
+    version: 'v24.46',
+    title: 'Bản cập nhật v24.46: Tự Động Phân Tích Ngay Khi Dán Liên Kết',
+    date: '02/11/2026',
+    features: [
+      'Tự Động Kích Hoạt Phân Tích (Auto-Resolve): Tự động phân tích slide và bài báo học thuật ngay khi người dùng dán liên kết qua phím tắt Ctrl + V, menu chuột phải, nút Dán hoặc dán toàn cục trang',
+      'Đồng Bộ Trải Nghiệm Ba Module: Áp dụng cơ chế auto-resolve mượt mà cho SlideShare, Academia.edu và ResearchGate kèm bộ lọc làm sạch liên kết rác'
+    ],
+    fixes: [
+      'Khử Trùng Lặp & Chống Lỗi Nhập: Tích hợp cơ chế kiểm soát debounce và chặn re-entry khi tiến trình phân tích đang chạy'
+    ]
+  },
   'v24.45': {
     version: 'v24.45',
     title: 'Bản cập nhật v24.45: Khắc Phục Triệt Để Trích Xuất SlideShare, Trình Xem Trước & Lịch Sử Tải Xuống',
