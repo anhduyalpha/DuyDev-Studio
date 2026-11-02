@@ -6,6 +6,21 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.34': {
+    version: 'v24.34',
+    title: 'Bản cập nhật v24.34: Tăng Cường Bảo Mật Đa Tầng Toàn Diện (Defense-in-Depth Security Hardening)',
+    date: '02/11/2026',
+    features: [
+      'Bảo Mật Phiên Đa Tầng Bằng Cookie Ký Số HMAC: Tự động cấp phát và kiểm chứng cookie HttpOnly SameSite=Lax (ds_session, ds_admin_session), chống giả mạo danh tính và rò rỉ mã thiết bị',
+      'Cơ Chế Chống Giả Mạo Yêu Cầu (CSRF Double-Submit): Bổ sung mã thông báo CSRF HMAC độc quyền kết hợp kiểm tra nguồn gốc nghiêm ngặt (Sec-Fetch-Site / Origin Whitelist)',
+      'Lá Chắn Mã Nguồn & Chống Sao Chép / DevTools: Ngăn chặn truy cập trực tiếp file nguồn /src/, chặn phím tắt thanh tra mã (F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+S) và click chuột phải trái phép cho khách vãng lai (tự động bỏ qua cho Quản trị viên)',
+      'Bảo Vệ Đăng Nhập Brute-Force: Tự động khóa IP 15 phút khi nhập sai mật khẩu quản trị quá 5 lần liên tiếp; loại bỏ hoàn toàn mã băm mật khẩu cứng khỏi mã nguồn giao diện'
+    ],
+    fixes: [
+      'Chống Tấn Công SSRF Qua Proxy Media: Thẩm định nghiêm ngặt danh sách tên miền được phép, chặn đứng mọi nỗ lực khai thác mạng nội bộ (localhost, loopback, private IP, cloud metadata)',
+      'Chuẩn Hóa Tiêu Chuẩn Bảo Mật OWASP: Thiết lập chặt chẽ các HTTP Security Headers (X-Content-Type-Options, X-Frame-Options, CSP, Permissions-Policy, Referrer-Policy)'
+    ]
+  },
   'v24.33': {
     version: 'v24.33',
     title: 'Bản cập nhật v24.33: Nâng Cấp Toàn Diện Facebook Downloader (Bài Viết, Album Ảnh, Reel & Video)',

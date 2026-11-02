@@ -129,4 +129,133 @@ export class AuthService {
 
     return crypto.timingSafeEqual(sigBuf, expBuf);
   }
+
+  // --- Visitor Session & Signed Cookie Gatekeeper ---
+
+  /**
+   * Generates a tamper-proof signed visitor session cookie (ds_session) bound to deviceId
+   * Format: <deviceId>.<expiresAt>.<signature>
+   */
+  static generateVisitorCookie(deviceId: string): { sessionCookie: string; csrfToken: string; deviceId: string } {
+    const cleanId = (deviceId || '').trim() || `dev_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+    const expiresAt = Date.now() + TOKEN_TTL_MS; // 30 days
+    const payload = `${cleanId}.${expiresAt}`;
+    const signature = crypto
+      .createHmac('sha256', HMAC_SECRET)
+      .update(`visitor:${payload}`)
+      .digest('hex');
+
+    const sessionCookie = `${payload}.${signature}`;
+    const csrfToken = this.generateCsrfToken(cleanId);
+    return { sessionCookie, csrfToken, deviceId: cleanId };
+  }
+
+  /**
+   * Verifies an incoming ds_session cookie value
+   */
+  static verifyVisitorCookie(cookieVal?: string | null): { valid: boolean; deviceId?: string } {
+    if (!cookieVal || typeof cookieVal !== 'string') return { valid: false };
+    const parts = cookieVal.trim().split('.');
+    if (parts.length !== 3) return { valid: false };
+
+    const [deviceId, expStr, signature] = parts;
+    const expiresAt = Number(expStr);
+    if (!deviceId || isNaN(expiresAt) || Date.now() > expiresAt) return { valid: false };
+
+    const expected = crypto
+      .createHmac('sha256', HMAC_SECRET)
+      .update(`visitor:${deviceId}.${expiresAt}`)
+      .digest('hex');
+
+    const sigBuf = Buffer.from(signature, 'hex');
+    const expBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expBuf.length || sigBuf.length === 0) return { valid: false };
+
+    const valid = crypto.timingSafeEqual(sigBuf, expBuf);
+    return { valid, deviceId: valid ? deviceId : undefined };
+  }
+
+  /**
+   * Generates a stateless CSRF token bound to deviceId
+   */
+  static generateCsrfToken(deviceId: string): string {
+    return crypto
+      .createHmac('sha256', HMAC_SECRET)
+      .update(`csrf:${deviceId}`)
+      .digest('hex')
+      .slice(0, 32);
+  }
+
+  /**
+   * Verifies CSRF token for mutating requests
+   */
+  static verifyCsrfToken(csrfToken: string | undefined, deviceId: string): boolean {
+    if (!csrfToken || !deviceId) return false;
+    const expected = this.generateCsrfToken(deviceId);
+    const inBuf = Buffer.from(csrfToken.trim(), 'utf8');
+    const expBuf = Buffer.from(expected, 'utf8');
+    if (inBuf.length !== expBuf.length) return false;
+    return crypto.timingSafeEqual(inBuf, expBuf);
+  }
+
+  // --- Admin Brute-Force Rate Limiting ---
+  private static loginAttempts = new Map<string, { attempts: number; lockedUntil?: number }>();
+  private static readonly MAX_FAILED_ATTEMPTS = 5;
+  private static readonly LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+  /**
+   * Checks if an IP is currently locked out from admin login attempts
+   */
+  static checkLoginAllowed(ip: string): { allowed: boolean; retryAfterSec?: number } {
+    const cleanIp = (ip || '').replace(/^::ffff:/, '').trim();
+    const entry = this.loginAttempts.get(cleanIp);
+    if (!entry) return { allowed: true };
+
+    if (entry.lockedUntil && entry.lockedUntil > Date.now()) {
+      const retryAfterSec = Math.ceil((entry.lockedUntil - Date.now()) / 1000);
+      return { allowed: false, retryAfterSec };
+    }
+
+    if (entry.lockedUntil && entry.lockedUntil <= Date.now()) {
+      this.loginAttempts.delete(cleanIp);
+      return { allowed: true };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Records a login attempt (failure increments lockout; success clears)
+   */
+  static recordLoginAttempt(ip: string, success: boolean): { allowed: boolean; remainingAttempts: number; retryAfterSec?: number } {
+    const cleanIp = (ip || '').replace(/^::ffff:/, '').trim();
+    if (success) {
+      this.loginAttempts.delete(cleanIp);
+      return { allowed: true, remainingAttempts: this.MAX_FAILED_ATTEMPTS };
+    }
+
+    const current = this.loginAttempts.get(cleanIp) || { attempts: 0 };
+    current.attempts += 1;
+
+    if (current.attempts >= this.MAX_FAILED_ATTEMPTS) {
+      current.lockedUntil = Date.now() + this.LOCKOUT_MS;
+      this.loginAttempts.set(cleanIp, current);
+      const retryAfterSec = Math.ceil(this.LOCKOUT_MS / 1000);
+      return { allowed: false, remainingAttempts: 0, retryAfterSec };
+    }
+
+    this.loginAttempts.set(cleanIp, current);
+    return {
+      allowed: true,
+      remainingAttempts: Math.max(0, this.MAX_FAILED_ATTEMPTS - current.attempts)
+    };
+  }
+
+  /**
+   * Resets login lockout for a specific IP (for testing and administrative reset)
+   */
+  static resetLoginLockout(ip: string): void {
+    const cleanIp = (ip || '').replace(/^::ffff:/, '').trim();
+    this.loginAttempts.delete(cleanIp);
+  }
 }

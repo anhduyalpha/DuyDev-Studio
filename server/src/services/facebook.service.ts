@@ -19,6 +19,7 @@ import { DriveService } from './drive.service.js';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -692,6 +693,12 @@ export class FacebookService {
     rangeHeader: string | undefined,
     reply: FastifyReply
   ): Promise<any> {
+    try {
+      validateSafeMediaUrl(targetUrl, ['fbcdn.net', 'facebook.com', 'fbsbx.com']);
+    } catch (e: any) {
+      throw new BadRequestError(e.message || 'URL không hợp lệ (SSRF Guard)');
+    }
+
     const isFbLookaside = targetUrl.includes('lookaside.fbsbx.com');
     const headers: Record<string, string> = {
       'User-Agent': isFbLookaside ? 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' : DEFAULT_UA,
@@ -885,6 +892,12 @@ export class FacebookService {
   ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
     if (!mediaUrl) {
       throw new BadRequestError('Không tìm thấy đường dẫn nội dung để lưu');
+    }
+
+    try {
+      validateSafeMediaUrl(mediaUrl, ['fbcdn.net', 'facebook.com', 'fbsbx.com']);
+    } catch (e: any) {
+      throw new BadRequestError(e.message || 'URL không hợp lệ (SSRF Guard)');
     }
 
     const fbDir = path.join(resolvedStoragePaths.drive, 'facebook');

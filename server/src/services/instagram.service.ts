@@ -19,6 +19,7 @@ import { DriveService } from './drive.service.js';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -312,6 +313,8 @@ export class InstagramService {
     rangeHeader: string | undefined,
     reply: FastifyReply
   ): Promise<any> {
+    validateSafeMediaUrl(targetUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
+
     const headers: Record<string, string> = {
       'User-Agent': DEFAULT_UA,
       'Referer': 'https://www.instagram.com/'
@@ -437,6 +440,8 @@ export class InstagramService {
     if (!mediaUrl) {
       throw new BadRequestError('Không tìm thấy đường dẫn tệp để lưu');
     }
+
+    validateSafeMediaUrl(mediaUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
 
     const igDir = path.join(resolvedStoragePaths.drive, 'instagram');
     if (!fs.existsSync(igDir)) {

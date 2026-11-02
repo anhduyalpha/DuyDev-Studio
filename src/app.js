@@ -36,12 +36,13 @@ import { checkAndRenderMigrationNotice } from './components/common/MigrationNoti
 import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
-import { isAdminAuthenticated } from './utilities/adminAuth.js';
+import { isAdminAuthenticated, getAdminToken } from './utilities/adminAuth.js';
+import { initSecurityShield } from './utilities/securityShield.js';
 import { isProfileConfigured, syncProfileWithServer, getUserProfile } from './utilities/userProfile.js';
 import { openProfileModal } from './components/common/ProfileModal.js';
 
 /**
- * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id and role headers
+ * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id, X-DS-CSRF, and auth credentials
  */
 function setupGlobalApiFetchInterceptor() {
   if (typeof window === 'undefined' || !window.fetch) return;
@@ -52,6 +53,16 @@ function setupGlobalApiFetchInterceptor() {
       if (urlStr.includes('/api/v1/') || urlStr.startsWith('/api/') || urlStr.startsWith('api/')) {
         const deviceId = getDeviceId();
         const isAdmin = isAdminAuthenticated();
+        const adminToken = getAdminToken();
+
+        // Extract CSRF token from document.cookie
+        const csrfMatch = typeof document !== 'undefined' ? document.cookie.match(/(?:^|;\s*)ds_csrf=([^;]*)/) : null;
+        const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : '';
+
+        // Ensure credentials are sent with requests
+        if (!init.credentials) {
+          init.credentials = 'same-origin';
+        }
 
         let headers = init.headers;
         if (!headers) {
@@ -60,20 +71,34 @@ function setupGlobalApiFetchInterceptor() {
 
         if (headers instanceof Headers) {
           if (!headers.has('X-Device-Id')) headers.set('X-Device-Id', deviceId);
+          if (csrfToken && !headers.has('X-DS-CSRF')) headers.set('X-DS-CSRF', csrfToken);
           if (isAdmin && !headers.has('X-Is-Admin')) headers.set('X-Is-Admin', 'true');
+          if (adminToken && !headers.has('x-storage-auth')) headers.set('x-storage-auth', adminToken);
         } else if (Array.isArray(headers)) {
           if (!headers.some(([k]) => k.toLowerCase() === 'x-device-id')) {
             headers.push(['X-Device-Id', deviceId]);
           }
+          if (csrfToken && !headers.some(([k]) => k.toLowerCase() === 'x-ds-csrf')) {
+            headers.push(['X-DS-CSRF', csrfToken]);
+          }
           if (isAdmin && !headers.some(([k]) => k.toLowerCase() === 'x-is-admin')) {
             headers.push(['X-Is-Admin', 'true']);
+          }
+          if (adminToken && !headers.some(([k]) => k.toLowerCase() === 'x-storage-auth')) {
+            headers.push(['x-storage-auth', adminToken]);
           }
         } else if (typeof headers === 'object') {
           if (!headers['X-Device-Id'] && !headers['x-device-id']) {
             headers['X-Device-Id'] = deviceId;
           }
+          if (csrfToken && !headers['X-DS-CSRF'] && !headers['x-ds-csrf']) {
+            headers['X-DS-CSRF'] = csrfToken;
+          }
           if (isAdmin && !headers['X-Is-Admin'] && !headers['x-is-admin']) {
             headers['X-Is-Admin'] = 'true';
+          }
+          if (adminToken && !headers['x-storage-auth']) {
+            headers['x-storage-auth'] = adminToken;
           }
         }
         init.headers = headers;
@@ -96,6 +121,7 @@ class App {
     }
 
     setupGlobalApiFetchInterceptor();
+    initSecurityShield();
     initTheme();
     registerServiceWorker();
     taskCoordinator.init();

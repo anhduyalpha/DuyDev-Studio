@@ -5,15 +5,8 @@
 
 import { showToast } from './toast.js';
 
-const STORAGE_KEY_PWD_HASH = 'ds_admin_pwd_hash';
 const SESSION_KEY_AUTH = 'ds_admin_authenticated';
 const SESSION_KEY_TOKEN = 'ds_admin_token';
-
-// SHA-256 for default password: "anhduy123"
-const DEFAULT_HASH_ANHDUY = 'a40c326dd366739719ecbb8380f0534093cf6916b9b63114a71e885d20692ccc';
-// SHA-256 for legacy fallback passwords: "duydev", "admin"
-const DEFAULT_HASH_DUYDEV = '3bc00dd78427db6937b4606a8e593ec3560c4343665d9fba311b103612baf8fb';
-const DEFAULT_HASH_ADMIN = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
 
 /**
  * Computes SHA-256 hex string using browser native SubtleCrypto
@@ -100,20 +93,25 @@ export function getStorageAuthHeaders() {
 }
 
 /**
- * Validates the admin password (tries server first for cross-machine sync, falls back to local)
+ * Validates the admin password securely against the backend
+ * Backed by server-side rate-limited brute force protection (5 attempts / 15 min lockout)
  */
 export async function verifyAdminPassword(password) {
   if (!password || typeof password !== 'string') return false;
   const trimmed = password.trim();
-  const inputHash = await sha256(trimmed);
 
-  // 1. Try server online verification first
   try {
     const res = await fetch('/api/v1/auth/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: trimmed })
     });
+
+    if (res.status === 429) {
+      showToast('Quá nhiều lần thử thất bại. Vui lòng thử lại sau 15 phút.', 'error');
+      return false;
+    }
+
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data?.token) {
@@ -121,40 +119,15 @@ export async function verifyAdminPassword(password) {
           sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
           sessionStorage.setItem(SESSION_KEY_TOKEN, data.data.token);
           localStorage.setItem(SESSION_KEY_TOKEN, data.data.token);
-          localStorage.setItem(STORAGE_KEY_PWD_HASH, inputHash);
         } catch {}
         return true;
       }
-    } else if (res.status === 401) {
-      return false;
     }
+    return false;
   } catch (netErr) {
-    // Network error / offline mode, proceed with local check
+    showToast('Không thể kết nối đến máy chủ xác thực.', 'error');
+    return false;
   }
-
-  // 2. Fallback to local storage hash or defaults
-  const storedHash = localStorage.getItem(STORAGE_KEY_PWD_HASH);
-  let isValid = false;
-  if (inputHash === DEFAULT_HASH_ANHDUY) {
-    isValid = true;
-    try {
-      localStorage.setItem(STORAGE_KEY_PWD_HASH, DEFAULT_HASH_ANHDUY);
-    } catch {}
-  } else if (storedHash) {
-    isValid = (inputHash === storedHash);
-  } else {
-    isValid = (inputHash === DEFAULT_HASH_DUYDEV || inputHash === DEFAULT_HASH_ADMIN);
-  }
-
-  if (isValid) {
-    try {
-      sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
-      if (!sessionStorage.getItem(SESSION_KEY_TOKEN)) {
-        sessionStorage.setItem(SESSION_KEY_TOKEN, trimmed);
-      }
-    } catch {}
-  }
-  return isValid;
 }
 
 /**
@@ -165,7 +138,6 @@ export async function changeAdminPassword(oldPassword, newPassword) {
     return { success: false, error: 'Mật khẩu mới phải có tối thiểu 4 ký tự' };
   }
 
-  // 1. Try server online change first
   try {
     const res = await fetch('/api/v1/auth/change-password', {
       method: 'POST',
@@ -179,22 +151,25 @@ export async function changeAdminPassword(oldPassword, newPassword) {
     if (data.data?.token) {
       try {
         sessionStorage.setItem(SESSION_KEY_TOKEN, data.data.token);
+        localStorage.setItem(SESSION_KEY_TOKEN, data.data.token);
+        sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
       } catch {}
     }
+    return { success: true };
   } catch (netErr) {
-    // If server unreachable, check local
-    const isOldValid = await verifyAdminPassword(oldPassword);
-    if (!isOldValid) {
-      return { success: false, error: 'Mật khẩu hiện tại không chính xác' };
-    }
+    return { success: false, error: 'Không thể kết nối đến máy chủ' };
   }
+}
 
-  const newHash = await sha256(newPassword.trim());
+/**
+ * Logs out the admin session both locally and on server
+ */
+export async function logoutAdmin() {
   try {
-    localStorage.setItem(STORAGE_KEY_PWD_HASH, newHash);
-    sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
+    await fetch('/api/v1/auth/logout', { method: 'POST' });
   } catch {}
-  return { success: true };
+  lockAdminSession();
+  showToast('Đã đăng xuất phiên Quản trị viên', 'info');
 }
 
 /**

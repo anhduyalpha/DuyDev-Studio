@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import {
   verifyPasswordHandler,
+  logoutHandler,
   changePasswordHandler,
   authStatusHandler,
   adminAuthGuard,
@@ -9,6 +10,7 @@ import {
 
 export async function authRoute(app: FastifyInstance) {
   app.post('/api/v1/auth/verify', verifyPasswordHandler);
+  app.post('/api/v1/auth/logout', logoutHandler);
   app.post('/api/v1/auth/change-password', changePasswordHandler);
   app.get('/api/v1/auth/status', authStatusHandler);
   app.get('/api/v1/auth/r2-stats', { preHandler: adminAuthGuard }, r2StatsHandler);

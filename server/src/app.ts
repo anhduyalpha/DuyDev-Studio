@@ -45,6 +45,7 @@ import { instagramRoute } from './api/routes/instagram.route.js';
 import { spotifyRoute } from './api/routes/spotify.route.js';
 import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
 import { ipAccessService } from './services/ip-access.service.js';
+import { cookieSessionIssuerHook, apiSecurityGuard, isAllowedOrigin } from './api/middleware/security.middleware.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -76,7 +77,11 @@ export async function buildApp(): Promise<FastifyInstance> {
         cb(null, false);
         return;
       }
-      cb(null, true);
+      if (isAllowedOrigin(origin)) {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -129,7 +134,27 @@ export async function buildApp(): Promise<FastifyInstance> {
       req.headers['content-type'] = 'application/json';
     }
 
+    // OWASP Enterprise Security Headers
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'SAMEORIGIN');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    reply.header('Content-Security-Policy', "frame-ancestors 'self'; object-src 'none'; base-uri 'self';");
+
     const url = req.raw.url || req.url || '';
+
+    // Block direct address bar navigation to /src/ JavaScript modules
+    if (req.method === 'GET' && url.startsWith('/src/')) {
+      const dest = req.headers['sec-fetch-dest'];
+      const mode = req.headers['sec-fetch-mode'];
+      if (dest === 'document' || mode === 'navigate') {
+        return reply.status(403).send({
+          success: false,
+          error: 'DIRECT_ACCESS_FORBIDDEN',
+          message: 'Truy cập trực tiếp mã nguồn bị từ chối.'
+        });
+      }
+    }
     const hostHeader = String(req.headers.host || '').toLowerCase();
     if (hostHeader.includes('alphadaniel.io.vn')) {
       reply.header('X-Domain-Migration', 'https://studio.duydev.cloud');
@@ -139,6 +164,17 @@ export async function buildApp(): Promise<FastifyInstance> {
         return reply.redirect(`https://studio.duydev.cloud${url}`, 302);
       }
     }
+
+    // Issue/refresh signed HttpOnly visitor session cookie & attach verified device id
+    await cookieSessionIssuerHook(req, reply);
+    if (reply.sent) return;
+
+    // Apply API Gatekeeper on all /api/v1 routes
+    if (url.startsWith('/api/v1')) {
+      await apiSecurityGuard(req, reply);
+      if (reply.sent) return;
+    }
+
     // Skip health checks, auth verification and static assets to prevent lockout
     const isExcluded = url.startsWith('/health') ||
       url.startsWith('/api/v1/health') ||
