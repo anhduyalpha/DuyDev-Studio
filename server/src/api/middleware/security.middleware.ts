@@ -86,13 +86,20 @@ export function serializeCookie(
  * Appends Set-Cookie headers cleanly onto FastifyReply
  */
 export function appendSetCookie(reply: FastifyReply, cookieStr: string): void {
+  const cookieName = cookieStr.split('=')[0];
   const existing = reply.getHeader('Set-Cookie');
   if (!existing) {
     reply.header('Set-Cookie', cookieStr);
   } else if (Array.isArray(existing)) {
-    reply.header('Set-Cookie', [...existing, cookieStr]);
+    const filtered = existing.filter((c) => !String(c).startsWith(`${cookieName}=`));
+    reply.header('Set-Cookie', [...filtered, cookieStr]);
   } else {
-    reply.header('Set-Cookie', [String(existing), cookieStr]);
+    const existingStr = String(existing);
+    if (existingStr.startsWith(`${cookieName}=`)) {
+      reply.header('Set-Cookie', cookieStr);
+    } else {
+      reply.header('Set-Cookie', [existingStr, cookieStr]);
+    }
   }
 }
 
@@ -138,6 +145,9 @@ function checkHeavyTaskRateLimit(ip: string): boolean {
  * automatically issues a new cryptographically signed session cookie.
  */
 export async function cookieSessionIssuerHook(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if ((req as any)._sessionIssued) return;
+  (req as any)._sessionIssued = true;
+
   const cookies = parseCookies(req.headers.cookie);
   const rawSession = cookies['ds_session'];
   const sessionCheck = AuthService.verifyVisitorCookie(rawSession);
