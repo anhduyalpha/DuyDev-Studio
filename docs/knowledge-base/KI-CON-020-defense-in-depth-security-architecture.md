@@ -69,12 +69,17 @@ flowchart TD
   - Bắt buộc hostname phải khớp hoặc kết thúc bằng danh sách tên miền CDN được phép (ví dụ `fbcdn.net`, `facebook.com` cho Facebook; `cdninstagram.com` cho Instagram).
   - Ném `BadRequestError` chuẩn hóa khi vi phạm.
 
-### Lớp 6: Lá Chắn Client Anti-Tamper & Khử Bỏ Mã Băm Cứng
+### Lớp 6: Lá Chắn Client Anti-Tamper, Anti-Debugger & Khử Bỏ Mã Băm Cứng
 - **Khử bỏ mã băm cứng**: Xóa bỏ hoàn toàn các hằng số SHA-256 (`DEFAULT_HASH_ANHDUY`, v.v.) khỏi mã nguồn client `adminAuth.js`. Việc xác thực mật khẩu được chuyển 100% về endpoint `/api/v1/auth/verify`.
 - **Anti-DevTools & Anti-Copy (`securityShield.js`)**:
   - Chặn các tổ hợp phím kiểm tra mã nguồn: `F12`, `Ctrl+Shift+I`, `Ctrl+Shift+J`, `Ctrl+Shift+C`, `Ctrl+U`, `Ctrl+S`.
   - Vô hiệu hóa chuột phải (`contextmenu`) trên trang, ngoại trừ bên trong các trường nhập liệu (`input`, `textarea`, `[contenteditable]`), trình phát âm thanh/video hoặc phần tử có class `.allow-select`.
-  - **Tự Động Bỏ Qua Cho Quản Trị Viên & Localhost**: Khi quản trị viên đã xác thực (`isAdminAuthenticated() === true`) hoặc đang chạy trên máy dev (`localhost`, `127.0.0.1`), toàn bộ lá chắn client tự động tắt để phục vụ việc debug và phát triển thuận tiện.
+- **Bẫy Chống Debugger Đa Tầng (Multi-Vector Anti-Debugger Trap)**:
+  - *Vi sai thời gian (Timing Delta)*: Đo khoảng cách `performance.now()` trước và sau khi kích hoạt bẫy `Function("debugger")()`. Nếu độ trễ $> 100\text{ms}$, chứng minh DevTools đang mở và trình duyệt đang dừng ở điểm ngắt breakpoint.
+  - *Đầu dò Console Probe*: Dùng đối tượng RegExp với hàm `toString` tùy biến. Khi tab Console của DevTools được mở, trình duyệt tự động định dạng và gọi `toString`, kích hoạt ngay hàm phát hiện.
+  - *Đo kích thước cửa sổ (Docked DevTools)*: Phát hiện độ lệch lớn giữa `outerWidth - innerWidth` ($> 180\text{px}$) hoặc `outerHeight - innerHeight` ($> 200\text{px}$) trên desktop.
+  - *Vòng lặp ngắt liên hoàn*: Khi phát hiện DevTools, kích hoạt chuỗi ngắt lặp lại mỗi $120\text{ms}$ làm tê liệt khả năng debug và thanh tra mã nguồn của người dùng tò mò.
+  - **Tự Động Bỏ Qua Cho Quản Trị Viên & Localhost**: Khi quản trị viên đăng nhập (`isAdminAuthenticated() === true`) hoặc đang chạy trên môi trường phát triển (`localhost`, `127.0.0.1`, LAN IP), hệ thống tự động tắt toàn bộ bẫy chống debugger để phục vụ việc debug và phát triển mượt mà. Lắng nghe qua sự kiện tùy biến `ds:admin-auth-changed`.
 
 ---
 

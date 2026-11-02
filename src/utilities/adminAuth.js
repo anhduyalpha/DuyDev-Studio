@@ -119,6 +119,7 @@ export async function verifyAdminPassword(password) {
           sessionStorage.setItem(SESSION_KEY_AUTH, 'true');
           sessionStorage.setItem(SESSION_KEY_TOKEN, data.data.token);
           localStorage.setItem(SESSION_KEY_TOKEN, data.data.token);
+          window.dispatchEvent(new CustomEvent('ds:admin-auth-changed', { detail: { authenticated: true } }));
         } catch {}
         return true;
       }
@@ -180,6 +181,9 @@ export function lockAdminSession() {
     sessionStorage.removeItem(SESSION_KEY_AUTH);
     sessionStorage.removeItem(SESSION_KEY_TOKEN);
     localStorage.removeItem(SESSION_KEY_TOKEN);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ds:admin-auth-changed', { detail: { authenticated: false } }));
+    }
   } catch {}
 }
 

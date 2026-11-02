@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.36': {
+    version: 'v24.36',
+    title: 'Bản cập nhật v24.36: Tích Hợp Hệ Thống Chống Debugger & Ngăn Chặn DevTools Toàn Diện',
+    date: '02/11/2026',
+    features: [
+      'Bẫy Chống Debugger Đa Tầng (Multi-Vector Anti-Debugger Trap): Kết hợp kiểm tra vi sai thời gian (Timing Delta), đầu dò định dạng Console Probe và đo kích thước cửa sổ Docked DevTools để phát hiện ngay khi công cụ nhà phát triển mở ra',
+      'Vòng Lặp Ngắt Debugger Tự Động: Tự động kích hoạt chuỗi ngắt Function("debugger")() liên hoàn để làm gián đoạn mọi thao tác thanh tra, dịch ngược hoặc can thiệp mã nguồn',
+      'Cơ Chế Bỏ Qua Thông Minh Cho Quản Trị Viên: Tự động lắng nghe trạng thái đăng nhập để vô hiệu hóa toàn bộ bẫy chống debugger khi Quản trị viên đăng nhập hoặc khi phát triển tại localhost'
+    ],
+    fixes: [
+      'Cảnh Báo & Xóa Bảng Điều Khiển: Tự động dọn dẹp console.clear() và cảnh báo vi phạm bản quyền khi phát hiện nỗ lực vọc vạch DevTools trái phép'
+    ]
+  },
   'v24.35': {
     version: 'v24.35',
     title: 'Bản cập nhật v24.35: Tinh Chỉnh Chân Trang (Footer Branding & Tagline)',
