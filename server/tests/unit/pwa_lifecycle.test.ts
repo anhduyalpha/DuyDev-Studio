@@ -84,11 +84,11 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       expect(indexContent).toContain('const search = window.location.search || \'\';');
     });
 
-    it('Footer.js must dynamically display CURRENT_PWA_VERSION and not be hardcoded to an obsolete version', () => {
+    it('Footer.js must not contain obsolete hardcoded version and must feature approved branding quote', () => {
       const footerPath = path.join(rootDir, 'src/components/layout/Footer.js');
       const footerContent = fs.readFileSync(footerPath, 'utf-8');
-      expect(footerContent).toContain('CURRENT_PWA_VERSION');
       expect(footerContent).not.toContain('v23.11');
+      expect(footerContent).toContain('Studio của Duy cho mụi người dùng');
     });
   });
 

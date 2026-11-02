@@ -6,6 +6,18 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.39': {
+    version: 'v24.39',
+    title: 'Bản cập nhật v24.39: Khóa Chặn DevTools Tuyệt Đối (Zero Bypass Prompt)',
+    date: '02/11/2026',
+    features: [
+      'Khóa Chặn DevTools Tuyệt Đối: Loại bỏ hoàn toàn tùy chọn/nút vượt qua trên màn hình cảnh báo, đảm bảo chặn đứng mọi hành vi mở DevTools',
+      'Yêu Cầu Tải Lại Trang Duy Nhất: Chỉ cho phép đóng DevTools và tải lại trang web (F5) để tiếp tục truy cập'
+    ],
+    fixes: [
+      'Bảo Mật Giao Diện Khóa: Không hiển thị bất kỳ manh mối xác thực hoặc phương thức bypass nào ra màn hình công cộng'
+    ]
+  },
   'v24.38': {
     version: 'v24.38',
     title: 'Bản cập nhật v24.38: Khóa Cố Định "ÂU NÂU ĐỪNG PHÁ WEB" & Yêu Cầu Tải Lại Trang (Reload)',

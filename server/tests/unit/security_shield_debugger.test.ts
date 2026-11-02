@@ -80,5 +80,13 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
       checkDevToolsStatus(false);
       expect(isWebLocked).toBe(true);
     });
+
+    it('contains no admin bypass button or prompt on the blocker screen', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const shieldSource = fs.readFileSync(path.resolve(__dirname, '../../../src/utilities/securityShield.js'), 'utf-8');
+      expect(shieldSource).not.toContain('dsBtnBypassDevTools');
+      expect(shieldSource).not.toContain('Tôi là Quản trị viên');
+    });
   });
 });

@@ -4,7 +4,7 @@
  * and permanent DevTools lockout displaying "ÂU NÂU ĐỪNG PHÁ WEB" requiring page reload.
  */
 
-import { isAdminAuthenticated, showAdminPasswordModal } from './adminAuth.js';
+import { isAdminAuthenticated } from './adminAuth.js';
 
 let isWebLocked = false;
 let checkIntervalId = null;
@@ -115,13 +115,6 @@ export function showDevToolsBlockScreen() {
             <span>Tải lại trang (F5)</span>
           </button>
         </div>
-
-        <!-- Admin Bypass option -->
-        <div class="pt-2 border-t border-white/5 w-full">
-          <button id="dsBtnBypassDevTools" class="text-xs text-zinc-500 hover:text-zinc-300 underline transition cursor-pointer">
-            Tôi là Quản trị viên Duy
-          </button>
-        </div>
       </div>
     `;
 
@@ -133,27 +126,6 @@ export function showDevToolsBlockScreen() {
     if (btnReload) {
       btnReload.onclick = () => {
         window.location.reload();
-      };
-    }
-
-    // Attach Admin Bypass Action
-    const btnBypass = document.getElementById('dsBtnBypassDevTools');
-    if (btnBypass) {
-      btnBypass.onclick = () => {
-        if (isAdminAuthenticated()) {
-          bypassActive = true;
-          isWebLocked = false;
-          hideDevToolsBlockScreen();
-        } else {
-          showAdminPasswordModal({
-            message: 'Nhập mật khẩu Quản trị viên để mở khóa DevTools.',
-            onSuccess: () => {
-              bypassActive = true;
-              isWebLocked = false;
-              hideDevToolsBlockScreen();
-            }
-          });
-        }
       };
     }
   }
@@ -263,6 +235,11 @@ export function startAntiDebugger() {
 export function initSecurityShield() {
   if (typeof window === 'undefined' || window._dsShieldActive) return;
   window._dsShieldActive = true;
+
+  // If already authenticated as admin before DevTools is opened, allow bypass
+  if (isAdminAuthenticated()) {
+    bypassActive = true;
+  }
 
   // 1. Anti-Clickjacking Frame Buster
   try {

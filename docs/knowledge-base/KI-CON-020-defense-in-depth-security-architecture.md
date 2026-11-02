@@ -79,6 +79,11 @@ flowchart TD
   - *Đầu dò Console Probe*: Dùng đối tượng RegExp với hàm `toString` tùy biến. Khi tab Console của DevTools được mở, trình duyệt tự động định dạng và gọi `toString`, kích hoạt ngay hàm phát hiện.
   - *Đo kích thước cửa sổ (Docked DevTools)*: Phát hiện độ lệch lớn giữa `outerWidth - innerWidth` ($> 180\text{px}$) hoặc `outerHeight - innerHeight` ($> 200\text{px}$) trên desktop.
   - *Vòng lặp ngắt liên hoàn*: Khi phát hiện DevTools, kích hoạt chuỗi ngắt lặp lại mỗi $120\text{ms}$ làm tê liệt khả năng debug và thanh tra mã nguồn của người dùng tò mò.
+  - **Màn Hình Khóa Toàn Diện & Chặn Tuyệt Đối ("ÂU NÂU ĐỪNG PHÁ WEB")**:
+    - Khi phát hiện DevTools, hệ thống lập tức phủ toàn màn hình cảnh báo đỏ rực: *"ÂU NÂU ĐỪNG PHÁ WEB"*.
+    - **Khóa cố định (Zero-Flicker Latch)**: Gán `isWebLocked = true` vĩnh viễn trong phiên đó; chỉ cho phép vào lại web khi người dùng đã đóng DevTools và bấm **Tải lại trang (F5)** (`window.location.reload()`).
+    - **Không hiển thị nút bypass trên màn hình khóa (Zero Bypass Prompt)**: Loại bỏ hoàn toàn nút mở khóa hoặc gợi ý quyền quản trị trên màn hình cảnh báo công cộng nhằm ngăn chặn mọi hành vi tò mò hoặc vượt rào; Quản trị viên chỉ được bypass nếu đã đăng nhập từ giao diện ứng dụng trước khi mở DevTools.
+    - **Bảo Vệ Đa Lớp Trước Hành Vi Xóa DOM**: Kích hoạt `MutationObserver` tự động tái lập màn hình khóa nếu người dùng cố tình xóa thẻ cảnh báo qua Elements tab.
   - **Tự Động Bỏ Qua Cho Quản Trị Viên & Localhost**: Khi quản trị viên đăng nhập (`isAdminAuthenticated() === true`) hoặc đang chạy trên môi trường phát triển (`localhost`, `127.0.0.1`, LAN IP), hệ thống tự động tắt toàn bộ bẫy chống debugger để phục vụ việc debug và phát triển mượt mà. Lắng nghe qua sự kiện tùy biến `ds:admin-auth-changed`.
 
 ---
