@@ -32,11 +32,12 @@ function isDockedDevToolsOpen() {
   // DevTools docked to right or left takes > 100px width (typically 300px - 800px)
   if (widthDiff > 100) return true;
 
-  // DevTools docked to bottom takes > 200px height (unless virtual keyboard is active on mobile input)
+  // DevTools docked to bottom takes > 200px height (desktop only, unless virtual keyboard is active on mobile input)
+  const isDesktop = !window.screen || window.screen.width >= 768;
   const isInputFocused = typeof document !== 'undefined' &&
     document.activeElement &&
     ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-  if (heightDiff > 200 && !isInputFocused) return true;
+  if (isDesktop && heightDiff > 200 && !isInputFocused) return true;
 
   return false;
 }
@@ -46,6 +47,7 @@ function isDockedDevToolsOpen() {
  * When DevTools is open, debugger halts execution (>100ms)
  */
 function isTimingDevToolsOpen() {
+  if (isDockedDevToolsOpen()) return true;
   const start = performance.now();
   try {
     (function () {
@@ -62,7 +64,12 @@ function isTimingDevToolsOpen() {
  */
 export function lockWebPermanently() {
   if (isWebLocked || typeof document === 'undefined') return;
+  if (isLocalDev()) return;
   isWebLocked = true;
+
+  try {
+    sessionStorage.setItem('__ds_dt_lock', '1');
+  } catch {}
 
   // Stop polling once locked to latch the screen permanently
   if (checkIntervalId) {
@@ -73,67 +80,157 @@ export function lockWebPermanently() {
     clearInterval(consoleProbeIntervalId);
     consoleProbeIntervalId = null;
   }
+  if (blockerObserver) {
+    blockerObserver.disconnect();
+    blockerObserver = null;
+  }
+
+  // Abort all active network downloads, SSE streams, script evaluations
+  try {
+    window.stop();
+  } catch {}
 
   showDevToolsBlockScreen();
 }
 
 /**
- * Shows the full-screen "ÂU NÂU ĐỪNG PHÁ WEB" DevTools blocker overlay
+ * Shows the full-screen "ÂU NÂU ĐỪNG PHÁ WEB" DevTools blocker page
+ * Completely replaces document DOM to ensure zero source code or sensitive UI can be inspected.
  */
 export function showDevToolsBlockScreen() {
   if (typeof document === 'undefined') return;
 
-  const blockerId = 'ds-devtools-blocker';
-  let blocker = document.getElementById(blockerId);
-  if (!blocker) {
-    blocker = document.createElement('div');
-    blocker.id = blockerId;
-    blocker.className = 'fixed inset-0 z-[99999999] bg-[#09090b] flex items-center justify-center p-4 select-none font-sans';
-    blocker.innerHTML = `
-      <div class="relative max-w-lg w-full bg-[#121216] border border-red-500/30 rounded-3xl p-8 md:p-10 text-center shadow-2xl shadow-red-500/10 flex flex-col items-center space-y-6 animate-fadeIn">
-        <!-- Pulsing Alert Badge -->
-        <div class="relative w-20 h-20 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
-          <span class="absolute inset-0 rounded-2xl bg-red-500/20 animate-ping opacity-75"></span>
-          <i data-lucide="shield-alert" class="w-10 h-10 relative z-10"></i>
+  const blockerHTML = `
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>ÂU NÂU ĐỪNG PHÁ WEB</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          background-color: #09090b;
+          color: #f4f4f5;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        .card {
+          background-color: #121216;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 24px;
+          padding: 32px;
+          max-width: 480px;
+          width: 100%;
+          text-align: center;
+          box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.15);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+        .icon-box {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          border-radius: 20px;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #ef4444;
+        }
+        .icon-box svg {
+          width: 40px;
+          height: 40px;
+        }
+        h1 {
+          color: #ef4444;
+          font-size: 24px;
+          font-weight: 900;
+          letter-spacing: -0.025em;
+          text-transform: uppercase;
+        }
+        p {
+          color: #d4d4d8;
+          font-size: 15px;
+          line-height: 1.6;
+        }
+        .badge {
+          color: #f87171;
+          font-family: monospace;
+          font-weight: 700;
+        }
+        button {
+          background-color: #dc2626;
+          color: #ffffff;
+          border: none;
+          border-radius: 14px;
+          padding: 14px 28px;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.15s, transform 0.1s;
+          width: 100%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.3);
+        }
+        button:hover {
+          background-color: #ef4444;
+        }
+        button:active {
+          transform: scale(0.98);
+        }
+      </style>
+    </head>
+    <body>
+      <div id="ds-devtools-blocker" class="card">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <path d="M12 8v4"></path>
+            <path d="M12 16h.01"></path>
+          </svg>
         </div>
-
-        <!-- Title & Message Requested by User -->
-        <div class="space-y-3">
-          <h1 class="text-2xl md:text-4xl font-black text-red-500 tracking-tight uppercase">
-            ÂU NÂU ĐỪNG PHÁ WEB
-          </h1>
-          <p class="text-sm md:text-base text-zinc-300 leading-relaxed max-w-md mx-auto">
-            Phát hiện bạn đang mở công cụ lập trình viên (<span class="text-red-400 font-mono font-bold">DevTools</span>).
-            Vui lòng đóng DevTools và bấm <strong class="text-white">Tải lại trang</strong> để vào lại web nhé!
+        <div>
+          <h1>ÂU NÂU ĐỪNG PHÁ WEB</h1>
+          <p style="margin-top: 10px;">
+            Phát hiện bạn đang mở công cụ lập trình viên (<span class="badge">DevTools</span>).<br>
+            Vui lòng đóng DevTools và bấm <strong style="color: #fff;">Tải lại trang</strong> để vào lại web nhé!
           </p>
         </div>
-
-        <!-- Action / Reload Button -->
-        <div class="w-full pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button id="dsBtnReloadWeb" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-95 text-white text-sm font-bold transition shadow-lg shadow-red-600/25 flex items-center justify-center gap-2 cursor-pointer">
-            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-            <span>Tải lại trang (F5)</span>
-          </button>
-        </div>
+        <button id="dsBtnReloadWeb">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+            <path d="M16 21h5v-5"></path>
+          </svg>
+          <span>Tải lại trang (F5)</span>
+        </button>
       </div>
-    `;
+    </body>
+  `;
 
-    document.body.appendChild(blocker);
-    if (window.lucide) window.lucide.createIcons();
+  document.documentElement.innerHTML = blockerHTML;
 
-    // Attach Reload Action
-    const btnReload = document.getElementById('dsBtnReloadWeb');
-    if (btnReload) {
-      btnReload.onclick = () => {
-        window.location.reload();
-      };
-    }
+  const btnReload = document.getElementById('dsBtnReloadWeb');
+  if (btnReload) {
+    btnReload.onclick = () => {
+      try {
+        sessionStorage.removeItem('__ds_dt_lock');
+      } catch {}
+      window.location.reload();
+    };
   }
-
-  try {
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-  } catch {}
 }
 
 /**
@@ -156,6 +253,7 @@ export function hideDevToolsBlockScreen() {
  */
 function checkDevToolsStatus() {
   if (isWebLocked || typeof window === 'undefined') return;
+  if (isLocalDev()) return;
 
   if (isDockedDevToolsOpen() || isTimingDevToolsOpen()) {
     lockWebPermanently();
@@ -183,6 +281,7 @@ function initConsoleProbe() {
  */
 export function startAntiDebugger() {
   if (typeof window === 'undefined') return;
+  if (isLocalDev()) return;
 
   initConsoleProbe();
 
@@ -200,17 +299,6 @@ export function startAntiDebugger() {
       } catch {}
     }
   }, 500);
-
-  // Background debugger interrupt loop while locked
-  setInterval(() => {
-    if (isWebLocked) {
-      try {
-        (function () {
-          return false;
-        }['constructor']('debugger')());
-      } catch {}
-    }
-  }, 150);
 
   // Listen to window resize for instant docked DevTools detection
   window.addEventListener('resize', checkDevToolsStatus, { passive: true });
@@ -234,6 +322,7 @@ export function startAntiDebugger() {
  */
 export function initSecurityShield() {
   if (typeof window === 'undefined' || window._dsShieldActive) return;
+  if (isLocalDev()) return;
   window._dsShieldActive = true;
 
   // 1. Anti-Clickjacking Frame Buster

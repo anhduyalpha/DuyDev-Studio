@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.50': {
+    version: 'v24.50',
+    title: 'Bản cập nhật v24.50: Triệt Tiêu Lỗ Hổng Pre-Reload DevTools & Xóa Bỏ Bẫy Debugger Pause',
+    date: '03/11/2026',
+    features: [
+      'Lá Chắn Khung 0 Đồng Bộ (Frame-0 Pre-Reload Shield): Chèn bộ chặn trực tiếp ngay đầu thẻ <head> của index.html, kiểm tra trạng thái DevTools tức thì trước khi tải bất kỳ mã nguồn, script hay DOM nào',
+      'Hủy Nạp Toàn Diện & Xóa Trắng DOM: Kích hoạt window.stop() và thay thế toàn bộ innerHTML bằng trang chặn cô lập, không để lại bất kỳ thành phần giao diện, dữ liệu nhạy cảm hay mã script nào trong bộ nhớ',
+      'Cơ Chế Khóa Phiên Thông Minh (Session Latch): Tự động duy trì trạng thái khóa nếu DevTools vẫn mở khi F5, và tự động giải phóng khi người dùng đã đóng DevTools'
+    ],
+    fixes: [
+      'Loại Bỏ Vòng Lặp Debugger Pause: Xóa bỏ hoàn toàn vòng lặp kích hoạt Function("debugger")() định kỳ, ngăn chặn trình duyệt Chrome dừng ở breakpoint và làm lộ cây thư mục mã nguồn trong tab Sources',
+      'Tương Thích Môi Trường Cục Bộ: Đảm bảo các địa chỉ localhost, 127.0.0.1 và mạng LAN nội bộ (192.168.*) luôn được miễn trừ hoàn toàn để phát triển và kiểm thử thuận tiện'
+    ]
+  },
   'v24.49': {
     version: 'v24.49',
     title: 'Bản cập nhật v24.49: Khắc Phục Lỗi Toast [object Object], Sửa Lỗi Hộp Lịch Sử & Thao Tác Thùng Rác',
