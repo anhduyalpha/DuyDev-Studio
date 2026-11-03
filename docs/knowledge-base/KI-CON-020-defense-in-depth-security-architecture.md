@@ -77,7 +77,9 @@ flowchart TD
 - **Bẫy Chống Debugger Đa Tầng (Multi-Vector Anti-Debugger Trap)**:
   - *Vi sai thời gian (Timing Delta)*: Đo khoảng cách `performance.now()` trước và sau khi kích hoạt bẫy `Function("debugger")()`. Nếu độ trễ $> 100\text{ms}$, chứng minh DevTools đang mở và trình duyệt đang dừng ở điểm ngắt breakpoint.
   - *Đầu dò Console Probe*: Dùng đối tượng RegExp với hàm `toString` tùy biến. Khi tab Console của DevTools được mở, trình duyệt tự động định dạng và gọi `toString`, kích hoạt ngay hàm phát hiện.
-  - *Đo kích thước cửa sổ (Docked DevTools)*: Phát hiện độ lệch lớn giữa `outerWidth - innerWidth` ($> 180\text{px}$) hoặc `outerHeight - innerHeight` ($> 200\text{px}$) trên desktop.
+  - *Đo kích thước cửa sổ (Docked DevTools)*: Phát hiện độ lệch lớn giữa `outerWidth - innerWidth` ($> 100\text{px}$) hoặc `outerHeight - innerHeight` ($> 200\text{px}$) **chỉ trên desktop (`isDesktop && !isMobileOrApk`)**.
+  - *Miễn trừ tuyệt đối môi trường Mobile & Native Android (`isMobileOrApk`)*: Trên Android (Chrome, WebView, `window.AndroidBridge`), `outerWidth` trả về pixel phần cứng màn hình (1080px) trong khi `innerWidth` trả về pixel CSS viewport (412px), tạo độ lệch vi sai ~668px. Bắt buộc miễn trừ toàn bộ kiểm tra docked dimension, console probe và debugger polling trên thiết bị di động để tránh gọi nhầm `window.stop()` làm tê liệt ứng dụng.
+  - *Lá Chắn Khung 0 Đồng Bộ (Frame-0 Pre-Reload Shield)*: Đặt script chặn đồng bộ ngay đầu thẻ `<head>` của `index.html`. Nếu phát hiện `isMobileOrApk`, ngay lập tức xóa bỏ cờ khóa rác `__ds_dt_lock` khỏi `sessionStorage` và trả lời bình thường.
   - *Vòng lặp ngắt liên hoàn*: Khi phát hiện DevTools, kích hoạt chuỗi ngắt lặp lại mỗi $120\text{ms}$ làm tê liệt khả năng debug và thanh tra mã nguồn của người dùng tò mò.
   - **Màn Hình Khóa Toàn Diện & Chặn Tuyệt Đối ("ÂU NÂU ĐỪNG PHÁ WEB")**:
     - Khi phát hiện DevTools, hệ thống lập tức phủ toàn màn hình cảnh báo đỏ rực: *"ÂU NÂU ĐỪNG PHÁ WEB"*.
