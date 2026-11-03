@@ -259,6 +259,10 @@ export class FacebookWorkspace {
         ? data.author
         : (data.author?.name || data.author?.username || data.author?.channel || 'facebook');
 
+      const proxyCover = data.cover
+        ? (data.cover.startsWith('http') ? `/api/v1/facebook/stream?url=${encodeURIComponent(data.cover)}` : data.cover)
+        : null;
+
       storage.recordCompletedJob({
         id: `fb-${data.id || Date.now()}`,
         toolId: 'facebook-downloader',
@@ -267,8 +271,8 @@ export class FacebookWorkspace {
         fileName: safeFileName,
         title: (data.title || (isImage ? 'Facebook Post' : 'Facebook Video')).replace(/[\r\n\t]+/g, ' ').trim(),
         author: authorStr,
-        cover: data.cover || null,
-        thumbnail: data.cover || null,
+        cover: proxyCover || data.cover || null,
+        thumbnail: proxyCover || data.cover || null,
         duration: data.duration || null,
         downloadUrl: targetMediaUrl,
         videoHdUrl: data.videoHdUrl || null,
@@ -691,6 +695,23 @@ export class FacebookWorkspace {
 
       if (res.data?.relPath) {
         storage.updateItemDrivePath(targetMediaUrl, res.data.relPath);
+        if (res.data?.metadata?.thumbnail) {
+          try {
+            const rawHist = localStorage.getItem('ds_history');
+            if (rawHist) {
+              const hist = JSON.parse(rawHist);
+              let changed = false;
+              hist.forEach(h => {
+                if (h.downloadUrl === targetMediaUrl || h.viewUrl === targetMediaUrl || (this.videoData && h.id === `fb-${this.videoData.id}`)) {
+                  h.cover = res.data.metadata.thumbnail;
+                  h.thumbnail = res.data.metadata.thumbnail;
+                  changed = true;
+                }
+              });
+              if (changed) localStorage.setItem('ds_history', JSON.stringify(hist));
+            }
+          } catch {}
+        }
       }
 
       if (saveDriveBtn) {
@@ -929,7 +950,7 @@ export class FacebookWorkspace {
             toolId: 'facebook-downloader',
             title: 'Lịch Sử Tải Facebook',
             activeTab: this.historyTab,
-            fallbackIcon: 'facebook',
+            fallbackIcon: 'video',
             accentColor: '#1877F2',
             driveFolderPath: '/facebook'
           })}
@@ -1003,7 +1024,7 @@ export class FacebookWorkspace {
       toolId: 'facebook-downloader',
       title: 'Lịch Sử Tải Video Facebook',
       activeTab: this.historyTab,
-      fallbackIcon: 'facebook',
+      fallbackIcon: 'video',
       accentColor: '#1877F2',
       driveFolderPath: '/facebook'
     });

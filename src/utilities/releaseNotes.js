@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.51': {
+    version: 'v24.51',
+    title: 'Bản cập nhật v24.51: Sửa Triệt Để Lỗi Thumbnail Đen Trong Lịch Sử Facebook Downloader',
+    date: '03/11/2026',
+    features: [
+      'Bộ Giải Mã Thumbnail Thông Minh (resolveMediaCover): Tự động phân giải đường dẫn ảnh cục bộ từ Studio Drive đối với ảnh bài viết đã lưu, và tự động chuyển hướng các liên kết CDN Facebook (fbcdn.net, lookaside.fbsbx.com) qua proxy stream của server',
+      'Cơ Chế Phủ Lớp Icon An Toàn Tuyệt Đối: Pre-render sẵn icon Lucide chính xác trong DOM ngay từ frame đầu tiên. Khi hình ảnh tải lỗi hoặc hết hạn token, hệ thống tự ẩn ảnh lỗi và hiển thị biểu tượng chuẩn, triệt tiêu hoàn toàn ô vuông đen',
+      'Đồng Bộ Thumbnail Cục Bộ Sau Khi Lưu Drive: Tự động ghi đè data URI thumbnail sạch vào bộ nhớ trình duyệt ngay khi lưu thành công vào Studio Drive, bảo đảm thumbnail không bao giờ bị mất'
+    ],
+    fixes: [
+      'Sửa Lỗi Tên Icon Lucide Không Hợp Lệ: Chuẩn hóa fallback icon từ tên thương hiệu không tồn tại ("facebook", "instagram") sang các icon hợp lệ ("video", "image") trong thư viện Lucide v1.64.0',
+      'Chống Chặn Hotlink Bằng No-Referrer: Bổ sung referrerpolicy="no-referrer" cho toàn bộ thẻ ảnh thumbnail trong MediaHistorySection, ngăn chặn CDN Facebook chặn tải ảnh với mã lỗi 403 Forbidden'
+    ]
+  },
   'v24.50': {
     version: 'v24.50',
     title: 'Bản cập nhật v24.50: Triệt Tiêu Lỗ Hổng Pre-Reload DevTools & Xóa Bỏ Bẫy Debugger Pause',

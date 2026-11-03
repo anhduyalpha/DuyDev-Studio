@@ -58,6 +58,53 @@ export function getCleanAuthor(item) {
   return '';
 }
 
+/**
+ * Resolves reliable thumbnail URL from Drive, base64 cache or server proxy stream
+ */
+export function resolveMediaCover(item) {
+  if (!item) return '';
+  const rawCover = item.cover || item.thumbnail;
+
+  // 1. If item has driveRelPath and is an image: use local Drive image directly!
+  if (item.driveRelPath) {
+    const isImg = item.mediaType === 'image' || item.fileName?.match(/\.(jpe?g|png|webp|gif)$/i);
+    if (isImg) {
+      return StorageService.getDownloadUrl(item.driveRelPath, true);
+    }
+    if (rawCover && rawCover.startsWith('data:image')) {
+      return rawCover;
+    }
+    const thumbPath = item.driveRelPath.replace(/\.[^.]+$/, '.thumb.jpg');
+    return StorageService.getDownloadUrl(thumbPath, true);
+  }
+
+  if (!rawCover) return '';
+  if (rawCover.startsWith('data:image') || rawCover.startsWith('/api/v1/')) {
+    return rawCover;
+  }
+
+  // 2. Facebook CDN / lookaside URL: route via Fastify proxy stream to bypass hotlink block
+  if (rawCover.includes('fbcdn.net') || rawCover.includes('fbsbx.com') || (item.toolId === 'facebook-downloader' && rawCover.startsWith('http'))) {
+    return `/api/v1/facebook/stream?url=${encodeURIComponent(rawCover)}`;
+  }
+
+  return rawCover;
+}
+
+/**
+ * Resolves valid Lucide icon name for fallback state (never brand names like 'facebook' or 'instagram')
+ */
+export function getItemFallbackIcon(item, defaultIcon = 'film') {
+  if (!item) return (defaultIcon === 'facebook' || defaultIcon === 'instagram') ? 'video' : defaultIcon;
+  const isImg = item.mediaType === 'image' || item.fileName?.match(/\.(jpe?g|png|webp|gif)$/i);
+  if (isImg) return 'image';
+  if (item.toolId === 'facebook-downloader') return 'video';
+  if (item.toolId === 'instagram-downloader') return isImg ? 'image' : 'video';
+  if (item.toolId === 'spotify-downloader') return 'music';
+  if (defaultIcon === 'facebook' || defaultIcon === 'instagram') return isImg ? 'image' : 'video';
+  return defaultIcon || 'film';
+}
+
 export function triggerDownload(url, fileName, mimeType = 'application/octet-stream') {
   if (!url) {
     showToast('Không có liên kết tải xuống hợp lệ', 'error');
@@ -219,42 +266,41 @@ export function renderMediaHistorySection({
           <div class="space-y-2.5">
             ${currentList.map((item) => {
               const hasDrive = Boolean(item.driveRelPath);
-              const coverImg = item.cover || item.thumbnail;
+              const coverImg = resolveMediaCover(item);
               const itemTitle = item.title || item.fileName || 'Phương tiện';
               const cleanAuthor = getCleanAuthor(item);
               const driveTargetUrl = driveFolderPath ? `#storage?path=${encodeURIComponent(driveFolderPath)}` : '#storage';
               const hasBothQualities = Boolean(!hasDrive && item.videoHdUrl && item.videoSdUrl);
+              const itemIcon = getItemFallbackIcon(item, fallbackIcon);
 
               return `
                 <div class="p-3 sm:p-3.5 rounded-xl border border-zinc-200/80 dark:border-white/[0.08] bg-white dark:bg-[#16161A] shadow-xs space-y-2.5 transition-all hover:border-zinc-300 dark:hover:border-white/15">
                   
                   <!-- Top: Thumbnail & Metadata Row -->
                   <div class="flex items-start gap-3 min-w-0">
-                    <!-- Thumbnail -->
-                    ${coverImg ? `
-                      <div
-                        class="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 dark:border-white/10 shrink-0 shadow-2xs cursor-pointer group"
-                        data-action-preview="${escapeHtml(item.id)}"
-                        title="Xem trước"
-                      >
+                    <!-- Thumbnail with Guaranteed Non-Black Pre-rendered Icon Layer -->
+                    <div
+                      class="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center shrink-0 shadow-2xs cursor-pointer group text-zinc-400"
+                      data-action-preview="${escapeHtml(item.id)}"
+                      title="Xem trước"
+                    >
+                      <i data-lucide="${itemIcon}" class="w-5 h-5 pointer-events-none"></i>
+                      ${coverImg ? `
                         <img
                           src="${escapeHtml(coverImg)}"
                           alt="Thumbnail"
-                          class="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          class="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
                           loading="lazy"
-                          onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-zinc-500\\'><i data-lucide=\\'${fallbackIcon}\\' class=\\'w-5 h-5\\'></i></div>'"
+                          referrerpolicy="no-referrer"
+                          onerror="this.style.display='none'"
                         />
-                        ${item.duration ? `
-                          <span class="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/75 text-[9px] font-mono font-medium text-white">
-                            ${formatDuration(item.duration)}
-                          </span>
-                        ` : ''}
-                      </div>
-                    ` : `
-                      <div class="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center shrink-0 text-zinc-400">
-                        <i data-lucide="${fallbackIcon}" class="w-5 h-5"></i>
-                      </div>
-                    `}
+                      ` : ''}
+                      ${item.duration ? `
+                        <span class="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/75 text-[9px] font-mono font-medium text-white z-10">
+                          ${formatDuration(item.duration)}
+                        </span>
+                      ` : ''}
+                    </div>
 
                     <!-- Text Details -->
                     <div class="min-w-0 flex-1 space-y-1">

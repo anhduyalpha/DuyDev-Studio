@@ -860,7 +860,7 @@ export class InstagramWorkspace {
             toolId: 'instagram-downloader',
             title: 'Lịch Sử Tải Instagram',
             activeTab: this.historyTab,
-            fallbackIcon: 'instagram',
+            fallbackIcon: 'image',
             accentColor: '#E1306C',
             driveFolderPath: '/instagram'
           })}
@@ -934,7 +934,7 @@ export class InstagramWorkspace {
       toolId: 'instagram-downloader',
       title: 'Lịch Sử Tải Instagram',
       activeTab: this.historyTab,
-      fallbackIcon: 'instagram',
+      fallbackIcon: 'image',
       accentColor: '#E1306C',
       driveFolderPath: '/instagram'
     });
