@@ -12,8 +12,21 @@
         var host = window.location.hostname;
         if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.')) return;
 
+        // Bypass immediately on mobile browsers or native Android APK wrapper
+        var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+        var isMobileOrApk = Boolean(
+          (typeof window !== 'undefined' && (window.AndroidBridge || /Android|iPhone|iPad|iPod|Mobile|DuyDevStudioNative|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua))) ||
+          (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && window.screen && (window.screen.width < 1024 || window.screen.height < 768)) ||
+          (window.screen && window.screen.width < 768)
+        );
+
+        if (isMobileOrApk) {
+          try { sessionStorage.removeItem('__ds_dt_lock'); } catch(e) {}
+          return;
+        }
+
         var isDesktop = !window.screen || window.screen.width >= 768;
-        var isDocked = (window.outerWidth - window.innerWidth > 100) || (isDesktop && (window.outerHeight - window.innerHeight > 200));
+        var isDocked = isDesktop && ((window.outerWidth - window.innerWidth > 100) || (window.outerHeight - window.innerHeight > 200));
         var wasLocked = false;
         try { wasLocked = sessionStorage.getItem('__ds_dt_lock') === '1'; } catch(e) {}
 
@@ -212,14 +225,14 @@
   <script>if (typeof lucide === 'undefined') { document.write('<script src="https://unpkg.com/lucide@latest"><\/script>'); }</script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.51">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.51">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=24.51">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=24.51">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.51">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.52">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.52">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=24.52">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=24.52">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.52">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=24.51">
+  <link rel="modulepreload" href="src/app.js?v=24.52">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -2969,7 +2982,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=24.51"></script>
+  <script type="module" src="src/app.js?v=24.52"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>

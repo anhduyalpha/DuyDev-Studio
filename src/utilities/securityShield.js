@@ -20,11 +20,41 @@ export function isLocalDev() {
 }
 
 /**
+ * Detects if the current environment is a mobile browser, tablet, or native Android/iOS APK wrapper.
+ * DevTools cannot be docked to a mobile/tablet viewport or inside native WebViews.
+ */
+export function isMobileOrApk() {
+  if (typeof window === 'undefined') return false;
+
+  // Native Android APK bridge (injected via addJavascriptInterface)
+  if (Boolean(window.AndroidBridge)) return true;
+
+  // Native app custom User-Agent tag or common mobile platforms
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+  if (/Android|iPhone|iPad|iPod|Mobile|DuyDevStudioNative|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+    return true;
+  }
+
+  // Pointer & viewport checks for mobile/touch screens
+  const isCoarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  const isSmallScreen = Boolean(window.screen && (window.screen.width < 1024 || window.screen.height < 768));
+  if (isCoarsePointer && isSmallScreen) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Detects docked DevTools (Docked Right, Left, or Bottom)
  * Normal desktop window borders are <= 32px width and <= 160px height.
  */
 function isDockedDevToolsOpen() {
   if (typeof window === 'undefined') return false;
+  if (isMobileOrApk()) return false;
+
+  const isDesktop = !window.screen || window.screen.width >= 768;
+  if (!isDesktop) return false;
 
   const widthDiff = window.outerWidth - window.innerWidth;
   const heightDiff = window.outerHeight - window.innerHeight;
@@ -33,11 +63,10 @@ function isDockedDevToolsOpen() {
   if (widthDiff > 100) return true;
 
   // DevTools docked to bottom takes > 200px height (desktop only, unless virtual keyboard is active on mobile input)
-  const isDesktop = !window.screen || window.screen.width >= 768;
   const isInputFocused = typeof document !== 'undefined' &&
     document.activeElement &&
     ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-  if (isDesktop && heightDiff > 200 && !isInputFocused) return true;
+  if (heightDiff > 200 && !isInputFocused) return true;
 
   return false;
 }
@@ -47,6 +76,7 @@ function isDockedDevToolsOpen() {
  * When DevTools is open, debugger halts execution (>100ms)
  */
 function isTimingDevToolsOpen() {
+  if (isMobileOrApk()) return false;
   if (isDockedDevToolsOpen()) return true;
   const start = performance.now();
   try {
@@ -282,6 +312,11 @@ function initConsoleProbe() {
 export function startAntiDebugger() {
   if (typeof window === 'undefined') return;
   if (isLocalDev()) return;
+  if (isMobileOrApk()) {
+    // Mobile browsers & native Android APK do not have docked DevTools.
+    // Skip polling, console probe, and debugger loops to eliminate battery drain, frame drops, and false positives.
+    return;
+  }
 
   initConsoleProbe();
 

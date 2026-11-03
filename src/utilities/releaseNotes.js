@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.52': {
+    version: 'v24.52',
+    title: 'Bản cập nhật v24.52: Khắc Phục Triệt Để Hiện Tượng Đơ Ứng Dụng Trên Android & Tối Ưu Hóa Mobile Shield',
+    date: '03/11/2026',
+    features: [
+      'Miễn Trừ DevTools Thông Minh Cho Android & Mobile: Nhận diện chính xác cầu nối native AndroidBridge và các thiết bị di động/máy tính bảng, loại bỏ hoàn toàn các cơ chế kiểm tra kích thước DevTools docking vốn chỉ áp dụng cho máy tính để bàn',
+      'Tự Động Giải Phóng Khóa Phiên (Auto-Unlock Session): Tự động phát hiện và xóa cờ khóa __ds_dt_lock nếu ứng dụng đang chạy trong môi trường mobile, bảo đảm giao diện phản hồi mượt mà ngay từ khung hình đầu tiên',
+      'Triệt Tiêu Hoàn Toàn Tải CPU Định Kỳ Trên Thiết Bị Di Động: Bỏ qua các vòng lặp kiểm tra 150ms và console probe trên điện thoại để tiết kiệm pin tối đa và duy trì 60fps mượt mà'
+    ],
+    fixes: [
+      'Sửa Lỗi Đơ Ứng Dụng Android Khi Mở: Khắc phục sự sai lệch giữa pixel vật lý (outerWidth 1080px) và pixel CSS (innerWidth 412px) trên WebView Android vốn gây ra kích hoạt nhầm tính năng khóa DevTools và gọi window.stop()',
+      'Đồng Bộ Hóa Frame-0 & SecurityShield: Ràng buộc điều kiện kiểm tra kích thước docked DevTools nghiêm ngặt với cờ isDesktop và isMobileOrApk trên cả index.html lẫn securityShield.js'
+    ]
+  },
   'v24.51': {
     version: 'v24.51',
     title: 'Bản cập nhật v24.51: Sửa Triệt Để Lỗi Thumbnail Đen Trong Lịch Sử Facebook Downloader',

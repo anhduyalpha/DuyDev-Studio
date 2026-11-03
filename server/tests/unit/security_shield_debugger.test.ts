@@ -38,7 +38,15 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
   });
 
   describe('Docked DevTools Dimension Logic', () => {
-    function isDockedDevTools(innerWidth: number, innerHeight: number, outerWidth: number, outerHeight: number): boolean {
+    function isDockedDevTools(
+      innerWidth: number,
+      innerHeight: number,
+      outerWidth: number,
+      outerHeight: number,
+      options: { isDesktop?: boolean; isMobile?: boolean } = { isDesktop: true, isMobile: false }
+    ): boolean {
+      if (options.isMobile) return false;
+      if (!options.isDesktop) return false;
       const widthDiff = outerWidth - innerWidth;
       const heightDiff = outerHeight - innerHeight;
       return widthDiff > 100 || heightDiff > 250;
@@ -55,6 +63,60 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
     it('detects desktop DevTools docked to bottom (heightDiff > 250)', () => {
       // DevTools docked at bottom (takes 350px height)
       expect(isDockedDevTools(1440, 550, 1456, 940)).toBe(true);
+    });
+
+    it('exempts Android and mobile devices from docked false positives', () => {
+      // Android device with physical outerWidth: 1080, CSS innerWidth: 412 (difference 668px)
+      expect(
+        isDockedDevTools(412, 732, 1080, 2400, { isDesktop: false, isMobile: true })
+      ).toBe(false);
+
+      // Native Android App with AndroidBridge
+      expect(
+        isDockedDevTools(393, 851, 1080, 2340, { isDesktop: false, isMobile: true })
+      ).toBe(false);
+    });
+  });
+
+  describe('Mobile & Android Bridge Exemption', () => {
+    function testIsMobileOrApk(env: {
+      hasAndroidBridge?: boolean;
+      userAgent?: string;
+      screenWidth?: number;
+      screenHeight?: number;
+      isCoarsePointer?: boolean;
+    }): boolean {
+      if (Boolean(env.hasAndroidBridge)) return true;
+      const ua = env.userAgent || '';
+      if (/Android|iPhone|iPad|iPod|Mobile|DuyDevStudioNative|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+        return true;
+      }
+      if (env.isCoarsePointer && env.screenWidth && (env.screenWidth < 1024 || (env.screenHeight && env.screenHeight < 768))) {
+        return true;
+      }
+      if (env.screenWidth && env.screenWidth < 768) {
+        return true;
+      }
+      return false;
+    }
+
+    it('recognizes native AndroidBridge as mobile app', () => {
+      expect(testIsMobileOrApk({ hasAndroidBridge: true })).toBe(true);
+    });
+
+    it('recognizes Android and iOS user agents', () => {
+      expect(testIsMobileOrApk({ userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) DuyDevStudioNative/1.0' })).toBe(true);
+      expect(testIsMobileOrApk({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)' })).toBe(true);
+    });
+
+    it('recognizes desktop browsers as non-mobile', () => {
+      expect(testIsMobileOrApk({
+        hasAndroidBridge: false,
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        screenWidth: 1920,
+        screenHeight: 1080,
+        isCoarsePointer: false
+      })).toBe(false);
     });
   });
 
