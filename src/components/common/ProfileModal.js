@@ -15,6 +15,8 @@ import {
   compressAvatarImage
 } from '../../utilities/userProfile.js';
 import { showToast } from '../../utilities/toast.js';
+import { getDeviceId } from '../../utilities/deviceId.js';
+import { storage } from '../../utilities/storage.js';
 
 function escapeHtml(str) {
   return String(str || '')
@@ -30,10 +32,12 @@ let activeModalEl = null;
  * Opens Profile Modal
  * @param {Object} options
  * @param {boolean} options.isOnboarding - If true, displays the onboarding 2-step flow
+ * @param {'profile' | 'sync'} [options.initialTab] - Initial active tab in edit mode
  * @param {Function} options.onComplete - Callback when profile is saved
  */
 export function openProfileModal(options = {}) {
   const isOnboarding = Boolean(options.isOnboarding);
+  let activeTab = (!isOnboarding && options.initialTab === 'sync') ? 'sync' : 'profile';
   const currentProfile = getUserProfile();
 
   // If modal already exists, remove it
@@ -43,19 +47,152 @@ export function openProfileModal(options = {}) {
   let pendingName = currentProfile.name || '';
   let pendingAvatar = currentProfile.avatar || '';
 
+  // Device Sync State
+  let syncStatus = null;
+  let isLoadingSync = false;
+  let generatedCodeData = null;
+  let countdownText = '';
+  let countdownTimer = null;
+  let isGenerating = false;
+  let isRedeeming = false;
+
+  async function fetchSyncStatus() {
+    isLoadingSync = true;
+    try {
+      const deviceId = getDeviceId();
+      const res = await fetch('/api/v1/device/sync/status', {
+        headers: { 'x-device-id': deviceId }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        syncStatus = json.data;
+      }
+    } catch (err) {
+      console.warn('[Sync] Failed to fetch sync status', err);
+    } finally {
+      isLoadingSync = false;
+    }
+  }
+
+  function startCountdown(expiresAt) {
+    if (countdownTimer) clearInterval(countdownTimer);
+    const update = () => {
+      const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      if (left <= 0) {
+        countdownText = 'Mã đã hết hạn';
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+        generatedCodeData = null;
+        renderModalContent();
+      } else {
+        const m = Math.floor(left / 60).toString().padStart(2, '0');
+        const s = (left % 60).toString().padStart(2, '0');
+        countdownText = `Hết hạn sau ${m}:${s}`;
+        const timerEl = modalOverlay.querySelector('#dsSyncTimerDisplay');
+        if (timerEl) timerEl.textContent = countdownText;
+      }
+    };
+    update();
+    countdownTimer = setInterval(update, 1000);
+  }
+
+  async function generateSyncCode() {
+    if (isGenerating) return;
+    isGenerating = true;
+    renderModalContent();
+    try {
+      const deviceId = getDeviceId();
+      const res = await fetch('/api/v1/device/sync/code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
+        body: JSON.stringify({ deviceId })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        generatedCodeData = json.data;
+        startCountdown(json.data.expiresAt);
+        showToast('Mã đồng bộ đã được tạo!', 'success');
+      } else {
+        showToast(json.message || 'Không thể tạo mã đồng bộ', 'error');
+      }
+    } catch (err) {
+      showToast('Lỗi mạng khi tạo mã đồng bộ', 'error');
+    } finally {
+      isGenerating = false;
+      renderModalContent();
+    }
+  }
+
+  async function redeemSyncCode(code) {
+    if (!code || code.length !== 6) {
+      showToast('Vui lòng nhập đủ mã 6 chữ số', 'error');
+      return;
+    }
+    if (isRedeeming) return;
+    isRedeeming = true;
+    renderModalContent();
+    try {
+      const deviceId = getDeviceId();
+      const res = await fetch('/api/v1/device/sync/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
+        body: JSON.stringify({ deviceId, code })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast('Liên kết thiết bị thành công!', 'success');
+        await storage.syncAllWithServer({ replaceLocal: true }).catch(() => {});
+        await fetchSyncStatus();
+      } else {
+        showToast(json.message || 'Mã không hợp lệ hoặc đã hết hạn', 'error');
+      }
+    } catch (err) {
+      showToast('Lỗi kết nối khi đồng bộ', 'error');
+    } finally {
+      isRedeeming = false;
+      renderModalContent();
+    }
+  }
+
+  async function unlinkDevice(targetDeviceId) {
+    try {
+      const deviceId = getDeviceId();
+      const res = await fetch('/api/v1/device/sync/unlink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-device-id': deviceId },
+        body: JSON.stringify({ requestDeviceId: deviceId, targetDeviceId })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast('Đã hủy liên kết thiết bị', 'success');
+        await storage.syncAllWithServer({ replaceLocal: true }).catch(() => {});
+        await fetchSyncStatus();
+      } else {
+        showToast(json.message || 'Không thể hủy liên kết', 'error');
+      }
+    } catch (err) {
+      showToast('Lỗi khi hủy liên kết thiết bị', 'error');
+    } finally {
+      renderModalContent();
+    }
+  }
+
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'dsProfileModalOverlay';
   modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/60 backdrop-blur-2xl -webkit-backdrop-filter: blur(28px) saturate(180%) animate-fade-in select-none';
 
   function renderModalContent() {
-    const isStep1 = currentStep === 1;
+    const isSyncTab = !isOnboarding && activeTab === 'sync';
+    const isStep1 = !isSyncTab && currentStep === 1;
     const initialLetter = getInitialLetter(pendingName);
     const gradientClass = getAvatarGradient(pendingName);
 
     modalOverlay.innerHTML = `
       <div 
         id="dsProfileModalCard" 
-        class="relative w-full max-w-md bg-white/90 dark:bg-zinc-900/85 backdrop-blur-2xl -webkit-backdrop-filter: blur(32px) saturate(190%) border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-6 sm:p-7 overflow-hidden transition-all duration-200"
+        class="relative w-full max-w-md ${isSyncTab ? 'sm:max-w-lg' : ''} bg-white/90 dark:bg-zinc-900/85 backdrop-blur-2xl -webkit-backdrop-filter: blur(32px) saturate(190%) border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-6 sm:p-7 overflow-hidden transition-all duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dsProfileModalTitle"
@@ -73,7 +210,191 @@ export function openProfileModal(options = {}) {
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
 
-        ${isStep1 ? `
+        <!-- Segment Tabs for Edit Mode -->
+        ${!isOnboarding ? `
+          <div class="flex items-center gap-1 p-1 mb-5 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 rounded-2xl text-xs font-semibold">
+            <button 
+              type="button" 
+              id="dsTabProfileBtn"
+              class="flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${!isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+            >
+              <i data-lucide="user" class="w-3.5 h-3.5"></i>
+              <span>Hồ sơ cá nhân</span>
+            </button>
+            <button 
+              type="button" 
+              id="dsTabSyncBtn"
+              class="flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+            >
+              <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+              <span>Đồng bộ thiết bị</span>
+              ${syncStatus?.isLinked ? `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>` : ''}
+            </button>
+          </div>
+        ` : ''}
+
+        ${isSyncTab ? `
+          <!-- ================= SYNC TAB: ĐỒNG BỘ THIẾT BỊ ================= -->
+          <div class="space-y-4 pt-1">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
+                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight flex items-center gap-2">
+                  <span>Đồng bộ thiết bị</span>
+                  ${syncStatus?.isLinked ? `
+                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full">
+                      Đã ghép nối (${syncStatus.totalLinked})
+                    </span>
+                  ` : `
+                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 rounded-full">
+                      Chưa ghép nối
+                    </span>
+                  `}
+                </h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                  Chia sẻ lịch sử xử lý file và thùng rác qua mã một lần (OTC)
+                </p>
+              </div>
+            </div>
+
+            <!-- BLOCK 1: TẠO MÃ TRÊN THIẾT BỊ NÀY -->
+            <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                  <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  <span>Mã kết nối từ thiết bị này</span>
+                </div>
+                ${generatedCodeData ? `
+                  <span id="dsSyncTimerDisplay" class="text-[11px] font-mono font-medium text-amber-600 dark:text-amber-400">
+                    ${countdownText || 'Hết hạn sau 05:00'}
+                  </span>
+                ` : ''}
+              </div>
+
+              ${generatedCodeData ? `
+                <div class="flex items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900/90 border border-indigo-200 dark:border-indigo-500/30 rounded-xl shadow-xs">
+                  <div class="text-2xl font-black font-mono tracking-[0.25em] text-indigo-600 dark:text-indigo-400 pl-1 select-all">
+                    ${generatedCodeData.code}
+                  </div>
+                  <button 
+                    type="button" 
+                    id="dsCopySyncCodeBtn"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 transition cursor-pointer flex items-center gap-1.5"
+                    title="Sao chép mã"
+                  >
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span>Sao chép</span>
+                  </button>
+                </div>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">
+                  Nhập mã 6 số này trên thiết bị khác để liên kết lịch sử. Mã có hiệu lực trong 5 phút.
+                </p>
+              ` : `
+                <button 
+                  type="button" 
+                  id="dsGenerateSyncCodeBtn"
+                  ${isGenerating ? 'disabled' : ''}
+                  class="w-full h-10 px-4 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+                  <span>${isGenerating ? 'Đang tạo mã...' : 'Tạo mã kết nối (6 số)'}</span>
+                </button>
+              `}
+            </div>
+
+            <!-- BLOCK 2: NHẬP MÃ TỪ THIẾT BỊ KHÁC -->
+            <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-3">
+              <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                <i data-lucide="link-2" class="w-3.5 h-3.5 text-indigo-500"></i>
+                <span>Nhập mã từ thiết bị khác</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  id="dsInputSyncCode"
+                  maxlength="6"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Nhập 6 số..."
+                  class="flex-1 h-10 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-center font-mono text-base font-bold tracking-[0.2em] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition uppercase"
+                />
+                <button 
+                  type="button" 
+                  id="dsSubmitSyncCodeBtn"
+                  ${isRedeeming ? 'disabled' : ''}
+                  class="h-10 px-4 rounded-xl text-xs font-bold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                >
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                  <span>${isRedeeming ? 'Đang ghép...' : 'Liên kết'}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- BLOCK 3: DANH SÁCH THIẾT BỊ ĐÃ LIÊN KẾT -->
+            ${syncStatus?.linkedDevices && syncStatus.linkedDevices.length > 0 ? `
+              <div class="space-y-2 pt-1">
+                <div class="flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  <span>Thiết bị trong nhóm (${syncStatus.linkedDevices.length})</span>
+                  <span class="text-[10px] text-zinc-400 font-mono">Nhóm: ${syncStatus.syncGroupId ? syncStatus.syncGroupId.slice(-8) : ''}</span>
+                </div>
+                <div class="max-h-36 overflow-y-auto space-y-1.5 pr-0.5">
+                  ${syncStatus.linkedDevices.map(dev => {
+                    const isCurrent = dev.deviceId === syncStatus.currentDeviceId;
+                    return `
+                      <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 dark:bg-zinc-800/30 border border-zinc-200/50 dark:border-white/5 text-xs">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                          <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-700/60 flex items-center justify-center text-zinc-600 dark:text-zinc-300 shrink-0">
+                            <i data-lucide="${dev.userAgentSummary?.includes('Mobile') || dev.userAgentSummary?.includes('Android') || dev.userAgentSummary?.includes('iPhone') ? 'smartphone' : 'laptop'}" class="w-3.5 h-3.5"></i>
+                          </div>
+                          <div class="min-w-0">
+                            <div class="font-semibold text-zinc-800 dark:text-zinc-200 truncate flex items-center gap-1.5">
+                              <span>${escapeHtml(dev.alias || 'Thiết bị')}</span>
+                              ${isCurrent ? `<span class="px-1.5 py-0.2 text-[9px] font-bold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded">Bạn</span>` : ''}
+                            </div>
+                            <div class="text-[10px] text-zinc-400 truncate">
+                              ${dev.ip || ''} · ${dev.userAgentSummary || ''}
+                            </div>
+                          </div>
+                        </div>
+                        ${!isCurrent ? `
+                          <button 
+                            type="button" 
+                            class="btn-unlink-device p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer"
+                            data-device-id="${dev.deviceId}"
+                            title="Hủy liên kết thiết bị này"
+                          >
+                            <i data-lucide="unlink" class="w-3.5 h-3.5"></i>
+                          </button>
+                        ` : `
+                          <button 
+                            type="button" 
+                            class="btn-unlink-device px-2 py-1 rounded-lg text-[10px] font-medium text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer"
+                            data-device-id="${dev.deviceId}"
+                            title="Rời nhóm đồng bộ"
+                          >
+                            Rời nhóm
+                          </button>
+                        `}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="pt-2">
+              <button 
+                type="button" 
+                id="dsSyncCloseModalBtn"
+                class="w-full h-11 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        ` : isStep1 ? `
           <!-- ================= STEP 1: NHẬP TÊN PROFILE ================= -->
           <div class="space-y-4 pt-1">
             <div class="flex items-center gap-3.5">
@@ -299,6 +620,74 @@ export function openProfileModal(options = {}) {
       if (e.target === modalOverlay) handleDismiss();
     };
 
+    // Top Tab Switcher (Non-onboarding)
+    if (!isOnboarding) {
+      const tabProfileBtn = modalOverlay.querySelector('#dsTabProfileBtn');
+      if (tabProfileBtn) {
+        tabProfileBtn.onclick = () => {
+          activeTab = 'profile';
+          renderModalContent();
+        };
+      }
+      const tabSyncBtn = modalOverlay.querySelector('#dsTabSyncBtn');
+      if (tabSyncBtn) {
+        tabSyncBtn.onclick = () => {
+          activeTab = 'sync';
+          if (!syncStatus && !isLoadingSync) {
+            fetchSyncStatus().then(() => renderModalContent());
+          } else {
+            renderModalContent();
+          }
+        };
+      }
+    }
+
+    if (!isOnboarding && activeTab === 'sync') {
+      // Sync Tab Listeners
+      const genBtn = modalOverlay.querySelector('#dsGenerateSyncCodeBtn');
+      if (genBtn) genBtn.onclick = generateSyncCode;
+
+      const copyBtn = modalOverlay.querySelector('#dsCopySyncCodeBtn');
+      if (copyBtn && generatedCodeData?.code) {
+        copyBtn.onclick = () => {
+          try {
+            navigator.clipboard?.writeText(generatedCodeData.code);
+            showToast('Đã sao chép mã 6 số!', 'success');
+          } catch {
+            showToast('Không thể sao chép mã', 'error');
+          }
+        };
+      }
+
+      const submitSyncBtn = modalOverlay.querySelector('#dsSubmitSyncCodeBtn');
+      const inputSyncCode = modalOverlay.querySelector('#dsInputSyncCode');
+      const handleRedeem = () => {
+        const val = (inputSyncCode?.value || '').trim();
+        redeemSyncCode(val);
+      };
+      if (submitSyncBtn) submitSyncBtn.onclick = handleRedeem;
+      if (inputSyncCode) {
+        inputSyncCode.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleRedeem();
+          }
+        };
+      }
+
+      modalOverlay.querySelectorAll('.btn-unlink-device').forEach(btn => {
+        btn.onclick = () => {
+          const targetId = btn.getAttribute('data-device-id');
+          if (targetId) unlinkDevice(targetId);
+        };
+      });
+
+      const syncCloseBtn = modalOverlay.querySelector('#dsSyncCloseModalBtn');
+      if (syncCloseBtn) syncCloseBtn.onclick = closeProfileModal;
+
+      return;
+    }
+
     if (currentStep === 1) {
       const nameInput = modalOverlay.querySelector('#dsProfileNameInput');
       const errorP = modalOverlay.querySelector('#dsProfileNameError');
@@ -469,10 +858,19 @@ export function openProfileModal(options = {}) {
 
   modalOverlay._cleanup = () => {
     document.removeEventListener('keydown', handleKeydown);
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
   };
 
   document.body.appendChild(modalOverlay);
   activeModalEl = modalOverlay;
+
+  if (activeTab === 'sync' && !syncStatus && !isLoadingSync) {
+    fetchSyncStatus().then(() => renderModalContent());
+  }
+
   renderModalContent();
 }
 

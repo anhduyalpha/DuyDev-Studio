@@ -9,6 +9,7 @@ import { soundEngine } from '../utilities/soundEngine.js';
 import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { renderHistoryItemRow } from '../components/history/HistoryItemRow.js';
+import { openProfileModal } from '../components/common/ProfileModal.js';
 
 let historyState = {
   currentTab: 'history', historyItems: storage.getLocalHistory(),
@@ -62,6 +63,11 @@ export function renderHistoryPage(initialTab) {
             <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
             <input id="inputHistorySearch" type="text" value="${searchQuery}" placeholder="Tìm kiếm..." class="w-36 sm:w-48 pl-8 pr-3 py-1.5 rounded-xl glass-search text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none transition font-sans" />
           </div>
+
+          <button id="btnSyncDevices" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 dark:text-indigo-400 text-xs font-semibold border border-indigo-200/60 dark:border-indigo-500/20 transition cursor-pointer inline-flex items-center gap-1.5 shadow-2xs" title="Đồng bộ lịch sử qua mã liên kết">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+            <span>Đồng bộ</span>
+          </button>
 
           <div class="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] rounded-xl text-xs font-semibold">
             <button id="btnTabHistory" class="px-3 py-1.5 rounded-lg transition cursor-pointer ${!isTrash ? 'bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
@@ -196,6 +202,9 @@ export function attachHistoryPageListeners(rerender) {
   };
   document.getElementById('btnTabHistory')?.addEventListener('click', () => switchTab('history'));
   document.getElementById('btnTabTrash')?.addEventListener('click', () => switchTab('trash'));
+  document.getElementById('btnSyncDevices')?.addEventListener('click', () => {
+    openProfileModal({ initialTab: 'sync' });
+  });
 
   // Seamless in-place search without losing input focus
   document.getElementById('inputHistorySearch')?.addEventListener('input', (e) => {

@@ -8,6 +8,7 @@ import { youtubeApi } from '../services/youtubeApi.js';
 import { showToast } from '../../../../utilities/toast.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
 import { notifyJobComplete, notifyJobFailed } from '../../../../utilities/notificationHelper.js';
+import { storage } from '../../../../utilities/storage.js';
 
 const STORAGE_KEY = 'ds_youtube_history_v1';
 
@@ -98,6 +99,13 @@ export class YoutubeManager {
       lastResult: null,
       recentHistory: this.loadHistory()
     };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dd:history-updated', () => {
+        this.state.recentHistory = this.loadHistory();
+        this.notify();
+      });
+    }
   }
 
   subscribe(listener) {
@@ -116,12 +124,38 @@ export class YoutubeManager {
   }
 
   loadHistory() {
+    let localItems = [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
+      localItems = raw ? JSON.parse(raw) : [];
+    } catch {}
+
+    const toolItems = storage.getToolHistory('youtube-downloader') || [];
+    const mappedToolItems = toolItems.map(t => ({
+      id: t.id,
+      videoId: t.detailsJson?.videoId || t.id,
+      title: t.title || t.fileName,
+      thumbnail: t.thumbnail || t.cover,
+      duration: t.duration,
+      durationString: t.duration ? `${Math.floor(t.duration / 60)}:${String(t.duration % 60).padStart(2, '0')}` : null,
+      type: t.mediaType === 'audio' ? 'audio' : 'video',
+      quality: t.quality || '1080p',
+      fileName: t.fileName,
+      sizeBytes: t.resultSize,
+      downloadUrl: t.downloadUrl,
+      viewUrl: t.viewUrl || t.downloadUrl,
+      savedToDrive: Boolean(t.driveRelPath),
+      savedAt: new Date(t.createdAt || 0).getTime()
+    }));
+
+    const map = new Map();
+    for (const item of [...localItems, ...mappedToolItems]) {
+      const key = item.id || item.downloadUrl || item.title;
+      if (key && !map.has(key)) {
+        map.set(key, item);
+      }
     }
+    return Array.from(map.values()).slice(0, 30);
   }
 
   saveHistory(item) {
@@ -135,6 +169,24 @@ export class YoutubeManager {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
       this.state.recentHistory = trimmed;
       this.notify();
+
+      storage.recordCompletedJob({
+        id: `yt-${item.id || Date.now()}`,
+        toolId: 'youtube-downloader',
+        toolTitle: 'YouTube Downloader',
+        tool: 'YouTube Downloader',
+        fileName: item.fileName || item.title || 'YouTube Media',
+        title: item.title,
+        thumbnail: item.thumbnail,
+        cover: item.thumbnail,
+        duration: item.duration,
+        durationString: item.durationString,
+        downloadUrl: item.downloadUrl,
+        resultSize: item.sizeBytes || 0,
+        quality: item.quality,
+        mediaType: item.type === 'audio' ? 'audio' : 'video',
+        driveRelPath: item.savedToDrive ? (item.fileName || 'youtube') : null
+      });
     } catch (err) {
       console.warn('[YoutubeManager] Failed to persist history:', err);
     }
@@ -146,6 +198,7 @@ export class YoutubeManager {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state.recentHistory));
     } catch {}
     this.notify();
+    storage.moveToTrash(id);
   }
 
   clearHistory() {
@@ -154,6 +207,7 @@ export class YoutubeManager {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
     this.notify();
+    storage.clearToolHistoryToTrash('youtube-downloader');
     showToast('Đã xoá lịch sử tải YouTube', 'info');
   }
 

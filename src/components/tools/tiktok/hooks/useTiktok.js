@@ -64,6 +64,13 @@ export class TiktokManager {
         isCancelled: false
       }
     };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dd:history-updated', () => {
+        this.state.recentHistory = this.loadHistory();
+        this.notify({ type: 'history' });
+      });
+    }
   }
 
   getState() {
@@ -82,12 +89,34 @@ export class TiktokManager {
   }
 
   loadHistory() {
+    let localItems = [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
+      localItems = raw ? JSON.parse(raw) : [];
+    } catch {}
+
+    const toolItems = storage.getToolHistory('tiktok-downloader') || [];
+    const mappedToolItems = toolItems.map(t => ({
+      id: String(t.id).replace(/^tiktok-/, ''),
+      title: t.title || t.fileName,
+      cover: t.cover || t.thumbnail,
+      author: t.author,
+      duration: t.duration,
+      url: t.downloadUrl || t.originalUrl,
+      driveRelPath: t.driveRelPath,
+      isSlideshow: t.mediaType === 'carousel' || (t.quality && t.quality.includes('Ảnh')),
+      slideCount: 0,
+      timestamp: new Date(t.createdAt || 0).getTime()
+    }));
+
+    const map = new Map();
+    for (const item of [...localItems, ...mappedToolItems]) {
+      const key = String(item.id || item.url || item.title);
+      if (key && !map.has(key)) {
+        map.set(key, item);
+      }
     }
+    return Array.from(map.values()).slice(0, 15);
   }
 
   saveHistory(item) {

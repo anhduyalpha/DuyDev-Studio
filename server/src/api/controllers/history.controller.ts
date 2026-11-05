@@ -11,12 +11,18 @@ import {
   historyIdParamSchema
 } from '../../schemas/history.schema.js';
 import { StorageManager } from '../../storage/storage.manager.js';
+import { deviceRegistryService } from '../../services/device-registry.service.js';
 
-function extractDeviceAndAdmin(req: FastifyRequest): { deviceId: string | null; isAdmin: boolean } {
+function extractDeviceAndAdmin(req: FastifyRequest): {
+  deviceId: string | null;
+  isAdmin: boolean;
+  groupDeviceIds: string[];
+} {
   const deviceIdHeader = (req.headers['x-device-id'] as string) || (req.query as any)?.deviceId;
   const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : null;
   const isAdmin = req.headers['x-is-admin'] === 'true' || Boolean(req.headers['x-admin-token']);
-  return { deviceId, isAdmin };
+  const groupDeviceIds = deviceId ? deviceRegistryService.getSyncGroupDeviceIds(deviceId) : [];
+  return { deviceId, isAdmin, groupDeviceIds };
 }
 
 function formatHistoryRecord(r: {
@@ -44,12 +50,14 @@ function formatHistoryRecord(r: {
 
 export async function getHistory(req: FastifyRequest, reply: FastifyReply) {
   const query = historyQuerySchema.parse(req.query || {});
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
 
-  // Scoped query: regular guests only see their own records matching their deviceId
+  // Scoped query: regular guests see records matching their deviceId or sync group
   const whereClause: any = { isDeleted: false };
   if (!isAdmin) {
-    if (deviceId) {
+    if (groupDeviceIds.length > 1) {
+      whereClause.deviceId = { in: groupDeviceIds };
+    } else if (deviceId) {
       whereClause.deviceId = deviceId;
     } else {
       whereClause.deviceId = '__unidentified_guest__';
@@ -84,13 +92,14 @@ export async function getHistory(req: FastifyRequest, reply: FastifyReply) {
 
 export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply) {
   const body = createHistorySchema.parse(req.body);
-  const { deviceId } = extractDeviceAndAdmin(req);
+  const { deviceId, groupDeviceIds } = extractDeviceAndAdmin(req);
   const targetDeviceId = deviceId || body.deviceId || null;
+  const targetDeviceIds = groupDeviceIds.length > 0 ? groupDeviceIds : (targetDeviceId ? [targetDeviceId] : []);
 
   if (body.id || body.resultFileId || body.downloadUrl) {
     const existing = await prisma.historyRecord.findFirst({
       where: {
-        ...(targetDeviceId ? { OR: [{ deviceId: targetDeviceId }, { deviceId: null }] } : {}),
+        ...(targetDeviceIds.length > 0 ? { OR: [{ deviceId: { in: targetDeviceIds } }, { deviceId: null }] } : {}),
         AND: [
           {
             OR: [
@@ -175,12 +184,12 @@ async function findHistoryRecordByIdOrUrl(id: string) {
 
 export async function softDeleteHistoryItem(req: FastifyRequest, reply: FastifyReply) {
   const { id } = historyIdParamSchema.parse(req.params);
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const existing = await findHistoryRecordByIdOrUrl(id);
   if (!existing) throw new NotFoundError(`History item ${id} not found`);
 
-  // Guard: if guest and record has a deviceId, ensure it matches
-  if (!isAdmin && existing.deviceId && deviceId && existing.deviceId !== deviceId) {
+  // Guard: if guest and record has a deviceId, ensure it matches either deviceId or belongs to the sync group
+  if (!isAdmin && existing.deviceId && deviceId && !groupDeviceIds.includes(existing.deviceId)) {
     throw new NotFoundError(`History item ${id} not found`);
   }
 
@@ -196,11 +205,15 @@ export async function softDeleteHistoryItem(req: FastifyRequest, reply: FastifyR
 }
 
 export async function clearHistoryToTrash(req: FastifyRequest, reply: FastifyReply) {
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: false };
   if (!isAdmin) {
-    whereClause.deviceId = deviceId || '__unidentified_guest__';
+    if (groupDeviceIds.length > 1) {
+      whereClause.deviceId = { in: groupDeviceIds };
+    } else {
+      whereClause.deviceId = deviceId || '__unidentified_guest__';
+    }
   }
   if (toolId) {
     const baseTool = String(toolId).replace(/-downloader$/, '');
@@ -220,11 +233,13 @@ export async function clearHistoryToTrash(req: FastifyRequest, reply: FastifyRep
 
 export async function getTrashItems(req: FastifyRequest, reply: FastifyReply) {
   const query = historyQuerySchema.parse(req.query || {});
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
 
   const whereClause: any = { isDeleted: true };
   if (!isAdmin) {
-    if (deviceId) {
+    if (groupDeviceIds.length > 1) {
+      whereClause.deviceId = { in: groupDeviceIds };
+    } else if (deviceId) {
       whereClause.deviceId = deviceId;
     } else {
       whereClause.deviceId = '__unidentified_guest__';
@@ -259,11 +274,11 @@ export async function getTrashItems(req: FastifyRequest, reply: FastifyReply) {
 
 export async function restoreTrashItem(req: FastifyRequest, reply: FastifyReply) {
   const { id } = historyIdParamSchema.parse(req.params);
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const existing = await findHistoryRecordByIdOrUrl(id);
   if (!existing) throw new NotFoundError(`Trash item ${id} not found`);
 
-  if (!isAdmin && existing.deviceId && deviceId && existing.deviceId !== deviceId) {
+  if (!isAdmin && existing.deviceId && deviceId && !groupDeviceIds.includes(existing.deviceId)) {
     throw new NotFoundError(`Trash item ${id} not found`);
   }
 
@@ -279,11 +294,15 @@ export async function restoreTrashItem(req: FastifyRequest, reply: FastifyReply)
 }
 
 export async function restoreAllTrash(req: FastifyRequest, reply: FastifyReply) {
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: true };
   if (!isAdmin) {
-    whereClause.deviceId = deviceId || '__unidentified_guest__';
+    if (groupDeviceIds.length > 1) {
+      whereClause.deviceId = { in: groupDeviceIds };
+    } else {
+      whereClause.deviceId = deviceId || '__unidentified_guest__';
+    }
   }
   if (toolId) {
     const baseTool = String(toolId).replace(/-downloader$/, '');
@@ -303,11 +322,11 @@ export async function restoreAllTrash(req: FastifyRequest, reply: FastifyReply) 
 
 export async function permanentlyDeleteTrashItem(req: FastifyRequest, reply: FastifyReply) {
   const { id } = historyIdParamSchema.parse(req.params);
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const existing = await findHistoryRecordByIdOrUrl(id);
   if (!existing) throw new NotFoundError(`Item ${id} not found`);
 
-  if (!isAdmin && existing.deviceId && deviceId && existing.deviceId !== deviceId) {
+  if (!isAdmin && existing.deviceId && deviceId && !groupDeviceIds.includes(existing.deviceId)) {
     throw new NotFoundError(`Item ${id} not found`);
   }
 
@@ -323,11 +342,15 @@ export async function permanentlyDeleteTrashItem(req: FastifyRequest, reply: Fas
 }
 
 export async function emptyTrash(req: FastifyRequest, reply: FastifyReply) {
-  const { deviceId, isAdmin } = extractDeviceAndAdmin(req);
+  const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: true };
   if (!isAdmin) {
-    whereClause.deviceId = deviceId || '__unidentified_guest__';
+    if (groupDeviceIds.length > 1) {
+      whereClause.deviceId = { in: groupDeviceIds };
+    } else {
+      whereClause.deviceId = deviceId || '__unidentified_guest__';
+    }
   }
   if (toolId) {
     const baseTool = String(toolId).replace(/-downloader$/, '');

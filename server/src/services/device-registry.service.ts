@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { logger } from '../lib/logger.js';
 
 export interface StoredDeviceInfo {
@@ -15,6 +16,13 @@ export interface StoredDeviceInfo {
   country: string;
   lastIp: string;
   ipHistory: string[];
+  syncGroupId?: string;
+}
+
+interface SyncCodeEntry {
+  code: string;
+  deviceId: string;
+  expiresAt: number;
 }
 
 export class DeviceRegistryService {
@@ -22,6 +30,8 @@ export class DeviceRegistryService {
   private filePath: string;
   private devices: Map<string, StoredDeviceInfo> = new Map();
   private saveTimer: NodeJS.Timeout | null = null;
+  private syncCodes: Map<string, SyncCodeEntry> = new Map();
+  private redeemAttempts: Map<string, { count: number; resetAt: number }> = new Map();
 
   private constructor() {
     const baseDir = process.cwd().endsWith('server') ? process.cwd() : path.join(process.cwd(), 'server');
@@ -442,6 +452,218 @@ export class DeviceRegistryService {
       this.scheduleSave();
     }
     return prunedCount;
+  }
+
+  public getSyncGroupDeviceIds(deviceId: string | null): string[] {
+    if (!deviceId || typeof deviceId !== 'string') return [];
+    const trimmed = deviceId.trim();
+    if (!trimmed) return [];
+    const dev = this.devices.get(trimmed);
+    if (dev?.syncGroupId) {
+      const set = new Set<string>();
+      for (const d of this.devices.values()) {
+        if (d.syncGroupId === dev.syncGroupId) {
+          set.add(d.deviceId);
+        }
+      }
+      set.add(trimmed);
+      return Array.from(set);
+    }
+    return [trimmed];
+  }
+
+  public getSyncStatus(deviceId: string) {
+    if (!deviceId) {
+      return { isLinked: false, syncGroupId: null, devices: [], activeCode: null };
+    }
+    const trimmed = deviceId.trim();
+    const dev = this.devices.get(trimmed);
+    const now = Date.now();
+
+    // Clean expired codes
+    for (const [code, entry] of this.syncCodes.entries()) {
+      if (entry.expiresAt <= now) {
+        this.syncCodes.delete(code);
+      }
+    }
+
+    let activeCode: { code: string; expiresInSec: number } | null = null;
+    for (const entry of this.syncCodes.values()) {
+      if (entry.deviceId === trimmed && entry.expiresAt > now) {
+        activeCode = {
+          code: entry.code,
+          expiresInSec: Math.max(0, Math.round((entry.expiresAt - now) / 1000))
+        };
+        break;
+      }
+    }
+
+    if (dev?.syncGroupId) {
+      const members = Array.from(this.devices.values())
+        .filter(d => d.syncGroupId === dev.syncGroupId)
+        .map(d => ({
+          deviceId: d.deviceId,
+          maskedId: d.deviceId.length > 8 ? `...${d.deviceId.slice(-6)}` : d.deviceId,
+          alias: d.alias || (d.isOwner ? '👑 Máy của Duy' : 'Thiết bị liên kết'),
+          avatar: d.avatar || '',
+          deviceSummary: d.deviceSummary || 'Web Client',
+          lastSeenAt: d.lastSeenAt || d.firstSeenAt,
+          isCurrent: d.deviceId === trimmed
+        }));
+
+      return {
+        isLinked: true,
+        syncGroupId: dev.syncGroupId,
+        devices: members,
+        activeCode
+      };
+    }
+
+    return {
+      isLinked: false,
+      syncGroupId: null,
+      devices: dev ? [{
+        deviceId: dev.deviceId,
+        maskedId: dev.deviceId.length > 8 ? `...${dev.deviceId.slice(-6)}` : dev.deviceId,
+        alias: dev.alias || (dev.isOwner ? '👑 Máy của Duy' : 'Thiết bị này'),
+        avatar: dev.avatar || '',
+        deviceSummary: dev.deviceSummary || 'Web Client',
+        lastSeenAt: dev.lastSeenAt || dev.firstSeenAt,
+        isCurrent: true
+      }] : [],
+      activeCode
+    };
+  }
+
+  public generateSyncCode(deviceId: string): { code: string; expiresInSec: number } {
+    if (!deviceId || typeof deviceId !== 'string') {
+      throw new Error('Thiếu mã thiết bị (deviceId)');
+    }
+    const trimmed = deviceId.trim();
+    if (!this.devices.has(trimmed)) {
+      this.setProfile(trimmed, {});
+    }
+
+    // Revoke any prior active codes for this device
+    for (const [code, entry] of this.syncCodes.entries()) {
+      if (entry.deviceId === trimmed) {
+        this.syncCodes.delete(code);
+      }
+    }
+
+    const code = String(crypto.randomInt(100000, 1000000));
+    this.syncCodes.set(code, {
+      code,
+      deviceId: trimmed,
+      expiresAt: Date.now() + 300 * 1000
+    });
+
+    return { code, expiresInSec: 300 };
+  }
+
+  public redeemSyncCode(redeemerDeviceId: string, rawCode: string): {
+    success: boolean;
+    syncGroupId?: string;
+    message: string;
+    devices?: any[];
+  } {
+    if (!redeemerDeviceId || typeof redeemerDeviceId !== 'string') {
+      return { success: false, message: 'Thiếu mã thiết bị nhận (deviceId)' };
+    }
+    const redeemerId = redeemerDeviceId.trim();
+    const now = Date.now();
+
+    // Rate-limit check (max 5 failed attempts per 5 minutes)
+    const attempt = this.redeemAttempts.get(redeemerId);
+    if (attempt && attempt.resetAt > now && attempt.count >= 5) {
+      const remainingSec = Math.ceil((attempt.resetAt - now) / 1000);
+      return {
+        success: false,
+        message: `Bạn đã nhập sai mã quá 5 lần. Vui lòng chờ ${remainingSec} giây để thử lại.`
+      };
+    }
+
+    const cleanCode = (rawCode || '').replace(/\D/g, '').trim();
+    if (cleanCode.length !== 6) {
+      return { success: false, message: 'Mã liên kết phải gồm đúng 6 chữ số.' };
+    }
+
+    const entry = this.syncCodes.get(cleanCode);
+    if (!entry || entry.expiresAt <= now) {
+      if (!attempt || attempt.resetAt <= now) {
+        this.redeemAttempts.set(redeemerId, { count: 1, resetAt: now + 300 * 1000 });
+      } else {
+        attempt.count++;
+      }
+      if (entry) this.syncCodes.delete(cleanCode);
+      return { success: false, message: 'Mã liên kết không hợp lệ hoặc đã hết hạn.' };
+    }
+
+    if (entry.deviceId === redeemerId) {
+      return { success: false, message: 'Không thể nhập mã liên kết của chính thiết bị này.' };
+    }
+
+    // Single-use: delete code immediately and clear attempts
+    this.syncCodes.delete(cleanCode);
+    this.redeemAttempts.delete(redeemerId);
+
+    let issuer = this.devices.get(entry.deviceId);
+    if (!issuer) issuer = this.setProfile(entry.deviceId, {})!;
+    let redeemer = this.devices.get(redeemerId);
+    if (!redeemer) redeemer = this.setProfile(redeemerId, {})!;
+
+    const targetGroupId = issuer.syncGroupId || redeemer.syncGroupId || (
+      'grp_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex')
+    );
+
+    // Merge if two distinct groups collided
+    if (issuer.syncGroupId && redeemer.syncGroupId && issuer.syncGroupId !== redeemer.syncGroupId) {
+      const oldRedeemerGroup = redeemer.syncGroupId;
+      for (const d of this.devices.values()) {
+        if (d.syncGroupId === oldRedeemerGroup) {
+          d.syncGroupId = targetGroupId;
+        }
+      }
+    }
+
+    issuer.syncGroupId = targetGroupId;
+    redeemer.syncGroupId = targetGroupId;
+
+    // Propagate profile attributes if redeemer is fresh/unconfigured
+    if (!redeemer.alias && issuer.alias) redeemer.alias = issuer.alias;
+    if (!redeemer.avatar && issuer.avatar) redeemer.avatar = issuer.avatar;
+    if (issuer.isOwner) redeemer.isOwner = true;
+
+    this.scheduleSave();
+
+    const status = this.getSyncStatus(redeemerId);
+    return {
+      success: true,
+      syncGroupId: targetGroupId,
+      message: 'Đã liên kết thiết bị thành công! Lịch sử xử lý tệp đã được hợp nhất.',
+      devices: status.devices
+    };
+  }
+
+  public unlinkDevice(requestDeviceId: string, targetDeviceId?: string): { success: boolean; message: string } {
+    if (!requestDeviceId) return { success: false, message: 'Thiếu mã thiết bị' };
+    const target = (targetDeviceId || requestDeviceId).trim();
+    const dev = this.devices.get(target);
+
+    if (!dev || !dev.syncGroupId) {
+      return { success: true, message: 'Thiết bị chưa tham gia nhóm đồng bộ nào.' };
+    }
+
+    const oldGroup = dev.syncGroupId;
+    dev.syncGroupId = undefined;
+
+    const remaining = Array.from(this.devices.values()).filter(d => d.syncGroupId === oldGroup);
+    if (remaining.length <= 1) {
+      remaining.forEach(d => { d.syncGroupId = undefined; });
+    }
+
+    this.scheduleSave();
+    return { success: true, message: 'Đã hủy liên kết thiết bị thành công.' };
   }
 
   public listDevices(): StoredDeviceInfo[] {

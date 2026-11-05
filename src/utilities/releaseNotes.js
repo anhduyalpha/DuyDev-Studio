@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.54': {
+    version: 'v24.54',
+    title: 'Bản cập nhật v24.54: Đồng Bộ Hóa Lịch Sử Đa Thiết Bị Qua Mã OTC & Miễn Trừ Zen Browser Triệt Để',
+    date: '05/11/2026',
+    features: [
+      'Đồng Bộ Lịch Sử Đa Thiết Bị Qua Mã Một Lần (One-Time Code Sync): Cho phép tạo mã kết nối 6 chữ số (hiệu lực 5 phút) để liên kết an toàn giữa điện thoại, máy tính bảng và laptop, chia sẻ toàn bộ lịch sử xử lý file và thùng rác qua nhóm syncGroupId chung',
+      'Đồng Bộ Hai Chiều Tự Động Toàn Hệ Thống: Tất cả các mô-đun (PDF Studio, File Converter, Quiz Generator, QR Studio, YouTube, TikTok, Facebook, Instagram, Spotify, Archive...) tự động đồng bộ tác vụ đã xử lý về nhóm thiết bị ngay sau khi liên kết',
+      'Giao Diện Quản Lý Nhóm Thiết Bị & Nút Đồng Bộ Nhanh: Bổ sung tab "Đồng bộ thiết bị" trong cài đặt hồ sơ cá nhân và nút "Đồng bộ" trên trang Lịch sử tác vụ (#history), hỗ trợ xem danh sách thiết bị liên kết, hủy ghép nối và rời nhóm linh hoạt'
+    ],
+    fixes: [
+      'Miễn Trừ DevTools Tuyệt Đối Cho Zen Browser & Trình Duyệt Sidebar: Tích hợp bộ nhận diện đặc thù (/Zen\\/|Arc\\/|Vivaldi\\//i) và nút "Tải lại & Bỏ qua cảnh báo" tự động vô hiệu hóa kiểm tra dock/timing, loại bỏ triệt để tình trạng false positive'
+    ]
+  },
   'v24.53': {
     version: 'v24.53',
     title: 'Bản cập nhật v24.53: Khắc Phục Lỗi Nhận Nhầm DevTools Trên Zen Browser & Cơ Chế Tự Động Bỏ Khóa Bằng Nút Bấm',

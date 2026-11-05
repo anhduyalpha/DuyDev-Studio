@@ -212,4 +212,83 @@ export async function systemRoute(app: FastifyInstance) {
       return reply.status(500).send({ success: false, error: err?.message || 'Lỗi cập nhật hồ sơ thiết bị' });
     }
   });
+
+  // -------------------------------------------------------------
+  // Multi-Device One-Time Code Synchronization Endpoints
+  // -------------------------------------------------------------
+  app.get('/api/v1/device/sync/status', async (req, reply) => {
+    try {
+      const q = (req.query as any) || {};
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || q.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : '';
+
+      if (!deviceId) {
+        return reply.status(400).send({ success: false, error: 'Thiếu mã thiết bị (deviceId)' });
+      }
+
+      const status = deviceRegistryService.getSyncStatus(deviceId);
+      return reply.send({ success: true, data: status });
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err?.message || 'Lỗi đọc trạng thái đồng bộ' });
+    }
+  });
+
+  app.post('/api/v1/device/sync/code', async (req, reply) => {
+    try {
+      const body = (req.body as any) || {};
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || body.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : '';
+
+      if (!deviceId) {
+        return reply.status(400).send({ success: false, error: 'Thiếu mã thiết bị (deviceId)' });
+      }
+
+      const codeData = deviceRegistryService.generateSyncCode(deviceId);
+      return reply.send({ success: true, data: codeData });
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, error: err?.message || 'Lỗi tạo mã đồng bộ' });
+    }
+  });
+
+  app.post('/api/v1/device/sync/redeem', async (req, reply) => {
+    try {
+      const body = (req.body as any) || {};
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || body.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : '';
+      const code = String(body.code || '').trim();
+
+      if (!deviceId) {
+        return reply.status(400).send({ success: false, message: 'Thiếu mã thiết bị (deviceId)' });
+      }
+      if (!code) {
+        return reply.status(400).send({ success: false, message: 'Vui lòng nhập mã đồng bộ gồm 6 chữ số' });
+      }
+
+      const result = deviceRegistryService.redeemSyncCode(deviceId, code);
+      if (!result.success) {
+        return reply.status(400).send(result);
+      }
+      return reply.send(result);
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err?.message || 'Lỗi liên kết thiết bị' });
+    }
+  });
+
+  app.post('/api/v1/device/sync/unlink', async (req, reply) => {
+    try {
+      const body = (req.body as any) || {};
+      const deviceIdHeader = (req.headers['x-device-id'] as string) || body.deviceId;
+      const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : '';
+      const targetDeviceId = body.targetDeviceId ? String(body.targetDeviceId).trim() : undefined;
+
+      if (!deviceId) {
+        return reply.status(400).send({ success: false, message: 'Thiếu mã thiết bị (deviceId)' });
+      }
+
+      const result = deviceRegistryService.unlinkDevice(deviceId, targetDeviceId);
+      return reply.send(result);
+    } catch (err: any) {
+      return reply.status(500).send({ success: false, message: err?.message || 'Lỗi hủy liên kết thiết bị' });
+    }
+  });
 }

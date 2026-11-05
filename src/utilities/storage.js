@@ -235,7 +235,7 @@ export const storage = {
     } catch {}
   },
 
-  async fetchHistory() {
+  async fetchHistory(options = {}) {
     try {
       const deviceId = getDeviceId();
       const res = await fetch(`/api/v1/history?limit=50&deviceId=${encodeURIComponent(deviceId)}`, {
@@ -244,7 +244,7 @@ export const storage = {
       if (res.ok) {
         const json = await res.json();
         const serverItems = deduplicateList(json.data?.items || []);
-        const localItems = this.getLocalHistory();
+        const localItems = options.replaceLocal ? [] : this.getLocalHistory();
         const trashItems = this.getLocalTrash();
 
         // Build a set of trashed identifiers to prevent resurrecting deleted items
@@ -270,13 +270,59 @@ export const storage = {
           return true;
         });
 
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged.slice(0, 50)));
+        const oldSerialized = localStorage.getItem(STORAGE_KEYS.HISTORY);
+        const newSerialized = JSON.stringify(merged.slice(0, 50));
+        localStorage.setItem(STORAGE_KEYS.HISTORY, newSerialized);
+        if (oldSerialized !== newSerialized) {
+          dispatchHistoryUpdated(null, 'sync-fetched');
+        }
         return merged;
       }
     } catch (e) {
       console.warn('Failed to fetch history from server', e);
     }
     return this.getLocalHistory();
+  },
+
+  async pushLocalHistoryToServer() {
+    try {
+      const deviceId = getDeviceId();
+      const localHistory = this.getLocalHistory();
+      if (!localHistory || localHistory.length === 0) return;
+
+      for (const item of localHistory.slice(0, 30)) {
+        if (!item || !item.fileName) continue;
+        fetch('/api/v1/history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-device-id': deviceId
+          },
+          body: JSON.stringify({
+            id: item.id,
+            deviceId,
+            toolId: item.toolId || 'general',
+            toolTitle: item.toolTitle || item.tool || 'Công cụ',
+            fileName: item.fileName || 'Tài liệu',
+            originalSize: item.originalSize || 0,
+            resultSize: item.resultSize || item.fileSize || 0,
+            downloadUrl: item.downloadUrl || null,
+            resultFileId: item.resultFileId || null,
+            status: item.status || 'success',
+            detailsJson: typeof item.detailsJson === 'string' ? item.detailsJson : (item.detailsJson ? JSON.stringify(item.detailsJson) : null)
+          })
+        }).catch(() => {});
+      }
+    } catch {}
+  },
+
+  async syncAllWithServer(options = {}) {
+    await this.pushLocalHistoryToServer();
+    const [history, trash] = await Promise.all([
+      this.fetchHistory(options),
+      this.fetchTrash(options)
+    ]);
+    return { history, trash };
   },
 
   recordCompletedJob(record) {
@@ -581,7 +627,7 @@ export const storage = {
     } catch {}
   },
 
-  async fetchTrash() {
+  async fetchTrash(options = {}) {
     try {
       const deviceId = getDeviceId();
       const res = await fetch(`/api/v1/trash?limit=50&deviceId=${encodeURIComponent(deviceId)}`, {
@@ -590,9 +636,14 @@ export const storage = {
       if (res.ok) {
         const json = await res.json();
         const serverTrash = deduplicateList(json.data?.items || []);
-        const localTrash = this.getLocalTrash();
+        const localTrash = options.replaceLocal ? [] : this.getLocalTrash();
         const mergedTrash = deduplicateList([...localTrash, ...serverTrash]);
-        localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(mergedTrash.slice(0, 50)));
+        const oldSerialized = localStorage.getItem(STORAGE_KEYS.TRASH);
+        const newSerialized = JSON.stringify(mergedTrash.slice(0, 50));
+        localStorage.setItem(STORAGE_KEYS.TRASH, newSerialized);
+        if (oldSerialized !== newSerialized) {
+          dispatchHistoryUpdated(null, 'sync-trash-fetched');
+        }
         return mergedTrash;
       }
     } catch (e) {

@@ -122,6 +122,57 @@ export function getQuizHistoryList() {
       }
     } catch {}
     safeSet(QUIZ_HISTORY_KEY, list);
+  } else {
+    // Dynamic merge of synced items from other devices
+    try {
+      const globalHistory = storage.getToolHistory('quiz-generator') || [];
+      if (globalHistory.length > 0) {
+        const existingIds = new Set(list.map(p => String(p.id)));
+        const legacyGroups = new Map();
+        for (const item of globalHistory) {
+          const name = item.fileName || '';
+          const prefix = name.replace(/_(DeBai|DapAn)\.pdf$/i, '');
+          const key = `${prefix}_${Math.floor(new Date(item.createdAt || 0).getTime() / 60000)}`;
+          if (!legacyGroups.has(key)) {
+            legacyGroups.set(key, { prefix, createdAt: item.createdAt, items: [] });
+          }
+          legacyGroups.get(key).items.push(item);
+        }
+        for (const group of legacyGroups.values()) {
+          const ws = group.items.find((i) => (i.fileName || '').includes('_DeBai')) || group.items[0];
+          const ans = group.items.find((i) => (i.fileName || '').includes('_DapAn')) || group.items[1] || ws;
+          const pairId = `sync_${ws?.resultFileId || ws?.id || Date.now()}`;
+          if (!existingIds.has(pairId) && !existingIds.has(String(ws?.id))) {
+            const paired = normalizeQuizPair({
+              id: pairId,
+              timestamp: new Date(group.createdAt || 0).getTime(),
+              createdAt: group.createdAt,
+              prefix: group.prefix,
+              title: group.prefix,
+              count: 20,
+              worksheet: {
+                fileId: ws?.resultFileId,
+                fileName: ws?.fileName,
+                sizeBytes: ws?.resultSize,
+                downloadUrl: ws?.downloadUrl,
+                viewUrl: ws?.resultFileId ? `/api/v1/files/view/${ws.resultFileId}` : ws?.downloadUrl
+              },
+              answer: {
+                fileId: ans?.resultFileId,
+                fileName: ans?.fileName,
+                sizeBytes: ans?.resultSize,
+                downloadUrl: ans?.downloadUrl,
+                viewUrl: ans?.resultFileId ? `/api/v1/files/view/${ans.resultFileId}` : ans?.downloadUrl
+              }
+            });
+            if (paired) {
+              list.push(paired);
+              existingIds.add(pairId);
+            }
+          }
+        }
+      }
+    } catch {}
   }
 
   list.sort((a, b) => b.timestamp - a.timestamp);

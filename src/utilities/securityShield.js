@@ -46,6 +46,16 @@ export function isMobileOrApk() {
 }
 
 /**
+ * Detects browsers with prominent sidebars or vertical tabs (Zen, Arc, Vivaldi, Firefox Sidebery)
+ * where widthDiff false-positives are frequent.
+ */
+export function isSpecialSidebarBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Zen\/|Arc\/|Vivaldi\//i.test(ua);
+}
+
+/**
  * Checks if the user or browser environment previously dismissed a false-positive lockout.
  * Disables dimension-based docked DevTools checks for sidebar browsers (Zen, Arc, Edge vertical tabs).
  */
@@ -64,7 +74,7 @@ export function isDevToolsDismissed() {
  */
 function isDockedDevToolsOpen() {
   if (typeof window === 'undefined') return false;
-  if (isMobileOrApk()) return false;
+  if (isMobileOrApk() || isSpecialSidebarBrowser()) return false;
   if (isDevToolsDismissed()) return false;
 
   const isDesktop = !window.screen || window.screen.width >= 768;
@@ -90,7 +100,7 @@ function isDockedDevToolsOpen() {
  * When DevTools is open, debugger halts execution (>100ms)
  */
 function isTimingDevToolsOpen() {
-  if (isMobileOrApk()) return false;
+  if (isMobileOrApk() || isSpecialSidebarBrowser() || isDevToolsDismissed()) return false;
   if (isDockedDevToolsOpen()) return true;
   const start = performance.now();
   try {
@@ -108,7 +118,7 @@ function isTimingDevToolsOpen() {
  */
 export function lockWebPermanently() {
   if (isWebLocked || typeof document === 'undefined') return;
-  if (isLocalDev()) return;
+  if (isLocalDev() || isDevToolsDismissed() || isSpecialSidebarBrowser()) return;
   isWebLocked = true;
 
   try {
@@ -258,7 +268,7 @@ export function showDevToolsBlockScreen() {
             <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
             <path d="M16 21h5v-5"></path>
           </svg>
-          <span>Tải lại trang (F5)</span>
+          <span>Tải lại & Bỏ qua cảnh báo</span>
         </button>
       </div>
     </body>
@@ -274,6 +284,19 @@ export function showDevToolsBlockScreen() {
         localStorage.setItem('__ds_dt_dismissed', '1');
         sessionStorage.removeItem('__ds_dt_lock');
       } catch {}
+      isWebLocked = false;
+      if (checkIntervalId) {
+        clearInterval(checkIntervalId);
+        checkIntervalId = null;
+      }
+      if (consoleProbeIntervalId) {
+        clearInterval(consoleProbeIntervalId);
+        consoleProbeIntervalId = null;
+      }
+      if (blockerObserver) {
+        blockerObserver.disconnect();
+        blockerObserver = null;
+      }
       window.location.reload();
     };
   }
@@ -299,7 +322,7 @@ export function hideDevToolsBlockScreen() {
  */
 function checkDevToolsStatus() {
   if (isWebLocked || typeof window === 'undefined') return;
-  if (isLocalDev()) return;
+  if (isLocalDev() || isDevToolsDismissed() || isSpecialSidebarBrowser()) return;
 
   if (isDockedDevToolsOpen() || isTimingDevToolsOpen()) {
     lockWebPermanently();
@@ -328,9 +351,9 @@ function initConsoleProbe() {
 export function startAntiDebugger() {
   if (typeof window === 'undefined') return;
   if (isLocalDev()) return;
-  if (isMobileOrApk() || isDevToolsDismissed()) {
-    // Mobile browsers & dismissed false-positive desktop browsers (Zen, Arc, sidebars)
-    // skip dimension polling and console probes.
+  if (isMobileOrApk() || isDevToolsDismissed() || isSpecialSidebarBrowser()) {
+    // Mobile browsers, custom sidebar browsers (Zen, Arc, Vivaldi), and dismissed browsers
+    // skip dimension polling and console probes completely.
     return;
   }
 

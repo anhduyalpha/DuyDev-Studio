@@ -40,6 +40,7 @@ import { isAdminAuthenticated, getAdminToken } from './utilities/adminAuth.js';
 import { initSecurityShield } from './utilities/securityShield.js';
 import { isProfileConfigured, syncProfileWithServer, getUserProfile } from './utilities/userProfile.js';
 import { openProfileModal } from './components/common/ProfileModal.js';
+import { storage } from './utilities/storage.js';
 
 /**
  * Global fetch interceptor ensuring all /api/v1/* requests attach X-Device-Id, X-DS-CSRF, and auth credentials
@@ -184,6 +185,7 @@ class App {
     // Background sync user profile and check for onboarding prompt
     syncProfileWithServer().finally(() => {
       this.checkAndPromptOnboardingProfile();
+      storage.syncAllWithServer().catch(() => {});
     });
 
     // Signal app readiness for any fast-path queued interactions
