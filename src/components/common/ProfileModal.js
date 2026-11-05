@@ -76,7 +76,8 @@ export function openProfileModal(options = {}) {
 
   function startCountdown(expiresAt) {
     if (countdownTimer) clearInterval(countdownTimer);
-    const update = () => {
+    let pollTick = 0;
+    const update = async () => {
       const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
       if (left <= 0) {
         countdownText = 'Mã đã hết hạn';
@@ -86,12 +87,32 @@ export function openProfileModal(options = {}) {
         }
         generatedCodeData = null;
         renderModalContent();
-      } else {
-        const m = Math.floor(left / 60).toString().padStart(2, '0');
-        const s = (left % 60).toString().padStart(2, '0');
-        countdownText = `Hết hạn sau ${m}:${s}`;
-        const timerEl = modalOverlay.querySelector('#dsSyncTimerDisplay');
-        if (timerEl) timerEl.textContent = countdownText;
+        return;
+      }
+
+      const m = Math.floor(left / 60).toString().padStart(2, '0');
+      const s = (left % 60).toString().padStart(2, '0');
+      countdownText = `Hết hạn sau ${m}:${s}`;
+      const timerEl = modalOverlay.querySelector('#dsSyncTimerDisplay');
+      if (timerEl) timerEl.textContent = countdownText;
+
+      // Poll sync status every 3 seconds to auto-detect when remote device redeems the OTC code
+      pollTick++;
+      if (pollTick % 3 === 0) {
+        try {
+          await fetchSyncStatus();
+          const isNowLinked = syncStatus?.isLinked || (syncStatus?.totalLinked && syncStatus.totalLinked > 1);
+          if (isNowLinked && !syncStatus?.activeCode) {
+            if (countdownTimer) {
+              clearInterval(countdownTimer);
+              countdownTimer = null;
+            }
+            generatedCodeData = null;
+            showToast('Thiết bị mới đã liên kết thành công!', 'success');
+            await storage.syncAllWithServer({ replaceLocal: true }).catch(() => {});
+            renderModalContent();
+          }
+        } catch {}
       }
     };
     update();
@@ -103,6 +124,8 @@ export function openProfileModal(options = {}) {
     isGenerating = true;
     renderModalContent();
     try {
+      // Ensure phone/current device flushes local history to backend before issuing code
+      await storage.pushLocalHistoryToServer().catch(() => {});
       const deviceId = getDeviceId();
       const res = await fetch('/api/v1/device/sync/code', {
         method: 'POST',
@@ -134,6 +157,8 @@ export function openProfileModal(options = {}) {
     isRedeeming = true;
     renderModalContent();
     try {
+      // Push any local history before linking
+      await storage.pushLocalHistoryToServer().catch(() => {});
       const deviceId = getDeviceId();
       const res = await fetch('/api/v1/device/sync/redeem', {
         method: 'POST',
@@ -142,9 +167,10 @@ export function openProfileModal(options = {}) {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        showToast('Liên kết thiết bị thành công!', 'success');
+        showToast('Liên kết thiết bị thành công! Đang đồng bộ...', 'success');
         await storage.syncAllWithServer({ replaceLocal: true }).catch(() => {});
         await fetchSyncStatus();
+        showToast('Đã hoàn tất đồng bộ lịch sử giữa các thiết bị!', 'success');
       } else {
         showToast(json.message || 'Mã không hợp lệ hoặc đã hết hạn', 'error');
       }
@@ -655,6 +681,7 @@ export function openProfileModal(options = {}) {
       if (tabSyncBtn) {
         tabSyncBtn.onclick = () => {
           activeTab = 'sync';
+          storage.pushLocalHistoryToServer().catch(() => {});
           if (!syncStatus && !isLoadingSync) {
             fetchSyncStatus().then(() => renderModalContent());
           } else {

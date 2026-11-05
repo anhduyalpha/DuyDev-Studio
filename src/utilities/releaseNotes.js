@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.56': {
+    version: 'v24.56',
+    title: 'Bản cập nhật v24.56: Khắc Phục Triệt Để Đồng Bộ Lịch Sử Media Downloader & Tự Động Đẩy Dữ Liệu Hai Chiều',
+    date: '05/11/2026',
+    features: [
+      'Đẩy Dữ Liệu Tức Thì Khi Tạo Mã Kết Nối: Thiết bị phát mã (điện thoại) tự động đóng gói và tải toàn bộ lịch sử cục bộ (Facebook Downloader, media, file) lên hệ thống máy chủ trước khi cấp mã OTC, đảm bảo laptop kết nối lập tức thấy toàn bộ lịch sử',
+      'API Nạp Lịch Sử Hàng Loạt (Bulk History Ingestion): Bổ sung endpoint POST /api/v1/history/bulk nạp nguyên vẹn toàn bộ danh sách lịch sử cùng siêu dữ liệu phong phú (ảnh bìa, chất lượng HD/SD, thời lượng, tác giả) trong 1 request duy nhất',
+      'Tự Động Phát Hiện Thiết Bị Kết Nối Real-Time: Màn hình đếm ngược mã 6 số trên điện thoại tự động thăm dò và phản hồi ngay lập tức khi máy tính liên kết thành công, chuyển sang trạng thái đã liên kết và kích hoạt đồng bộ hai chiều'
+    ],
+    fixes: [
+      'Sửa Lỗi Mất Dữ Liệu Do Bất Đồng Bộ Chưa Await: Khắc phục vòng lặp fetch un-awaited trong pushLocalHistoryToServer() khiến lệnh fetchHistory chạy trước khi lịch sử kịp lưu lên cơ sở dữ liệu',
+      'Chuẩn Hóa Số Nguyên Cho Kích Thước Tệp: Làm tròn số nguyên không âm cho originalSize và resultSize tránh lỗi xác thực z.number().int()'
+    ]
+  },
   'v24.55': {
     version: 'v24.55',
     title: 'Bản cập nhật v24.55: Sửa Triệt Để Lỗi Chồng Chéo Giao Diện Modal Đồng Bộ Trên PC & Mobile',

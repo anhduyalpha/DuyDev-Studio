@@ -6,6 +6,7 @@ import { FastifyInstance } from 'fastify';
 import {
   getHistory,
   createHistoryItem,
+  createBulkHistoryItems,
   softDeleteHistoryItem,
   clearHistoryToTrash,
   getTrashItems,
@@ -19,6 +20,7 @@ export async function historyRoute(app: FastifyInstance) {
   // History endpoints
   app.get('/api/v1/history', getHistory);
   app.post('/api/v1/history', createHistoryItem);
+  app.post('/api/v1/history/bulk', createBulkHistoryItems);
   app.delete('/api/v1/history/:id', softDeleteHistoryItem);
   app.delete('/api/v1/history', clearHistoryToTrash);
 

@@ -290,30 +290,73 @@ export const storage = {
       const localHistory = this.getLocalHistory();
       if (!localHistory || localHistory.length === 0) return;
 
-      for (const item of localHistory.slice(0, 30)) {
-        if (!item || !item.fileName) continue;
-        fetch('/api/v1/history', {
+      const validItems = localHistory.slice(0, 50).filter(item => item && (item.fileName || item.downloadUrl || item.id)).map(item => {
+        let detailsJson = typeof item.detailsJson === 'string' ? item.detailsJson : null;
+        if (!detailsJson) {
+          try {
+            detailsJson = JSON.stringify({
+              cover: item.cover || item.thumbnail || null,
+              thumbnail: item.thumbnail || item.cover || null,
+              author: item.author || null,
+              artist: item.artist || null,
+              duration: item.duration || null,
+              driveRelPath: item.driveRelPath || null,
+              originalUrl: item.originalUrl || item.sourceUrl || null,
+              quality: item.quality || null,
+              mediaType: item.mediaType || null,
+              viewUrl: item.viewUrl || null,
+              videoHdUrl: item.videoHdUrl || null,
+              videoSdUrl: item.videoSdUrl || null
+            });
+          } catch {}
+        }
+
+        return {
+          id: item.id || null,
+          deviceId,
+          toolId: item.toolId || item.tool || 'general',
+          toolTitle: item.toolTitle || item.tool || 'Công cụ',
+          fileName: item.fileName || 'Tài liệu',
+          originalSize: Math.max(0, Math.round(Number(item.originalSize) || 0)),
+          resultSize: Math.max(0, Math.round(Number(item.resultSize || item.fileSize) || 0)),
+          downloadUrl: item.downloadUrl || null,
+          resultFileId: item.resultFileId || null,
+          status: item.status || 'success',
+          detailsJson
+        };
+      });
+
+      if (validItems.length === 0) return;
+
+      // 1. Primary: Fast bulk ingestion via /api/v1/history/bulk
+      try {
+        const res = await fetch('/api/v1/history/bulk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-device-id': deviceId
           },
-          body: JSON.stringify({
-            id: item.id,
-            deviceId,
-            toolId: item.toolId || 'general',
-            toolTitle: item.toolTitle || item.tool || 'Công cụ',
-            fileName: item.fileName || 'Tài liệu',
-            originalSize: item.originalSize || 0,
-            resultSize: item.resultSize || item.fileSize || 0,
-            downloadUrl: item.downloadUrl || null,
-            resultFileId: item.resultFileId || null,
-            status: item.status || 'success',
-            detailsJson: typeof item.detailsJson === 'string' ? item.detailsJson : (item.detailsJson ? JSON.stringify(item.detailsJson) : null)
-          })
-        }).catch(() => {});
-      }
-    } catch {}
+          body: JSON.stringify({ items: validItems })
+        });
+        if (res.ok) return;
+      } catch {}
+
+      // 2. Fallback: Concurrent individual item ingestion
+      await Promise.all(validItems.map(async payload => {
+        try {
+          await fetch('/api/v1/history', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-device-id': deviceId
+            },
+            body: JSON.stringify(payload)
+          });
+        } catch {}
+      }));
+    } catch (e) {
+      console.warn('[storage] Failed to push local history to server:', e);
+    }
   },
 
   async syncAllWithServer(options = {}) {

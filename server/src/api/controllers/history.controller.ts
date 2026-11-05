@@ -7,6 +7,7 @@ import { prisma } from '../../lib/prisma.js';
 import { NotFoundError } from '../../lib/errors.js';
 import {
   createHistorySchema,
+  bulkHistorySchema,
   historyQuerySchema,
   historyIdParamSchema
 } from '../../schemas/history.schema.js';
@@ -160,6 +161,87 @@ export async function createHistoryItem(req: FastifyRequest, reply: FastifyReply
   return reply.status(201).send({
     success: true,
     data: formatHistoryRecord(created)
+  });
+}
+
+export async function createBulkHistoryItems(req: FastifyRequest, reply: FastifyReply) {
+  const body = bulkHistorySchema.parse(req.body);
+  const { deviceId, groupDeviceIds } = extractDeviceAndAdmin(req);
+  const targetDeviceId = deviceId || null;
+  const targetDeviceIds = groupDeviceIds.length > 0 ? groupDeviceIds : (targetDeviceId ? [targetDeviceId] : []);
+
+  const results: any[] = [];
+
+  for (const item of body.items) {
+    const itemTargetDeviceId = targetDeviceId || item.deviceId || null;
+    let existing: any = null;
+
+    if (item.id || item.resultFileId || item.downloadUrl) {
+      existing = await prisma.historyRecord.findFirst({
+        where: {
+          ...(targetDeviceIds.length > 0 ? { OR: [{ deviceId: { in: targetDeviceIds } }, { deviceId: null }] } : {}),
+          AND: [
+            {
+              OR: [
+                ...(item.id ? [{ id: item.id }] : []),
+                ...(item.resultFileId ? [{ resultFileId: item.resultFileId }] : []),
+                ...(item.downloadUrl ? [{ downloadUrl: item.downloadUrl }] : [])
+              ]
+            }
+          ]
+        }
+      });
+    }
+
+    if (existing) {
+      const updateData: any = {};
+      if (!existing.deviceId && itemTargetDeviceId) {
+        updateData.deviceId = itemTargetDeviceId;
+        existing.deviceId = itemTargetDeviceId;
+      }
+      if (item.detailsJson && item.detailsJson !== existing.detailsJson) {
+        updateData.detailsJson = item.detailsJson;
+        existing.detailsJson = item.detailsJson;
+      }
+      if (existing.isDeleted) {
+        updateData.isDeleted = false;
+        updateData.deletedAt = null;
+        existing.isDeleted = false;
+        existing.deletedAt = null;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await prisma.historyRecord.update({
+          where: { id: existing.id },
+          data: updateData
+        }).catch(() => {});
+      }
+      results.push(formatHistoryRecord(existing));
+    } else {
+      const created = await prisma.historyRecord.create({
+        data: {
+          ...(item.id ? { id: item.id } : {}),
+          deviceId: itemTargetDeviceId,
+          toolId: item.toolId,
+          toolTitle: item.toolTitle,
+          fileName: item.fileName,
+          originalSize: BigInt(Math.max(0, Math.round(Number(item.originalSize) || 0))),
+          resultSize: BigInt(Math.max(0, Math.round(Number(item.resultSize) || 0))),
+          resultFileId: item.resultFileId || null,
+          downloadUrl: item.downloadUrl || null,
+          status: item.status || 'success',
+          detailsJson: item.detailsJson || null
+        }
+      });
+      results.push(formatHistoryRecord(created));
+    }
+  }
+
+  return reply.status(200).send({
+    success: true,
+    data: {
+      count: results.length,
+      items: results
+    }
   });
 }
 
