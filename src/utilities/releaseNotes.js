@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.53': {
+    version: 'v24.53',
+    title: 'Bản cập nhật v24.53: Khắc Phục Lỗi Nhận Nhầm DevTools Trên Zen Browser & Cơ Chế Tự Động Bỏ Khóa Bằng Nút Bấm',
+    date: '05/11/2026',
+    features: [
+      'Cơ Chế Bỏ Khóa Tự Động Bằng Nút Bấm (1-Click Dismiss & Auto-Recovery): Khi người dùng bấm nút đỏ "Tải lại trang (F5)", hệ thống tự động ghi nhận cờ miễn trừ __ds_dt_dismissed vào bộ nhớ thiết bị, vô hiệu hoá các bộ đo kích thước cửa sổ và cho phép người dùng vào web bình thường',
+      'Tương Thích Tuyệt Đối Trình Duyệt Có Sidebar (Zen, Arc, Edge Vertical Tabs): Nâng ngưỡng vi sai chiều rộng từ 100px lên 350px để phân biệt rõ ràng giữa thanh tab dọc của Zen Browser (~220-300px) và bảng DevTools lập trình viên thật sự (>=380px)',
+      'Bảo Toàn Lá Chắn Phím Tắt & Menu Chuột Phải: Dù tính năng đo kích thước được tắt cho trình duyệt sidebar, các lớp phòng vệ phím tắt (F12, Ctrl+Shift+I) và chặn chuột phải vẫn hoạt động ổn định 100%'
+    ],
+    fixes: [
+      'Chấm Dứt Vòng Lặp Khóa Vô Hạn Trên Zen Browser: Khắc phục triệt để hiện tượng Zen Browser có thanh tab dọc làm lệch outerWidth và innerWidth khiến Frame-0 khóa màn hình liên tục mỗi khi F5'
+    ]
+  },
   'v24.52': {
     version: 'v24.52',
     title: 'Bản cập nhật v24.52: Khắc Phục Triệt Để Hiện Tượng Đơ Ứng Dụng Trên Android & Tối Ưu Hóa Mobile Shield',

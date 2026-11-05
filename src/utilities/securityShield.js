@@ -46,12 +46,26 @@ export function isMobileOrApk() {
 }
 
 /**
+ * Checks if the user or browser environment previously dismissed a false-positive lockout.
+ * Disables dimension-based docked DevTools checks for sidebar browsers (Zen, Arc, Edge vertical tabs).
+ */
+export function isDevToolsDismissed() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem('__ds_dt_dismissed') === '1' || localStorage.getItem('__ds_dt_dismissed') === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Detects docked DevTools (Docked Right, Left, or Bottom)
  * Normal desktop window borders are <= 32px width and <= 160px height.
  */
 function isDockedDevToolsOpen() {
   if (typeof window === 'undefined') return false;
   if (isMobileOrApk()) return false;
+  if (isDevToolsDismissed()) return false;
 
   const isDesktop = !window.screen || window.screen.width >= 768;
   if (!isDesktop) return false;
@@ -59,14 +73,14 @@ function isDockedDevToolsOpen() {
   const widthDiff = window.outerWidth - window.innerWidth;
   const heightDiff = window.outerHeight - window.innerHeight;
 
-  // DevTools docked to right or left takes > 100px width (typically 300px - 800px)
-  if (widthDiff > 100) return true;
+  // Sidebar browsers (Zen, Arc, Edge vertical tabs) use 180-320px width; docked DevTools takes >= 380px
+  if (widthDiff > 350) return true;
 
-  // DevTools docked to bottom takes > 200px height (desktop only, unless virtual keyboard is active on mobile input)
+  // DevTools docked to bottom takes > 250px height (desktop only, unless virtual keyboard is active on mobile input)
   const isInputFocused = typeof document !== 'undefined' &&
     document.activeElement &&
     ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-  if (heightDiff > 200 && !isInputFocused) return true;
+  if (heightDiff > 250 && !isInputFocused) return true;
 
   return false;
 }
@@ -256,6 +270,8 @@ export function showDevToolsBlockScreen() {
   if (btnReload) {
     btnReload.onclick = () => {
       try {
+        sessionStorage.setItem('__ds_dt_dismissed', '1');
+        localStorage.setItem('__ds_dt_dismissed', '1');
         sessionStorage.removeItem('__ds_dt_lock');
       } catch {}
       window.location.reload();
@@ -312,9 +328,9 @@ function initConsoleProbe() {
 export function startAntiDebugger() {
   if (typeof window === 'undefined') return;
   if (isLocalDev()) return;
-  if (isMobileOrApk()) {
-    // Mobile browsers & native Android APK do not have docked DevTools.
-    // Skip polling, console probe, and debugger loops to eliminate battery drain, frame drops, and false positives.
+  if (isMobileOrApk() || isDevToolsDismissed()) {
+    // Mobile browsers & dismissed false-positive desktop browsers (Zen, Arc, sidebars)
+    // skip dimension polling and console probes.
     return;
   }
 

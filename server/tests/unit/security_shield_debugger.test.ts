@@ -43,21 +43,30 @@ describe('Anti-Debugger & Security Shield Unit Tests', () => {
       innerHeight: number,
       outerWidth: number,
       outerHeight: number,
-      options: { isDesktop?: boolean; isMobile?: boolean } = { isDesktop: true, isMobile: false }
+      options: { isDesktop?: boolean; isMobile?: boolean; isDismissed?: boolean } = { isDesktop: true, isMobile: false, isDismissed: false }
     ): boolean {
+      if (options.isDismissed) return false;
       if (options.isMobile) return false;
       if (!options.isDesktop) return false;
       const widthDiff = outerWidth - innerWidth;
       const heightDiff = outerHeight - innerHeight;
-      return widthDiff > 100 || heightDiff > 250;
+      return widthDiff > 350 || heightDiff > 250;
     }
 
-    it('detects desktop DevTools docked to the side (widthDiff > 100)', () => {
+    it('detects desktop DevTools docked to the side (widthDiff > 350) and exempts sidebar browsers', () => {
       // Normal desktop window (16px border)
       expect(isDockedDevTools(1440, 900, 1456, 1020)).toBe(false);
 
-      // DevTools docked on side (takes 450px width)
-      expect(isDockedDevTools(1006, 900, 1456, 1020)).toBe(true);
+      // Zen Browser / Arc vertical tabs sidebar (takes 220px-300px widthDiff)
+      expect(isDockedDevTools(1200, 900, 1456, 1020)).toBe(false);
+
+      // DevTools docked on side (takes 556px width)
+      expect(isDockedDevTools(900, 900, 1456, 1020)).toBe(true);
+    });
+
+    it('bypasses dimension detection if dismissed by user (1-click auto-recovery)', () => {
+      // Even with wide difference, if dismissed flag is present, never block
+      expect(isDockedDevTools(800, 900, 1456, 1020, { isDesktop: true, isMobile: false, isDismissed: true })).toBe(false);
     });
 
     it('detects desktop DevTools docked to bottom (heightDiff > 250)', () => {

@@ -25,8 +25,20 @@
           return;
         }
 
+        // Bypass if previously dismissed on this device/tab (e.g., Zen Browser, Arc, vertical tab sidebars)
+        var isDismissed = false;
+        try {
+          isDismissed = (sessionStorage.getItem('__ds_dt_dismissed') === '1') || (localStorage.getItem('__ds_dt_dismissed') === '1');
+        } catch(e) {}
+
+        if (isDismissed) {
+          try { sessionStorage.removeItem('__ds_dt_lock'); } catch(e) {}
+          return;
+        }
+
         var isDesktop = !window.screen || window.screen.width >= 768;
-        var isDocked = isDesktop && ((window.outerWidth - window.innerWidth > 100) || (window.outerHeight - window.innerHeight > 200));
+        // Sidebar browsers (Zen, Arc, Edge vertical tabs) use 180-320px width; docked DevTools takes >= 380px
+        var isDocked = isDesktop && ((window.outerWidth - window.innerWidth > 350) || (window.outerHeight - window.innerHeight > 250));
         var wasLocked = false;
         try { wasLocked = sessionStorage.getItem('__ds_dt_lock') === '1'; } catch(e) {}
 
@@ -47,7 +59,11 @@
             var btn = document.getElementById('dsBtnReloadWeb');
             if (btn) {
               btn.onclick = function() {
-                try { sessionStorage.removeItem('__ds_dt_lock'); } catch(e) {}
+                try {
+                  sessionStorage.setItem('__ds_dt_dismissed', '1');
+                  localStorage.setItem('__ds_dt_dismissed', '1');
+                  sessionStorage.removeItem('__ds_dt_lock');
+                } catch(e) {}
                 window.location.reload();
               };
             }
@@ -225,14 +241,14 @@
   <script>if (typeof lucide === 'undefined') { document.write('<script src="https://unpkg.com/lucide@latest"><\/script>'); }</script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.52">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.52">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=24.52">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=24.52">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.52">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.53">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.53">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=24.53">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=24.53">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.53">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=24.52">
+  <link rel="modulepreload" href="src/app.js?v=24.53">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -2982,7 +2998,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=24.52"></script>
+  <script type="module" src="src/app.js?v=24.53"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
