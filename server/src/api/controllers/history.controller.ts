@@ -21,7 +21,7 @@ function extractDeviceAndAdmin(req: FastifyRequest): {
 } {
   const deviceIdHeader = (req.headers['x-device-id'] as string) || (req.query as any)?.deviceId;
   const deviceId = deviceIdHeader ? String(deviceIdHeader).trim() : null;
-  const isAdmin = req.headers['x-is-admin'] === 'true' || Boolean(req.headers['x-admin-token']);
+  const isAdmin = (req as any).isAdmin === true || req.headers['x-is-admin'] === 'true' || Boolean(req.headers['x-admin-token']);
   const groupDeviceIds = deviceId ? deviceRegistryService.getSyncGroupDeviceIds(deviceId) : [];
   return { deviceId, isAdmin, groupDeviceIds };
 }
@@ -53,16 +53,20 @@ export async function getHistory(req: FastifyRequest, reply: FastifyReply) {
   const query = historyQuerySchema.parse(req.query || {});
   const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
 
-  // Scoped query: regular guests see records matching their deviceId or sync group
+  // Scoped query: regular guests and paired sync groups see records matching their devices
   const whereClause: any = { isDeleted: false };
-  if (!isAdmin) {
-    if (groupDeviceIds.length > 1) {
-      whereClause.deviceId = { in: groupDeviceIds };
-    } else if (deviceId) {
-      whereClause.deviceId = deviceId;
-    } else {
-      whereClause.deviceId = '__unidentified_guest__';
+  let effectiveGroup = groupDeviceIds;
+  if (effectiveGroup.length <= 1 && query.deviceId) {
+    const qGroup = deviceRegistryService.getSyncGroupDeviceIds(query.deviceId);
+    if (qGroup.length > 1) {
+      effectiveGroup = qGroup;
     }
+  }
+
+  if (effectiveGroup.length > 1) {
+    whereClause.deviceId = { in: effectiveGroup };
+  } else if (!isAdmin) {
+    whereClause.deviceId = deviceId || query.deviceId || '__unidentified_guest__';
   } else if (query.deviceId) {
     whereClause.deviceId = query.deviceId;
   }
@@ -290,12 +294,12 @@ export async function clearHistoryToTrash(req: FastifyRequest, reply: FastifyRep
   const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: false };
-  if (!isAdmin) {
-    if (groupDeviceIds.length > 1) {
-      whereClause.deviceId = { in: groupDeviceIds };
-    } else {
-      whereClause.deviceId = deviceId || '__unidentified_guest__';
-    }
+  if (groupDeviceIds.length > 1) {
+    whereClause.deviceId = { in: groupDeviceIds };
+  } else if (!isAdmin) {
+    whereClause.deviceId = deviceId || '__unidentified_guest__';
+  } else if (deviceId) {
+    whereClause.deviceId = deviceId;
   }
   if (toolId) {
     const baseTool = String(toolId).replace(/-downloader$/, '');
@@ -318,14 +322,18 @@ export async function getTrashItems(req: FastifyRequest, reply: FastifyReply) {
   const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
 
   const whereClause: any = { isDeleted: true };
-  if (!isAdmin) {
-    if (groupDeviceIds.length > 1) {
-      whereClause.deviceId = { in: groupDeviceIds };
-    } else if (deviceId) {
-      whereClause.deviceId = deviceId;
-    } else {
-      whereClause.deviceId = '__unidentified_guest__';
+  let effectiveGroup = groupDeviceIds;
+  if (effectiveGroup.length <= 1 && query.deviceId) {
+    const qGroup = deviceRegistryService.getSyncGroupDeviceIds(query.deviceId);
+    if (qGroup.length > 1) {
+      effectiveGroup = qGroup;
     }
+  }
+
+  if (effectiveGroup.length > 1) {
+    whereClause.deviceId = { in: effectiveGroup };
+  } else if (!isAdmin) {
+    whereClause.deviceId = deviceId || query.deviceId || '__unidentified_guest__';
   } else if (query.deviceId) {
     whereClause.deviceId = query.deviceId;
   }
@@ -379,12 +387,12 @@ export async function restoreAllTrash(req: FastifyRequest, reply: FastifyReply) 
   const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: true };
-  if (!isAdmin) {
-    if (groupDeviceIds.length > 1) {
-      whereClause.deviceId = { in: groupDeviceIds };
-    } else {
-      whereClause.deviceId = deviceId || '__unidentified_guest__';
-    }
+  if (groupDeviceIds.length > 1) {
+    whereClause.deviceId = { in: groupDeviceIds };
+  } else if (!isAdmin) {
+    whereClause.deviceId = deviceId || '__unidentified_guest__';
+  } else if (deviceId) {
+    whereClause.deviceId = deviceId;
   }
   if (toolId) {
     const baseTool = String(toolId).replace(/-downloader$/, '');
@@ -427,12 +435,12 @@ export async function emptyTrash(req: FastifyRequest, reply: FastifyReply) {
   const { deviceId, isAdmin, groupDeviceIds } = extractDeviceAndAdmin(req);
   const toolId = (req.query as any)?.toolId || (req.body as any)?.toolId;
   const whereClause: any = { isDeleted: true };
-  if (!isAdmin) {
-    if (groupDeviceIds.length > 1) {
-      whereClause.deviceId = { in: groupDeviceIds };
-    } else {
-      whereClause.deviceId = deviceId || '__unidentified_guest__';
-    }
+  if (groupDeviceIds.length > 1) {
+    whereClause.deviceId = { in: groupDeviceIds };
+  } else if (!isAdmin) {
+    whereClause.deviceId = deviceId || '__unidentified_guest__';
+  } else if (deviceId) {
+    whereClause.deviceId = deviceId;
   }
   if (toolId) {
     const baseTool = String(toolId).replace(/-downloader$/, '');

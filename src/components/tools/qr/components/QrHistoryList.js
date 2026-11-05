@@ -179,7 +179,22 @@ export function renderQrHistoryList(filterMode = 'all') {
   `.trim();
 }
 
+let _qrGlobalHistoryHandler = null;
+
 export function attachQrHistoryListeners(onReRender) {
+  if (typeof window !== 'undefined' && onReRender) {
+    if (_qrGlobalHistoryHandler) {
+      window.removeEventListener('dd:history-updated', _qrGlobalHistoryHandler);
+    }
+    _qrGlobalHistoryHandler = (e) => {
+      const tid = e.detail?.toolId ? String(e.detail.toolId).toLowerCase() : '';
+      if (!tid || tid.includes('qr')) {
+        onReRender();
+      }
+    };
+    window.addEventListener('dd:history-updated', _qrGlobalHistoryHandler);
+  }
+
   document.querySelectorAll('.btn-toggle-qr-history').forEach(btn => {
     btn.onclick = () => {
       const mode = btn.dataset.filterMode || 'all';

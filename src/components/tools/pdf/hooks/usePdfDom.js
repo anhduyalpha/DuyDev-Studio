@@ -1193,6 +1193,12 @@ export function attachPdfConverterListeners(queueManager) {
   bindPdfHistory(queueManager);
   const detachPaste = attachPdfClipboardPaste(queueManager);
 
+  const handleGlobalHistoryUpdated = () => {
+    updatePdfHistoryDom(queueManager);
+  };
+  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+  storage.fetchHistory().catch(() => {});
+
   const unsubscribe = queueManager.subscribe((state, eventType) => {
     if (eventType === 'file-loading') {
       syncLayoutColumns(state);
@@ -1520,6 +1526,7 @@ export function attachPdfConverterListeners(queueManager) {
   return () => {
     try { unsubscribe(); } catch {}
     try { detachPaste(); } catch {}
+    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
     closePdfPageLightbox();
     cleanupChainMenuListener();
   };

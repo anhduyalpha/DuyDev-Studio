@@ -242,6 +242,12 @@ class App {
           taskCoordinator.stopHeartbeat();
         } else {
           taskCoordinator.updateHeartbeatState();
+          // Debounced multi-device history sync when user returns to app tab
+          const now = Date.now();
+          if (!this._lastTabSync || now - this._lastTabSync > 20000) {
+            this._lastTabSync = now;
+            storage.syncAllWithServer().catch(() => {});
+          }
         }
         window.dispatchEvent(new CustomEvent('ds:visibility-change', { detail: { hidden: isHidden } }));
       });

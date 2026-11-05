@@ -11,6 +11,8 @@ export const STORAGE_KEYS = {
   SETTINGS: 'ds_settings_v2'
 };
 
+export const MAX_STORAGE_ITEMS = 150;
+
 function normalizeHistoryItem(item) {
   if (!item) return item;
   if (!item.toolId && item.tool) item.toolId = item.tool;
@@ -238,7 +240,7 @@ export const storage = {
   async fetchHistory(options = {}) {
     try {
       const deviceId = getDeviceId();
-      const res = await fetch(`/api/v1/history?limit=50&deviceId=${encodeURIComponent(deviceId)}`, {
+      const res = await fetch(`/api/v1/history?limit=100&deviceId=${encodeURIComponent(deviceId)}`, {
         headers: { 'x-device-id': deviceId }
       });
       if (res.ok) {
@@ -271,7 +273,7 @@ export const storage = {
         });
 
         const oldSerialized = localStorage.getItem(STORAGE_KEYS.HISTORY);
-        const newSerialized = JSON.stringify(merged.slice(0, 50));
+        const newSerialized = JSON.stringify(merged.slice(0, MAX_STORAGE_ITEMS));
         localStorage.setItem(STORAGE_KEYS.HISTORY, newSerialized);
         if (oldSerialized !== newSerialized) {
           dispatchHistoryUpdated(null, 'sync-fetched');
@@ -290,7 +292,7 @@ export const storage = {
       const localHistory = this.getLocalHistory();
       if (!localHistory || localHistory.length === 0) return;
 
-      const validItems = localHistory.slice(0, 50).filter(item => item && (item.fileName || item.downloadUrl || item.id)).map(item => {
+      const validItems = localHistory.slice(0, MAX_STORAGE_ITEMS).filter(item => item && (item.fileName || item.downloadUrl || item.id)).map(item => {
         let detailsJson = typeof item.detailsJson === 'string' ? item.detailsJson : null;
         if (!detailsJson) {
           try {
@@ -448,7 +450,7 @@ export const storage = {
       } else {
         list.unshift(itemPayload);
       }
-      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, 50)));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, MAX_STORAGE_ITEMS)));
       dispatchHistoryUpdated(itemPayload.toolId, 'record', itemPayload);
     } catch (e) {
       console.warn('Failed to record completed job locally', e);
@@ -535,7 +537,7 @@ export const storage = {
     try {
       const list = this.getLocalHistory();
       list.unshift(localRecord);
-      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, 50)));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(list).slice(0, MAX_STORAGE_ITEMS)));
       dispatchHistoryUpdated(localRecord.toolId, 'add', localRecord);
     } catch {}
 
@@ -578,7 +580,7 @@ export const storage = {
           const currentList = this.getLocalHistory();
           const target = currentList.find(x => x.downloadUrl === localRecord.downloadUrl || x.id === item.id);
           if (target) target.id = json.data.id;
-          localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(currentList).slice(0, 50)));
+          localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(currentList).slice(0, MAX_STORAGE_ITEMS)));
         }
       }
     } catch {}
@@ -598,7 +600,7 @@ export const storage = {
       if (trashedItem) {
         const trashList = this.getLocalTrash();
         trashList.unshift(trashedItem);
-        localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList(trashList).slice(0, 50)));
+        localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList(trashList).slice(0, MAX_STORAGE_ITEMS)));
         dispatchHistoryUpdated(trashedItem?.toolId, 'trash', trashedItem);
       }
     } catch {}
@@ -623,7 +625,7 @@ export const storage = {
       }
 
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(remainingHistory));
-      localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList([...newlyTrashed, ...trashList]).slice(0, 50)));
+      localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList([...newlyTrashed, ...trashList]).slice(0, MAX_STORAGE_ITEMS)));
       dispatchHistoryUpdated(null, 'trash-multiple');
     } catch {}
   },
@@ -653,7 +655,7 @@ export const storage = {
       const trashList = this.getLocalTrash();
       const now = new Date().toISOString();
       const newlyTrashed = historyList.map(h => ({ ...h, deletedAt: now }));
-      localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList([...newlyTrashed, ...trashList]).slice(0, 50)));
+      localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(deduplicateList([...newlyTrashed, ...trashList]).slice(0, MAX_STORAGE_ITEMS)));
       localStorage.removeItem(STORAGE_KEYS.HISTORY);
       dispatchHistoryUpdated(null, 'clear-all-trash');
     } catch {}
@@ -673,7 +675,7 @@ export const storage = {
   async fetchTrash(options = {}) {
     try {
       const deviceId = getDeviceId();
-      const res = await fetch(`/api/v1/trash?limit=50&deviceId=${encodeURIComponent(deviceId)}`, {
+      const res = await fetch(`/api/v1/trash?limit=100&deviceId=${encodeURIComponent(deviceId)}`, {
         headers: { 'x-device-id': deviceId }
       });
       if (res.ok) {
@@ -682,7 +684,7 @@ export const storage = {
         const localTrash = options.replaceLocal ? [] : this.getLocalTrash();
         const mergedTrash = deduplicateList([...localTrash, ...serverTrash]);
         const oldSerialized = localStorage.getItem(STORAGE_KEYS.TRASH);
-        const newSerialized = JSON.stringify(mergedTrash.slice(0, 50));
+        const newSerialized = JSON.stringify(mergedTrash.slice(0, MAX_STORAGE_ITEMS));
         localStorage.setItem(STORAGE_KEYS.TRASH, newSerialized);
         if (oldSerialized !== newSerialized) {
           dispatchHistoryUpdated(null, 'sync-trash-fetched');
@@ -777,7 +779,7 @@ export const storage = {
         localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(trashList));
         const historyList = this.getLocalHistory();
         historyList.unshift(restored);
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(historyList).slice(0, 50)));
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList(historyList).slice(0, MAX_STORAGE_ITEMS)));
         dispatchHistoryUpdated(restored?.toolId, 'restore', restored);
       }
     } catch {}
@@ -803,7 +805,7 @@ export const storage = {
       }
 
       localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(remainingTrash));
-      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList([...restored, ...historyList]).slice(0, 50)));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList([...restored, ...historyList]).slice(0, MAX_STORAGE_ITEMS)));
       dispatchHistoryUpdated(null, 'restore-multiple');
     } catch {}
   },
@@ -830,7 +832,7 @@ export const storage = {
   restoreAllTrashSync() {
     try {
       const restored = this.getLocalTrash().map(t => { const c = { ...t }; delete c.deletedAt; return c; });
-      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList([...restored, ...this.getLocalHistory()]).slice(0, 50)));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(deduplicateList([...restored, ...this.getLocalHistory()]).slice(0, MAX_STORAGE_ITEMS)));
       localStorage.removeItem(STORAGE_KEYS.TRASH);
       dispatchHistoryUpdated(null, 'restore-all');
     } catch {}

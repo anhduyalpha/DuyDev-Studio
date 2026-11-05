@@ -6,6 +6,20 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.57': {
+    version: 'v24.57',
+    title: 'Bản cập nhật v24.57: Khắc Phục Triệt Để Đồng Bộ Lịch Sử Toàn Diện Cho Tất Cả Công Cụ & Nhóm Thiết Bị',
+    date: '05/11/2026',
+    features: [
+      'Đồng Bộ Lịch Sử Toàn Diện (Universal Tool Sync): Sửa triệt để bộ lọc thiết bị backend, đảm bảo tất cả các công cụ (Facebook, TikTok, Spotify, PDF Studio, File Converter, Quiz Generator, QR Studio, v.v.) và trang Lịch sử đều hiển thị đầy đủ tệp từ tất cả các máy trong nhóm liên kết',
+      'Tự Động Làm Mới Khi Đổi Tab (Tab Return Sync): Tự động kiểm tra và đồng bộ lịch sử ngầm khi người dùng quay lại tab ứng dụng, dữ liệu tải về từ điện thoại lập tức hiển thị trên máy tính mà không cần F5',
+      'Mở Rộng Dung Lượng Bộ Nhớ Đệm Lên 150 Mục: Nâng cấp giới hạn truy vấn và lưu trữ cục bộ từ 50 lên 150 mục giúp không bị cắt bớt lịch sử giữa các thiết bị'
+    ],
+    fixes: [
+      'Sửa Lỗi Bỏ Qua Sync Group Khi Là Admin: Khắc phục điều kiện rẽ nhánh if (!isAdmin) trong backend khiến tài khoản admin trên laptop chỉ truy vấn được lịch sử máy mình mà bỏ qua thiết bị điện thoại liên kết',
+      'Lắng Nghe Sự Kiện Lịch Sử Cho PDF & Converter: Bổ sung kênh dd:history-updated cho PDF Studio, File Converter và QR Studio tự động cập nhật danh sách ngay khi có dữ liệu đồng bộ mới'
+    ]
+  },
   'v24.56': {
     version: 'v24.56',
     title: 'Bản cập nhật v24.56: Khắc Phục Triệt Để Đồng Bộ Lịch Sử Media Downloader & Tự Động Đẩy Dữ Liệu Hai Chiều',

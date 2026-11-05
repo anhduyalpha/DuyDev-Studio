@@ -579,9 +579,15 @@ export function attachConverterListeners(manager) {
   }
 
   bindConverterHistory(manager);
+  const handleGlobalHistoryUpdated = () => {
+    updateConverterHistoryDom(manager);
+  };
+  window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
+  storage.fetchHistory().catch(() => {});
   const unsubscribeObserver = setupConverterObserver(manager);
 
   return () => {
     unsubscribeObserver();
+    window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
   };
 }

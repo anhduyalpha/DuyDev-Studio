@@ -890,12 +890,7 @@ export class SpotifyWorkspace {
         this.saveHistoryItemToDrive(item);
       },
       onHistoryChange: () => {
-        const currentList = this.historyTab === 'trash'
-          ? storage.getToolTrash('spotify-downloader')
-          : storage.getToolHistory('spotify-downloader');
-        if (currentList.length === 0) {
-          this.renderHistory();
-        }
+        this.renderHistory();
       }
     });
 

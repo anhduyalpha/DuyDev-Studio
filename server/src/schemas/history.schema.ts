@@ -17,13 +17,13 @@ export const createHistorySchema = z.object({
 export type CreateHistoryInput = z.infer<typeof createHistorySchema>;
 
 export const bulkHistorySchema = z.object({
-  items: z.array(createHistorySchema).min(1).max(100)
+  items: z.array(createHistorySchema).min(1).max(200)
 });
 
 export type BulkHistoryInput = z.infer<typeof bulkHistorySchema>;
 
 export const historyQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().max(100).optional().default(50),
+  limit: z.coerce.number().int().positive().max(200).optional().default(100),
   offset: z.coerce.number().int().nonnegative().optional().default(0),
   deviceId: z.string().optional(),
   toolId: z.string().optional()

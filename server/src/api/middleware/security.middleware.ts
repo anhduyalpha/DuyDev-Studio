@@ -260,8 +260,9 @@ export async function apiSecurityGuard(req: FastifyRequest, reply: FastifyReply)
   const authHeader = (req.headers['x-storage-auth'] as string) || (req.headers.authorization as string) || '';
   const adminCookie = cookies['ds_admin_session'];
   const isAdmin = AuthService.validateToken(authHeader) || AuthService.validateToken(adminCookie);
+  const hasFreshSession = Boolean((req as any).verifiedDeviceId);
 
-  if (!sessionCheck.valid && !isAdmin) {
+  if (!sessionCheck.valid && !isAdmin && !hasFreshSession) {
     logger.warn({ url, ip: req.ip }, '[SecurityGuard] Rejected unauthenticated API request without valid session cookie');
     return reply.status(403).send({
       success: false,

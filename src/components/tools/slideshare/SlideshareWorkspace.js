@@ -924,12 +924,7 @@ export class SlideshareWorkspace {
         }
       },
       onHistoryChange: () => {
-        const currentList = this.historyTab === 'trash'
-          ? storage.getToolTrash('slideshare-downloader')
-          : storage.getToolHistory('slideshare-downloader');
-        if (currentList.length === 0) {
-          this.renderHistory();
-        }
+        this.renderHistory();
       }
     });
 
