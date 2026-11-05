@@ -189,10 +189,13 @@ export function openProfileModal(options = {}) {
     const initialLetter = getInitialLetter(pendingName);
     const gradientClass = getAvatarGradient(pendingName);
 
+    const deviceList = syncStatus?.devices || syncStatus?.linkedDevices || [];
+    const linkedCount = syncStatus?.totalLinked ?? deviceList.length ?? (syncStatus?.isLinked ? 2 : 1);
+
     modalOverlay.innerHTML = `
       <div 
         id="dsProfileModalCard" 
-        class="relative w-full max-w-md ${isSyncTab ? 'sm:max-w-lg' : ''} bg-white/90 dark:bg-zinc-900/85 backdrop-blur-2xl -webkit-backdrop-filter: blur(32px) saturate(190%) border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-6 sm:p-7 overflow-hidden transition-all duration-200"
+        class="relative w-full max-w-[440px] ${isSyncTab ? 'sm:max-w-[480px]' : ''} bg-white/95 dark:bg-zinc-900/90 backdrop-blur-2xl -webkit-backdrop-filter: blur(32px) saturate(190%) border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-4 sm:p-6 overflow-hidden transition-all duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dsProfileModalTitle"
@@ -200,59 +203,74 @@ export function openProfileModal(options = {}) {
         <!-- Top Apple Specular Sheen -->
         <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/40 dark:via-indigo-400/50 to-transparent"></div>
 
-        <!-- Close Button -->
-        <button 
-          type="button" 
-          id="dsProfileCloseBtn"
-          class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition cursor-pointer"
-          aria-label="Đóng"
-        >
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-
-        <!-- Segment Tabs for Edit Mode -->
+        <!-- Header Row: Tabs + Close Button (Eliminates overlap on both PC and Android) -->
         ${!isOnboarding ? `
-          <div class="flex items-center gap-1 p-1 mb-5 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 rounded-2xl text-xs font-semibold">
+          <div class="flex items-center gap-2 mb-4 sm:mb-5">
+            <div class="flex-1 flex items-center gap-1 p-1 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 rounded-2xl text-xs font-semibold min-w-0">
+              <button 
+                type="button" 
+                id="dsTabProfileBtn"
+                class="flex-1 h-9 px-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 min-w-0 ${!isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+              >
+                <i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i>
+                <span class="truncate">Hồ sơ cá nhân</span>
+              </button>
+              <button 
+                type="button" 
+                id="dsTabSyncBtn"
+                class="flex-1 h-9 px-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 min-w-0 ${isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+              >
+                <i data-lucide="smartphone" class="w-3.5 h-3.5 shrink-0"></i>
+                <span class="truncate">Đồng bộ thiết bị</span>
+                ${syncStatus?.isLinked ? `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>` : ''}
+              </button>
+            </div>
             <button 
               type="button" 
-              id="dsTabProfileBtn"
-              class="flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${!isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+              id="dsProfileCloseBtn"
+              class="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition cursor-pointer active:scale-95"
+              aria-label="Đóng"
             >
-              <i data-lucide="user" class="w-3.5 h-3.5"></i>
-              <span>Hồ sơ cá nhân</span>
-            </button>
-            <button 
-              type="button" 
-              id="dsTabSyncBtn"
-              class="flex-1 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
-            >
-              <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
-              <span>Đồng bộ thiết bị</span>
-              ${syncStatus?.isLinked ? `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>` : ''}
+              <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
-        ` : ''}
+        ` : `
+          <!-- Onboarding Header with Close Button -->
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Thiết lập tài khoản</span>
+            <button 
+              type="button" 
+              id="dsProfileCloseBtn"
+              class="w-9 h-9 rounded-2xl flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition cursor-pointer"
+              aria-label="Đóng"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `}
 
         ${isSyncTab ? `
           <!-- ================= SYNC TAB: ĐỒNG BỘ THIẾT BỊ ================= -->
-          <div class="space-y-4 pt-1">
-            <div class="flex items-center gap-3.5">
-              <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
+          <div class="space-y-3.5 sm:space-y-4 pt-0.5">
+            <div class="flex items-start sm:items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs mt-0.5 sm:mt-0">
                 <i data-lucide="refresh-cw" class="w-5 h-5"></i>
               </div>
-              <div>
-                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight flex items-center gap-2">
-                  <span>Đồng bộ thiết bị</span>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 id="dsProfileModalTitle" class="text-base font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+                    Đồng bộ thiết bị
+                  </h3>
                   ${syncStatus?.isLinked ? `
-                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full">
-                      Đã ghép nối (${syncStatus.totalLinked})
+                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full shrink-0">
+                      Đã ghép nối (${linkedCount} thiết bị)
                     </span>
                   ` : `
-                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 rounded-full">
+                    <span class="px-2 py-0.5 text-[10px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 rounded-full shrink-0">
                       Chưa ghép nối
                     </span>
                   `}
-                </h3>
+                </div>
                 <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                   Chia sẻ lịch sử xử lý file và thùng rác qua mã một lần (OTC)
                 </p>
@@ -260,7 +278,7 @@ export function openProfileModal(options = {}) {
             </div>
 
             <!-- BLOCK 1: TẠO MÃ TRÊN THIẾT BỊ NÀY -->
-            <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-3">
+            <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-2.5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-500"></i>
@@ -281,7 +299,7 @@ export function openProfileModal(options = {}) {
                   <button 
                     type="button" 
                     id="dsCopySyncCodeBtn"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 transition cursor-pointer flex items-center gap-1.5"
+                    class="h-9 px-3 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 transition cursor-pointer flex items-center gap-1.5 shrink-0"
                     title="Sao chép mã"
                   >
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
@@ -296,16 +314,16 @@ export function openProfileModal(options = {}) {
                   type="button" 
                   id="dsGenerateSyncCodeBtn"
                   ${isGenerating ? 'disabled' : ''}
-                  class="w-full h-10 px-4 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  class="w-full h-11 px-4 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.99]"
                 >
-                  <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+                  <i data-lucide="qr-code" class="w-4 h-4"></i>
                   <span>${isGenerating ? 'Đang tạo mã...' : 'Tạo mã kết nối (6 số)'}</span>
                 </button>
               `}
             </div>
 
             <!-- BLOCK 2: NHẬP MÃ TỪ THIẾT BỊ KHÁC -->
-            <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-3">
+            <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-2.5">
               <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                 <i data-lucide="link-2" class="w-3.5 h-3.5 text-indigo-500"></i>
                 <span>Nhập mã từ thiết bị khác</span>
@@ -317,51 +335,55 @@ export function openProfileModal(options = {}) {
                   maxlength="6"
                   inputmode="numeric"
                   pattern="[0-9]*"
-                  placeholder="Nhập 6 số..."
-                  class="flex-1 h-10 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-center font-mono text-base font-bold tracking-[0.2em] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition uppercase"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  placeholder="6 chữ số..."
+                  class="flex-1 h-11 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-center font-mono text-base font-bold tracking-[0.15em] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 placeholder:tracking-normal placeholder:font-sans placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition uppercase"
                 />
                 <button 
                   type="button" 
                   id="dsSubmitSyncCodeBtn"
                   ${isRedeeming ? 'disabled' : ''}
-                  class="h-10 px-4 rounded-xl text-xs font-bold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                  class="h-11 px-4 rounded-xl text-xs font-bold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 shrink-0 active:scale-95"
                 >
-                  <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                  <i data-lucide="check" class="w-4 h-4"></i>
                   <span>${isRedeeming ? 'Đang ghép...' : 'Liên kết'}</span>
                 </button>
               </div>
             </div>
 
             <!-- BLOCK 3: DANH SÁCH THIẾT BỊ ĐÃ LIÊN KẾT -->
-            ${syncStatus?.linkedDevices && syncStatus.linkedDevices.length > 0 ? `
+            ${deviceList.length > 0 ? `
               <div class="space-y-2 pt-1">
                 <div class="flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                  <span>Thiết bị trong nhóm (${syncStatus.linkedDevices.length})</span>
-                  <span class="text-[10px] text-zinc-400 font-mono">Nhóm: ${syncStatus.syncGroupId ? syncStatus.syncGroupId.slice(-8) : ''}</span>
+                  <span>Thiết bị trong nhóm (${deviceList.length})</span>
+                  <span class="text-[10px] text-zinc-400 font-mono">Nhóm: ${syncStatus?.syncGroupId ? syncStatus.syncGroupId.slice(-8) : 'Cục bộ'}</span>
                 </div>
                 <div class="max-h-36 overflow-y-auto space-y-1.5 pr-0.5">
-                  ${syncStatus.linkedDevices.map(dev => {
-                    const isCurrent = dev.deviceId === syncStatus.currentDeviceId;
+                  ${deviceList.map(dev => {
+                    const isCurrent = dev.deviceId === syncStatus?.currentDeviceId || dev.isCurrent;
                     return `
                       <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50/60 dark:bg-zinc-800/30 border border-zinc-200/50 dark:border-white/5 text-xs">
                         <div class="flex items-center gap-2.5 min-w-0">
-                          <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-700/60 flex items-center justify-center text-zinc-600 dark:text-zinc-300 shrink-0">
-                            <i data-lucide="${dev.userAgentSummary?.includes('Mobile') || dev.userAgentSummary?.includes('Android') || dev.userAgentSummary?.includes('iPhone') ? 'smartphone' : 'laptop'}" class="w-3.5 h-3.5"></i>
+                          <div class="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-700/60 flex items-center justify-center text-zinc-600 dark:text-zinc-300 shrink-0">
+                            <i data-lucide="${(dev.deviceSummary || '').includes('Mobile') || (dev.deviceSummary || '').includes('Android') || (dev.deviceSummary || '').includes('iPhone') ? 'smartphone' : 'laptop'}" class="w-4 h-4"></i>
                           </div>
                           <div class="min-w-0">
                             <div class="font-semibold text-zinc-800 dark:text-zinc-200 truncate flex items-center gap-1.5">
-                              <span>${escapeHtml(dev.alias || 'Thiết bị')}</span>
-                              ${isCurrent ? `<span class="px-1.5 py-0.2 text-[9px] font-bold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded">Bạn</span>` : ''}
+                              <span class="truncate">${escapeHtml(dev.alias || 'Thiết bị')}</span>
+                              ${isCurrent ? `<span class="px-1.5 py-0.2 text-[9px] font-bold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded shrink-0">Bạn</span>` : ''}
                             </div>
                             <div class="text-[10px] text-zinc-400 truncate">
-                              ${dev.ip || ''} · ${dev.userAgentSummary || ''}
+                              ${dev.maskedId || ''} · ${dev.deviceSummary || 'Web Client'}
                             </div>
                           </div>
                         </div>
                         ${!isCurrent ? `
                           <button 
                             type="button" 
-                            class="btn-unlink-device p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer"
+                            class="btn-unlink-device p-2 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer shrink-0"
                             data-device-id="${dev.deviceId}"
                             title="Hủy liên kết thiết bị này"
                           >
@@ -370,7 +392,7 @@ export function openProfileModal(options = {}) {
                         ` : `
                           <button 
                             type="button" 
-                            class="btn-unlink-device px-2 py-1 rounded-lg text-[10px] font-medium text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer"
+                            class="btn-unlink-device px-2.5 py-1 rounded-lg text-[10px] font-medium text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer shrink-0"
                             data-device-id="${dev.deviceId}"
                             title="Rời nhóm đồng bộ"
                           >
@@ -384,11 +406,11 @@ export function openProfileModal(options = {}) {
               </div>
             ` : ''}
 
-            <div class="pt-2">
+            <div class="pt-1">
               <button 
                 type="button" 
                 id="dsSyncCloseModalBtn"
-                class="w-full h-11 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
+                class="w-full h-10 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
               >
                 Đóng
               </button>

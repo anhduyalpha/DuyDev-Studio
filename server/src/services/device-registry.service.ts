@@ -515,22 +515,30 @@ export class DeviceRegistryService {
         isLinked: true,
         syncGroupId: dev.syncGroupId,
         devices: members,
+        linkedDevices: members,
+        totalLinked: members.length,
+        currentDeviceId: trimmed,
         activeCode
       };
     }
 
+    const defaultDevList = dev ? [{
+      deviceId: dev.deviceId,
+      maskedId: dev.deviceId.length > 8 ? `...${dev.deviceId.slice(-6)}` : dev.deviceId,
+      alias: dev.alias || (dev.isOwner ? '👑 Máy của Duy' : 'Thiết bị này'),
+      avatar: dev.avatar || '',
+      deviceSummary: dev.deviceSummary || 'Web Client',
+      lastSeenAt: dev.lastSeenAt || dev.firstSeenAt,
+      isCurrent: true
+    }] : [];
+
     return {
       isLinked: false,
       syncGroupId: null,
-      devices: dev ? [{
-        deviceId: dev.deviceId,
-        maskedId: dev.deviceId.length > 8 ? `...${dev.deviceId.slice(-6)}` : dev.deviceId,
-        alias: dev.alias || (dev.isOwner ? '👑 Máy của Duy' : 'Thiết bị này'),
-        avatar: dev.avatar || '',
-        deviceSummary: dev.deviceSummary || 'Web Client',
-        lastSeenAt: dev.lastSeenAt || dev.firstSeenAt,
-        isCurrent: true
-      }] : [],
+      devices: defaultDevList,
+      linkedDevices: defaultDevList,
+      totalLinked: 1,
+      currentDeviceId: trimmed,
       activeCode
     };
   }

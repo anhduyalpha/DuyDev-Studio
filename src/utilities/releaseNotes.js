@@ -6,6 +6,19 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.55': {
+    version: 'v24.55',
+    title: 'Bản cập nhật v24.55: Sửa Triệt Để Lỗi Chồng Chéo Giao Diện Modal Đồng Bộ Trên PC & Mobile',
+    date: '05/11/2026',
+    features: [
+      'Giao Diện Top-Bar Thống Nhất Cho Profile & Sync: Tích hợp nút đóng modal (X) thành khối đồng cấp trong thanh điều hướng phân đoạn, loại bỏ hoàn toàn hiện tượng nút đóng bị đè lên tab "Đồng bộ thiết bị"',
+      'Hiển Thị Huy Hiệu & Số Lượng Thiết Bị Chính Xác: Khắc phục lỗi hiển thị "Đã ghép nối (undefined)", chuẩn hóa dữ liệu đếm số lượng thiết bị thành viên (linkedDevices / totalLinked) trên cả backend lẫn frontend',
+      'Tối Ưu Ô Nhập Mã Liên Kết Trên Android & PC: Thêm các thuộc tính autocomplete="off" và tách biệt kiểu chữ placeholder giúp giao diện không bị các trình quản lý mật khẩu tự động chèn biểu tượng che khuất'
+    ],
+    fixes: [
+      'Khắc Phục Lỗi Chồng Lấn Nút Đóng & Tab: Tinh chỉnh bố cục co giãn linh hoạt min-w-0 và điều chỉnh padding card trên màn hình điện thoại (360px+) lẫn màn hình máy tính'
+    ]
+  },
   'v24.54': {
     version: 'v24.54',
     title: 'Bản cập nhật v24.54: Đồng Bộ Hóa Lịch Sử Đa Thiết Bị Qua Mã OTC & Miễn Trừ Zen Browser Triệt Để',
