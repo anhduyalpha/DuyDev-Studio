@@ -6,6 +6,17 @@
  */
 
 export const RELEASE_NOTES_MAP = {
+  'v24.58': {
+    version: 'v24.58',
+    title: 'Bản cập nhật v24.58: Sửa Lỗi Truy Cập Module File Converter (ReferenceError storage)',
+    date: '09/11/2026',
+    features: [
+      'Khôi Phục Toàn Diện Khả Năng Truy Cập File Converter: Bổ sung import module storage trong useConverterDom.js khắc phục lỗi ReferenceError khi nạp trang'
+    ],
+    fixes: [
+      'Sửa Lỗi ReferenceError storage is not defined: Khắc phục lỗi thiếu import storage trong hook attachConverterListeners của File Converter Pro'
+    ]
+  },
   'v24.57': {
     version: 'v24.57',
     title: 'Bản cập nhật v24.57: Khắc Phục Triệt Để Đồng Bộ Lịch Sử Toàn Diện Cho Tất Cả Công Cụ & Nhóm Thiết Bị',

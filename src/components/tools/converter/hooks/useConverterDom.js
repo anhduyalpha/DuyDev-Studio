@@ -11,6 +11,7 @@ import { bindConverterHistory, updateConverterHistoryDom } from '../components/C
 import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
+import { storage } from '../../../../utilities/storage.js';
 
 /**
  * Safely refreshes Lucide icons if available in current runtime environment.
