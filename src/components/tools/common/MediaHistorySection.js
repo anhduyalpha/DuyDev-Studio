@@ -267,6 +267,7 @@ export function renderMediaHistorySection({
             ${currentList.map((item) => {
               const hasDrive = Boolean(item.driveRelPath);
               const coverImg = resolveMediaCover(item);
+              const rawFallbackCover = item.cover || item.thumbnail || (Array.isArray(item.slideImages) && item.slideImages[0]) || '';
               const itemTitle = item.title || item.fileName || 'Phương tiện';
               const cleanAuthor = getCleanAuthor(item);
               const driveTargetUrl = driveFolderPath ? `#storage?path=${encodeURIComponent(driveFolderPath)}` : '#storage';
@@ -288,11 +289,12 @@ export function renderMediaHistorySection({
                       ${coverImg ? `
                         <img
                           src="${escapeHtml(coverImg)}"
+                          data-fallback="${escapeHtml(rawFallbackCover)}"
                           alt="Thumbnail"
                           class="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
                           loading="lazy"
                           referrerpolicy="no-referrer"
-                          onerror="this.style.display='none'"
+                          onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}"
                         />
                       ` : ''}
                       ${item.duration ? `
@@ -605,19 +607,54 @@ export function attachMediaHistoryListeners({
         ? StorageService.getDownloadUrl(item.driveRelPath, false)
         : (item.downloadUrl || item.viewUrl);
 
-      const isAudio = item.mediaType === 'audio' || item.fileName?.endsWith('.mp3');
+      const ext = (item.fileName || '').toLowerCase().split('.').pop() || '';
+      const isAudio = item.mediaType === 'audio' || ext === 'mp3';
       const isImage = item.mediaType === 'image' || item.mediaType === 'photo' ||
         /\.(jpe?g|png|webp|gif|svg)$/i.test(item.fileName || '') ||
         (item.mediaType === 'carousel' && !item.fileName?.endsWith('.mp4'));
+      const isPdf = ext === 'pdf' || item.mimeType === 'application/pdf';
+      const isPptx = ['ppt', 'pptx', 'odp'].includes(ext);
+
+      let targetCat = undefined;
+      let targetMime = undefined;
+      if (isAudio) {
+        targetCat = 'audio';
+        targetMime = 'audio/mpeg';
+      } else if (isImage) {
+        targetCat = 'image';
+        targetMime = 'image/jpeg';
+      } else if (isPdf) {
+        targetCat = 'pdf';
+        targetMime = 'application/pdf';
+      } else if (isPptx) {
+        targetCat = 'presentation';
+        targetMime = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      } else if (item.toolId === 'facebook-downloader' || item.toolId === 'tiktok-downloader' || ext === 'mp4') {
+        targetCat = 'video';
+        targetMime = 'video/mp4';
+      }
 
       ViewerConnector.preview({
         name: item.fileName || item.title || 'Media',
         fileName: item.fileName || item.title || 'Media',
         path: hasDrive ? item.driveRelPath : undefined,
-        category: isAudio ? 'audio' : (isImage ? 'image' : 'video'),
-        mimeType: isAudio ? 'audio/mpeg' : (isImage ? 'image/jpeg' : 'video/mp4'),
+        category: targetCat,
+        mimeType: targetMime || item.mimeType,
         viewUrl: targetViewUrl,
-        downloadUrl: targetDownloadUrl
+        downloadUrl: targetDownloadUrl,
+        historyItemId: item.id,
+        originalUrl: item.sourceUrl || item.originalUrl || item.downloadUrl || '',
+        onRetry: () => {
+          if (typeof onReResolve === 'function') {
+            onReResolve(item.sourceUrl || item.originalUrl || item.downloadUrl || '');
+          }
+        },
+        onRemoveBroken: async () => {
+          await storage.moveToTrash(item.id);
+          if (typeof onHistoryChange === 'function') {
+            onHistoryChange();
+          }
+        }
       });
     };
   });
@@ -634,9 +671,12 @@ export function attachMediaHistoryListeners({
         ? StorageService.getDownloadUrl(item.driveRelPath, false)
         : (item.downloadUrl || item.viewUrl);
       const fileName = item.fileName || `${item.title || 'media'}.${item.mediaType === 'audio' ? 'mp3' : 'mp4'}`;
-      const isAudio = item.mediaType === 'audio' || fileName.endsWith('.mp3');
+      const ext = fileName.toLowerCase().split('.').pop() || '';
+      const isAudio = item.mediaType === 'audio' || ext === 'mp3';
       const isImage = item.mediaType === 'image' || item.mediaType === 'photo' || /\.(jpe?g|png|webp|gif|svg)$/i.test(fileName);
-      const mime = isAudio ? 'audio/mpeg' : (isImage ? 'image/jpeg' : 'video/mp4');
+      const isPdf = ext === 'pdf';
+      const isPptx = ['pptx', 'ppt', 'odp'].includes(ext);
+      const mime = isAudio ? 'audio/mpeg' : (isImage ? 'image/jpeg' : (isPdf ? 'application/pdf' : (isPptx ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation' : 'video/mp4')));
 
       triggerDownload(downloadUrl, fileName, mime);
     };

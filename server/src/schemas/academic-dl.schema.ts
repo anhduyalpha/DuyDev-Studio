@@ -28,3 +28,11 @@ export const academicCheckDuplicateSchema = z.object({
   url: z.string().optional(),
   category: z.enum(['slideshare', 'academia', 'researchgate']).default('slideshare')
 });
+
+export const academicCompileTempSchema = z.object({
+  id: z.string().min(1, 'ID không được để trống'),
+  title: z.string().min(1, 'Tiêu đề không được để trống'),
+  format: z.enum(['pdf', 'pptx']).default('pdf'),
+  originalUrl: z.string().optional(),
+  slideImages: z.array(z.string()).optional()
+});

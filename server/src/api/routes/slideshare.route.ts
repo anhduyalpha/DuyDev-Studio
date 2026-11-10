@@ -9,7 +9,8 @@ import {
   academicResolveBodySchema,
   academicStreamQuerySchema,
   academicSaveDriveBodySchema,
-  academicCheckDuplicateSchema
+  academicCheckDuplicateSchema,
+  academicCompileTempSchema
 } from '../../schemas/academic-dl.schema.js';
 
 export async function slideshareRoute(app: FastifyInstance) {
@@ -46,12 +47,19 @@ export async function slideshareRoute(app: FastifyInstance) {
       throw new BadRequestError('Thiếu tham số tệp cần tải');
     }
 
+    const isTemp = query?.temp === '1' || query?.temp === 'true';
     const driveDir = path.join(resolvedStoragePaths.drive, 'slideshare');
+    const tempDir = resolvedStoragePaths.temp;
     const safeName = path.basename(filePath);
-    const diskPath = path.join(driveDir, safeName);
+    let diskPath = isTemp ? path.join(tempDir, safeName) : path.join(driveDir, safeName);
 
     if (!fs.existsSync(diskPath)) {
-      throw new NotFoundError(`Tệp ${safeName} không tồn tại trên hệ thống`);
+      const altPath = isTemp ? path.join(driveDir, safeName) : path.join(tempDir, safeName);
+      if (fs.existsSync(altPath)) {
+        diskPath = altPath;
+      } else {
+        throw new NotFoundError(`Tệp ${safeName} không tồn tại trên hệ thống`);
+      }
     }
 
     const stat = await fsPromises.stat(diskPath);
@@ -69,6 +77,18 @@ export async function slideshareRoute(app: FastifyInstance) {
     reply.header('Cache-Control', 'public, max-age=3600');
 
     return reply.send(fs.createReadStream(diskPath));
+  });
+
+  app.post('/api/v1/slideshare/compile', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id, title, format, originalUrl, slideImages } = academicCompileTempSchema.parse(request.body || {});
+    const result = await SlideShareService.compileTempPresentation(
+      format,
+      id,
+      title,
+      slideImages,
+      originalUrl
+    );
+    return reply.send({ success: true, data: result });
   });
 
   app.post('/api/v1/slideshare/save-drive', async (request: FastifyRequest, reply: FastifyReply) => {

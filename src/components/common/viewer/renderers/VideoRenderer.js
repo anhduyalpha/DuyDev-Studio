@@ -169,10 +169,10 @@ export function attachVideoListeners(state, registerCleanup) {
         video.play().catch(() => {});
       } else {
         const statusText = res.status === 404
-          ? 'Tệp video không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
+          ? 'Tệp không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
           : (res.status === 403 || res.status === 401
               ? `Không có quyền truy cập tệp hoặc phiên làm việc đã hết hạn (HTTP ${res.status}).`
-              : `Máy chủ phản hồi lỗi khi nạp video (HTTP ${res.status}).`);
+              : `Máy chủ phản hồi lỗi khi nạp dữ liệu (HTTP ${res.status}).`);
         if (state.showErrorFallback) {
           state.showErrorFallback(statusText, `HTTP ${res.status}`);
         }

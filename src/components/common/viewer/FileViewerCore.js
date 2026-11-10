@@ -256,11 +256,14 @@ export function renderFallbackErrorCard(state, reason = '', details = '') {
   const displayReason = reason || 'Định dạng này không hỗ trợ xem trực tiếp hoặc tệp bị lỗi cấu trúc';
   const downloadUrl = state.downloadUrl || state.viewUrl || '#';
   const fileSizeStr = state.size > 0 ? `(${formatBytes(state.size)})` : '';
+  const is404 = String(reason || '').includes('404') || String(details || '').includes('404') || String(reason || '').includes('không tồn tại');
+  const hasRetry = Boolean(state.onRetry || state.originalUrl);
+  const hasRemove = Boolean(state.onRemoveBroken || state.historyItemId);
 
   return `
     <div id="viewerFallbackCard" class="py-12 sm:py-16 px-4 max-w-lg mx-auto w-full text-center space-y-5 animate-fadeIn">
-      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center mx-auto shadow-inner">
-        <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+      <div class="w-14 h-14 rounded-2xl ${is404 ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'} flex items-center justify-center mx-auto shadow-inner">
+        <i data-lucide="${is404 ? 'alert-octagon' : 'alert-triangle'}" class="w-7 h-7"></i>
       </div>
 
       <div class="space-y-1.5">
@@ -280,14 +283,29 @@ export function renderFallbackErrorCard(state, reason = '', details = '') {
       </div>
 
       <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-        <button id="btnSwitchToHexDump" type="button" class="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs">
-          <i data-lucide="binary" class="w-4 h-4"></i>
-          <span>Xem dạng Mã Hex / Văn bản thô</span>
-        </button>
-        <a id="btnFallbackDirectDownload" href="${downloadUrl}" download="${state.name}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-2 transition shadow-xs cursor-pointer">
-          <i data-lucide="download" class="w-4 h-4"></i>
-          <span>Tải tệp xuống máy</span>
-        </a>
+        ${is404 ? `
+          ${hasRetry ? `
+            <button id="btnViewerRetryDownload" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs min-h-[40px]">
+              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+              <span>Thử tải lại từ nguồn</span>
+            </button>
+          ` : ''}
+          ${hasRemove ? `
+            <button id="btnViewerRemoveBroken" type="button" class="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 transition cursor-pointer border border-rose-500/20 min-h-[40px]">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+              <span>Xóa tệp lỗi</span>
+            </button>
+          ` : ''}
+        ` : `
+          <button id="btnSwitchToHexDump" type="button" class="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs">
+            <i data-lucide="binary" class="w-4 h-4"></i>
+            <span>Xem dạng Mã Hex / Văn bản thô</span>
+          </button>
+          <a id="btnFallbackDirectDownload" href="${downloadUrl}" download="${state.name}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-2 transition shadow-xs cursor-pointer">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Tải tệp xuống máy</span>
+          </a>
+        `}
       </div>
     </div>
   `;
@@ -299,6 +317,34 @@ export function showViewerFallbackCard(state, reason = '', details = '') {
   viewerBody.className = 'p-3 sm:p-5 flex-1 overflow-auto custom-scrollbar flex flex-col justify-center bg-zinc-50/50 dark:bg-[#0e0e11]';
   viewerBody.innerHTML = renderFallbackErrorCard(state, reason, details);
   if (window.lucide) window.lucide.createIcons({ root: viewerBody });
+
+  const retryBtn = document.getElementById('btnViewerRetryDownload');
+  if (retryBtn) {
+    retryBtn.onclick = () => {
+      closeFileViewer();
+      if (typeof state.onRetry === 'function') {
+        state.onRetry();
+      } else if (state.originalUrl && window.__ddReResolveUrl) {
+        window.__ddReResolveUrl(state.originalUrl);
+      }
+    };
+  }
+
+  const removeBtn = document.getElementById('btnViewerRemoveBroken');
+  if (removeBtn) {
+    removeBtn.onclick = async () => {
+      closeFileViewer();
+      if (typeof state.onRemoveBroken === 'function') {
+        await state.onRemoveBroken();
+      } else if (state.historyItemId) {
+        try {
+          const { storage } = await import('../../../utilities/storage.js');
+          await storage.moveToTrash(state.historyItemId);
+        } catch (_) {}
+      }
+      showToast('Đã xóa mục bị lỗi khỏi lịch sử', 'success');
+    };
+  }
 
   const hexBtn = document.getElementById('btnSwitchToHexDump');
   hexBtn?.addEventListener('click', () => {

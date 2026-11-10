@@ -52,10 +52,35 @@ export class SlideshareWorkspace {
     this.boundHandleClick = this.handleClick.bind(this);
   }
 
+  async sanitizeCorruptedHistory() {
+    try {
+      const history = storage.getToolHistory('slideshare-downloader');
+      const trash = storage.getToolTrash('slideshare-downloader');
+      const isCorrupted = (item) => {
+        const title = (item.title || '').toLowerCase();
+        const fn = (item.fileName || '').toLowerCase();
+        return title.includes('client challenge') || fn.includes('client challenge') || title.includes('undefined') || fn.includes('undefined');
+      };
+
+      for (const item of history) {
+        if (isCorrupted(item)) {
+          await storage.moveToTrash(item.id);
+          await storage.permanentlyDeleteTrashItem(item.id);
+        }
+      }
+      for (const item of trash) {
+        if (isCorrupted(item)) {
+          await storage.permanentlyDeleteTrashItem(item.id);
+        }
+      }
+    } catch (_) {}
+  }
+
   mount() {
     this.render();
 
-    Promise.all([storage.fetchHistory(), storage.fetchTrash()]).then(() => {
+    Promise.all([storage.fetchHistory(), storage.fetchTrash()]).then(async () => {
+      await this.sanitizeCorruptedHistory();
       this.renderHistory();
     }).catch(() => {});
 
@@ -456,7 +481,10 @@ export class SlideshareWorkspace {
       // Add presentation to history immediately upon get
       const cleanTitle = (res.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
       const pptxName = this.savedPptxFileName || `[SlideShare]_${cleanTitle}_${String(res.id).slice(-8)}.pptx`;
-      const pptxDl = `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`;
+      const pptxDl = this.savedPptxDrivePath
+        ? `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`
+        : `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}&temp=1`;
+      const coverImg = res.coverUrl || (res.slideImages && res.slideImages[0]) || '';
 
       await storage.addHistoryItem({
         id: `ss_${res.id}`,
@@ -467,10 +495,11 @@ export class SlideshareWorkspace {
         fileSize: (res.slideCount || 1) * 150000,
         resultSize: (res.slideCount || 1) * 150000,
         mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        driveRelPath: this.savedPptxDrivePath || `/slideshare/${pptxName}`,
+        driveRelPath: this.savedPptxDrivePath || null,
         downloadUrl: pptxDl,
-        thumbnail: res.coverUrl,
-        cover: res.coverUrl,
+        thumbnail: coverImg,
+        cover: coverImg,
+        slideImages: res.slideImages || [],
         author: res.author,
         sourceUrl: cleanUrl,
         timestamp: Date.now()
@@ -480,11 +509,6 @@ export class SlideshareWorkspace {
       setMediaHistoryExpanded('slideshare-downloader', true);
       this.renderResultArea();
       this.renderHistory();
-
-      // Background pre-save so files exist on Drive for instant download
-      if (!this.savedDrivePath || !this.savedPptxDrivePath) {
-        this.saveToDrive({ silent: true }).catch(() => {});
-      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       this.loading = false;
@@ -547,41 +571,25 @@ export class SlideshareWorkspace {
           showToast('Đã lưu bài thuyết trình vào Studio Drive (/slideshare)!', 'success');
         }
 
-        // Add PDF to media history
-        await storage.addHistoryItem({
-          id: `ss_pdf_${this.data.id}`,
-          toolId: 'slideshare-downloader',
-          toolTitle: 'SlideShare Downloader',
-          title: `${this.data.title} (PDF)`,
-          fileName: result.fileName,
-          fileSize: result.size,
-          resultSize: result.size,
-          mimeType: 'application/pdf',
-          driveRelPath: result.drivePath,
-          downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(result.fileName)}`,
-          thumbnail: this.data.coverUrl,
-          cover: this.data.coverUrl,
-          author: this.data.author,
-          sourceUrl: this.data.originalUrl,
-          timestamp: Date.now()
-        });
-
-        // Add PPTX to media history if compiled
+        // Update existing master history item with real Drive path
         const cleanTitle = (this.data.title || 'Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
         const pptxName = result.pptxFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pptx`;
+        const coverImg = this.data.coverUrl || (this.data.slideImages && this.data.slideImages[0]) || '';
+
         await storage.addHistoryItem({
-          id: `ss_pptx_${this.data.id}`,
+          id: `ss_${this.data.id}`,
           toolId: 'slideshare-downloader',
           toolTitle: 'SlideShare Downloader',
-          title: `${this.data.title} (PPTX)`,
+          title: this.data.title,
           fileName: pptxName,
           fileSize: result.pptxSize || result.size,
           resultSize: result.pptxSize || result.size,
           mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          driveRelPath: result.pptxDrivePath || `/slideshare/${pptxName}`,
+          driveRelPath: result.pptxDrivePath || result.drivePath,
           downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`,
-          thumbnail: this.data.coverUrl,
-          cover: this.data.coverUrl,
+          thumbnail: coverImg,
+          cover: coverImg,
+          slideImages: this.data.slideImages || [],
           author: this.data.author,
           sourceUrl: this.data.originalUrl,
           timestamp: Date.now()
@@ -659,16 +667,29 @@ export class SlideshareWorkspace {
     const btn = this.container.querySelector('#btnDownloadSsPptx');
     const origHtml = btn?.innerHTML;
 
-    if (!this.savedPptxFileName) {
+    const cleanTitle = (this.data.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
+    const pptxName = this.savedPptxFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pptx`;
+    let dlUrl = '';
+
+    if (this.savedPptxDrivePath) {
+      dlUrl = `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`;
+    } else {
       if (btn) {
         btn.disabled = true;
         btn.classList.add('opacity-75', 'cursor-not-allowed');
-        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang chuẩn bị file PPTX...</span>';
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang chuẩn bị PPTX...</span>';
         if (window.lucide) window.lucide.createIcons({ root: btn });
       }
       showToast('Đang tổng hợp các slide thành tệp PowerPoint (.pptx)...', 'info');
       try {
-        await this.saveToDrive({ silent: true });
+        const comp = await slideshareApi.compileTemp({
+          id: String(this.data.id),
+          title: this.data.title,
+          format: 'pptx',
+          slideImages: this.data.slideImages || [],
+          originalUrl: this.data.originalUrl
+        });
+        dlUrl = comp.downloadUrl;
       } catch (err) {
         const msg = formatErrorMessage(err, 'Lỗi khi tạo tệp PowerPoint (.pptx)');
         showToast(msg, 'error');
@@ -683,9 +704,6 @@ export class SlideshareWorkspace {
       }
     }
 
-    const cleanTitle = (this.data.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
-    const pptxName = this.savedPptxFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pptx`;
-    const dlUrl = `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`;
     triggerDownload(dlUrl, pptxName, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
     soundEngine?.play?.('success');
     showToast('Đang tải tệp PowerPoint (.pptx) về máy...', 'success');
@@ -696,16 +714,29 @@ export class SlideshareWorkspace {
     const btn = this.container.querySelector('#btnDownloadSsPdf');
     const origHtml = btn?.innerHTML;
 
-    if (!this.savedFileName) {
+    const cleanTitle = (this.data.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
+    const pdfName = this.savedFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pdf`;
+    let dlUrl = '';
+
+    if (this.savedDrivePath) {
+      dlUrl = `/api/v1/slideshare/download?file=${encodeURIComponent(pdfName)}`;
+    } else {
       if (btn) {
         btn.disabled = true;
         btn.classList.add('opacity-75', 'cursor-not-allowed');
-        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang chuẩn bị file PDF...</span>';
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang chuẩn bị PDF...</span>';
         if (window.lucide) window.lucide.createIcons({ root: btn });
       }
       showToast('Đang đóng gói các slide thành tệp PDF...', 'info');
       try {
-        await this.saveToDrive({ silent: true });
+        const comp = await slideshareApi.compileTemp({
+          id: String(this.data.id),
+          title: this.data.title,
+          format: 'pdf',
+          slideImages: this.data.slideImages || [],
+          originalUrl: this.data.originalUrl
+        });
+        dlUrl = comp.downloadUrl;
       } catch (err) {
         const msg = formatErrorMessage(err, 'Lỗi khi tạo tệp PDF');
         showToast(msg, 'error');
@@ -720,9 +751,6 @@ export class SlideshareWorkspace {
       }
     }
 
-    const cleanTitle = (this.data.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
-    const pdfName = this.savedFileName || `[SlideShare]_${cleanTitle}_${String(this.data.id).slice(-8)}.pdf`;
-    const dlUrl = `/api/v1/slideshare/download?file=${encodeURIComponent(pdfName)}`;
     triggerDownload(dlUrl, pdfName, 'application/pdf');
     soundEngine?.play?.('success');
     showToast('Đang tải tệp PDF về máy...', 'success');
@@ -734,12 +762,11 @@ export class SlideshareWorkspace {
 
     if (this.loading) {
       el.innerHTML = `
-        <div class="linear-card p-6 md:p-8 rounded-3xl border border-zinc-200 dark:border-white/10 bg-white/70 dark:bg-[#121216]/70 backdrop-blur-md text-center space-y-4 animate-fadeIn">
-          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-500 animate-pulse">
-            <i data-lucide="loader-2" class="w-7 h-7 animate-spin"></i>
+        <div class="linear-card p-6 md:p-8 rounded-3xl border border-zinc-200 dark:border-white/10 bg-white/70 dark:bg-[#121216]/70 backdrop-blur-md text-center space-y-3 animate-fadeIn">
+          <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-500 animate-pulse">
+            <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
           </div>
-          <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Đang bóc tách bài thuyết trình SlideShare...</h3>
-          <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">Hệ thống đang tải danh sách slide độ phân giải cao và trích xuất siêu dữ liệu.</p>
+          <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">Đang trích xuất bài thuyết trình...</h3>
         </div>
       `;
       if (window.lucide) window.lucide.createIcons({ root: el });
@@ -769,6 +796,7 @@ export class SlideshareWorkspace {
     const slideImages = Array.isArray(this.data.slideImages) ? this.data.slideImages : [];
     const hasSlides = slideImages.length > 0;
     const totalSlides = hasSlides ? slideImages.length : (slideCount || 1);
+    const cleanAuthor = author ? (author.startsWith('@') ? author : `@${author}`) : '';
 
     el.innerHTML = `
       <div class="linear-card p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#121216] shadow-xl space-y-5 animate-fadeIn">
@@ -781,20 +809,14 @@ export class SlideshareWorkspace {
               </div>
             </div>
           ` : ''}
-          <div class="space-y-2 flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                <i data-lucide="presentation" class="w-3 h-3"></i>
-                <span>SlideShare Presentation</span>
-              </div>
-              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
-                <span>PPTX & PDF</span>
-              </span>
-            </div>
+          <div class="space-y-1.5 flex-1 min-w-0">
             <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2">${escapeHtml(title)}</h2>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400">Tác giả: <strong class="text-zinc-700 dark:text-zinc-300">${escapeHtml(author)}</strong></p>
-            ${description ? `<p class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">${escapeHtml(description)}</p>` : ''}
+            <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              ${cleanAuthor ? `<span class="font-medium text-zinc-700 dark:text-zinc-300">${escapeHtml(cleanAuthor)}</span><span>•</span>` : ''}
+              <span class="font-mono">${totalSlides} trang</span>
+              ${isSaved ? `<span>•</span><span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-0.5"><i data-lucide="check" class="w-2.5 h-2.5"></i> Đã lưu Drive</span>` : ''}
+            </div>
+            ${description ? `<p class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed pt-1">${escapeHtml(description)}</p>` : ''}
           </div>
         </div>
 
@@ -844,27 +866,21 @@ export class SlideshareWorkspace {
         ` : ''}
 
         <div class="pt-3 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center gap-3">
-          <!-- Tải PPTX (Bản gốc) - PRIMARY CTA BUTTON -->
-          <button id="btnDownloadSsPptx" class="min-h-[46px] px-6 py-3 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-600 to-orange-600 hover:from-orange-400 hover:to-orange-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
-            <i data-lucide="file-presentation" class="w-4 h-4"></i>
-            <span>Tải PowerPoint (.pptx)</span>
-          </button>
-
           <!-- Tải PDF -->
-          <button id="btnDownloadSsPdf" class="min-h-[46px] px-5 py-3 rounded-2xl bg-[#0077B5] hover:bg-[#0284C7] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-sky-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+          <button id="btnDownloadSsPdf" class="min-h-[44px] px-5 py-2.5 rounded-2xl bg-[#0077B5] hover:bg-[#0284C7] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-md shadow-sky-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
             <i data-lucide="file-text" class="w-4 h-4"></i>
             <span>Tải PDF (.pdf)</span>
           </button>
 
-          <!-- Lưu Drive -->
-          <button id="btnSaveSsDrive" ${this.savingToDrive ? 'disabled' : ''} class="min-h-[46px] px-5 py-3 rounded-2xl ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600'} active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
-            ${this.savingToDrive ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang đóng gói...</span>' : isSaved ? '<i data-lucide="check" class="w-4 h-4"></i><span>Đã lưu vào Drive</span>' : '<i data-lucide="hard-drive" class="w-4 h-4"></i><span>Lưu cả PPTX & PDF</span>'}
+          <!-- Tải PPTX -->
+          <button id="btnDownloadSsPptx" class="min-h-[44px] px-5 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="file-presentation" class="w-4 h-4"></i>
+            <span>Tải PowerPoint (.pptx)</span>
           </button>
 
-          <!-- Xem PDF trong Viewer -->
-          <button id="btnPreviewSs" class="min-h-[46px] px-4 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
-            <i data-lucide="eye" class="w-4 h-4"></i>
-            <span>Xem PDF Viewer</span>
+          <!-- Lưu Drive -->
+          <button id="btnSaveSsDrive" ${this.savingToDrive ? 'disabled' : ''} class="min-h-[44px] px-4 py-2.5 rounded-2xl ${isSaved ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10'} active:scale-[0.98] text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
+            ${this.savingToDrive ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang lưu...</span>' : isSaved ? '<i data-lucide="check" class="w-4 h-4"></i><span>Đã lưu vào Drive</span>' : '<i data-lucide="hard-drive" class="w-4 h-4"></i><span>Lưu vào Drive</span>'}
           </button>
         </div>
       </div>
@@ -923,6 +939,32 @@ export class SlideshareWorkspace {
           this.resolvePresentation();
         }
       },
+      onSaveDrive: async (item) => {
+        if (!item) return;
+        showToast('Đang lưu bài thuyết trình vào Studio Drive...', 'info');
+        try {
+          const res = await slideshareApi.saveToDrive({
+            url: item.sourceUrl || item.originalUrl || '',
+            title: item.title,
+            id: String(item.id).replace(/^ss_/, ''),
+            originalUrl: item.sourceUrl || item.originalUrl || '',
+            cover: item.cover || item.thumbnail,
+            author: item.author,
+            slideImages: item.slideImages || [],
+            category: 'slideshare'
+          });
+          const pptxName = res.pptxFileName || `[SlideShare]_${item.title}_${String(item.id).slice(-8)}.pptx`;
+          await storage.addHistoryItem({
+            ...item,
+            driveRelPath: res.pptxDrivePath || res.drivePath,
+            downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`
+          });
+          showToast('Đã lưu bài thuyết trình vào Studio Drive!', 'success');
+          this.renderHistory();
+        } catch (err) {
+          showToast(formatErrorMessage(err, 'Lỗi khi lưu vào Studio Drive'), 'error');
+        }
+      },
       onHistoryChange: () => {
         this.renderHistory();
       }
@@ -977,7 +1019,6 @@ export class SlideshareWorkspace {
         <div class="linear-card p-5 sm:p-7 rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#121216] shadow-xl space-y-4">
           <div class="space-y-1.5">
             <h1 class="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Tải Bài Thuyết Trình SlideShare</h1>
-            <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">Nhập hoặc dán liên kết SlideShare để tải slide chất lượng cao về PDF.</p>
           </div>
 
           <div class="relative flex items-center">

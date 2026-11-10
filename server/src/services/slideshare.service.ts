@@ -198,9 +198,56 @@ export class SlideShareService {
         }
       }
 
-      // 4. Final Fallback: if no slides extracted at all, use cover image
-      if (slideImages.length === 0 && coverUrl) {
+      // 4. Check for Anti-bot / Cloudflare challenges & Fallback to oEmbed API
+      const isChallengeTitle = /^(client challenge|just a moment|attention required|access denied|security check)/i.test(title);
+      if (isChallengeTitle || slideImages.length === 0) {
+        try {
+          const oembedUrl = `https://www.slideshare.net/api/oembed/2?url=${encodeURIComponent(url)}&format=json`;
+          const oembedRes = await fetch(oembedUrl, {
+            headers: { 'User-Agent': DEFAULT_UA },
+            signal: AbortSignal.timeout(8000)
+          });
+          if (oembedRes.ok) {
+            const oembedJson: any = await oembedRes.json();
+            if (oembedJson.title && !/^(client challenge|just a moment)/i.test(oembedJson.title)) {
+              title = String(oembedJson.title).trim();
+            }
+            if (oembedJson.author_name) {
+              author = String(oembedJson.author_name).trim();
+            }
+            if (oembedJson.thumbnail) {
+              coverUrl = String(oembedJson.thumbnail).trim();
+            }
+            if (oembedJson.total_slides && Number(oembedJson.total_slides) > 0) {
+              totalSlides = Number(oembedJson.total_slides);
+            }
+            if (oembedJson.slide_image_baseurl && totalSlides > 0) {
+              const base = String(oembedJson.slide_image_baseurl).trim();
+              const suffix = String(oembedJson.slide_image_baseurl_suffix || '-1024.jpg').trim();
+              slideImages.length = 0;
+              for (let i = 1; i <= totalSlides; i++) {
+                slideImages.push(`${base}${i}${suffix}`);
+              }
+              if (!coverUrl && slideImages.length > 0) coverUrl = slideImages[0];
+            }
+          }
+        } catch (oerr) {
+          logger.warn({ err: oerr }, '[SlideShareService] oEmbed fallback failed');
+        }
+      }
+
+      // Final Fallback: if no slides extracted at all, use cover image (only if title is not a challenge)
+      if (slideImages.length === 0 && coverUrl && !/^(client challenge|just a moment)/i.test(title)) {
         slideImages.push(coverUrl);
+      }
+
+      // Strict Validation: reject bot/challenge responses so broken entries are never saved
+      if (/^(client challenge|just a moment|attention required|access denied|security check)/i.test(title) || slideImages.length === 0) {
+        throw new BadRequestError('Không thể lấy nội dung slide do SlideShare yêu cầu xác minh bảo mật hoặc liên kết không hợp lệ. Vui lòng thử lại sau.');
+      }
+
+      if (!coverUrl && slideImages.length > 0) {
+        coverUrl = slideImages[0];
       }
 
       // Generate stable presentation ID
@@ -313,6 +360,14 @@ export class SlideShareService {
         throw new BadRequestError('Không thể tải các trang slide để ghép thành tệp PDF / PPTX.');
       }
 
+      // Save .thumb.jpg for local instant preview in Drive & History
+      if (downloadedImages.length > 0) {
+        const targetThumbPath = path.join(driveDir, `[SlideShare]_${cleanTitle}_${id.slice(-8)}.thumb.jpg`);
+        try {
+          await fsPromises.copyFile(downloadedImages[0], targetThumbPath);
+        } catch (_) {}
+      }
+
       const manifestPath = path.join(tempDir, 'images.json');
       await fsPromises.writeFile(manifestPath, JSON.stringify(downloadedImages), 'utf8');
 
@@ -423,6 +478,111 @@ export class SlideShareService {
       };
     } finally {
       // Clean up temp images
+      fsPromises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+
+  static async compileTempPresentation(
+    format: 'pdf' | 'pptx',
+    id: string,
+    title: string,
+    slideImages?: string[],
+    originalUrl?: string
+  ): Promise<{
+    fileName: string;
+    downloadUrl: string;
+    size: number;
+  }> {
+    const cleanTitle = (title || 'Presentation')
+      .replace(/[<>:"/\\|?*]/g, '_')
+      .trim()
+      .slice(0, 80);
+    const fileName = `[SlideShare]_${cleanTitle}_${id.slice(-8)}.${format}`;
+    const targetPath = path.join(resolvedStoragePaths.temp, fileName);
+
+    // If file already exists in temp and is non-empty, reuse it
+    if (fs.existsSync(targetPath)) {
+      const existingStat = await fsPromises.stat(targetPath);
+      if (existingStat.size > 1024) {
+        return {
+          fileName,
+          downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(fileName)}&temp=1`,
+          size: existingStat.size
+        };
+      }
+    }
+
+    let slideImagesToUse = slideImages && slideImages.length > 0 ? slideImages : [];
+    if (slideImagesToUse.length === 0 && originalUrl) {
+      const resolved = await this.resolvePresentation(originalUrl);
+      slideImagesToUse = resolved.slideImages;
+    }
+
+    if (slideImagesToUse.length === 0) {
+      throw new BadRequestError('Không có hình ảnh slide để biên dịch.');
+    }
+
+    const tempDir = path.join(resolvedStoragePaths.temp, `slideshare_compile_${Date.now()}_${id}`);
+    await fsPromises.mkdir(tempDir, { recursive: true });
+
+    const downloadedImages: string[] = [];
+    try {
+      const imagesToFetch = slideImagesToUse.slice(0, 100);
+      for (let i = 0; i < imagesToFetch.length; i += 5) {
+        const batch = imagesToFetch.slice(i, i + 5);
+        await Promise.all(
+          batch.map(async (imgUrl, batchIdx) => {
+            const idx = i + batchIdx;
+            const imgPath = path.join(tempDir, `slide_${String(idx).padStart(4, '0')}.jpg`);
+            try {
+              const r = await fetch(imgUrl, {
+                headers: { 'User-Agent': DEFAULT_UA },
+                signal: AbortSignal.timeout(10000)
+              });
+              if (r.ok) {
+                const buf = Buffer.from(await r.arrayBuffer());
+                await fsPromises.writeFile(imgPath, buf);
+                downloadedImages.push(imgPath);
+              }
+            } catch {}
+          })
+        );
+      }
+
+      downloadedImages.sort();
+      if (downloadedImages.length === 0) {
+        throw new BadRequestError('Không thể tải các trang slide để biên dịch.');
+      }
+
+      const manifestPath = path.join(tempDir, 'images.json');
+      await fsPromises.writeFile(manifestPath, JSON.stringify(downloadedImages), 'utf8');
+
+      const pyCmd = resolvePythonBin();
+      if (format === 'pptx') {
+        const pptxEngineScript = resolveSlidesToPptxEngine();
+        await execFileAsync(pyCmd, [
+          pptxEngineScript,
+          '--images-json', manifestPath,
+          '--output', targetPath,
+          '--title', title
+        ]);
+      } else {
+        const pdfEngineScript = resolveSlidesToPdfEngine();
+        await execFileAsync(pyCmd, [
+          pdfEngineScript,
+          '--images-json', manifestPath,
+          '--output', targetPath,
+          '--title', title
+        ]);
+      }
+
+      const stat = await fsPromises.stat(targetPath);
+      return {
+        fileName,
+        downloadUrl: `/api/v1/slideshare/download?file=${encodeURIComponent(fileName)}&temp=1`,
+        size: stat.size
+      };
+    } finally {
       fsPromises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
     }
   }

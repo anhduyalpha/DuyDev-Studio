@@ -589,6 +589,10 @@ export const ViewerConnector = {
       playlist,
       playlistIndex,
       direction,
+      historyItemId: item.historyItemId || options.historyItemId || null,
+      originalUrl: item.originalUrl || options.originalUrl || null,
+      onRetry: typeof options.onRetry === 'function' ? options.onRetry : (typeof item.onRetry === 'function' ? item.onRetry : null),
+      onRemoveBroken: typeof options.onRemoveBroken === 'function' ? options.onRemoveBroken : (typeof item.onRemoveBroken === 'function' ? item.onRemoveBroken : null),
       onSwitchItem: (targetIdx, dir) => {
         if (Array.isArray(playlist) && playlist.length > 0) {
           openPlaylistItem(playlist, targetIdx, dir);

@@ -56,6 +56,20 @@ export const slideshareApi = {
     return json.data;
   },
 
+  async compileTemp(payload) {
+    const res = await fetch('/api/v1/slideshare/compile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) {
+      throw new Error(parseApiError(json, 'Lỗi biên dịch tệp tải xuống'));
+    }
+    return json.data;
+  },
+
   getStreamUrl(pdfUrl, filename = 'slideshare_presentation.pdf', download = false) {
     if (!pdfUrl) return '';
     const params = new URLSearchParams({
