@@ -97,7 +97,7 @@ export function formatTaskTitle(task) {
  */
 export function getVisibleDockTasks(tasks = []) {
   if (!tasks || tasks.length === 0) return [];
-  const currentRoute = typeof window !== 'undefined' ? (window.location.hash || '') : '';
+  const currentRoute = typeof window !== 'undefined' ? (window.location.hash || '').toLowerCase() : '';
   if (!currentRoute) return tasks;
 
   if (isScribdRoute(currentRoute)) {
@@ -106,7 +106,19 @@ export function getVisibleDockTasks(tasks = []) {
   if (isStudocuRoute(currentRoute)) {
     return tasks.filter((task) => !isStudocuTask(task));
   }
-  return tasks;
+
+  // Filter out short in-page document resolve tasks if the user is already on that tool's route
+  return tasks.filter((task) => {
+    if (!task) return false;
+    const taskRoute = (task.route || '').toLowerCase();
+    const isCurrentPage = Boolean(
+      taskRoute && (currentRoute === taskRoute || currentRoute.startsWith(taskRoute) || taskRoute.startsWith(currentRoute))
+    );
+    if (isCurrentPage && (task.type === 'document-resolve' || task.type === 'media-resolve')) {
+      return false;
+    }
+    return true;
+  });
 }
 
 /**
@@ -271,6 +283,11 @@ function attachDockListeners(container) {
       btnToggle.title = isMinimized ? 'Mở rộng' : 'Thu nhỏ';
       btnToggle.innerHTML = `<i data-lucide="${isMinimized ? 'chevron-up' : 'chevron-down'}" class="w-3 h-3"></i>`;
       if (window.lucide) window.lucide.createIcons({ root: btnToggle });
+      if (typeof document !== 'undefined') {
+        const currentCount = tasksEl?.querySelectorAll?.('[data-task-id]')?.length || 1;
+        const dockHeight = isMinimized ? 52 : Math.min(260, 52 + currentCount * 48);
+        document.documentElement.style.setProperty('--toast-bottom-offset', `calc(${dockHeight}px + 1.75rem)`);
+      }
     };
   }
 
@@ -313,7 +330,15 @@ export function updateDockDOM(host, rawTasks = []) {
     if (host.innerHTML !== '') {
       host.innerHTML = '';
     }
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--toast-bottom-offset', '1.25rem');
+    }
     return;
+  }
+
+  if (typeof document !== 'undefined') {
+    const dockHeight = isMinimized ? 52 : Math.min(260, 52 + tasks.length * 48);
+    document.documentElement.style.setProperty('--toast-bottom-offset', `calc(${dockHeight}px + 1.75rem)`);
   }
 
   const capsule = host.querySelector('#globalTaskDockCapsule');

@@ -283,16 +283,31 @@ class TaskCoordinator {
     } else {
       soundEngine.playJobComplete();
     }
-    showActionableToast(`${task.moduleTitle}: "${task.title}" đã hoàn tất`, {
-      type: 'success',
-      silent: true,
-      actionText: 'Mở ngay',
-      onAction: () => {
-        if (task.route) {
-          window.location.hash = task.route;
+
+    const currentHash = typeof window !== 'undefined' ? (window.location.hash || '').toLowerCase() : '';
+    const taskRoute = (task.route || '').toLowerCase();
+    const isCurrentPage = Boolean(
+      taskRoute &&
+      currentHash &&
+      (currentHash === taskRoute ||
+       currentHash.startsWith(taskRoute) ||
+       taskRoute.startsWith(currentHash) ||
+       (task.moduleId && currentHash.includes(task.moduleId.toLowerCase())))
+    );
+
+    // If user is already viewing this module, suppress redundant actionable toast ("Mở ngay")
+    if (!isCurrentPage) {
+      showActionableToast(`${task.moduleTitle}: "${task.title}" đã hoàn tất`, {
+        type: 'success',
+        silent: true,
+        actionText: 'Mở ngay',
+        onAction: () => {
+          if (task.route) {
+            window.location.hash = task.route;
+          }
         }
-      }
-    });
+      });
+    }
 
     const moduleName = task.moduleTitle || 'DuyDev Studio';
     const targetUrl = task.route ? `${window.location.origin}/#${task.route.replace(/^#/, '')}` : window.location.href;
@@ -331,6 +346,19 @@ class TaskCoordinator {
    */
   createTask(id, taskData = {}) {
     if (!id || !taskData) return;
+
+    // Anti-spam & zombie cleanup: supersede and prune any older running task from the same module/scope
+    const targetModule = taskData.moduleId || 'media';
+    const targetType = taskData.type || null;
+    for (const [existingId, existingTask] of this.directTasks.entries()) {
+      if (existingId !== id && existingTask.status === 'running') {
+        if (existingTask.moduleId === targetModule || (targetType && existingTask.type === targetType)) {
+          this.directTasks.delete(existingId);
+          this.lastStatuses.delete(existingId);
+        }
+      }
+    }
+
     this.directTasks.set(id, {
       id,
       moduleId: taskData.moduleId || 'media',
@@ -362,7 +390,7 @@ class TaskCoordinator {
           this.directTasks.delete(id);
           this.syncTasks(true);
         }
-      }, 5000);
+      }, 2000);
     }
   }
 

@@ -322,6 +322,18 @@ html.dark .task-micro-dock {
   }
 }
 
+/* Floating Toast Notification Layer - Non-colliding above Task Dock & BottomNav */
+#ds-toast-container {
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  transition: bottom 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 640px) {
+  #ds-toast-container {
+    bottom: var(--toast-bottom-offset, 1.25rem) !important;
+  }
+}
+
 .glass-panel-contained {
   background: var(--glass-card, rgba(255, 255, 255, 0.96));
   border: 1px solid rgba(0, 0, 0, 0.08);

@@ -430,6 +430,10 @@ export class SlideshareWorkspace {
       if (this.abortController) {
         this.abortController.abort();
       }
+      if (this.activeResolveTaskId) {
+        taskCoordinator.removeTask(this.activeResolveTaskId);
+        this.activeResolveTaskId = null;
+      }
     }
 
     this.lastResolvedUrl = cleanUrl;
@@ -453,9 +457,13 @@ export class SlideshareWorkspace {
     }
 
     const taskId = `ss_${Date.now()}`;
+    this.activeResolveTaskId = taskId;
     taskCoordinator.createTask(taskId, {
+      moduleId: 'slideshare-downloader',
+      moduleTitle: 'SlideShare',
       title: 'Phân tích SlideShare',
       type: 'document-resolve',
+      route: '#tool/slideshare-downloader',
       progress: 25
     });
 
@@ -469,6 +477,7 @@ export class SlideshareWorkspace {
       this.savedPptxDrivePath = null;
       this.savedPptxFileName = null;
       taskCoordinator.updateTask(taskId, { status: 'completed', progress: 100 });
+      this.activeResolveTaskId = null;
       soundEngine?.play?.('success');
 
       // Add presentation to history immediately upon get (not saved to Drive until user explicitly clicks Save)
@@ -501,10 +510,17 @@ export class SlideshareWorkspace {
       this.renderResultArea();
       this.renderHistory();
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError') {
+        if (this.activeResolveTaskId) {
+          taskCoordinator.removeTask(this.activeResolveTaskId);
+          this.activeResolveTaskId = null;
+        }
+        return;
+      }
       this.loading = false;
       this.error = err.message || 'Không thể phân tích tài liệu SlideShare';
       taskCoordinator.updateTask(taskId, { status: 'failed', progress: 100 });
+      this.activeResolveTaskId = null;
       soundEngine?.play?.('error');
       this.renderResultArea();
     } finally {

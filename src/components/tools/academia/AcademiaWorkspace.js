@@ -285,8 +285,11 @@ export class AcademiaWorkspace {
 
     const taskId = `ac_${Date.now()}`;
     taskCoordinator.createTask(taskId, {
+      moduleId: 'academia-downloader',
+      moduleTitle: 'Academia',
       title: 'Phân tích tài liệu Academia',
       type: 'document-resolve',
+      route: '#tool/academia-downloader',
       progress: 25
     });
 
@@ -299,7 +302,10 @@ export class AcademiaWorkspace {
       soundEngine?.play?.('success');
       this.renderResultArea();
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError') {
+        taskCoordinator.removeTask(taskId);
+        return;
+      }
       this.loading = false;
       this.error = err.message || 'Không thể phân tích tài liệu Academia.edu';
       taskCoordinator.updateTask(taskId, { status: 'failed', progress: 100 });

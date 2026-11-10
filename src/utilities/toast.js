@@ -6,14 +6,18 @@
 
 import { soundEngine } from './soundEngine.js';
 
-const MAX_ACTIVE_TOASTS = 3;
+const MAX_ACTIVE_TOASTS = 2;
 const DEFAULT_DURATION = 2500;
 
-/** @type {Array<{ id: string, message: string, type: string, element: HTMLElement, textSpan: HTMLElement | null, count: number, timeoutId: any, dismiss: (fast?: boolean) => void }>} */
+let lastToastTime = 0;
+let lastToastMessage = '';
+
+/** @type {Array<{ id: string, message: string, type: string, isActionable?: boolean, element: HTMLElement, textSpan: HTMLElement | null, count: number, timeoutId: any, dismiss: (fast?: boolean) => void }>} */
 const activeToasts = [];
 
 /**
  * Returns the toast container element, creating it if necessary.
+ * Dynamically offsets above GlobalTaskDock to prevent visual collisions.
  * @returns {HTMLElement | null}
  */
 function getToastContainer() {
@@ -22,7 +26,8 @@ function getToastContainer() {
   if (!container) {
     container = document.createElement('div');
     container.id = 'ds-toast-container';
-    container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0 max-h-[min(50vh,320px)] overflow-hidden';
+    container.className = 'fixed z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0 max-h-[min(50vh,320px)] overflow-hidden transition-all duration-300 ease-out right-0 sm:right-5';
+    container.style.bottom = 'var(--toast-bottom-offset, calc(76px + env(safe-area-inset-bottom, 0px)))';
     document.body.appendChild(container);
   }
   return container;
@@ -112,17 +117,14 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION, o
   const cleanMessage = String(message || '').trim();
   if (!cleanMessage) return;
 
-  if (!options?.silent) {
-    if (type === 'error') {
-      soundEngine.playError();
-    } else if (type === 'warning') {
-      soundEngine.playWarning();
-    } else if (type === 'delete' || type === 'trash') {
-      soundEngine.playDelete();
-    } else if (type === 'deleteAll' || type === 'clearAll') {
-      soundEngine.playDeleteAll();
-    } else {
-      soundEngine.playNotification();
+  const now = Date.now();
+  // Anti-spam debounce: ignore identical rapid calls within 300ms
+  if (cleanMessage === lastToastMessage && now - lastToastTime < 300) {
+    const existingFast = activeToasts.find((t) => t.message === cleanMessage && t.type === type);
+    if (existingFast) {
+      clearTimeout(existingFast.timeoutId);
+      existingFast.timeoutId = setTimeout(() => existingFast.dismiss(), duration);
+      return;
     }
   }
 
@@ -147,10 +149,30 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION, o
     setTimeout(() => existing.element?.classList.remove('scale-102'), 150);
 
     existing.timeoutId = setTimeout(() => existing.dismiss(), duration);
+    lastToastTime = now;
+    lastToastMessage = cleanMessage;
     return;
   }
 
-  // 2. FIFO Capacity Enforcement
+  // Play audio strictly for brand-new toasts (not spam replays)
+  if (!options?.silent) {
+    if (type === 'error') {
+      soundEngine.playError();
+    } else if (type === 'warning') {
+      soundEngine.playWarning();
+    } else if (type === 'delete' || type === 'trash') {
+      soundEngine.playDelete();
+    } else if (type === 'deleteAll' || type === 'clearAll') {
+      soundEngine.playDeleteAll();
+    } else {
+      soundEngine.playNotification();
+    }
+  }
+
+  lastToastTime = now;
+  lastToastMessage = cleanMessage;
+
+  // 2. FIFO Capacity Enforcement (strict MAX_ACTIVE_TOASTS = 2)
   evictOldestIfFull();
 
   // 3. Create new Toast DOM element
@@ -199,35 +221,55 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION, o
 }
 
 /**
- * Actionable Toast with an interactive button (e.g., "Mở ngay")
+ * Actionable Toast with an interactive button (e.g., "Mở ngay").
+ * Guarantees zero stacking clutter by enforcing max 1 actionable toast and strict deduplication.
  * @param {string} message
  * @param {Object} [options]
  * @param {'info'|'success'|'error'|'warning'} [options.type='success']
  * @param {string} [options.actionText='Mở ngay']
  * @param {() => void} [options.onAction]
- * @param {number} [options.duration=6000]
+ * @param {number} [options.duration=5000]
  */
-export function showActionableToast(message, { type = 'success', actionText = 'Mở ngay', onAction, duration = 6000, silent = false } = {}) {
+export function showActionableToast(message, { type = 'success', actionText = 'Mở ngay', onAction, duration = 5000, silent = false } = {}) {
   const container = getToastContainer();
   if (!container) return;
 
   const cleanMessage = String(message || '').trim();
   if (!cleanMessage) return;
 
+  const now = Date.now();
+
+  // Deduplication & Anti-Spam: check if matching or any actionable toast already exists
+  const existingActionable = activeToasts.find((t) => t.isActionable || t.message === cleanMessage);
+  if (existingActionable) {
+    if (existingActionable.message === cleanMessage) {
+      // Refresh timer and pulse gently
+      clearTimeout(existingActionable.timeoutId);
+      existingActionable.element.classList.remove('scale-102');
+      void existingActionable.element.offsetWidth;
+      existingActionable.element.classList.add('scale-102');
+      setTimeout(() => existingActionable.element?.classList.remove('scale-102'), 150);
+      existingActionable.timeoutId = setTimeout(() => existingActionable.dismiss(), duration);
+      return;
+    }
+    // If a different actionable toast is already open, dismiss it immediately (never pile actionable toasts!)
+    existingActionable.dismiss(true);
+  }
+
   if (!silent) {
     if (type === 'error') {
       soundEngine.playError();
     } else if (type === 'warning') {
       soundEngine.playWarning();
-    } else if (type === 'delete' || type === 'trash') {
-      soundEngine.playDelete();
-    } else if (type === 'deleteAll' || type === 'clearAll') {
-      soundEngine.playDeleteAll();
     } else {
       soundEngine.playNotification();
     }
   }
 
+  lastToastTime = now;
+  lastToastMessage = cleanMessage;
+
+  // FIFO Capacity Enforcement
   evictOldestIfFull();
 
   const toast = document.createElement('div');
@@ -240,16 +282,17 @@ export function showActionableToast(message, { type = 'success', actionText = 'M
       <span class="truncate text-zinc-100 font-medium">${cleanMessage}</span>
     </div>
     <div class="flex items-center gap-2 shrink-0">
-      <button type="button" class="btn-toast-action px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition cursor-pointer">
+      <button type="button" class="btn-toast-action px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition cursor-pointer shadow-xs active:scale-95">
         ${actionText}
       </button>
-      <button type="button" class="btn-toast-dismiss p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition cursor-pointer">
+      <button type="button" class="btn-toast-dismiss p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition cursor-pointer" title="Đóng">
         <i data-lucide="x" class="w-3.5 h-3.5"></i>
       </button>
     </div>
   `;
 
   const toastRecord = createToastRecord(toast, cleanMessage, type);
+  toastRecord.isActionable = true;
 
   const actionBtn = typeof toast.querySelector === 'function' ? toast.querySelector('.btn-toast-action') : null;
   if (actionBtn) {

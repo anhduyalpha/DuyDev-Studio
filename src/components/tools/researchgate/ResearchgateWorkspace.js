@@ -285,8 +285,11 @@ export class ResearchgateWorkspace {
 
     const taskId = `rg_${Date.now()}`;
     taskCoordinator.createTask(taskId, {
+      moduleId: 'researchgate-downloader',
+      moduleTitle: 'ResearchGate',
       title: 'Phân tích tài liệu ResearchGate',
       type: 'document-resolve',
+      route: '#tool/researchgate-downloader',
       progress: 25
     });
 
@@ -299,7 +302,10 @@ export class ResearchgateWorkspace {
       soundEngine?.play?.('success');
       this.renderResultArea();
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError') {
+        taskCoordinator.removeTask(taskId);
+        return;
+      }
       this.loading = false;
       this.error = err.message || 'Không thể phân tích tài liệu ResearchGate';
       taskCoordinator.updateTask(taskId, { status: 'failed', progress: 100 });
