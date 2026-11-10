@@ -6,7 +6,7 @@
 
 import { soundEngine } from './soundEngine.js';
 
-const MAX_ACTIVE_TOASTS = 2;
+const MAX_ACTIVE_TOASTS = 3;
 const DEFAULT_DURATION = 2500;
 
 let lastToastTime = 0;

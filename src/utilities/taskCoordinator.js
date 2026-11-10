@@ -310,7 +310,9 @@ class TaskCoordinator {
     }
 
     const moduleName = task.moduleTitle || 'DuyDev Studio';
-    const targetUrl = task.route ? `${window.location.origin}/#${task.route.replace(/^#/, '')}` : window.location.href;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const href = typeof window !== 'undefined' ? window.location.href : '';
+    const targetUrl = task.route ? `${origin}/#${task.route.replace(/^#/, '')}` : href;
     notifyJobComplete(
       `${moduleName} • Hoàn tất`,
       `"${task.title}" đã hoàn tất! Chạm để xem kết quả.`,
@@ -328,7 +330,9 @@ class TaskCoordinator {
   notifyFailure(task) {
     soundEngine.playError();
     const moduleName = task.moduleTitle || 'DuyDev Studio';
-    const targetUrl = task.route ? `${window.location.origin}/#${task.route.replace(/^#/, '')}` : window.location.href;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const href = typeof window !== 'undefined' ? window.location.href : '';
+    const targetUrl = task.route ? `${origin}/#${task.route.replace(/^#/, '')}` : href;
     notifyJobFailed(
       `${moduleName} • Thất bại`,
       `"${task.title}" gặp sự cố khi xử lý: ${task.stage || 'Vui lòng thử lại.'}`,
