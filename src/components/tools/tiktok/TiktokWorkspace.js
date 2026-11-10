@@ -13,6 +13,58 @@ import { StorageService } from '../../../services/storageService.js';
 import { ViewerConnector } from '../../common/viewer/FileViewerConnector.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { readText } from '../../../utilities/clipboard.js';
+import {
+  renderMediaHistorySection,
+  attachMediaHistoryListeners,
+  setMediaHistoryExpanded
+} from '../common/MediaHistorySection.js';
+import { storage } from '../../../utilities/storage.js';
+
+function migrateLegacyTiktokHistory() {
+  try {
+    const keys = ['ds_tiktok_history_v1', 'tiktok_download_history', 'tiktok_history'];
+    const currentToolItems = storage.getToolHistory('tiktok-downloader') || [];
+    const existingKeys = new Set(
+      currentToolItems.map((t) => String(t.id).replace(/^tiktok-/, '')).concat(currentToolItems.map((t) => t.originalUrl))
+    );
+
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const items = JSON.parse(raw);
+      if (!Array.isArray(items)) continue;
+
+      for (const item of items) {
+        const itemId = String(item.id || item.url || Date.now());
+        if (existingKeys.has(itemId) || (item.url && existingKeys.has(item.url))) {
+          continue;
+        }
+
+        storage.recordCompletedJob({
+          id: `tiktok-${item.id || Date.now()}`,
+          toolId: 'tiktok-downloader',
+          toolTitle: 'TikTok Downloader',
+          tool: 'TikTok Downloader',
+          fileName: item.title || (item.isSlideshow ? 'TikTok Album' : 'TikTok Video'),
+          title: item.title,
+          author: item.author,
+          cover: item.cover,
+          thumbnail: item.cover,
+          duration: item.duration,
+          downloadUrl: item.url,
+          originalUrl: item.url,
+          quality: item.isSlideshow ? `${item.slideCount || 0} Ảnh` : 'HD Video',
+          mediaType: item.isSlideshow ? 'carousel' : 'video',
+          driveRelPath: item.driveRelPath
+        });
+        existingKeys.add(itemId);
+        if (item.url) existingKeys.add(item.url);
+      }
+    }
+  } catch (err) {
+    console.warn('[TikTok] Legacy history migration skipped:', err);
+  }
+}
 
 function formatCompactNumber(num) {
   if (!num || isNaN(num)) return '0';
@@ -166,9 +218,16 @@ export function renderTiktokWorkspace() {
         ${videoData ? renderResultCard(videoData, isSavingDrive, savedDriveResult, existingInDrive, isForceResave) : ''}
       </div>
 
-      <!-- Recent History Container (Surgically Updated) -->
+      <!-- Isolated Media History Section -->
       <div id="tiktokHistoryContainer">
-        ${recentHistory && recentHistory.length > 0 ? renderRecentHistoryCard(recentHistory) : ''}
+        ${renderMediaHistorySection({
+          toolId: 'tiktok-downloader',
+          title: 'Lịch Sử Tải Xuống',
+          activeTab: 'history',
+          fallbackIcon: 'video',
+          accentColor: '#EE1D52',
+          driveFolderPath: '/tiktok'
+        })}
       </div>
     </div>
   `.trim();
@@ -554,101 +613,7 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
   `.trim();
 }
 
-function renderRecentHistoryCard(history) {
-  return `
-    <div class="p-4 sm:p-5 rounded-2xl bg-white/90 dark:bg-[#121215]/90 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm backdrop-blur-xl space-y-3 animate-fadeIn">
-      <div class="flex items-center justify-between">
-        <h4 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-          <i data-lucide="clock" class="w-3.5 h-3.5 text-zinc-400"></i>
-          Lịch Sử Tải Xuống
-        </h4>
-        <button
-          id="btnClearTiktokHistory"
-          type="button"
-          class="text-[11px] text-zinc-400 hover:text-red-500 transition cursor-pointer"
-        >
-          Xóa lịch sử
-        </button>
-      </div>
 
-      <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-        ${history.map((it) => {
-          const hasDrive = Boolean(it.driveRelPath);
-          const driveDownloadUrl = hasDrive ? StorageService.getDownloadUrl(it.driveRelPath, false) : '';
-          const isSlide = Boolean(it.isSlideshow);
-
-          return `
-            <div class="py-2.5 flex items-center justify-between gap-3 group">
-              <div class="flex items-center gap-3 min-w-0 flex-1">
-                ${it.cover ? `
-                  <img src="${it.cover}" alt="cover" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0" loading="lazy" decoding="async" onerror="this.style.display='none'"/>
-                ` : `
-                  <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="${isSlide ? 'images' : 'video'}" class="w-4 h-4"></i>
-                  </div>
-                `}
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">${escapeHtml(it.title || (isSlide ? 'TikTok Album' : 'TikTok Video'))}</p>
-                    ${isSlide ? `
-                      <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
-                        <i data-lucide="images" class="w-2.5 h-2.5"></i> Album
-                      </span>
-                    ` : ''}
-                    ${hasDrive ? `
-                      <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
-                        <i data-lucide="check" class="w-2.5 h-2.5"></i> Đã lưu Drive
-                      </span>
-                    ` : ''}
-                  </div>
-                  <p class="text-[11px] text-zinc-400 truncate mt-0.5">@${escapeHtml(it.author || 'tiktok')} • ${isSlide ? `${it.slideCount || 'Album'} Ảnh` : formatDuration(it.duration)}</p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-1 shrink-0">
-                ${hasDrive ? `
-                  <button
-                    type="button"
-                    data-preview-drive-path="${escapeHtml(it.driveRelPath)}"
-                    data-item-title="${escapeHtml(it.title || (isSlide ? 'album.zip' : 'video.mp4'))}"
-                    class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer"
-                    title="${isSlide ? 'Xem tệp trong Drive' : 'Xem trước video'}"
-                  >
-                    <i data-lucide="${isSlide ? 'archive' : 'eye'}" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <a
-                    href="${driveDownloadUrl}"
-                    download
-                    class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer flex items-center justify-center"
-                    title="Tải từ Studio Drive (Không bao giờ hết hạn)"
-                  >
-                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                  </a>
-                  <a
-                    href="#storage?path=/tiktok"
-                    class="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs transition cursor-pointer flex items-center justify-center"
-                    title="Mở trong Studio Drive"
-                  >
-                    <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
-                  </a>
-                ` : ''}
-
-                <button
-                  type="button"
-                  data-re-resolve-url="${escapeHtml(it.url)}"
-                  class="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-600 hover:text-white text-zinc-600 dark:text-zinc-300 text-xs font-medium transition cursor-pointer shrink-0"
-                  title="Lấy lại link TikTok"
-                >
-                  Mở lại
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `.trim();
-}
 
 /**
  * Lazily ensure JSZip library is available in the window context
@@ -778,6 +743,9 @@ export function attachTiktokWorkspaceListeners() {
   const historyContainer = document.getElementById('tiktokHistoryContainer');
   const batchBanner = document.getElementById('tiktokBatchProgressBanner');
   const btnCancelBatch = document.getElementById('btnCancelTiktokBatch');
+
+  let activeHistoryTab = 'history';
+  let historyCleanup = null;
 
   function syncInputButtons(val) {
     const hasValue = Boolean(val && val.length > 0);
@@ -1117,10 +1085,36 @@ export function attachTiktokWorkspaceListeners() {
     if (window.lucide?.createIcons) window.lucide.createIcons();
   }
 
+  function renderHistory() {
+    if (!historyContainer) return;
+    historyContainer.innerHTML = renderMediaHistorySection({
+      toolId: 'tiktok-downloader',
+      title: 'Lịch Sử Tải Xuống',
+      activeTab: activeHistoryTab,
+      fallbackIcon: 'video',
+      accentColor: '#EE1D52',
+      driveFolderPath: '/tiktok'
+    });
+    attachHistoryListeners();
+  }
+
   function attachHistoryListeners() {
-    document.querySelectorAll('[data-re-resolve-url]').forEach((btn) => {
-      btn.onclick = () => {
-        const targetUrl = btn.getAttribute('data-re-resolve-url');
+    if (!historyContainer) return;
+
+    if (historyCleanup) {
+      historyCleanup();
+      historyCleanup = null;
+    }
+
+    historyCleanup = attachMediaHistoryListeners({
+      container: historyContainer,
+      toolId: 'tiktok-downloader',
+      accentColor: '#EE1D52',
+      onTabChange: (tab) => {
+        activeHistoryTab = tab;
+        renderHistory();
+      },
+      onReResolve: (targetUrl) => {
         if (targetUrl) {
           if (input) {
             input.value = targetUrl;
@@ -1130,29 +1124,29 @@ export function attachTiktokWorkspaceListeners() {
           tiktokManager.resolve(targetUrl);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      };
-    });
-
-    document.querySelectorAll('[data-preview-drive-path]').forEach((btn) => {
-      btn.onclick = () => {
-        const path = btn.getAttribute('data-preview-drive-path');
-        const title = btn.getAttribute('data-item-title') || 'video.mp4';
-        if (path) {
-          ViewerConnector.preview({ path, name: title });
+      },
+      onSaveDrive: async (item) => {
+        try {
+          showToast('Đang lưu vào Studio Drive...', 'info', 2000);
+          const res = await tiktokApi.saveToDrive(item.downloadUrl || item.originalUrl, false);
+          if (res.success && res.item?.relPath) {
+            tiktokManager.updateHistoryDrivePath(item.id, res.item.relPath);
+            showToast('Đã lưu thành công vào Studio Drive!', 'success');
+          } else {
+            showToast(res.message || 'Không thể lưu vào Drive', 'error');
+          }
+        } catch (err) {
+          showToast(err.message || 'Lỗi khi lưu vào Drive', 'error');
         }
-      };
+      },
+      onHistoryChange: () => {
+        renderHistory();
+      }
     });
 
-    const btnClearHistory = document.getElementById('btnClearTiktokHistory');
-    if (btnClearHistory) {
-      btnClearHistory.onclick = () => {
-        soundEngine.playDeleteAll();
-        tiktokManager.clearHistory();
-        showToast('Đã xóa lịch sử gần đây', 'deleteAll', 2500, { silent: true });
-      };
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: historyContainer });
     }
-
-    if (window.lucide?.createIcons) window.lucide.createIcons();
   }
 
   // Subscribe to state changes for SURGICAL in-place updates (Zero full-DOM destruction)
@@ -1230,16 +1224,18 @@ export function attachTiktokWorkspaceListeners() {
 
     // 4. History Container
     if (historyContainer) {
-      historyContainer.innerHTML = state.recentHistory?.length > 0 ? renderRecentHistoryCard(state.recentHistory) : '';
-      attachHistoryListeners();
+      renderHistory();
     }
 
     if (window.lucide?.createIcons) window.lucide.createIcons();
   });
 
+  // Migrate legacy localStorage history to storage.js if needed
+  migrateLegacyTiktokHistory();
+
   // Attach listeners to current results and history
   attachResultCardListeners();
-  attachHistoryListeners();
+  renderHistory();
 
   // Cancel Batch Button
   if (btnCancelBatch) {
@@ -1415,17 +1411,17 @@ export function attachTiktokWorkspaceListeners() {
     if (!e.detail?.toolId || e.detail.toolId === 'tiktok-downloader' || e.detail.toolId === 'tiktok') {
       const history = tiktokManager.loadHistory();
       tiktokManager.state.recentHistory = history;
-      if (historyContainer) {
-        historyContainer.innerHTML = history.length > 0 ? renderRecentHistoryCard(history) : '';
-        attachHistoryListeners();
-        if (window.lucide?.createIcons) window.lucide.createIcons();
-      }
+      renderHistory();
     }
   }
   window.addEventListener('dd:history-updated', handleGlobalHistoryUpdated);
 
   return () => {
     unsubscribe();
+    if (historyCleanup) {
+      historyCleanup();
+      historyCleanup = null;
+    }
     window.removeEventListener('ds:pending-autostart-ready', handlePendingAutoStart);
     window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
     const audio = document.getElementById('tiktokAudioPlayer');
