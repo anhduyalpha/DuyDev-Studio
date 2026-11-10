@@ -21,6 +21,11 @@ import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+];
 
 function resolvePythonBin(): string {
   if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
@@ -94,181 +99,260 @@ export class SlideShareService {
 
   static async resolvePresentation(rawUrl: string): Promise<SlideShareResolveResult> {
     const url = this.extractUrl(rawUrl);
+    const MAX_RETRIES = 3;
+    let lastError: any = null;
 
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': DEFAULT_UA,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9,vi;q=0.8'
-        },
-        signal: AbortSignal.timeout(15000)
-      });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const ua = USER_AGENTS[(attempt - 1) % USER_AGENTS.length];
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': ua,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,vi;q=0.8',
+            'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"'
+          },
+          signal: AbortSignal.timeout(15000)
+        });
 
-      if (!res.ok) {
-        throw new BadRequestError(`Không thể truy cập SlideShare (HTTP ${res.status}). Bài viết có thể bị xóa hoặc riêng tư.`);
-      }
-
-      const html = await res.text();
-
-      // 1. Try parsing Next.js __NEXT_DATA__ payload (standard for modern SlideShare)
-      let title = '';
-      let author = 'SlideShare Author';
-      let description = '';
-      let coverUrl = '';
-      const slideImages: string[] = [];
-      let totalSlides = 0;
-
-      const nextDataMatch = html.match(/<script\s+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
-      if (nextDataMatch) {
-        try {
-          const nextJson = JSON.parse(nextDataMatch[1]);
-          const slideshow = nextJson.props?.pageProps?.slideshow;
-          if (slideshow) {
-            if (slideshow.title) title = String(slideshow.title).trim();
-            if (slideshow.user?.name || slideshow.user?.login || slideshow.username) {
-              author = String(slideshow.user?.name || slideshow.user?.login || slideshow.username).trim();
-            }
-            if (slideshow.description) description = String(slideshow.description).trim();
-            totalSlides = Number(slideshow.totalSlides) || 0;
-
-            const slides = slideshow.slides;
-            if (slides && slides.host && slides.imageLocation && totalSlides > 0) {
-              const sizes: Array<{ quality?: number; width?: number }> = Array.isArray(slides.imageSizes) ? slides.imageSizes : [];
-              const bestSize = sizes.find(s => s.width === 2048) || sizes.find(s => s.width === 1024) || sizes[sizes.length - 1];
-              const quality = bestSize?.quality || 75;
-              const width = bestSize?.width || 2048;
-              const slideSlug = slides.title || 'slide';
-
-              for (let i = 1; i <= totalSlides; i++) {
-                slideImages.push(`${slides.host}/${slides.imageLocation}/${quality}/${slideSlug}-${i}-${width}.jpg`);
-              }
-
-              if (slideImages.length > 0) {
-                coverUrl = slideImages[0];
-              }
-            }
+        if (!res.ok) {
+          if (res.status === 404 || res.status === 410) {
+            throw new BadRequestError(`Tài liệu SlideShare không tồn tại hoặc đã bị xóa (HTTP ${res.status}).`);
           }
-        } catch (e) {
-          logger.warn({ err: e }, '[SlideShareService] Failed to parse __NEXT_DATA__ JSON payload');
-        }
-      }
-
-      // 2. Fallbacks for Title, Author, Description, Cover if not found in __NEXT_DATA__
-      if (!title) {
-        const titleOg = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-        const titleTag = html.match(/<title>([^<]+)<\/title>/i);
-        if (titleOg && titleOg[1]) title = titleOg[1].trim();
-        else if (titleTag && titleTag[1]) title = titleTag[1].replace(/\s*-\s*SlideShare.*/i, '').trim();
-        if (!title) title = 'SlideShare Presentation';
-      }
-
-      if (author === 'SlideShare Author') {
-        const authorMatch = html.match(/<span[^>]*class=["'][^"']*author[^"']*["'][^>]*>([^<]+)<\/span>/i) ||
-                            html.match(/"author":\s*\{[^}]*"name":\s*"([^"]+)"/i) ||
-                            html.match(/by\s+<a[^>]*>([^<]+)<\/a>/i);
-        if (authorMatch && authorMatch[1]) {
-          author = authorMatch[1].trim();
-        }
-      }
-
-      if (!description) {
-        const descOg = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
-                       html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-        if (descOg && descOg[1]) description = descOg[1].trim();
-      }
-
-      if (!coverUrl) {
-        const imageOg = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
-        if (imageOg && imageOg[1]) coverUrl = imageOg[1].trim();
-      }
-
-      // 3. Fallback regex for legacy static HTML slide images
-      if (slideImages.length === 0) {
-        const imgRegex = /https:\/\/image\.slidesharecdn\.com\/[a-zA-Z0-9_\-\.\/]+-slide-\d+-[a-zA-Z0-9_\.]+/g;
-        const matches = html.match(imgRegex);
-        if (matches) {
-          const unique = Array.from(new Set(matches));
-          unique.sort((a, b) => {
-            const idxA = parseInt(a.match(/slide-(\d+)/)?.[1] || '0', 10);
-            const idxB = parseInt(b.match(/slide-(\d+)/)?.[1] || '0', 10);
-            return idxA - idxB;
-          });
-          slideImages.push(...unique);
-        }
-      }
-
-      // 4. Check for Anti-bot / Cloudflare challenges & Fallback to oEmbed API
-      const isChallengeTitle = /^(client challenge|just a moment|attention required|access denied|security check)/i.test(title);
-      if (isChallengeTitle || slideImages.length === 0) {
-        try {
-          const oembedUrl = `https://www.slideshare.net/api/oembed/2?url=${encodeURIComponent(url)}&format=json`;
-          const oembedRes = await fetch(oembedUrl, {
-            headers: { 'User-Agent': DEFAULT_UA },
-            signal: AbortSignal.timeout(8000)
-          });
-          if (oembedRes.ok) {
-            const oembedJson: any = await oembedRes.json();
-            if (oembedJson.title && !/^(client challenge|just a moment)/i.test(oembedJson.title)) {
-              title = String(oembedJson.title).trim();
-            }
-            if (oembedJson.author_name) {
-              author = String(oembedJson.author_name).trim();
-            }
-            if (oembedJson.thumbnail) {
-              coverUrl = String(oembedJson.thumbnail).trim();
-            }
-            if (oembedJson.total_slides && Number(oembedJson.total_slides) > 0) {
-              totalSlides = Number(oembedJson.total_slides);
-            }
-            if (oembedJson.slide_image_baseurl && totalSlides > 0) {
-              const base = String(oembedJson.slide_image_baseurl).trim();
-              const suffix = String(oembedJson.slide_image_baseurl_suffix || '-1024.jpg').trim();
-              slideImages.length = 0;
-              for (let i = 1; i <= totalSlides; i++) {
-                slideImages.push(`${base}${i}${suffix}`);
-              }
-              if (!coverUrl && slideImages.length > 0) coverUrl = slideImages[0];
-            }
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+            continue;
           }
-        } catch (oerr) {
-          logger.warn({ err: oerr }, '[SlideShareService] oEmbed fallback failed');
+          throw new BadRequestError(`Không thể truy cập SlideShare (HTTP ${res.status}). Bài viết có thể bị xóa hoặc riêng tư.`);
+        }
+
+        const html = await res.text();
+
+        let title = '';
+        let author = 'SlideShare Author';
+        let description = '';
+        let coverUrl = '';
+        const slideImages: string[] = [];
+        let totalSlides = 0;
+
+        // 1. Try parsing Next.js Pages Router (__NEXT_DATA__)
+        const nextDataMatch = html.match(/<script\s+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+        if (nextDataMatch) {
+          try {
+            const nextJson = JSON.parse(nextDataMatch[1]);
+            const slideshow = nextJson.props?.pageProps?.slideshow;
+            if (slideshow) {
+              if (slideshow.title) title = String(slideshow.title).trim();
+              if (slideshow.user?.name || slideshow.user?.login || slideshow.username) {
+                author = String(slideshow.user?.name || slideshow.user?.login || slideshow.username).trim();
+              }
+              if (slideshow.description) description = String(slideshow.description).trim();
+              totalSlides = Number(slideshow.totalSlides) || 0;
+
+              const slides = slideshow.slides;
+              if (slides && slides.host && slides.imageLocation && totalSlides > 0) {
+                const sizes: Array<{ quality?: number; width?: number }> = Array.isArray(slides.imageSizes) ? slides.imageSizes : [];
+                const bestSize = sizes.find((s) => s.width === 2048) || sizes.find((s) => s.width === 1024) || sizes[sizes.length - 1];
+                const quality = bestSize?.quality || 75;
+                const width = bestSize?.width || 2048;
+                const slideSlug = slides.title || 'slide';
+
+                for (let i = 1; i <= totalSlides; i++) {
+                  slideImages.push(`${slides.host}/${slides.imageLocation}/${quality}/${slideSlug}-${i}-${width}.jpg`);
+                }
+
+                if (slideImages.length > 0) {
+                  coverUrl = slideImages[0];
+                }
+              }
+            }
+          } catch (e) {
+            logger.warn({ err: e }, '[SlideShareService] Failed to parse __NEXT_DATA__ JSON payload');
+          }
+        }
+
+        // 2. Try parsing Next.js App Router (RSC Payload / Embedded JSON)
+        if (slideImages.length === 0) {
+          try {
+            const cleanHtml = html.replace(/\\"/g, '"');
+            const slidesMatch = cleanHtml.match(/"slides"\s*:\s*(\{"host"[\s\S]*?\]\s*\})/i) ||
+                                cleanHtml.match(/"slides"\s*:\s*(\{[^}]+\})/i);
+            const totalMatch = cleanHtml.match(/"totalSlides"\s*:\s*(\d+)/i);
+            const userMatch = cleanHtml.match(/"user"\s*:\s*\{[^}]*?"name"\s*:\s*"([^"]+)"/i) ||
+                              cleanHtml.match(/"user"\s*:\s*\{[^}]*?"login"\s*:\s*"([^"]+)"/i);
+            const titleMatch = cleanHtml.match(/"slideshow"[^}]*?"title"\s*:\s*"([^"]+)"/i);
+
+            if (totalMatch && Number(totalMatch[1]) > 0) {
+              totalSlides = Number(totalMatch[1]);
+            }
+            if (userMatch && userMatch[1]) {
+              author = userMatch[1].trim();
+            }
+            if (titleMatch && titleMatch[1]) {
+              title = titleMatch[1].trim();
+            }
+
+            if (slidesMatch && totalSlides > 0) {
+              const slides = JSON.parse(slidesMatch[1]);
+              if (slides.host && slides.imageLocation) {
+                const sizes: Array<{ quality?: number; width?: number }> = Array.isArray(slides.imageSizes) ? slides.imageSizes : [];
+                const bestSize = sizes.find((s) => s.width === 2048) || sizes.find((s) => s.width === 1024) || sizes[sizes.length - 1];
+                const quality = bestSize?.quality || 75;
+                const width = bestSize?.width || 2048;
+                const slideSlug = slides.title || 'slide';
+
+                for (let i = 1; i <= totalSlides; i++) {
+                  slideImages.push(`${slides.host}/${slides.imageLocation}/${quality}/${slideSlug}-${i}-${width}.jpg`);
+                }
+
+                if (slideImages.length > 0) {
+                  coverUrl = slideImages[0];
+                }
+              }
+            }
+          } catch (e) {
+            logger.warn({ err: e }, '[SlideShareService] Failed to parse App Router payload');
+          }
+        }
+
+        // 3. Fallbacks for Title, Author, Description, Cover if not found
+        if (!title) {
+          const titleOg = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+          const titleTag = html.match(/<title>([^<]+)<\/title>/i);
+          if (titleOg && titleOg[1]) title = titleOg[1].trim();
+          else if (titleTag && titleTag[1]) title = titleTag[1].replace(/\s*-\s*SlideShare.*/i, '').trim();
+          if (!title) title = 'SlideShare Presentation';
+        }
+
+        if (author === 'SlideShare Author') {
+          const authorMatch = html.match(/<span[^>]*class=["'][^"']*author[^"']*["'][^>]*>([^<]+)<\/span>/i) ||
+                              html.match(/"author":\s*\{[^}]*"name":\s*"([^"]+)"/i) ||
+                              html.match(/by\s+<a[^>]*>([^<]+)<\/a>/i);
+          if (authorMatch && authorMatch[1]) {
+            author = authorMatch[1].trim();
+          }
+        }
+
+        if (!description) {
+          const descOg = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i) ||
+                         html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+          if (descOg && descOg[1]) description = descOg[1].trim();
+        }
+
+        if (!coverUrl) {
+          const imageOg = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+          if (imageOg && imageOg[1]) coverUrl = imageOg[1].trim();
+        }
+
+        // 4. Enhanced Fallback regex for all slide images on image.slidesharecdn.com
+        if (slideImages.length === 0) {
+          const imgRegex = /https:\/\/image\.slidesharecdn\.com\/[a-zA-Z0-9_\-\.\/]+(?:-slide-|-)\d+-(?:2048|1024|638|320|[a-zA-Z0-9_]+)\.(?:jpg|png|webp)/gi;
+          const matches = html.match(imgRegex);
+          if (matches) {
+            const unique = Array.from(new Set(matches));
+            unique.sort((a, b) => {
+              const idxA = parseInt(a.match(/(?:slide-|-)(\d+)-/)?.[1] || '0', 10);
+              const idxB = parseInt(b.match(/(?:slide-|-)(\d+)-/)?.[1] || '0', 10);
+              return idxA - idxB;
+            });
+            slideImages.push(...unique);
+          }
+        }
+
+        // 5. Fallback to oEmbed API if challenge or no slides
+        const isChallengeTitle = /^(client challenge|just a moment|attention required|access denied|security check)/i.test(title);
+        if (isChallengeTitle || slideImages.length === 0) {
+          try {
+            const oembedUrl = `https://www.slideshare.net/api/oembed/2?url=${encodeURIComponent(url)}&format=json`;
+            const oembedRes = await fetch(oembedUrl, {
+              headers: { 'User-Agent': ua },
+              signal: AbortSignal.timeout(8000)
+            });
+            const cType = oembedRes.headers.get('content-type') || '';
+            if (oembedRes.ok && cType.includes('application/json')) {
+              const oembedJson: any = await oembedRes.json();
+              if (oembedJson.title && !/^(client challenge|just a moment)/i.test(oembedJson.title)) {
+                title = String(oembedJson.title).trim();
+              }
+              if (oembedJson.author_name) {
+                author = String(oembedJson.author_name).trim();
+              }
+              if (oembedJson.thumbnail) {
+                coverUrl = String(oembedJson.thumbnail).trim();
+              }
+              if (oembedJson.total_slides && Number(oembedJson.total_slides) > 0) {
+                totalSlides = Number(oembedJson.total_slides);
+              }
+              if (oembedJson.slide_image_baseurl && totalSlides > 0) {
+                const base = String(oembedJson.slide_image_baseurl).trim();
+                const suffix = String(oembedJson.slide_image_baseurl_suffix || '-1024.jpg').trim();
+                slideImages.length = 0;
+                for (let i = 1; i <= totalSlides; i++) {
+                  slideImages.push(`${base}${i}${suffix}`);
+                }
+                if (!coverUrl && slideImages.length > 0) coverUrl = slideImages[0];
+              }
+            }
+          } catch (oerr) {
+            logger.warn({ err: oerr }, '[SlideShareService] oEmbed fallback failed');
+          }
+        }
+
+        // Final fallback: use cover image if title is clean
+        if (slideImages.length === 0 && coverUrl && !/^(client challenge|just a moment)/i.test(title)) {
+          slideImages.push(coverUrl);
+        }
+
+        // Verification check for challenge / empty slides
+        if (/^(client challenge|just a moment|attention required|access denied|security check)/i.test(title) || slideImages.length === 0) {
+          if (attempt < MAX_RETRIES) {
+            logger.warn({ attempt, url }, '[SlideShareService] Transient extraction failure or challenge, retrying...');
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+            continue;
+          }
+          throw new BadRequestError('Không thể tải nội dung slide vào thời điểm này do máy chủ SlideShare tạm thời chặn kết nối. Vui lòng bấm "Thử lại" sau vài giây.');
+        }
+
+        if (!coverUrl && slideImages.length > 0) {
+          coverUrl = slideImages[0];
+        }
+
+        // Generate stable presentation ID
+        const idMatch = url.match(/\/([^\/?#]+)(?:\?|$)/);
+        const id = idMatch ? idMatch[1] : crypto.createHash('md5').update(url).digest('hex').slice(0, 12);
+
+        return {
+          id,
+          title,
+          author,
+          description,
+          coverUrl,
+          slideCount: Math.max(slideImages.length, totalSlides, 1),
+          slideImages,
+          originalUrl: url
+        };
+      } catch (err: any) {
+        lastError = err;
+        if (err instanceof BadRequestError) {
+          if (attempt < MAX_RETRIES && !err.message.includes('không tồn tại hoặc đã bị xóa')) {
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+            continue;
+          }
+          throw err;
+        }
+        logger.warn({ err, url, attempt }, '[SlideShareService] Attempt failed');
+        if (attempt < MAX_RETRIES) {
+          await new Promise((r) => setTimeout(r, 400 * attempt));
+          continue;
         }
       }
-
-      // Final Fallback: if no slides extracted at all, use cover image (only if title is not a challenge)
-      if (slideImages.length === 0 && coverUrl && !/^(client challenge|just a moment)/i.test(title)) {
-        slideImages.push(coverUrl);
-      }
-
-      // Strict Validation: reject bot/challenge responses so broken entries are never saved
-      if (/^(client challenge|just a moment|attention required|access denied|security check)/i.test(title) || slideImages.length === 0) {
-        throw new BadRequestError('Không thể lấy nội dung slide do SlideShare yêu cầu xác minh bảo mật hoặc liên kết không hợp lệ. Vui lòng thử lại sau.');
-      }
-
-      if (!coverUrl && slideImages.length > 0) {
-        coverUrl = slideImages[0];
-      }
-
-      // Generate stable presentation ID
-      const idMatch = url.match(/\/([^\/?#]+)(?:\?|$)/);
-      const id = idMatch ? idMatch[1] : crypto.createHash('md5').update(url).digest('hex').slice(0, 12);
-
-      return {
-        id,
-        title,
-        author,
-        description,
-        coverUrl,
-        slideCount: Math.max(slideImages.length, totalSlides, 1),
-        slideImages,
-        originalUrl: url
-      };
-    } catch (err: any) {
-      if (err instanceof BadRequestError) throw err;
-      logger.error({ err, url }, '[SlideShareService] Failed to resolve presentation');
-      throw new BadRequestError(`Lỗi phân tích SlideShare: ${err.message || 'Không xác định'}`);
     }
+
+    if (lastError instanceof BadRequestError) throw lastError;
+    logger.error({ err: lastError, url }, '[SlideShareService] Failed to resolve presentation after retries');
+    throw new BadRequestError(`Lỗi phân tích SlideShare: ${lastError?.message || 'Không xác định'}`);
   }
 
   static async saveToDrive(

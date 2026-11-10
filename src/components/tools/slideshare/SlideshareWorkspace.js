@@ -782,13 +782,29 @@ export class SlideshareWorkspace {
 
     if (this.error) {
       el.innerHTML = `
-        <div class="linear-card p-5 md:p-6 rounded-3xl border border-rose-500/20 bg-rose-500/[0.04] text-center space-y-3 animate-fadeIn">
+        <div class="linear-card p-5 md:p-6 rounded-3xl border border-rose-500/20 bg-rose-500/[0.04] text-center space-y-3.5 animate-fadeIn">
           <div class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500">
             <i data-lucide="alert-circle" class="w-5 h-5"></i>
           </div>
-          <div class="text-sm font-semibold text-rose-600 dark:text-rose-400">${escapeHtml(this.error)}</div>
+          <div class="text-sm font-semibold text-rose-600 dark:text-rose-400 max-w-md mx-auto leading-relaxed">${escapeHtml(this.error)}</div>
+          <div class="pt-1">
+            <button
+              type="button"
+              id="btnRetrySlideAnalysis"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition cursor-pointer"
+            >
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+              <span>Thử lại ngay</span>
+            </button>
+          </div>
         </div>
       `;
+      const btnRetry = el.querySelector('#btnRetrySlideAnalysis');
+      if (btnRetry) {
+        btnRetry.onclick = () => {
+          this.analyzeSlide();
+        };
+      }
       if (window.lucide) window.lucide.createIcons({ root: el });
       return;
     }
