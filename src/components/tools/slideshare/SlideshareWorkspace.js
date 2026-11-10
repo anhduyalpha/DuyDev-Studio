@@ -464,26 +464,17 @@ export class SlideshareWorkspace {
       const res = await slideshareApi.resolve(cleanUrl, { signal: this.abortController.signal });
       this.data = res;
       this.loading = false;
+      this.savedDrivePath = null;
+      this.savedFileName = null;
+      this.savedPptxDrivePath = null;
+      this.savedPptxFileName = null;
       taskCoordinator.updateTask(taskId, { status: 'completed', progress: 100 });
       soundEngine?.play?.('success');
 
-      // Check if already downloaded to Drive
-      try {
-        const dup = await slideshareApi.checkDuplicate({ id: res.id, url: cleanUrl });
-        if (dup?.exists) {
-          this.savedDrivePath = dup.drivePath;
-          this.savedFileName = dup.fileName;
-          this.savedPptxDrivePath = dup.pptxDrivePath || null;
-          this.savedPptxFileName = dup.pptxFileName || null;
-        }
-      } catch (_) {}
-
-      // Add presentation to history immediately upon get
+      // Add presentation to history immediately upon get (not saved to Drive until user explicitly clicks Save)
       const cleanTitle = (res.title || 'SlideShare Presentation').replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 80);
-      const pptxName = this.savedPptxFileName || `[SlideShare]_${cleanTitle}_${String(res.id).slice(-8)}.pptx`;
-      const pptxDl = this.savedPptxDrivePath
-        ? `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}`
-        : `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}&temp=1`;
+      const pptxName = `[SlideShare]_${cleanTitle}_${String(res.id).slice(-8)}.pptx`;
+      const pptxDl = `/api/v1/slideshare/download?file=${encodeURIComponent(pptxName)}&temp=1`;
       const coverImg = res.coverUrl || (res.slideImages && res.slideImages[0]) || '';
 
       await storage.addHistoryItem({
@@ -495,7 +486,7 @@ export class SlideshareWorkspace {
         fileSize: (res.slideCount || 1) * 150000,
         resultSize: (res.slideCount || 1) * 150000,
         mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        driveRelPath: this.savedPptxDrivePath || null,
+        driveRelPath: null,
         downloadUrl: pptxDl,
         thumbnail: coverImg,
         cover: coverImg,
