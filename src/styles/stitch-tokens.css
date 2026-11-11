@@ -43,8 +43,8 @@ html.dark {
   --border-active: rgba(255, 255, 255, 0.28);
 
   --text-primary: #F5F5F7;
-  --text-secondary: #A1A1A6;
-  --text-muted: #86868B;
+  --text-secondary: #B4B4BB;
+  --text-muted: #9898A0;
 
   --accent: #4F46E5;
   --accent-light: #6366F1;
@@ -457,6 +457,15 @@ html.dark .glass-search {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 120, 120, 0.35);
+}
+
+/* Hide Scrollbar Utility (Preserves touch/wheel scrolling without ugly bar) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Animated Moving Gradient Border for Quiz Result & Telemetry Cards */

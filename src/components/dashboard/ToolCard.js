@@ -97,11 +97,6 @@ export function renderToolCard(tool) {
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             ${tierBadgeHtml}
-            ${!tierConfig ? `
-              <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-              </div>
-            ` : ''}
           </div>
         </div>
 
@@ -114,17 +109,17 @@ export function renderToolCard(tool) {
             ${tierSubtitle.text}
           </p>
         ` : ''}
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           ${tool.description}
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           ${tool.specs && tool.specs.length > 0 ? tool.specs.map((spec, idx) => `
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums ${
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums ${
               idx === 0 
                 ? 'bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold' 
-                : 'bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]'
+                : 'bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]'
             }">
               ${spec}
             </span>

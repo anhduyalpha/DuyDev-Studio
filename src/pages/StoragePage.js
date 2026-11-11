@@ -382,13 +382,17 @@ function renderFolderTabs(currentPath) {
   const isYouTube = currentPath === '/youtube' || currentPath.startsWith('/youtube/') || currentPath === '/YouTube' || currentPath.startsWith('/YouTube/');
   const isTikTok = currentPath === '/tiktok' || currentPath.startsWith('/tiktok/');
   const isRoot = !isTikTok && !isYouTube;
+  const inactiveTabCls = 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10';
+  const rootTabCls = isRoot ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : inactiveTabCls;
+  const ytTabCls = isYouTube ? 'bg-red-600 text-white border-red-600 shadow-xs' : inactiveTabCls;
+  const ttTabCls = isTikTok ? 'bg-rose-600 text-white border-rose-600 shadow-xs' : inactiveTabCls;
 
   return `
     <div id="storageFolderTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
       <button 
         type="button" 
         data-storage-tab="/" 
-        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${isRoot ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10'}"
+        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${rootTabCls}"
       >
         <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
         <span>Thư mục gốc</span>
@@ -397,23 +401,23 @@ function renderFolderTabs(currentPath) {
       <button 
         type="button" 
         data-storage-tab="/youtube" 
-        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${isYouTube ? 'bg-red-600 text-white border-red-600 shadow-xs' : 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10'}"
+        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${ytTabCls}"
       >
         <svg class="w-3.5 h-3.5 fill-current ${isYouTube ? 'text-white' : 'text-red-500'}" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
         </svg>
         <span>YouTube</span>
-        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${isYouTube ? 'bg-white/20 text-white' : 'bg-red-500/10 text-red-500 border border-red-500/20'}">/youtube</span>
+        <span class="px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${isYouTube ? 'bg-white/20 text-white' : 'bg-red-500/10 text-red-500 border border-red-500/20'}">/youtube</span>
       </button>
 
       <button 
         type="button" 
         data-storage-tab="/tiktok" 
-        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${isTikTok ? 'bg-rose-600 text-white border-rose-600 shadow-xs' : 'bg-white dark:bg-[#121215] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10'}"
+        class="storage-folder-tab px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition cursor-pointer border shrink-0 ${ttTabCls}"
       >
         <i data-lucide="video" class="w-3.5 h-3.5 ${isTikTok ? 'text-white' : 'text-rose-500'}"></i>
         <span>TikTok Downloader</span>
-        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${isTikTok ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">/tiktok</span>
+        <span class="px-1.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${isTikTok ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}">/tiktok</span>
       </button>
     </div>
   `;

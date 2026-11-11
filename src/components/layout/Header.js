@@ -30,14 +30,14 @@ export function syncHeaderUserProfile(profile = null) {
   const displayName = updated.name || (isAdminAuthenticated() ? 'Duy' : 'Khách');
 
   if (avatarEl) {
-    avatarEl.className = `relative flex w-[30px] h-[30px] sm:w-8 sm:h-8 min-w-[30px] sm:min-w-[32px] max-w-[30px] sm:max-w-[32px] max-h-[30px] sm:max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
+    avatarEl.className = `relative flex w-8 h-8 min-w-[32px] max-w-[32px] max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${getAvatarGradient(updated.name)}`;
     avatarEl.innerHTML = renderAvatarInnerHtml(updated.avatar, updated.name);
   }
   if (nameEl) {
     nameEl.textContent = displayName;
   }
   if (btnEl) {
-    btnEl.title = updated.name ? `Hồ sơ: ${escapeHtml(updated.name)} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)';
+    btnEl.title = updated.name ? `Hồ sơ: ${escapeHtml(updated.name)}` : 'Hồ sơ người dùng';
   }
 }
 
@@ -67,10 +67,10 @@ export function renderHeader() {
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
         
         <!-- Left: Clean Branding -->
-        <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0 group" onclick="window.location.hash = ''">
+        <a href="#" aria-label="Về trang chủ DuyDev Studio" class="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0 group no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
           <img src="src/assets/logo-ds.svg?v=22.12" alt="DuyDev Studio" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain transition-all duration-200 group-hover:scale-105 group-hover:ring-2 group-hover:ring-orange-500/30 group-hover:shadow-md group-hover:shadow-orange-500/10 shrink-0" />
           <span class="font-bold text-xs sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
-        </div>
+        </a>
 
         <!-- Center: Minimalist Search Bar (Desktop - Apple Sequoia Frosted Glass) -->
         <div class="hidden md:flex flex-1 max-w-md mx-6">
@@ -80,7 +80,7 @@ export function renderHeader() {
               type="text" 
               id="globalSearchInput"
               role="searchbox"
-              aria-label="Tìm kiếm công cụ (⌘K)"
+              aria-label="Tìm kiếm công cụ"
               placeholder="Tìm kiếm công cụ..." 
               class="w-full glass-search rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans"
             >
@@ -90,9 +90,14 @@ export function renderHeader() {
 
         <!-- Right: Controls (Ergonomic Apple Control Center Dock) -->
         <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          <div class="flex items-center gap-0.5 sm:gap-1.5 p-0.5 sm:p-1.5 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
+          <div class="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-1.5 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
+            <!-- Mobile Search Toggle Button -->
+            <button type="button" id="btnMobileSearchToggle" title="Tìm kiếm công cụ" aria-label="Tìm kiếm công cụ" class="md:hidden inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+              <i data-lucide="search" class="w-4 h-4"></i>
+            </button>
+
             <!-- Storage Drive Link -->
-            <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-[30px] h-[30px] sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
             </a>
 
@@ -102,7 +107,7 @@ export function renderHeader() {
             </a>
 
             <!-- Trash Bin Link -->
-            <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-[30px] h-[30px] sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="trash-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
               <span id="headerTrashDot" class="${trashCount > 0 ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
             </a>
@@ -112,7 +117,7 @@ export function renderHeader() {
                  role="status"
                  aria-label="Trạng thái hệ thống"
                  title="Trực tuyến" 
-                 class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 px-0.5 sm:px-1 select-none">
+                 class="hidden sm:inline-flex items-center justify-center w-6 h-6 px-1 select-none">
               <span id="headerSystemDot" class="specular-status-dot specular-status-dot-emerald"></span>
             </div>
 
@@ -120,36 +125,53 @@ export function renderHeader() {
             <button id="btnSoundToggle" 
                     title="${soundTitle}" 
                     aria-label="${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}" 
-                    class="inline-flex w-[30px] h-[30px] sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+                    class="inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
             </button>
 
             <!-- Theme Toggle Button -->
-            <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-[30px] h-[30px] sm:w-9 sm:h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <button id="btnThemeToggle" title="${isDark ? 'Giao diện sáng' : 'Giao diện tối'}" aria-label="${isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}" class="inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
             </button>
           </div>
 
-          <div class="h-5 w-px bg-zinc-200 dark:bg-white/10 mx-0.5 hidden xs:block"></div>
+          <div class="h-5 w-px bg-zinc-200 dark:bg-white/10 mx-0.5 hidden sm:block"></div>
 
           <!-- User Profile Avatar Pill -->
           <button 
             type="button" 
             id="headerProfileBtn" 
-            title="${userProfile.name ? `Hồ sơ: ${escapeHtml(userProfile.name)} (Nhấp để đổi avatar / tên)` : 'Hồ sơ người dùng (Nhấp để đổi avatar / tên)'}" 
+            title="${userProfile.name ? `Hồ sơ: ${escapeHtml(userProfile.name)}` : 'Hồ sơ người dùng'}" 
             aria-label="Hồ sơ người dùng & Đổi avatar" 
-            class="flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 sm:pl-1 sm:pr-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
+            class="flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 min-h-[40px] rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
           >
-            <div id="headerUserAvatar" class="relative flex w-[30px] h-[30px] sm:w-8 sm:h-8 min-w-[30px] sm:min-w-[32px] max-w-[30px] sm:max-w-[32px] max-h-[30px] sm:max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${gradientClass}">
+            <div id="headerUserAvatar" class="relative flex w-8 h-8 min-w-[32px] max-w-[32px] max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${gradientClass}">
               ${avatarHtml}
             </div>
-            <span id="headerUserNameText" class="hidden xs:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[60px] sm:max-w-[85px] truncate leading-none text-left">
+            <span id="headerUserNameText" class="hidden sm:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[85px] truncate leading-none text-left">
               ${escapeHtml(displayName)}
             </span>
           </button>
 
         </div>
 
+      </div>
+
+      <!-- Mobile Collapsible Search Bar Drawer -->
+      <div id="mobileSearchDrawer" class="hidden md:hidden max-w-7xl mx-auto pt-2.5 pb-1 animate-fadeIn">
+        <div class="relative w-full">
+          <i data-lucide="search" class="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input 
+            type="search" 
+            id="mobileSearchInput"
+            aria-label="Tìm kiếm công cụ trên di động"
+            placeholder="Tìm kiếm trong 21 công cụ..." 
+            class="w-full glass-search rounded-xl pl-10 pr-10 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans"
+          >
+          <button type="button" id="btnCloseMobileSearch" aria-label="Đóng tìm kiếm" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
     </header>
   `;
@@ -208,8 +230,47 @@ export async function syncHeaderSystemTelemetry() {
 
 export function attachHeaderListeners(onSearch) {
   const searchInput = document.getElementById('globalSearchInput');
+  const mobileSearchInput = document.getElementById('mobileSearchInput');
+  const mobileSearchDrawer = document.getElementById('mobileSearchDrawer');
+  const btnMobileSearchToggle = document.getElementById('btnMobileSearchToggle');
+  const btnCloseMobileSearch = document.getElementById('btnCloseMobileSearch');
+
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => onSearch(e.target.value));
+    searchInput.addEventListener('input', (e) => {
+      if (mobileSearchInput && mobileSearchInput.value !== e.target.value) {
+        mobileSearchInput.value = e.target.value;
+      }
+      onSearch(e.target.value);
+    });
+  }
+
+  if (mobileSearchInput) {
+    mobileSearchInput.addEventListener('input', (e) => {
+      if (searchInput && searchInput.value !== e.target.value) {
+        searchInput.value = e.target.value;
+      }
+      onSearch(e.target.value);
+    });
+  }
+
+  if (btnMobileSearchToggle && mobileSearchDrawer) {
+    btnMobileSearchToggle.addEventListener('click', () => {
+      const isHidden = mobileSearchDrawer.classList.toggle('hidden');
+      if (!isHidden && mobileSearchInput) {
+        setTimeout(() => mobileSearchInput.focus(), 50);
+      }
+    });
+  }
+
+  if (btnCloseMobileSearch && mobileSearchDrawer) {
+    btnCloseMobileSearch.addEventListener('click', () => {
+      mobileSearchDrawer.classList.add('hidden');
+      if (mobileSearchInput && mobileSearchInput.value) {
+        mobileSearchInput.value = '';
+        if (searchInput) searchInput.value = '';
+        onSearch('');
+      }
+    });
   }
 
   // Sound toggle & amplification listeners

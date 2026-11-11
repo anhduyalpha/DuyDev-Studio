@@ -49,7 +49,7 @@ export function renderDropzoneQueue(queueState = {}) {
       <div id="pdfFileLoadingCard" class="p-8 sm:p-12 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed ${theme.borderActive} shadow-xs flex flex-col items-center justify-center text-center space-y-4 animate-fadeIn select-none min-h-[220px]">
         <div class="relative flex items-center justify-center">
           <div class="w-14 h-14 rounded-2xl ${theme.bgSoft} border ${theme.borderColor} flex items-center justify-center ${theme.textSoft} shadow-sm">
-            <i data-lucide="upload-cloud" class="w-7 h-7 animate-bounce"></i>
+            <i data-lucide="upload-cloud" class="w-7 h-7 animate-pulse"></i>
           </div>
           <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
           <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500"></span>
@@ -231,24 +231,25 @@ export function renderDropzoneQueue(queueState = {}) {
   return `
     <div class="space-y-3.5">
       <!-- File Dropzone Card (Compact Vertical) -->
-      <div id="pdfDropzone" class="relative group p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-zinc-300 dark:border-zinc-700/80 hover:${theme.borderActive} shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[135px] sm:min-h-[145px] transition-colors duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.01]">
+      <div id="pdfDropzone" class="relative group p-5 sm:p-7 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-zinc-300/90 dark:border-zinc-700/80 hover:border-zinc-400 dark:hover:border-zinc-500 shadow-xs text-center cursor-pointer flex flex-col items-center justify-center min-h-[160px] sm:min-h-[175px] transition-all duration-200 hover:bg-zinc-50/50 dark:hover:bg-white/[0.015]">
         <input type="file" id="pdfDropzone_input" class="hidden" accept="${accept}" multiple>
         
-        <div class="w-10 h-10 rounded-xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center mb-1.5 group-hover:scale-105 transition duration-200">
+        <div class="w-11 h-11 rounded-2xl ${theme.bgSoft} border ${theme.borderColor} ${theme.textSoft} flex items-center justify-center mb-2 group-hover:scale-105 transition duration-200 shadow-2xs">
           <i data-lucide="${theme.icon || 'upload-cloud'}" class="w-5 h-5"></i>
         </div>
         
-        <h4 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">${title}</h4>
+        <h4 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white tracking-tight">${title}</h4>
         ${subtitle ? `<p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-sm font-normal">${subtitle}</p>` : ''}
         
-        <div class="mt-2.5 flex items-center justify-center gap-2">
+        <div class="mt-3.5 flex items-center justify-center gap-2.5">
           <button type="button" onclick="document.getElementById('pdfDropzone_input').click()" 
-                  class="px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold shadow-xs transition cursor-pointer">
-            Chọn tệp
+                  class="h-10 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs sm:text-sm font-semibold shadow-xs transition cursor-pointer inline-flex items-center gap-2 active:scale-[0.98]">
+            <i data-lucide="folder-open" class="w-4 h-4"></i>
+            <span>Chọn tệp</span>
           </button>
           ${isImages ? `
             <button type="button" id="btnPastePdfImage"
-                    class="px-3 py-1.5 rounded-xl border border-zinc-200/90 dark:border-white/[0.08] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán ảnh từ bộ nhớ tạm (Ctrl + V)">
+                    class="h-10 px-4 rounded-xl border border-zinc-200/90 dark:border-white/[0.08] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 active:scale-[0.98]" title="Dán ảnh từ bộ nhớ tạm">
               <i data-lucide="clipboard" class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400"></i>
               <span>Dán ảnh</span>
             </button>
@@ -258,9 +259,9 @@ export function renderDropzoneQueue(queueState = {}) {
 
       ${!isImages ? `
         <!-- Separate Google Drive Link Card -->
-        <div id="pdfDriveImportCard" class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121215] border-2 border-dashed border-zinc-300 dark:border-zinc-700/80 hover:${theme.borderActive} shadow-xs space-y-2.5 transition-colors duration-200">
+        <div id="pdfDriveImportCard" class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/[0.14] shadow-xs space-y-2.5 transition-colors duration-200">
           <div class="flex items-center text-xs px-0.5">
-            <span class="font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+            <span class="font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <i data-lucide="link" class="w-3.5 h-3.5 ${theme.textSoft}"></i>
               <span>Hoặc dán liên kết Google Drive</span>
             </span>

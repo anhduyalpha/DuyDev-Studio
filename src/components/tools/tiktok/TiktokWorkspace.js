@@ -100,19 +100,13 @@ export function renderTiktokWorkspace() {
       <!-- Breadcrumb Bar -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-          <a href="#" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/80 dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> <span class="hidden xs:inline">Dashboard</span>
+          <a href="#" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#111114] hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition shadow-xs">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> <span>Dashboard</span>
           </a>
           <span class="text-zinc-400 dark:text-zinc-600">/</span>
           <span class="text-zinc-900 dark:text-zinc-200 font-semibold truncate flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-[#EE1D52]"></span>
             TikTok Downloader
-          </span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-            <i data-lucide="check" class="w-3 h-3"></i> Video & Album Ảnh Không Logo
           </span>
         </div>
       </div>
@@ -127,7 +121,7 @@ export function renderTiktokWorkspace() {
             <input
               id="tiktokUrlInput"
               type="text"
-              placeholder="Dán liên kết TikTok (Video hoặc Album ảnh)..."
+              placeholder="Dán liên kết video hoặc album TikTok..."
               value="${escapeHtml(url)}"
               autocomplete="off"
               autocorrect="off"

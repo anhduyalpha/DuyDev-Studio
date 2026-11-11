@@ -271,6 +271,12 @@ class App {
       if (sessionStorage.getItem('ds_profile_prompt_dismissed') === '1') return;
     } catch {}
 
+    // Non-blocking deep-link onboarding: do not interrupt users navigating directly to a tool route
+    const currentHash = window.location.hash || '';
+    if (currentHash && currentHash !== '#' && currentHash !== '#dashboard') {
+      return;
+    }
+
     if (document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
       return;
     }
@@ -402,8 +408,9 @@ class App {
       document.getElementById('headerContainer').innerHTML = renderHeader();
       document.getElementById('footerContainer').innerHTML = renderFooter();
     } else {
-      // In-place hydration sync for user profile (in case user customized name/avatar in localStorage)
+      // Refresh header markup & profile state in-place
       try {
+        existingHeader.innerHTML = renderHeader();
         syncHeaderUserProfile();
       } catch (_) {}
     }

@@ -16,7 +16,7 @@ export function renderBottomNav(activeRoute = '') {
         : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium'
     }">
       <i data-lucide="${icon}" class="w-5 h-5 shrink-0 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}"></i>
-      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">${label}</span>
+      <span class="text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">${label}</span>
     </a>
   `;
 

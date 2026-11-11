@@ -195,6 +195,17 @@ function bindDropzone(qm) {
   const driveCard = rootEl.querySelector('#pdfDriveImportCard');
   const inputDrive = rootEl.querySelector('#inputPdfDriveLink');
 
+  const setCardNeutral = (card) => {
+    if (!card) return;
+    card.classList.remove(
+      'border-red-500/80',
+      'dark:border-red-500/70',
+      'border-red-500',
+      'border-emerald-500',
+      'dark:border-emerald-500'
+    );
+  };
+
   const setCardGreen = (card) => {
     if (!card) return;
     card.classList.remove('border-red-500/80', 'dark:border-red-500/70', 'border-red-500');
@@ -232,7 +243,7 @@ function bindDropzone(qm) {
     dropzone.addEventListener('dragleave', (e) => {
       e.preventDefault();
       if (!dropzone.contains(e.relatedTarget)) {
-        setCardRed(dropzone);
+        setCardNeutral(dropzone);
       }
     });
 
@@ -311,6 +322,12 @@ function bindDropzone(qm) {
     const updateDriveBorder = () => {
       if (isImporting) return;
       const url = inputDrive.value.trim();
+      if (!url) {
+        setCardNeutral(driveCard);
+        inputDrive.classList.remove('focus:ring-emerald-500/50', 'border-emerald-500/60');
+        inputDrive.classList.add('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');
+        return;
+      }
       if (isValidGoogleDriveUrl(url)) {
         setCardGreen(driveCard);
         inputDrive.classList.remove('focus:ring-zinc-400/40', 'dark:focus:ring-zinc-600/40');

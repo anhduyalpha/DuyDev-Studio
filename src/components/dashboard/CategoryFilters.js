@@ -26,13 +26,13 @@ export function getAdjacentCategory(currentCatId, direction = 'next', categories
 export function renderCategoryFilters(activeCategory = 'all', counts = {}, categoriesList = CATEGORIES) {
   const list = Array.isArray(categoriesList) && categoriesList.length > 0 ? categoriesList : CATEGORIES;
   return `
-    <div class="inline-flex max-w-full p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-[16px] border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto custom-scrollbar select-none touch-pan-x">
+    <div class="inline-flex max-w-full p-1 bg-black/[0.03] dark:bg-white/[0.04] rounded-[16px] border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto no-scrollbar select-none touch-pan-x">
       <div id="categoryFilterBar" role="tablist" aria-label="Bộ lọc phân loại công cụ" class="flex items-center gap-1 min-w-max">
         ${list.map(cat => {
           const isActive = cat.id === activeCategory;
           const count = counts[cat.id] !== undefined ? counts[cat.id] : 0;
           const activeClasses = 'bg-[#1D1D1F] text-white font-semibold shadow-xs border-[#1D1D1F] dark:bg-white/[0.14] dark:text-white dark:border-white/[0.16] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]';
-          const inactiveClasses = 'bg-white/80 text-zinc-600 border-black/[0.04] hover:bg-white hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs';
+          const inactiveClasses = 'bg-white/80 text-zinc-600 border-black/[0.04] hover:bg-white hover:text-black dark:bg-[#16161A] dark:text-zinc-400 dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs';
 
           return `
             <button 
@@ -41,10 +41,10 @@ export function renderCategoryFilters(activeCategory = 'all', counts = {}, categ
               role="tab"
               aria-selected="${isActive}"
               aria-pressed="${isActive}"
-              class="filter-pill flex items-center px-3.5 sm:px-4 py-1.5 min-h-[36px] sm:min-h-[34px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isActive ? activeClasses : inactiveClasses}">
+              class="filter-pill flex items-center px-3.5 sm:px-4 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isActive ? activeClasses : inactiveClasses}">
               <span class="w-1.5 h-1.5 rounded-full mr-2 shrink-0 ${isActive ? 'bg-white' : ''}" style="${isActive ? '' : `background-color: ${cat.color};`}"></span>
               <span>${cat.label}</span>
-              <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums ${isActive ? 'bg-white/20 text-white dark:bg-white/[0.18] dark:text-white' : 'bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]'}">${count}</span>
+              <span class="filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums ${isActive ? 'bg-white/20 text-white dark:bg-white/[0.18] dark:text-white' : 'bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.06]'}">${count}</span>
             </button>
           `;
         }).join('')}
@@ -63,9 +63,9 @@ export function updateCategoryFilterPills(activeCategory = 'all', counts = {}, c
     const cat = list.find(c => c.id === catId);
 
     const activeClasses = 'bg-[#1D1D1F] text-white font-semibold shadow-xs border-[#1D1D1F] dark:bg-white/[0.14] dark:text-white dark:border-white/[0.16] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]';
-    const inactiveClasses = 'bg-white/80 text-zinc-600 border-black/[0.04] hover:bg-white hover:text-black dark:bg-[#16161A] dark:text-[#86868B] dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs';
+    const inactiveClasses = 'bg-white/80 text-zinc-600 border-black/[0.04] hover:bg-white hover:text-black dark:bg-[#16161A] dark:text-zinc-400 dark:border-white/[0.08] dark:hover:text-[#F5F5F7] font-medium shadow-2xs';
 
-    btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-1.5 min-h-[36px] sm:min-h-[34px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isActive ? activeClasses : inactiveClasses}`;
+    btn.className = `filter-pill flex items-center px-3.5 sm:px-4 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-[12px] text-xs sm:text-sm border transition-transform duration-100 ease-out whitespace-nowrap active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 ${isActive ? activeClasses : inactiveClasses}`;
     btn.setAttribute('aria-selected', String(isActive));
     btn.setAttribute('aria-pressed', String(isActive));
 
@@ -86,7 +86,7 @@ export function updateCategoryFilterPills(activeCategory = 'all', counts = {}, c
       badge.className = `filter-count-badge ml-1.5 px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono font-medium tabular-nums ${
         isActive
           ? 'bg-white/20 text-white dark:bg-white/[0.18] dark:text-white'
-          : 'bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-[#86868B] border border-black/[0.04] dark:border-white/[0.06]'
+          : 'bg-black/[0.05] text-zinc-600 dark:bg-white/[0.08] dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.06]'
       }`;
     }
   });

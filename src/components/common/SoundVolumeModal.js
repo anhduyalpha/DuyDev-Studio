@@ -26,6 +26,13 @@ export function openSoundVolumeModal() {
   const currentPercent = Math.round(currentVolume * 100);
   const isEnabled = soundEngine.isEnabled();
   const diag = soundEngine.getAudioDiagnostics();
+  const muteBtnCls = isEnabled
+    ? 'bg-zinc-200/80 hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/20 text-zinc-800 dark:text-white border-zinc-300 dark:border-white/10'
+    : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent';
+  const getPresetCls = (p) =>
+    currentPercent === p
+      ? 'bg-indigo-600 text-white'
+      : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5';
 
   const modalHtml = `
     <div id="soundVolumeModalContainer" class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);" role="dialog" aria-modal="true" aria-labelledby="soundModalTitle">
@@ -39,7 +46,7 @@ export function openSoundVolumeModal() {
             </div>
             <div>
               <h3 id="soundModalTitle" class="font-bold text-base text-zinc-900 dark:text-white">Khuếch Đại Âm Thanh</h3>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Điều chỉnh âm lượng phản hồi hệ thống (Web & APK)</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">Điều chỉnh âm lượng phản hồi hệ thống</p>
             </div>
           </div>
           <button id="btnCloseSoundVolumeModal" type="button" class="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer" aria-label="Đóng">
@@ -55,10 +62,10 @@ export function openSoundVolumeModal() {
             </div>
             <div>
               <p class="text-sm font-semibold text-zinc-900 dark:text-white">Âm thanh phản hồi</p>
-              <p id="soundModalStatusText" class="text-xs text-zinc-500 dark:text-zinc-400">${isEnabled ? 'Đang bật' : 'Đang tắt (Muted)'}</p>
+              <p id="soundModalStatusText" class="text-xs text-zinc-500 dark:text-zinc-400">${isEnabled ? 'Đang bật' : 'Đang tắt'}</p>
             </div>
           </div>
-          <button id="btnSoundModalToggleMute" type="button" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${isEnabled ? 'bg-zinc-200/80 hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/20 text-zinc-800 dark:text-white border-zinc-300 dark:border-white/10' : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent'}">
+          <button id="btnSoundModalToggleMute" type="button" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${muteBtnCls}">
             ${isEnabled ? 'Tắt âm' : 'Bật âm'}
           </button>
         </div>
@@ -67,8 +74,8 @@ export function openSoundVolumeModal() {
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <label for="soundVolumeSlider" class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-              <span>Độ khuếch đại (Gain)</span>
-              <span id="soundVolumeMultiplierLabel" class="text-[11px] font-mono text-zinc-400">(${(currentPercent / 100).toFixed(2)}x)</span>
+              <span>Độ khuếch đại</span>
+              <span id="soundVolumeMultiplierLabel" class="text-[11px] font-mono text-zinc-400">${(currentPercent / 100).toFixed(2)}x</span>
             </label>
             <span id="soundVolumePercentBadge" class="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               ${currentPercent}%
@@ -89,20 +96,20 @@ export function openSoundVolumeModal() {
 
           <!-- Quick Presets -->
           <div class="flex flex-wrap items-center gap-1.5 pt-1">
-            <button type="button" data-preset="50" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${currentPercent === 50 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
+            <button type="button" data-preset="50" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${getPresetCls(50)}">
               50%
             </button>
-            <button type="button" data-preset="100" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${currentPercent === 100 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
-              100% (Tiêu chuẩn)
+            <button type="button" data-preset="100" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${getPresetCls(100)}">
+              100%
             </button>
-            <button type="button" data-preset="150" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${currentPercent === 150 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
-              150% (Lớn)
+            <button type="button" data-preset="150" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${getPresetCls(150)}">
+              150%
             </button>
-            <button type="button" data-preset="200" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${currentPercent === 200 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
-              200% (Khuếch đại cao)
+            <button type="button" data-preset="200" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${getPresetCls(200)}">
+              200%
             </button>
-            <button type="button" data-preset="250" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${currentPercent === 250 ? 'bg-indigo-600 text-white' : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/5'}">
-              250% (Tối đa)
+            <button type="button" data-preset="250" class="btn-sound-preset px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer ${getPresetCls(250)}">
+              250%
             </button>
           </div>
         </div>

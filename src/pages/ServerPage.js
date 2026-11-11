@@ -75,10 +75,16 @@ export function renderServerPage() {
               ${isSoundEnabled ? 'Bật phản hồi âm thanh khi hoàn thành tác vụ, chuyển đổi chế độ và thao tác nhanh' : 'Tắt toàn bộ âm thanh phản hồi trên trình duyệt này'}
             </p>
           </div>
-          <button id="btnServerSoundToggle" class="w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-semibold border transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer ${isSoundEnabled ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] dark:text-zinc-200 border-zinc-200 dark:border-white/10' : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent'}">
+          ${(() => {
+            const soundBtnCls = isSoundEnabled
+              ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.08] dark:hover:bg-white/[0.12] dark:text-white border-zinc-200 dark:border-white/10'
+              : 'bg-indigo-600 hover:bg-indigo-500 text-white border-transparent';
+            return `
+          <button id="btnServerSoundToggle" class="w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-semibold border transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer ${soundBtnCls}">
             <i data-lucide="${isSoundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4"></i>
             <span>${isSoundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}</span>
-          </button>
+          </button>`;
+          })()}
         </div>
       </div>
 

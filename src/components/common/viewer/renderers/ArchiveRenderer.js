@@ -855,11 +855,16 @@ export function attachArchiveViewerListeners(state, registerCleanup) {
             <div class="w-full h-full flex flex-col bg-white dark:bg-[#121215] rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
               ${sheetNames.length > 1 ? `
                 <div class="px-3 py-1.5 border-b border-zinc-200 dark:border-white/10 flex items-center gap-1.5 overflow-x-auto bg-zinc-50 dark:bg-white/[0.02] shrink-0 font-mono text-xs">
-                  ${sheetNames.map((sName, sIdx) => `
-                    <button type="button" class="btn-sheet-tab px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${sIdx === activeSheetIndex ? 'bg-emerald-500 text-white shadow-2xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}" data-sheet-idx="${sIdx}">
+                  ${sheetNames.map((sName, sIdx) => {
+                    const tabCls = sIdx === activeSheetIndex
+                      ? 'bg-emerald-500 text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white';
+                    return `
+                    <button type="button" class="btn-sheet-tab px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${tabCls}" data-sheet-idx="${sIdx}">
                       ${escapeHtml(sName)}
                     </button>
-                  `).join('')}
+                  `;
+                  }).join('')}
                 </div>
               ` : ''}
               <div id="archiveSheetTableHost" class="flex-1 overflow-auto custom-scrollbar flex flex-col min-h-0">

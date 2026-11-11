@@ -61,9 +61,9 @@ export function renderDashboardPage() {
       <!-- Tools Grid -->
       <div>
         <div class="flex items-center justify-between mb-4 sm:mb-5">
-          <span id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg tracking-[-0.02em]">
+          <h2 id="toolsCountLabel" class="font-bold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg tracking-[-0.02em] m-0">
             ${isAllDefault ? `Tất cả công cụ (${tools.length})` : `Kết quả (${tools.length})`}
-          </span>
+          </h2>
         </div>
 
         <div id="toolsGridContainer">
@@ -105,6 +105,8 @@ export function attachDashboardListeners(onReRender) {
       toolRegistry.setSearchQuery('');
       const searchInput = document.getElementById('globalSearchInput');
       if (searchInput) searchInput.value = '';
+      const mobileSearchInput = document.getElementById('mobileSearchInput');
+      if (mobileSearchInput) mobileSearchInput.value = '';
       if (onReRender) onReRender();
       return;
     }
@@ -426,6 +428,8 @@ export function attachDashboardListeners(onReRender) {
       toolRegistry.setSearchQuery('');
       const searchInput = document.getElementById('globalSearchInput');
       if (searchInput) searchInput.value = '';
+      const mobileSearchInput = document.getElementById('mobileSearchInput');
+      if (mobileSearchInput) mobileSearchInput.value = '';
       if (onReRender) onReRender();
     }
   };

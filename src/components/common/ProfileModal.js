@@ -207,7 +207,8 @@ export function openProfileModal(options = {}) {
 
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'dsProfileModalOverlay';
-  modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/60 backdrop-blur-2xl -webkit-backdrop-filter: blur(28px) saturate(180%) animate-fade-in select-none';
+  modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/60 backdrop-blur-2xl animate-fade-in select-none overflow-x-hidden';
+  modalOverlay.style.webkitBackdropFilter = 'blur(28px) saturate(180%)';
 
   function renderModalContent() {
     const isSyncTab = !isOnboarding && activeTab === 'sync';
@@ -221,7 +222,8 @@ export function openProfileModal(options = {}) {
     modalOverlay.innerHTML = `
       <div 
         id="dsProfileModalCard" 
-        class="relative w-full max-w-[440px] ${isSyncTab ? 'sm:max-w-[480px]' : ''} bg-white/95 dark:bg-zinc-900/90 backdrop-blur-2xl -webkit-backdrop-filter: blur(32px) saturate(190%) border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-4 sm:p-6 overflow-hidden transition-all duration-200"
+        class="relative w-full max-w-[calc(100vw-24px)] sm:max-w-[440px] ${isSyncTab ? 'sm:max-w-[480px]' : ''} bg-white/95 dark:bg-zinc-900/90 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-4 sm:p-6 overflow-hidden transition-all duration-200 box-border"
+        style="-webkit-backdrop-filter: blur(32px) saturate(190%);"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dsProfileModalTitle"
@@ -319,7 +321,7 @@ export function openProfileModal(options = {}) {
 
               ${generatedCodeData ? `
                 <div class="flex items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900/90 border border-indigo-200 dark:border-indigo-500/30 rounded-xl shadow-xs">
-                  <div class="text-2xl font-black font-mono tracking-[0.25em] text-indigo-600 dark:text-indigo-400 pl-1 select-all">
+                  <div class="text-2xl font-black font-mono tracking-[0.25em] text-zinc-900 dark:text-zinc-50 pl-1 select-all">
                     ${generatedCodeData.code}
                   </div>
                   <button 
@@ -445,12 +447,12 @@ export function openProfileModal(options = {}) {
         ` : isStep1 ? `
           <!-- ================= STEP 1: NHẬP TÊN PROFILE ================= -->
           <div class="space-y-4 pt-1">
-            <div class="flex items-center gap-3.5">
+            <div class="flex items-center gap-3.5 min-w-0">
               <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
                 <i data-lucide="user" class="w-5 h-5"></i>
               </div>
-              <div>
-                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+              <div class="min-w-0 flex-1">
+                <h3 id="dsProfileModalTitle" class="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-50 tracking-tight truncate">
                   ${isOnboarding ? 'Chào mừng bạn đến với Studio' : 'Tên hồ sơ của bạn'}
                 </h3>
                 <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
@@ -487,21 +489,21 @@ export function openProfileModal(options = {}) {
             </div>
 
             <!-- Action Buttons for Step 1 -->
-            <div class="flex items-center gap-2.5 pt-2">
+            <div class="flex items-center gap-2.5 pt-2 min-w-0">
               <button 
                 type="button" 
                 id="dsProfileSkipBtn"
-                class="px-4 h-12 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
+                class="px-4 h-12 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer shrink-0"
               >
                 ${isOnboarding ? 'Để sau' : 'Hủy'}
               </button>
               <button 
                 type="button" 
                 id="dsProfileNextStepBtn"
-                class="flex-1 h-12 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
+                class="flex-1 min-w-0 h-12 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 active:scale-[0.98] transition cursor-pointer inline-flex items-center justify-center gap-1.5"
               >
-                <span>${isOnboarding ? 'Tiếp tục (Chọn Avatar)' : 'Tiếp tục'}</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                <span class="truncate">Tiếp tục</span>
+                <i data-lucide="arrow-right" class="w-4 h-4 shrink-0"></i>
               </button>
             </div>
           </div>
