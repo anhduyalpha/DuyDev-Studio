@@ -474,8 +474,13 @@ export function resolveViewerUrls(item) {
       viewUrl = `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(drivePath)}${authParam}${devParam}`;
     } else {
       const pathMatch = (downloadUrl || viewUrl).match(/[?&]path=([^&#]+)/);
+      const ssFileMatch = (downloadUrl || viewUrl).match(/\/api\/v1\/slideshare\/download\?(?:[^#]*&)?file=([^&#]+)/i);
       if (pathMatch) {
         viewUrl = `/api/v1/viewer/preview-pdf?path=${pathMatch[1]}${authParam}${devParam}`;
+      } else if (ssFileMatch) {
+        let rawName = ssFileMatch[1];
+        try { rawName = decodeURIComponent(rawName); } catch {}
+        viewUrl = `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(`/slideshare/${rawName}`)}${authParam}${devParam}`;
       }
     }
   }

@@ -85,7 +85,12 @@ tags:
 - Nhận diện đúng `.pdf` (`category: 'pdf'`) và `.pptx` (`category: 'presentation'`).
 - Không ép cứng `category: 'video'` đối với các tệp tài liệu.
 
-### 3.5. Cơ chế Retry & Remove thông minh trong File Viewer
+### 3.5. Cơ chế Retry & Remove thông minh trong File Viewer & Xem trước PPTX không phụ thuộc LibreOffice Impress
+- Trong `ViewerService.getPreviewPdfPath` (`server/src/services/viewer.service.ts`):
+  - **Sibling `.pdf` Fast-Path**: Khi yêu cầu xem trước tệp `.pptx` (ví dụ `/slideshare/[SlideShare]_...pptx`), nếu tệp `.pdf` cùng tên đã tồn tại cạnh bên, trả về ngay lập tức trong `<1ms` mà không cần chạy LibreOffice.
+  - **Python Fallback (`convertPptxToPdfPython`)**: Khi máy chủ Linux thiếu gói `libreoffice-impress` khiến `soffice --headless --convert-to pdf` thoát mà không tạo tệp `.pdf` (gây lỗi HTTP 400 `Unexpected server response (400) while retrieving PDF`), tự động fallback sang script Python (`python-pptx` + `PyMuPDF`) để kết xuất từng slide sang PDF.
+- Trong `viewer.controller.ts` & `SlideshareWorkspace.js`:
+  - Hỗ trợ tìm tệp xem trước trong cả `drive` lẫn `temp`, đồng thời tự động gọi `compileTemp` khi người dùng nhấn **Xem** hoặc **Tải về** trên mục lịch sử chưa lưu vào Drive.
 - Trong `FileViewerCore.js`:
   - Khi gặp lỗi 404: Ẩn nút xem Hex Dump vô nghĩa.
   - Hiển thị 2 nút tương tác:

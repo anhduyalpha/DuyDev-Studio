@@ -962,6 +962,56 @@ export class SlideshareWorkspace {
           this.resolvePresentation();
         }
       },
+      onPreview: async (item) => {
+        if (!item || item.driveRelPath) return false;
+        showToast('Đang chuẩn bị bản xem trước PDF...', 'info');
+        try {
+          const comp = await slideshareApi.compileTemp({
+            id: String(item.id).replace(/^ss_/, ''),
+            title: item.title,
+            format: 'pdf',
+            slideImages: item.slideImages || [],
+            originalUrl: item.sourceUrl || item.originalUrl || ''
+          });
+          ViewerConnector.preview({
+            name: comp.fileName || item.fileName || item.title || 'SlideShare.pdf',
+            fileName: comp.fileName || item.fileName || item.title || 'SlideShare.pdf',
+            path: `/slideshare/${comp.fileName}`,
+            category: 'pdf',
+            mimeType: 'application/pdf',
+            viewUrl: `/api/v1/viewer/preview-pdf?path=${encodeURIComponent(`/slideshare/${comp.fileName}`)}`,
+            downloadUrl: comp.downloadUrl,
+            historyItemId: item.id,
+            originalUrl: item.sourceUrl || item.originalUrl || ''
+          });
+          return true;
+        } catch (err) {
+          showToast(formatErrorMessage(err, 'Không thể tạo bản xem trước PDF'), 'error');
+          return true;
+        }
+      },
+      onDownload: async (item) => {
+        if (!item || item.driveRelPath) return false;
+        showToast('Đang tổng hợp tệp PowerPoint (.pptx)...', 'info');
+        try {
+          const comp = await slideshareApi.compileTemp({
+            id: String(item.id).replace(/^ss_/, ''),
+            title: item.title,
+            format: 'pptx',
+            slideImages: item.slideImages || [],
+            originalUrl: item.sourceUrl || item.originalUrl || ''
+          });
+          await triggerDownload(
+            comp.downloadUrl,
+            comp.fileName || item.fileName || 'presentation.pptx',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+          );
+          return true;
+        } catch (err) {
+          showToast(formatErrorMessage(err, 'Lỗi khi tải tệp PowerPoint (.pptx)'), 'error');
+          return true;
+        }
+      },
       onSaveDrive: async (item) => {
         if (!item) return;
         showToast('Đang lưu bài thuyết trình vào Studio Drive...', 'info');

@@ -480,6 +480,8 @@ export function attachMediaHistoryListeners({
   onTabChange,
   onReResolve,
   onSaveDrive,
+  onPreview,
+  onDownload,
   onHistoryChange,
   accentColor = '#4F46E5'
 }) {
@@ -594,10 +596,15 @@ export function attachMediaHistoryListeners({
 
   // 5. Preview item in app
   container.querySelectorAll('[data-action-preview]').forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
       const id = btn.getAttribute('data-action-preview');
       const item = storage.getLocalHistory().find((x) => x.id === id);
       if (!item) return;
+
+      if (typeof onPreview === 'function') {
+        const handled = await onPreview(item, btn);
+        if (handled) return;
+      }
 
       const hasDrive = Boolean(item.driveRelPath);
       const targetViewUrl = hasDrive
@@ -661,10 +668,15 @@ export function attachMediaHistoryListeners({
 
   // 6. Direct download (Single resolution or Drive file)
   container.querySelectorAll('[data-action-download]').forEach((btn) => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
       const id = btn.getAttribute('data-action-download');
       const item = storage.getLocalHistory().find((x) => x.id === id);
       if (!item) return;
+
+      if (typeof onDownload === 'function') {
+        const handled = await onDownload(item, btn);
+        if (handled) return;
+      }
 
       const hasDrive = Boolean(item.driveRelPath);
       const downloadUrl = hasDrive

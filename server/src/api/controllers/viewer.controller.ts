@@ -5,9 +5,11 @@
 
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { existsSync, createReadStream, statSync } from 'fs';
+import path from 'path';
 import { prisma } from '../../lib/prisma.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { isPermanentRetention } from '../../config/limits.config.js';
+import { resolvedStoragePaths } from '../../config/env.config.js';
 import { DriveService } from '../../services/drive.service.js';
 import { AuthService } from '../../services/auth.service.js';
 import { ViewerService } from '../../services/viewer.service.js';
@@ -45,7 +47,20 @@ export async function previewPdfHandler(request: FastifyRequest, reply: FastifyR
 
     sourcePath = DriveService.getDiskPath(relPath);
     if (!existsSync(sourcePath)) {
-      throw new NotFoundError(`Tệp '${relPath}' không tồn tại trên hệ thống`);
+      const siblingDrivePdf = sourcePath.replace(/\.[^.\\/]+$/, '.pdf');
+      const baseName = path.basename(relPath);
+      const tempExact = path.join(resolvedStoragePaths.temp, baseName);
+      const tempPdf = path.join(resolvedStoragePaths.temp, baseName.replace(/\.[^.\\/]+$/, '.pdf'));
+
+      if (siblingDrivePdf !== sourcePath && existsSync(siblingDrivePdf)) {
+        sourcePath = siblingDrivePdf;
+      } else if (isPublicToolPath && existsSync(tempPdf)) {
+        sourcePath = tempPdf;
+      } else if (isPublicToolPath && existsSync(tempExact)) {
+        sourcePath = tempExact;
+      } else {
+        throw new NotFoundError(`Tệp '${relPath}' không tồn tại trên hệ thống`);
+      }
     }
     if (statSync(sourcePath).isDirectory()) {
       throw new BadRequestError('Không thể tạo bản xem trước PDF cho thư mục');
