@@ -102,15 +102,17 @@ export function checkAndRenderMigrationNotice() {
     </div>
 
     <!-- 2. High-Priority Migration Notice Modal -->
-    <div id="migrationNoticeModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn select-none">
-      <div class="relative w-full max-w-lg rounded-3xl border border-amber-500/30 dark:border-amber-500/20 bg-white dark:bg-[#121215] p-6 sm:p-8 shadow-2xl space-y-6 text-center overflow-hidden">
+    <div id="migrationNoticeModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn select-none">
+      <div class="relative w-full max-w-lg max-h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-48px)] rounded-3xl border border-amber-500/30 dark:border-amber-500/20 bg-white dark:bg-[#121215] p-5 sm:p-8 shadow-2xl flex flex-col overflow-hidden text-center isolate box-border">
         
         <!-- Glowing background aura -->
         <div class="absolute -top-24 -left-24 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-        <!-- Beacon Header Icon -->
-        <div class="relative mx-auto w-16 h-16 flex items-center justify-center">
+        <!-- Scrollable Modal Content -->
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain space-y-5 sm:space-y-6 pr-0.5">
+          <!-- Beacon Header Icon -->
+          <div class="relative mx-auto w-16 h-16 flex items-center justify-center shrink-0">
           <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 opacity-20 blur-xl"></div>
           <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-md">
             <i data-lucide="arrow-right-left" class="w-8 h-8"></i>
@@ -183,6 +185,7 @@ export function checkAndRenderMigrationNotice() {
               Tôi vẫn muốn ở lại trang này
             </button>
           </div>
+        </div>
         </div>
 
       </div>

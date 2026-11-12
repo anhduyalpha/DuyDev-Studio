@@ -13,8 +13,8 @@ let keydownListener = null;
  */
 export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
   return `
-    <div id="${id}" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md hidden select-none" style="display: none; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
-      <div class="relative w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4 animate-scaleUp">
+    <div id="${id}" class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md hidden select-none" style="display: none; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
+      <div class="relative w-full max-w-md max-h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-48px)] rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111114] p-5 sm:p-6 shadow-2xl flex flex-col overflow-y-auto custom-scrollbar space-y-4 animate-scaleUp isolate box-border">
         <!-- Header -->
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -52,7 +52,7 @@ export function renderSlideConfirmModal(id = 'globalSlideConfirmModal') {
 
         <!-- Footer / Cancel button -->
         <div class="flex justify-end pt-1">
-          <button type="button" id="${id}BtnCancel" class="px-4 py-2 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer">
+          <button type="button" id="${id}BtnCancel" class="min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer flex items-center justify-center">
             Hủy
           </button>
         </div>

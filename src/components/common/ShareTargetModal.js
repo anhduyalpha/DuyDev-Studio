@@ -238,7 +238,7 @@ export function openShareTargetModal(payload) {
   container.innerHTML = `
     <div id="shareTargetBackdrop" class="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm animate-fadeIn"></div>
     <div class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div id="shareTargetPanel" class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-zinc-800 bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div id="shareTargetPanel" class="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-zinc-800 bg-[#111114] p-5 sm:p-6 shadow-2xl space-y-4 max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-48px)] overflow-y-auto custom-scrollbar isolate box-border">
         <!-- Header -->
         <div class="flex items-center justify-between pb-1 border-b border-zinc-800/60">
           <div class="flex items-center gap-3">

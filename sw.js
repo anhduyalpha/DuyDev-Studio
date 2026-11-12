@@ -3,7 +3,7 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v24.65';
+const CACHE_NAME = 'duydev-studio-v24.66';
 
 const ASSETS_TO_PRECACHE = [
   './',
@@ -27,7 +27,7 @@ const ASSETS_TO_PRECACHE = [
   './src/utilities/notificationHelper.js?v=23.70',
   './src/utilities/smartUrlRouter.js?v=24.44',
   './src/utilities/tierViewportGovernor.js',
-  './src/components/common/SoundVolumeModal.js?v=23.70',
+  './src/components/common/SoundVolumeModal.js?v=24.66',
   './src/hooks/useToolRegistry.js',
   './src/components/tools/scribd/ScribdWorkspace.js',
   './src/components/tools/slideshare/SlideshareWorkspace.js',

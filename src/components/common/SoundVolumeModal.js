@@ -36,10 +36,10 @@ export function openSoundVolumeModal() {
 
   const modalHtml = `
     <div id="soundVolumeModalContainer" class="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md select-none" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);" role="dialog" aria-modal="true" aria-labelledby="soundModalTitle">
-      <div id="soundVolumeModalCard" class="relative w-full max-w-lg bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col p-5 sm:p-6 space-y-5 animate-scaleUp">
+      <div id="soundVolumeModalCard" class="relative w-full max-w-lg max-h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-48px)] bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col p-4 sm:p-6 space-y-4 sm:space-y-5 animate-scaleUp isolate box-border">
         
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-zinc-100 dark:border-white/5 pb-3">
+        <div class="flex items-center justify-between border-b border-zinc-100 dark:border-white/5 pb-3 shrink-0">
           <div class="flex items-center gap-2.5">
             <div class="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
               <i data-lucide="sliders" class="w-5 h-5"></i>
@@ -49,12 +49,14 @@ export function openSoundVolumeModal() {
               <p class="text-xs text-zinc-500 dark:text-zinc-400">Điều chỉnh âm lượng phản hồi hệ thống</p>
             </div>
           </div>
-          <button id="btnCloseSoundVolumeModal" type="button" class="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer" aria-label="Đóng">
+          <button id="btnCloseSoundVolumeModal" type="button" class="w-9 h-9 sm:w-8 sm:h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer" aria-label="Đóng">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <!-- Mute/Unmute Switch & Master Status -->
+        <!-- Scrollable Modal Body -->
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain pr-0.5 space-y-4 sm:space-y-5">
+          <!-- Mute/Unmute Switch & Master Status -->
         <div class="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-white/[0.05]">
           <div class="flex items-center gap-3">
             <div id="soundModalStatusIcon" class="w-8 h-8 rounded-lg ${isEnabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'} flex items-center justify-center">
@@ -187,6 +189,7 @@ export function openSoundVolumeModal() {
           <p class="leading-relaxed text-[11px] text-zinc-400 dark:text-zinc-500">
             * Trên điện thoại & APK: Âm thanh chạy qua kênh Media. Hãy tăng âm lượng thiết bị để nghe rõ nhất.
           </p>
+        </div>
         </div>
 
       </div>

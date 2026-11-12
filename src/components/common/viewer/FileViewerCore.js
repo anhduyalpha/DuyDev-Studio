@@ -496,8 +496,8 @@ async function probeAndUpgradeCategory(state, sessionId, abortSignal) {
       const modalBox = document.querySelector('#fileViewerCoreModal > div');
       if (modalBox) {
         modalBox.className = isFullHeight
-          ? 'relative w-full h-full sm:h-auto sm:max-h-[95vh] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col'
-          : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]';
+          ? 'relative w-full h-full sm:h-auto sm:max-h-[calc(100dvh-32px)] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col isolate box-border'
+          : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-24px)] sm:max-h-[92vh] isolate box-border';
       }
 
       const viewerBody = document.getElementById('fileViewerBody');
@@ -705,7 +705,7 @@ export function openFileViewer(state) {
 
   const modalHtml = `
     <div id="fileViewerCoreModal" style="position: fixed; inset: 0; z-index: 99999;" class="fixed inset-0 z-[99999] flex items-center justify-center ${isFullHeight ? 'p-0 sm:p-4' : 'p-2.5 sm:p-5'} bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div class="${isFullHeight ? 'relative w-full h-full sm:h-auto sm:max-h-[95vh] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col' : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]'}">
+      <div class="${isFullHeight ? 'relative w-full h-full sm:h-auto sm:max-h-[calc(100dvh-32px)] max-w-6xl bg-white dark:bg-[#121215] rounded-none sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col isolate box-border' : 'relative w-full max-w-5xl bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-24px)] sm:max-h-[92vh] isolate box-border'}">
         
         <!-- Header Bar -->
         <div class="px-3 sm:px-5 py-2.5 sm:py-3 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between gap-2 sm:gap-3 bg-zinc-50/90 dark:bg-[#16161a] shrink-0">

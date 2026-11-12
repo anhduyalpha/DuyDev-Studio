@@ -222,7 +222,7 @@ export function openProfileModal(options = {}) {
     modalOverlay.innerHTML = `
       <div 
         id="dsProfileModalCard" 
-        class="relative w-full max-w-[calc(100vw-24px)] sm:max-w-[440px] ${isSyncTab ? 'sm:max-w-[480px]' : ''} bg-white/95 dark:bg-zinc-900/90 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-4 sm:p-6 overflow-hidden transition-all duration-200 box-border"
+        class="relative w-full max-w-[calc(100vw-24px)] sm:max-w-[440px] ${isSyncTab ? 'sm:max-w-[480px]' : ''} max-h-[calc(100dvh-32px)] sm:max-h-[calc(100dvh-48px)] flex flex-col bg-white/95 dark:bg-zinc-900/90 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04),inset_0_1px_1px_0_rgba(255,255,255,0.95)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.12)] p-4 sm:p-6 overflow-hidden transition-all duration-200 box-border isolate"
         style="-webkit-backdrop-filter: blur(32px) saturate(190%);"
         role="dialog"
         aria-modal="true"
@@ -233,30 +233,32 @@ export function openProfileModal(options = {}) {
 
         <!-- Header Row: Tabs + Close Button (Eliminates overlap on both PC and Android) -->
         ${!isOnboarding ? `
-          <div class="flex items-center gap-2 mb-4 sm:mb-5">
-            <div class="flex-1 flex items-center gap-1 p-1 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 rounded-2xl text-xs font-semibold min-w-0">
+          <div class="flex items-center gap-2 mb-3.5 sm:mb-4 shrink-0">
+            <div class="flex-1 min-w-0 flex items-center gap-1 p-1 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 rounded-2xl text-xs font-semibold">
               <button 
                 type="button" 
                 id="dsTabProfileBtn"
-                class="flex-1 h-9 px-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 min-w-0 ${!isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+                class="flex-1 min-w-0 h-9 px-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${!isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
               >
                 <i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i>
-                <span class="truncate">Hồ sơ cá nhân</span>
+                <span class="truncate sm:hidden">Hồ sơ</span>
+                <span class="truncate hidden sm:inline">Hồ sơ cá nhân</span>
               </button>
               <button 
                 type="button" 
                 id="dsTabSyncBtn"
-                class="flex-1 h-9 px-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 min-w-0 ${isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+                class="flex-1 min-w-0 h-9 px-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${isSyncTab ? 'bg-white dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-50 shadow-xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'}"
               >
                 <i data-lucide="smartphone" class="w-3.5 h-3.5 shrink-0"></i>
-                <span class="truncate">Đồng bộ thiết bị</span>
+                <span class="truncate sm:hidden">Đồng bộ</span>
+                <span class="truncate hidden sm:inline">Đồng bộ thiết bị</span>
                 ${syncStatus?.isLinked ? `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>` : ''}
               </button>
             </div>
             <button 
               type="button" 
               id="dsProfileCloseBtn"
-              class="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition cursor-pointer active:scale-95"
+              class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl shrink-0 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition cursor-pointer active:scale-95"
               aria-label="Đóng"
             >
               <i data-lucide="x" class="w-4 h-4"></i>
@@ -264,7 +266,7 @@ export function openProfileModal(options = {}) {
           </div>
         ` : `
           <!-- Onboarding Header with Close Button -->
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-4 shrink-0">
             <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Thiết lập tài khoản</span>
             <button 
               type="button" 
@@ -279,7 +281,7 @@ export function openProfileModal(options = {}) {
 
         ${isSyncTab ? `
           <!-- ================= SYNC TAB: ĐỒNG BỘ THIẾT BỊ ================= -->
-          <div class="space-y-3.5 sm:space-y-4 pt-0.5">
+          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain pr-0.5 space-y-3.5 sm:space-y-4 pt-0.5">
             <div class="flex items-start sm:items-center gap-3">
               <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs mt-0.5 sm:mt-0">
                 <i data-lucide="refresh-cw" class="w-5 h-5"></i>
@@ -309,7 +311,7 @@ export function openProfileModal(options = {}) {
             <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-2.5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-500 shrink-0"></i>
                   <span>Mã kết nối từ thiết bị này</span>
                 </div>
                 ${generatedCodeData ? `
@@ -353,10 +355,10 @@ export function openProfileModal(options = {}) {
             <!-- BLOCK 2: NHẬP MÃ TỪ THIẾT BỊ KHÁC -->
             <div class="p-3.5 sm:p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-white/5 space-y-2.5">
               <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                <i data-lucide="link-2" class="w-3.5 h-3.5 text-indigo-500"></i>
+                <i data-lucide="link-2" class="w-3.5 h-3.5 text-indigo-500 shrink-0"></i>
                 <span>Nhập mã từ thiết bị khác</span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 min-w-0 w-full">
                 <input 
                   type="text" 
                   id="dsInputSyncCode"
@@ -368,15 +370,15 @@ export function openProfileModal(options = {}) {
                   autocapitalize="off"
                   spellcheck="false"
                   placeholder="6 chữ số..."
-                  class="flex-1 h-11 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-center font-mono text-base font-bold tracking-[0.15em] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 placeholder:tracking-normal placeholder:font-sans placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition uppercase"
+                  class="flex-1 min-w-0 w-full h-11 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-center font-mono text-base font-bold tracking-[0.15em] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 placeholder:tracking-normal placeholder:font-sans placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition uppercase"
                 />
                 <button 
                   type="button" 
                   id="dsSubmitSyncCodeBtn"
                   ${isRedeeming ? 'disabled' : ''}
-                  class="h-11 px-4 rounded-xl text-xs font-bold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 shrink-0 active:scale-95"
+                  class="h-11 px-3.5 sm:px-4 rounded-xl text-xs font-bold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 shrink-0 whitespace-nowrap active:scale-95"
                 >
-                  <i data-lucide="check" class="w-4 h-4"></i>
+                  <i data-lucide="check" class="w-4 h-4 shrink-0"></i>
                   <span>${isRedeeming ? 'Đang ghép...' : 'Liên kết'}</span>
                 </button>
               </div>
@@ -389,7 +391,7 @@ export function openProfileModal(options = {}) {
                   <span>Thiết bị trong nhóm (${deviceList.length})</span>
                   <span class="text-[10px] text-zinc-400 font-mono">Nhóm: ${syncStatus?.syncGroupId ? syncStatus.syncGroupId.slice(-8) : 'Cục bộ'}</span>
                 </div>
-                <div class="max-h-36 overflow-y-auto space-y-1.5 pr-0.5">
+                <div class="max-h-48 overflow-y-auto custom-scrollbar overscroll-contain space-y-1.5 pr-0.5">
                   ${deviceList.map(dev => {
                     const isCurrent = dev.deviceId === syncStatus?.currentDeviceId || dev.isCurrent;
                     return `
@@ -438,7 +440,7 @@ export function openProfileModal(options = {}) {
               <button 
                 type="button" 
                 id="dsSyncCloseModalBtn"
-                class="w-full h-10 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer"
+                class="w-full h-11 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 transition cursor-pointer active:scale-[0.99]"
               >
                 Đóng
               </button>
@@ -446,7 +448,7 @@ export function openProfileModal(options = {}) {
           </div>
         ` : isStep1 ? `
           <!-- ================= STEP 1: NHẬP TÊN PROFILE ================= -->
-          <div class="space-y-4 pt-1">
+          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain pr-0.5 space-y-4 pt-1">
             <div class="flex items-center gap-3.5 min-w-0">
               <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
                 <i data-lucide="user" class="w-5 h-5"></i>
@@ -509,7 +511,7 @@ export function openProfileModal(options = {}) {
           </div>
         ` : `
           <!-- ================= STEP 2: ĐỔI AVATAR (HOẶC EDIT PROFILE) ================= -->
-          <div class="space-y-4 pt-1">
+          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain pr-0.5 space-y-4 pt-1">
             <div class="flex items-center gap-3.5">
               <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/25 flex items-center justify-center shrink-0 shadow-xs">
                 <i data-lucide="sparkles" class="w-5 h-5"></i>
