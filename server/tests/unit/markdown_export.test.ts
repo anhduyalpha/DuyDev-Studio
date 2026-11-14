@@ -306,5 +306,16 @@ Normal paragraph content.
       expect(code).toMatch(/e\.key\s*===\s*['"]Escape['"]/);
       expect(code).toContain('lockAdminSession');
     });
+
+    it('parseMarkdownToHtml wraps table rows cleanly and renders blockquotes after HTML escaping', async () => {
+      // @ts-ignore frontend ES module test import
+      const { parseMarkdownToHtml } = await import('../../../src/utilities/markdownParser.js');
+      const html = parseMarkdownToHtml('| Cột A | Cột B |\n| :--- | :--- |\n| 1 | 2 |\n\n> Quoted line');
+      expect(html).toContain('<table class="w-full border-collapse');
+      expect(html).toContain('<tbody><tr');
+      expect(html).toContain('</tbody></table>');
+      expect(html).toContain('<blockquote class=');
+      expect(html).toContain('Quoted line</blockquote>');
+    });
   });
 });

@@ -28,8 +28,8 @@ export function parseMarkdownToHtml(md) {
     // Bold / Italic
     .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold text-zinc-900 dark:text-white">$1</strong>')
     .replace(/\*(.*?)\*/gim, '<em class="italic text-zinc-800 dark:text-zinc-200">$1</em>')
-    // Blockquote
-    .replace(/^\> (.*$)/gim, '<blockquote class="border-l-4 border-indigo-500 pl-3 py-1 my-2 italic text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-white/[0.02] rounded-r-lg">$1</blockquote>')
+    // Blockquote (> already HTML-escaped to &gt; above)
+    .replace(/^&gt; (.*$)/gim, '<blockquote class="border-l-4 border-indigo-500 pl-3 py-1 my-2 italic text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-white/[0.02] rounded-r-lg">$1</blockquote>')
     // Code blocks
     .replace(/```([\s\S]*?)```/gim, '<pre class="bg-zinc-100 dark:bg-[#0E0E11] p-3 rounded-xl border border-zinc-200/60 dark:border-white/[0.04] font-mono text-[11px] overflow-x-auto text-indigo-600 dark:text-indigo-400 my-3"><code>$1</code></pre>')
     // Inline code
@@ -52,6 +52,7 @@ export function parseMarkdownToHtml(md) {
       }
       return `<tr class="border-b border-zinc-200 dark:border-white/10">${cells.map(c => `<td class="p-2 border border-zinc-200 dark:border-white/10">${c.trim()}</td>`).join('')}</tr>`;
     })
+    .replace(/(?:<tr\b[^>]*>[\s\S]*?<\/tr>\s*)+/gim, (rows) => `<table class="w-full border-collapse my-3 text-xs"><tbody>${rows.replace(/\s+(?=<tr)/g, '')}</tbody></table>`)
     // Line breaks
     .replace(/\n\n/gim, '<div class="h-2"></div>');
 
