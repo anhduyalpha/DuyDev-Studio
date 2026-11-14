@@ -8,6 +8,10 @@ import * as childProcess from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { FacebookService } from '../../src/services/facebook.service.js';
 import { BadRequestError } from '../../src/lib/errors.js';
+import {
+  facebookStreamQuerySchema,
+  facebookSaveDriveBodySchema
+} from '../../src/schemas/facebook.schema.js';
 
 vi.mock('node:child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:child_process')>();
@@ -373,6 +377,19 @@ describe('FacebookService - Fast-Race, DASH Muxer, Cache & Hardening Suite', () 
           'test_id_fail'
         )
       ).rejects.toThrow(/ffmpeg DASH mux failed/);
+    });
+
+    it('validates facebookStreamQuerySchema accepts dashToken without url and rejects empty payload', () => {
+      const parsedWithToken = facebookStreamQuerySchema.parse({ dashToken: 'abc123token' });
+      expect(parsedWithToken.dashToken).toBe('abc123token');
+      expect(parsedWithToken.url).toBe('');
+
+      const parsedWithUrl = facebookStreamQuerySchema.parse({ url: 'https://video.xx.fbcdn.net/v/test.mp4' });
+      expect(parsedWithUrl.url).toBe('https://video.xx.fbcdn.net/v/test.mp4');
+
+      expect(() => facebookStreamQuerySchema.parse({ url: '' })).toThrow();
+      expect(() => facebookStreamQuerySchema.parse({ url: '   ' })).toThrow();
+      expect(() => facebookStreamQuerySchema.parse({})).toThrow();
     });
   });
 

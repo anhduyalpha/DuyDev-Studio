@@ -1554,8 +1554,15 @@ export class FacebookService {
         const stat = await fsPromises.stat(tmpPath);
         byteCount = stat.size;
 
-        const fileBuffer = await fsPromises.readFile(tmpPath);
-        hashSha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+        // Streaming SHA-256 computation to prevent Node buffer/heap spikes on large media
+        const hash = crypto.createHash('sha256');
+        await new Promise<void>((res, rej) => {
+          const stream = fs.createReadStream(tmpPath);
+          stream.on('data', (chunk) => hash.update(chunk));
+          stream.on('end', () => res());
+          stream.on('error', (err) => rej(err));
+        });
+        hashSha256 = hash.digest('hex');
 
         await fsPromises.rename(tmpPath, targetFilePath);
       } catch (muxErr) {

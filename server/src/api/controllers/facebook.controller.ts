@@ -30,7 +30,7 @@ export async function streamFacebookHandler(request: FastifyRequest, reply: Fast
   const isDownload = download === true || download === 'true' || download === '1';
   const rangeHeader = request.headers.range;
 
-  const resolvedUrl = dashToken && !url.startsWith('dash://') ? `dash://${dashToken}` : url;
+  const resolvedUrl = dashToken && (!url || !url.startsWith('dash://')) ? `dash://${dashToken}` : url;
 
   await FacebookService.proxyStream(
     resolvedUrl,
