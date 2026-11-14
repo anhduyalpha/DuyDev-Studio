@@ -8,7 +8,7 @@ import { showToast } from '../../utilities/toast.js';
 import { parseMarkdownToHtml, downloadBlob } from '../../utilities/markdownParser.js';
 import { loadModuleState, saveModuleState } from '../../utilities/moduleState.js';
 import { storage } from '../../utilities/storage.js';
-import { requireAdmin, getStorageAuthHeaders } from '../../utilities/adminAuth.js';
+import { requireAdmin, getStorageAuthHeaders, lockAdminSession } from '../../utilities/adminAuth.js';
 
 /**
  * @typedef {Object} MarkdownState
@@ -439,6 +439,8 @@ export function attachMarkdownEditorListeners(onReRender) {
     });
   }
 
+  let activeCloseDriveModal = null;
+
   /**
    * Opens Drive Picker Modal querying /api/v1/storage/list
    */
@@ -476,118 +478,183 @@ export function attachMarkdownEditorListeners(onReRender) {
       </div>
     `;
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
+
+    const backdropEl = document.getElementById('mdDriveModalBackdrop');
+    const handleBackdropClick = (e) => {
+      if (e.target === backdropEl) {
+        closeModal();
+      }
+    };
+    backdropEl?.addEventListener('click', handleBackdropClick);
+
+    const handleModalKeydown = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+    window.addEventListener('keydown', handleModalKeydown);
 
     const closeModal = () => {
+      window.removeEventListener('keydown', handleModalKeydown);
+      backdropEl?.removeEventListener('click', handleBackdropClick);
       modalRoot.innerHTML = '';
+      activeCloseDriveModal = null;
     };
+    activeCloseDriveModal = closeModal;
 
     document.getElementById('btnCloseDriveModal')?.addEventListener('click', closeModal);
     document.getElementById('btnCancelDriveModal')?.addEventListener('click', closeModal);
 
-    try {
-      const res = await fetch('/api/v1/storage/list?path=/', {
-        headers: getStorageAuthHeaders()
-      });
-
-      if (!res.ok) {
-        throw new Error(`Storage error ${res.status}`);
-      }
-
-      const listData = await res.json();
-      const files = listData.items || listData.files || [];
-
-      // Filter text and markdown files
-      const mdFiles = files.filter((f) => {
-        const name = (f.name || f.filename || '').toLowerCase();
-        return name.endsWith('.md') || name.endsWith('.markdown') || name.endsWith('.txt');
-      });
-
+    const loadDriveFiles = async (allow401Retry = true) => {
       const listEl = document.getElementById('mdDriveFileList');
       if (!listEl) return;
 
-      if (mdFiles.length === 0) {
-        listEl.innerHTML = `
-          <div class="text-center py-8 text-zinc-400 space-y-2">
-            <i data-lucide="file-question" class="w-8 h-8 mx-auto text-zinc-500"></i>
-            <p>Không tìm thấy file .md hoặc .txt nào trong thư mục gốc của Drive.</p>
-          </div>
-        `;
-        if (window.lucide) window.lucide.createIcons();
-        return;
-      }
+      listEl.innerHTML = `
+        <div class="flex items-center justify-center py-8 text-zinc-400">
+          <i data-lucide="loader-2" class="w-5 h-5 animate-spin mr-2"></i> Đang tải danh sách file...
+        </div>
+      `;
+      if (window.lucide && listEl) window.lucide.createIcons({ root: listEl });
 
-      listEl.innerHTML = mdFiles
-        .map((f) => {
-          const filePath = f.path || f.relPath || `/${f.name}`;
-          const fileSize = f.sizeBytes ? `${Math.round(f.sizeBytes / 1024)} KB` : '';
-          return `
-            <div data-drive-path="${escapeHtml(filePath)}" class="drive-item flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 hover:bg-indigo-50 dark:bg-white/[0.02] dark:hover:bg-indigo-500/10 border border-zinc-200/60 dark:border-white/[0.05] transition cursor-pointer group">
-              <div class="flex items-center gap-2.5 truncate">
-                <i data-lucide="file-text" class="w-4 h-4 text-indigo-500 shrink-0"></i>
-                <span class="font-medium text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 truncate">${escapeHtml(
-                  f.name
-                )}</span>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <span class="text-[11px] text-zinc-400">${fileSize}</span>
-                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-zinc-400 group-hover:text-indigo-500 transition"></i>
-              </div>
+      try {
+        const res = await fetch('/api/v1/storage/list?path=/', {
+          headers: getStorageAuthHeaders()
+        });
+
+        if (res.status === 401) {
+          if (allow401Retry) {
+            lockAdminSession();
+            requireAdmin(() => {
+              loadDriveFiles(false);
+            }, 'Phiên xác thực đã hết hạn. Vui lòng nhập mật khẩu Quản trị viên để mở Storage Drive');
+            return;
+          }
+          throw new Error('401_UNAUTHORIZED');
+        }
+
+        if (!res.ok) {
+          throw new Error(`Storage error ${res.status}`);
+        }
+
+        const listData = await res.json();
+        const files = listData.items || listData.files || [];
+
+        // Filter text and markdown files
+        const mdFiles = files.filter((f) => {
+          const name = (f.name || f.filename || '').toLowerCase();
+          return name.endsWith('.md') || name.endsWith('.markdown') || name.endsWith('.txt');
+        });
+
+        if (mdFiles.length === 0) {
+          listEl.innerHTML = `
+            <div class="text-center py-8 text-zinc-400 space-y-2">
+              <i data-lucide="file-question" class="w-8 h-8 mx-auto text-zinc-500"></i>
+              <p>Không tìm thấy file .md hoặc .txt nào trong thư mục gốc của Drive.</p>
             </div>
           `;
-        })
-        .join('');
+          if (window.lucide && listEl) window.lucide.createIcons({ root: listEl });
+          return;
+        }
 
-      if (window.lucide) window.lucide.createIcons();
+        listEl.innerHTML = mdFiles
+          .map((f) => {
+            const filePath = f.path || f.relPath || `/${f.name}`;
+            const fileSize = f.sizeBytes ? `${Math.round(f.sizeBytes / 1024)} KB` : '';
+            return `
+              <div data-drive-path="${escapeHtml(filePath)}" class="drive-item flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 hover:bg-indigo-50 dark:bg-white/[0.02] dark:hover:bg-indigo-500/10 border border-zinc-200/60 dark:border-white/[0.05] transition cursor-pointer group">
+                <div class="flex items-center gap-2.5 truncate">
+                  <i data-lucide="file-text" class="w-4 h-4 text-indigo-500 shrink-0"></i>
+                  <span class="font-medium text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 truncate">${escapeHtml(
+                    f.name
+                  )}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-[11px] text-zinc-400">${fileSize}</span>
+                  <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-zinc-400 group-hover:text-indigo-500 transition"></i>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
 
-      listEl.querySelectorAll('.drive-item').forEach((item) => {
-        item.addEventListener('click', async () => {
-          const drivePath = item.getAttribute('data-drive-path');
-          if (!drivePath) return;
+        if (window.lucide && listEl) window.lucide.createIcons({ root: listEl });
 
-          try {
-            item.innerHTML = `<span class="text-indigo-500 py-1 flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang tải nội dung...</span>`;
-            if (window.lucide) window.lucide.createIcons();
+        listEl.querySelectorAll('.drive-item').forEach((item) => {
+          item.addEventListener('click', async () => {
+            const drivePath = item.getAttribute('data-drive-path');
+            if (!drivePath) return;
 
-            const downRes = await fetch(
-              `/api/v1/storage/download?path=${encodeURIComponent(drivePath)}`,
-              {
-                headers: getStorageAuthHeaders()
+            const downloadFile = async (allowDown401Retry = true) => {
+              try {
+                item.innerHTML = `<span class="text-indigo-500 py-1 flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang tải nội dung...</span>`;
+                if (window.lucide && item) window.lucide.createIcons({ root: item });
+
+                const downRes = await fetch(
+                  `/api/v1/storage/download?path=${encodeURIComponent(drivePath)}`,
+                  {
+                    headers: getStorageAuthHeaders()
+                  }
+                );
+
+                if (downRes.status === 401) {
+                  if (allowDown401Retry) {
+                    lockAdminSession();
+                    requireAdmin(() => {
+                      downloadFile(false);
+                    }, 'Xác thực lại Quản trị viên để tải file từ Storage Drive');
+                    return;
+                  }
+                  throw new Error('401_UNAUTHORIZED');
+                }
+
+                if (!downRes.ok) {
+                  throw new Error(`Download failed: HTTP ${downRes.status}`);
+                }
+
+                const text = await downRes.text();
+                markdownState.content = text;
+                mdPendingContent = null;
+                if (textarea) textarea.value = text;
+                persistMarkdownState();
+                if (preview) preview.innerHTML = parseMarkdownToHtml(text);
+                const countEl = document.getElementById('markdownCharCount');
+                if (countEl) countEl.textContent = `${text.length} ký tự`;
+
+                closeModal();
+                showToast('Đã tải tài liệu từ Drive thành công', 'success');
+              } catch (err) {
+                if (err.message === '401_UNAUTHORIZED') {
+                  showToast('Yêu cầu xác thực Quản trị viên để tải file', 'error');
+                } else {
+                  showToast('Lỗi khi tải file từ Drive', 'error');
+                }
+                closeModal();
               }
-            );
+            };
 
-            if (!downRes.ok) {
-              throw new Error(`Download failed: HTTP ${downRes.status}`);
-            }
-
-            const text = await downRes.text();
-            markdownState.content = text;
-            mdPendingContent = null;
-            if (textarea) textarea.value = text;
-            persistMarkdownState();
-            if (preview) preview.innerHTML = parseMarkdownToHtml(text);
-            const countEl = document.getElementById('markdownCharCount');
-            if (countEl) countEl.textContent = `${text.length} ký tự`;
-
-            closeModal();
-            showToast('Đã tải tài liệu từ Drive thành công', 'success');
-          } catch (err) {
-            showToast('Lỗi khi tải file từ Drive', 'error');
-            closeModal();
-          }
+            await downloadFile(true);
+          });
         });
-      });
-    } catch (netErr) {
-      const listEl = document.getElementById('mdDriveFileList');
-      if (listEl) {
+      } catch (netErr) {
+        if (!listEl) return;
+        const isAuthErr = netErr.message === '401_UNAUTHORIZED';
         listEl.innerHTML = `
-          <div class="text-center py-6 text-red-500 space-y-1">
-            <p class="font-semibold">Không thể kết nối đến Storage Drive.</p>
-            <p class="text-[11px] text-zinc-400">Vui lòng kiểm tra quyền quản trị hoặc thử lại sau.</p>
+          <div class="text-center py-6 text-red-500 space-y-2">
+            <p class="font-semibold">${isAuthErr ? 'Phiên xác thực đã hết hạn hoặc chưa được cấp quyền.' : 'Không thể kết nối đến Storage Drive.'}</p>
+            <p class="text-[11px] text-zinc-400">${isAuthErr ? 'Vui lòng mở khóa Quản trị viên để xem danh sách file.' : 'Vui lòng kiểm tra kết nối mạng hoặc thử lại.'}</p>
+            <button id="btnRetryDriveFetch" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer">
+              Thử lại
+            </button>
           </div>
         `;
+        document.getElementById('btnRetryDriveFetch')?.addEventListener('click', () => {
+          requireAdmin(() => loadDriveFiles(true));
+        });
       }
-    }
+    };
+
+    await loadDriveFiles(true);
   }
 
   // Export DOCX & PDF via Backend API /api/v1/markdown/export
@@ -599,7 +666,7 @@ export function attachMarkdownEditorListeners(onReRender) {
     if (btn) {
       btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang xử lý...`;
       btn.setAttribute('disabled', 'true');
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide && btn) window.lucide.createIcons({ root: btn });
     }
 
     try {
@@ -651,7 +718,7 @@ export function attachMarkdownEditorListeners(onReRender) {
       if (btn) {
         btn.innerHTML = originalText;
         btn.removeAttribute('disabled');
-        if (window.lucide) window.lucide.createIcons();
+        if (window.lucide && btn) window.lucide.createIcons({ root: btn });
       }
     }
   }
@@ -737,6 +804,11 @@ export function attachMarkdownEditorListeners(onReRender) {
     const isEditorActive = Boolean(document.getElementById('markdownInput'));
     if (!isEditorActive) return;
 
+    // Pause shortcuts if modal or admin auth prompt is open
+    if (document.getElementById('mdDriveModalBackdrop') || document.getElementById('dsModalAdminPwdInput')) {
+      return;
+    }
+
     // Ctrl+S: Save/Download .md
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
@@ -791,6 +863,9 @@ export function attachMarkdownEditorListeners(onReRender) {
 
   // Return unmount cleanup function
   return () => {
+    if (activeCloseDriveModal) {
+      activeCloseDriveModal();
+    }
     if (mdDebounceTimer) {
       clearTimeout(mdDebounceTimer);
       mdDebounceTimer = null;

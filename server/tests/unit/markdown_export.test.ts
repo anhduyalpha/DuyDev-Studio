@@ -26,6 +26,12 @@ describe('Task 4.4 - Markdown Export & Docs Upgrade Suite', () => {
 
   afterAll(async () => {
     for (const id of createdFileIds) {
+      try {
+        const fileRec = await prisma.fileRecord.findUnique({ where: { id } }).catch(() => null);
+        if (fileRec?.storagePath && existsSync(fileRec.storagePath)) {
+          await fs.unlink(fileRec.storagePath).catch(() => {});
+        }
+      } catch {}
       await prisma.fileRecord.deleteMany({ where: { id } }).catch(() => {});
       await prisma.historyRecord.deleteMany({ where: { resultFileId: id } }).catch(() => {});
     }
@@ -290,6 +296,15 @@ Normal paragraph content.
       expect(code).not.toContain('Xuất .DOCX (');
       expect(code).not.toContain('Xuất .PDF (');
       expect(code).not.toContain('Tải .md (');
+
+      // 8. Scoped lucide.createIcons only (never unscoped createIcons())
+      expect(code).toContain('createIcons({ root:');
+      expect(code).not.toMatch(/createIcons\(\s*\)/);
+
+      // 9. Drive modal dismiss (backdrop click & Escape key) and shortcut pause
+      expect(code).toContain('mdDriveModalBackdrop');
+      expect(code).toMatch(/e\.key\s*===\s*['"]Escape['"]/);
+      expect(code).toContain('lockAdminSession');
     });
   });
 });

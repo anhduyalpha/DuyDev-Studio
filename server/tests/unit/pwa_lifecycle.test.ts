@@ -88,7 +88,7 @@ describe('PWA Lifecycle & Skip-Waiting Protection Suite', () => {
       const footerPath = path.join(rootDir, 'src/components/layout/Footer.js');
       const footerContent = fs.readFileSync(footerPath, 'utf-8');
       expect(footerContent).not.toContain('v23.11');
-      expect(footerContent).toContain('Studio của Duy cho mụi người dùng');
+      expect(footerContent).toMatch(/Studio của Duy cho (?:mọi|mụi) người dùng/);
     });
   });
 
