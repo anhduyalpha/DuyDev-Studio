@@ -74,7 +74,8 @@ function handleUrlCandidate(raw) {
 }
 
 export function attachScribdListeners() {
-  if (window.lucide?.createIcons) window.lucide.createIcons();
+  const root = document.getElementById('scribdWorkspaceRoot');
+  if (root && window.lucide?.createIcons) window.lucide.createIcons({ root: root });
   scribdManager.init();
 
   let prevDownloading = false;
@@ -391,7 +392,7 @@ export function attachScribdListeners() {
       }
       prevDownloading = state.isDownloading;
       attachHeroHandlers();
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      if (heroEl && window.lucide?.createIcons) window.lucide.createIcons({ root: heroEl });
     }
     heroEl?.querySelector('.scribd-command-deck')?.classList.toggle('is-processing', Boolean(state.isDownloading));
 
@@ -490,7 +491,7 @@ export function attachScribdListeners() {
       prevStructureKey = structureKey;
       prevSearchQuery = state.searchQuery;
       listEl.innerHTML = renderDocumentListCard(state);
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      if (listEl && window.lucide?.createIcons) window.lucide.createIcons({ root: listEl });
       attachListHandlers();
     } else if (itemsEl && state.searchQuery !== prevSearchQuery) {
       prevSearchQuery = state.searchQuery;

@@ -212,7 +212,7 @@ export function attachServerPageListeners(onRerender) {
       btnCheckUpdate.addEventListener('click', async () => {
         btnCheckUpdate.disabled = true;
         btnCheckUpdate.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang kiểm tra...';
-        if (window.lucide) window.lucide.createIcons();
+        if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
 
         try {
           const check = await checkApkUpdate();
@@ -250,7 +250,7 @@ export function attachServerPageListeners(onRerender) {
                 showToast('Tải hoàn tất! Đang khởi chạy bộ cài đặt hệ thống', 'success');
                 btnCheckUpdate.disabled = false;
                 btnCheckUpdate.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> Cài đặt APK';
-                if (window.lucide) window.lucide.createIcons();
+                if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
                 cleanup();
               },
               onError: (err) => {
@@ -258,7 +258,7 @@ export function attachServerPageListeners(onRerender) {
                 showToast(`Không thể tải APK: ${err.message || 'Lỗi mạng'}`, 'error');
                 btnCheckUpdate.disabled = false;
                 btnCheckUpdate.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Thử lại';
-                if (window.lucide) window.lucide.createIcons();
+                if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
                 cleanup();
               }
             });
@@ -268,24 +268,24 @@ export function attachServerPageListeners(onRerender) {
             showToast(`Bạn đang sử dụng phiên bản APK mới nhất (${check.currentVersion})`, 'success');
             btnCheckUpdate.disabled = false;
             btnCheckUpdate.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i> Đã là bản mới nhất';
-            if (window.lucide) window.lucide.createIcons();
+            if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
             setTimeout(() => {
               btnCheckUpdate.innerHTML = '<i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Cập nhật APK';
-              if (window.lucide) window.lucide.createIcons();
+              if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
             }, 3000);
           }
         } catch (err) {
           showToast(`Lỗi kiểm tra cập nhật: ${err.message}`, 'error');
           btnCheckUpdate.disabled = false;
           btnCheckUpdate.innerHTML = '<i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Cập nhật APK';
-          if (window.lucide) window.lucide.createIcons();
+          if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
         }
       });
     } else {
       btnCheckUpdate.addEventListener('click', async () => {
         btnCheckUpdate.disabled = true;
         btnCheckUpdate.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Đang kiểm tra...';
-        if (window.lucide) window.lucide.createIcons();
+        if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
 
         const result = await checkForAppUpdate();
         if (result.updated) {
@@ -296,7 +296,7 @@ export function attachServerPageListeners(onRerender) {
         if (!result.updated) {
           btnCheckUpdate.disabled = false;
           btnCheckUpdate.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kiểm tra cập nhật';
-          if (window.lucide) window.lucide.createIcons();
+          if (window.lucide && btnCheckUpdate) window.lucide.createIcons({ root: btnCheckUpdate });
         }
       });
     }

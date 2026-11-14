@@ -980,7 +980,7 @@ export function attachStoragePageListeners(onSoftReRender) {
     const contentArea = document.getElementById('storageContentArea');
     if (contentArea) {
       contentArea.innerHTML = renderExplorerContent();
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) window.lucide.createIcons({ root: contentArea });
     }
     updateBatchToolbar();
     updateStatusBar();
@@ -1008,11 +1008,17 @@ export function attachStoragePageListeners(onSoftReRender) {
     } finally {
       state.isLoading = false;
       const breadcrumbEl = document.getElementById('storageBreadcrumbContainer');
-      rerenderContentOnly();
-      if (breadcrumbEl) breadcrumbEl.innerHTML = renderBreadcrumbs(state.currentPath);
+      if (breadcrumbEl) {
+        breadcrumbEl.innerHTML = renderBreadcrumbs(state.currentPath);
+        if (window.lucide) window.lucide.createIcons({ root: breadcrumbEl });
+      }
       const tabsEl = document.getElementById('storageFolderTabsContainer');
-      if (tabsEl) tabsEl.outerHTML = renderFolderTabs(state.currentPath);
-      if (window.lucide) window.lucide.createIcons();
+      if (tabsEl) {
+        tabsEl.outerHTML = renderFolderTabs(state.currentPath);
+        const newTabsEl = document.getElementById('storageFolderTabsContainer');
+        if (newTabsEl && window.lucide) window.lucide.createIcons({ root: newTabsEl });
+      }
+      rerenderContentOnly();
     }
   };
 
@@ -1685,7 +1691,7 @@ function showNewFolderModal(onConfirm) {
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
   const cleanup = () => { modalRoot.innerHTML = ''; };
   const input = document.getElementById('inputNewFolderName');
@@ -1833,7 +1839,7 @@ function showStorageItemActionsModal(item, loadDirectory, previewStorageItem) {
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
   const cleanup = () => { modalRoot.innerHTML = ''; };
 
@@ -1951,7 +1957,7 @@ function handleRenameItem(itemPath, oldName, onComplete) {
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
   const cleanup = () => { modalRoot.innerHTML = ''; };
   const input = document.getElementById('inputRenameItem');
@@ -2116,7 +2122,7 @@ function handleMoveCopyModal(itemPaths, isCopy = false, onComplete) {
       </div>
     `;
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
     const btnSubmit = document.getElementById('btnSubmitMoveCopy');
     const btnCancel = document.getElementById('btnCancelMoveCopy');

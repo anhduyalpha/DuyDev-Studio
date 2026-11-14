@@ -52,9 +52,8 @@ export function getCuteQuizProgressQuote(pct, rawStage) {
 }
 
 export function attachQuizListeners() {
-  if (window.lucide?.createIcons) window.lucide.createIcons();
-
   const root = document.getElementById('quizWorkspaceRoot');
+  if (root && window.lucide?.createIcons) window.lucide.createIcons({ root: root });
   if (!root) return () => {};
 
   let isTornDown = false;
@@ -218,7 +217,8 @@ export function attachQuizListeners() {
         }
       }
 
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      const cfgEl = document.getElementById('quizConfigContainer') || root;
+      if (cfgEl && window.lucide?.createIcons) window.lucide.createIcons({ root: cfgEl });
       syncGenerateButton();
     } catch (err) {
       console.warn('syncValidationUI warning:', err);
@@ -306,7 +306,8 @@ export function attachQuizListeners() {
       }
     }
 
-    if (window.lucide?.createIcons) window.lucide.createIcons();
+    const rootEl = document.getElementById('quizWorkspaceRoot') || root;
+    if (rootEl && window.lucide?.createIcons) window.lucide.createIcons({ root: rootEl });
 
     // Restore focus if element still exists
     if (activeId) {
@@ -811,7 +812,7 @@ export function attachQuizListeners() {
     if (historyEl) {
       historyEl.innerHTML = renderQuizHistoryList();
       attachHistoryHandlers();
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: historyEl });
     }
   }
 

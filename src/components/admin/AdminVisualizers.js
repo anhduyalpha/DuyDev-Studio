@@ -37,7 +37,7 @@ export function renderSvgGauge(percent, label, valueText, colorScheme = 'emerald
 
   return `
     <div class="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-900/60 border border-white/5 relative">
-      <div class="relative w-[${size}px] h-[${size}px] flex items-center justify-center">
+      <div class="relative flex items-center justify-center" style="width:${Number(size) || 110}px;height:${Number(size) || 110}px;">
         <svg class="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
           <!-- Background track -->
           <circle

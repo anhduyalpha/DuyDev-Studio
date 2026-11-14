@@ -29,6 +29,14 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const viewSplitPanePath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitPane.js');
   const cardTiersPath = path.join(rootDir, 'src/styles/card-tiers-10.css');
   const toolRegistryPath = path.join(rootDir, 'src/hooks/useToolRegistry.js');
+  const storagePagePath = path.join(rootDir, 'src/pages/StoragePage.js');
+  const quizListenersPath = path.join(rootDir, 'src/components/tools/quiz/hooks/useQuizListeners.js');
+  const serverPagePath = path.join(rootDir, 'src/pages/ServerPage.js');
+  const archivePagePath = path.join(rootDir, 'src/pages/ArchivePage.js');
+  const scribdWorkspacePath = path.join(rootDir, 'src/components/tools/scribd/ScribdWorkspace.js');
+  const youtubeWorkspacePath = path.join(rootDir, 'src/components/tools/youtube/YoutubeWorkspace.js');
+  const pdfDomPath = path.join(rootDir, 'src/components/tools/pdf/hooks/usePdfDom.js');
+  const tiktokWorkspacePath = path.join(rootDir, 'src/components/tools/tiktok/TiktokWorkspace.js');
 
   const swContent = fs.readFileSync(swPath, 'utf-8');
   const indexContent = fs.readFileSync(indexPath, 'utf-8');
@@ -52,6 +60,14 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const viewSplitPaneContent = fs.readFileSync(viewSplitPanePath, 'utf-8');
   const cardTiersContent = fs.readFileSync(cardTiersPath, 'utf-8');
   const toolRegistryContent = fs.readFileSync(toolRegistryPath, 'utf-8');
+  const storagePageContent = fs.readFileSync(storagePagePath, 'utf-8');
+  const quizListenersContent = fs.readFileSync(quizListenersPath, 'utf-8');
+  const serverPageContent = fs.readFileSync(serverPagePath, 'utf-8');
+  const archivePageContent = fs.readFileSync(archivePagePath, 'utf-8');
+  const scribdWorkspaceContent = fs.readFileSync(scribdWorkspacePath, 'utf-8');
+  const youtubeWorkspaceContent = fs.readFileSync(youtubeWorkspacePath, 'utf-8');
+  const pdfDomContent = fs.readFileSync(pdfDomPath, 'utf-8');
+  const tiktokWorkspaceContent = fs.readFileSync(tiktokWorkspacePath, 'utf-8');
 
   describe('1. Fastify Static Tiered Caching & ETag (Pillar 1)', () => {
     let app: FastifyInstance;
@@ -459,6 +475,48 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
 
     it('stitch-tokens.css must pause animations and disable transitions under html.ds-animations-paused', () => {
       expect(stitchContent).toContain('html.ds-animations-paused');
+    });
+  });
+
+  describe('7. Scoped Lucide DOM Mutex & Admin SVG Gauge Diffing (Task 3.3)', () => {
+    it('AdminPage.js, StoragePage.js, and polling/workspace tools must have zero bare lucide.createIcons() calls without { root }', () => {
+      const bareCreateIconsRegex = /createIcons\s*\(\s*(?!\s*\{\s*root\s*:)/;
+
+      const targetFiles = [
+        { name: 'AdminPage.js', content: adminPageContent },
+        { name: 'StoragePage.js', content: storagePageContent },
+        { name: 'useQuizListeners.js', content: quizListenersContent },
+        { name: 'ServerPage.js', content: serverPageContent },
+        { name: 'ArchivePage.js', content: archivePageContent },
+        { name: 'ScribdWorkspace.js', content: scribdWorkspaceContent },
+        { name: 'YoutubeWorkspace.js', content: youtubeWorkspaceContent },
+        { name: 'usePdfDom.js', content: pdfDomContent },
+        { name: 'TiktokWorkspace.js', content: tiktokWorkspaceContent },
+      ];
+
+      for (const file of targetFiles) {
+        const match = file.content.match(bareCreateIconsRegex);
+        expect(match, `File ${file.name} contains bare unscoped createIcons() call: ${match?.[0]}`).toBeNull();
+      }
+    });
+
+    it('AdminPage.js must diff SVG gauges using lastGaugeSignature before mutating #adminGaugesContainer.innerHTML', () => {
+      expect(adminPageContent).toContain('lastGaugeSignature');
+      expect(adminPageContent).toMatch(/gaugeSignature\s*=\s*`?\${[^}]+}\|\${[^}]+}\|\${[^}]+}`?/);
+    });
+
+    it('AdminPage.js must handle ds:native-app-paused and ds:native-app-resumed with clean teardown and signature reset', () => {
+      expect(adminPageContent).toContain("window.addEventListener('ds:native-app-paused'");
+      expect(adminPageContent).toContain("window.addEventListener('ds:native-app-resumed'");
+      expect(adminPageContent).toContain("window.removeEventListener('ds:native-app-paused'");
+      expect(adminPageContent).toContain("window.removeEventListener('ds:native-app-resumed'");
+      expect(adminPageContent).toContain('lastGaugeSignature = null');
+    });
+
+    it('StoragePage.js must deduplicate back-to-back icon refreshes in loadDirectory and scope createIcons to mutated containers', () => {
+      expect(storagePageContent).not.toMatch(/rerenderContentOnly\(\);\s*if\s*\(breadcrumbEl\)[^;]+;\s*if\s*\(tabsEl\)[^;]+;\s*if\s*\(window\.lucide\)\s*window\.lucide\.createIcons\(\);/);
+      const bareCreateIconsRegex = /createIcons\s*\(\s*(?!\s*\{\s*root\s*:)/;
+      expect(storagePageContent.match(bareCreateIconsRegex)).toBeNull();
     });
   });
 });

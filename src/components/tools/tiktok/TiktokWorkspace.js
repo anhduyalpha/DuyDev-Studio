@@ -726,7 +726,8 @@ async function downloadSlideshowZip(video) {
 }
 
 export function attachTiktokWorkspaceListeners() {
-  if (window.lucide?.createIcons) window.lucide.createIcons();
+  const root = document.getElementById('tiktokWorkspaceRoot');
+  if (root && window.lucide?.createIcons) window.lucide.createIcons({ root: root });
 
   const input = document.getElementById('tiktokUrlInput');
   const btnResolve = document.getElementById('btnResolveTiktok');
@@ -1076,7 +1077,7 @@ export function attachTiktokWorkspaceListeners() {
       }
     }
 
-    if (window.lucide?.createIcons) window.lucide.createIcons();
+    if (resultContainer && window.lucide?.createIcons) window.lucide.createIcons({ root: resultContainer });
   }
 
   function renderHistory() {
@@ -1221,7 +1222,8 @@ export function attachTiktokWorkspaceListeners() {
       renderHistory();
     }
 
-    if (window.lucide?.createIcons) window.lucide.createIcons();
+    const rootEl = document.getElementById('tiktokWorkspaceRoot') || resultContainer;
+    if (rootEl && window.lucide?.createIcons) window.lucide.createIcons({ root: rootEl });
   });
 
   // Migrate legacy localStorage history to storage.js if needed

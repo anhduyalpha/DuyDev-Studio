@@ -629,8 +629,8 @@ export class YoutubeWorkspace {
     this.container.addEventListener('click', this.boundHandleClick);
 
     // Refresh Lucide icons
-    if (window.lucide?.createIcons) {
-      window.lucide.createIcons();
+    if (this.container && window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: this.container });
     }
   }
 }

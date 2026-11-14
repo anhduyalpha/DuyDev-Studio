@@ -29,7 +29,11 @@ import { renderAdminToolCardManager, attachAdminToolCardManagerListeners, initDr
 // Module state for polling ticker and data cache
 let telemetryPollingTimer = null;
 let adminVisibilityHandler = null;
+let adminNativePauseHandler = null;
+let adminNativeResumeHandler = null;
 let isPollingPaused = false;
+let isNativeAppPaused = false;
+let lastGaugeSignature = null;
 let latestTelemetryData = null;
 let cachedFailedJobsData = [];
 let cachedEngineTimeoutsData = null;
@@ -60,6 +64,7 @@ function formatUptime(seconds) {
  * Renders the Admin Page HTML
  */
 export function renderAdminPage() {
+  lastGaugeSignature = null;
   const isAuth = isAdminAuthenticated();
 
   if (!isAuth) {
@@ -851,12 +856,19 @@ function updateAdminTelemetryDom(data) {
   // 4. Hardware Gauges Row
   const gaugesContainer = document.getElementById('adminGaugesContainer');
   if (gaugesContainer) {
+    const memPct = mem.percent || 0;
     const cpuLoadPct = Math.min(100, Math.round(((loadAvg[0] || 0) / (host.cpuCores || 4)) * 100));
-    gaugesContainer.innerHTML = `
-      ${renderSvgGauge(mem.percent || 0, 'Host RAM', `${mem.percent || 0}%`, 'auto')}
-      ${renderSvgGauge(cpuLoadPct, 'Tải CPU', `${cpuLoadPct}%`, 'auto')}
-      ${renderSvgGauge(r2.percentUsed || 0, 'Cloudflare R2', `${r2.percentUsed || 0}%`, 'orange')}
-    `;
+    const r2Pct = r2.percentUsed || 0;
+    const gaugeSignature = `${memPct}|${cpuLoadPct}|${r2Pct}`;
+
+    if (gaugeSignature !== lastGaugeSignature) {
+      lastGaugeSignature = gaugeSignature;
+      gaugesContainer.innerHTML = `
+        ${renderSvgGauge(memPct, 'Host RAM', `${memPct}%`, 'auto')}
+        ${renderSvgGauge(cpuLoadPct, 'Tải CPU', `${cpuLoadPct}%`, 'auto')}
+        ${renderSvgGauge(r2Pct, 'Cloudflare R2', `${r2Pct}%`, 'orange')}
+      `;
+    }
   }
 
   // 5. Hardware & Resource text details
@@ -959,11 +971,10 @@ function updateAdminTelemetryDom(data) {
     if (!isEditingKey) {
       aiContainer.innerHTML = renderAiAgentsCard(data.ai);
       attachAiAgentsListeners(aiContainer, () => fetchAdminTelemetry());
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons({ root: aiContainer });
+      }
     }
-  }
-
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
   }
 }
 
@@ -1006,7 +1017,7 @@ export function attachAdminPageListeners(onRerender) {
         btnToggleVis.innerHTML = isPassword
           ? '<i data-lucide="eye-off" class="w-4 h-4"></i>'
           : '<i data-lucide="eye" class="w-4 h-4"></i>';
-        if (window.lucide) window.lucide.createIcons();
+        if (window.lucide && btnToggleVis) window.lucide.createIcons({ root: btnToggleVis });
       };
     }
 
@@ -1017,7 +1028,7 @@ export function attachAdminPageListeners(onRerender) {
 
       btnUnlock.disabled = true;
       btnUnlock.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>Đang xác thực...</span>';
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide && btnUnlock) window.lucide.createIcons({ root: btnUnlock });
 
       const isValid = await verifyAdminPassword(pwd);
       if (isValid) {
@@ -1032,7 +1043,7 @@ export function attachAdminPageListeners(onRerender) {
         inputPwd.classList.add('border-rose-500');
         inputPwd.focus();
         inputPwd.select();
-        if (window.lucide) window.lucide.createIcons();
+        if (window.lucide && btnUnlock) window.lucide.createIcons({ root: btnUnlock });
       }
     };
 
@@ -1060,6 +1071,7 @@ export function attachAdminPageListeners(onRerender) {
 
   const switchTab = (tab) => {
     currentAdminTab = tab;
+    let mutatedContainer = null;
     if (tab === 'overview') {
       if (viewOverview) viewOverview.classList.remove('hidden');
       if (viewIpManager) viewIpManager.classList.add('hidden');
@@ -1073,6 +1085,7 @@ export function attachAdminPageListeners(onRerender) {
       if (viewIpManager) {
         viewIpManager.classList.remove('hidden');
         attachIpTrafficListeners(viewIpManager);
+        mutatedContainer = viewIpManager;
       }
       if (viewToolManager) viewToolManager.classList.add('hidden');
       if (tabOverview) tabOverview.className = inactiveTabClass;
@@ -1086,13 +1099,14 @@ export function attachAdminPageListeners(onRerender) {
         initDraftTools();
         viewToolManager.innerHTML = renderAdminToolCardManager();
         attachAdminToolCardManagerListeners(viewToolManager);
+        mutatedContainer = viewToolManager;
       }
       if (tabOverview) tabOverview.className = inactiveTabClass;
       if (tabIpManager) tabIpManager.className = inactiveTabClass;
       if (tabToolManager) tabToolManager.className = activeTabClass;
     }
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
+    if (mutatedContainer && window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons({ root: mutatedContainer });
     }
   };
 
@@ -1502,6 +1516,9 @@ async function fetchAdminTelemetry(onRerender) {
           if (failedJobsContainer && hasChanged) {
             failedJobsContainer.innerHTML = renderFailedJobsInspector(cachedFailedJobsData);
             attachFailedJobsListeners(failedJobsContainer, onRerender);
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+              window.lucide.createIcons({ root: failedJobsContainer });
+            }
           }
         }
       } catch (err) {
@@ -1518,15 +1535,13 @@ async function fetchAdminTelemetry(onRerender) {
             attachEngineTimeoutsListeners(engineContainer, (newTimeouts) => {
               cachedEngineTimeoutsData = newTimeouts;
             });
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+              window.lucide.createIcons({ root: engineContainer });
+            }
           }
         } catch (err) {
           console.warn('[AdminPage] Failed to fetch engine timeouts:', err);
         }
-      }
-
-      // Refresh icons if lucide is present
-      if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        window.lucide.createIcons();
       }
     }
   } catch (err) {
@@ -1548,7 +1563,7 @@ function startAdminPolling(onRerender) {
 
   telemetryPollingTimer = setInterval(() => {
     // Battery optimization: pause polling if tab is in background or manually paused
-    if (document.hidden || document.visibilityState === 'hidden' || isPollingPaused) {
+    if (document.hidden || document.visibilityState === 'hidden' || isPollingPaused || isNativeAppPaused) {
       return;
     }
     fetchAdminTelemetry(onRerender);
@@ -1556,7 +1571,7 @@ function startAdminPolling(onRerender) {
 
   let lastResumeFetch = 0;
   adminVisibilityHandler = (e) => {
-    const isHidden = document.hidden || document.visibilityState === 'hidden' || Boolean(e?.detail?.hidden);
+    const isHidden = document.hidden || document.visibilityState === 'hidden' || isNativeAppPaused || Boolean(e?.detail?.hidden);
     if (!isHidden && !isPollingPaused) {
       const now = Date.now();
       if (now - lastResumeFetch >= 15000) {
@@ -1566,10 +1581,19 @@ function startAdminPolling(onRerender) {
     }
   };
 
+  adminNativePauseHandler = () => {
+    isNativeAppPaused = true;
+  };
+
+  adminNativeResumeHandler = (e) => {
+    isNativeAppPaused = false;
+    adminVisibilityHandler(e);
+  };
+
   document.addEventListener('visibilitychange', adminVisibilityHandler);
   window.addEventListener('ds:visibility-change', adminVisibilityHandler);
-  window.addEventListener('ds:native-app-paused', stopAdminPolling);
-  window.addEventListener('ds:native-app-resumed', adminVisibilityHandler);
+  window.addEventListener('ds:native-app-paused', adminNativePauseHandler);
+  window.addEventListener('ds:native-app-resumed', adminNativeResumeHandler);
 }
 
 /**
@@ -1587,8 +1611,16 @@ export function stopAdminPolling() {
   if (adminVisibilityHandler) {
     document.removeEventListener('visibilitychange', adminVisibilityHandler);
     window.removeEventListener('ds:visibility-change', adminVisibilityHandler);
-    window.removeEventListener('ds:native-app-paused', stopAdminPolling);
-    window.removeEventListener('ds:native-app-resumed', adminVisibilityHandler);
     adminVisibilityHandler = null;
   }
+  if (adminNativePauseHandler) {
+    window.removeEventListener('ds:native-app-paused', adminNativePauseHandler);
+    adminNativePauseHandler = null;
+  }
+  if (adminNativeResumeHandler) {
+    window.removeEventListener('ds:native-app-resumed', adminNativeResumeHandler);
+    adminNativeResumeHandler = null;
+  }
+  lastGaugeSignature = null;
+  isNativeAppPaused = false;
 }

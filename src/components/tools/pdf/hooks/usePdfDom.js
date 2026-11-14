@@ -281,7 +281,7 @@ function bindDropzone(qm) {
       }
       if (spinner) spinner.classList.toggle('hidden', !loading);
       if (driveIcon) driveIcon.classList.toggle('opacity-40', loading);
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      if (driveCard && window.lucide?.createIcons) window.lucide.createIcons({ root: driveCard });
     };
 
     const doAutoImport = async (targetUrl) => {
@@ -670,7 +670,8 @@ function bindDropzone(qm) {
         }
         if (multiDriveSpinner) multiDriveSpinner.classList.toggle('hidden', !loading);
         if (multiDriveIcon) multiDriveIcon.classList.toggle('opacity-40', loading);
-        if (window.lucide?.createIcons) window.lucide.createIcons();
+        const multiContainer = inputMultiDrive.parentElement || rootEl;
+        if (multiContainer && window.lucide?.createIcons) window.lucide.createIcons({ root: multiContainer });
       };
 
       const doMultiAutoImport = async (targetUrl) => {
