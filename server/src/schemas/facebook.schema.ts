@@ -7,7 +7,8 @@ export const facebookResolveBodySchema = z.object({
 export const facebookStreamQuerySchema = z.object({
   url: z.string().min(1, 'Target media URL is required'),
   download: z.union([z.string(), z.boolean()]).optional(),
-  filename: z.string().optional()
+  filename: z.string().optional(),
+  dashToken: z.string().optional()
 });
 
 export const facebookSaveDriveBodySchema = z.object({
@@ -27,7 +28,8 @@ export const facebookSaveDriveBodySchema = z.object({
   quality: z.string().optional(),
   mediaType: z.enum(['video', 'image', 'post']).optional().default('video'),
   ext: z.string().optional(),
-  overwrite: z.boolean().optional().default(false)
+  overwrite: z.boolean().optional().default(false),
+  dashToken: z.string().optional()
 });
 
 export const facebookCheckDuplicateSchema = z.object({
@@ -41,6 +43,7 @@ export interface FacebookMediaFormat {
   url: string;
   sizeBytes?: number;
   ext: string;
+  dashToken?: string;
 }
 
 export interface FacebookVideoData {
