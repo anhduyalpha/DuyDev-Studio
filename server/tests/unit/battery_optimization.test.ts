@@ -394,6 +394,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
     it('index.html must reference matching version for all critical CSS and app.js bundles', () => {
       const match = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v(\d+\.\d+)['"]/);
       const v = match ? match[1] : '21.3';
+      expect(indexContent).toContain(`href="src/styles/tailwind.generated.css?v=${v}"`);
       expect(indexContent).toContain(`href="src/styles/stitch-tokens.css?v=${v}"`);
       expect(indexContent).toContain(`href="src/styles/studocu.css?v=${v}"`);
       expect(indexContent).toContain(`href="src/styles/highlight-theme.css?v=${v}"`);
@@ -403,6 +404,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
     it('sw.js ASSETS_TO_PRECACHE must reference matching version', () => {
       const match = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v(\d+\.\d+)['"]/);
       const v = match ? match[1] : '21.3';
+      expect(swContent).toContain(`'./src/styles/tailwind.generated.css?v=${v}'`);
       expect(swContent).toContain(`'./src/styles/stitch-tokens.css?v=${v}'`);
       expect(swContent).toContain(`'./src/styles/studocu.css?v=${v}'`);
       expect(swContent).toContain(`'./src/styles/highlight-theme.css?v=${v}'`);

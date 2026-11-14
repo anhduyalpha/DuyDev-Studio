@@ -7,6 +7,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
+import compress from '@fastify/compress';
 import path from 'path';
 import https from 'https';
 import { existsSync, readFileSync } from 'fs';
@@ -328,6 +329,13 @@ function isAllowedStaticAsset(pathname: string): boolean {
     clean.startsWith('/static/') || clean.startsWith('/pdfjs/')
   );
 }
+
+  // 6.2 Global HTTP Compression (Brotli + Gzip, skips SSE text/event-stream)
+  await app.register(compress, {
+    global: true,
+    threshold: 1024,
+    encodings: ['br', 'gzip']
+  });
 
   // 7. Unified Server: Serve PWA Frontend (Single-Port Hosting)
   const clientRoot = existsSync(path.resolve(process.cwd(), 'index.html'))

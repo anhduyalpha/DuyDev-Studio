@@ -192,70 +192,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    if (typeof tailwind !== 'undefined') {
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            spacing: {
-              '7.5': '1.875rem',
-              '8.5': '2.125rem',
-            },
-            screens: {
-              xs: '420px',
-              sm: '640px',
-              md: '768px',
-              lg: '1024px',
-              xl: '1280px',
-              '2xl': '1536px'
-            },
-            fontFamily: {
-              sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-              mono: ['"JetBrains Mono"', 'monospace'],
-            },
-            colors: {
-              brand: {
-                400: '#818cf8',
-                500: '#6366f1',
-                600: '#4f46e5',
-              }
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(4px)' },
-                '100%': { opacity: '1', transform: 'none' },
-              },
-              shimmer: {
-                '0%': { transform: 'translateX(-100%)' },
-                '100%': { transform: 'translateX(100%)' },
-              }
-            },
-            animation: {
-              fadeIn: 'fadeIn 0.2s ease-out forwards',
-              shimmer: 'shimmer 1.8s infinite',
-            }
-          }
-        }
-      };
-    }
-  </script>
+  <!-- Pre-Compiled Static Tailwind CSS v3 -->
+  <link rel="stylesheet" href="src/styles/tailwind.generated.css?v=25.0">
 
   <!-- Lucide Icons (Local Zero-Latency Precache with CDN Fallback) -->
   <script src="src/vendor/lucide.min.js"></script>
   <script>if (typeof lucide === 'undefined') { document.write('<script src="https://unpkg.com/lucide@latest"><\/script>'); }</script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.68">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=25.0">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=24.68">
+  <link rel="modulepreload" href="src/app.js?v=25.0">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -3464,7 +3416,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=24.68"></script>
+  <script type="module" src="src/app.js?v=25.0"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
