@@ -54,6 +54,32 @@ if (savedMd) {
   }
 }
 
+let mdDebounceTimer = null;
+let mdPendingContent = null;
+
+/**
+ * Immediately flushes any pending debounced Markdown parse and localStorage persistence.
+ */
+export function flushMarkdownSync() {
+  if (mdDebounceTimer !== null) {
+    clearTimeout(mdDebounceTimer);
+    mdDebounceTimer = null;
+  }
+  if (mdPendingContent !== null) {
+    markdownState.content = mdPendingContent;
+    mdPendingContent = null;
+    persistMarkdownState();
+    const preview = document.getElementById('markdownPreview');
+    if (preview) {
+      preview.innerHTML = parseMarkdownToHtml(markdownState.content);
+    }
+    const countEl = document.getElementById('markdownCharCount');
+    if (countEl) {
+      countEl.textContent = `${markdownState.content.length} ký tự`;
+    }
+  }
+}
+
 /**
  * Persists the current Markdown editor content and view mode.
  */
@@ -152,7 +178,7 @@ export function renderMarkdownEditor() {
         } bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-white/[0.07] p-4 shadow-sm flex flex-col">
           <div class="text-[11px] font-mono text-zinc-400 mb-2 flex items-center justify-between">
             <span>SOẠN THẢO MARKDOWN</span>
-            <span>${content.length} ký tự</span>
+            <span id="markdownCharCount">${content.length} ký tự</span>
           </div>
           <textarea id="markdownInput" rows="22" class="w-full flex-1 p-3 rounded-xl bg-zinc-50/70 dark:bg-[#0E0E11] border border-zinc-200/60 dark:border-white/[0.04] text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed resize-y">${content}</textarea>
         </div>
@@ -186,11 +212,27 @@ export function attachMarkdownEditorListeners(onReRender) {
 
   if (textarea) {
     textarea.addEventListener('input', (e) => {
-      markdownState.content = e.target.value;
-      persistMarkdownState();
-      if (preview) {
-        preview.innerHTML = parseMarkdownToHtml(markdownState.content);
+      const val = e.target.value;
+      mdPendingContent = val;
+      const countEl = document.getElementById('markdownCharCount');
+      if (countEl) {
+        countEl.textContent = `${val.length} ký tự`;
       }
+
+      if (mdDebounceTimer) {
+        clearTimeout(mdDebounceTimer);
+      }
+      mdDebounceTimer = setTimeout(() => {
+        mdDebounceTimer = null;
+        if (mdPendingContent !== null) {
+          markdownState.content = mdPendingContent;
+          mdPendingContent = null;
+          persistMarkdownState();
+          if (preview) {
+            preview.innerHTML = parseMarkdownToHtml(markdownState.content);
+          }
+        }
+      }, 180);
     });
   }
 
@@ -203,11 +245,8 @@ export function attachMarkdownEditorListeners(onReRender) {
         const end = textarea.selectionEnd;
         const current = textarea.value;
         textarea.value = current.substring(0, start) + snippet + current.substring(end);
-        markdownState.content = textarea.value;
-        persistMarkdownState();
-        if (preview) {
-          preview.innerHTML = parseMarkdownToHtml(markdownState.content);
-        }
+        mdPendingContent = textarea.value;
+        flushMarkdownSync();
         textarea.focus();
         textarea.setSelectionRange(start + snippet.length, start + snippet.length);
       }
@@ -217,6 +256,7 @@ export function attachMarkdownEditorListeners(onReRender) {
   // View modes
   document.querySelectorAll('.btn-md-view').forEach((btn) => {
     btn.addEventListener('click', () => {
+      flushMarkdownSync();
       markdownState.viewMode = btn.dataset.mdView;
       persistMarkdownState();
       if (onReRender) onReRender();
@@ -227,6 +267,7 @@ export function attachMarkdownEditorListeners(onReRender) {
   const btnExpHtml = document.getElementById('btnExportHtml');
   if (btnExpHtml) {
     btnExpHtml.addEventListener('click', () => {
+      flushMarkdownSync();
       const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
@@ -260,6 +301,7 @@ export function attachMarkdownEditorListeners(onReRender) {
   const btnExpMd = document.getElementById('btnExportMd');
   if (btnExpMd) {
     btnExpMd.addEventListener('click', () => {
+      flushMarkdownSync();
       downloadBlob(markdownState.content, 'document.md', 'text/markdown');
       storage.addHistoryItem({
         toolId: 'markdown-docs',
@@ -275,11 +317,20 @@ export function attachMarkdownEditorListeners(onReRender) {
   const btnPrint = document.getElementById('btnPrintPdf');
   if (btnPrint) {
     btnPrint.addEventListener('click', () => {
+      flushMarkdownSync();
       window.print();
     });
   }
 
   return () => {
-    // Teardown: no active asynchronous timers to clear
+    if (mdDebounceTimer) {
+      clearTimeout(mdDebounceTimer);
+      mdDebounceTimer = null;
+    }
+    if (mdPendingContent !== null) {
+      markdownState.content = mdPendingContent;
+      mdPendingContent = null;
+      persistMarkdownState();
+    }
   };
 }

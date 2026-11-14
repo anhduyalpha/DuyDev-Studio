@@ -5,6 +5,7 @@
 
 import { showToast } from '../../../../utilities/toast.js';
 import { taskCoordinator } from '../../../../utilities/taskCoordinator.js';
+import { computeTextHashes, computeFileHashesStreaming } from '../../../../utilities/hashStream.js';
 
 export function bufferToHex(buffer) {
   return Array.from(new Uint8Array(buffer))
@@ -13,19 +14,7 @@ export function bufferToHex(buffer) {
 }
 
 export async function calculateTextHashes(text) {
-  const enc = new TextEncoder();
-  const data = enc.encode(text);
-  const [sha256Buf, sha1Buf, sha512Buf] = await Promise.all([
-    crypto.subtle.digest('SHA-256', data),
-    crypto.subtle.digest('SHA-1', data),
-    crypto.subtle.digest('SHA-512', data)
-  ]);
-
-  return {
-    sha256: bufferToHex(sha256Buf),
-    sha1: bufferToHex(sha1Buf),
-    sha512: bufferToHex(sha512Buf)
-  };
+  return computeTextHashes(text);
 }
 
 class HashManager {
@@ -36,7 +25,15 @@ class HashManager {
     this.activeFile = null;
     this.isHashing = false;
     this.progress = 0;
+    this.abortController = null;
     this.subscribers = new Set();
+  }
+
+  abort() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
   }
 
   subscribe(fn) {
@@ -69,33 +66,33 @@ export const hashManager = new HashManager();
 taskCoordinator.registerManager(hashManager);
 
 export async function processHashFile(file, hashState, onReRender) {
+  hashManager.abort();
+  const controller = new AbortController();
+  hashManager.abortController = controller;
+
   hashState.file = file;
   hashState.isHashing = true;
   hashState.fileHashes = null;
   hashState.compareMatch = null;
+  hashState.hashProgress = 0;
   hashManager.isHashing = true;
   hashManager.activeFile = file;
-  hashManager.progress = 30;
+  hashManager.progress = 0;
   hashManager.notify();
 
   if (onReRender) onReRender();
 
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    hashManager.progress = 70;
-    hashManager.notify();
+    const hashes = await computeFileHashesStreaming(file, {
+      signal: controller.signal,
+      onProgress: (pct) => {
+        hashManager.progress = pct;
+        hashState.hashProgress = pct;
+        hashManager.notify();
+      }
+    });
 
-    const [sha256Buf, sha1Buf, sha512Buf] = await Promise.all([
-      crypto.subtle.digest('SHA-256', arrayBuffer),
-      crypto.subtle.digest('SHA-1', arrayBuffer),
-      crypto.subtle.digest('SHA-512', arrayBuffer)
-    ]);
-
-    hashState.fileHashes = {
-      sha256: bufferToHex(sha256Buf),
-      sha1: bufferToHex(sha1Buf),
-      sha512: bufferToHex(sha512Buf)
-    };
+    hashState.fileHashes = hashes;
 
     if (hashState.compareHash) {
       const val = hashState.compareHash.toLowerCase();
@@ -103,10 +100,17 @@ export async function processHashFile(file, hashState, onReRender) {
     }
 
     hashManager.progress = 100;
+    hashState.hashProgress = 100;
     showToast(`Đã tính mã băm xong cho ${file.name}`, 'success');
   } catch (err) {
+    if (err?.name === 'AbortError') {
+      return;
+    }
     showToast(`Lỗi khi tính mã băm: ${err.message}`, 'error');
   } finally {
+    if (hashManager.abortController === controller) {
+      hashManager.abortController = null;
+    }
     hashState.isHashing = false;
     hashManager.isHashing = false;
     hashManager.notify();
