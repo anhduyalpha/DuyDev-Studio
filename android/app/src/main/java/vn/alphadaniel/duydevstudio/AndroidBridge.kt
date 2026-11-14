@@ -53,6 +53,17 @@ class AndroidBridge(
     }
 
     /**
+     * Notifies the native activity that the client-side Web SPA has completed hydration
+     * and is ready to dismiss native splash and accept events.
+     */
+    @JavascriptInterface
+    fun notifyAppReady() {
+        activity.runOnUiThread {
+            activity.onAppReady()
+        }
+    }
+
+    /**
      * Report active background tasks from frontend task coordinator.
      * Allows native Activity to perform work-aware sleep without killing active downloads.
      */
