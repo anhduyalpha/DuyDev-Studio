@@ -8,7 +8,7 @@ export function renderFooter() {
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
           <span>•</span>
-          <span>Studio của Duy cho mụi người dùng</span>
+          <span>Studio của Duy cho mọi người dùng</span>
         </div>
 
         <div class="flex items-center gap-4 text-zinc-700 dark:text-zinc-300 font-medium">

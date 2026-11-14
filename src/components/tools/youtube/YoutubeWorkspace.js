@@ -423,7 +423,7 @@ export class YoutubeWorkspace {
                       }"
                     >
                       <i data-lucide="music" class="w-4 h-4"></i>
-                      <span>Âm thanh (Audio)</span>
+                      <span>Âm thanh</span>
                     </button>
                   </div>
 

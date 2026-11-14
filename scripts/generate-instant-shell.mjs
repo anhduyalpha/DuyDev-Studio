@@ -21,7 +21,8 @@ globalThis.document = {
   querySelectorAll: () => [],
   addEventListener: () => {},
   removeEventListener: () => {},
-  cookie: ''
+  cookie: '',
+  visibilityState: 'visible'
 };
 globalThis.localStorage = {
   getItem: () => null,

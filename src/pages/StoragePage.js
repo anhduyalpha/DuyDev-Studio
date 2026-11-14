@@ -177,78 +177,84 @@ export function renderStoragePage() {
           </div>
         </div>
 
-        <!-- Right: Actions Toolbar -->
-        <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <!-- Search in directory -->
-          <div class="relative">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input 
-              type="text" 
-              id="inputStorageSearch" 
-              placeholder="Lọc tệp..." 
-              value="${escapeHtml(state.searchQuery)}"
-              class="w-32 sm:w-44 pl-8 pr-7 py-1.5 rounded-xl glass-search text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none transition font-sans"
-            />
-            <button id="btnStorageClearSearch" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-0.5 cursor-pointer ${state.searchQuery ? '' : 'hidden'}" title="Xóa tìm kiếm">
-              <i data-lucide="x" class="w-3 h-3"></i>
+        <!-- Right: Actions Toolbar (Option C 2-Row Ergonomics) -->
+        <div class="flex flex-col gap-2 w-full lg:w-auto shrink-0">
+          <!-- Row 1: Search, Upload, New Folder -->
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <!-- Search in directory -->
+            <div class="relative flex-1 min-w-0 sm:w-48">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input 
+                type="text" 
+                id="inputStorageSearch" 
+                placeholder="Lọc tệp..." 
+                value="${escapeHtml(state.searchQuery)}"
+                class="w-full flex-1 min-w-0 min-h-[44px] pl-8 pr-7 py-2 rounded-xl glass-search text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none transition font-sans"
+              />
+              <button id="btnStorageClearSearch" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 min-w-[32px] min-h-[32px] flex items-center justify-center cursor-pointer ${state.searchQuery ? '' : 'hidden'}" title="Xóa tìm kiếm">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Upload Button -->
+            <label for="storageFileInput" class="min-h-[44px] px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Tải lên</span>
+            </label>
+            <input type="file" id="storageFileInput" multiple class="hidden" />
+
+            <!-- New Folder Button -->
+            <button id="btnStorageNewFolder" class="min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 flex items-center gap-1.5 cursor-pointer shrink-0">
+              <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">Thư mục mới</span>
             </button>
           </div>
 
-          <!-- Sort Select Menu -->
-          <div class="relative">
-            <select 
-              id="selectStorageSort" 
-              class="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200/80 dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 focus:outline-none cursor-pointer appearance-none pr-7"
-              title="Sắp xếp danh sách"
-            >
-              <option value="name_asc" ${state.sortBy === 'name' && state.sortDirection === 'asc' ? 'selected' : ''}>Tên (A-Z)</option>
-              <option value="name_desc" ${state.sortBy === 'name' && state.sortDirection === 'desc' ? 'selected' : ''}>Tên (Z-A)</option>
-              <option value="size_asc" ${state.sortBy === 'size' && state.sortDirection === 'asc' ? 'selected' : ''}>Kích thước (Nhỏ nhất)</option>
-              <option value="size_desc" ${state.sortBy === 'size' && state.sortDirection === 'desc' ? 'selected' : ''}>Kích thước (Lớn nhất)</option>
-              <option value="date_desc" ${state.sortBy === 'date' && state.sortDirection === 'desc' ? 'selected' : ''}>Thời gian (Mới nhất)</option>
-              <option value="date_asc" ${state.sortBy === 'date' && state.sortDirection === 'asc' ? 'selected' : ''}>Thời gian (Cũ nhất)</option>
-              <option value="type_asc" ${state.sortBy === 'type' && state.sortDirection === 'asc' ? 'selected' : ''}>Định dạng (A-Z)</option>
-            </select>
-            <i data-lucide="arrow-down-up" class="w-3 h-3 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          </div>
+          <!-- Row 2: Sort, Grid/List, Select All, Refresh, Lock -->
+          <div class="overflow-x-auto flex items-center gap-1.5 w-full sm:w-auto pb-0.5 sm:pb-0">
+            <!-- Sort Select Menu -->
+            <div class="relative min-w-0">
+              <select 
+                id="selectStorageSort" 
+                class="min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200/80 dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 focus:outline-none cursor-pointer appearance-none pr-7"
+                title="Sắp xếp danh sách"
+              >
+                <option value="name_asc" ${state.sortBy === 'name' && state.sortDirection === 'asc' ? 'selected' : ''}>Tên (A-Z)</option>
+                <option value="name_desc" ${state.sortBy === 'name' && state.sortDirection === 'desc' ? 'selected' : ''}>Tên (Z-A)</option>
+                <option value="size_asc" ${state.sortBy === 'size' && state.sortDirection === 'asc' ? 'selected' : ''}>Kích thước (Nhỏ nhất)</option>
+                <option value="size_desc" ${state.sortBy === 'size' && state.sortDirection === 'desc' ? 'selected' : ''}>Kích thước (Lớn nhất)</option>
+                <option value="date_desc" ${state.sortBy === 'date' && state.sortDirection === 'desc' ? 'selected' : ''}>Thời gian (Mới nhất)</option>
+                <option value="date_asc" ${state.sortBy === 'date' && state.sortDirection === 'asc' ? 'selected' : ''}>Thời gian (Cũ nhất)</option>
+                <option value="type_asc" ${state.sortBy === 'type' && state.sortDirection === 'asc' ? 'selected' : ''}>Định dạng (A-Z)</option>
+              </select>
+              <i data-lucide="arrow-down-up" class="w-3 h-3 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
 
-          <!-- View Toggle -->
-          <div class="flex items-center bg-zinc-100 dark:bg-white/[0.06] p-0.5 rounded-xl border border-zinc-200 dark:border-white/10">
-            <button id="btnStorageViewGrid" title="Dạng lưới" class="p-1.5 rounded-lg transition cursor-pointer ${state.viewMode === 'grid' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
-              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            <!-- View Toggle -->
+            <div class="flex items-center min-h-[44px] bg-zinc-100 dark:bg-white/[0.06] p-1 rounded-xl border border-zinc-200 dark:border-white/10 shrink-0">
+              <button id="btnStorageViewGrid" title="Dạng lưới" class="min-h-[36px] min-w-[36px] p-2 rounded-lg transition cursor-pointer flex items-center justify-center ${state.viewMode === 'grid' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
+                <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+              </button>
+              <button id="btnStorageViewList" title="Dạng danh sách" class="min-h-[36px] min-w-[36px] p-2 rounded-lg transition cursor-pointer flex items-center justify-center ${state.viewMode === 'list' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
+                <i data-lucide="list" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Select All Toggle Button -->
+            <button id="btnStorageSelectAllToggle" title="Chọn tất cả (Ctrl+A)" class="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 flex items-center justify-center cursor-pointer shrink-0">
+              <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
             </button>
-            <button id="btnStorageViewList" title="Dạng danh sách" class="p-1.5 rounded-lg transition cursor-pointer ${state.viewMode === 'list' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
-              <i data-lucide="list" class="w-3.5 h-3.5"></i>
+
+            <!-- Refresh Button -->
+            <button id="btnStorageRefresh" title="Làm mới" class="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 flex items-center justify-center cursor-pointer shrink-0">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <!-- Lock Session Button -->
+            <button id="btnStorageLock" title="Khóa phiên lưu trữ" class="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition border border-red-200 dark:border-red-500/20 flex items-center justify-center cursor-pointer shrink-0">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-
-          <!-- Select All Toggle Button -->
-          <button id="btnStorageSelectAllToggle" title="Chọn tất cả (Ctrl+A)" class="p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 cursor-pointer">
-            <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
-          </button>
-
-          <!-- New Folder Button -->
-          <button id="btnStorageNewFolder" class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 flex items-center gap-1.5 cursor-pointer">
-            <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">Thư mục mới</span>
-          </button>
-
-          <!-- Upload Button -->
-          <label for="storageFileInput" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
-            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-            <span>Tải lên</span>
-          </label>
-          <input type="file" id="storageFileInput" multiple class="hidden" />
-
-          <!-- Refresh Button -->
-          <button id="btnStorageRefresh" title="Làm mới" class="p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 cursor-pointer">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          </button>
-
-          <!-- Lock Session Button -->
-          <button id="btnStorageLock" title="Khóa phiên lưu trữ" class="p-1.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition border border-red-200 dark:border-red-500/20 cursor-pointer">
-            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          </button>
         </div>
 
       </div>

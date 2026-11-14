@@ -210,7 +210,7 @@ export function renderViewSplitToolbar(state) {
           type="button"
           data-action="toggle-inspector"
           title="Kính lúp soi điểm ảnh [I]"
-          class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+          class="min-h-[44px] min-w-[44px] px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
             inspectorOpen
               ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-600 dark:text-cyan-400'
               : 'bg-zinc-100 dark:bg-black/40 border-zinc-200/60 dark:border-white/5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'

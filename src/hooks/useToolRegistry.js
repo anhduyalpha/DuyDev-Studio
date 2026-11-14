@@ -434,6 +434,10 @@ class ToolRegistry {
     return this.categories;
   }
 
+  getAllTools() {
+    return Array.isArray(this.tools) ? this.tools.slice() : [];
+  }
+
   initCrossTabSync() {
     if (typeof window === 'undefined') return;
 
