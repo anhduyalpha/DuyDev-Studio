@@ -13,9 +13,51 @@ import { FastifyReply } from 'fastify';
 import { resolvedStoragePaths } from '../config/env.config.js';
 import { StorageManager } from '../storage/storage.manager.js';
 import { prisma } from '../lib/prisma.js';
-import { BadRequestError } from '../lib/errors.js';
+import { AppError, BadRequestError, ErrorCodes } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
+import { expandRedirectUrl } from './shared/media-url-cache.js';
+
+export const ALLOWED_ACADEMIA_HOSTS = [
+  'academia.edu',
+  'academia-assets.com',
+  'openalex.org',
+  'unpaywall.org',
+  'cloudfront.net',
+  'amazonaws.com',
+  'core.ac.uk',
+  'arxiv.org',
+  'biorxiv.org',
+  'medrxiv.org',
+  'nih.gov',
+  'ncbi.nlm.nih.gov',
+  'doi.org',
+  'wiley.com',
+  'springer.com',
+  'sciencedirect.com',
+  'nature.com',
+  'ieee.org',
+  'mdpi.com',
+  'frontiersin.org',
+  'oup.com',
+  'tandfonline.com',
+  'plos.org'
+];
+
+function validateSecureHopUrl(hopUrl: string, allowedHosts: string[]): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(hopUrl);
+  } catch {
+    throw new BadRequestError('Định dạng URL không hợp lệ');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new BadRequestError('Chỉ cho phép liên kết HTTPS bảo mật');
+  }
+
+  return validateSafeMediaUrl(hopUrl, allowedHosts);
+}
 
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -191,9 +233,18 @@ export class AcademiaService {
     const resolved = await this.resolvePaper(originalUrl || url);
     const pdfSourceUrl = resolved.pdfUrl || url;
 
-    const ALLOWED_ACADEMIA_HOSTS = ['academia.edu', 'academia-assets.com', 'openalex.org', 'unpaywall.org', 'cloudfront.net', 'amazonaws.com', 'core.ac.uk'];
-    const safeUrl = validateSafeMediaUrl(pdfSourceUrl, ALLOWED_ACADEMIA_HOSTS);
-    const res = await fetch(safeUrl, {
+    const resolvedPdfUrl = await expandRedirectUrl(
+      pdfSourceUrl,
+      (hopUrl) => validateSecureHopUrl(hopUrl, ALLOWED_ACADEMIA_HOSTS),
+      {
+        allowedHosts: ALLOWED_ACADEMIA_HOSTS,
+        maxHops: 5,
+        timeoutMs: 15000,
+        method: 'HEAD'
+      }
+    );
+
+    const res = await fetch(resolvedPdfUrl, {
       headers: {
         'User-Agent': DEFAULT_UA,
         'Accept': 'application/pdf,*/*'
@@ -202,7 +253,26 @@ export class AcademiaService {
     });
 
     if (!res.ok) {
+      if (res.body && typeof res.body.cancel === 'function') {
+        try {
+          await res.body.cancel();
+        } catch {}
+      }
       throw new BadRequestError(`Không thể tải tệp PDF từ nguồn tài liệu (HTTP ${res.status}).`);
+    }
+
+    const contentType = (res.headers.get('content-type') || 'application/pdf').trim();
+    if (contentType.toLowerCase().startsWith('text/html')) {
+      if (res.body && typeof res.body.cancel === 'function') {
+        try {
+          await res.body.cancel();
+        } catch {}
+      }
+      throw new AppError(
+        'Nguồn tài liệu trả về trang HTML/Login thay vì tệp PDF hợp lệ.',
+        422,
+        ErrorCodes.FILE_CORRUPTED
+      );
     }
 
     const fileStream = fs.createWriteStream(targetPath);
@@ -273,8 +343,16 @@ export class AcademiaService {
     rangeHeader: string | undefined,
     reply: FastifyReply
   ): Promise<void> {
-    const ALLOWED_ACADEMIA_HOSTS = ['academia.edu', 'academia-assets.com', 'openalex.org', 'unpaywall.org', 'cloudfront.net', 'amazonaws.com', 'core.ac.uk'];
-    const safeUrl = validateSafeMediaUrl(url, ALLOWED_ACADEMIA_HOSTS);
+    const resolvedUrl = await expandRedirectUrl(
+      url,
+      (hopUrl) => validateSecureHopUrl(hopUrl, ALLOWED_ACADEMIA_HOSTS),
+      {
+        allowedHosts: ALLOWED_ACADEMIA_HOSTS,
+        maxHops: 5,
+        timeoutMs: 15000,
+        method: 'HEAD'
+      }
+    );
 
     const headers: Record<string, string> = {
       'User-Agent': DEFAULT_UA
@@ -283,17 +361,39 @@ export class AcademiaService {
       headers['Range'] = rangeHeader;
     }
 
-    const upstreamRes = await fetch(safeUrl, { headers });
+    const upstreamRes = await fetch(resolvedUrl, {
+      headers,
+      signal: AbortSignal.timeout(30000)
+    });
+
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
+      if (upstreamRes.body && typeof upstreamRes.body.cancel === 'function') {
+        try {
+          await upstreamRes.body.cancel();
+        } catch {}
+      }
       throw new BadRequestError(`Upstream PDF fetch failed with status ${upstreamRes.status}`);
     }
 
-    const contentType = upstreamRes.headers.get('content-type') || 'application/pdf';
+    const contentType = (upstreamRes.headers.get('content-type') || 'application/pdf').trim();
+    if (contentType.toLowerCase().startsWith('text/html')) {
+      if (upstreamRes.body && typeof upstreamRes.body.cancel === 'function') {
+        try {
+          await upstreamRes.body.cancel();
+        } catch {}
+      }
+      throw new AppError(
+        'Nguồn tài liệu trả về trang HTML/Login thay vì tệp PDF hợp lệ.',
+        422,
+        ErrorCodes.FILE_CORRUPTED
+      );
+    }
+
     const contentLength = upstreamRes.headers.get('content-length');
     const contentRange = upstreamRes.headers.get('content-range');
 
     const replyHeaders: Record<string, string | number> = {
-      'Content-Type': contentType,
+      'Content-Type': contentType || 'application/pdf',
       'Accept-Ranges': 'bytes'
     };
 
@@ -301,7 +401,14 @@ export class AcademiaService {
     if (contentRange) replyHeaders['Content-Range'] = contentRange;
 
     const disposition = isDownload ? 'attachment' : 'inline';
-    const encodedFilename = encodeURIComponent(filename || 'academia_paper.pdf');
+    let cleanFilename = (filename || 'academia_paper.pdf')
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || 'academia_paper.pdf';
+    if (!cleanFilename.toLowerCase().endsWith('.pdf')) {
+      cleanFilename += '.pdf';
+    }
+    const encodedFilename = encodeURIComponent(cleanFilename);
     replyHeaders['Content-Disposition'] = `${disposition}; filename*=UTF-8''${encodedFilename}`;
 
     reply.code(upstreamRes.status);

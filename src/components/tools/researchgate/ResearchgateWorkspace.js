@@ -236,7 +236,7 @@ export class ResearchgateWorkspace {
         category: 'document',
         mimeType: 'application/pdf',
         viewUrl: this.data.coverUrl || '',
-        downloadUrl: researchgateApi.getStreamUrl(this.data.pdfUrl || this.data.originalUrl, `${this.data.title || 'researchgate'}.pdf`, true)
+        downloadUrl: this.data.pdfUrl ? researchgateApi.getStreamUrl(this.data.pdfUrl, `${this.data.title || 'researchgate'}.pdf`, true) : ''
       });
       return;
     }
@@ -442,6 +442,17 @@ export class ResearchgateWorkspace {
           <button id="btnSaveRgDrive" ${this.savingToDrive ? 'disabled' : ''} class="flex-1 min-h-[44px] px-5 py-2.5 rounded-2xl bg-[#0D9488] hover:bg-[#14B8A6] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-lg shadow-teal-600/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
             ${this.savingToDrive ? '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Đang xử lý & Lưu...</span>' : '<i data-lucide="hard-drive" class="w-4 h-4"></i><span>Lưu vào Studio Drive</span>'}
           </button>
+          ${this.data.pdfUrl ? `
+            <a href="${researchgateApi.getStreamUrl(this.data.pdfUrl, (title || 'researchgate_paper') + '.pdf', true)}" download="${escapeHtml((title || 'researchgate_paper') + '.pdf')}" target="_blank" rel="noopener noreferrer" id="btnDownloadRg" title="Tải tệp PDF về máy" class="min-h-[44px] px-4 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer border border-zinc-200/60 dark:border-white/10">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Tải về máy</span>
+            </a>
+          ` : `
+            <button disabled id="btnDownloadRg" title="Chưa có PDF trực tiếp" class="min-h-[44px] px-4 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-600 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed opacity-60 border border-zinc-200/40 dark:border-white/5">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Tải về máy</span>
+            </button>
+          `}
           <button id="btnPreviewRg" class="min-h-[44px] px-4 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
             <i data-lucide="eye" class="w-4 h-4"></i>
             <span>Xem trước</span>
