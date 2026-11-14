@@ -120,8 +120,11 @@ export function attachDashboardListeners(onReRender) {
   // 120Hz & Low-Battery Governor: Suspend offscreen tier card animations
   let tierObserver = null;
   const observeTierCards = (container = document) => {
-    if (!('IntersectionObserver' in window)) return;
-    if (tierObserver) tierObserver.disconnect();
+    if (typeof IntersectionObserver === 'undefined') return;
+    if (tierObserver) {
+      tierObserver.disconnect();
+      tierObserver = null;
+    }
     tierObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -130,12 +133,20 @@ export function attachDashboardListeners(onReRender) {
           entry.target.classList.add('tier-offscreen');
         }
       });
-    }, { rootMargin: '60px 0px' });
+    }, { rootMargin: '80px' });
 
-    container.querySelectorAll('.tier-card').forEach((card) => tierObserver.observe(card));
+    container.querySelectorAll('.tier-card, [data-tier]').forEach((card) => tierObserver.observe(card));
   };
 
   observeTierCards();
+
+  // Responsive layout sync through ResizeObserver
+  const unbindResize = toolRegistry.bindResizeObserver(
+    document.getElementById('toolsGridContainer') || document.getElementById('dashboardRoot'),
+    () => {
+      observeTierCards();
+    }
+  );
 
   // Centralized Category Switcher (Triggered via click, keyboard arrow, or horizontal swipe gesture)
   const switchCategory = (cat, direction = null, clickedBtn = null, isSwipe = false) => {
@@ -443,6 +454,7 @@ export function attachDashboardListeners(onReRender) {
 
   return () => {
     if (typeof unsubscribeRegistry === 'function') unsubscribeRegistry();
+    if (typeof unbindResize === 'function') unbindResize();
     if (toolsGridContainer) toolsGridContainer.removeEventListener('click', handleToolsGridClick);
     if (recentContainer) recentContainer.removeEventListener('click', handleRecentClick);
     stopSwipe();

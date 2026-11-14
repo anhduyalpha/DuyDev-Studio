@@ -481,16 +481,6 @@ class ToolRegistry {
         this.fetchServerLayout();
       }
     });
-
-    // 4. Background gentle polling every 12 seconds when active
-    const pollTimer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        this.fetchServerLayout();
-      }
-    }, 12000);
-    if (pollTimer && typeof pollTimer.unref === 'function') {
-      pollTimer.unref();
-    }
   }
 
   loadLocalLayout() {
@@ -831,6 +821,47 @@ class ToolRegistry {
   getToolTier(toolId) {
     const tool = this.tools.find(t => t.id === toolId);
     return tool ? tool.tier || null : null;
+  }
+
+  /**
+   * Bind ResizeObserver to drive responsive layout and grid adjustments cleanly
+   * without interval polling. Returns cleanup disconnect function.
+   */
+  bindResizeObserver(target = (typeof document !== 'undefined' ? document.getElementById('mainContent') || document.body : null), onResize = null) {
+    if (typeof ResizeObserver === 'undefined' || !target) return () => {};
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+    this._resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect) {
+          const width = entry.contentRect.width;
+          if (width > 0 && Math.abs(width - (this._lastLayoutWidth || 0)) > 16) {
+            this._lastLayoutWidth = width;
+            if (typeof onResize === 'function') {
+              onResize(width, entry);
+            }
+          }
+        }
+      }
+    });
+    try {
+      this._resizeObserver.observe(target);
+    } catch (_) {}
+    return () => {
+      if (this._resizeObserver) {
+        this._resizeObserver.disconnect();
+        this._resizeObserver = null;
+      }
+    };
+  }
+
+  disconnectResizeObserver() {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
   }
 }
 

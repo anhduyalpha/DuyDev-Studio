@@ -260,9 +260,15 @@ class App {
         }
       });
 
+      // Clear any stale paused states if document is currently visible on startup
+      const initialHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden');
+      document.documentElement.classList.toggle('app-backgrounded', initialHidden);
+      document.documentElement.classList.toggle('ds-animations-paused', initialHidden);
+
       // Native Android lifecycle: suspend audio/video and stop coordinator heartbeat when app pauses
       window.addEventListener('ds:native-app-paused', () => {
         document.documentElement.classList.add('app-backgrounded');
+        document.documentElement.classList.add('ds-animations-paused');
         document.querySelectorAll('audio, video').forEach((media) => {
           try { media.pause(); } catch {}
         });
@@ -273,6 +279,7 @@ class App {
       // Native Android lifecycle: resume heartbeat when app returns to foreground
       window.addEventListener('ds:native-app-resumed', () => {
         document.documentElement.classList.remove('app-backgrounded');
+        document.documentElement.classList.remove('ds-animations-paused');
         taskCoordinator.updateHeartbeatState();
         window.dispatchEvent(new CustomEvent('ds:visibility-change', { detail: { hidden: false } }));
       });
@@ -281,6 +288,7 @@ class App {
       document.addEventListener('visibilitychange', () => {
         const isHidden = document.hidden || document.visibilityState === 'hidden';
         document.documentElement.classList.toggle('app-backgrounded', isHidden);
+        document.documentElement.classList.toggle('ds-animations-paused', isHidden);
         if (isHidden) {
           document.querySelectorAll('audio, video').forEach((media) => {
             try { media.pause(); } catch {}
@@ -592,6 +600,9 @@ class App {
       } catch (e) {
         console.warn('[Router] unmountCurrentTool error:', e);
       }
+    }
+    if (toolRegistry && typeof toolRegistry.disconnectResizeObserver === 'function') {
+      toolRegistry.disconnectResizeObserver();
     }
     this.currentCleanups.forEach(fn => typeof fn === 'function' && fn());
     this.currentCleanups = [];

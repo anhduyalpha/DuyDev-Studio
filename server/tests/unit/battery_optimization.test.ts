@@ -27,6 +27,8 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const formatSelectorPath = path.join(rootDir, 'src/components/tools/converter/components/FormatSelector.js');
   const viewSplitSliderOverlayPath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js');
   const viewSplitPanePath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitPane.js');
+  const cardTiersPath = path.join(rootDir, 'src/styles/card-tiers-10.css');
+  const toolRegistryPath = path.join(rootDir, 'src/hooks/useToolRegistry.js');
 
   const swContent = fs.readFileSync(swPath, 'utf-8');
   const indexContent = fs.readFileSync(indexPath, 'utf-8');
@@ -48,6 +50,8 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const formatSelectorContent = fs.readFileSync(formatSelectorPath, 'utf-8');
   const viewSplitSliderOverlayContent = fs.readFileSync(viewSplitSliderOverlayPath, 'utf-8');
   const viewSplitPaneContent = fs.readFileSync(viewSplitPanePath, 'utf-8');
+  const cardTiersContent = fs.readFileSync(cardTiersPath, 'utf-8');
+  const toolRegistryContent = fs.readFileSync(toolRegistryPath, 'utf-8');
 
   describe('1. Fastify Static Tiered Caching & ETag (Pillar 1)', () => {
     let app: FastifyInstance;
@@ -415,6 +419,46 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       const sameOriginSection = swContent.slice(swContent.indexOf('// 3. Same-origin assets:'));
       expect(sameOriginSection).toContain("fetch(event.request, { cache: 'no-cache' })");
       expect(sameOriginSection).toContain("fetch(event.request)");
+    });
+  });
+
+  describe('6. Dashboard 10-Tier Visual Fidelity, 3-Signal Pause & Observer Lifecycle (Pillar 6)', () => {
+    it('useToolRegistry.js must NOT contain any global layout setInterval(..., 12000) and must bind ResizeObserver for responsive layout sync', () => {
+      expect(toolRegistryContent).not.toMatch(/setInterval\([^,]+,\s*12000\)/);
+      expect(toolRegistryContent).toContain('ResizeObserver');
+    });
+
+    it('DashboardPage.js must initialize IntersectionObserver with rootMargin 80px toggling .tier-offscreen and disconnect on unmount cleanup', () => {
+      expect(dashboardContent).toContain('IntersectionObserver');
+      expect(dashboardContent).toContain("rootMargin: '80px'");
+      expect(dashboardContent).toContain('tier-offscreen');
+      expect(dashboardContent).toContain('tierObserver.disconnect()');
+    });
+
+    it('card-tiers-10.css must keep 10-Tier visuals while pausing animations under .tier-offscreen, html.app-backgrounded, and html.ds-animations-paused', () => {
+      // Must preserve Tier visuals (gradients, shines, particles)
+      expect(cardTiersContent).toContain('.tier-card.tier-ex');
+      expect(cardTiersContent).toContain('.tier-card.tier-ur');
+      expect(cardTiersContent).toContain('.tier-card.tier-lr');
+
+      // Static corner plates must NOT be forced into GPU compositor layers with will-change
+      expect(cardTiersContent).not.toMatch(/\.tier-card\s+\.corner-plate[^{]*\{[^}]*will-change/);
+
+      // Must pause animations under all 3 signals: .tier-offscreen, html.app-backgrounded, html.ds-animations-paused
+      expect(cardTiersContent).toContain('tier-offscreen');
+      expect(cardTiersContent).toContain('html.app-backgrounded');
+      expect(cardTiersContent).toContain('html.ds-animations-paused');
+      expect(cardTiersContent).toContain('animation-play-state: paused !important;');
+    });
+
+    it('app.js must synchronize both html.app-backgrounded and html.ds-animations-paused across visibilitychange, ds:native-app-paused, and ds:native-app-resumed', () => {
+      expect(appJsContent).toContain("classList.add('ds-animations-paused')");
+      expect(appJsContent).toContain("classList.remove('ds-animations-paused')");
+      expect(appJsContent).toContain("classList.toggle('ds-animations-paused'");
+    });
+
+    it('stitch-tokens.css must pause animations and disable transitions under html.ds-animations-paused', () => {
+      expect(stitchContent).toContain('html.ds-animations-paused');
     });
   });
 });
