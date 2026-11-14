@@ -269,6 +269,9 @@ export function attachViewSplitDomListeners(store, onReRender) {
       loadAndAssignImage(store.activePaneId, pendingHandoff.blob, pendingHandoff.fileName || 'image.png');
     } else if (pendingHandoff.url) {
       loadAndAssignImage(store.activePaneId, pendingHandoff.url, pendingHandoff.fileName || 'image.png');
+    } else if (pendingHandoff.fileId) {
+      const url = `/api/v1/files/download/${encodeURIComponent(pendingHandoff.fileId)}`;
+      loadAndAssignImage(store.activePaneId, url, pendingHandoff.fileName || 'image.png');
     }
   }
 

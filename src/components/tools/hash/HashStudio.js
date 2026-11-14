@@ -11,6 +11,7 @@ import { calculateTextHashes, processHashFile, updateBase64, hashManager } from 
 import { renderHashCards, renderCompareMatchHtml, bindCopyHashButtons } from './components/HashCards.js';
 import { loadModuleState, saveModuleState } from '../../../utilities/moduleState.js';
 import { consumeHandoff } from '../../../utilities/toolHandoff.js';
+import { getStorageAuthHeaders } from '../../../utilities/adminAuth.js';
 
 /**
  * @typedef {Object} HashResultMap
@@ -286,16 +287,54 @@ export function attachHashStudioListeners(onReRender) {
   let isTeardown = false;
   let textDebounceTimer = null;
 
-  // Consume cross-tool handoff if available
+  // Consume cross-tool handoff if available (file, blob, url/fileId, or text)
   const pendingHandoff = consumeHandoff('hash-checksum');
-  if (pendingHandoff && pendingHandoff.file) {
-    hashState.activeTab = 'file';
-    hashManager.abort();
-    processHashFile(pendingHandoff.file, hashState, () => {
-      if (!isTeardown && onReRender) onReRender();
-    }).then(() => {
-      if (!isTeardown) persistHashState();
-    });
+  if (pendingHandoff) {
+    if (pendingHandoff.file) {
+      hashState.activeTab = 'file';
+      hashManager.abort();
+      processHashFile(pendingHandoff.file, hashState, () => {
+        if (!isTeardown && onReRender) onReRender();
+      }).then(() => {
+        if (!isTeardown) persistHashState();
+      });
+    } else if (pendingHandoff.blob) {
+      const f = new File([pendingHandoff.blob], pendingHandoff.fileName || 'artifact', {
+        type: pendingHandoff.mimeType || 'application/octet-stream'
+      });
+      hashState.activeTab = 'file';
+      hashManager.abort();
+      processHashFile(f, hashState, () => {
+        if (!isTeardown && onReRender) onReRender();
+      }).then(() => {
+        if (!isTeardown) persistHashState();
+      });
+    } else if (pendingHandoff.url || pendingHandoff.fileId) {
+      const downloadUrl = pendingHandoff.url || `/api/v1/files/download/${encodeURIComponent(pendingHandoff.fileId)}`;
+      const headers = downloadUrl.startsWith('/api/v1/storage') ? getStorageAuthHeaders() : {};
+      fetch(downloadUrl, { headers })
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (!blob || isTeardown) return;
+          const f = new File([blob], pendingHandoff.fileName || 'artifact', {
+            type: pendingHandoff.mimeType || blob.type || 'application/octet-stream'
+          });
+          hashState.activeTab = 'file';
+          hashManager.abort();
+          processHashFile(f, hashState, () => {
+            if (!isTeardown && onReRender) onReRender();
+          }).then(() => {
+            if (!isTeardown) persistHashState();
+          });
+        })
+        .catch(() => {});
+    } else if (pendingHandoff.text) {
+      hashState.activeTab = 'text';
+      hashState.textInput = pendingHandoff.text;
+      calculateTextHashes(hashState);
+      persistHashState();
+      if (onReRender) onReRender();
+    }
   }
 
   const handleGlobalPaste = async (e) => {

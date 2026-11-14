@@ -599,6 +599,19 @@ const FOLDER_EMPTY_LAUNCHERS = {
       btn: 'bg-sky-600 hover:bg-sky-500 text-white'
     }
   },
+  '/images': {
+    title: 'Chưa có hình ảnh nào trong Drive',
+    desc: 'So sánh hình ảnh Before/After hoặc soi điểm ảnh Pixel Inspector với ViewSplit và lưu ảnh trực tiếp vào đây.',
+    toolRoute: '#tool/view-split',
+    btnLabel: 'Mở ViewSplit',
+    icon: 'columns-2',
+    colorClasses: {
+      bg: 'bg-cyan-500/10 dark:bg-cyan-500/15',
+      border: 'border-cyan-500/20 dark:border-cyan-500/30',
+      text: 'text-cyan-600 dark:text-cyan-400',
+      btn: 'bg-cyan-600 hover:bg-cyan-500 text-white'
+    }
+  },
   '/documents': {
     title: 'Chưa có tài liệu soạn thảo nào trong Drive',
     desc: 'Soạn thảo ghi chú, văn bản Markdown hoặc xuất Word/PDF từ Markdown Docs và lưu trực tiếp vào Drive.',

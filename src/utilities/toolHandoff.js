@@ -14,10 +14,19 @@ export const TOOL_ROUTES = {
   'view-split': '#tool/view-split',
   'hash-checksum': '#tool/hash-checksum',
   'qr-multi': '#tool/qr-multi',
+  'qr-studio': '#tool/qr-multi',
   'markdown-docs': '#tool/markdown-docs',
   'server-archive': '#server-archive',
   'archive-inspect': '#archive'
 };
+
+function toolMatches(target, requested) {
+  if (target === requested) return true;
+  if ((target === 'qr-multi' || target === 'qr-studio') && (requested === 'qr-multi' || requested === 'qr-studio')) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * Dispatches a handoff payload to target tool and navigates to its route.
@@ -66,7 +75,7 @@ export function consumeHandoff(toolId) {
   const now = Date.now();
 
   // 1. Check in-memory first (preserves rich File/Blob objects)
-  if (inMemoryHandoff && inMemoryHandoff.targetTool === toolId) {
+  if (inMemoryHandoff && toolMatches(inMemoryHandoff.targetTool, toolId)) {
     if (now - inMemoryHandoff.timestamp <= HANDOFF_TTL_MS) {
       const payload = inMemoryHandoff.payload;
       inMemoryHandoff = null;
@@ -86,7 +95,7 @@ export function consumeHandoff(toolId) {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        if (data && data.targetTool === toolId && (now - data.timestamp <= HANDOFF_TTL_MS)) {
+        if (data && toolMatches(data.targetTool, toolId) && (now - data.timestamp <= HANDOFF_TTL_MS)) {
           sessionStorage.removeItem(SESSION_KEY);
           return data.payload || null;
         }
@@ -105,7 +114,7 @@ export function consumeHandoff(toolId) {
  */
 export function hasPendingHandoff(toolId) {
   const now = Date.now();
-  if (inMemoryHandoff && inMemoryHandoff.targetTool === toolId) {
+  if (inMemoryHandoff && toolMatches(inMemoryHandoff.targetTool, toolId)) {
     return (now - inMemoryHandoff.timestamp <= HANDOFF_TTL_MS);
   }
   try {
@@ -113,7 +122,7 @@ export function hasPendingHandoff(toolId) {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        return data?.targetTool === toolId && (now - data.timestamp <= HANDOFF_TTL_MS);
+        return Boolean(data && toolMatches(data.targetTool, toolId) && (now - data.timestamp <= HANDOFF_TTL_MS));
       }
     }
   } catch {}

@@ -103,6 +103,22 @@ export function renderConverterResult(state) {
                   <span>Xem</span>
                 </button>
 
+                <!-- Hash Checksum Button -->
+                <button type="button" class="btn-hash-converter-result min-h-[44px] px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                  data-item-id="${it.id}" title="Kiểm tra mã băm Hash">
+                  <i data-lucide="binary" class="w-3.5 h-3.5 text-zinc-500"></i>
+                  <span>Hash</span>
+                </button>
+
+                ${/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(res.fileName || '') ? `
+                  <!-- ViewSplit Comparison Button -->
+                  <button type="button" class="btn-viewsplit-converter-result min-h-[44px] px-3 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 dark:bg-cyan-950/30 dark:hover:bg-cyan-900/40 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                    data-item-id="${it.id}" title="So sánh ảnh trên ViewSplit">
+                    <i data-lucide="columns-2" class="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400"></i>
+                    <span>ViewSplit</span>
+                  </button>
+                ` : ''}
+
                 <!-- Save to Drive Button -->
                 <button type="button" class="btn-save-drive-converter-result min-h-[44px] px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
                   data-item-id="${it.id}" title="Lưu vào Studio Drive (/converted)">

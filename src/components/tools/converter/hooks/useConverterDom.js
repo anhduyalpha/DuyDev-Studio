@@ -13,7 +13,9 @@ import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
 import { storage } from '../../../../utilities/storage.js';
 import { saveArtifactToDrive } from '../../../../utilities/driveSaveHelper.js';
-import { consumeHandoff } from '../../../../utilities/toolHandoff.js';
+import { consumeHandoff, sendToTool } from '../../../../utilities/toolHandoff.js';
+import { getStorageAuthHeaders } from '../../../../utilities/adminAuth.js';
+import { showToast } from '../../../../utilities/toast.js';
 
 /**
  * Safely refreshes Lucide icons if available in current runtime environment.
@@ -325,7 +327,9 @@ export function setupConverterObserver(manager) {
  * @returns {() => void} Teardown unsubscribe function
  */
 export function attachConverterListeners(manager) {
-  // 0. Consume cross-tool handoff if available
+  let isMounted = true;
+
+  // 0. Consume cross-tool handoff if available (File, Blob, or URL/fileId)
   const pendingHandoff = consumeHandoff('universal-converter');
   if (pendingHandoff) {
     if (pendingHandoff.file) {
@@ -335,6 +339,26 @@ export function attachConverterListeners(manager) {
         type: pendingHandoff.mimeType || pendingHandoff.blob.type || 'application/octet-stream'
       });
       manager.addFiles([f]);
+    } else if (pendingHandoff.url || pendingHandoff.fileId) {
+      const downloadUrl = pendingHandoff.url || `/api/v1/files/download/${encodeURIComponent(pendingHandoff.fileId)}`;
+      const headers = downloadUrl.startsWith('/api/v1/storage') ? getStorageAuthHeaders() : {};
+      fetch(downloadUrl, { headers })
+        .then((res) => {
+          if (!res.ok) throw new Error(`Không thể tải tệp (${res.status})`);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (!isMounted) return;
+          const fileName = pendingHandoff.fileName || 'artifact';
+          const mimeType = pendingHandoff.mimeType || blob.type || 'application/octet-stream';
+          const f = new File([blob], fileName, { type: mimeType });
+          manager.addFiles([f]);
+          showToast(`Đã nhận ${fileName} từ công cụ khác`, 'info');
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          showToast(err.message || 'Lỗi khi nhận tệp handoff', 'error');
+        });
     }
   }
 
@@ -583,6 +607,36 @@ export function attachConverterListeners(manager) {
         return;
       }
 
+      // Cross-tool Handoff: Hash Checksum
+      const hashBtn = e.target.closest('.btn-hash-converter-result');
+      if (hashBtn) {
+        const itemId = hashBtn.dataset.itemId;
+        const it = manager.items?.find((x) => x.id === itemId);
+        if (it?.result) {
+          sendToTool('hash-checksum', {
+            fileId: it.result.resultFileId,
+            fileName: it.result.fileName,
+            url: it.result.downloadUrl
+          });
+        }
+        return;
+      }
+
+      // Cross-tool Handoff: ViewSplit Image Compare
+      const vsBtn = e.target.closest('.btn-viewsplit-converter-result');
+      if (vsBtn) {
+        const itemId = vsBtn.dataset.itemId;
+        const it = manager.items?.find((x) => x.id === itemId);
+        if (it?.result) {
+          sendToTool('view-split', {
+            fileId: it.result.resultFileId,
+            fileName: it.result.fileName,
+            url: it.result.downloadUrl
+          });
+        }
+        return;
+      }
+
       // Individual Save to Drive (/converted)
       const saveDriveBtn = e.target.closest('.btn-save-drive-converter-result');
       if (saveDriveBtn) {
@@ -653,6 +707,7 @@ export function attachConverterListeners(manager) {
   const unsubscribeObserver = setupConverterObserver(manager);
 
   return () => {
+    isMounted = false;
     if (typeof document !== 'undefined') {
       document.removeEventListener('paste', handleGlobalPaste);
     }

@@ -11,6 +11,7 @@ import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { renderHistoryItemRow } from '../components/history/HistoryItemRow.js';
 import { openProfileModal } from '../components/common/ProfileModal.js';
 import { saveArtifactToDrive } from '../utilities/driveSaveHelper.js';
+import { sendToTool } from '../utilities/toolHandoff.js';
 
 let historyState = {
   currentTab: 'history', historyItems: storage.getLocalHistory(),
@@ -109,6 +110,38 @@ function bindRowActions(root, rerender) {
       const list = historyState.currentTab === 'trash' ? historyState.trashItems : historyState.historyItems;
       const item = list.find(x => x.id === btn.dataset.previewId);
       if (item) ViewerConnector.preview(item);
+    };
+  });
+
+  root.querySelectorAll('.btn-handoff-hash-history').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.handoffHashId;
+      const item = list.find(x => x.id === id);
+      if (!item) return;
+      const downloadHref = item.driveRelPath
+        ? `/api/v1/storage/download?path=${encodeURIComponent(item.driveRelPath)}`
+        : (item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null));
+      sendToTool('hash-checksum', {
+        fileId: item.resultFileId,
+        fileName: item.fileName,
+        url: downloadHref
+      });
+    };
+  });
+
+  root.querySelectorAll('.btn-handoff-vs-history').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.handoffVsId;
+      const item = list.find(x => x.id === id);
+      if (!item) return;
+      const downloadHref = item.driveRelPath
+        ? `/api/v1/storage/download?path=${encodeURIComponent(item.driveRelPath)}`
+        : (item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null));
+      sendToTool('view-split', {
+        fileId: item.resultFileId,
+        fileName: item.fileName,
+        url: downloadHref
+      });
     };
   });
 

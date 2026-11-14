@@ -295,4 +295,27 @@ describe('POST /api/v1/storage/save-artifact & Security Boundary Tests', () => {
     const json = res.json();
     expect(json.success).toBe(false);
   });
+
+  it('6. toolHandoff cross-tool routing, TTL, and aliases contract', async () => {
+    const { TOOL_ROUTES, sendToTool, consumeHandoff, hasPendingHandoff } = await import('../../../src/utilities/toolHandoff.js');
+    expect(TOOL_ROUTES['universal-converter']).toBe('#tool/universal-converter');
+    expect(TOOL_ROUTES['pdf-studio']).toBe('#tool/pdf-studio');
+    expect(TOOL_ROUTES['view-split']).toBe('#tool/view-split');
+    expect(TOOL_ROUTES['hash-checksum']).toBe('#tool/hash-checksum');
+    expect(TOOL_ROUTES['qr-multi']).toBe('#tool/qr-multi');
+    expect(TOOL_ROUTES['qr-studio']).toBe('#tool/qr-multi');
+
+    // Test send and consume with aliases
+    sendToTool('qr-studio', { url: 'https://facebook.com/reel/123', fileName: 'reel.mp4' });
+    expect(hasPendingHandoff('qr-multi')).toBe(true);
+    expect(hasPendingHandoff('qr-studio')).toBe(true);
+
+    const consumed = consumeHandoff('qr-multi');
+    expect(consumed).not.toBeNull();
+    expect(consumed?.url).toBe('https://facebook.com/reel/123');
+
+    // Single consume semantics: second consume should be null
+    expect(consumeHandoff('qr-multi')).toBeNull();
+    expect(hasPendingHandoff('qr-multi')).toBe(false);
+  });
 });

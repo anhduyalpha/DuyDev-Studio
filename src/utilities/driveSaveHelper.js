@@ -38,18 +38,24 @@ export async function saveArtifactToDrive({
       try { onUnlockRequired(); } catch {}
     }
     return new Promise((resolve) => {
-      requireAdmin(async () => {
-        const result = await saveArtifactToDrive({
-          fileId,
-          blob,
-          fileName,
-          targetFolder,
-          metadata,
-          overwrite,
-          _isRetry: true
-        });
-        resolve(result);
-      }, 'Nhập mật khẩu Quản trị viên để lưu tệp vào Kho lưu trữ Drive.');
+      requireAdmin(
+        async () => {
+          const result = await saveArtifactToDrive({
+            fileId,
+            blob,
+            fileName,
+            targetFolder,
+            metadata,
+            overwrite,
+            _isRetry: true
+          });
+          resolve(result);
+        },
+        'Nhập mật khẩu Quản trị viên để lưu tệp vào Kho lưu trữ Drive.',
+        () => {
+          resolve({ success: false, cancelled: true, error: 'AUTH_CANCELLED' });
+        }
+      );
     });
   }
 
@@ -93,18 +99,24 @@ export async function saveArtifactToDrive({
     if (response.status === 401 && !_isRetry) {
       lockAdminSession();
       return new Promise((resolve) => {
-        requireAdmin(async () => {
-          const retryResult = await saveArtifactToDrive({
-            fileId,
-            blob,
-            fileName,
-            targetFolder,
-            metadata,
-            overwrite,
-            _isRetry: true
-          });
-          resolve(retryResult);
-        }, 'Phiên xác thực đã hết hạn. Vui lòng nhập mật khẩu Quản trị viên để tiếp tục.');
+        requireAdmin(
+          async () => {
+            const retryResult = await saveArtifactToDrive({
+              fileId,
+              blob,
+              fileName,
+              targetFolder,
+              metadata,
+              overwrite,
+              _isRetry: true
+            });
+            resolve(retryResult);
+          },
+          'Phiên xác thực đã hết hạn. Vui lòng nhập mật khẩu Quản trị viên để tiếp tục.',
+          () => {
+            resolve({ success: false, cancelled: true, error: 'AUTH_CANCELLED' });
+          }
+        );
       });
     }
 

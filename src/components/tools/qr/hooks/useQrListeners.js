@@ -24,6 +24,7 @@ import { copyText, copyQrImageOrFallback } from '../../../../utilities/clipboard
 import { storage } from '../../../../utilities/storage.js';
 import { attachQrHistoryListeners } from '../components/QrHistoryList.js';
 import { attachQrPasteHandler, detachQrPasteHandler, handleClipboardPaste } from './useQrPaste.js';
+import { consumeHandoff } from '../../../../utilities/toolHandoff.js';
 
 /**
  * Attaches an event listener to an element by its ID if the element exists.
@@ -49,6 +50,29 @@ function on(id, eventOrHandler, maybeHandler) {
  */
 export function attachQrStudioListeners(onReRender) {
   detachQrPasteHandler();
+
+  // 0. Consume cross-tool handoff (e.g. from Downloader cards or history)
+  const pendingHandoff = consumeHandoff('qr-multi') || consumeHandoff('qr-studio');
+  if (pendingHandoff) {
+    if (pendingHandoff.url) {
+      qrState.activeTab = 'url';
+      if (qrState.dynamic) qrState.dynamic.targetUrl = pendingHandoff.url;
+      if (qrState.url) qrState.url.targetUrl = pendingHandoff.url;
+      persistQrState();
+      const input = document.getElementById('inputTargetUrl') || document.getElementById('inputStaticUrl');
+      if (input) input.value = pendingHandoff.url;
+      showToast('Đã nhận liên kết tạo mã QR', 'info');
+      if (onReRender) onReRender();
+    } else if (pendingHandoff.text) {
+      qrState.activeTab = 'text';
+      if (qrState.text) qrState.text.content = pendingHandoff.text;
+      persistQrState();
+      const textInput = document.getElementById('qrTextInput');
+      if (textInput) textInput.value = pendingHandoff.text;
+      showToast('Đã nhận nội dung tạo mã QR', 'info');
+      if (onReRender) onReRender();
+    }
+  }
 
   const activeBtn = document.querySelector(`.btn-qr-tab[data-qr-tab="${qrState.activeTab}"]`);
   if (activeBtn) {
