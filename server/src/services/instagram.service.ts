@@ -28,6 +28,17 @@ const DEFAULT_ASBD_ID = '129477';
 const DEFAULT_IG_APP_ID = '936619743392459';
 const DEFAULT_LSD_TOKEN = 'AVqbxe3J_YA';
 
+/**
+ * Safely cancels unconsumed response streams to prevent Undici connection and socket leaks
+ */
+async function cancelResponseBody(res?: Response | null): Promise<void> {
+  if (res?.body && typeof (res.body as any).cancel === 'function') {
+    try {
+      await (res.body as any).cancel();
+    } catch {}
+  }
+}
+
 export class InstagramService {
   private static readonly mediaCache = new BoundedTtlCache<InstagramVideoData>(200, 10 * 60 * 1000);
 
@@ -237,6 +248,7 @@ export class InstagramService {
       });
 
       if (!res.ok) {
+        await cancelResponseBody(res);
         // If reel embed returned non-200, try fallback post embed endpoint
         if (canonicalType === 'reel') {
           const altRes = await fetch(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
@@ -245,6 +257,8 @@ export class InstagramService {
           });
           if (altRes.ok) {
             html = await altRes.text();
+          } else {
+            await cancelResponseBody(altRes);
           }
         }
         if (!html) return null;
@@ -444,7 +458,10 @@ export class InstagramService {
         signal: AbortSignal.timeout(4500)
       });
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        await cancelResponseBody(res);
+        return null;
+      }
       const json = (await res.json()) as any;
       const media = json?.data?.xdt_shortcode_media || json?.data?.shortcode_media;
       if (media) {
@@ -471,7 +488,8 @@ export class InstagramService {
       ''
     ).trim();
     const title = media.title || caption.replace(/\r?\n/g, ' ').slice(0, 100) || `Instagram Media ${id}`;
-    const cover = media.display_url || media.thumbnail_src || '';
+    const rawCover = media.display_url || media.thumbnail_src || '';
+    const cover = rawCover ? String(rawCover).replace(/&amp;/g, '&') : '';
     const duration = Number(media.video_duration || 0);
 
     const author = {
@@ -485,11 +503,14 @@ export class InstagramService {
       const items: InstagramMediaItem[] = sidecarEdges
         .map(({ node }: any) => {
           const isVid = Boolean(node.is_video || node.video_url);
-          const url = (isVid ? node.video_url : node.display_url) || node.display_url;
+          const rawUrl = (isVid ? node.video_url : node.display_url) || node.display_url;
+          const url = rawUrl ? String(rawUrl).replace(/&amp;/g, '&') : '';
+          const rawThumb = node.display_url || cover;
+          const thumbnail = rawThumb ? String(rawThumb).replace(/&amp;/g, '&') : '';
           return {
             type: isVid ? ('video' as const) : ('image' as const),
             url,
-            thumbnail: node.display_url || cover
+            thumbnail
           };
         })
         .filter((i) => Boolean(i.url));
@@ -515,8 +536,9 @@ export class InstagramService {
     }
 
     const isVideo = Boolean(media.is_video || media.video_url);
-    const mediaUrl = isVideo ? media.video_url : media.display_url;
-    if (!mediaUrl) return null;
+    const rawMediaUrl = isVideo ? media.video_url : media.display_url;
+    if (!rawMediaUrl) return null;
+    const mediaUrl = String(rawMediaUrl).replace(/&amp;/g, '&');
 
     const items: InstagramMediaItem[] = [
       {
@@ -563,7 +585,10 @@ export class InstagramService {
         signal: AbortSignal.timeout(8000)
       });
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        await cancelResponseBody(res);
+        return null;
+      }
       const data = (await res.json()) as any;
       if (data.error) return null;
 
@@ -650,8 +675,9 @@ export class InstagramService {
       '2'
     ];
 
-    if (process.env.IG_COOKIES_FILE && fs.existsSync(process.env.IG_COOKIES_FILE)) {
-      args.push('--cookies', process.env.IG_COOKIES_FILE);
+    const cookiesFile = process.env.IG_COOKIES_FILE?.trim();
+    if (cookiesFile && fs.existsSync(cookiesFile)) {
+      args.push('--cookies', cookiesFile);
     }
 
     args.push(targetUrl);
@@ -775,6 +801,7 @@ export class InstagramService {
     });
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
+      await cancelResponseBody(upstreamRes);
       throw new BadRequestError(`Không thể kết nối đến luồng video: HTTP ${upstreamRes.status}`);
     }
 
@@ -910,6 +937,7 @@ export class InstagramService {
     });
 
     if (!upstreamRes.ok || !upstreamRes.body) {
+      await cancelResponseBody(upstreamRes);
       throw new BadRequestError(`Không thể tải nội dung từ Instagram: HTTP ${upstreamRes.status}`);
     }
 
@@ -967,6 +995,8 @@ export class InstagramService {
           thumbnailDataUri = `data:${contentType};base64,${coverBuffer.toString('base64')}`;
           const thumbPath = targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg');
           await fsPromises.writeFile(thumbPath, coverBuffer).catch(() => {});
+        } else {
+          await cancelResponseBody(coverRes);
         }
       } catch {}
     }
