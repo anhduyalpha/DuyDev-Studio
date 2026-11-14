@@ -288,6 +288,10 @@ export function attachHashStudioListeners(onReRender) {
   document.querySelectorAll('.btn-hash-tab').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (isTeardown) return;
+      if (textDebounceTimer) {
+        clearTimeout(textDebounceTimer);
+        textDebounceTimer = null;
+      }
       hashManager.abort();
       hashState.activeTab = btn.dataset.hashTab;
       persistHashState();
