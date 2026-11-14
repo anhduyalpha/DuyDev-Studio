@@ -9,6 +9,7 @@ import { parseMarkdownToHtml, downloadBlob } from '../../utilities/markdownParse
 import { loadModuleState, saveModuleState } from '../../utilities/moduleState.js';
 import { storage } from '../../utilities/storage.js';
 import { requireAdmin, getStorageAuthHeaders, lockAdminSession } from '../../utilities/adminAuth.js';
+import { saveArtifactToDrive } from '../../utilities/driveSaveHelper.js';
 
 /**
  * @typedef {Object} MarkdownState
@@ -155,6 +156,9 @@ export function renderMarkdownEditor() {
           </button>
           <button id="btnExportPdf" type="button" class="min-h-[44px] px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-semibold flex items-center gap-2 transition shadow-xs cursor-pointer">
             <i data-lucide="file-down" class="w-4 h-4 text-red-400 dark:text-red-600"></i> Xuất .PDF
+          </button>
+          <button id="btnSaveMarkdownToDrive" type="button" class="min-h-[44px] px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-xs font-semibold flex items-center gap-2 transition shadow-xs cursor-pointer" title="Lưu tài liệu hiện tại vào Studio Drive (/documents)">
+            <i data-lucide="hard-drive" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i> Lưu vào Drive
           </button>
 
           <button id="btnExportMd" type="button" class="min-h-[44px] px-3 py-2 rounded-xl bg-white hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5 transition shadow-xs cursor-pointer">
@@ -436,6 +440,25 @@ export function attachMarkdownEditorListeners(onReRender) {
       requireAdmin(async () => {
         openDriveDocumentPicker();
       }, 'Mở khóa Storage Drive để chọn file Markdown');
+    });
+  }
+
+  // Save to Drive Action
+  const btnSaveMarkdownToDrive = document.getElementById('btnSaveMarkdownToDrive');
+  if (btnSaveMarkdownToDrive) {
+    btnSaveMarkdownToDrive.addEventListener('click', async () => {
+      const content = activeEditorState.content || '';
+      const baseName = (activeEditorState.fileName || 'document.md').replace(/\.[^.]+$/, '');
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+      await saveArtifactToDrive({
+        blob,
+        fileName: `${baseName}.md`,
+        targetFolder: '/documents',
+        metadata: {
+          tool: 'markdown-docs',
+          wordCount: activeEditorState.stats?.words || 0
+        }
+      });
     });
   }
 

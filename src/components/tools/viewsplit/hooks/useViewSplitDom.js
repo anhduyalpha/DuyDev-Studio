@@ -18,8 +18,10 @@ import {
 import { drawLoupe, updatePixelInspectorHud } from '../components/ViewSplitPixelInspector.js';
 import {
   downloadComparisonImage,
-  copyComparisonImageToClipboard
+  copyComparisonImageToClipboard,
+  saveComparisonImageToDrive
 } from '../utilities/viewSplitCompositor.js';
+import { consumeHandoff } from '../../../../utilities/toolHandoff.js';
 import { toggleTheme } from '../../../../hooks/useTheme.js';
 
 /**
@@ -257,6 +259,18 @@ export function attachViewSplitDomListeners(store, onReRender) {
       showToast('Lỗi khi nạp ảnh', 'error');
     }
   };
+
+  // Consume cross-tool handoff if arriving from another tool
+  const pendingHandoff = consumeHandoff('view-split');
+  if (pendingHandoff) {
+    if (pendingHandoff.file) {
+      loadAndAssignImage(store.activePaneId, pendingHandoff.file, pendingHandoff.fileName || pendingHandoff.file.name);
+    } else if (pendingHandoff.blob) {
+      loadAndAssignImage(store.activePaneId, pendingHandoff.blob, pendingHandoff.fileName || 'image.png');
+    } else if (pendingHandoff.url) {
+      loadAndAssignImage(store.activePaneId, pendingHandoff.url, pendingHandoff.fileName || 'image.png');
+    }
+  }
 
   // ─── 1. RAF Canvas Render Loop ───
   const renderCanvasFrame = () => {
@@ -1204,6 +1218,17 @@ export function attachViewSplitDomListeners(store, onReRender) {
         showToast('Đang tải ảnh so sánh...', 'info');
         const isDark = document.documentElement.classList.contains('dark');
         await downloadComparisonImage(store.panes, store.layout, {
+          sliderPos: store.sliderPos,
+          diffMultiplier: store.diffMultiplier,
+          filter: store.filter,
+          background: isDark ? '#09090B' : '#F4F4F6'
+        });
+        break;
+      }
+
+      case 'save-drive-composite': {
+        const isDark = document.documentElement.classList.contains('dark');
+        await saveComparisonImageToDrive(store.panes, store.layout, {
           sliderPos: store.sliderPos,
           diffMultiplier: store.diffMultiplier,
           filter: store.filter,

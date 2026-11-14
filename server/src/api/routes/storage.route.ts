@@ -9,7 +9,8 @@ import {
   renameStorageHandler,
   moveStorageHandler,
   copyStorageHandler,
-  statsStorageHandler
+  statsStorageHandler,
+  saveArtifactHandler
 } from '../controllers/storage.controller.js';
 
 export async function storageRoute(app: FastifyInstance) {
@@ -18,6 +19,7 @@ export async function storageRoute(app: FastifyInstance) {
 
   app.get('/api/v1/storage/list', listStorageHandler);
   app.post('/api/v1/storage/upload', uploadStorageHandler);
+  app.post('/api/v1/storage/save-artifact', saveArtifactHandler);
   app.get('/api/v1/storage/download', downloadStorageHandler);
   app.post('/api/v1/storage/mkdir', mkdirStorageHandler);
   app.delete('/api/v1/storage/delete', deleteStorageHandler);

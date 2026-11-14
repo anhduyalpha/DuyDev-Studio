@@ -12,6 +12,8 @@ import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
 import { storage } from '../../../../utilities/storage.js';
+import { saveArtifactToDrive } from '../../../../utilities/driveSaveHelper.js';
+import { consumeHandoff } from '../../../../utilities/toolHandoff.js';
 
 /**
  * Safely refreshes Lucide icons if available in current runtime environment.
@@ -323,6 +325,37 @@ export function setupConverterObserver(manager) {
  * @returns {() => void} Teardown unsubscribe function
  */
 export function attachConverterListeners(manager) {
+  // 0. Consume cross-tool handoff if available
+  const pendingHandoff = consumeHandoff('universal-converter');
+  if (pendingHandoff) {
+    if (pendingHandoff.file) {
+      manager.addFiles([pendingHandoff.file]);
+    } else if (pendingHandoff.blob) {
+      const f = new File([pendingHandoff.blob], pendingHandoff.fileName || 'file', {
+        type: pendingHandoff.mimeType || pendingHandoff.blob.type || 'application/octet-stream'
+      });
+      manager.addFiles([f]);
+    }
+  }
+
+  // Global Ctrl+V (paste) listener outside input fields
+  const handleGlobalPaste = (e) => {
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+      return;
+    }
+    if (document.getElementById('dsModalAdminPwdInput') || document.getElementById('shareTargetPanel')) {
+      return;
+    }
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      e.preventDefault();
+      manager.addFiles(Array.from(files));
+    }
+  };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('paste', handleGlobalPaste);
+  }
+
   // 1. Dropzone & File Ingestion (Multiple Support)
   const onFilesSelected = (files) => {
     if (files && files.length > 0) {
@@ -550,6 +583,38 @@ export function attachConverterListeners(manager) {
         return;
       }
 
+      // Individual Save to Drive (/converted)
+      const saveDriveBtn = e.target.closest('.btn-save-drive-converter-result');
+      if (saveDriveBtn) {
+        const itemId = saveDriveBtn.dataset.itemId;
+        const it = manager.items?.find((x) => x.id === itemId);
+        if (it?.result?.resultFileId) {
+          saveArtifactToDrive({
+            fileId: it.result.resultFileId,
+            fileName: it.result.fileName,
+            targetFolder: '/converted',
+            metadata: { tool: 'universal-converter', format: it.targetFormat }
+          });
+        }
+        return;
+      }
+
+      // Batch Save All to Drive (/converted)
+      if (e.target.closest('#btnSaveAllConverterToDrive')) {
+        const completedItems = manager.items?.filter((x) => x.status === 'completed' && x.result) || [];
+        for (const it of completedItems) {
+          if (it.result?.resultFileId) {
+            saveArtifactToDrive({
+              fileId: it.result.resultFileId,
+              fileName: it.result.fileName,
+              targetFolder: '/converted',
+              metadata: { tool: 'universal-converter', format: it.targetFormat }
+            });
+          }
+        }
+        return;
+      }
+
       const retryBtn = e.target.closest('.btn-retry-converter-result');
       if (retryBtn) {
         const itemId = retryBtn.dataset.itemId;
@@ -588,6 +653,9 @@ export function attachConverterListeners(manager) {
   const unsubscribeObserver = setupConverterObserver(manager);
 
   return () => {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('paste', handleGlobalPaste);
+    }
     unsubscribeObserver();
     window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
   };

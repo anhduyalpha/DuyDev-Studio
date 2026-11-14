@@ -10,6 +10,7 @@ import { renderDropzone, attachDropzoneListeners } from '../../common/Dropzone.j
 import { calculateTextHashes, processHashFile, updateBase64, hashManager } from './hooks/useHashActions.js';
 import { renderHashCards, renderCompareMatchHtml, bindCopyHashButtons } from './components/HashCards.js';
 import { loadModuleState, saveModuleState } from '../../../utilities/moduleState.js';
+import { consumeHandoff } from '../../../utilities/toolHandoff.js';
 
 /**
  * @typedef {Object} HashResultMap
@@ -285,6 +286,40 @@ export function attachHashStudioListeners(onReRender) {
   let isTeardown = false;
   let textDebounceTimer = null;
 
+  // Consume cross-tool handoff if available
+  const pendingHandoff = consumeHandoff('hash-checksum');
+  if (pendingHandoff && pendingHandoff.file) {
+    hashState.activeTab = 'file';
+    hashManager.abort();
+    processHashFile(pendingHandoff.file, hashState, () => {
+      if (!isTeardown && onReRender) onReRender();
+    }).then(() => {
+      if (!isTeardown) persistHashState();
+    });
+  }
+
+  const handleGlobalPaste = async (e) => {
+    if (isTeardown) return;
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+      return;
+    }
+    if (document.getElementById('dsModalAdminPwdInput') || document.getElementById('shareTargetPanel')) {
+      return;
+    }
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      e.preventDefault();
+      hashManager.abort();
+      await processHashFile(files[0], hashState, () => {
+        if (!isTeardown && onReRender) onReRender();
+      });
+      if (!isTeardown) persistHashState();
+    }
+  };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('paste', handleGlobalPaste);
+  }
+
   document.querySelectorAll('.btn-hash-tab').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (isTeardown) return;
@@ -429,6 +464,9 @@ export function attachHashStudioListeners(onReRender) {
 
   return () => {
     isTeardown = true;
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('paste', handleGlobalPaste);
+    }
     if (textDebounceTimer) {
       clearTimeout(textDebounceTimer);
       textDebounceTimer = null;

@@ -10,6 +10,7 @@ import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { renderHistoryItemRow } from '../components/history/HistoryItemRow.js';
 import { openProfileModal } from '../components/common/ProfileModal.js';
+import { saveArtifactToDrive } from '../utilities/driveSaveHelper.js';
 
 let historyState = {
   currentTab: 'history', historyItems: storage.getLocalHistory(),
@@ -108,6 +109,37 @@ function bindRowActions(root, rerender) {
       const list = historyState.currentTab === 'trash' ? historyState.trashItems : historyState.historyItems;
       const item = list.find(x => x.id === btn.dataset.previewId);
       if (item) ViewerConnector.preview(item);
+    };
+  });
+
+  root.querySelectorAll('.btn-save-drive-history').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.saveDriveId;
+      const item = historyState.historyItems.find(x => x.id === id);
+      if (!item || !item.resultFileId) return;
+
+      const ext = (item.fileName || '').split('.').pop()?.toLowerCase();
+      let targetFolder = '/converted';
+      if (ext === 'pdf') targetFolder = '/pdf';
+      else if (['zip', 'tar', 'gz', '7z', 'rar'].includes(ext)) targetFolder = '/archives';
+      else if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)) targetFolder = '/images';
+      else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md'].includes(ext)) targetFolder = '/documents';
+
+      const res = await saveArtifactToDrive({
+        fileId: item.resultFileId,
+        fileName: item.fileName,
+        targetFolder,
+        metadata: {
+          historyId: item.id,
+          tool: item.tool || item.toolTitle
+        }
+      });
+
+      if (res.success && res.data?.path) {
+        item.driveRelPath = res.data.path;
+        await storage.updateHistoryItem(item.id, { driveRelPath: res.data.path });
+        if (rerender) rerender();
+      }
     };
   });
 

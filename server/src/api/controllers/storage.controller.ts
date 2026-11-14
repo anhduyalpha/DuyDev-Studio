@@ -12,6 +12,7 @@ import { getMimeTypeForExt } from '../../schemas/converter.schema.js';
 import { checkETagMatch } from '../../lib/http.utils.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
+import { prisma } from '../../lib/prisma.js';
 
 // Schemas
 const listQuerySchema = z.object({
@@ -59,7 +60,8 @@ export async function storageAuthGuard(request: FastifyRequest, reply: FastifyRe
   const relPath = query?.path || '';
 
   // Whitelist public tool downloads and previews (/slideshare/, /academia/, /researchgate/)
-  if (request.routerPath === '/api/v1/storage/download' && /^(?:\/)?(?:slideshare|academia|researchgate)\//i.test(relPath)) {
+  const routerUrl = request.routeOptions?.url || request.routerPath;
+  if (routerUrl === '/api/v1/storage/download' && /^(?:\/)?(?:slideshare|academia|researchgate)\//i.test(relPath)) {
     return;
   }
 
@@ -434,5 +436,209 @@ export async function statsStorageHandler(_request: FastifyRequest, reply: Fasti
   return reply.send({
     success: true,
     data: stats
+  });
+}
+
+/**
+ * Target folder allowlist for artifact persistence.
+ * Strictly limited to authorized destination folders.
+ */
+export const ALLOWED_ARTIFACT_FOLDERS = ['/pdf', '/converted', '/archives', '/images', '/documents'] as const;
+
+const saveArtifactJsonSchema = z.object({
+  fileId: z.string().min(1, 'fileId is required'),
+  targetFolder: z.string().min(1, 'targetFolder is required'),
+  fileName: z.string().optional(),
+  overwrite: z.boolean().optional().default(false),
+  metadata: z.record(z.any()).optional()
+});
+
+/**
+ * Handle multipart artifact saving
+ */
+async function handleMultipartSaveArtifact(request: FastifyRequest, reply: FastifyReply) {
+  const query = (request.query as Record<string, string>) || {};
+  let targetFolder = query.targetFolder || query.path || '';
+  let fileName = query.fileName || '';
+  let overwrite = query.overwrite === 'true';
+  let metadata: Record<string, any> = {};
+
+  const tempFilePath = path.join(resolvedStoragePaths.temp, `art_up_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.tmp`);
+  let bytesWritten = 0;
+  let fileReceived = false;
+
+  const parts = request.parts({ limits: { fileSize: 100 * 1024 * 1024 } });
+  try {
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        if (!fileReceived) {
+          fileReceived = true;
+          if (!fileName && part.filename) {
+            fileName = part.filename;
+          }
+          const writeStream = fs.createWriteStream(tempFilePath);
+          await pipeline(part.file, writeStream);
+          const stat = await fsPromises.stat(tempFilePath);
+          bytesWritten = stat.size;
+        } else {
+          await part.file.resume();
+        }
+      } else {
+        if (part.fieldname === 'targetFolder') {
+          targetFolder = String(part.value || '');
+        } else if (part.fieldname === 'fileName') {
+          fileName = String(part.value || '');
+        } else if (part.fieldname === 'overwrite') {
+          overwrite = String(part.value) === 'true';
+        } else if (part.fieldname === 'metadata') {
+          try {
+            metadata = JSON.parse(String(part.value || '{}'));
+          } catch {}
+        }
+      }
+    }
+  } catch (err: any) {
+    if (fs.existsSync(tempFilePath)) {
+      await fsPromises.unlink(tempFilePath).catch(() => {});
+    }
+    throw err;
+  }
+
+  if (!fileReceived || bytesWritten === 0) {
+    if (fs.existsSync(tempFilePath)) {
+      await fsPromises.unlink(tempFilePath).catch(() => {});
+    }
+    throw new BadRequestError('Tệp tải lên rỗng hoặc không tìm thấy tệp');
+  }
+
+  const normFolder = DriveService.normalizeRelativePath(targetFolder);
+  if (!ALLOWED_ARTIFACT_FOLDERS.includes(normFolder as any)) {
+    if (fs.existsSync(tempFilePath)) {
+      await fsPromises.unlink(tempFilePath).catch(() => {});
+    }
+    throw new BadRequestError(`Thư mục đích không hợp lệ. Chỉ chấp nhận: ${ALLOWED_ARTIFACT_FOLDERS.join(', ')}`);
+  }
+
+  const targetDiskDir = DriveService.getDiskPath(normFolder);
+  if (!fs.existsSync(targetDiskDir)) {
+    await fsPromises.mkdir(targetDiskDir, { recursive: true });
+  }
+
+  const candidateName = (fileName || 'artifact').trim();
+  const originalName = path.basename(candidateName).replace(/[\\/:*?"<>|\0]/g, '_') || 'artifact';
+
+  let finalName = originalName;
+  let targetFilePath = path.join(targetDiskDir, finalName);
+
+  if (!overwrite) {
+    let counter = 1;
+    const ext = path.extname(originalName);
+    const base = path.basename(originalName, ext);
+    while (fs.existsSync(targetFilePath)) {
+      finalName = `${base} (${counter})${ext}`;
+      targetFilePath = path.join(targetDiskDir, finalName);
+      counter++;
+    }
+  }
+
+  StorageManager.sanitizeSafePath(resolvedStoragePaths.drive, path.relative(resolvedStoragePaths.drive, targetFilePath));
+  await fsPromises.rename(tempFilePath, targetFilePath);
+
+  const metaFilePath = targetFilePath.replace(/\.[^.]+$/, '') + '.meta.json';
+  const ext = path.extname(targetFilePath).toLowerCase().replace(/^\./, '');
+  const mimeType = getMimeTypeForExt(ext);
+  const sidecarMeta = {
+    savedAt: new Date().toISOString(),
+    originalName: finalName,
+    sizeBytes: bytesWritten,
+    mimeType,
+    ...metadata
+  };
+  await fsPromises.writeFile(metaFilePath, JSON.stringify(sidecarMeta, null, 2), 'utf8');
+
+  DriveService.invalidateStatsCache();
+
+  const itemRelPath = normFolder === '/' ? `/${finalName}` : `${normFolder}/${finalName}`;
+  return reply.status(201).send({
+    success: true,
+    data: {
+      path: itemRelPath,
+      name: finalName,
+      sizeBytes: bytesWritten
+    }
+  });
+}
+
+/**
+ * Auth-Gated Universal Save Artifact to Drive
+ * Handles copying by fileId or direct multipart upload into /pdf, /converted, /archives, /images, /documents
+ */
+export async function saveArtifactHandler(request: FastifyRequest, reply: FastifyReply) {
+  if (request.isMultipart()) {
+    return handleMultipartSaveArtifact(request, reply);
+  }
+
+  const body = saveArtifactJsonSchema.parse(request.body || {});
+  const normFolder = DriveService.normalizeRelativePath(body.targetFolder);
+
+  if (!ALLOWED_ARTIFACT_FOLDERS.includes(normFolder as any)) {
+    throw new BadRequestError(`Thư mục đích không hợp lệ. Chỉ chấp nhận: ${ALLOWED_ARTIFACT_FOLDERS.join(', ')}`);
+  }
+
+  const fileRecord = await prisma.fileRecord.findUnique({
+    where: { id: body.fileId.trim() }
+  });
+
+  if (!fileRecord || fileRecord.isPurged || !fs.existsSync(fileRecord.storagePath)) {
+    throw new NotFoundError(`Tệp nguồn không tồn tại hoặc đã bị xóa`);
+  }
+
+  const targetDiskDir = DriveService.getDiskPath(normFolder);
+  if (!fs.existsSync(targetDiskDir)) {
+    await fsPromises.mkdir(targetDiskDir, { recursive: true });
+  }
+
+  const candidateName = (body.fileName || fileRecord.originalName || 'artifact').trim();
+  const originalName = path.basename(candidateName).replace(/[\\/:*?"<>|\0]/g, '_') || 'artifact';
+
+  let finalName = originalName;
+  let targetFilePath = path.join(targetDiskDir, finalName);
+
+  if (!body.overwrite) {
+    let counter = 1;
+    const ext = path.extname(originalName);
+    const base = path.basename(originalName, ext);
+    while (fs.existsSync(targetFilePath)) {
+      finalName = `${base} (${counter})${ext}`;
+      targetFilePath = path.join(targetDiskDir, finalName);
+      counter++;
+    }
+  }
+
+  StorageManager.sanitizeSafePath(resolvedStoragePaths.drive, path.relative(resolvedStoragePaths.drive, targetFilePath));
+  await fsPromises.copyFile(fileRecord.storagePath, targetFilePath);
+  const stat = await fsPromises.stat(targetFilePath);
+
+  const metaFilePath = targetFilePath.replace(/\.[^.]+$/, '') + '.meta.json';
+  const sidecarMeta = {
+    savedAt: new Date().toISOString(),
+    sourceFileId: fileRecord.id,
+    originalName: fileRecord.originalName,
+    sizeBytes: stat.size,
+    mimeType: fileRecord.mimeType,
+    ...(body.metadata || {})
+  };
+  await fsPromises.writeFile(metaFilePath, JSON.stringify(sidecarMeta, null, 2), 'utf8');
+
+  DriveService.invalidateStatsCache();
+
+  const itemRelPath = normFolder === '/' ? `/${finalName}` : `${normFolder}/${finalName}`;
+  return reply.status(201).send({
+    success: true,
+    data: {
+      path: itemRelPath,
+      name: finalName,
+      sizeBytes: stat.size
+    }
   });
 }

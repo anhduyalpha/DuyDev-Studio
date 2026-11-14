@@ -44,11 +44,16 @@ export function renderHistoryItemRow(item, isTrash) {
 
       <div class="flex items-center justify-end sm:justify-start gap-2 pt-2 sm:pt-0 border-t border-zinc-100 dark:border-white/[0.04] sm:border-t-0 shrink-0 w-full sm:w-auto flex-wrap">
         ${hasPreview ? `
-          <button type="button" data-preview-id="${item.id}" class="btn-preview-history px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+          <button type="button" data-preview-id="${item.id}" class="btn-preview-history min-h-[44px] px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i> Xem
           </button>
+          ${!isTrash && !hasDrive && item.resultFileId ? `
+            <button type="button" data-save-drive-id="${item.id}" class="btn-save-drive-history min-h-[44px] px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer" title="Lưu tệp này vào Studio Drive">
+              <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-sky-600 dark:text-sky-400"></i> Lưu Drive
+            </button>
+          ` : ''}
           ${!isTrash && downloadHref ? `
-            <a href="${downloadHref}" download="${item.fileName || 'file'}" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+            <a href="${downloadHref}" download="${item.fileName || 'file'}" class="min-h-[44px] px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải lại
             </a>
           ` : ''}

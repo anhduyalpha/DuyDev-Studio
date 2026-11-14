@@ -101,13 +101,16 @@ export function renderArchiveCompressPane(state = {}) {
           </div>
 
           <div class="flex flex-wrap items-center justify-center gap-3">
-            <a href="${result.downloadUrl}" download="${result.archiveName}" class="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-sm font-semibold inline-flex items-center gap-2 transition shadow-sm">
+            <a href="${result.downloadUrl}" download="${result.archiveName}" class="min-h-[44px] px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-sm font-semibold inline-flex items-center gap-2 transition shadow-sm">
               <i data-lucide="download" class="w-4 h-4"></i> Tải về (${formatBytes(result.sizeBytes)})
             </a>
-            <button id="btnTrashCompressResult" class="px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-red-50 text-zinc-700 hover:text-red-600 dark:bg-white/[0.04] dark:hover:bg-red-500/10 dark:text-zinc-300 dark:hover:text-red-400 border border-zinc-200 dark:border-white/[0.08] text-sm font-semibold inline-flex items-center gap-1.5 transition">
+            <button id="btnSaveArchiveToDrive" type="button" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-sm font-semibold inline-flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]">
+              <i data-lucide="hard-drive" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i> Lưu vào Drive
+            </button>
+            <button id="btnTrashCompressResult" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-red-50 text-zinc-700 hover:text-red-600 dark:bg-white/[0.04] dark:hover:bg-red-500/10 dark:text-zinc-300 dark:hover:text-red-400 border border-zinc-200 dark:border-white/[0.08] text-sm font-semibold inline-flex items-center gap-1.5 transition">
               <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa
             </button>
-            <button id="btnResetCompress" class="px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] dark:text-zinc-300 dark:hover:text-white border border-zinc-200 dark:border-white/[0.08] text-sm font-semibold transition">
+            <button id="btnResetCompress" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] dark:text-zinc-300 dark:hover:text-white border border-zinc-200 dark:border-white/[0.08] text-sm font-semibold transition">
               Nén đợt mới
             </button>
           </div>

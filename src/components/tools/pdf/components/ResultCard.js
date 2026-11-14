@@ -77,6 +77,16 @@ export function renderResultCard(result) {
           <i data-lucide="${previewIcon}" class="w-4 h-4 text-[#d97706] dark:text-amber-400"></i> Xem trước
         </button>
 
+        <button id="btnSavePdfToDrive" type="button" data-file-id="${result.resultFileId || ''}" data-file-name="${result.fileName || ''}"
+          class="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]">
+          <i data-lucide="hard-drive" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i> Lưu vào Drive
+        </button>
+
+        <button id="btnHandoffPdfToConverter" type="button" data-file-id="${result.resultFileId || ''}" data-file-name="${result.fileName || ''}"
+          class="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]">
+          <i data-lucide="share-2" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i> Chuyển đổi
+        </button>
+
         ${!isZip && !isDocx ? `
           <button id="btnContinueWithResult" type="button" title="Tiếp tục chỉnh sửa với tệp kết quả này"
             class="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]">

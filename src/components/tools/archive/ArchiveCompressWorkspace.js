@@ -9,6 +9,7 @@ import { attachDropzoneListeners } from '../../common/Dropzone.js';
 import { archiveCompressManager } from './hooks/useArchiveCompressManager.js';
 import { showToast } from '../../../utilities/toast.js';
 import { storage } from '../../../utilities/storage.js';
+import { saveArtifactToDrive } from '../../../utilities/driveSaveHelper.js';
 
 export function renderArchiveCompressWorkspace(state = archiveCompressManager.getState()) {
   return `
@@ -122,6 +123,21 @@ export function attachArchiveCompressListeners(rerender) {
       showToast('Đã chuyển tệp vào thùng rác', 'info');
       archiveCompressManager.resetResult();
       rerender?.();
+    };
+  }
+
+  const btnSaveDrive = document.getElementById('btnSaveArchiveToDrive');
+  if (btnSaveDrive) {
+    btnSaveDrive.onclick = async () => {
+      const res = archiveCompressManager.result;
+      if (res?.fileId) {
+        await saveArtifactToDrive({
+          fileId: res.fileId,
+          fileName: res.archiveName || 'archive.zip',
+          targetFolder: '/archives',
+          metadata: { tool: 'server-archive', format: archiveCompressManager.format }
+        });
+      }
     };
   }
 

@@ -6,6 +6,7 @@
 
 import { LAYOUT_MODES } from '../hooks/useViewSplit.js';
 import { calculateDifferencePixel } from '../hooks/useViewSplitSync.js';
+import { saveArtifactToDrive } from '../../../../utilities/driveSaveHelper.js';
 
 /**
  * Creates a canvas composited from active panes according to layout mode.
@@ -363,4 +364,27 @@ export async function copyComparisonImageToClipboard(panes, layout, options = {}
   }
 
   return false;
+}
+
+/**
+ * Saves composited comparison image directly into Studio Drive (/images).
+ *
+ * @param {Array<Object>} panes
+ * @param {string} layout
+ * @param {Object} [options]
+ * @returns {Promise<Object>}
+ */
+export async function saveComparisonImageToDrive(panes, layout, options = {}) {
+  const blob = await exportMergedComparisonBlob(panes, layout, { ...options, format: 'image/png' });
+  const fileName = `viewsplit-comparison-${Date.now()}.png`;
+  return saveArtifactToDrive({
+    blob,
+    fileName,
+    targetFolder: '/images',
+    metadata: {
+      tool: 'viewsplit',
+      layout,
+      paneCount: (panes || []).filter(p => Boolean(p.image)).length
+    }
+  });
 }

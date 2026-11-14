@@ -59,11 +59,40 @@ export class InstagramWorkspace {
       }
     };
     window.addEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
+
+    this.handleGlobalPaste = (e) => {
+      if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+        return;
+      }
+      if (document.getElementById('dsModalAdminPwdInput') || document.getElementById('shareTargetPanel')) {
+        return;
+      }
+      const text = e.clipboardData?.getData('text') || '';
+      const cleanUrl = this.sanitizeUrl(text);
+      if (cleanUrl) {
+        e.preventDefault();
+        this.url = cleanUrl;
+        const input = this.container.querySelector('#igUrlInput');
+        if (input) input.value = this.url;
+        this.updateInputActions();
+        this.resolveMedia();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('paste', this.handleGlobalPaste);
+    }
   }
 
   unmount() {
     // Decouple background network tasks from SPA DOM teardown (KI-FIX-015)
     this.abortController = null;
+
+    if (this.handleGlobalPaste) {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('paste', this.handleGlobalPaste);
+      }
+      this.handleGlobalPaste = null;
+    }
 
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);

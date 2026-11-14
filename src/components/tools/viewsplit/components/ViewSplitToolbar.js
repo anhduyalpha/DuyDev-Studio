@@ -246,10 +246,19 @@ export function renderViewSplitToolbar(state) {
             type="button"
             data-action="download-composite"
             title="Tải về ảnh so sánh tổng hợp (PNG)"
-            class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm hover:shadow text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+            class="min-h-[44px] px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm hover:shadow text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
           >
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>Xuất ảnh</span>
+          </button>
+          <button
+            type="button"
+            data-action="save-drive-composite"
+            title="Lưu ảnh so sánh vào Studio Drive (/images)"
+            class="min-h-[44px] px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 shadow-xs text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+          >
+            <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-sky-600 dark:text-sky-400"></i>
+            <span class="hidden sm:inline">Lưu Drive</span>
           </button>
         </div>
       </div>

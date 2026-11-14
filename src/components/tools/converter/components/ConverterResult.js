@@ -94,18 +94,25 @@ export function renderConverterResult(state) {
                 </div>
               </div>
 
-              <!-- Right: Individual Actions (Download & Preview) -->
-              <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-white/[0.04] justify-end">
+              <!-- Right: Individual Actions (Download & Preview & Save Drive) -->
+              <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-white/[0.04] justify-end flex-wrap">
                 <!-- Preview Button -->
-                <button type="button" class="btn-preview-converter-result px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                <button type="button" class="btn-preview-converter-result min-h-[44px] px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
                   data-item-id="${it.id}" title="Xem trước tệp">
                   <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-500"></i>
                   <span>Xem</span>
                 </button>
 
+                <!-- Save to Drive Button -->
+                <button type="button" class="btn-save-drive-converter-result min-h-[44px] px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/30 dark:hover:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs"
+                  data-item-id="${it.id}" title="Lưu vào Studio Drive (/converted)">
+                  <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-sky-600 dark:text-sky-400"></i>
+                  <span>Lưu Drive</span>
+                </button>
+
                 <!-- Direct Individual Download Button -->
                 <a href="${res.downloadUrl}" download="${res.fileName || 'file'}"
-                  class="btn-download-converter-result px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs shadow-emerald-600/20"
+                  class="btn-download-converter-result min-h-[44px] px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-xs shadow-emerald-600/20"
                   title="Tải về tệp này">
                   <i data-lucide="download" class="w-3.5 h-3.5"></i>
                   <span>Tải về</span>
@@ -144,13 +151,21 @@ export function renderConverterResult(state) {
       <div class="flex flex-wrap items-center gap-3 pt-3 border-t border-zinc-100 dark:border-white/[0.06]">
         <!-- Download All as ZIP Button -->
         <button id="btnDownloadAllZip" type="button"
-          class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 transition shadow-sm shadow-indigo-500/20 cursor-pointer active:scale-95">
+          class="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 transition shadow-sm shadow-indigo-500/20 cursor-pointer active:scale-95">
           <i data-lucide="archive" class="w-4 h-4"></i>
           <span>Tải tất cả dạng .ZIP (${completed.length} tệp)</span>
         </button>
 
+        <!-- Save All to Drive Button -->
+        <button id="btnSaveAllConverterToDrive" type="button"
+          class="min-h-[44px] px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-2 transition shadow-sm shadow-sky-500/20 cursor-pointer active:scale-95"
+          title="Lưu toàn bộ kết quả chuyển đổi vào Studio Drive (/converted)">
+          <i data-lucide="hard-drive" class="w-4 h-4"></i>
+          <span>Lưu tất cả vào Drive</span>
+        </button>
+
         <button id="btnClearAllConverterResults" type="button"
-          class="min-h-[42px] px-4 py-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-500/30 bg-indigo-50/70 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-200 text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition flex items-center gap-2 ml-auto cursor-pointer active:scale-95">
+          class="min-h-[44px] px-4 py-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-500/30 bg-indigo-50/70 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-200 text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition flex items-center gap-2 ml-auto cursor-pointer active:scale-95">
           <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
           <span>Chuyển đổi tiếp</span>
         </button>
