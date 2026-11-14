@@ -1193,6 +1193,9 @@ class MainActivity : AppCompatActivity() {
             val effectiveTargetRoute = targetRoute ?: detectedRoute
 
             val payload = JSONObject().apply {
+                val now = System.currentTimeMillis()
+                put("timestamp", now)
+                put("payloadId", "sp_${now}_${(1000..9999).random()}")
                 if (subject.isNotBlank()) put("title", subject)
                 if (text.isNotBlank()) put("text", text)
                 if (!detectedUrl.isNullOrBlank()) put("url", detectedUrl)

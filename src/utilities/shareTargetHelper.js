@@ -159,10 +159,51 @@ export function base64ToFile(base64Data, filename, mimeType) {
 }
 
 /**
- * In-memory set of consumed payload IDs to prevent duplicate consumption
- * under concurrent fast-path, app.js, and native share arrived events.
+ * Bounded TTL cache of consumed payload IDs to prevent duplicate consumption
+ * under concurrent fast-path, app.js, and native share arrived events while
+ * allowing subsequent shares (even with the same URL) after TTL or with distinct IDs.
  */
-const consumedPayloadIds = new Set();
+const CONSUMED_PAYLOAD_TTL_MS = 10_000;
+const MAX_CONSUMED_PAYLOAD_CACHE = 50;
+
+/** @type {Map<string, number>} */
+const consumedPayloadCache = new Map();
+
+function pruneConsumedPayloadCache(now = Date.now()) {
+  for (const [id, ts] of consumedPayloadCache.entries()) {
+    if (now - ts > CONSUMED_PAYLOAD_TTL_MS) {
+      consumedPayloadCache.delete(id);
+    }
+  }
+  while (consumedPayloadCache.size > MAX_CONSUMED_PAYLOAD_CACHE) {
+    const oldestKey = consumedPayloadCache.keys().next().value;
+    if (oldestKey) consumedPayloadCache.delete(oldestKey);
+    else break;
+  }
+}
+
+function isPayloadConsumed(payloadId, now = Date.now()) {
+  if (!payloadId) return false;
+  pruneConsumedPayloadCache(now);
+  const ts = consumedPayloadCache.get(payloadId);
+  if (!ts) return false;
+  if (now - ts > CONSUMED_PAYLOAD_TTL_MS) {
+    consumedPayloadCache.delete(payloadId);
+    return false;
+  }
+  return true;
+}
+
+function markPayloadConsumed(payloadId, now = Date.now()) {
+  if (!payloadId) return;
+  pruneConsumedPayloadCache(now);
+  consumedPayloadCache.set(payloadId, now);
+}
+
+/** Reset consumed cache (used by unit tests) */
+export function _clearConsumedPayloadCache() {
+  consumedPayloadCache.clear();
+}
 
 /**
  * Normalize payload from AndroidBridge into standard share payload with File objects
@@ -177,6 +218,7 @@ export async function normalizeNativePayload(nativePayload, shouldFetchFiles = t
   const payloadId = String(
     nativePayload.payloadId ||
     nativePayload.id ||
+    (nativePayload.timestamp ? 'sp_' + nativePayload.timestamp : null) ||
     ('sp_' + (nativePayload.url || '') + '|' + (nativePayload.text || '') + '|' + (nativePayload.files ? nativePayload.files.length : 0))
   );
 
@@ -270,7 +312,7 @@ export async function peekPendingSharedPayload() {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
           if (parsed) {
             const normalized = await normalizeNativePayload(parsed, false);
-            if (normalized && !consumedPayloadIds.has(normalized.payloadId)) {
+            if (normalized && !isPayloadConsumed(normalized.payloadId)) {
               return normalized;
             }
           }
@@ -293,8 +335,8 @@ export async function peekPendingSharedPayload() {
       if (!allPayloads || !allPayloads.length) return null;
       const last = allPayloads[allPayloads.length - 1];
       if (!last) return null;
-      const payloadId = String(last.payloadId || ('idb_' + (last.timestamp || Date.now())));
-      if (consumedPayloadIds.has(payloadId)) return null;
+      const payloadId = String(last.payloadId || (last.timestamp ? 'idb_' + last.timestamp : null) || ('idb_' + (last.url || '') + '|' + (last.text || '')));
+      if (isPayloadConsumed(payloadId)) return null;
       return { ...last, payloadId };
     } finally {
       db.close();
@@ -311,7 +353,7 @@ export async function peekPendingSharedPayload() {
  * @returns {Promise<{payloadId: string, title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
 export async function consumePendingSharedPayload(targetPayloadId = null) {
-  if (targetPayloadId && consumedPayloadIds.has(targetPayloadId)) {
+  if (targetPayloadId && isPayloadConsumed(targetPayloadId)) {
     return null;
   }
 
@@ -325,11 +367,11 @@ export async function consumePendingSharedPayload(targetPayloadId = null) {
           if (parsed) {
             const normalized = await normalizeNativePayload(parsed, true);
             const effId = targetPayloadId || normalized?.payloadId;
-            if (effId && consumedPayloadIds.has(effId)) {
+            if (effId && isPayloadConsumed(effId)) {
               return null;
             }
             if (effId) {
-              consumedPayloadIds.add(effId);
+              markPayloadConsumed(effId);
             }
             if (typeof window.AndroidBridge.clearSharedPayload === 'function') {
               window.AndroidBridge.clearSharedPayload();
@@ -359,11 +401,11 @@ export async function consumePendingSharedPayload(targetPayloadId = null) {
       }
 
       const last = allPayloads[allPayloads.length - 1];
-      const effId = targetPayloadId || String(last.payloadId || ('idb_' + (last.timestamp || Date.now())));
-      if (consumedPayloadIds.has(effId)) {
+      const effId = targetPayloadId || String(last.payloadId || (last.timestamp ? 'idb_' + last.timestamp : null) || ('idb_' + (last.url || '') + '|' + (last.text || '')));
+      if (isPayloadConsumed(effId)) {
         return null;
       }
-      consumedPayloadIds.add(effId);
+      markPayloadConsumed(effId);
 
       store.clear();
       await new Promise((resolve, reject) => {

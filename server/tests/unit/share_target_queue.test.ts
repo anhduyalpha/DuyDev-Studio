@@ -3,17 +3,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   peekPendingSharedPayload,
-  consumePendingSharedPayload
+  consumePendingSharedPayload,
+  _clearConsumedPayloadCache
 } from '../../../src/utilities/shareTargetHelper.js';
 import { detectSmartRoute } from '../../../src/utilities/smartUrlRouter.js';
-import { renderHeader, syncHeaderUserProfile } from '../../../src/components/layout/Header.js';
+import { renderHeader } from '../../../src/components/layout/Header.js';
 
 describe('Task 1.2 — Atomic Share Queue, Hydration Watchdog & Non-Blocking Onboarding', () => {
   const rootDir = path.resolve(__dirname, '../../../');
   const appJsPath = path.join(rootDir, 'src/app.js');
   const indexPath = path.join(rootDir, 'index.html');
   const shareModalPath = path.join(rootDir, 'src/components/common/ShareTargetModal.js');
-  const headerPath = path.join(rootDir, 'src/components/layout/Header.js');
+  const mainActivityPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/MainActivity.kt');
 
   let originalWindow: any;
   let originalDocument: any;
@@ -38,14 +39,18 @@ describe('Task 1.2 — Atomic Share Queue, Hydration Watchdog & Non-Blocking Onb
     global.localStorage = mockStorage;
     // @ts-ignore
     global.sessionStorage = mockStorage;
+
+    _clearConsumedPayloadCache();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     global.window = originalWindow;
     global.document = originalDocument;
     global.localStorage = originalLocalStorage;
     global.sessionStorage = originalSessionStorage;
     vi.restoreAllMocks();
+    _clearConsumedPayloadCache();
   });
 
   describe('1. Atomic peekPendingSharedPayload() without clearing', () => {
@@ -77,7 +82,7 @@ describe('Task 1.2 — Atomic Share Queue, Hydration Watchdog & Non-Blocking Onb
     });
   });
 
-  describe('2. Idempotent consumePendingSharedPayload(payloadId)', () => {
+  describe('2. Idempotent consumePendingSharedPayload(payloadId) & Bounded Cache', () => {
     it('double call to consumePendingSharedPayload(payloadId) only invokes clearSharedPayload() once', async () => {
       const clearMock = vi.fn();
       const payloadId = 'test_payload_id_12345';
@@ -106,6 +111,103 @@ describe('Task 1.2 — Atomic Share Queue, Hydration Watchdog & Non-Blocking Onb
       expect(clearMock).toHaveBeenCalledTimes(1);
       expect(secondResult).toBeNull();
     });
+
+    it('re-sharing the exact same URL with a fresh payloadId/timestamp succeeds immediately and calls clearSharedPayload() a second time', async () => {
+      const clearMock = vi.fn();
+      const sharedUrl = 'https://www.academia.edu/55555/sample-article';
+
+      let currentPayload: any = {
+        payloadId: 'sp_1700000000000_1111',
+        timestamp: 1700000000000,
+        url: sharedUrl,
+        title: 'Article 1'
+      };
+
+      // @ts-ignore
+      global.window = {
+        AndroidBridge: {
+          getSharedPayload: vi.fn(() => (currentPayload ? JSON.stringify(currentPayload) : '')),
+          clearSharedPayload: vi.fn(() => {
+            clearMock();
+            currentPayload = null;
+          })
+        }
+      };
+
+      // Share 1: peek and consume
+      const peek1 = await peekPendingSharedPayload();
+      expect(peek1).not.toBeNull();
+      expect(peek1?.payloadId).toBe('sp_1700000000000_1111');
+      const consume1 = await consumePendingSharedPayload(peek1!.payloadId);
+      expect(consume1).not.toBeNull();
+      expect(clearMock).toHaveBeenCalledTimes(1);
+
+      // Share 2: user re-shares the exact same URL from Android (within <1s) with fresh payloadId
+      currentPayload = {
+        payloadId: 'sp_1700000000500_2222',
+        timestamp: 1700000000500,
+        url: sharedUrl,
+        title: 'Article 1'
+      };
+
+      const peek2 = await peekPendingSharedPayload();
+      expect(peek2).not.toBeNull();
+      expect(peek2?.payloadId).toBe('sp_1700000000500_2222');
+      const consume2 = await consumePendingSharedPayload(peek2!.payloadId);
+      expect(consume2).not.toBeNull();
+      expect(clearMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('re-sharing the exact same URL without payloadId/timestamp after the dedup TTL window succeeds instead of being permanently dropped', async () => {
+      vi.useFakeTimers();
+      const clearMock = vi.fn();
+      const sharedUrl = 'https://www.tiktok.com/@creator/video/123456789';
+
+      let currentPayload: any = {
+        url: sharedUrl,
+        text: 'Check this video'
+      };
+
+      // @ts-ignore
+      global.window = {
+        AndroidBridge: {
+          getSharedPayload: vi.fn(() => (currentPayload ? JSON.stringify(currentPayload) : '')),
+          clearSharedPayload: vi.fn(() => {
+            clearMock();
+            currentPayload = null;
+          })
+        }
+      };
+
+      // Share 1: peek and consume
+      const peek1 = await peekPendingSharedPayload();
+      expect(peek1).not.toBeNull();
+      const consume1 = await consumePendingSharedPayload(peek1!.payloadId);
+      expect(consume1).not.toBeNull();
+      expect(clearMock).toHaveBeenCalledTimes(1);
+
+      // Duplicate immediate arrival with same deterministic key within <10s is blocked
+      currentPayload = { url: sharedUrl, text: 'Check this video' };
+      const peekDuplicate = await peekPendingSharedPayload();
+      expect(peekDuplicate).toBeNull();
+
+      // Advance time beyond the 10s TTL window
+      vi.advanceTimersByTime(11000);
+
+      // After TTL window, re-sharing the exact same payload succeeds
+      const peekAfterTtl = await peekPendingSharedPayload();
+      expect(peekAfterTtl).not.toBeNull();
+      const consumeAfterTtl = await consumePendingSharedPayload(peekAfterTtl!.payloadId);
+      expect(consumeAfterTtl).not.toBeNull();
+      expect(clearMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('MainActivity.kt builds share JSON with per-intent timestamp and random payloadId', () => {
+      const mainActivityContent = fs.readFileSync(mainActivityPath, 'utf-8');
+      expect(mainActivityContent).toContain('val now = System.currentTimeMillis()');
+      expect(mainActivityContent).toContain('put("timestamp", now)');
+      expect(mainActivityContent).toContain('put("payloadId", "sp_${now}_');
+    });
   });
 
   describe('3. Smart Route Detection & Query Dispatch for Academia and ResearchGate', () => {
@@ -127,6 +229,14 @@ describe('Task 1.2 — Atomic Share Queue, Hydration Watchdog & Non-Blocking Onb
       expect(res?.autoStart).toBe(true);
     });
 
+    it('ShareTargetModal.js passes canonical #tool/academia and #tool/researchgate to handoffSmartUrl', () => {
+      const shareModalContent = fs.readFileSync(shareModalPath, 'utf-8');
+      expect(shareModalContent).toContain("handoffSmartUrl({ toolId: 'academia', route: '#tool/academia'");
+      expect(shareModalContent).toContain("handoffSmartUrl({ toolId: 'researchgate', route: '#tool/researchgate'");
+      expect(shareModalContent).toContain("case '#tool/academia-downloader':");
+      expect(shareModalContent).toContain("case '#tool/researchgate-downloader':");
+    });
+
     it('app.js contains ?url= auto-fill dispatcher hooks for academia and researchgate', () => {
       const appJs = fs.readFileSync(appJsPath, 'utf-8');
       expect(appJs).toMatch(/acUrlInput/);
@@ -138,7 +248,6 @@ describe('Task 1.2 — Atomic Share Queue, Hydration Watchdog & Non-Blocking Onb
     it('app.js handles replaced payload on ds:native-share-arrived when modal is open', () => {
       const appJs = fs.readFileSync(appJsPath, 'utf-8');
       expect(appJs).toContain('ds:native-share-arrived');
-      // Must not silently bail out on shareTargetPanel when a new native share arrives
       expect(appJs).toMatch(/ds:native-share-arrived[\s\S]*?(?:peekPendingSharedPayload|openShareTargetModal)/);
     });
   });

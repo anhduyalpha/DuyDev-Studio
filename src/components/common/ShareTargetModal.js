@@ -502,7 +502,7 @@ async function dispatchSharedPayloadToTool(action, payload) {
       case '#tool/academia-downloader': {
         const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
         if (targetUrl) {
-          handoffSmartUrl({ toolId: 'academia', route: '#tool/academia-downloader', url: targetUrl });
+          handoffSmartUrl({ toolId: 'academia', route: '#tool/academia', url: targetUrl });
         }
         break;
       }
@@ -510,7 +510,7 @@ async function dispatchSharedPayloadToTool(action, payload) {
       case '#tool/researchgate-downloader': {
         const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
         if (targetUrl) {
-          handoffSmartUrl({ toolId: 'researchgate', route: '#tool/researchgate-downloader', url: targetUrl });
+          handoffSmartUrl({ toolId: 'researchgate', route: '#tool/researchgate', url: targetUrl });
         }
         break;
       }
