@@ -480,63 +480,63 @@ html.dark .tier-watermark-seal-ex {
 
 /* Bolt 1 (Top-Left): Active 0% -> 18% (~0.65s) - Explosive Sharp Twin Strike */
 @keyframes lightning-chain-1 {
-  0% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
+  0% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE) drop-shadow(0 0 0 transparent); }
   1.5% { opacity: 1; filter: drop-shadow(0 0 20px #22D3EE) drop-shadow(0 0 35px #FFFFFF); }
-  3.5% { opacity: 0.20; }
+  3.5% { opacity: 0.20; filter: drop-shadow(0 0 8px #22D3EE) drop-shadow(0 0 0 transparent); }
   5.5% { opacity: 1; filter: drop-shadow(0 0 24px #67E8F9) drop-shadow(0 0 40px #FFFFFF); }
-  8% { opacity: 0.45; }
+  8% { opacity: 0.45; filter: drop-shadow(0 0 12px #22D3EE) drop-shadow(0 0 16px #FFFFFF); }
   11% { opacity: 0.90; filter: drop-shadow(0 0 16px #22D3EE) drop-shadow(0 0 28px #FFFFFF); }
-  14% { opacity: 0.30; }
-  18%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
+  14% { opacity: 0.30; filter: drop-shadow(0 0 8px #22D3EE) drop-shadow(0 0 0 transparent); }
+  18%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE) drop-shadow(0 0 0 transparent); }
 }
 
 /* Bolt 4 (Bottom-Left): Active 16% -> 38% (~0.80s) - Deep Rolling Rumbling Surge */
 @keyframes lightning-chain-4 {
-  0%, 15% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
-  17% { opacity: 0.70; }
+  0%, 15% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8) drop-shadow(0 0 0 transparent); }
+  17% { opacity: 0.70; filter: drop-shadow(0 0 14px #38BDF8) drop-shadow(0 0 20px #FFFFFF); }
   19% { opacity: 1; filter: drop-shadow(0 0 22px #38BDF8) drop-shadow(0 0 38px #FFFFFF); }
-  22% { opacity: 0.20; }
+  22% { opacity: 0.20; filter: drop-shadow(0 0 8px #38BDF8) drop-shadow(0 0 0 transparent); }
   25% { opacity: 1; filter: drop-shadow(0 0 25px #67E8F9) drop-shadow(0 0 42px #FFFFFF); }
-  28% { opacity: 0.45; }
+  28% { opacity: 0.45; filter: drop-shadow(0 0 12px #38BDF8) drop-shadow(0 0 16px #FFFFFF); }
   31% { opacity: 0.90; filter: drop-shadow(0 0 18px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
-  35% { opacity: 0.40; }
-  38%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
+  35% { opacity: 0.40; filter: drop-shadow(0 0 10px #38BDF8) drop-shadow(0 0 0 transparent); }
+  38%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8) drop-shadow(0 0 0 transparent); }
 }
 
 /* Bolt 2 (Top-Right): Active 37% -> 54% (~0.60s) - Ultra-Rapid High-Frequency Jitter Snap */
 @keyframes lightning-chain-2 {
-  0%, 36% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
+  0%, 36% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8) drop-shadow(0 0 0 transparent); }
   38% { opacity: 1; filter: drop-shadow(0 0 22px #38BDF8) drop-shadow(0 0 38px #FFFFFF); }
-  40% { opacity: 0.20; }
+  40% { opacity: 0.20; filter: drop-shadow(0 0 8px #38BDF8) drop-shadow(0 0 0 transparent); }
   42% { opacity: 1; filter: drop-shadow(0 0 20px #67E8F9) drop-shadow(0 0 35px #FFFFFF); }
-  45% { opacity: 0.40; }
+  45% { opacity: 0.40; filter: drop-shadow(0 0 12px #38BDF8) drop-shadow(0 0 14px #FFFFFF); }
   48% { opacity: 0.95; filter: drop-shadow(0 0 18px #38BDF8) drop-shadow(0 0 30px #FFFFFF); }
-  51% { opacity: 0.35; }
-  54%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8); }
+  51% { opacity: 0.35; filter: drop-shadow(0 0 10px #38BDF8) drop-shadow(0 0 0 transparent); }
+  54%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #38BDF8) drop-shadow(0 0 0 transparent); }
 }
 
 /* Bolt 3 (Bottom-Right): Active 53% -> 74% (~0.75s) - Rolling Crescendo Discharge Before Climax */
 @keyframes lightning-chain-3 {
-  0%, 52% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
-  54% { opacity: 0.65; }
+  0%, 52% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE) drop-shadow(0 0 0 transparent); }
+  54% { opacity: 0.65; filter: drop-shadow(0 0 14px #22D3EE) drop-shadow(0 0 18px #FFFFFF); }
   56% { opacity: 1; filter: drop-shadow(0 0 20px #22D3EE) drop-shadow(0 0 35px #FFFFFF); }
-  59% { opacity: 0.20; }
+  59% { opacity: 0.20; filter: drop-shadow(0 0 8px #22D3EE) drop-shadow(0 0 0 transparent); }
   62% { opacity: 0.90; filter: drop-shadow(0 0 18px #67E8F9) drop-shadow(0 0 32px #FFFFFF); }
-  66% { opacity: 0.45; }
+  66% { opacity: 0.45; filter: drop-shadow(0 0 12px #22D3EE) drop-shadow(0 0 16px #FFFFFF); }
   69% { opacity: 1; filter: drop-shadow(0 0 24px #22D3EE) drop-shadow(0 0 40px #FFFFFF); }
-  72% { opacity: 0.40; }
-  74%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE); }
+  72% { opacity: 0.40; filter: drop-shadow(0 0 10px #22D3EE) drop-shadow(0 0 0 transparent); }
+  74%, 100% { opacity: 0.10; filter: drop-shadow(0 0 6px #22D3EE) drop-shadow(0 0 0 transparent); }
 }
 
 /* Grand Climax: Massive Diagonal Lightning Bolt Across Card (Active 76% -> 96%, ~0.72s) */
 @keyframes lightning-chain-diagonal {
   0%, 75% {
     opacity: 0;
-    filter: drop-shadow(0 0 0 transparent);
+    filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
   }
   76% {
     opacity: 0.40;
-    filter: drop-shadow(0 0 15px #22D3EE);
+    filter: drop-shadow(0 0 15px #22D3EE) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
   }
   78% {
     opacity: 1;
@@ -544,6 +544,7 @@ html.dark .tier-watermark-seal-ex {
   }
   81% {
     opacity: 0.25;
+    filter: drop-shadow(0 0 12px #22D3EE) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
   }
   83% {
     opacity: 1;
@@ -551,20 +552,23 @@ html.dark .tier-watermark-seal-ex {
   }
   86% {
     opacity: 0.60;
+    filter: drop-shadow(0 0 20px #22D3EE) drop-shadow(0 0 30px #FFFFFF) drop-shadow(0 0 0 transparent);
   }
   89% {
     opacity: 0.95;
-    filter: drop-shadow(0 0 25px #22D3EE) drop-shadow(0 0 45px #FFFFFF);
+    filter: drop-shadow(0 0 25px #22D3EE) drop-shadow(0 0 45px #FFFFFF) drop-shadow(0 0 0 transparent);
   }
   92% {
     opacity: 0.40;
+    filter: drop-shadow(0 0 12px #22D3EE) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
   }
   95% {
     opacity: 0.15;
+    filter: drop-shadow(0 0 6px #22D3EE) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
   }
   97%, 100% {
     opacity: 0;
-    filter: drop-shadow(0 0 0 transparent);
+    filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
   }
 }
 
@@ -669,14 +673,14 @@ html.dark .tier-watermark-seal-ex {
 
 @keyframes lightning-star-flash-anim {
   0%, 75% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
-  76% { opacity: 0.30; transform: translate(-50%, -50%) scale(0.7) rotate(5deg); }
-  78% { opacity: 1; transform: translate(-50%, -50%) scale(1.6) rotate(15deg); }
-  81% { opacity: 0.20; transform: translate(-50%, -50%) scale(1.0) rotate(22deg); }
-  83% { opacity: 1; transform: translate(-50%, -50%) scale(1.8) rotate(30deg); }
-  86% { opacity: 0.50; transform: translate(-50%, -50%) scale(1.3) rotate(36deg); }
-  90% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.8) rotate(42deg); }
-  95% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(45deg); }
-  96%, 100% { opacity: 0; }
+  76% { opacity: 0.30; transform: translate(-50%, -50%) scale(0.7) rotate(12deg); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(1.6) rotate(28deg); }
+  81% { opacity: 0.20; transform: translate(-50%, -50%) scale(1.0) rotate(42deg); }
+  83% { opacity: 1; transform: translate(-50%, -50%) scale(1.8) rotate(56deg); }
+  86% { opacity: 0.50; transform: translate(-50%, -50%) scale(1.3) rotate(68deg); }
+  90% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.8) rotate(80deg); }
+  95% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(88deg); }
+  96%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(90deg); }
 }
 
 @keyframes lightning-anamorphic-flash-anim {
@@ -688,7 +692,7 @@ html.dark .tier-watermark-seal-ex {
   86% { opacity: 0.55; transform: translate(-50%, -50%) rotate(-18deg) scaleX(1.2); }
   90% { opacity: 0.25; transform: translate(-50%, -50%) rotate(-18deg) scaleX(0.8); }
   95% { opacity: 0; transform: translate(-50%, -50%) rotate(-18deg) scaleX(0.3); }
-  96%, 100% { opacity: 0; }
+  96%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-18deg) scaleX(0.2); }
 }
 
 @keyframes lightning-shockwave-anim {
@@ -770,43 +774,43 @@ html.dark .tier-card.tier-lr .solar-bolt-left {
 }
 
 @keyframes solar-thunder-1 {
-  0%, 18% { opacity: 0.80; }
+  0%, 18% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
   4% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
-  6% { opacity: 0.40; }
+  6% { opacity: 0.40; filter: drop-shadow(0 0 2px #B45309) drop-shadow(0 0 5px #F59E0B) drop-shadow(0 0 0 transparent); }
   8% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
-  12% { opacity: 0.70; }
-  14% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
-  19%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  12% { opacity: 0.70; filter: drop-shadow(0 0 4px #B45309) drop-shadow(0 0 10px #F59E0B) drop-shadow(0 0 0 transparent); }
+  14% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 14px #F59E0B) drop-shadow(0 0 20px #FEF08A); }
+  19%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
 }
 
 @keyframes solar-thunder-2 {
-  0%, 24% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  0%, 24% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
   28% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
-  30% { opacity: 0.40; }
+  30% { opacity: 0.40; filter: drop-shadow(0 0 2px #B45309) drop-shadow(0 0 5px #F59E0B) drop-shadow(0 0 0 transparent); }
   32% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
-  36% { opacity: 0.70; }
-  38% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
-  43%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  36% { opacity: 0.70; filter: drop-shadow(0 0 4px #B45309) drop-shadow(0 0 10px #F59E0B) drop-shadow(0 0 0 transparent); }
+  38% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 14px #F59E0B) drop-shadow(0 0 20px #FEF08A); }
+  43%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
 }
 
 @keyframes solar-thunder-3 {
-  0%, 49% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  0%, 49% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
   53% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
-  55% { opacity: 0.40; }
+  55% { opacity: 0.40; filter: drop-shadow(0 0 2px #B45309) drop-shadow(0 0 5px #F59E0B) drop-shadow(0 0 0 transparent); }
   57% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
-  61% { opacity: 0.70; }
-  63% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
-  68%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  61% { opacity: 0.70; filter: drop-shadow(0 0 4px #B45309) drop-shadow(0 0 10px #F59E0B) drop-shadow(0 0 0 transparent); }
+  63% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 14px #F59E0B) drop-shadow(0 0 20px #FEF08A); }
+  68%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
 }
 
 @keyframes solar-thunder-4 {
-  0%, 74% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  0%, 74% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
   78% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 16px #F59E0B) drop-shadow(0 0 25px #FBBF24); }
-  80% { opacity: 0.40; }
+  80% { opacity: 0.40; filter: drop-shadow(0 0 2px #B45309) drop-shadow(0 0 5px #F59E0B) drop-shadow(0 0 0 transparent); }
   82% { opacity: 1; filter: drop-shadow(0 0 12px #B45309) drop-shadow(0 0 22px #F59E0B) drop-shadow(0 0 32px #FFFFFF); }
-  86% { opacity: 0.70; }
-  88% { opacity: 1; filter: drop-shadow(0 0 14px #F59E0B); }
-  93%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B); }
+  86% { opacity: 0.70; filter: drop-shadow(0 0 4px #B45309) drop-shadow(0 0 10px #F59E0B) drop-shadow(0 0 0 transparent); }
+  88% { opacity: 1; filter: drop-shadow(0 0 8px #B45309) drop-shadow(0 0 14px #F59E0B) drop-shadow(0 0 20px #FEF08A); }
+  93%, 100% { opacity: 0.80; filter: drop-shadow(0 0 3px #B45309) drop-shadow(0 0 7px #F59E0B) drop-shadow(0 0 0 transparent); }
 }
 
 /* Blinding Solar Flare & Anamorphic Beam */
@@ -855,8 +859,16 @@ html.dark .tier-card.tier-lr .solar-bolt-left {
 }
 
 @keyframes solar-flare-blinding {
-  0%, 100% { transform: scale(0.7); opacity: 0.35; }
-  50% { transform: scale(1.2); opacity: 0.85; filter: drop-shadow(0 0 16px #FACC15) drop-shadow(0 0 28px #FEF08A); }
+  0%, 100% {
+    transform: scale(0.7);
+    opacity: 0.35;
+    filter: drop-shadow(0 0 10px #FACC15) drop-shadow(0 0 18px #FEF08A);
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.85;
+    filter: drop-shadow(0 0 16px #FACC15) drop-shadow(0 0 28px #FEF08A);
+  }
 }
 
 @keyframes solar-anamorphic-pulse {
@@ -876,18 +888,48 @@ html.dark .tier-card.tier-lr .solar-bolt-left {
   height: 36px;
   pointer-events: none;
   z-index: 2;
-  animation: solar-star-glare 3.2s ease-in-out infinite;
+  animation: solar-star-glare 3.2s linear infinite;
 }
 
 @keyframes solar-star-glare {
-  0%, 100% {
+  0% {
     transform: scale(0.65) rotate(0deg);
     opacity: 0.35;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.35)) drop-shadow(0 0 6px rgba(250, 204, 21, 0.25));
+  }
+  12.5% {
+    transform: scale(0.74) rotate(45deg);
+    opacity: 0.42;
+  }
+  25% {
+    transform: scale(0.95) rotate(90deg);
+    opacity: 0.60;
+  }
+  37.5% {
+    transform: scale(1.16) rotate(135deg);
+    opacity: 0.78;
   }
   50% {
-    transform: scale(1.25) rotate(45deg);
+    transform: scale(1.25) rotate(180deg);
     opacity: 0.85;
     filter: drop-shadow(0 0 12px #FFFFFF) drop-shadow(0 0 22px #FACC15);
+  }
+  62.5% {
+    transform: scale(1.16) rotate(225deg);
+    opacity: 0.78;
+  }
+  75% {
+    transform: scale(0.95) rotate(270deg);
+    opacity: 0.60;
+  }
+  87.5% {
+    transform: scale(0.74) rotate(315deg);
+    opacity: 0.42;
+  }
+  100% {
+    transform: scale(0.65) rotate(360deg);
+    opacity: 0.35;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.35)) drop-shadow(0 0 6px rgba(250, 204, 21, 0.25));
   }
 }
 
@@ -1024,27 +1066,27 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
 .tier-card.tier-ur .mote-2 {
   width: 5.5px; height: 5.5px; left: 74%; bottom: 22%;
   background: #38BDF8; box-shadow: 0 0 12px #38BDF8, 0 0 22px #FFFFFF;
-  animation-duration: 5.0s; animation-delay: 1.1s;
+  animation-duration: 5.0s; animation-delay: -1.1s;
 }
 .tier-card.tier-ur .mote-3 {
   width: 4px; height: 4px; left: 44%; bottom: 8%;
   background: #FACC15; box-shadow: 0 0 10px #FACC15, 0 0 18px #FFFFFF;
-  animation-duration: 4.6s; animation-delay: 2.2s;
+  animation-duration: 4.6s; animation-delay: -2.2s;
 }
 .tier-card.tier-ur .mote-4 {
   width: 5px; height: 5px; left: 86%; bottom: 42%;
   background: #C084FC; box-shadow: 0 0 12px #C084FC, 0 0 20px #FFFFFF;
-  animation-duration: 5.4s; animation-delay: 0.7s;
+  animation-duration: 5.4s; animation-delay: -0.7s;
 }
 .tier-card.tier-ur .mote-5 {
   width: 3.5px; height: 3.5px; left: 16%; bottom: 48%;
   background: #34D399; box-shadow: 0 0 8px #34D399, 0 0 16px #FFFFFF;
-  animation-duration: 4.4s; animation-delay: 1.8s;
+  animation-duration: 4.4s; animation-delay: -1.8s;
 }
 .tier-card.tier-ur .mote-6 {
   width: 5px; height: 5px; left: 58%; bottom: 62%;
   background: #FB7185; box-shadow: 0 0 12px #FB7185, 0 0 24px #FFFFFF;
-  animation-duration: 5.8s; animation-delay: 3.0s;
+  animation-duration: 5.8s; animation-delay: -3.0s;
 }
 @keyframes ur-starlight-float {
   0% { transform: translateY(0) scale(0.6); opacity: 0; }
@@ -1056,14 +1098,17 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
 
 /* Multi-Phase Dual-Rotating Mythic Mandala Seal */
 .tier-card.tier-ur .ur-mandala-outer {
+  transform-box: view-box;
   transform-origin: 87px 87px;
   animation: spin-clockwise 22s linear infinite;
 }
 .tier-card.tier-ur .ur-mandala-inner {
+  transform-box: view-box;
   transform-origin: 87px 87px;
   animation: spin-counter 15s linear infinite;
 }
 .tier-card.tier-ur .ur-mandala-core {
+  transform-box: view-box;
   transform-origin: 87px 87px;
   animation: ur-mandala-pulse 3.6s ease-in-out infinite;
 }
@@ -1082,8 +1127,16 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
   pointer-events: none;
 }
 @keyframes ur-halo-breathing {
-  0%, 100% { transform: scale(0.88); opacity: 0.45; }
-  50% { transform: scale(1.22); opacity: 0.95; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 60%, rgba(236, 72, 153, 0.6))); }
+  0%, 100% {
+    transform: scale(0.88);
+    opacity: 0.45;
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 25%, rgba(236, 72, 153, 0.2)));
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 60%, rgba(236, 72, 153, 0.6)));
+  }
 }
 .tier-card.tier-ur .ur-orbit-satellite {
   position: absolute;
@@ -1134,23 +1187,52 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
   width: 24px;
   height: 24px;
   pointer-events: none;
-  animation: diamond-glint-twinkle 3.2s ease-in-out infinite;
+  animation: diamond-glint-twinkle 3.2s linear infinite;
 }
 .tier-card.tier-ur .flare-tl { top: 6px; left: 6px; }
-.tier-card.tier-ur .flare-tr { top: 6px; right: 6px; animation-delay: 0.8s; }
-.tier-card.tier-ur .flare-bl { bottom: 6px; left: 6px; animation-delay: 1.6s; }
-.tier-card.tier-ur .flare-br { bottom: 6px; right: 6px; animation-delay: 2.4s; }
+.tier-card.tier-ur .flare-tr { top: 6px; right: 6px; animation-delay: -0.8s; }
+.tier-card.tier-ur .flare-bl { bottom: 6px; left: 6px; animation-delay: -1.6s; }
+.tier-card.tier-ur .flare-br { bottom: 6px; right: 6px; animation-delay: -2.4s; }
 
 @keyframes diamond-glint-twinkle {
-  0%, 100% {
+  0% {
     transform: scale(0.35) rotate(0deg);
     opacity: 0.35;
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 6px rgba(255, 255, 255, 0));
+  }
+  12.5% {
+    transform: scale(0.53) rotate(45deg);
+    opacity: 0.44;
+  }
+  25% {
+    transform: scale(0.98) rotate(90deg);
+    opacity: 0.68;
+  }
+  37.5% {
+    transform: scale(1.42) rotate(135deg);
+    opacity: 0.91;
   }
   50% {
-    transform: scale(1.6) rotate(90deg);
+    transform: scale(1.6) rotate(180deg);
     opacity: 1;
     filter: drop-shadow(0 0 16px rgba(255, 255, 255, 1)) drop-shadow(0 0 28px currentColor);
+  }
+  62.5% {
+    transform: scale(1.42) rotate(225deg);
+    opacity: 0.91;
+  }
+  75% {
+    transform: scale(0.98) rotate(270deg);
+    opacity: 0.68;
+  }
+  87.5% {
+    transform: scale(0.53) rotate(315deg);
+    opacity: 0.44;
+  }
+  100% {
+    transform: scale(0.35) rotate(360deg);
+    opacity: 0.35;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 6px rgba(255, 255, 255, 0));
   }
 }
 
@@ -1651,15 +1733,15 @@ html.dark .tier-card.tier-ss {
   background: color-mix(in srgb, var(--accent) 70%, #F43F5E);
 }
 .tier-card.tier-ss .ember-1 { left: 15%; bottom: 15px; width: 4px; height: 4px; animation-duration: 4s; animation-delay: 0s; box-shadow: 0 0 6px var(--accent); }
-.tier-card.tier-ss .ember-2 { left: 35%; bottom: 10px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 1.2s; box-shadow: 0 0 5px var(--accent); }
-.tier-card.tier-ss .ember-3 { left: 55%; bottom: 25px; width: 4px; height: 4px; animation-duration: 4.8s; animation-delay: 2.5s; box-shadow: 0 0 6px var(--accent); }
-.tier-card.tier-ss .ember-4 { left: 75%; bottom: 8px; width: 3px; height: 3px; animation-duration: 6s; animation-delay: 3s; box-shadow: 0 0 5px var(--accent); }
-.tier-card.tier-ss .ember-5 { left: 90%; bottom: 20px; width: 3.5px; height: 3.5px; animation-duration: 4.5s; animation-delay: 1.5s; box-shadow: 0 0 6px var(--accent); }
-.tier-card.tier-ss .ember-6 { left: 25%; bottom: 35px; width: 2.5px; height: 2.5px; animation-duration: 5.2s; animation-delay: 0.8s; box-shadow: 0 0 5px var(--accent); }
-.tier-card.tier-ss .ember-7 { left: 45%; bottom: 18px; width: 4px; height: 4px; animation-duration: 4.2s; animation-delay: 2.2s; box-shadow: 0 0 6px var(--accent); }
-.tier-card.tier-ss .ember-8 { left: 65%; bottom: 30px; width: 3px; height: 3px; animation-duration: 5.8s; animation-delay: 3.5s; box-shadow: 0 0 5px var(--accent); }
-.tier-card.tier-ss .ember-9 { left: 80%; bottom: 40px; width: 2.5px; height: 2.5px; animation-duration: 4.6s; animation-delay: 1.9s; box-shadow: 0 0 5px var(--accent); }
-.tier-card.tier-ss .ember-10 { left: 10%; bottom: 28px; width: 3px; height: 3px; animation-duration: 6.2s; animation-delay: 2.8s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-2 { left: 35%; bottom: 10px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: -1.2s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-3 { left: 55%; bottom: 25px; width: 4px; height: 4px; animation-duration: 4.8s; animation-delay: -2.5s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-4 { left: 75%; bottom: 8px; width: 3px; height: 3px; animation-duration: 6s; animation-delay: -3s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-5 { left: 90%; bottom: 20px; width: 3.5px; height: 3.5px; animation-duration: 4.5s; animation-delay: -1.5s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-6 { left: 25%; bottom: 35px; width: 2.5px; height: 2.5px; animation-duration: 5.2s; animation-delay: -0.8s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-7 { left: 45%; bottom: 18px; width: 4px; height: 4px; animation-duration: 4.2s; animation-delay: -2.2s; box-shadow: 0 0 6px var(--accent); }
+.tier-card.tier-ss .ember-8 { left: 65%; bottom: 30px; width: 3px; height: 3px; animation-duration: 5.8s; animation-delay: -3.5s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-9 { left: 80%; bottom: 40px; width: 2.5px; height: 2.5px; animation-duration: 4.6s; animation-delay: -1.9s; box-shadow: 0 0 5px var(--accent); }
+.tier-card.tier-ss .ember-10 { left: 10%; bottom: 28px; width: 3px; height: 3px; animation-duration: 6.2s; animation-delay: -2.8s; box-shadow: 0 0 6px var(--accent); }
 
 .tier-card.tier-ss .tier-crest-badge {
   background: linear-gradient(135deg, rgba(225, 29, 72, 0.22), rgba(159, 18, 57, 0.32));
@@ -1769,12 +1851,12 @@ html.dark .tier-card.tier-ur {
   height: 18px;
   pointer-events: none;
   z-index: 5;
-  animation: star-twinkle 3s ease-in-out infinite;
+  animation: star-twinkle 3s linear infinite;
 }
 .tier-card.tier-ur .star-tl { top: 8px; left: 8px; }
-.tier-card.tier-ur .star-tr { top: 8px; right: 8px; animation-delay: 0.75s; }
-.tier-card.tier-ur .star-bl { bottom: 8px; left: 8px; animation-delay: 1.5s; }
-.tier-card.tier-ur .star-br { bottom: 8px; right: 8px; animation-delay: 2.25s; }
+.tier-card.tier-ur .star-tr { top: 8px; right: 8px; animation-delay: -0.75s; }
+.tier-card.tier-ur .star-bl { bottom: 8px; left: 8px; animation-delay: -1.5s; }
+.tier-card.tier-ur .star-br { bottom: 8px; right: 8px; animation-delay: -2.25s; }
 
 .tier-card.tier-ur .tier-crest-badge {
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.28), rgba(56, 189, 248, 0.28));
@@ -1937,16 +2019,16 @@ html.dark .tier-card.tier-lr .spark {
   box-shadow: 0 0 8px var(--accent), 0 0 16px color-mix(in srgb, var(--accent) 60%, #FACC15) !important;
 }
 
-.tier-card.tier-lr .spark-1 { left: 10%; bottom: 8px; width: 4.5px; height: 4.5px; animation-duration: 4.0s; animation-delay: 0.2s; }
-.tier-card.tier-lr .spark-2 { left: 24%; bottom: 14px; width: 5.5px; height: 5.5px; animation-duration: 4.6s; animation-delay: 1.2s; }
-.tier-card.tier-lr .spark-3 { left: 38%; bottom: 6px; width: 4.0px; height: 4.0px; animation-duration: 3.6s; animation-delay: 2.1s; }
+.tier-card.tier-lr .spark-1 { left: 10%; bottom: 8px; width: 4.5px; height: 4.5px; animation-duration: 4.0s; animation-delay: -0.2s; }
+.tier-card.tier-lr .spark-2 { left: 24%; bottom: 14px; width: 5.5px; height: 5.5px; animation-duration: 4.6s; animation-delay: -1.2s; }
+.tier-card.tier-lr .spark-3 { left: 38%; bottom: 6px; width: 4.0px; height: 4.0px; animation-duration: 3.6s; animation-delay: -2.1s; }
 .tier-card.tier-lr .spark-4 { left: 52%; bottom: 18px; width: 5.0px; height: 5.0px; animation-duration: 5.2s; animation-delay: 0s; }
-.tier-card.tier-lr .spark-5 { left: 66%; bottom: 12px; width: 4.5px; height: 4.5px; animation-duration: 4.4s; animation-delay: 2.8s; }
-.tier-card.tier-lr .spark-6 { left: 80%; bottom: 20px; width: 5.0px; height: 5.0px; animation-duration: 4.8s; animation-delay: 0.8s; }
-.tier-card.tier-lr .spark-7 { left: 90%; bottom: 10px; width: 4.0px; height: 4.0px; animation-duration: 4.2s; animation-delay: 2.4s; }
-.tier-card.tier-lr .spark-8 { left: 18%; bottom: 26px; width: 4.5px; height: 4.5px; animation-duration: 3.8s; animation-delay: 0.5s; }
-.tier-card.tier-lr .spark-9 { left: 45%; bottom: 22px; width: 5.0px; height: 5.0px; animation-duration: 5.0s; animation-delay: 1.6s; }
-.tier-card.tier-lr .spark-10 { left: 74%; bottom: 20px; width: 4.5px; height: 4.5px; animation-duration: 5.6s; animation-delay: 3.2s; }
+.tier-card.tier-lr .spark-5 { left: 66%; bottom: 12px; width: 4.5px; height: 4.5px; animation-duration: 4.4s; animation-delay: -2.8s; }
+.tier-card.tier-lr .spark-6 { left: 80%; bottom: 20px; width: 5.0px; height: 5.0px; animation-duration: 4.8s; animation-delay: -0.8s; }
+.tier-card.tier-lr .spark-7 { left: 90%; bottom: 10px; width: 4.0px; height: 4.0px; animation-duration: 4.2s; animation-delay: -2.4s; }
+.tier-card.tier-lr .spark-8 { left: 18%; bottom: 26px; width: 4.5px; height: 4.5px; animation-duration: 3.8s; animation-delay: -0.5s; }
+.tier-card.tier-lr .spark-9 { left: 45%; bottom: 22px; width: 5.0px; height: 5.0px; animation-duration: 5.0s; animation-delay: -1.6s; }
+.tier-card.tier-lr .spark-10 { left: 74%; bottom: 20px; width: 4.5px; height: 4.5px; animation-duration: 5.6s; animation-delay: -3.2s; }
 
 /* Molten Plasma Top Rail - Light Mode */
 .tier-card.tier-lr .tier-molten-plasma {
@@ -2063,18 +2145,18 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 .tier-card.tier-ex .star {
   background: color-mix(in srgb, var(--accent) 60%, #FFFFFF) !important;
 }
-.tier-card.tier-ex .star-1 { left: 15%; bottom: 15px; width: 3px; height: 3px; animation-duration: 5s; animation-delay: 0.2s; box-shadow: 0 0 8px var(--accent); }
-.tier-card.tier-ex .star-2 { left: 35%; bottom: 25px; width: 4px; height: 4px; animation-duration: 6.5s; animation-delay: 1.5s; box-shadow: 0 0 10px #A855F7; }
-.tier-card.tier-ex .star-3 { left: 55%; bottom: 10px; width: 2.5px; height: 2.5px; animation-duration: 4.2s; animation-delay: 3s; box-shadow: 0 0 8px var(--accent); }
-.tier-card.tier-ex .star-4 { left: 75%; bottom: 35px; width: 3.5px; height: 3.5px; animation-duration: 5.8s; animation-delay: 2s; box-shadow: 0 0 8px #EC4899; }
-.tier-card.tier-ex .star-5 { left: 90%; bottom: 8px; width: 3px; height: 3px; animation-duration: 4.8s; animation-delay: 4s; box-shadow: 0 0 8px var(--accent); }
-.tier-card.tier-ex .star-6 { left: 25%; bottom: 40px; width: 2px; height: 2px; animation-duration: 6s; animation-delay: 1s; box-shadow: 0 0 6px #FFFFFF; }
-.tier-card.tier-ex .star-7 { left: 45%; bottom: 18px; width: 3.5px; height: 3.5px; animation-duration: 4.4s; animation-delay: 2.5s; box-shadow: 0 0 8px var(--accent); }
-.tier-card.tier-ex .star-8 { left: 65%; bottom: 28px; width: 3px; height: 3px; animation-duration: 5.2s; animation-delay: 0.5s; box-shadow: 0 0 10px #C084FC; }
-.tier-card.tier-ex .star-9 { left: 82%; bottom: 42px; width: 2.5px; height: 2.5px; animation-duration: 6.1s; animation-delay: 3.3s; box-shadow: 0 0 8px var(--accent); }
-.tier-card.tier-ex .star-10 { left: 8%; bottom: 22px; width: 4px; height: 4px; animation-duration: 4.7s; animation-delay: 1.8s; box-shadow: 0 0 10px #EC4899; }
-.tier-card.tier-ex .star-11 { left: 48%; bottom: 38px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: 3.8s; box-shadow: 0 0 8px var(--accent); }
-.tier-card.tier-ex .star-12 { left: 95%; bottom: 30px; width: 2px; height: 2px; animation-duration: 4.9s; animation-delay: 0.8s; box-shadow: 0 0 6px #FFFFFF; }
+.tier-card.tier-ex .star-1 { left: 15%; bottom: 15px; width: 3px; height: 3px; animation-duration: 5s; animation-delay: -0.2s; box-shadow: 0 0 8px var(--accent); }
+.tier-card.tier-ex .star-2 { left: 35%; bottom: 25px; width: 4px; height: 4px; animation-duration: 6.5s; animation-delay: -1.5s; box-shadow: 0 0 10px #A855F7; }
+.tier-card.tier-ex .star-3 { left: 55%; bottom: 10px; width: 2.5px; height: 2.5px; animation-duration: 4.2s; animation-delay: -3s; box-shadow: 0 0 8px var(--accent); }
+.tier-card.tier-ex .star-4 { left: 75%; bottom: 35px; width: 3.5px; height: 3.5px; animation-duration: 5.8s; animation-delay: -2s; box-shadow: 0 0 8px #EC4899; }
+.tier-card.tier-ex .star-5 { left: 90%; bottom: 8px; width: 3px; height: 3px; animation-duration: 4.8s; animation-delay: -4s; box-shadow: 0 0 8px var(--accent); }
+.tier-card.tier-ex .star-6 { left: 25%; bottom: 40px; width: 2px; height: 2px; animation-duration: 6s; animation-delay: -1s; box-shadow: 0 0 6px #FFFFFF; }
+.tier-card.tier-ex .star-7 { left: 45%; bottom: 18px; width: 3.5px; height: 3.5px; animation-duration: 4.4s; animation-delay: -2.5s; box-shadow: 0 0 8px var(--accent); }
+.tier-card.tier-ex .star-8 { left: 65%; bottom: 28px; width: 3px; height: 3px; animation-duration: 5.2s; animation-delay: -0.5s; box-shadow: 0 0 10px #C084FC; }
+.tier-card.tier-ex .star-9 { left: 82%; bottom: 42px; width: 2.5px; height: 2.5px; animation-duration: 6.1s; animation-delay: -3.3s; box-shadow: 0 0 8px var(--accent); }
+.tier-card.tier-ex .star-10 { left: 8%; bottom: 22px; width: 4px; height: 4px; animation-duration: 4.7s; animation-delay: -1.8s; box-shadow: 0 0 10px #EC4899; }
+.tier-card.tier-ex .star-11 { left: 48%; bottom: 38px; width: 3px; height: 3px; animation-duration: 5.5s; animation-delay: -3.8s; box-shadow: 0 0 8px var(--accent); }
+.tier-card.tier-ex .star-12 { left: 95%; bottom: 30px; width: 2px; height: 2px; animation-duration: 4.9s; animation-delay: -0.8s; box-shadow: 0 0 6px #FFFFFF; }
 
 .tier-card.tier-ex .tier-cosmic-grid {
   position: absolute;
@@ -2161,8 +2243,15 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 }
 
 @keyframes star-twinkle {
-  0%, 100% { transform: scale(0.7) rotate(0deg); opacity: 0.4; }
-  50% { transform: scale(1.25) rotate(45deg); opacity: 1; }
+  0% { transform: scale(0.7) rotate(0deg); opacity: 0.4; }
+  12.5% { transform: scale(0.78) rotate(45deg); opacity: 0.49; }
+  25% { transform: scale(0.98) rotate(90deg); opacity: 0.7; }
+  37.5% { transform: scale(1.17) rotate(135deg); opacity: 0.91; }
+  50% { transform: scale(1.25) rotate(180deg); opacity: 1; }
+  62.5% { transform: scale(1.17) rotate(225deg); opacity: 0.91; }
+  75% { transform: scale(0.98) rotate(270deg); opacity: 0.7; }
+  87.5% { transform: scale(0.78) rotate(315deg); opacity: 0.49; }
+  100% { transform: scale(0.7) rotate(360deg); opacity: 0.4; }
 }
 
 @keyframes pulse-halo {

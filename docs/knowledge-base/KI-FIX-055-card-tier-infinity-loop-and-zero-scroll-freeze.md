@@ -6,10 +6,10 @@ domain: frontend
 status: verified
 created_at: 2026-11-14
 updated_at: 2026-11-14
-version: 1.0.0
+version: 1.1.0
 trigger_conditions:
   - Khi hiệu ứng quét sáng/shimmer/beam trên card tier B, A, UR, LR bị khựng giữa chừng hoặc biến mất lâu rồi giật lùi
-  - Khi vòng mandala trong của card Tier UR đứng im hoàn toàn không xoay
+  - Khi vòng mandala trong của card Tier UR đứng im hoặc giật nhịp tại mốc 50% / cuối chu kỳ (filter snap / quay đảo chiều)
   - Khi cuộn trang làm đơ/đứng toàn bộ hiệu ứng chuyển động trên Dashboard
 search_queries:
   - card-tiers-10 infinity loop dead hold
@@ -44,19 +44,25 @@ tags:
    - Selector `.ur-mandala-inner` gọi `@keyframes spin-counter-clockwise` không tồn tại (tên chuẩn trong file là `spin-counter`).
 2. **Scroll Freeze từ `tierViewportGovernor.js` & `html.is-swiping`**:
    - `tierViewportGovernor.js` lắng nghe `scroll`/`touchmove` toàn cục và gắn class `is-swiping` lên `<html>` (`KI-CON-012` violation), kích hoạt rule `html.is-swiping ... { animation-play-state: paused !important; }`.
+3. **Filter Tuple Mismatch, Reverse Rotation & Positive Particle Delays (v24.68)**:
+   - `ur-halo-breathing`, `diamond-glint-twinkle`, `solar-star-glare`, `solar-flare-blinding`, `solar-thunder-1..4` và `lightning-chain-*` thiếu `filter` ở mốc `0%/100%` hoặc thay đổi số lượng `drop-shadow(...)` giữa các stop khiến Chromium snapped/nội suy rời rạc tại `50%` và wrap.
+   - `diamond-glint-twinkle`, `star-twinkle`, `solar-star-glare` xoay đảo chiều (`0deg -> 90deg/45deg -> 0deg`) gây khựng tại đỉnh và quay ngược lại; `lightning-star-flash-anim` / `lightning-anamorphic-flash-anim` thiếu `transform` ở `96%, 100%`.
+   - Các hạt `.mote-*`, `.ember-*`, `.spark-*`, `.star-*` và `.flare-tr/bl/br` dùng `animation-delay` dương khiến chúng đứng yên lúc khởi tạo rồi mới bật chạy.
 
 ---
 
 ## 3. Giải Pháp Chuẩn Hóa (Verified Fix)
-1. **True Infinity Loops (`src/styles/card-tiers-10.css`)**:
+1. **True Infinity Loops & Filter/Transform Parity (`src/styles/card-tiers-10.css`)**:
    - Loại bỏ toàn bộ điểm chết (`28%, 100%`, `35%, 100%`, `48%..100%`).
    - Chuẩn hóa biên độ `translate3d` khớp tỉ lệ phần tử `400%` / `300%` / `220%` (`-48% -> +48%` cho `blade-sheen-sweep` và `solar-beam-sweep`; `-55% -> +55%` cho `sweep-shimmer`; `-80% -> +80%` cho `ur-prismatic-sweep`; `-100% -> +100%` cho `sweep-holo-foil`) với đường cong `linear infinite` và mượt hóa `opacity` tại rìa `0%/12%/88%/100%`.
-   - Sửa `.ur-mandala-inner` sang `spin-counter 15s linear infinite`.
+   - Sửa `.ur-mandala-inner` sang `spin-counter 15s linear infinite` và gắn `transform-box: view-box; transform-origin: 87px 87px;` khớp `<circle cx="87" cy="87">`.
    - Tối ưu `blood-heartbeat` thành sóng tâm thu–tâm trương liên hoàn 0%–100%.
+   - Cân bằng chính xác số lượng `drop-shadow(...)` trên mọi keyframe stop của `ur-halo-breathing`, `diamond-glint-twinkle`, `solar-star-glare`, `solar-flare-blinding`, `solar-thunder-1..4`, `lightning-chain-1..4`, `lightning-chain-diagonal`, đồng thời bổ sung `transform` ở `96%, 100%` của optical flare keyframes.
+   - Chuyển `diamond-glint-twinkle`, `star-twinkle`, `solar-star-glare` sang xoay một chiều liên tục `0deg -> 360deg` kết hợp lấy mẫu cosine tại 9 mốc (`0%..100%`, `linear infinite`) và đổi toàn bộ stagger delay của góc sao / hạt sang giá trị âm (`-0.2s .. -4s`).
 2. **Gỡ bỏ Scroll Freeze (`tierViewportGovernor.js`, `DashboardPage.js`, `card-tiers-10.css`)**:
    - Xóa rule CSS `html.is-swiping ... { animation-play-state: paused !important; }`.
    - Chuyển `initTierViewportGovernor()` thành no-op an toàn và gỡ bỏ lời gọi trong `DashboardPage.js`, giữ nguyên `IntersectionObserver` (`.tier-offscreen`) và `visibilitychange` (`html.app-backgrounded`) để tiết kiệm pin.
-3. **Đồng bộ Tri-Point Version `v24.67`**:
+3. **Đồng bộ Tri-Point Version `v24.68`**:
    - Đồng bộ `sw.js`, `index.html`, và `src/utilities/pwa.js`.
 
 ---
