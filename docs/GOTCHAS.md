@@ -74,17 +74,21 @@
 - **Danger**: Do NOT try to add a build step, import npm packages, or use `require()`. This would break the entire frontend architecture.
 - **Action**: Use `src/vendor/` for third-party libraries (copy minified JS files).
 
-### [CONFIRMED] Tailwind CSS via CDN runtime parser
-- **Location**: `index.html` (CDN script tag)
-- **What**: Tailwind's CDN play script parses all templates at runtime. No pre-compilation, no tree-shaking.
-- **Impact**: Slower initial load. All utility classes are available but computed on-the-fly.
-- **Appears intentional**: Yes (zero-build architecture).
+### [RESOLVED in v25.0] Static pre-built Tailwind v3 CSS (`npm run build:css`)
+- **Location**: `tailwind.config.js`, `src/styles/tailwind.input.css` → `src/styles/tailwind.generated.css`
+- **What**: Tailwind CDN runtime script was removed from `index.html`. Styling uses the committed static CSS bundle rebuilt locally with `npm run build:css` (`--minify`) and instant shell sync (`npm run build:shell`).
+- **Danger**: Adding brand-new Tailwind utility classes to `src/**` without running `npm run build:css` will leave those classes unstyled in production.
+- **Action**: After adding new Tailwind utility classes or editing `index.html` shell markup, run `npm run build:css` (and `npm run build:shell`) and commit `src/styles/tailwind.generated.css`.
 
-### [CONFIRMED] Service Worker cache versioning is manual
-- **Location**: `sw.js` line 6
-- **What**: `CACHE_NAME = 'duydev-studio-v19.1'` and asset URLs have `?v=19.1` suffixes. Version must be bumped manually.
-- **Danger**: If you change frontend files without bumping the SW version, users will see stale cached content until they hard-refresh.
-- **Action**: Update `CACHE_NAME` and `?v=` suffixes in `sw.js` when modifying frontend files. Also update `ASSETS_TO_PRECACHE` if adding new files.
+### [CONFIRMED] Service Worker cache versioning uses Tri-Point Sync
+- **Location**: `sw.js`, `src/utilities/pwa.js`, `index.html` (currently `duydev-studio-v25.0` / `?v=25.0`)
+- **What**: All three files must stay synchronized on the same cache version string (`duydev-studio-vXX.Y`), enforced by unit tests (`viewer_hardening.test.ts`, `android_push_notifications.test.ts`, `pwa_lifecycle.test.ts`).
+- **Danger**: Bumping `sw.js` without updating `pwa.js` and `index.html` breaks offline precache consistency and fails tri-point tests.
+- **Action**: Update `CACHE_NAME` / `?v=` across `sw.js`, `src/utilities/pwa.js`, and `index.html` together (`npm run build:shell` after `index.html` edits).
+
+### [CONFIRMED] Storage Drive saves require unlocked Storage PIN & ViewSplit uses dirty render
+- **Locations**: `server/src/api/routes/storage.routes.ts` (`/api/v1/storage/save-artifact`), `src/utilities/driveSaveHelper.js`, `src/components/tools/viewsplit/ViewSplitWorkspace.js`
+- **What**: Saving artifacts directly to Studio Drive requires an active Storage admin session (`requireAdmin()` / `getStorageAuthHeaders()`). ViewSplit uses on-demand `scheduleRender()` (`0` idle rAF callbacks); do NOT re-introduce continuous `requestAnimationFrame` loops.
 
 ### [CONFIRMED] Legacy route cleanup in app.js
 - **Location**: `src/app.js` lines 51-54, 67, 303-310
