@@ -903,15 +903,17 @@ html.dark .tier-card.tier-lr .solar-bolt-left {
     rgba(255, 255, 255, 0.5) 50%,
     rgba(250, 204, 21, 0.2) 53%,
     transparent 58%);
-  animation: solar-beam-sweep 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: solar-beam-sweep 3.4s linear infinite;
   pointer-events: none;
   z-index: 2;
 }
 
 @keyframes solar-beam-sweep {
-  0% { transform: translate(-65%, -65%) rotate(0deg); opacity: 0; }
-  15% { opacity: 0.8; }
-  35%, 100% { transform: translate(65%, 65%) rotate(0deg); opacity: 0; }
+  0% { transform: translate3d(-48%, -48%, 0) rotate(0deg); opacity: 0; }
+  12% { opacity: 0.85; }
+  50% { opacity: 1; }
+  88% { opacity: 0.85; }
+  100% { transform: translate3d(48%, 48%, 0) rotate(0deg); opacity: 0; }
 }
 
 /* --- Tier LR: Radiating Sunburst Corona God-Rays & Rising Light Pillars --- */
@@ -987,16 +989,16 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
     rgba(250, 204, 21, 0.20) 58%, 
     transparent 62%);
   transform: rotate(28deg);
-  animation: ur-prismatic-sweep 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: ur-prismatic-sweep 3.6s linear infinite;
   pointer-events: none;
   z-index: 3;
   mix-blend-mode: screen;
 }
 @keyframes ur-prismatic-sweep {
-  0% { transform: translateY(-130%) rotate(28deg); opacity: 0; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { transform: translateY(130%) rotate(28deg); opacity: 0; }
+  0% { transform: translate3d(0, -80%, 0) rotate(28deg); opacity: 0; }
+  12% { opacity: 0.95; }
+  88% { opacity: 0.95; }
+  100% { transform: translate3d(0, 80%, 0) rotate(28deg); opacity: 0; }
 }
 
 /* Floating Prismatic Starlight Motes (Drifting Particles) */
@@ -1059,7 +1061,7 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
 }
 .tier-card.tier-ur .ur-mandala-inner {
   transform-origin: 87px 87px;
-  animation: spin-counter-clockwise 15s linear infinite;
+  animation: spin-counter 15s linear infinite;
 }
 .tier-card.tier-ur .ur-mandala-core {
   transform-origin: 87px 87px;
@@ -1183,21 +1185,25 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
     box-shadow: 0 0 28px rgba(225, 29, 72, 0.38);
     border-color: rgba(225, 29, 72, 0.85);
   }
-  12% {
+  15% {
     box-shadow: 0 0 46px rgba(225, 29, 72, 0.75), inset 0 0 16px rgba(244, 63, 94, 0.35);
     border-color: rgba(253, 164, 175, 1);
   }
-  22% {
+  28% {
     box-shadow: 0 0 30px rgba(225, 29, 72, 0.42);
     border-color: rgba(225, 29, 72, 0.85);
   }
-  34% {
+  42% {
     box-shadow: 0 0 54px rgba(244, 63, 94, 0.85), inset 0 0 22px rgba(244, 63, 94, 0.45);
     border-color: rgba(255, 228, 230, 1);
   }
-  48% {
-    box-shadow: 0 0 28px rgba(225, 29, 72, 0.38);
-    border-color: rgba(225, 29, 72, 0.85);
+  65% {
+    box-shadow: 0 0 36px rgba(225, 29, 72, 0.50);
+    border-color: rgba(244, 63, 94, 0.9);
+  }
+  82% {
+    box-shadow: 0 0 26px rgba(225, 29, 72, 0.34);
+    border-color: rgba(225, 29, 72, 0.8);
   }
 }
 
@@ -1250,7 +1256,7 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
     rgba(255, 255, 255, 0.65) 50%,
     rgba(96, 165, 250, 0.25) 52%,
     transparent 58%);
-  animation: blade-sheen-sweep 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: blade-sheen-sweep 3.2s linear infinite;
 }
 
 .tier-card.tier-a .tier-blade-sheen {
@@ -1260,16 +1266,27 @@ html.dark .tier-card.tier-lr .tier-solar-sunburst {
     rgba(255, 255, 255, 0.75) 50%,
     rgba(245, 158, 11, 0.30) 52%,
     transparent 58%);
-  animation: blade-sheen-sweep 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 1.5s;
+  animation: blade-sheen-sweep 3.2s linear infinite;
+  animation-delay: -1.6s;
 }
 
 @keyframes blade-sheen-sweep {
   0% {
-    transform: translate(-65%, -65%) rotate(0deg);
+    transform: translate3d(-48%, -48%, 0) rotate(0deg);
+    opacity: 0;
   }
-  28%, 100% {
-    transform: translate(65%, 65%) rotate(0deg);
+  12% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(48%, 48%, 0) rotate(0deg);
+    opacity: 0;
   }
 }
 
@@ -1448,7 +1465,7 @@ html.dark .tier-card.tier-b {
   position: absolute;
   inset: -100%;
   background: linear-gradient(115deg, transparent 40%, rgba(96, 165, 250, 0.18) 50%, transparent 60%);
-  animation: sweep-shimmer 7s infinite;
+  animation: sweep-shimmer 3.6s linear infinite;
   z-index: 2;
 }
 .tier-card.tier-b .tier-crest-badge {
@@ -1740,7 +1757,7 @@ html.dark .tier-card.tier-ur {
     rgba(255, 255, 255, 0.45) 48%, 
     rgba(56, 189, 248, 0.18) 52%, 
     transparent 70%);
-  animation: sweep-holo-foil 6s ease-in-out infinite;
+  animation: sweep-holo-foil 4.2s linear infinite;
   pointer-events: none;
   z-index: 2;
   will-change: transform;
@@ -2120,14 +2137,26 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 }
 
 @keyframes sweep-shimmer {
-  0% { transform: translateX(-100%) rotate(25deg); }
-  30%, 100% { transform: translateX(200%) rotate(25deg); }
+  0% {
+    transform: translate3d(-55%, 0, 0) rotate(25deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(55%, 0, 0) rotate(25deg);
+    opacity: 0;
+  }
 }
 
 @keyframes sweep-holo-foil {
   0% { transform: translate3d(-100%, 0, 0); opacity: 0; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
+  12% { opacity: 0.85; }
+  88% { opacity: 0.85; }
   100% { transform: translate3d(100%, 0, 0); opacity: 0; }
 }
 
@@ -2144,26 +2173,8 @@ html.dark .tier-card.tier-lr .tier-cta-btn {
 /* ==============================================================================
    8. Performance & Accessibility Compliance
    ============================================================================== */
-/* 120Hz & Low-Battery Governor: Micro-animations pause strictly during active touch swipe (KI-FIX-023) */
-html.is-swiping .tier-anim-layer,
-html.is-swiping .ur-halo-ring,
-html.is-swiping .ur-orbit-satellite,
-html.is-swiping .tier-holo-foil-sheen,
-html.is-swiping .rune-circle-svg,
-html.is-swiping .solar-ring-svg,
-html.is-swiping .astrolabe-outer,
-html.is-swiping .astrolabe-inner,
-html.is-swiping .particle,
-html.is-swiping .starlight-mote,
-html.is-swiping .spark,
-html.is-swiping .ember,
-html.is-swiping .star,
-html.is-swiping .diamond-flare,
-html.is-swiping .tier-prismatic-beam-sweep,
-html.is-swiping .tier-solar-beam-sweep,
-html.is-swiping .flame-tongue {
-  animation-play-state: paused !important;
-}
+/* 120Hz & Zero-Freeze Compositor Architecture: All cards run GPU animations smoothly during scroll.
+   Offscreen cards are automatically suspended by IntersectionObserver (.tier-offscreen). */
 
 html.app-backgrounded * {
   animation: none !important;
