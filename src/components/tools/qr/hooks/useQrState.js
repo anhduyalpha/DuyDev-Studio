@@ -171,7 +171,7 @@ export const CORNER_SQUARE_TYPES = [
 ];
 
 export function getApiBase() {
-  if (window.location.port === '5173') {
+  if (typeof window !== 'undefined' && window.location?.port === '5173') {
     return `${window.location.protocol}//${window.location.hostname}:3000`;
   }
   return '';
