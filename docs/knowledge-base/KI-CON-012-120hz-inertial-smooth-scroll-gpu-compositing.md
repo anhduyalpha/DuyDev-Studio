@@ -89,6 +89,6 @@ graph TD
 
 ## 4. Các Quy Tắc Cấm Kỵ Tuyệt Đối (Anti-Patterns)
 1. **CẤM** import bất kỳ thư viện JS smooth-scroll hay wheel interceptor nào (`Lenis`, `Locomotive`, `SmoothScroll.js`).
-2. **CẤM** gắn/gỡ class trên thẻ `<html>` hoặc `<body>` trong sự kiện `scroll` (`is-scrolling`).
+2. **CẤM** gắn/gỡ class trên thẻ `<html>` hoặc `<body>` trong sự kiện `scroll` (`is-scrolling`, `is-swiping`). Chỉ sử dụng `IntersectionObserver` (`.tier-offscreen`) và Page Visibility (`html.app-backgrounded`) để tạm dừng hoạt họa ngoài màn hình (KI-FIX-055).
 3. **CẤM** đặt `backdrop-filter` trên các thẻ lặp lại trong danh sách cuộn.
 4. **CẤM** dùng `View.LAYER_TYPE_HARDWARE` trên `WebView` của Android.
