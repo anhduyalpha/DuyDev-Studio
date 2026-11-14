@@ -20,6 +20,7 @@ import { toolRegistry } from '../hooks/useToolRegistry.js';
 
 let currentActiveToolId = 'pdf-studio';
 let currentActiveModule = null;
+let latestRenderToken = 0;
 const MODULE_CACHE = new Map();
 
 /**
@@ -291,7 +292,7 @@ export function renderToolLoadingSkeleton(tool = null) {
       </div>
 
       <!-- Skeleton Header -->
-      <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] shadow-xs space-y-3">
+      <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] shadow-sm space-y-3">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-white/10 flex items-center justify-center">
             <i data-lucide="loader-2" class="w-5 h-5 text-zinc-400 dark:text-zinc-500 animate-spin"></i>
@@ -325,29 +326,44 @@ export function renderToolLoadingSkeleton(tool = null) {
 }
 
 /**
+ * Escapes unsafe characters to prevent DOM-XSS
+ */
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str || '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Fallback error view when dynamic import fails
  */
 function renderToolErrorFallback(toolId, error) {
-  const message = error?.message || 'Không thể tải mô-đun công cụ';
+  const safeToolId = escapeHtml(toolId);
+  const safeMessage = escapeHtml(error?.message || 'Không thể tải mô-đun công cụ');
+
   return `
-    <div id="toolErrorFallback" class="max-w-xl mx-auto my-12 p-6 sm:p-8 rounded-2xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-900/40 shadow-lg text-center space-y-4">
+    <div id="toolErrorFallback" class="max-w-xl mx-auto my-12 p-6 sm:p-8 rounded-2xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-900/40 shadow-sm text-center space-y-4">
       <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center text-rose-500">
         <i data-lucide="alert-triangle" class="w-7 h-7"></i>
       </div>
       <div class="space-y-1.5">
         <h2 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">Không thể tải công cụ</h2>
         <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-          Đã xảy ra lỗi khi tải mô-đun cho <span class="font-mono text-zinc-700 dark:text-zinc-300 font-semibold">${toolId}</span>.
+          Đã xảy ra lỗi khi tải mô-đun cho <span class="font-mono text-zinc-700 dark:text-zinc-300 font-semibold">${safeToolId}</span>.
         </p>
         <p class="text-xs text-rose-600 dark:text-rose-400 font-mono bg-rose-50 dark:bg-rose-950/30 px-3 py-1.5 rounded-lg border border-rose-200/60 dark:border-rose-900/30 break-all">
-          ${message}
+          ${safeMessage}
         </p>
       </div>
       <div class="flex items-center justify-center gap-3 pt-2">
-        <a href="#dashboard" class="px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/10 dark:hover:bg-white/15 dark:text-white text-xs font-semibold transition cursor-pointer">
+        <a href="#dashboard" class="px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/10 dark:hover:bg-white/15 dark:text-white text-xs font-semibold transition cursor-pointer">
           Về Dashboard
         </a>
-        <button onclick="window.location.reload()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer">
+        <button onclick="window.location.reload()" class="px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
           Tải lại trang
         </button>
       </div>
@@ -359,21 +375,28 @@ function renderToolErrorFallback(toolId, error) {
  * Asynchronously renders the requested tool page by dynamically loading its workspace
  */
 export async function renderToolPage(toolId = 'pdf-convert', subTab = null) {
+  const myToken = ++latestRenderToken;
   currentActiveToolId = toolId;
   const canonicalId = TOOL_ALIASES[toolId] || toolId;
   const loader = TOOL_LOADERS[canonicalId] || TOOL_LOADERS[toolId];
 
   if (!loader) {
-    currentActiveModule = null;
+    if (myToken === latestRenderToken && currentActiveToolId === toolId) {
+      currentActiveModule = null;
+    }
     return renderToolErrorFallback(toolId, new Error(`Không tìm thấy công cụ "${toolId}".`));
   }
 
   try {
     const mod = await loadToolModule(canonicalId);
-    currentActiveModule = mod;
+    if (myToken === latestRenderToken && currentActiveToolId === toolId) {
+      currentActiveModule = mod;
+    }
     return mod.render(subTab, toolId);
   } catch (err) {
-    currentActiveModule = null;
+    if (myToken === latestRenderToken && currentActiveToolId === toolId) {
+      currentActiveModule = null;
+    }
     console.error(`[ToolPage] Error loading tool module "${toolId}":`, err);
     return renderToolErrorFallback(toolId, err);
   }

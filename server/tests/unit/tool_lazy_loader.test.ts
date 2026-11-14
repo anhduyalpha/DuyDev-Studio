@@ -125,9 +125,45 @@ describe('Task 1.4 — Lazy Dynamic Tool Loading (ToolPage.js) & Race-Free Route
       // Should show a clean fallback UI rather than throwing
       expect(fallbackHtml).toMatch(/(Không thể tải|Lỗi|error|fallback|Dashboard)/i);
     });
+
+    it('renderToolErrorFallback escapes HTML to prevent DOM-XSS', async () => {
+      const { renderToolPage } = await import(
+        '../../../src/pages/ToolPage.js'
+      );
+
+      const xssPayload = '<img src=x onerror=alert(1)>';
+      const fallbackHtml = await renderToolPage(xssPayload);
+      expect(typeof fallbackHtml).toBe('string');
+      // Verify raw <img tag is not injected
+      expect(fallbackHtml).not.toContain('<img src=x');
+      // Verify < and > are safely escaped as entities
+      expect(fallbackHtml).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    });
   });
 
   describe('Race-Condition & Sequence Guard in Navigation', () => {
+    it('ToolPage latestRenderToken guards currentActiveModule so slow earlier navigation does not overwrite fast latest module', async () => {
+      const { renderToolPage, attachToolPageListeners } = await import(
+        '../../../src/pages/ToolPage.js'
+      );
+
+      // Trigger rapid overlapping renders:
+      // First call: 'storage' (slower)
+      // Second call: 'hash-checksum' (faster or called right after)
+      const p1 = renderToolPage('storage');
+      const p2 = renderToolPage('hash-checksum');
+
+      await Promise.all([p1, p2]);
+
+      // Since 'hash-checksum' was the latest navigation, attachToolPageListeners should attach hash listeners
+      // and NOT revert to storage
+      const onReRender = vi.fn();
+      attachToolPageListeners(onReRender);
+
+      // Now verify switching to qr-scan
+      await renderToolPage('qr-scan');
+      attachToolPageListeners(onReRender);
+    });
     it('Switching rapidly from Tool A -> Tool B cancels DOM swap and listeners for A (navigationSeq guard)', async () => {
       // Mock navigation state machine mimicking app.js
       let navigationSeq = 0;
