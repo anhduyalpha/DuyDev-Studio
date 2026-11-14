@@ -327,7 +327,7 @@ export async function apiSecurityGuard(req: FastifyRequest, reply: FastifyReply)
  * Validates external media URLs before proxying or saving to disk
  * Mitigates Server-Side Request Forgery (SSRF) and private network pivoting
  */
-export function validateSafeMediaUrl(rawUrl: string, allowedHostSuffixes: string[]): string {
+export function validateSafeMediaUrl(rawUrl: string, allowedHostSuffixes?: string[]): string {
   if (!rawUrl || typeof rawUrl !== 'string') {
     throw new BadRequestError('Đường dẫn media không hợp lệ');
   }
@@ -359,11 +359,13 @@ export function validateSafeMediaUrl(rawUrl: string, allowedHostSuffixes: string
     throw new BadRequestError('Truy cập mạng nội bộ bị từ chối (SSRF Protection)');
   }
 
-  const isAllowed = allowedHostSuffixes.some(
-    (suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`)
-  );
-  if (!isAllowed) {
-    throw new BadRequestError(`Tên miền nguồn '${hostname}' không nằm trong danh sách máy chủ được phép`);
+  if (allowedHostSuffixes && allowedHostSuffixes.length > 0) {
+    const isAllowed = allowedHostSuffixes.some(
+      (suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`)
+    );
+    if (!isAllowed) {
+      throw new BadRequestError(`Tên miền nguồn '${hostname}' không nằm trong danh sách máy chủ được phép`);
+    }
   }
 
   return rawUrl;

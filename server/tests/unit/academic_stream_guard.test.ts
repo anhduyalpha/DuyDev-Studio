@@ -92,6 +92,43 @@ describe('Academic Stream Guard & Direct Download Suite', () => {
       expect(mockReply.sentData).toBeDefined();
     });
 
+    it('follows valid HTTPS OA redirect to institutional .edu repository (openalex.org -> dspace.mit.edu)', async () => {
+      const mockFetch = vi.fn(async (url: string) => {
+        if (url === 'https://openalex.org/oa/mit-thesis') {
+          return new Response(null, {
+            status: 302,
+            headers: { Location: 'https://dspace.mit.edu/bitstream/paper.pdf' }
+          });
+        }
+        if (url === 'https://dspace.mit.edu/bitstream/paper.pdf') {
+          return new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Length': '4'
+            }
+          });
+        }
+        return new Response(null, { status: 404 });
+      });
+
+      globalThis.fetch = mockFetch as any;
+
+      const mockReply = createMockReply();
+      await AcademiaService.proxyStream(
+        'https://openalex.org/oa/mit-thesis',
+        true,
+        'mit_paper.pdf',
+        undefined,
+        mockReply
+      );
+
+      expect(mockReply.statusCode).toBe(200);
+      expect(mockReply.headersObj['Content-Type']).toBe('application/pdf');
+      expect(mockReply.headersObj['Content-Disposition']).toContain('mit_paper.pdf');
+      expect(mockReply.sentData).toBeDefined();
+    });
+
     it('rejects intermediate hop redirecting to internal SSRF target (169.254.169.254 or 127.0.0.1)', async () => {
       const mockFetch = vi.fn(async (url: string) => {
         if (url === 'https://openalex.org/oa/malicious') {
@@ -173,6 +210,45 @@ describe('Academic Stream Guard & Direct Download Suite', () => {
           'https://www.academia.edu/attachments/12345/download_file',
           true,
           'login_wall.pdf',
+          undefined,
+          mockReply
+        )
+      ).rejects.toMatchObject({
+        statusCode: 422
+      });
+
+      expect(cancelCalled).toBe(true);
+      expect(mockReply.send).not.toHaveBeenCalled();
+    });
+
+    it('throws AppError with HTTP 422 when upstream returns application/xhtml+xml instead of PDF', async () => {
+      let cancelCalled = false;
+      const mockFetch = vi.fn(async (url: string) => {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body>XHTML Login</body></html>'));
+            controller.close();
+          },
+          cancel() {
+            cancelCalled = true;
+          }
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/xhtml+xml; charset=utf-8'
+          }
+        });
+      });
+
+      globalThis.fetch = mockFetch as any;
+
+      const mockReply = createMockReply();
+      await expect(
+        AcademiaService.proxyStream(
+          'https://www.academia.edu/attachments/xhtml/download',
+          true,
+          'xhtml_wall.pdf',
           undefined,
           mockReply
         )
@@ -317,6 +393,45 @@ describe('Academic Stream Guard & Direct Download Suite', () => {
           'https://www.researchgate.net/publication/345678/download',
           true,
           'rg_paper.pdf',
+          undefined,
+          mockReply
+        )
+      ).rejects.toMatchObject({
+        statusCode: 422
+      });
+
+      expect(cancelCalled).toBe(true);
+      expect(mockReply.send).not.toHaveBeenCalled();
+    });
+
+    it('throws AppError with HTTP 422 when upstream returns application/xhtml+xml instead of PDF', async () => {
+      let cancelCalled = false;
+      const mockFetch = vi.fn(async (url: string) => {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body>XHTML Login</body></html>'));
+            controller.close();
+          },
+          cancel() {
+            cancelCalled = true;
+          }
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/xhtml+xml; charset=utf-8'
+          }
+        });
+      });
+
+      globalThis.fetch = mockFetch as any;
+
+      const mockReply = createMockReply();
+      await expect(
+        ResearchGateService.proxyStream(
+          'https://www.researchgate.net/publication/345678/download_xhtml',
+          true,
+          'xhtml_wall.pdf',
           undefined,
           mockReply
         )
