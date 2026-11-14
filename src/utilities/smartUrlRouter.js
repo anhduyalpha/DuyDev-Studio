@@ -163,7 +163,7 @@ export function detectSmartRoute(raw) {
     }
     return {
       toolId: 'academia',
-      route: '#tool/academia-downloader',
+      route: '#tool/academia',
       url: matchedUrl,
       autoStart: true
     };
@@ -178,7 +178,7 @@ export function detectSmartRoute(raw) {
     }
     return {
       toolId: 'researchgate',
-      route: '#tool/researchgate-downloader',
+      route: '#tool/researchgate',
       url: matchedUrl,
       autoStart: true
     };
@@ -214,8 +214,8 @@ export function handoffSmartUrl(smartResult) {
     instagram: '#tool/instagram-downloader',
     spotify: '#tool/spotify-downloader',
     slideshare: '#tool/slideshare-downloader',
-    academia: '#tool/academia-downloader',
-    researchgate: '#tool/researchgate-downloader',
+    academia: '#tool/academia',
+    researchgate: '#tool/researchgate',
     tiktok: '#tool/tiktok'
   };
   const targetRoute = smartResult.route || routeMap[smartResult.toolId] || '#tool/tiktok';

@@ -27,6 +27,7 @@ export function syncHeaderUserProfile(profile = null) {
   const avatarEl = document.getElementById('headerUserAvatar');
   const nameEl = document.getElementById('headerUserNameText');
   const btnEl = document.getElementById('headerProfileBtn');
+  const dotEl = document.getElementById('headerProfileDot');
   const displayName = updated.name || (isAdminAuthenticated() ? 'Duy' : 'Khách');
 
   if (avatarEl) {
@@ -38,6 +39,11 @@ export function syncHeaderUserProfile(profile = null) {
   }
   if (btnEl) {
     btnEl.title = updated.name ? `Hồ sơ: ${escapeHtml(updated.name)}` : 'Hồ sơ người dùng';
+  }
+  if (dotEl) {
+    const isConfigured = Boolean(updated.name && updated.name.trim().length > 0);
+    const hasDot = !isConfigured && (typeof localStorage !== 'undefined' && localStorage.getItem('ds_profile_needs_onboarding') === '1');
+    dotEl.classList.toggle('hidden', !hasDot);
   }
 }
 
@@ -58,6 +64,8 @@ export function renderHeader() {
   const displayName = userProfile.name || (isAdmin ? 'Duy' : 'Khách');
   const gradientClass = getAvatarGradient(userProfile.name);
   const avatarHtml = renderAvatarInnerHtml(userProfile.avatar, userProfile.name);
+  const isConfigured = Boolean(userProfile.name && userProfile.name.trim().length > 0);
+  const hasOnboardingDot = !isConfigured && (typeof localStorage !== 'undefined' && localStorage.getItem('ds_profile_needs_onboarding') === '1');
   const soundTitle = isSoundEnabled 
     ? (isAdmin ? 'Tắt âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Tắt âm thanh') 
     : (isAdmin ? 'Bật âm thanh (Click đúp để mở bảng điều khiển Admin)' : 'Bật âm thanh');
@@ -143,7 +151,7 @@ export function renderHeader() {
             id="headerProfileBtn" 
             title="${userProfile.name ? `Hồ sơ: ${escapeHtml(userProfile.name)}` : 'Hồ sơ người dùng'}" 
             aria-label="Hồ sơ người dùng & Đổi avatar" 
-            class="flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 min-h-[40px] rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
+            class="relative flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 min-h-[44px] rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
           >
             <div id="headerUserAvatar" class="relative flex w-8 h-8 min-w-[32px] max-w-[32px] max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ${gradientClass}">
               ${avatarHtml}
@@ -151,6 +159,7 @@ export function renderHeader() {
             <span id="headerUserNameText" class="hidden sm:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[85px] truncate leading-none text-left">
               ${escapeHtml(displayName)}
             </span>
+            <span id="headerProfileDot" class="${hasOnboardingDot ? '' : 'hidden'} absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-[#121215]"></span>
           </button>
 
         </div>

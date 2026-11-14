@@ -30,8 +30,13 @@ import { detectSmartRoute, handoffSmartUrl } from './utilities/smartUrlRouter.js
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
 import { closeFileViewer } from './components/common/viewer/FileViewerCore.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
-import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
+import { peekPendingSharedPayload, consumePendingSharedPayload } from './utilities/shareTargetHelper.js';
 import { openShareTargetModal } from './components/common/ShareTargetModal.js';
+
+// Native Android IPC liveness ping (immediate 0ms response expected by MainActivity watchdog within 350ms)
+if (typeof window !== 'undefined') {
+  window.__dsAlivePing = () => 'ok';
+}
 import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
 import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
@@ -115,7 +120,11 @@ class App {
     this.appRoot = document.getElementById('app');
   }
 
-  init() {
+  async init() {
+    if (typeof window !== 'undefined') {
+      window.__dsAlivePing = () => 'ok';
+    }
+
     if (typeof window !== 'undefined' && window.__IS_DEPRECATED_DOMAIN) {
       console.warn('[DS] Deprecated domain detected. App execution halted in favor of migration screen.');
       return;
@@ -179,20 +188,28 @@ class App {
     this.renderShell();
     checkAndRenderMigrationNotice();
     initGlobalTaskDock();
-    this.handleRoute();
+    await this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
+
+    // Signal app readiness and boot hydration
+    window.__DS_APP_HYDRATED = true;
+    window.__dsAppReady = true;
+    window.dispatchEvent(new CustomEvent('ds:app-ready'));
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyAppReady === 'function') {
+      try {
+        window.AndroidBridge.notifyAppReady();
+      } catch (err) {
+        console.warn('[AndroidBridge] notifyAppReady error:', err);
+      }
+    }
+    const startupHint = document.getElementById('appStartupTimeoutHint');
+    if (startupHint) startupHint.remove();
 
     // Background sync user profile and check for onboarding prompt
     syncProfileWithServer().finally(() => {
       this.checkAndPromptOnboardingProfile();
       storage.syncAllWithServer().catch(() => {});
     });
-
-    // Signal app readiness for any fast-path queued interactions
-    window.__dsAppReady = true;
-    window.dispatchEvent(new CustomEvent('ds:app-ready'));
-    const startupHint = document.getElementById('appStartupTimeoutHint');
-    if (startupHint) startupHint.remove();
 
     // Cold-start share target check (handles Android native intent and Service Worker shares)
     this.checkAndOpenShareTarget();
@@ -210,8 +227,16 @@ class App {
 
     // Native Android wrapper: listen for payloads arriving via AndroidBridge
     if (typeof window !== 'undefined') {
-      window.addEventListener('ds:native-share-arrived', () => {
-        this.checkAndOpenShareTarget();
+      window.addEventListener('ds:native-share-arrived', async () => {
+        const panel = document.getElementById('shareTargetPanel');
+        if (!panel) {
+          this.checkAndOpenShareTarget();
+        } else {
+          const newPayload = await peekPendingSharedPayload();
+          if (newPayload) {
+            openShareTargetModal(newPayload);
+          }
+        }
       });
 
       // Native Android lifecycle: suspend audio/video and stop coordinator heartbeat when app pauses
@@ -266,14 +291,28 @@ class App {
   }
 
   checkAndPromptOnboardingProfile() {
-    if (isProfileConfigured()) return;
+    if (isProfileConfigured()) {
+      try { localStorage.removeItem('ds_profile_needs_onboarding'); } catch {}
+      syncHeaderUserProfile();
+      return;
+    }
     try {
       if (sessionStorage.getItem('ds_profile_prompt_dismissed') === '1') return;
     } catch {}
 
-    // Non-blocking deep-link onboarding: do not interrupt users navigating directly to a tool route
-    const currentHash = window.location.hash || '';
-    if (currentHash && currentHash !== '#' && currentHash !== '#dashboard') {
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=') || Boolean(typeof window !== 'undefined' && window.AndroidBridge?.getSharedPayload?.());
+    const isApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || (typeof navigator !== 'undefined' && navigator.userAgent.includes('DuyDevStudio')) || Boolean(window.__DS_IS_APK));
+    const isDeepLink = hash && hash !== '#' && hash !== '#dashboard';
+
+    // Non-blocking deep-link, share target, and APK launch onboarding:
+    // Do NOT interrupt with blocking ProfileModal. Persist flag for Header.js dot instead.
+    if (isShare || isApk || isDeepLink) {
+      try {
+        localStorage.setItem('ds_profile_needs_onboarding', '1');
+      } catch {}
+      syncHeaderUserProfile();
       return;
     }
 
@@ -314,13 +353,13 @@ class App {
       const hasFiles = searchParams.get('hasFiles') === '1' || hashParams.get('hasFiles') === '1';
       const isShareRoute = hash.startsWith('#share-target') || window.location.pathname.endsWith('/share-target') || hasFiles || Boolean(url || text);
 
-      // 2. Poll IndexedDB with backoff if this is a share event (prevents race condition with SW write)
-      let payload = await retrievePendingSharedData();
+      // 2. Poll with backoff if this is a share event (peeks without consuming until modal/tool consumes)
+      let payload = await peekPendingSharedPayload();
       if (!payload && isShareRoute) {
         for (let i = 0; i < 4; i++) {
           if (document.getElementById('shareTargetPanel')) return;
           await new Promise(r => setTimeout(r, 120));
-          payload = await retrievePendingSharedData();
+          payload = await peekPendingSharedPayload();
           if (payload) break;
         }
       }
@@ -328,7 +367,7 @@ class App {
       // Check again if modal was opened while waiting
       if (document.getElementById('shareTargetPanel')) return;
 
-      // 3. Fallback to URL parameters if IndexedDB had no files
+      // 3. Fallback to URL parameters if no stored payload
       if (!payload && (url || text || title)) {
         payload = { url, text, title, files: [] };
       }
@@ -352,6 +391,9 @@ class App {
       if (!payload.files || payload.files.length === 0) {
         const smart = detectSmartRoute(payload.url || payload.text || '');
         if (smart) {
+          if (payload.payloadId) {
+            consumePendingSharedPayload(payload.payloadId);
+          }
           if (window.location.hash.startsWith('#share-target')) {
             history.replaceState(null, '', window.location.pathname);
           }
@@ -624,6 +666,34 @@ class App {
             }
           }, 100);
         }
+      } else if (parts[0] === 'academia-downloader' || parts[0] === 'academia') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('acUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.getElementById('btnResolveAc');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
+      } else if (parts[0] === 'researchgate-downloader' || parts[0] === 'researchgate') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('rgUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.getElementById('btnResolveRg');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
       }
     } else if (hash === '#qr' || hash.startsWith('#qr/')) {
       dispatchTool('qr-multi', hash.startsWith('#qr/') ? hash.replace('#qr/', '') : null);
@@ -715,8 +785,36 @@ class App {
       dispatchTool('slideshare-downloader');
     } else if (hash === '#academia' || hash === '#academia-downloader' || hash.startsWith('#academia?') || hash.startsWith('#academia-downloader?')) {
       dispatchTool('academia-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('acUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.getElementById('btnResolveAc');
+            if (btn) btn.click();
+          }
+        }, 100);
+      }
     } else if (hash === '#researchgate' || hash === '#researchgate-downloader' || hash.startsWith('#researchgate?') || hash.startsWith('#researchgate-downloader?')) {
       dispatchTool('researchgate-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('rgUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.getElementById('btnResolveRg');
+            if (btn) btn.click();
+          }
+        }, 100);
+      }
     } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {
       dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);
     } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {
@@ -796,10 +894,10 @@ if (typeof window !== 'undefined') {
 }
 
 // Start Application on DOM Ready
-function boot() {
+async function boot() {
   try {
     const app = new App();
-    app.init();
+    await app.init();
   } catch (err) {
     console.error('App initialization error:', err);
     const root = document.getElementById('app');
