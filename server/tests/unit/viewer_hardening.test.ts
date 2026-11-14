@@ -616,8 +616,8 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
     const swPath = path.join(rootDir, 'sw.js');
     const swContent = fs.readFileSync(swPath, 'utf-8');
 
-    it('sw.js must be bumped to duydev-studio-v23.x', () => {
-      expect(swContent).toMatch(/const CACHE_NAME = 'duydev-studio-v24\.\d+';/);
+    it('sw.js must be bumped to >= duydev-studio-v25.0', () => {
+      expect(swContent).toMatch(/const CACHE_NAME = 'duydev-studio-v2[5-9]\.\d+';/);
     });
 
     it('sw.js must explicitly bypass ranges, blob, api, download, viewer, and stream requests', () => {

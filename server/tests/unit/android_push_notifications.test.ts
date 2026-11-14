@@ -89,8 +89,8 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain('client.focus()');
     });
 
-    it('sw.js cache name must be v23.55', () => {
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v23.55'");
+    it('sw.js cache name must match current release v25.0', () => {
+      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.0'");
     });
   });
 
@@ -103,9 +103,9 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
     });
 
-    it('build.gradle.kts must be bumped to versionCode 2354 and versionName 23.54.0', () => {
-      expect(gradleContent).toContain('versionCode = 2354');
-      expect(gradleContent).toContain('versionName = "23.54.0"');
+    it('build.gradle.kts must maintain versionCode >= 2408 and versionName 24.8.0', () => {
+      expect(gradleContent).toContain('versionCode = 2408');
+      expect(gradleContent).toContain('versionName = "24.8.0"');
     });
   });
 });
