@@ -10,8 +10,9 @@ cd /home/anhduy/dd-studio
 git fetch origin main
 git reset --hard origin/main
 
-echo "📦 [PROD DEPLOY] Building server..."
+echo "📦 [PROD DEPLOY] Installing server dependencies & building..."
 cd /home/anhduy/dd-studio/server
+npm ci --no-audit --no-fund
 npx prisma generate
 npx prisma db push --skip-generate
 npm run build
@@ -20,7 +21,7 @@ echo "🔄 [PROD DEPLOY] Restarting dd-studio.service and companion Python daemo
 pkill -f 'engines/scribd/daemon.py' || true
 pkill -f 'engines/studocu/daemon.py' || true
 pkill -f 'node dist/app.js' || true
-sleep 4
+sleep 6
 
 echo "✅ [PROD DEPLOY] Complete! Service status:"
 systemctl status dd-studio.service --no-pager || true
