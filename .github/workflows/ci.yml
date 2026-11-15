@@ -55,8 +55,9 @@ jobs:
         env:
           DATABASE_URL: "file:./dev.db"
         run: |
-          npx --prefix server prisma generate
-          npx --prefix server prisma db push --skip-generate
+          cd server
+          npx prisma generate
+          npx prisma db push --skip-generate
 
       - name: Verify Tailwind CSS & Instant Shell build
         run: |
@@ -80,7 +81,7 @@ jobs:
           DATABASE_URL: "file:./dev.db"
           NODE_ENV: "test"
         run: |
-          npx --prefix server vitest run \
+          ./server/node_modules/.bin/vitest run --root server \
             tests/unit/academic_stream_guard.test.ts \
             tests/unit/android_push_notifications.test.ts \
             tests/unit/battery_optimization.test.ts \
