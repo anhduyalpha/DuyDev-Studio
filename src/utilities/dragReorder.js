@@ -113,6 +113,9 @@ export function attachPointerReorder(container, {
   let startPointerY = 0;
   let itemRects = [];
   let itemElements = [];
+  let moveRafId = null;
+  let latestPointerX = 0;
+  let latestPointerY = 0;
 
   const targetWindow = typeof window !== 'undefined' ? window : (container?.ownerDocument?.defaultView || null);
 
@@ -232,18 +235,34 @@ export function attachPointerReorder(container, {
     if (!isDragging || e.pointerId !== activePointerId || !draggedItem) return;
     if (e.cancelable) e.preventDefault();
 
-    const clientX = e.clientX ?? 0;
-    const clientY = e.clientY ?? 0;
-    const dx = clientX - startPointerX;
-    const dy = clientY - startPointerY;
-    draggedItem.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`;
-    draggedItem.style.willChange = 'transform';
+    latestPointerX = e.clientX ?? 0;
+    latestPointerY = e.clientY ?? 0;
 
-    const targetIdx = computeDropIndex2D(clientX, clientY, itemRects, fromIndex);
-    if (targetIdx !== currentTargetIndex) {
-      currentTargetIndex = targetIdx;
-      triggerHaptic(10);
-      updateSiblingShifts(targetIdx);
+    if (moveRafId) return;
+
+    const runFrame = () => {
+      moveRafId = null;
+      if (!isDragging || !draggedItem) return;
+
+      const dx = latestPointerX - startPointerX;
+      const dy = latestPointerY - startPointerY;
+      draggedItem.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`;
+      draggedItem.style.willChange = 'transform';
+
+      const targetIdx = computeDropIndex2D(latestPointerX, latestPointerY, itemRects, fromIndex);
+      if (targetIdx !== currentTargetIndex) {
+        currentTargetIndex = targetIdx;
+        triggerHaptic(10);
+        updateSiblingShifts(targetIdx);
+      }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      moveRafId = requestAnimationFrame(runFrame);
+    } else if (targetWindow && typeof targetWindow.requestAnimationFrame === 'function') {
+      moveRafId = targetWindow.requestAnimationFrame(runFrame);
+    } else {
+      runFrame();
     }
   };
 
@@ -251,6 +270,19 @@ export function attachPointerReorder(container, {
     if (!isDragging || e.pointerId !== activePointerId) return;
     isDragging = false;
     removeDragListeners();
+
+    if (moveRafId) {
+      cancelAnimationFrame(moveRafId);
+      moveRafId = null;
+    }
+
+    // Flush latest coordinates for fast flicks before finalizing drop index
+    const endX = (e.clientX !== undefined && e.clientX !== null) ? e.clientX : latestPointerX;
+    const endY = (e.clientY !== undefined && e.clientY !== null) ? e.clientY : latestPointerY;
+    const flushTargetIdx = computeDropIndex2D(endX, endY, itemRects, fromIndex);
+    if (flushTargetIdx !== -1) {
+      currentTargetIndex = flushTargetIdx;
+    }
 
     try {
       activeHandle?.releasePointerCapture?.(e.pointerId);
@@ -281,6 +313,10 @@ export function attachPointerReorder(container, {
   container.addEventListener('pointerdown', onPointerDown);
 
   const cleanup = () => {
+    if (moveRafId) {
+      cancelAnimationFrame(moveRafId);
+      moveRafId = null;
+    }
     removeDragListeners();
     container.removeEventListener('pointerdown', onPointerDown);
     resetAllTransforms();

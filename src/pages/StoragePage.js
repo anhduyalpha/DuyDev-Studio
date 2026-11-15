@@ -177,78 +177,84 @@ export function renderStoragePage() {
           </div>
         </div>
 
-        <!-- Right: Actions Toolbar -->
-        <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <!-- Search in directory -->
-          <div class="relative">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input 
-              type="text" 
-              id="inputStorageSearch" 
-              placeholder="Lọc tệp..." 
-              value="${escapeHtml(state.searchQuery)}"
-              class="w-32 sm:w-44 pl-8 pr-7 py-1.5 rounded-xl glass-search text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none transition font-sans"
-            />
-            <button id="btnStorageClearSearch" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-0.5 cursor-pointer ${state.searchQuery ? '' : 'hidden'}" title="Xóa tìm kiếm">
-              <i data-lucide="x" class="w-3 h-3"></i>
+        <!-- Right: Actions Toolbar (Option C 2-Row Ergonomics) -->
+        <div class="flex flex-col gap-2 w-full lg:w-auto shrink-0">
+          <!-- Row 1: Search, Upload, New Folder -->
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <!-- Search in directory -->
+            <div class="relative flex-1 min-w-0 sm:w-48">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input 
+                type="text" 
+                id="inputStorageSearch" 
+                placeholder="Lọc tệp..." 
+                value="${escapeHtml(state.searchQuery)}"
+                class="w-full flex-1 min-w-0 min-h-[44px] pl-8 pr-7 py-2 rounded-xl glass-search text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none transition font-sans"
+              />
+              <button id="btnStorageClearSearch" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 min-w-[32px] min-h-[32px] flex items-center justify-center cursor-pointer ${state.searchQuery ? '' : 'hidden'}" title="Xóa tìm kiếm">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Upload Button -->
+            <label for="storageFileInput" class="min-h-[44px] px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Tải lên</span>
+            </label>
+            <input type="file" id="storageFileInput" multiple class="hidden" />
+
+            <!-- New Folder Button -->
+            <button id="btnStorageNewFolder" class="min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 flex items-center gap-1.5 cursor-pointer shrink-0">
+              <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">Thư mục mới</span>
             </button>
           </div>
 
-          <!-- Sort Select Menu -->
-          <div class="relative">
-            <select 
-              id="selectStorageSort" 
-              class="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200/80 dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 focus:outline-none cursor-pointer appearance-none pr-7"
-              title="Sắp xếp danh sách"
-            >
-              <option value="name_asc" ${state.sortBy === 'name' && state.sortDirection === 'asc' ? 'selected' : ''}>Tên (A-Z)</option>
-              <option value="name_desc" ${state.sortBy === 'name' && state.sortDirection === 'desc' ? 'selected' : ''}>Tên (Z-A)</option>
-              <option value="size_asc" ${state.sortBy === 'size' && state.sortDirection === 'asc' ? 'selected' : ''}>Kích thước (Nhỏ nhất)</option>
-              <option value="size_desc" ${state.sortBy === 'size' && state.sortDirection === 'desc' ? 'selected' : ''}>Kích thước (Lớn nhất)</option>
-              <option value="date_desc" ${state.sortBy === 'date' && state.sortDirection === 'desc' ? 'selected' : ''}>Thời gian (Mới nhất)</option>
-              <option value="date_asc" ${state.sortBy === 'date' && state.sortDirection === 'asc' ? 'selected' : ''}>Thời gian (Cũ nhất)</option>
-              <option value="type_asc" ${state.sortBy === 'type' && state.sortDirection === 'asc' ? 'selected' : ''}>Định dạng (A-Z)</option>
-            </select>
-            <i data-lucide="arrow-down-up" class="w-3 h-3 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          </div>
+          <!-- Row 2: Sort, Grid/List, Select All, Refresh, Lock -->
+          <div class="overflow-x-auto flex items-center gap-1.5 w-full sm:w-auto pb-0.5 sm:pb-0">
+            <!-- Sort Select Menu -->
+            <div class="relative min-w-0">
+              <select 
+                id="selectStorageSort" 
+                class="min-h-[44px] px-3 py-2 rounded-xl bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200/80 dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 focus:outline-none cursor-pointer appearance-none pr-7"
+                title="Sắp xếp danh sách"
+              >
+                <option value="name_asc" ${state.sortBy === 'name' && state.sortDirection === 'asc' ? 'selected' : ''}>Tên (A-Z)</option>
+                <option value="name_desc" ${state.sortBy === 'name' && state.sortDirection === 'desc' ? 'selected' : ''}>Tên (Z-A)</option>
+                <option value="size_asc" ${state.sortBy === 'size' && state.sortDirection === 'asc' ? 'selected' : ''}>Kích thước (Nhỏ nhất)</option>
+                <option value="size_desc" ${state.sortBy === 'size' && state.sortDirection === 'desc' ? 'selected' : ''}>Kích thước (Lớn nhất)</option>
+                <option value="date_desc" ${state.sortBy === 'date' && state.sortDirection === 'desc' ? 'selected' : ''}>Thời gian (Mới nhất)</option>
+                <option value="date_asc" ${state.sortBy === 'date' && state.sortDirection === 'asc' ? 'selected' : ''}>Thời gian (Cũ nhất)</option>
+                <option value="type_asc" ${state.sortBy === 'type' && state.sortDirection === 'asc' ? 'selected' : ''}>Định dạng (A-Z)</option>
+              </select>
+              <i data-lucide="arrow-down-up" class="w-3 h-3 text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
 
-          <!-- View Toggle -->
-          <div class="flex items-center bg-zinc-100 dark:bg-white/[0.06] p-0.5 rounded-xl border border-zinc-200 dark:border-white/10">
-            <button id="btnStorageViewGrid" title="Dạng lưới" class="p-1.5 rounded-lg transition cursor-pointer ${state.viewMode === 'grid' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
-              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            <!-- View Toggle -->
+            <div class="flex items-center min-h-[44px] bg-zinc-100 dark:bg-white/[0.06] p-1 rounded-xl border border-zinc-200 dark:border-white/10 shrink-0">
+              <button id="btnStorageViewGrid" title="Dạng lưới" class="min-h-[36px] min-w-[36px] p-2 rounded-lg transition cursor-pointer flex items-center justify-center ${state.viewMode === 'grid' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
+                <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+              </button>
+              <button id="btnStorageViewList" title="Dạng danh sách" class="min-h-[36px] min-w-[36px] p-2 rounded-lg transition cursor-pointer flex items-center justify-center ${state.viewMode === 'list' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
+                <i data-lucide="list" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Select All Toggle Button -->
+            <button id="btnStorageSelectAllToggle" title="Chọn tất cả (Ctrl+A)" class="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 flex items-center justify-center cursor-pointer shrink-0">
+              <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
             </button>
-            <button id="btnStorageViewList" title="Dạng danh sách" class="p-1.5 rounded-lg transition cursor-pointer ${state.viewMode === 'list' ? 'bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-2xs' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'}">
-              <i data-lucide="list" class="w-3.5 h-3.5"></i>
+
+            <!-- Refresh Button -->
+            <button id="btnStorageRefresh" title="Làm mới" class="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 flex items-center justify-center cursor-pointer shrink-0">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <!-- Lock Session Button -->
+            <button id="btnStorageLock" title="Khóa phiên lưu trữ" class="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition border border-red-200 dark:border-red-500/20 flex items-center justify-center cursor-pointer shrink-0">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-
-          <!-- Select All Toggle Button -->
-          <button id="btnStorageSelectAllToggle" title="Chọn tất cả (Ctrl+A)" class="p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 cursor-pointer">
-            <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
-          </button>
-
-          <!-- New Folder Button -->
-          <button id="btnStorageNewFolder" class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition border border-zinc-200 dark:border-white/10 flex items-center gap-1.5 cursor-pointer">
-            <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">Thư mục mới</span>
-          </button>
-
-          <!-- Upload Button -->
-          <label for="storageFileInput" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
-            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-            <span>Tải lên</span>
-          </label>
-          <input type="file" id="storageFileInput" multiple class="hidden" />
-
-          <!-- Refresh Button -->
-          <button id="btnStorageRefresh" title="Làm mới" class="p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition border border-zinc-200 dark:border-white/10 cursor-pointer">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          </button>
-
-          <!-- Lock Session Button -->
-          <button id="btnStorageLock" title="Khóa phiên lưu trữ" class="p-1.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition border border-red-200 dark:border-red-500/20 cursor-pointer">
-            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          </button>
         </div>
 
       </div>
@@ -436,53 +442,218 @@ function renderExplorerContent() {
     `;
   }
 
+const FOLDER_EMPTY_LAUNCHERS = {
+  '/youtube': {
+    title: 'Chưa có video hoặc âm thanh YouTube nào trong Drive',
+    desc: 'Khi tải video hoặc âm thanh từ YouTube Downloader, bạn có thể bấm "Lưu vào Drive" để tự động lưu trữ và quản lý tập trung tại thư mục này.',
+    toolRoute: '#tool/youtube-downloader',
+    btnLabel: 'Mở YouTube Downloader',
+    icon: 'play',
+    colorClasses: {
+      bg: 'bg-red-500/10 dark:bg-red-500/15',
+      border: 'border-red-500/20 dark:border-red-500/30',
+      text: 'text-red-600 dark:text-red-400',
+      btn: 'bg-red-600 hover:bg-red-500 text-white'
+    }
+  },
+  '/tiktok': {
+    title: 'Chưa có video TikTok nào trong Drive',
+    desc: 'Khi tải video TikTok, bạn có thể bấm "Lưu Trực Tiếp Vào Studio Drive" để tự động lưu video vào thư mục này.',
+    toolRoute: '#tool/tiktok-downloader',
+    btnLabel: 'Mở TikTok Downloader',
+    icon: 'video',
+    colorClasses: {
+      bg: 'bg-rose-500/10 dark:bg-rose-500/15',
+      border: 'border-rose-500/20 dark:border-rose-500/30',
+      text: 'text-rose-600 dark:text-rose-400',
+      btn: 'bg-rose-600 hover:bg-rose-500 text-white'
+    }
+  },
+  '/facebook': {
+    title: 'Chưa có video Facebook nào trong Drive',
+    desc: 'Khi tải video từ Facebook Downloader, bạn có thể chọn lưu vào Drive để quản lý và xem lại bất cứ lúc nào.',
+    toolRoute: '#tool/facebook-downloader',
+    btnLabel: 'Mở Facebook Downloader',
+    icon: 'video',
+    colorClasses: {
+      bg: 'bg-blue-500/10 dark:bg-blue-500/15',
+      border: 'border-blue-500/20 dark:border-blue-500/30',
+      text: 'text-blue-600 dark:text-blue-400',
+      btn: 'bg-blue-600 hover:bg-blue-500 text-white'
+    }
+  },
+  '/instagram': {
+    title: 'Chưa có media Instagram nào trong Drive',
+    desc: 'Khi tải reels hoặc bài viết từ Instagram Downloader, bạn có thể bấm lưu trực tiếp vào Drive cá nhân.',
+    toolRoute: '#tool/instagram-downloader',
+    btnLabel: 'Mở Instagram Downloader',
+    icon: 'camera',
+    colorClasses: {
+      bg: 'bg-pink-500/10 dark:bg-pink-500/15',
+      border: 'border-pink-500/20 dark:border-pink-500/30',
+      text: 'text-pink-600 dark:text-pink-400',
+      btn: 'bg-pink-600 hover:bg-pink-500 text-white'
+    }
+  },
+  '/spotify': {
+    title: 'Chưa có bài hát Spotify nào trong Drive',
+    desc: 'Khi tải nhạc từ Spotify Downloader, bài hát chất lượng cao sẽ được tự động lưu và tổ chức tại thư mục này.',
+    toolRoute: '#tool/spotify-downloader',
+    btnLabel: 'Mở Spotify Downloader',
+    icon: 'music',
+    colorClasses: {
+      bg: 'bg-emerald-500/10 dark:bg-emerald-500/15',
+      border: 'border-emerald-500/20 dark:border-emerald-500/30',
+      text: 'text-emerald-600 dark:text-emerald-400',
+      btn: 'bg-emerald-600 hover:bg-emerald-500 text-white'
+    }
+  },
+  '/scribd': {
+    title: 'Chưa có tài liệu Scribd nào trong Drive',
+    desc: 'Tải và giải mã tài liệu Scribd thành PDF gốc không watermark và lưu trữ lâu dài tại đây.',
+    toolRoute: '#tool/scribd',
+    btnLabel: 'Mở Scribd Archiver',
+    icon: 'file-text',
+    colorClasses: {
+      bg: 'bg-orange-500/10 dark:bg-orange-500/15',
+      border: 'border-orange-500/20 dark:border-orange-500/30',
+      text: 'text-orange-600 dark:text-orange-400',
+      btn: 'bg-orange-600 hover:bg-orange-500 text-white'
+    }
+  },
+  '/slideshare': {
+    title: 'Chưa có slide SlideShare nào trong Drive',
+    desc: 'Tải bài thuyết trình và slide tài liệu dạng PDF/PPTX và lưu vào thư mục này để trình chiếu.',
+    toolRoute: '#tool/slideshare-downloader',
+    btnLabel: 'Mở SlideShare Downloader',
+    icon: 'presentation',
+    colorClasses: {
+      bg: 'bg-amber-500/10 dark:bg-amber-500/15',
+      border: 'border-amber-500/20 dark:border-amber-500/30',
+      text: 'text-amber-600 dark:text-amber-400',
+      btn: 'bg-amber-600 hover:bg-amber-500 text-white'
+    }
+  },
+  '/academia': {
+    title: 'Chưa có nghiên cứu Academia nào trong Drive',
+    desc: 'Tải tài liệu và bài báo nghiên cứu học thuật đầy đủ từ Academia.edu về lưu trữ an toàn.',
+    toolRoute: '#tool/academia-downloader',
+    btnLabel: 'Mở Academia Downloader',
+    icon: 'graduation-cap',
+    colorClasses: {
+      bg: 'bg-cyan-500/10 dark:bg-cyan-500/15',
+      border: 'border-cyan-500/20 dark:border-cyan-500/30',
+      text: 'text-cyan-600 dark:text-cyan-400',
+      btn: 'bg-cyan-600 hover:bg-cyan-500 text-white'
+    }
+  },
+  '/researchgate': {
+    title: 'Chưa có bài báo ResearchGate nào trong Drive',
+    desc: 'Truy xuất các công trình khoa học và báo cáo PDF từ ResearchGate về lưu trữ tập trung.',
+    toolRoute: '#tool/researchgate-downloader',
+    btnLabel: 'Mở ResearchGate Downloader',
+    icon: 'microscope',
+    colorClasses: {
+      bg: 'bg-teal-500/10 dark:bg-teal-500/15',
+      border: 'border-teal-500/20 dark:border-teal-500/30',
+      text: 'text-teal-600 dark:text-teal-400',
+      btn: 'bg-teal-600 hover:bg-teal-500 text-white'
+    }
+  },
+  '/pdf': {
+    title: 'Chưa có tài liệu PDF nào trong Drive',
+    desc: 'Xử lý gộp, tách, nén hoặc chuyển đổi tài liệu PDF trong PDF Studio và bấm "Lưu vào Drive" để lưu trữ.',
+    toolRoute: '#tool/pdf-studio',
+    btnLabel: 'Mở PDF Studio',
+    icon: 'file-text',
+    colorClasses: {
+      bg: 'bg-amber-500/10 dark:bg-amber-500/15',
+      border: 'border-amber-500/20 dark:border-amber-500/30',
+      text: 'text-amber-600 dark:text-amber-400',
+      btn: 'bg-amber-600 hover:bg-amber-500 text-white'
+    }
+  },
+  '/converted': {
+    title: 'Chưa có tệp chuyển đổi nào trong Drive',
+    desc: 'Chuyển đổi hình ảnh, tài liệu hoặc âm thanh với Universal Converter và lưu kết quả an toàn vào đây.',
+    toolRoute: '#tool/universal-converter',
+    btnLabel: 'Mở Universal Converter',
+    icon: 'refresh-cw',
+    colorClasses: {
+      bg: 'bg-indigo-500/10 dark:bg-indigo-500/15',
+      border: 'border-indigo-500/20 dark:border-indigo-500/30',
+      text: 'text-indigo-600 dark:text-indigo-400',
+      btn: 'bg-indigo-600 hover:bg-indigo-500 text-white'
+    }
+  },
+  '/archives': {
+    title: 'Chưa có tệp nén nào trong Drive',
+    desc: 'Đóng gói nén ZIP, TAR.GZ hoặc kiểm tra kho lưu trữ máy chủ trong File Nén Studio.',
+    toolRoute: '#server-archive',
+    btnLabel: 'Mở File Nén & Server Archive',
+    icon: 'archive',
+    colorClasses: {
+      bg: 'bg-sky-500/10 dark:bg-sky-500/15',
+      border: 'border-sky-500/20 dark:border-sky-500/30',
+      text: 'text-sky-600 dark:text-sky-400',
+      btn: 'bg-sky-600 hover:bg-sky-500 text-white'
+    }
+  },
+  '/images': {
+    title: 'Chưa có hình ảnh nào trong Drive',
+    desc: 'So sánh hình ảnh Before/After hoặc soi điểm ảnh Pixel Inspector với ViewSplit và lưu ảnh trực tiếp vào đây.',
+    toolRoute: '#tool/view-split',
+    btnLabel: 'Mở ViewSplit',
+    icon: 'columns-2',
+    colorClasses: {
+      bg: 'bg-cyan-500/10 dark:bg-cyan-500/15',
+      border: 'border-cyan-500/20 dark:border-cyan-500/30',
+      text: 'text-cyan-600 dark:text-cyan-400',
+      btn: 'bg-cyan-600 hover:bg-cyan-500 text-white'
+    }
+  },
+  '/documents': {
+    title: 'Chưa có tài liệu soạn thảo nào trong Drive',
+    desc: 'Soạn thảo ghi chú, văn bản Markdown hoặc xuất Word/PDF từ Markdown Docs và lưu trực tiếp vào Drive.',
+    toolRoute: '#tool/markdown-docs',
+    btnLabel: 'Mở Markdown Docs',
+    icon: 'file-edit',
+    colorClasses: {
+      bg: 'bg-violet-500/10 dark:bg-violet-500/15',
+      border: 'border-violet-500/20 dark:border-violet-500/30',
+      text: 'text-violet-600 dark:text-violet-400',
+      btn: 'bg-violet-600 hover:bg-violet-500 text-white'
+    }
+  }
+};
+
   const items = getProcessedItems();
 
   if (items.length === 0) {
-    if (!state.searchQuery && (state.currentPath === '/youtube' || state.currentPath.startsWith('/youtube/') || state.currentPath === '/YouTube' || state.currentPath.startsWith('/YouTube/'))) {
-      return `
-        <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center animate-fadeIn">
-          <div class="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shadow-xs">
-            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
+    if (!state.searchQuery) {
+      const normalizedFolder = (state.currentPath || '/').toLowerCase().replace(/\/+$/, '') || '/';
+      const launcher = FOLDER_EMPTY_LAUNCHERS[normalizedFolder];
+      if (launcher) {
+        return `
+          <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center animate-fadeIn">
+            <div class="w-14 h-14 rounded-2xl ${launcher.colorClasses.bg} border ${launcher.colorClasses.border} ${launcher.colorClasses.text} flex items-center justify-center shadow-xs">
+              <i data-lucide="${launcher.icon}" class="w-7 h-7"></i>
+            </div>
+            <div class="max-w-md px-4">
+              <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-200">
+                ${launcher.title}
+              </h4>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                ${launcher.desc}
+              </p>
+              <a href="${launcher.toolRoute}" class="inline-flex items-center gap-1.5 mt-3.5 px-4 py-2 min-h-[44px] rounded-xl ${launcher.colorClasses.btn} text-xs font-semibold shadow-xs transition cursor-pointer">
+                <i data-lucide="${launcher.icon}" class="w-3.5 h-3.5"></i>
+                <span>${launcher.btnLabel}</span>
+              </a>
+            </div>
           </div>
-          <div class="max-w-md">
-            <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-200">
-              Chưa có video hoặc âm thanh YouTube nào trong Drive
-            </h4>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Khi tải video hoặc âm thanh từ YouTube Downloader, bạn có thể bấm "Lưu vào Drive" để tự động lưu trữ và quản lý tập trung tại thư mục này.
-            </p>
-            <a href="#tool/youtube-downloader" class="inline-flex items-center gap-1.5 mt-3.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer">
-              <i data-lucide="play" class="w-3.5 h-3.5"></i>
-              <span>Mở YouTube Downloader</span>
-            </a>
-          </div>
-        </div>
-      `;
-    }
-
-    if (!state.searchQuery && (state.currentPath === '/tiktok' || state.currentPath.startsWith('/tiktok/'))) {
-      return `
-        <div class="py-20 flex flex-col items-center justify-center space-y-3 text-center animate-fadeIn">
-          <div class="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shadow-xs">
-            <i data-lucide="video" class="w-7 h-7"></i>
-          </div>
-          <div class="max-w-md">
-            <h4 class="font-bold text-sm text-zinc-800 dark:text-zinc-200">
-              Chưa có video TikTok nào trong Drive
-            </h4>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Khi tải video TikTok, bạn có thể bấm "Lưu Trực Tiếp Vào Studio Drive" để tự động lưu video vào thư mục này.
-            </p>
-            <a href="#tool/tiktok-downloader" class="inline-flex items-center gap-1.5 mt-3.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer">
-              <i data-lucide="video" class="w-3.5 h-3.5"></i>
-              <span>Mở TikTok Downloader</span>
-            </a>
-          </div>
-        </div>
-      `;
+        `;
+      }
     }
 
     return `
@@ -980,7 +1151,7 @@ export function attachStoragePageListeners(onSoftReRender) {
     const contentArea = document.getElementById('storageContentArea');
     if (contentArea) {
       contentArea.innerHTML = renderExplorerContent();
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) window.lucide.createIcons({ root: contentArea });
     }
     updateBatchToolbar();
     updateStatusBar();
@@ -1008,11 +1179,17 @@ export function attachStoragePageListeners(onSoftReRender) {
     } finally {
       state.isLoading = false;
       const breadcrumbEl = document.getElementById('storageBreadcrumbContainer');
-      rerenderContentOnly();
-      if (breadcrumbEl) breadcrumbEl.innerHTML = renderBreadcrumbs(state.currentPath);
+      if (breadcrumbEl) {
+        breadcrumbEl.innerHTML = renderBreadcrumbs(state.currentPath);
+        if (window.lucide) window.lucide.createIcons({ root: breadcrumbEl });
+      }
       const tabsEl = document.getElementById('storageFolderTabsContainer');
-      if (tabsEl) tabsEl.outerHTML = renderFolderTabs(state.currentPath);
-      if (window.lucide) window.lucide.createIcons();
+      if (tabsEl) {
+        tabsEl.outerHTML = renderFolderTabs(state.currentPath);
+        const newTabsEl = document.getElementById('storageFolderTabsContainer');
+        if (newTabsEl && window.lucide) window.lucide.createIcons({ root: newTabsEl });
+      }
+      rerenderContentOnly();
     }
   };
 
@@ -1685,7 +1862,7 @@ function showNewFolderModal(onConfirm) {
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
   const cleanup = () => { modalRoot.innerHTML = ''; };
   const input = document.getElementById('inputNewFolderName');
@@ -1833,7 +2010,7 @@ function showStorageItemActionsModal(item, loadDirectory, previewStorageItem) {
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
   const cleanup = () => { modalRoot.innerHTML = ''; };
 
@@ -1951,7 +2128,7 @@ function handleRenameItem(itemPath, oldName, onComplete) {
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
   const cleanup = () => { modalRoot.innerHTML = ''; };
   const input = document.getElementById('inputRenameItem');
@@ -2116,7 +2293,7 @@ function handleMoveCopyModal(itemPaths, isCopy = false, onComplete) {
       </div>
     `;
 
-    if (window.lucide) window.lucide.createIcons();
+    if (window.lucide && modalRoot) window.lucide.createIcons({ root: modalRoot });
 
     const btnSubmit = document.getElementById('btnSubmitMoveCopy');
     const btnCancel = document.getElementById('btnCancelMoveCopy');

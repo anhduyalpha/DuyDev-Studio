@@ -191,8 +191,11 @@ export function lockAdminSession() {
 /**
  * Intercepts an action: executes immediately if admin is authenticated,
  * otherwise prompts the user with an Admin Password Modal.
+ * @param {Function} onAuthorized
+ * @param {string} [message]
+ * @param {Function} [onCancel]
  */
-export function requireAdmin(onAuthorized, message = 'Yêu cầu mật khẩu Quản trị viên để thực hiện thao tác này.') {
+export function requireAdmin(onAuthorized, message = 'Yêu cầu mật khẩu Quản trị viên để thực hiện thao tác này.', onCancel) {
   if (isAdminAuthenticated()) {
     onAuthorized();
     return;
@@ -201,8 +204,20 @@ export function requireAdmin(onAuthorized, message = 'Yêu cầu mật khẩu Qu
     message,
     onSuccess: () => {
       onAuthorized();
+    },
+    onCancel: () => {
+      if (typeof onCancel === 'function') onCancel();
     }
   });
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /**
@@ -226,7 +241,7 @@ export function showAdminPasswordModal({ message = 'Nhập mật khẩu Quản t
           </div>
           <div>
             <h4 class="font-bold text-sm text-zinc-900 dark:text-white">Xác thực Quản trị viên</h4>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">${message}</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">${escapeHtml(message)}</p>
           </div>
         </div>
 
@@ -253,11 +268,21 @@ export function showAdminPasswordModal({ message = 'Nhập mật khẩu Quản t
     </div>
   `;
 
-  if (window.lucide) window.lucide.createIcons();
+  if (window.lucide?.createIcons) window.lucide.createIcons({ root: modalEl });
 
   const cleanup = () => {
     modalEl.innerHTML = '';
   };
+
+  const backdrop = modalEl.querySelector('.fixed.inset-0');
+  if (backdrop) {
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        cleanup();
+        if (typeof onCancel === 'function') onCancel();
+      }
+    });
+  }
 
   const input = document.getElementById('dsModalAdminPwdInput');
   const errorEl = document.getElementById('dsModalAdminPwdError');

@@ -43,10 +43,25 @@
   transform: translateY(-4px) translateZ(0);
 }
 
-/* Offscreen Battery Shield: Pause all animation loops when card is outside viewport */
+/* Offscreen Battery Shield & 3-Signal Pause: Pause all animation loops when card is outside viewport or app is paused/backgrounded */
 .tier-card.tier-offscreen *,
 .tier-card.tier-offscreen *::before,
-.tier-card.tier-offscreen *::after {
+.tier-card.tier-offscreen *::after,
+[data-tier].tier-offscreen *,
+[data-tier].tier-offscreen *::before,
+[data-tier].tier-offscreen *::after,
+html.app-backgrounded .tier-card *,
+html.app-backgrounded .tier-card *::before,
+html.app-backgrounded .tier-card *::after,
+html.app-backgrounded [data-tier] *,
+html.app-backgrounded [data-tier] *::before,
+html.app-backgrounded [data-tier] *::after,
+html.ds-animations-paused .tier-card *,
+html.ds-animations-paused .tier-card *::before,
+html.ds-animations-paused .tier-card *::after,
+html.ds-animations-paused [data-tier] *,
+html.ds-animations-paused [data-tier] *::before,
+html.ds-animations-paused [data-tier] *::after {
   animation-play-state: paused !important;
 }
 
@@ -69,7 +84,6 @@
 .tier-card .solar-sunburst,
 .tier-card .flame-front,
 .tier-card .flame-back,
-.tier-card .corner-plate,
 .tier-card .diamond-flare,
 .tier-card .tier-prismatic-beam-sweep,
 .tier-card .tier-plasma-border-ex,

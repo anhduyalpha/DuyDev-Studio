@@ -106,14 +106,19 @@ export function renderQrStudio(initialTab = null) {
           <div class="lg:col-span-7 space-y-6">
             <div class="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-white/[0.07] p-6 space-y-6 shadow-sm">
               ${
-                activeTab === 'url'
-                  ? renderQrFormDynamic(dynamic) + renderQrStylePanel(styling)
-                  : (
-                      activeTab === 'vietqr' ? renderQrFormVietQr(vietqr)
-                      : activeTab === 'wifi' ? renderQrFormWifi(wifi)
-                      : activeTab === 'vcard' ? renderQrFormVCard(vcard)
-                      : renderQrFormStatic(qrState)
-                    ) + renderQrActionControls(qrState)
+                (
+                  activeTab === 'url'
+                    ? renderQrFormDynamic(dynamic)
+                    : activeTab === 'vietqr'
+                    ? renderQrFormVietQr(vietqr)
+                    : activeTab === 'wifi'
+                    ? renderQrFormWifi(wifi)
+                    : activeTab === 'vcard'
+                    ? renderQrFormVCard(vcard)
+                    : renderQrFormStatic(qrState)
+                ) +
+                renderQrStylePanel(styling) +
+                (activeTab !== 'url' ? renderQrActionControls(qrState) : '')
               }
             </div>
           </div>

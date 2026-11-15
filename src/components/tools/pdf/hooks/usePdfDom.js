@@ -24,6 +24,8 @@ import { attachSwipeToDismiss } from '../../../../utilities/swipeGesture.js';
 import { attachPointerReorder } from '../../../../utilities/dragReorder.js';
 import { attachPdfClipboardPaste, pasteImageFromClipboard } from './usePdfPaste.js';
 import { getToolTheme, PDF_THEMES } from '../services/pdfThemes.js';
+import { saveArtifactToDrive } from '../../../../utilities/driveSaveHelper.js';
+import { sendToTool } from '../../../../utilities/toolHandoff.js';
 
 const ALL_THEME_ICON_CLASSES = Object.values(PDF_THEMES).flatMap((t) => (t.iconActive || '').split(' ')).filter(Boolean);
 
@@ -281,7 +283,7 @@ function bindDropzone(qm) {
       }
       if (spinner) spinner.classList.toggle('hidden', !loading);
       if (driveIcon) driveIcon.classList.toggle('opacity-40', loading);
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      if (driveCard && window.lucide?.createIcons) window.lucide.createIcons({ root: driveCard });
     };
 
     const doAutoImport = async (targetUrl) => {
@@ -670,7 +672,8 @@ function bindDropzone(qm) {
         }
         if (multiDriveSpinner) multiDriveSpinner.classList.toggle('hidden', !loading);
         if (multiDriveIcon) multiDriveIcon.classList.toggle('opacity-40', loading);
-        if (window.lucide?.createIcons) window.lucide.createIcons();
+        const multiContainer = inputMultiDrive.parentElement || rootEl;
+        if (multiContainer && window.lucide?.createIcons) window.lucide.createIcons({ root: multiContainer });
       };
 
       const doMultiAutoImport = async (targetUrl) => {
@@ -1033,6 +1036,38 @@ function bindResult(qm) {
         ViewerConnector.preview({
           ...resultObj,
           fileId: resultObj.resultFileId
+        });
+      }
+      return;
+    }
+
+    // 3.1. Save PDF Result to Studio Drive (/pdf)
+    const saveDriveBtn = e.target.closest('#btnSavePdfToDrive');
+    if (saveDriveBtn) {
+      e.preventDefault();
+      const resultObj = queueMgr?.result || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager?.result : null);
+      if (resultObj?.resultFileId) {
+        saveArtifactToDrive({
+          fileId: resultObj.resultFileId,
+          fileName: resultObj.fileName,
+          targetFolder: '/pdf',
+          metadata: { tool: 'pdf-studio', mode: queueMgr?.activeMode || 'pdf' }
+        });
+      }
+      return;
+    }
+
+    // 3.2. Handoff PDF Result to Universal Converter
+    const handoffBtn = e.target.closest('#btnHandoffPdfToConverter');
+    if (handoffBtn) {
+      e.preventDefault();
+      const resultObj = queueMgr?.result || (typeof window !== 'undefined' ? window.__ds_pdfQueueManager?.result : null);
+      if (resultObj?.resultFileId) {
+        sendToTool('universal-converter', {
+          fileId: resultObj.resultFileId,
+          fileName: resultObj.fileName,
+          mimeType: 'application/pdf',
+          url: resultObj.downloadUrl
         });
       }
       return;

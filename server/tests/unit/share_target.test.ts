@@ -510,17 +510,17 @@ describe('Web Share Target & Classifier Suite', () => {
 
         // Peek should return the item without removing it
         const peek1 = await peekPendingSharedPayload();
-        expect(peek1).toEqual({ title: 'Test 1', url: 'https://example.com' });
+        expect(peek1).toMatchObject({ title: 'Test 1', url: 'https://example.com' });
         expect(store.length).toBe(1);
 
         // Second peek should still return the item
         const peek2 = await peekPendingSharedPayload();
-        expect(peek2).toEqual({ title: 'Test 1', url: 'https://example.com' });
+        expect(peek2).toMatchObject({ title: 'Test 1', url: 'https://example.com' });
         expect(store.length).toBe(1);
 
         // Consume should return the item AND clear the store
         const consumed = await consumePendingSharedPayload();
-        expect(consumed).toEqual({ title: 'Test 1', url: 'https://example.com' });
+        expect(consumed).toMatchObject({ title: 'Test 1', url: 'https://example.com' });
         expect(store.length).toBe(0);
 
         // Subsequent peek should return null
@@ -611,7 +611,7 @@ describe('Web Share Target & Classifier Suite', () => {
         }, 25);
 
         const result = await pollPromise;
-        expect(result).toEqual({ title: 'Shared via SW', url: 'https://sw-shared.com' });
+        expect(result).toMatchObject({ title: 'Shared via SW', url: 'https://sw-shared.com' });
       } finally {
         if (originalIDB !== undefined) (global as any).indexedDB = originalIDB;
         else delete (global as any).indexedDB;

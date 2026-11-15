@@ -1,6 +1,7 @@
 /**
  * Instagram Service - Multi-tier Video & Photo Extractor & Stream Manager
- * Native port of n8n Instagram Downloader workflow.
+ * Native port of n8n Instagram Downloader workflow with Tier 1 Cookieless Embed,
+ * Anonymous GraphQL, SSRF Guard, Bounded TTL Cache, and Hardened yt-dlp.
  */
 
 import fs from 'fs';
@@ -10,7 +11,6 @@ import crypto from 'crypto';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { FastifyReply } from 'fastify';
 import { InstagramVideoData, InstagramMediaItem } from '../schemas/instagram.schema.js';
 import { StorageManager } from '../storage/storage.manager.js';
@@ -20,11 +20,35 @@ import { prisma } from '../lib/prisma.js';
 import { BadRequestError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
+import { BoundedTtlCache, expandRedirectUrl, findExistingDriveMatch } from './shared/media-url-cache.js';
 
-const execFileAsync = promisify(execFile);
+export const INSTAGRAM_ALLOWED_HOSTS = ['instagram.com', 'instagr.am', 'cdninstagram.com', 'fbcdn.net'];
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const DEFAULT_ASBD_ID = '129477';
+const DEFAULT_IG_APP_ID = '936619743392459';
+const DEFAULT_LSD_TOKEN = 'AVqbxe3J_YA';
+
+/**
+ * Safely cancels unconsumed response streams to prevent Undici connection and socket leaks
+ */
+async function cancelResponseBody(res?: Response | null): Promise<void> {
+  if (res?.body && typeof (res.body as any).cancel === 'function') {
+    try {
+      await (res.body as any).cancel();
+    } catch {}
+  }
+}
 
 export class InstagramService {
+  private static readonly mediaCache = new BoundedTtlCache<InstagramVideoData>(200, 10 * 60 * 1000);
+
+  /**
+   * Clears in-memory resolution cache (for testing and administrative maintenance)
+   */
+  static clearCache(): void {
+    InstagramService.mediaCache.clear();
+  }
+
   /**
    * Cleans and validates raw text to a valid Instagram URL
    */
@@ -35,11 +59,13 @@ export class InstagramService {
     }
 
     // Auto-prepend https:// if protocol-less
-    if (/^(?:[a-zA-Z0-9_-]+\.)?instagram\.com(?:\/|$)/i.test(trimmed)) {
+    if (/^(?:[a-zA-Z0-9_-]+\.)?(?:instagram\.com|instagr\.am)(?:\/|$)/i.test(trimmed)) {
       trimmed = `https://${trimmed}`;
     }
 
-    const urlMatch = trimmed.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?instagram\.com\/(?:p|reel|reels|tv|stories)\/[a-zA-Z0-9_-]+[^\s"'<>]+/i);
+    const urlMatch = trimmed.match(
+      /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv|stories|share)(?:\/[a-zA-Z0-9_-]+)*[^\s"'<>]+/i
+    );
     if (!urlMatch) {
       throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết Instagram Post, Reel hoặc Story hợp lệ.');
     }
@@ -68,32 +94,109 @@ export class InstagramService {
   }
 
   /**
-   * Resolves Instagram video or post metadata using multi-tier strategy
+   * Expands shortlinks (instagr.am) and share redirects (instagram.com/share/...) with SSRF validation
+   */
+  private static async expandRedirectIfNeeded(url: string): Promise<string> {
+    if (url.includes('/share/') || url.includes('instagr.am')) {
+      const expanded = await expandRedirectUrl(
+        url,
+        (u) => validateSafeMediaUrl(u, INSTAGRAM_ALLOWED_HOSTS),
+        {
+          allowedHosts: INSTAGRAM_ALLOWED_HOSTS,
+          timeoutMs: 4000
+        }
+      );
+      return this.extractUrl(expanded);
+    }
+    return url;
+  }
+
+  /**
+   * Resolves Instagram video or post metadata using multi-tier strategy (Alias of resolveMedia)
    */
   static async resolveVideo(rawInput: string): Promise<InstagramVideoData> {
-    const targetUrl = this.extractUrl(rawInput);
-    logger.info({ targetUrl }, '[Instagram] Resolving video metadata...');
+    return this.resolveMedia(rawInput);
+  }
+
+  /**
+   * Resolves Instagram media (Video, Reel, Image, Carousel) using cookieless Tier 1 and hardened yt-dlp Tier 2
+   */
+  static async resolveMedia(rawInput: string): Promise<InstagramVideoData> {
+    let targetUrl = this.extractUrl(rawInput);
+    targetUrl = await this.expandRedirectIfNeeded(targetUrl);
+
+    logger.info({ targetUrl }, '[Instagram] Resolving media metadata...');
 
     const codeMatch = targetUrl.match(/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
-    const fallbackId = codeMatch?.[1] || `ig_${Date.now()}`;
+    const shortcode = codeMatch?.[1] || `ig_${Date.now()}`;
+    let canonicalType = 'p';
+    if (codeMatch) {
+      const rawType = codeMatch[0].split('/')[0].toLowerCase();
+      canonicalType = rawType === 'reels' ? 'reel' : rawType;
+    }
+    const canonicalUrl = `https://www.instagram.com/${canonicalType}/${shortcode}/`;
+    validateSafeMediaUrl(canonicalUrl, INSTAGRAM_ALLOWED_HOSTS);
 
-    let resolvedData: InstagramVideoData | null = null;
+    const cacheKey = `${canonicalType}:${shortcode}`;
 
-    // --- Tier 1: RapidAPI if configured ---
-    try {
-      const apiResult = await this.tryApiExtraction(targetUrl, fallbackId);
-      if (apiResult) {
-        resolvedData = apiResult;
-        logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1 API');
-      }
-    } catch (e: any) {
-      logger.debug({ err: e?.message }, '[Instagram] Tier 1 API skipped');
+    // 1. Check Bounded TTL Cache
+    const cached = this.mediaCache.get(cacheKey);
+    if (cached) {
+      logger.info({ cacheKey }, '[Instagram] Cache hit');
+      const existing = await this.checkExistingInDrive(cached.id, targetUrl);
+      return {
+        ...cached,
+        existingInDrive: existing.exists ? existing.item : null
+      };
     }
 
-    // --- Tier 2: yt-dlp CLI ---
+    let resolvedData: InstagramVideoData | null = null;
+    let extractedLsd: string | null = null;
+
+    // --- Tier 1A: Cookieless Embed HTML / Captioned Parser (timeout 4.5s) ---
+    try {
+      const embedRes = await this.tryEmbedExtraction(shortcode, canonicalType);
+      if (embedRes) {
+        resolvedData = embedRes.data;
+        extractedLsd = embedRes.lsd;
+        if (resolvedData) {
+          logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1A Embed');
+        }
+      }
+    } catch (err: any) {
+      logger.debug({ err: err?.message }, '[Instagram] Tier 1A embed failed or skipped');
+    }
+
+    // --- Tier 1B: Anonymous Web GraphQL Fallback (timeout 4.5s) ---
     if (!resolvedData) {
       try {
-        const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, fallbackId);
+        const gqlRes = await this.tryAnonymousGraphqlExtraction(shortcode, canonicalType, extractedLsd);
+        if (gqlRes) {
+          resolvedData = gqlRes;
+          logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1B Anonymous GraphQL');
+        }
+      } catch (err: any) {
+        logger.debug({ err: err?.message }, '[Instagram] Tier 1B GraphQL failed or skipped');
+      }
+    }
+
+    // --- Tier 1C: RapidAPI if configured ---
+    if (!resolvedData) {
+      try {
+        const apiResult = await this.tryApiExtraction(targetUrl, shortcode);
+        if (apiResult) {
+          resolvedData = apiResult;
+          logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1C RapidAPI');
+        }
+      } catch (e: any) {
+        logger.debug({ err: e?.message }, '[Instagram] Tier 1C API skipped');
+      }
+    }
+
+    // --- Tier 2: Hardened yt-dlp CLI (timeout 22s) ---
+    if (!resolvedData) {
+      try {
+        const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, shortcode);
         if (ytdlpResult) {
           resolvedData = ytdlpResult;
           logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 2 yt-dlp');
@@ -107,6 +210,9 @@ export class InstagramService {
       throw new BadRequestError('Không thể lấy thông tin video Instagram này. Bài viết có thể đang ở chế độ riêng tư hoặc đã bị xóa.');
     }
 
+    // Populate cache on successful resolution (NEVER cache failures!)
+    this.mediaCache.set(cacheKey, resolvedData);
+
     // Check Drive duplication
     const existing = await this.checkExistingInDrive(resolvedData.id, targetUrl);
     resolvedData.existingInDrive = existing.exists ? existing.item : null;
@@ -115,7 +221,351 @@ export class InstagramService {
   }
 
   /**
-   * Tier 1: Try RapidAPI endpoint (matching n8n node)
+   * Tier 1A: Fetch embed captioned page and extract media from JSON or DOM tags
+   */
+  private static async tryEmbedExtraction(
+    shortcode: string,
+    canonicalType: string
+  ): Promise<{ data: InstagramVideoData | null; lsd: string | null } | null> {
+    const embedUrl = canonicalType === 'reel'
+      ? `https://www.instagram.com/reel/${shortcode}/embed/captioned/`
+      : `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+
+    const headers: Record<string, string> = {
+      'User-Agent': DEFAULT_UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none'
+    };
+
+    let html = '';
+    try {
+      const res = await fetch(embedUrl, {
+        headers,
+        signal: AbortSignal.timeout(4500)
+      });
+
+      if (!res.ok) {
+        await cancelResponseBody(res);
+        // If reel embed returned non-200, try fallback post embed endpoint
+        if (canonicalType === 'reel') {
+          const altRes = await fetch(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
+            headers,
+            signal: AbortSignal.timeout(4500)
+          });
+          if (altRes.ok) {
+            html = await altRes.text();
+          } else {
+            await cancelResponseBody(altRes);
+          }
+        }
+        if (!html) return null;
+      } else {
+        html = await res.text();
+      }
+    } catch {
+      return null;
+    }
+
+    return this.parseEmbedHtml(html, shortcode);
+  }
+
+  /**
+   * Parses embed HTML for embedded JSON (window.__additionalDataLoaded / gql_data) or DOM fallback tags
+   */
+  private static parseEmbedHtml(
+    html: string,
+    shortcode: string
+  ): { data: InstagramVideoData | null; lsd: string | null } {
+    // Extract LSD token if present
+    const lsdMatch =
+      html.match(/name="lsd"\s+value="([^"]+)"/) ||
+      html.match(/"LSD",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
+      html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}\]/);
+    const lsd = lsdMatch?.[1] || null;
+
+    let mediaData: any = null;
+
+    // 1. Check window.__additionalDataLoaded
+    const addDataMatches = html.matchAll(/window\.__additionalDataLoaded\s*\(\s*[^,]+,\s*(\{[\s\S]*?\})\s*\);/g);
+    for (const m of addDataMatches) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        if (parsed) {
+          mediaData =
+            parsed.shortcode_media ||
+            parsed.xdt_shortcode_media ||
+            parsed.graphql?.shortcode_media ||
+            parsed.gql_data?.shortcode_media ||
+            parsed.gql_data;
+          if (mediaData) break;
+        }
+      } catch {}
+    }
+
+    // 2. Generic script inspection for shortcode_media / xdt_shortcode_media / gql_data
+    if (!mediaData) {
+      const scriptMatches = html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi);
+      for (const sm of scriptMatches) {
+        const content = sm[1];
+        if (
+          content.includes('shortcode_media') ||
+          content.includes('xdt_shortcode_media') ||
+          content.includes('gql_data')
+        ) {
+          const jsonMatch = content.match(/(\{[\s\S]*"(?:shortcode_media|xdt_shortcode_media|gql_data)"[\s\S]*\})/);
+          if (jsonMatch) {
+            try {
+              const parsed = JSON.parse(jsonMatch[1]);
+              mediaData =
+                parsed.shortcode_media ||
+                parsed.xdt_shortcode_media ||
+                parsed.graphql?.shortcode_media ||
+                parsed.gql_data?.shortcode_media ||
+                parsed.gql_data ||
+                parsed.data?.xdt_shortcode_media ||
+                parsed.data?.shortcode_media;
+              if (mediaData) break;
+            } catch {}
+          }
+        }
+      }
+    }
+
+    if (mediaData) {
+      const formatted = this.formatShortcodeMedia(mediaData, shortcode);
+      if (formatted) {
+        return { data: formatted, lsd };
+      }
+    }
+
+    // 3. Fallback: Extract directly from captioned embed DOM tags
+    const videoMatch =
+      html.match(/<video[^>]+src=["']([^"']+)["']/i) ||
+      html.match(/<video[^>]*>[\s\S]*?<source[^>]+src=["']([^"']+)["']/i);
+    const videoUrl = videoMatch?.[1] ? videoMatch[1].replace(/&amp;/g, '&') : undefined;
+
+    let imageUrl: string | undefined;
+    const imgMatches = html.matchAll(/<img([^>]+)>/gi);
+    for (const match of imgMatches) {
+      const attrs = match[1];
+      const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+      if (!srcMatch) continue;
+      const src = srcMatch[1].replace(/&amp;/g, '&');
+
+      // Carefully exclude profile avatars and sprite icons
+      const isAvatar =
+        /avatar|profile|150x150|s150x150/i.test(src) ||
+        /class=["'][^"']*(?:avatar|headeravatar)[^"']*["']/i.test(attrs);
+      const isSprite =
+        /sprite|glyph/i.test(src) ||
+        /class=["'][^"']*(?:sprite|glyph)[^"']*["']/i.test(attrs);
+      if (isAvatar || isSprite) continue;
+
+      if (/EmbeddedMediaImage/i.test(attrs)) {
+        imageUrl = src;
+        break;
+      }
+      if (!imageUrl) {
+        imageUrl = src;
+      }
+    }
+
+    const captionMatch = html.match(
+      /<div class=["'][^"']*(?:CaptionText|Caption)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i
+    );
+    let caption = '';
+    if (captionMatch) {
+      caption = captionMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+
+    const authorMatch =
+      html.match(/<(?:span|a|div) class=["'][^"']*UsernameText[^"']*["'][^>]*>([\s\S]*?)<\/(?:span|a|div)>/i) ||
+      html.match(/<a class=["'][^"']*CaptionUsername[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+    let authorUsername = '';
+    if (authorMatch) {
+      authorUsername = authorMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+
+    if (videoUrl || imageUrl) {
+      const isVideo = Boolean(videoUrl);
+      const primaryUrl = videoUrl || imageUrl!;
+      const items: InstagramMediaItem[] = [
+        {
+          type: isVideo ? 'video' : 'image',
+          url: primaryUrl,
+          thumbnail: imageUrl || videoUrl
+        }
+      ];
+
+      return {
+        data: {
+          id: shortcode,
+          title: caption ? caption.replace(/\r?\n/g, ' ').slice(0, 100) : `Instagram Post ${shortcode}`,
+          caption: caption || '',
+          author: {
+            username: authorUsername || 'Instagram User'
+          },
+          cover: imageUrl || videoUrl || '',
+          duration: 0,
+          mediaType: isVideo ? 'video' : 'image',
+          videoUrl: isVideo ? videoUrl : undefined,
+          imageUrl: !isVideo ? imageUrl : undefined,
+          medias: items,
+          isCarousel: false,
+          extractor: 'resolver'
+        },
+        lsd
+      };
+    }
+
+    return { data: null, lsd };
+  }
+
+  /**
+   * Tier 1B: Anonymous Web GraphQL Query with X-IG-App-ID and extracted LSD token
+   */
+  private static async tryAnonymousGraphqlExtraction(
+    shortcode: string,
+    canonicalType: string,
+    lsdToken: string | null
+  ): Promise<InstagramVideoData | null> {
+    const lsd = lsdToken || DEFAULT_LSD_TOKEN;
+    const headers: Record<string, string> = {
+      'User-Agent': DEFAULT_UA,
+      'Accept': '*/*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-FB-LSD': lsd,
+      'X-ASBD-ID': DEFAULT_ASBD_ID,
+      'X-IG-App-ID': DEFAULT_IG_APP_ID,
+      'Origin': 'https://www.instagram.com',
+      'Referer': `https://www.instagram.com/p/${shortcode}/`,
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin'
+    };
+
+    const body = `variables=${encodeURIComponent(JSON.stringify({ shortcode }))}&doc_id=8845758582119845`;
+
+    try {
+      const res = await fetch('https://www.instagram.com/graphql/query/', {
+        method: 'POST',
+        headers,
+        body,
+        signal: AbortSignal.timeout(4500)
+      });
+
+      if (!res.ok) {
+        await cancelResponseBody(res);
+        return null;
+      }
+      const json = (await res.json()) as any;
+      const media = json?.data?.xdt_shortcode_media || json?.data?.shortcode_media;
+      if (media) {
+        return this.formatShortcodeMedia(media, shortcode);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Normalizes shortcode_media / xdt_shortcode_media node into InstagramVideoData
+   */
+  private static formatShortcodeMedia(media: any, fallbackShortcode: string): InstagramVideoData | null {
+    if (!media) return null;
+
+    const id = String(media.id || fallbackShortcode);
+    const caption = (
+      media.edge_media_to_caption?.edges?.[0]?.node?.text ||
+      media.caption?.text ||
+      media.caption ||
+      media.title ||
+      ''
+    ).trim();
+    const title = media.title || caption.replace(/\r?\n/g, ' ').slice(0, 100) || `Instagram Media ${id}`;
+    const rawCover = media.display_url || media.thumbnail_src || '';
+    const cover = rawCover ? String(rawCover).replace(/&amp;/g, '&') : '';
+    const duration = Number(media.video_duration || 0);
+
+    const author = {
+      username: media.owner?.username || 'Instagram User',
+      fullName: media.owner?.full_name
+    };
+
+    const sidecarEdges = media.edge_sidecar_to_children?.edges;
+    if (Array.isArray(sidecarEdges) && sidecarEdges.length > 1) {
+      // Multi-item Carousel with mixed photo and video items
+      const items: InstagramMediaItem[] = sidecarEdges
+        .map(({ node }: any) => {
+          const isVid = Boolean(node.is_video || node.video_url);
+          const rawUrl = (isVid ? node.video_url : node.display_url) || node.display_url;
+          const url = rawUrl ? String(rawUrl).replace(/&amp;/g, '&') : '';
+          const rawThumb = node.display_url || cover;
+          const thumbnail = rawThumb ? String(rawThumb).replace(/&amp;/g, '&') : '';
+          return {
+            type: isVid ? ('video' as const) : ('image' as const),
+            url,
+            thumbnail
+          };
+        })
+        .filter((i) => Boolean(i.url));
+
+      if (items.length > 0) {
+        const primaryVideo = items.find((i) => i.type === 'video');
+        const primaryImage = items.find((i) => i.type === 'image');
+        return {
+          id,
+          title,
+          caption,
+          author,
+          cover: cover || items[0].thumbnail || items[0].url,
+          duration,
+          mediaType: 'carousel',
+          videoUrl: primaryVideo?.url,
+          imageUrl: primaryImage?.url,
+          medias: items,
+          isCarousel: true,
+          extractor: 'resolver'
+        };
+      }
+    }
+
+    const isVideo = Boolean(media.is_video || media.video_url);
+    const rawMediaUrl = isVideo ? media.video_url : media.display_url;
+    if (!rawMediaUrl) return null;
+    const mediaUrl = String(rawMediaUrl).replace(/&amp;/g, '&');
+
+    const items: InstagramMediaItem[] = [
+      {
+        type: isVideo ? 'video' : 'image',
+        url: mediaUrl,
+        thumbnail: cover || mediaUrl
+      }
+    ];
+
+    return {
+      id,
+      title,
+      caption,
+      author,
+      cover: cover || mediaUrl,
+      duration,
+      mediaType: isVideo ? 'video' : 'image',
+      videoUrl: isVideo ? mediaUrl : undefined,
+      imageUrl: !isVideo ? mediaUrl : undefined,
+      medias: items,
+      isCarousel: false,
+      extractor: 'resolver'
+    };
+  }
+
+  /**
+   * Tier 1C: Try RapidAPI endpoint (matching n8n node)
    */
   private static async tryApiExtraction(targetUrl: string, fallbackId: string): Promise<InstagramVideoData | null> {
     const apiKey = process.env.RAPIDAPI_KEY || process.env.RAPID_API_KEY;
@@ -135,8 +585,11 @@ export class InstagramService {
         signal: AbortSignal.timeout(8000)
       });
 
-      if (!res.ok) return null;
-      const data = await res.json() as any;
+      if (!res.ok) {
+        await cancelResponseBody(res);
+        return null;
+      }
+      const data = (await res.json()) as any;
       if (data.error) return null;
 
       const medias = Array.isArray(data.medias) ? data.medias : [];
@@ -158,8 +611,8 @@ export class InstagramService {
         mediaType = 'video';
       }
 
-      const primaryVideo = items.find(i => i.type === 'video');
-      const primaryImage = items.find(i => i.type === 'image');
+      const primaryVideo = items.find((i) => i.type === 'video');
+      const primaryImage = items.find((i) => i.type === 'image');
 
       return {
         id: String(data.id || fallbackId),
@@ -168,7 +621,7 @@ export class InstagramService {
         author: {
           username: data.author || 'Instagram User'
         },
-        cover: data.thumbnail || (items[0]?.thumbnail || items[0]?.url || ''),
+        cover: data.thumbnail || items[0]?.thumbnail || items[0]?.url || '',
         duration: Number(data.duration || 0),
         mediaType,
         videoUrl: primaryVideo?.url || (mediaType === 'video' ? items[0]?.url : undefined),
@@ -186,7 +639,7 @@ export class InstagramService {
    * Helper to parse yt-dlp stdout supporting single JSON, multi-line NDJSON, and entries array
    */
   static parseYtdlpOutput(stdout: string): any[] {
-    const rawLines = (stdout || '').trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const rawLines = (stdout || '').trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const parsedEntries: any[] = [];
 
     for (const line of rawLines) {
@@ -208,15 +661,33 @@ export class InstagramService {
   }
 
   /**
-   * Tier 2: Local yt-dlp CLI
+   * Tier 2: Hardened yt-dlp CLI fallback (--no-playlist, --socket-timeout 12, --retries 2, timeout 22s)
    */
   private static async tryYtdlpExtraction(targetUrl: string, fallbackId: string): Promise<InstagramVideoData | null> {
-    const { stdout } = await execFileAsync('yt-dlp', [
+    const args = [
       '--dump-json',
+      '--no-playlist',
       '--no-warnings',
       '--no-check-certificates',
-      targetUrl
-    ], { timeout: 20000, maxBuffer: 15 * 1024 * 1024 });
+      '--socket-timeout',
+      '12',
+      '--retries',
+      '2'
+    ];
+
+    const cookiesFile = process.env.IG_COOKIES_FILE?.trim();
+    if (cookiesFile && fs.existsSync(cookiesFile)) {
+      args.push('--cookies', cookiesFile);
+    }
+
+    args.push(targetUrl);
+
+    const { stdout } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+      execFile('yt-dlp', args, { timeout: 22000, maxBuffer: 15 * 1024 * 1024 }, (err, out, serr) => {
+        if (err) reject(err);
+        else resolve({ stdout: String(out || ''), stderr: String(serr || '') });
+      });
+    });
 
     const entries = this.parseYtdlpOutput(stdout);
     if (entries.length === 0) {
@@ -253,7 +724,8 @@ export class InstagramService {
           mediaItemUrl = videoFmt.url;
           isVideo = true;
         } else {
-          const anyFmt = entry.formats.filter((f: any) => f.url).pop() || entry.formats[entry.formats.length - 1];
+          const anyFmt =
+            entry.formats.filter((f: any) => f.url).pop() || entry.formats[entry.formats.length - 1];
           if (anyFmt?.url) {
             mediaItemUrl = anyFmt.url;
             isVideo = anyFmt.ext === 'mp4' || (Boolean(anyFmt.vcodec) && anyFmt.vcodec !== 'none');
@@ -284,8 +756,8 @@ export class InstagramService {
       mediaType = 'video';
     }
 
-    const primaryVideo = medias.find(m => m.type === 'video');
-    const primaryImage = medias.find(m => m.type === 'image');
+    const primaryVideo = medias.find((m) => m.type === 'video');
+    const primaryImage = medias.find((m) => m.type === 'image');
 
     return {
       id,
@@ -317,7 +789,7 @@ export class InstagramService {
 
     const headers: Record<string, string> = {
       'User-Agent': DEFAULT_UA,
-      'Referer': 'https://www.instagram.com/'
+      Referer: 'https://www.instagram.com/'
     };
     if (rangeHeader) {
       headers['Range'] = rangeHeader;
@@ -329,6 +801,7 @@ export class InstagramService {
     });
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
+      await cancelResponseBody(upstreamRes);
       throw new BadRequestError(`Không thể kết nối đến luồng video: HTTP ${upstreamRes.status}`);
     }
 
@@ -361,66 +834,64 @@ export class InstagramService {
 
   /**
    * Checks if media already exists in DD Studio Drive (`/data/storage/drive/instagram/`)
+   * Uses concurrent bounded worker pool scanning (*.meta.json) with early short-circuit.
    */
   static async checkExistingInDrive(
     videoId?: string,
-    originalUrl?: string
+    originalUrl?: string,
+    driveDirOverride?: string
   ): Promise<{ exists: boolean; item?: any }> {
-    const igDir = path.join(resolvedStoragePaths.drive, 'instagram');
-    if (!fs.existsSync(igDir)) {
-      return { exists: false };
-    }
-
+    const igDir = driveDirOverride || path.join(resolvedStoragePaths.drive, 'instagram');
     const cleanId = (videoId || '').trim();
     const normInputUrl = (originalUrl || '').split('?')[0].replace(/\/$/, '').toLowerCase();
     if (!cleanId && !normInputUrl) return { exists: false };
 
     try {
-      const files = await fsPromises.readdir(igDir, { withFileTypes: true });
-      for (const file of files) {
-        if (file.isDirectory() || (!file.name.endsWith('.mp4') && !file.name.endsWith('.jpg') && !file.name.endsWith('.webp'))) continue;
+      const match = await findExistingDriveMatch(
+        igDir,
+        async (meta, metaFileName) => {
+          let isMatch = false;
+          if (
+            cleanId &&
+            ((meta?.instagramId && String(meta.instagramId) === cleanId) ||
+              metaFileName.includes(cleanId.slice(-10)))
+          ) {
+            isMatch = true;
+          }
 
-        const mediaDiskPath = path.join(igDir, file.name);
-        if (!fs.existsSync(mediaDiskPath)) continue;
+          if (!isMatch && normInputUrl && meta?.originalUrl) {
+            const normMetaUrl = meta.originalUrl.split('?')[0].replace(/\/$/, '').toLowerCase();
+            if (normMetaUrl === normInputUrl) isMatch = true;
+          }
 
-        let isMatch = false;
-        let meta: any = null;
-        const metaPath = path.join(igDir, `${file.name.replace(/\.[^.]+$/, '')}.meta.json`);
+          if (!isMatch) return false;
 
-        if (fs.existsSync(metaPath)) {
-          try {
-            meta = JSON.parse(await fsPromises.readFile(metaPath, 'utf8'));
-          } catch {}
-        }
-
-        if (cleanId && ((meta?.instagramId && String(meta.instagramId) === cleanId) || file.name.includes(cleanId.slice(-10)))) {
-          isMatch = true;
-        }
-
-        if (!isMatch && normInputUrl && meta?.originalUrl) {
-          const normMetaUrl = meta.originalUrl.split('?')[0].replace(/\/$/, '').toLowerCase();
-          if (normMetaUrl === normInputUrl) isMatch = true;
-        }
-
-        if (isMatch) {
-          const stat = await fsPromises.stat(mediaDiskPath);
-          return {
-            exists: true,
-            item: {
-              fileName: file.name,
-              relPath: `/instagram/${file.name}`,
-              sizeBytes: stat.size,
-              title: meta?.title || file.name,
-              thumbnail: meta?.thumbnail,
-              duration: meta?.duration,
-              updatedAt: stat.mtime.toISOString()
+          // Find corresponding media file (.mp4, .jpg, .webp)
+          const baseName = metaFileName.replace(/\.meta\.json$/, '');
+          for (const ext of ['.mp4', '.jpg', '.webp']) {
+            const mediaDiskPath = path.join(igDir, `${baseName}${ext}`);
+            if (fs.existsSync(mediaDiskPath)) {
+              const stat = await fsPromises.stat(mediaDiskPath);
+              return {
+                fileName: `${baseName}${ext}`,
+                relPath: `/instagram/${baseName}${ext}`,
+                sizeBytes: stat.size,
+                title: meta?.title || `${baseName}${ext}`,
+                thumbnail: meta?.thumbnail,
+                duration: meta?.duration,
+                updatedAt: stat.mtime.toISOString()
+              };
             }
-          };
-        }
-      }
-    } catch {}
+          }
+          return false;
+        },
+        8
+      );
 
-    return { exists: false };
+      return match ? { exists: true, item: match } : { exists: false };
+    } catch {
+      return { exists: false };
+    }
   }
 
   /**
@@ -436,7 +907,14 @@ export class InstagramService {
     duration?: number,
     overwrite = false,
     mediaType?: 'video' | 'image' | 'carousel'
-  ): Promise<{ success: boolean; fileName: string; relPath: string; sizeBytes: number; fileId: string; metadata?: any }> {
+  ): Promise<{
+    success: boolean;
+    fileName: string;
+    relPath: string;
+    sizeBytes: number;
+    fileId: string;
+    metadata?: any;
+  }> {
     if (!mediaUrl) {
       throw new BadRequestError('Không tìm thấy đường dẫn tệp để lưu');
     }
@@ -453,17 +931,19 @@ export class InstagramService {
     const upstreamRes = await fetch(mediaUrl, {
       headers: {
         'User-Agent': DEFAULT_UA,
-        'Referer': 'https://www.instagram.com/'
+        Referer: 'https://www.instagram.com/'
       },
       signal: AbortSignal.timeout(120000)
     });
 
     if (!upstreamRes.ok || !upstreamRes.body) {
+      await cancelResponseBody(upstreamRes);
       throw new BadRequestError(`Không thể tải nội dung từ Instagram: HTTP ${upstreamRes.status}`);
     }
 
     const upstreamContentType = upstreamRes.headers.get('content-type') || '';
-    const isImage = (mediaType === 'image') ||
+    const isImage =
+      mediaType === 'image' ||
       upstreamContentType.startsWith('image/') ||
       /\.(jpe?g|png|webp)($|\?)/i.test(mediaUrl);
 
@@ -515,11 +995,13 @@ export class InstagramService {
           thumbnailDataUri = `data:${contentType};base64,${coverBuffer.toString('base64')}`;
           const thumbPath = targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg');
           await fsPromises.writeFile(thumbPath, coverBuffer).catch(() => {});
+        } else {
+          await cancelResponseBody(coverRes);
         }
       } catch {}
     }
 
-    const authorUsername = typeof author === 'string' ? author : (author?.username || 'instagram_user');
+    const authorUsername = typeof author === 'string' ? author : author?.username || 'instagram_user';
 
     const metadata = {
       instagramId: id || cleanId,

@@ -7,12 +7,15 @@ import { showToast } from '../../../utilities/toast.js';
 import { formatBytes } from '../../../utilities/formatters.js';
 import { copyText } from '../../../utilities/clipboard.js';
 import { renderDropzone, attachDropzoneListeners } from '../../common/Dropzone.js';
-import { calculateTextHashes, processHashFile, updateBase64 } from './hooks/useHashActions.js';
+import { calculateTextHashes, processHashFile, updateBase64, hashManager } from './hooks/useHashActions.js';
 import { renderHashCards, renderCompareMatchHtml, bindCopyHashButtons } from './components/HashCards.js';
 import { loadModuleState, saveModuleState } from '../../../utilities/moduleState.js';
+import { consumeHandoff } from '../../../utilities/toolHandoff.js';
+import { getStorageAuthHeaders } from '../../../utilities/adminAuth.js';
 
 /**
  * @typedef {Object} HashResultMap
+ * @property {string} md5
  * @property {string} sha256
  * @property {string} sha1
  * @property {string} sha512
@@ -282,10 +285,88 @@ function updateBase64Dom() {
  */
 export function attachHashStudioListeners(onReRender) {
   let isTeardown = false;
+  let textDebounceTimer = null;
+
+  // Consume cross-tool handoff if available (file, blob, url/fileId, or text)
+  const pendingHandoff = consumeHandoff('hash-checksum');
+  if (pendingHandoff) {
+    if (pendingHandoff.file) {
+      hashState.activeTab = 'file';
+      hashManager.abort();
+      processHashFile(pendingHandoff.file, hashState, () => {
+        if (!isTeardown && onReRender) onReRender();
+      }).then(() => {
+        if (!isTeardown) persistHashState();
+      });
+    } else if (pendingHandoff.blob) {
+      const f = new File([pendingHandoff.blob], pendingHandoff.fileName || 'artifact', {
+        type: pendingHandoff.mimeType || 'application/octet-stream'
+      });
+      hashState.activeTab = 'file';
+      hashManager.abort();
+      processHashFile(f, hashState, () => {
+        if (!isTeardown && onReRender) onReRender();
+      }).then(() => {
+        if (!isTeardown) persistHashState();
+      });
+    } else if (pendingHandoff.url || pendingHandoff.fileId) {
+      const downloadUrl = pendingHandoff.url || `/api/v1/files/download/${encodeURIComponent(pendingHandoff.fileId)}`;
+      const headers = downloadUrl.startsWith('/api/v1/storage') ? getStorageAuthHeaders() : {};
+      fetch(downloadUrl, { headers })
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (!blob || isTeardown) return;
+          const f = new File([blob], pendingHandoff.fileName || 'artifact', {
+            type: pendingHandoff.mimeType || blob.type || 'application/octet-stream'
+          });
+          hashState.activeTab = 'file';
+          hashManager.abort();
+          processHashFile(f, hashState, () => {
+            if (!isTeardown && onReRender) onReRender();
+          }).then(() => {
+            if (!isTeardown) persistHashState();
+          });
+        })
+        .catch(() => {});
+    } else if (pendingHandoff.text) {
+      hashState.activeTab = 'text';
+      hashState.textInput = pendingHandoff.text;
+      calculateTextHashes(hashState);
+      persistHashState();
+      if (onReRender) onReRender();
+    }
+  }
+
+  const handleGlobalPaste = async (e) => {
+    if (isTeardown) return;
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+      return;
+    }
+    if (document.getElementById('dsModalAdminPwdInput') || document.getElementById('shareTargetPanel')) {
+      return;
+    }
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      e.preventDefault();
+      hashManager.abort();
+      await processHashFile(files[0], hashState, () => {
+        if (!isTeardown && onReRender) onReRender();
+      });
+      if (!isTeardown) persistHashState();
+    }
+  };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('paste', handleGlobalPaste);
+  }
 
   document.querySelectorAll('.btn-hash-tab').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (isTeardown) return;
+      if (textDebounceTimer) {
+        clearTimeout(textDebounceTimer);
+        textDebounceTimer = null;
+      }
+      hashManager.abort();
       hashState.activeTab = btn.dataset.hashTab;
       persistHashState();
       if (onReRender) onReRender();
@@ -294,6 +375,7 @@ export function attachHashStudioListeners(onReRender) {
 
   attachDropzoneListeners('hashDropzone', async (files) => {
     if (isTeardown || !files || files.length === 0) return;
+    hashManager.abort();
     await processHashFile(files[0], hashState, () => {
       if (!isTeardown && onReRender) onReRender();
     });
@@ -334,26 +416,43 @@ export function attachHashStudioListeners(onReRender) {
   const textInput = document.getElementById('inputHashText');
   let textHashSeq = 0;
   if (textInput) {
-    textInput.addEventListener('input', async (e) => {
+    textInput.addEventListener('input', (e) => {
       if (isTeardown) return;
       const val = e.target.value;
       hashState.textInput = val;
       const seq = ++textHashSeq;
 
-      const hashes = val ? await calculateTextHashes(val) : null;
-      if (isTeardown || seq !== textHashSeq) return;
-
-      hashState.textHashes = hashes;
-      persistHashState();
-
-      const cardsEl = document.getElementById('textHashResultCards');
-      if (cardsEl) {
-        cardsEl.innerHTML = renderHashCards(hashState.textHashes);
-        bindCopyHashButtons(cardsEl);
-        if (window.lucide) {
-          window.lucide.createIcons({ root: cardsEl });
-        }
+      if (textDebounceTimer) {
+        clearTimeout(textDebounceTimer);
       }
+
+      if (!val) {
+        hashState.textHashes = null;
+        persistHashState();
+        const cardsEl = document.getElementById('textHashResultCards');
+        if (cardsEl) {
+          cardsEl.innerHTML = renderHashCards(null);
+        }
+        return;
+      }
+
+      textDebounceTimer = setTimeout(async () => {
+        textDebounceTimer = null;
+        const hashes = await calculateTextHashes(val);
+        if (isTeardown || seq !== textHashSeq) return;
+
+        hashState.textHashes = hashes;
+        persistHashState();
+
+        const cardsEl = document.getElementById('textHashResultCards');
+        if (cardsEl) {
+          cardsEl.innerHTML = renderHashCards(hashState.textHashes);
+          bindCopyHashButtons(cardsEl);
+          if (window.lucide) {
+            window.lucide.createIcons({ root: cardsEl });
+          }
+        }
+      }, 150);
     });
   }
 
@@ -404,5 +503,13 @@ export function attachHashStudioListeners(onReRender) {
 
   return () => {
     isTeardown = true;
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('paste', handleGlobalPaste);
+    }
+    if (textDebounceTimer) {
+      clearTimeout(textDebounceTimer);
+      textDebounceTimer = null;
+    }
+    hashManager.abort();
   };
 }

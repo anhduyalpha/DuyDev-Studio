@@ -423,7 +423,7 @@ export class YoutubeWorkspace {
                       }"
                     >
                       <i data-lucide="music" class="w-4 h-4"></i>
-                      <span>Âm thanh (Audio)</span>
+                      <span>Âm thanh</span>
                     </button>
                   </div>
 
@@ -629,8 +629,8 @@ export class YoutubeWorkspace {
     this.container.addEventListener('click', this.boundHandleClick);
 
     // Refresh Lucide icons
-    if (window.lucide?.createIcons) {
-      window.lucide.createIcons();
+    if (this.container && window.lucide?.createIcons) {
+      window.lucide.createIcons({ root: this.container });
     }
   }
 }

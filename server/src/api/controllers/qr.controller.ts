@@ -49,7 +49,8 @@ export async function generateQrHandler(request: FastifyRequest, reply: FastifyR
       content: result.content,
       dataUrl: result.dataUrl,
       version: result.version,
-      dynamic: dynamicInfo
+      dynamic: dynamicInfo,
+      rawPayload: result.payloadText
     }
   });
 }

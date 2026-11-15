@@ -245,7 +245,10 @@ html:not(.dark) .glass-panel {
    ============================================================================== */
 html.app-backgrounded *,
 html.app-backgrounded *::before,
-html.app-backgrounded *::after {
+html.app-backgrounded *::after,
+html.ds-animations-paused *,
+html.ds-animations-paused *::before,
+html.ds-animations-paused *::after {
   animation-play-state: paused !important;
   transition: none !important;
 }

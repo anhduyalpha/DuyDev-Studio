@@ -113,3 +113,7 @@ Thumbs.db
 engines/quiz/assets/**/__pycache__/
 engines/quiz/models/
 *.onnx
+
+# Worktrees & Superpowers Scratch
+.worktrees/
+.superpowers/

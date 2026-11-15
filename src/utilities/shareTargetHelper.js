@@ -159,14 +159,68 @@ export function base64ToFile(base64Data, filename, mimeType) {
 }
 
 /**
+ * Bounded TTL cache of consumed payload IDs to prevent duplicate consumption
+ * under concurrent fast-path, app.js, and native share arrived events while
+ * allowing subsequent shares (even with the same URL) after TTL or with distinct IDs.
+ */
+const CONSUMED_PAYLOAD_TTL_MS = 10_000;
+const MAX_CONSUMED_PAYLOAD_CACHE = 50;
+
+/** @type {Map<string, number>} */
+const consumedPayloadCache = new Map();
+
+function pruneConsumedPayloadCache(now = Date.now()) {
+  for (const [id, ts] of consumedPayloadCache.entries()) {
+    if (now - ts > CONSUMED_PAYLOAD_TTL_MS) {
+      consumedPayloadCache.delete(id);
+    }
+  }
+  while (consumedPayloadCache.size > MAX_CONSUMED_PAYLOAD_CACHE) {
+    const oldestKey = consumedPayloadCache.keys().next().value;
+    if (oldestKey) consumedPayloadCache.delete(oldestKey);
+    else break;
+  }
+}
+
+function isPayloadConsumed(payloadId, now = Date.now()) {
+  if (!payloadId) return false;
+  pruneConsumedPayloadCache(now);
+  const ts = consumedPayloadCache.get(payloadId);
+  if (!ts) return false;
+  if (now - ts > CONSUMED_PAYLOAD_TTL_MS) {
+    consumedPayloadCache.delete(payloadId);
+    return false;
+  }
+  return true;
+}
+
+function markPayloadConsumed(payloadId, now = Date.now()) {
+  if (!payloadId) return;
+  pruneConsumedPayloadCache(now);
+  consumedPayloadCache.set(payloadId, now);
+}
+
+/** Reset consumed cache (used by unit tests) */
+export function _clearConsumedPayloadCache() {
+  consumedPayloadCache.clear();
+}
+
+/**
  * Normalize payload from AndroidBridge into standard share payload with File objects
  * @param {object} nativePayload
  * @param {boolean} [shouldFetchFiles=true] - If false, creates lightweight placeholder File instances for fast peeking
- * @returns {Promise<{ title?: string, text?: string, url?: string, targetRoute?: string, targetMode?: string, files: File[] }|null>}
+ * @returns {Promise<{ payloadId: string, title?: string, text?: string, url?: string, targetRoute?: string, targetMode?: string, files: File[] }|null>}
  */
 export async function normalizeNativePayload(nativePayload, shouldFetchFiles = true) {
   if (!nativePayload) return null;
   const files = [];
+
+  const payloadId = String(
+    nativePayload.payloadId ||
+    nativePayload.id ||
+    (nativePayload.timestamp ? 'sp_' + nativePayload.timestamp : null) ||
+    ('sp_' + (nativePayload.url || '') + '|' + (nativePayload.text || '') + '|' + (nativePayload.files ? nativePayload.files.length : 0))
+  );
 
   if (Array.isArray(nativePayload.files)) {
     for (const f of nativePayload.files) {
@@ -196,6 +250,7 @@ export async function normalizeNativePayload(nativePayload, shouldFetchFiles = t
   }
 
   return {
+    payloadId,
     title: nativePayload.title || '',
     text: nativePayload.text || '',
     url: nativePayload.url || '',
@@ -245,7 +300,7 @@ export async function storeSharePayload(payload) {
 /**
  * Peek pending share payload from AndroidBridge or IndexedDB without write locks or deletion.
  * Opens a readonly transaction on object store 'shares'.
- * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
+ * @returns {Promise<{payloadId: string, title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
 export async function peekPendingSharedPayload() {
   try {
@@ -255,7 +310,12 @@ export async function peekPendingSharedPayload() {
       if (raw) {
         try {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (parsed) return await normalizeNativePayload(parsed, false);
+          if (parsed) {
+            const normalized = await normalizeNativePayload(parsed, false);
+            if (normalized && !isPayloadConsumed(normalized.payloadId)) {
+              return normalized;
+            }
+          }
         } catch (e) {
           console.warn('[AndroidBridge] Peek parse error:', e);
         }
@@ -273,7 +333,11 @@ export async function peekPendingSharedPayload() {
         req.onerror = () => reject(req.error);
       });
       if (!allPayloads || !allPayloads.length) return null;
-      return allPayloads[allPayloads.length - 1];
+      const last = allPayloads[allPayloads.length - 1];
+      if (!last) return null;
+      const payloadId = String(last.payloadId || (last.timestamp ? 'idb_' + last.timestamp : null) || ('idb_' + (last.url || '') + '|' + (last.text || '')));
+      if (isPayloadConsumed(payloadId)) return null;
+      return { ...last, payloadId };
     } finally {
       db.close();
     }
@@ -285,9 +349,14 @@ export async function peekPendingSharedPayload() {
 /**
  * Read and delete pending share payloads from AndroidBridge or IndexedDB using readwrite transaction.
  * Opens a readwrite transaction ONLY to consume data.
- * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
+ * @param {string} [targetPayloadId=null] - Optional specific payloadId to idempotently consume
+ * @returns {Promise<{payloadId: string, title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
-export async function consumePendingSharedPayload() {
+export async function consumePendingSharedPayload(targetPayloadId = null) {
+  if (targetPayloadId && isPayloadConsumed(targetPayloadId)) {
+    return null;
+  }
+
   try {
     // 0. Check native AndroidBridge first (instant 0ms)
     if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getSharedPayload === 'function') {
@@ -297,6 +366,13 @@ export async function consumePendingSharedPayload() {
           const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
           if (parsed) {
             const normalized = await normalizeNativePayload(parsed, true);
+            const effId = targetPayloadId || normalized?.payloadId;
+            if (effId && isPayloadConsumed(effId)) {
+              return null;
+            }
+            if (effId) {
+              markPayloadConsumed(effId);
+            }
             if (typeof window.AndroidBridge.clearSharedPayload === 'function') {
               window.AndroidBridge.clearSharedPayload();
             }
@@ -324,13 +400,20 @@ export async function consumePendingSharedPayload() {
         return null;
       }
 
+      const last = allPayloads[allPayloads.length - 1];
+      const effId = targetPayloadId || String(last.payloadId || (last.timestamp ? 'idb_' + last.timestamp : null) || ('idb_' + (last.url || '') + '|' + (last.text || '')));
+      if (isPayloadConsumed(effId)) {
+        return null;
+      }
+      markPayloadConsumed(effId);
+
       store.clear();
       await new Promise((resolve, reject) => {
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error);
       });
 
-      return allPayloads[allPayloads.length - 1];
+      return { ...last, payloadId: effId };
     } finally {
       db.close();
     }
@@ -341,8 +424,9 @@ export async function consumePendingSharedPayload() {
 
 /**
  * Poll for pending shared data with adaptive backoff and BroadcastChannel wake-up.
+ * Peeks only; does not clear payload until UI consumes it.
  * @param {number} [maxWaitMs=4500]
- * @returns {Promise<{title?: string, text?: string, url?: string, files?: File[]}|null>}
+ * @returns {Promise<{payloadId: string, title?: string, text?: string, url?: string, files?: File[]}|null>}
  */
 export async function pollPendingSharedData(maxWaitMs = 4500) {
   // If modal is already open in DOM, resolve immediately to avoid redundant I/O
@@ -350,11 +434,10 @@ export async function pollPendingSharedData(maxWaitMs = 4500) {
     return null;
   }
 
-  // 1. Instant check
+  // 1. Instant check (peek only)
   const instantPeek = await peekPendingSharedPayload();
   if (instantPeek) {
-    const consumed = await consumePendingSharedPayload();
-    if (consumed) return consumed;
+    return instantPeek;
   }
 
   const startTime = Date.now();
@@ -402,8 +485,8 @@ export async function pollPendingSharedData(maxWaitMs = 4500) {
         bc.onmessage = async (event) => {
           if (resolved) return;
           if (event.data?.type === 'PAYLOAD_READY') {
-            const payload = await consumePendingSharedPayload();
-            if (payload) finish(payload);
+            const peek = await peekPendingSharedPayload();
+            if (peek) finish(peek);
           }
         };
       } catch {}
@@ -438,11 +521,8 @@ export async function pollPendingSharedData(maxWaitMs = 4500) {
         const peek = await peekPendingSharedPayload();
         if (resolved) return;
         if (peek) {
-          const payload = await consumePendingSharedPayload();
-          if (payload) {
-            finish(payload);
-            return;
-          }
+          finish(peek);
+          return;
         }
         scheduleNext();
       }, delay);

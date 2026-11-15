@@ -13,6 +13,9 @@ import {
   handleCopyDynamicImage,
   generateQrCode,
   downloadGeneratedQr,
+  downloadStyledQr,
+  copyStyledQrImage,
+  syncStaticInputsFromDom,
   processScanFile
 } from './useQrActions.js';
 import { attachDropzoneListeners } from '../../../common/Dropzone.js';
@@ -21,6 +24,7 @@ import { copyText, copyQrImageOrFallback } from '../../../../utilities/clipboard
 import { storage } from '../../../../utilities/storage.js';
 import { attachQrHistoryListeners } from '../components/QrHistoryList.js';
 import { attachQrPasteHandler, detachQrPasteHandler, handleClipboardPaste } from './useQrPaste.js';
+import { consumeHandoff } from '../../../../utilities/toolHandoff.js';
 
 /**
  * Attaches an event listener to an element by its ID if the element exists.
@@ -47,13 +51,38 @@ function on(id, eventOrHandler, maybeHandler) {
 export function attachQrStudioListeners(onReRender) {
   detachQrPasteHandler();
 
+  // 0. Consume cross-tool handoff (e.g. from Downloader cards or history)
+  const pendingHandoff = consumeHandoff('qr-multi') || consumeHandoff('qr-studio');
+  if (pendingHandoff) {
+    if (pendingHandoff.url) {
+      qrState.activeTab = 'url';
+      if (qrState.dynamic) qrState.dynamic.targetUrl = pendingHandoff.url;
+      if (qrState.url) qrState.url.targetUrl = pendingHandoff.url;
+      persistQrState();
+      const input = document.getElementById('inputTargetUrl') || document.getElementById('inputStaticUrl');
+      if (input) input.value = pendingHandoff.url;
+      showToast('Đã nhận liên kết tạo mã QR', 'info');
+      if (onReRender) onReRender();
+    } else if (pendingHandoff.text) {
+      qrState.activeTab = 'text';
+      if (qrState.text) qrState.text.content = pendingHandoff.text;
+      persistQrState();
+      const textInput = document.getElementById('qrTextInput');
+      if (textInput) textInput.value = pendingHandoff.text;
+      showToast('Đã nhận nội dung tạo mã QR', 'info');
+      if (onReRender) onReRender();
+    }
+  }
+
   const activeBtn = document.querySelector(`.btn-qr-tab[data-qr-tab="${qrState.activeTab}"]`);
   if (activeBtn) {
     activeBtn.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
 
   if (qrState.activeTab === 'url' && qrState.dynamic?.createdQr) {
-    renderStyledQrToContainer('dynamicQrCanvasContainer');
+    renderStyledQrToContainer('qrStyledCanvasContainer');
+  } else if (qrState.activeTab !== 'url' && qrState.generatedResult) {
+    renderStyledQrToContainer('qrStyledCanvasContainer');
   }
 
   // 1. Tab switches (Creation tabs only)
@@ -61,6 +90,7 @@ export function attachQrStudioListeners(onReRender) {
     btn.addEventListener('click', () => {
       const targetTab = btn.dataset.qrTab;
       if (targetTab && targetTab !== qrState.activeTab) {
+        syncStaticInputsFromDom();
         qrState.activeTab = targetTab;
         qrState.error = null;
         persistQrState();
@@ -82,6 +112,9 @@ export function attachQrStudioListeners(onReRender) {
   } else {
     bindStaticEvents(onReRender);
   }
+
+  // 3. Shared styling accordion events across all 5 creation tabs
+  bindStylingEvents(onReRender);
 
   // 3. Dismiss Error
   on('btnDismissQrError', 'click', () => {
@@ -177,108 +210,6 @@ function bindDynamicEvents(onReRender) {
     handleCreateDynamicQr(onReRender);
   });
 
-  on('btnToggleQrStyling', 'click', () => {
-    qrState.styling.isExpanded = !qrState.styling.isExpanded;
-    const content = document.getElementById('qrStylingCollapseContent');
-    const icon = document.getElementById('iconToggleQrStyling');
-    if (content) {
-      content.classList.toggle('hidden', !qrState.styling.isExpanded);
-    }
-    if (icon) {
-      icon.setAttribute('data-lucide', qrState.styling.isExpanded ? 'chevron-up' : 'chevron-down');
-      if (window.lucide) window.lucide.createIcons({ root: icon.parentElement });
-    }
-    persistQrState();
-  });
-
-  on('btnResetQrToStandard', 'click', () => {
-    qrState.styling.isCustomized = false;
-    qrState.styling.dotType = 'square';
-    qrState.styling.cornerSquareType = 'square';
-    qrState.styling.cornerDotType = 'square';
-    qrState.styling.dotColor = '#000000';
-    qrState.styling.useGradient = false;
-    qrState.styling.logoUrl = null;
-    persistQrState();
-    showToast('Đã đặt lại về chuẩn QR mặc định', 'info');
-    if (onReRender) onReRender();
-  });
-
-  document.querySelectorAll('.btn-dot-type').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      qrState.styling.dotType = btn.dataset.dotType;
-      qrState.styling.isCustomized = true;
-      persistQrState();
-      if (onReRender) onReRender();
-    });
-  });
-
-  on('chkUseGradient', 'change', (e) => {
-    qrState.styling.useGradient = e.target.checked;
-    qrState.styling.isCustomized = true;
-    persistQrState();
-    if (onReRender) onReRender();
-  });
-
-  on('qrGradientStart', 'change', (e) => {
-    qrState.styling.gradientStart = e.target.value;
-    qrState.styling.isCustomized = true;
-    persistQrState();
-    if (onReRender) onReRender();
-  });
-
-  on('qrGradientEnd', 'change', (e) => {
-    qrState.styling.gradientEnd = e.target.value;
-    qrState.styling.isCustomized = true;
-    persistQrState();
-    if (onReRender) onReRender();
-  });
-
-  document.querySelectorAll('.btn-preset-dot-color').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      qrState.styling.dotColor = btn.dataset.dotColor;
-      qrState.styling.isCustomized = true;
-      persistQrState();
-      if (onReRender) onReRender();
-    });
-  });
-
-  on('qrDotColor', 'change', (e) => {
-    qrState.styling.dotColor = e.target.value;
-    qrState.styling.isCustomized = true;
-    persistQrState();
-    if (onReRender) onReRender();
-  });
-
-  document.querySelectorAll('.btn-corner-square').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      qrState.styling.cornerSquareType = btn.dataset.cornerSquare;
-      qrState.styling.isCustomized = true;
-      persistQrState();
-      if (onReRender) onReRender();
-    });
-  });
-
-  on('dynamicLogoInput', 'change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        qrState.styling.logoUrl = event.target.result;
-        qrState.styling.isCustomized = true;
-        persistQrState();
-        if (onReRender) onReRender();
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  on('btnRemoveDynamicLogo', 'click', () => {
-    qrState.styling.logoUrl = null;
-    persistQrState();
-    if (onReRender) onReRender();
-  });
-
   if (qrState.dynamic.createdQr) {
     on('btnRefreshAnalytics', 'click', () => {
       handleRefreshAnalytics(onReRender);
@@ -319,6 +250,125 @@ function bindDynamicEvents(onReRender) {
     qrState.dynamic.createdQr = null;
     persistQrState();
     showToast('Đã chuyển mã QR vào thùng rác', 'info');
+    if (onReRender) onReRender();
+  });
+}
+
+/**
+ * Binds shared event listeners for QR Styling Accordion across all 5 creation tabs.
+ * @param {() => void} [onReRender]
+ */
+function bindStylingEvents(onReRender) {
+  on('btnToggleQrStyling', 'click', () => {
+    syncStaticInputsFromDom();
+    qrState.styling.isExpanded = !qrState.styling.isExpanded;
+    const content = document.getElementById('qrStylingCollapseContent');
+    const icon = document.getElementById('iconToggleQrStyling');
+    if (content) {
+      content.classList.toggle('hidden', !qrState.styling.isExpanded);
+    }
+    if (icon) {
+      icon.setAttribute('data-lucide', qrState.styling.isExpanded ? 'chevron-up' : 'chevron-down');
+      if (window.lucide) window.lucide.createIcons({ root: icon.parentElement });
+    }
+    persistQrState();
+  });
+
+  on('btnResetQrToStandard', 'click', () => {
+    syncStaticInputsFromDom();
+    qrState.styling.isCustomized = false;
+    qrState.styling.dotType = 'square';
+    qrState.styling.cornerSquareType = 'square';
+    qrState.styling.cornerDotType = 'square';
+    qrState.styling.dotColor = '#000000';
+    qrState.styling.useGradient = false;
+    qrState.styling.logoUrl = null;
+    persistQrState();
+    showToast('Đã đặt lại về chuẩn QR mặc định', 'info');
+    if (onReRender) onReRender();
+  });
+
+  document.querySelectorAll('.btn-dot-type').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      syncStaticInputsFromDom();
+      qrState.styling.dotType = btn.dataset.dotType;
+      qrState.styling.isCustomized = true;
+      persistQrState();
+      if (onReRender) onReRender();
+    });
+  });
+
+  on('chkUseGradient', 'change', (e) => {
+    syncStaticInputsFromDom();
+    qrState.styling.useGradient = e.target.checked;
+    qrState.styling.isCustomized = true;
+    persistQrState();
+    if (onReRender) onReRender();
+  });
+
+  on('qrGradientStart', 'change', (e) => {
+    syncStaticInputsFromDom();
+    qrState.styling.gradientStart = e.target.value;
+    qrState.styling.isCustomized = true;
+    persistQrState();
+    if (onReRender) onReRender();
+  });
+
+  on('qrGradientEnd', 'change', (e) => {
+    syncStaticInputsFromDom();
+    qrState.styling.gradientEnd = e.target.value;
+    qrState.styling.isCustomized = true;
+    persistQrState();
+    if (onReRender) onReRender();
+  });
+
+  document.querySelectorAll('.btn-preset-dot-color').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      syncStaticInputsFromDom();
+      qrState.styling.dotColor = btn.dataset.dotColor;
+      qrState.styling.isCustomized = true;
+      persistQrState();
+      if (onReRender) onReRender();
+    });
+  });
+
+  on('qrDotColor', 'change', (e) => {
+    syncStaticInputsFromDom();
+    qrState.styling.dotColor = e.target.value;
+    qrState.styling.isCustomized = true;
+    persistQrState();
+    if (onReRender) onReRender();
+  });
+
+  document.querySelectorAll('.btn-corner-square').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      syncStaticInputsFromDom();
+      qrState.styling.cornerSquareType = btn.dataset.cornerSquare;
+      qrState.styling.isCustomized = true;
+      persistQrState();
+      if (onReRender) onReRender();
+    });
+  });
+
+  on('dynamicLogoInput', 'change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      syncStaticInputsFromDom();
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        qrState.styling.logoUrl = event.target.result;
+        qrState.styling.isCustomized = true;
+        persistQrState();
+        if (onReRender) onReRender();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  on('btnRemoveDynamicLogo', 'click', () => {
+    syncStaticInputsFromDom();
+    qrState.styling.logoUrl = null;
+    persistQrState();
     if (onReRender) onReRender();
   });
 }
@@ -412,60 +462,17 @@ function bindStaticEvents(onReRender) {
     });
   });
 
-  document.querySelectorAll('.btn-color-preset').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      qrState.colorDark = btn.dataset.colorDark;
-      persistQrState();
-      if (onReRender) onReRender();
-    });
-  });
-
-  const customColorInput = document.getElementById('qrCustomColorDark');
-  if (customColorInput) {
-    customColorInput.addEventListener('input', (e) => {
-      qrState.colorDark = e.target.value;
-      persistQrState();
-    });
-    customColorInput.addEventListener('change', () => {
-      persistQrState();
-      if (onReRender) onReRender();
-    });
-  }
-
   on('btnGenerateQr', 'click', () => {
     generateQrCode(onReRender);
   });
 
   if (qrState.generatedResult) {
     on('btnDownloadQr', 'click', () => {
-      downloadGeneratedQr();
+      downloadStyledQr(qrState.format);
     });
 
-    on('btnCopyQrData', 'click', async () => {
-      try {
-        const { format, dataUrl, content } = qrState.generatedResult;
-        let blob = null;
-        if (format === 'png' && dataUrl) {
-          try {
-            const res = await fetch(dataUrl);
-            blob = await res.blob();
-          } catch {
-            // Fetch blob error fallback
-          }
-        }
-        const res = await copyQrImageOrFallback({ blob, dataUrl, text: content });
-        if (res.success) {
-          if (res.mode === 'image') {
-            showToast('Đã sao chép ảnh QR', 'success');
-          } else {
-            showToast('Đã sao chép nội dung', 'success');
-          }
-        } else {
-          showToast('Không thể sao chép', 'error');
-        }
-      } catch {
-        showToast('Không thể sao chép vào clipboard', 'error');
-      }
+    on('btnCopyQrData', 'click', () => {
+      copyStyledQrImage();
     });
 
     on('btnTrashStaticQr', 'click', async () => {

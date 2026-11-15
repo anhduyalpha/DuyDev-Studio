@@ -18,8 +18,10 @@ import {
 import { drawLoupe, updatePixelInspectorHud } from '../components/ViewSplitPixelInspector.js';
 import {
   downloadComparisonImage,
-  copyComparisonImageToClipboard
+  copyComparisonImageToClipboard,
+  saveComparisonImageToDrive
 } from '../utilities/viewSplitCompositor.js';
+import { consumeHandoff } from '../../../../utilities/toolHandoff.js';
 import { toggleTheme } from '../../../../hooks/useTheme.js';
 
 /**
@@ -31,10 +33,24 @@ import { toggleTheme } from '../../../../hooks/useTheme.js';
  */
 export function attachViewSplitDomListeners(store, onReRender) {
   let isAlive = true;
+  let isDirty = true;
+  let rafPending = false;
   let rafId = null;
+  let zoomBadgeDirty = true;
+  let cachedCanvasRect = null;
+  let cachedOverlayRect = null;
   const paneBlobUrls = new Map();
   let scratchCanvas = null;
   let scratchCtx = null;
+
+  function requestRender() {
+    if (!isAlive) return;
+    isDirty = true;
+    if (!rafPending) {
+      rafPending = true;
+      rafId = requestAnimationFrame(renderCanvasFrame);
+    }
+  }
 
   // Helper to load File or Blob into an HTMLImageElement
   const loadImageSource = (src, meta = {}) => {
@@ -236,19 +252,50 @@ export function attachViewSplitDomListeners(store, onReRender) {
       requestAnimationFrame(() => {
         syncActivePaneUI(store.activePaneId);
       });
+      zoomBadgeDirty = true;
+      requestRender();
     } catch (err) {
       console.error('[ViewSplit] Error loading image:', err);
       showToast('Lỗi khi nạp ảnh', 'error');
     }
   };
 
+  // Consume cross-tool handoff if arriving from another tool
+  const pendingHandoff = consumeHandoff('view-split');
+  if (pendingHandoff) {
+    if (pendingHandoff.file) {
+      loadAndAssignImage(store.activePaneId, pendingHandoff.file, pendingHandoff.fileName || pendingHandoff.file.name);
+    } else if (pendingHandoff.blob) {
+      loadAndAssignImage(store.activePaneId, pendingHandoff.blob, pendingHandoff.fileName || 'image.png');
+    } else if (pendingHandoff.url) {
+      loadAndAssignImage(store.activePaneId, pendingHandoff.url, pendingHandoff.fileName || 'image.png');
+    } else if (pendingHandoff.fileId) {
+      const url = `/api/v1/files/download/${encodeURIComponent(pendingHandoff.fileId)}`;
+      loadAndAssignImage(store.activePaneId, url, pendingHandoff.fileName || 'image.png');
+    }
+  }
+
   // ─── 1. RAF Canvas Render Loop ───
   const renderCanvasFrame = () => {
-    if (!isAlive) return;
-    if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) {
+    if (!isAlive) {
+      rafPending = false;
       rafId = null;
       return;
     }
+    if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) {
+      rafPending = false;
+      rafId = null;
+      return;
+    }
+    if (!isDirty) {
+      rafPending = false;
+      rafId = null;
+      return;
+    }
+
+    isDirty = false;
+    rafPending = false;
+    rafId = null;
 
     const dpr = window.devicePixelRatio || 1;
 
@@ -437,23 +484,34 @@ export function attachViewSplitDomListeners(store, onReRender) {
       updatePixelInspectorHud(store.pixelInspectorState, activeTitle);
     }
 
-    // D. Update Live Zoom Percentage Badges across panes
-    store.panes.forEach((p) => {
-      const zoomBadge = document.getElementById(`viewsplit-zoom-badge-${p.id}`);
-      if (zoomBadge) {
-        zoomBadge.textContent = `${Math.round(p.zoom * 100)}%`;
-      }
+    // D. Update Live Zoom Percentage Badges across panes only when dirty
+    if (zoomBadgeDirty) {
+      zoomBadgeDirty = false;
+      store.panes.forEach((p) => {
+        const zoomBadge = document.getElementById(`viewsplit-zoom-badge-${p.id}`);
+        if (zoomBadge) {
+          zoomBadge.textContent = `${Math.round(p.zoom * 100)}%`;
+        }
+      });
+    }
+
+    // Check if any pane image is an active playing video element
+    const hasPlayingVideo = store.panes.some((p) => {
+      const el = p.image;
+      return el && (el.tagName === 'VIDEO' || (typeof HTMLVideoElement !== 'undefined' && el instanceof HTMLVideoElement)) && !el.paused && !el.ended;
     });
 
-    rafId = requestAnimationFrame(renderCanvasFrame);
+    if (hasPlayingVideo) {
+      requestRender();
+    }
   };
 
-  rafId = requestAnimationFrame(renderCanvasFrame);
+  requestRender();
 
   const onVisibilityChange = () => {
     if (!isAlive) return;
-    if (typeof document !== 'undefined' && !document.hidden && !rafId) {
-      rafId = requestAnimationFrame(renderCanvasFrame);
+    if (typeof document !== 'undefined' && !document.hidden) {
+      requestRender();
     }
   };
   document.addEventListener('visibilitychange', onVisibilityChange);
@@ -482,6 +540,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
     );
 
     store.setTransform(pane.id, zoom, panX, panY, rect.width, rect.height);
+    zoomBadgeDirty = true;
+    requestRender();
   };
 
   // ─── 3. Mouse Drag (Pan) & Move (Cursor / Loupe) ───
@@ -545,9 +605,11 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const canvas = e.target.closest('.viewsplit-canvas, #viewsplit-overlay-canvas');
     if (!canvas) return;
 
+    cachedCanvasRect = canvas.getBoundingClientRect();
+
     let paneId;
     if (canvas.id === 'viewsplit-overlay-canvas') {
-      const rect = canvas.getBoundingClientRect();
+      const rect = cachedCanvasRect;
       const vx = e.clientX - rect.left;
       const splitX = rect.width * store.sliderPos;
       paneId = (store.layout === LAYOUT_MODES.SLIDER && vx >= splitX) ? 2 : 1;
@@ -566,6 +628,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
   };
 
   const onMouseMove = (e) => {
+    let mutated = false;
+
     // Handle Pan dragging
     if (isDragging && activeDragPaneId !== null) {
       const pane = store.getPane(activeDragPaneId);
@@ -574,7 +638,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         const deltaY = e.clientY - dragStartY;
         const canvas = document.querySelector(`.viewsplit-canvas[data-pane-id="${pane.id}"]`) ||
                        document.getElementById('viewsplit-overlay-canvas');
-        const rect = canvas ? canvas.getBoundingClientRect() : { width: 800, height: 600 };
+        const rect = cachedCanvasRect || (canvas ? canvas.getBoundingClientRect() : { width: 800, height: 600 });
 
         store.setTransform(
           pane.id,
@@ -584,13 +648,14 @@ export function attachViewSplitDomListeners(store, onReRender) {
           rect.width,
           rect.height
         );
+        mutated = true;
       }
     }
 
     // Handle Cursor Tracking & Loupe inspection
     const canvas = e.target.closest('.viewsplit-canvas, #viewsplit-overlay-canvas');
     if (canvas) {
-      const rect = canvas.getBoundingClientRect();
+      const rect = cachedCanvasRect || (cachedCanvasRect = canvas.getBoundingClientRect());
       const vx = e.clientX - rect.left;
       const vy = e.clientY - rect.top;
 
@@ -603,19 +668,31 @@ export function attachViewSplitDomListeners(store, onReRender) {
       }
 
       store.updateCursor(paneId, vx, vy, true);
+      mutated = true;
     } else {
-      store.clearAllCursors();
+      if (store.panes.some((p) => p.cursor.inside)) {
+        store.clearAllCursors();
+        mutated = true;
+      }
+      cachedCanvasRect = null;
+    }
+
+    if (mutated) {
+      requestRender();
     }
   };
 
   const onMouseUp = () => {
     isDragging = false;
     activeDragPaneId = null;
+    cachedCanvasRect = null;
   };
 
   const onWindowMouseLeave = (e) => {
     if (!e.relatedTarget || e.relatedTarget.nodeName === 'HTML') {
       store.clearAllCursors();
+      cachedCanvasRect = null;
+      requestRender();
     }
   };
 
@@ -627,6 +704,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (!divider) return;
     e.preventDefault();
     isDraggingSlider = true;
+    const overlay = document.querySelector('.viewsplit-overlay-container');
+    if (overlay) cachedOverlayRect = overlay.getBoundingClientRect();
   };
 
   const onSliderMouseMove = (e) => {
@@ -634,7 +713,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const overlay = document.querySelector('.viewsplit-overlay-container');
     if (!overlay) return;
 
-    const rect = overlay.getBoundingClientRect();
+    const rect = cachedOverlayRect || (cachedOverlayRect = overlay.getBoundingClientRect());
     const pos = (e.clientX - rect.left) / rect.width;
     store.setSliderPos(pos);
 
@@ -646,10 +725,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (sliderBadge) {
       sliderBadge.textContent = `${Math.round(store.sliderPos * 100)}%`;
     }
+    requestRender();
   };
 
   const onSliderMouseUp = () => {
     isDraggingSlider = false;
+    cachedOverlayRect = null;
   };
 
   const onSliderTouchStart = (e) => {
@@ -657,6 +738,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (!divider || e.touches.length !== 1) return;
     e.preventDefault();
     isDraggingSlider = true;
+    const overlay = document.querySelector('.viewsplit-overlay-container');
+    if (overlay) cachedOverlayRect = overlay.getBoundingClientRect();
   };
 
   const onSliderTouchMove = (e) => {
@@ -665,7 +748,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (!overlay) return;
 
     e.preventDefault();
-    const rect = overlay.getBoundingClientRect();
+    const rect = cachedOverlayRect || (cachedOverlayRect = overlay.getBoundingClientRect());
     const pos = (e.touches[0].clientX - rect.left) / rect.width;
     store.setSliderPos(pos);
 
@@ -677,10 +760,12 @@ export function attachViewSplitDomListeners(store, onReRender) {
     if (sliderBadge) {
       sliderBadge.textContent = `${Math.round(store.sliderPos * 100)}%`;
     }
+    requestRender();
   };
 
   const onSliderTouchEnd = () => {
     isDraggingSlider = false;
+    cachedOverlayRect = null;
   };
 
   // ─── 4b. Draggable Pixel Inspector HUD ───
@@ -809,6 +894,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const canvas = e.target.closest('.viewsplit-canvas, #viewsplit-overlay-canvas');
     if (!canvas) return;
 
+    cachedCanvasRect = canvas.getBoundingClientRect();
+
     const paneId = canvas.id === 'viewsplit-overlay-canvas' ? 1 : parseInt(canvas.dataset.paneId, 10);
     const pane = store.getPane(paneId);
     if (!pane) return;
@@ -827,7 +914,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
       initialTouchDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       initialTouchZoom = pane.zoom;
 
-      const rect = canvas.getBoundingClientRect();
+      const rect = cachedCanvasRect;
       touchAnchor = {
         x: (t1.clientX + t2.clientX) / 2 - rect.left,
         y: (t1.clientY + t2.clientY) / 2 - rect.top
@@ -843,7 +930,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const pane = store.getPane(paneId);
     if (!pane) return;
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = cachedCanvasRect || (cachedCanvasRect = canvas.getBoundingClientRect());
 
     if (e.touches.length === 1 && isDragging) {
       e.preventDefault();
@@ -857,6 +944,8 @@ export function attachViewSplitDomListeners(store, onReRender) {
         rect.width,
         rect.height
       );
+      zoomBadgeDirty = true;
+      requestRender();
     } else if (e.touches.length === 2 && initialTouchDistance > 0) {
       e.preventDefault();
       const t1 = e.touches[0];
@@ -872,12 +961,15 @@ export function attachViewSplitDomListeners(store, onReRender) {
       );
 
       store.setTransform(pane.id, zoom, panX, panY, rect.width, rect.height);
+      zoomBadgeDirty = true;
+      requestRender();
     }
   };
 
   const onTouchEnd = () => {
     isDragging = false;
     initialTouchDistance = 0;
+    cachedCanvasRect = null;
   };
 
   // ─── 6. Action Delegation (Click Handlers) ───
@@ -939,6 +1031,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         if (paneId && paneId >= 1 && paneId <= store.getVisiblePaneCount()) {
           store.setActivePane(paneId);
           syncActivePaneUI(paneId);
+          requestRender();
         }
         break;
       }
@@ -946,6 +1039,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
       case 'toggle-theme': {
         toggleTheme();
         onReRender();
+        requestRender();
         break;
       }
 
@@ -953,45 +1047,56 @@ export function attachViewSplitDomListeners(store, onReRender) {
         const newLayout = btn.dataset.layout;
         store.setLayout(newLayout);
         onReRender();
+        requestRender();
         break;
       }
 
       case 'toggle-sync-view': {
         store.toggleSyncView();
         onReRender();
+        requestRender();
         break;
       }
 
       case 'toggle-sync-cursor': {
         store.toggleSyncCursor();
         onReRender();
+        requestRender();
         break;
       }
 
       case 'toggle-filter': {
         store.toggleFilter();
         onReRender();
+        requestRender();
         break;
       }
 
       case 'toggle-inspector': {
         store.toggleInspector();
         onReRender();
+        requestRender();
         break;
       }
 
       case 'fit-all': {
         store.fitAll();
+        zoomBadgeDirty = true;
+        requestRender();
         break;
       }
 
       case 'actual-size': {
         store.actualSize();
+        zoomBadgeDirty = true;
+        requestRender();
         break;
       }
 
       case 'reset-view': {
         store.resetView();
+        zoomBadgeDirty = true;
+        requestRender();
         break;
       }
 
@@ -1046,6 +1151,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         store.setActivePane(paneId);
         syncActivePaneUI(paneId);
         onReRender();
+        requestRender();
         break;
       }
 
@@ -1075,6 +1181,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
 
         showToast('Đã đảo vị trí Pane A và Pane B', 'info');
         onReRender();
+        requestRender();
         break;
       }
 
@@ -1114,6 +1221,17 @@ export function attachViewSplitDomListeners(store, onReRender) {
         showToast('Đang tải ảnh so sánh...', 'info');
         const isDark = document.documentElement.classList.contains('dark');
         await downloadComparisonImage(store.panes, store.layout, {
+          sliderPos: store.sliderPos,
+          diffMultiplier: store.diffMultiplier,
+          filter: store.filter,
+          background: isDark ? '#09090B' : '#F4F4F6'
+        });
+        break;
+      }
+
+      case 'save-drive-composite': {
+        const isDark = document.documentElement.classList.contains('dark');
+        await saveComparisonImageToDrive(store.panes, store.layout, {
           sliderPos: store.sliderPos,
           diffMultiplier: store.diffMultiplier,
           filter: store.filter,
@@ -1164,6 +1282,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
         store.setActivePane(paneId);
         syncActivePaneUI(paneId);
         onReRender();
+        requestRender();
         break;
       }
     }
@@ -1173,6 +1292,7 @@ export function attachViewSplitDomListeners(store, onReRender) {
   const onInput = (e) => {
     if (e.target.dataset.action === 'set-diff-multiplier') {
       store.setDiffMultiplier(parseInt(e.target.value, 10));
+      requestRender();
     }
   };
 
@@ -1266,22 +1386,32 @@ export function attachViewSplitDomListeners(store, onReRender) {
     const key = e.key.toLowerCase();
     if (key === 'f') {
       store.fitAll();
+      zoomBadgeDirty = true;
+      requestRender();
     } else if (key === '1') {
       store.actualSize();
+      zoomBadgeDirty = true;
+      requestRender();
     } else if (key === 'r') {
       store.resetView();
+      zoomBadgeDirty = true;
+      requestRender();
     } else if (key === 's') {
       store.toggleSyncView();
       onReRender();
+      requestRender();
     } else if (key === 'c') {
       store.toggleSyncCursor();
       onReRender();
+      requestRender();
     } else if (key === 'n') {
       store.toggleFilter();
       onReRender();
+      requestRender();
     } else if (key === 'i') {
       store.toggleInspector();
       onReRender();
+      requestRender();
     }
   };
 
@@ -1368,17 +1498,47 @@ export function attachViewSplitDomListeners(store, onReRender) {
   const onThemeChange = () => {
     if (isAlive) {
       onReRender();
+      requestRender();
     }
   };
   window.addEventListener('ds-theme-change', onThemeChange);
 
   window.addEventListener('keydown', onKeyDown);
 
+  const onResize = () => {
+    cachedCanvasRect = null;
+    cachedOverlayRect = null;
+    requestRender();
+  };
+  window.addEventListener('resize', onResize);
+
+  let resizeObserver = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      onResize();
+    });
+    const rootEl = document.getElementById('viewsplit-root') || document.querySelector('.viewsplit-container') || (typeof document !== 'undefined' ? document.body : null);
+    if (rootEl) {
+      resizeObserver.observe(rootEl);
+    }
+  }
+
   // Return cleanup function
   return () => {
     isAlive = false;
-    if (rafId) cancelAnimationFrame(rafId);
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    rafPending = false;
     window.removeEventListener('ds-theme-change', onThemeChange);
+    window.removeEventListener('resize', onResize);
+    if (resizeObserver) {
+      try { resizeObserver.disconnect(); } catch {}
+      resizeObserver = null;
+    }
+    cachedCanvasRect = null;
+    cachedOverlayRect = null;
 
     window.removeEventListener('wheel', onWheel);
     window.removeEventListener('mousedown', onMouseDown);

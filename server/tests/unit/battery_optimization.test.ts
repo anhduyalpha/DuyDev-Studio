@@ -27,6 +27,16 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const formatSelectorPath = path.join(rootDir, 'src/components/tools/converter/components/FormatSelector.js');
   const viewSplitSliderOverlayPath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js');
   const viewSplitPanePath = path.join(rootDir, 'src/components/tools/viewsplit/components/ViewSplitPane.js');
+  const cardTiersPath = path.join(rootDir, 'src/styles/card-tiers-10.css');
+  const toolRegistryPath = path.join(rootDir, 'src/hooks/useToolRegistry.js');
+  const storagePagePath = path.join(rootDir, 'src/pages/StoragePage.js');
+  const quizListenersPath = path.join(rootDir, 'src/components/tools/quiz/hooks/useQuizListeners.js');
+  const serverPagePath = path.join(rootDir, 'src/pages/ServerPage.js');
+  const archivePagePath = path.join(rootDir, 'src/pages/ArchivePage.js');
+  const scribdWorkspacePath = path.join(rootDir, 'src/components/tools/scribd/ScribdWorkspace.js');
+  const youtubeWorkspacePath = path.join(rootDir, 'src/components/tools/youtube/YoutubeWorkspace.js');
+  const pdfDomPath = path.join(rootDir, 'src/components/tools/pdf/hooks/usePdfDom.js');
+  const tiktokWorkspacePath = path.join(rootDir, 'src/components/tools/tiktok/TiktokWorkspace.js');
 
   const swContent = fs.readFileSync(swPath, 'utf-8');
   const indexContent = fs.readFileSync(indexPath, 'utf-8');
@@ -48,6 +58,16 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
   const formatSelectorContent = fs.readFileSync(formatSelectorPath, 'utf-8');
   const viewSplitSliderOverlayContent = fs.readFileSync(viewSplitSliderOverlayPath, 'utf-8');
   const viewSplitPaneContent = fs.readFileSync(viewSplitPanePath, 'utf-8');
+  const cardTiersContent = fs.readFileSync(cardTiersPath, 'utf-8');
+  const toolRegistryContent = fs.readFileSync(toolRegistryPath, 'utf-8');
+  const storagePageContent = fs.readFileSync(storagePagePath, 'utf-8');
+  const quizListenersContent = fs.readFileSync(quizListenersPath, 'utf-8');
+  const serverPageContent = fs.readFileSync(serverPagePath, 'utf-8');
+  const archivePageContent = fs.readFileSync(archivePagePath, 'utf-8');
+  const scribdWorkspaceContent = fs.readFileSync(scribdWorkspacePath, 'utf-8');
+  const youtubeWorkspaceContent = fs.readFileSync(youtubeWorkspacePath, 'utf-8');
+  const pdfDomContent = fs.readFileSync(pdfDomPath, 'utf-8');
+  const tiktokWorkspaceContent = fs.readFileSync(tiktokWorkspacePath, 'utf-8');
 
   describe('1. Fastify Static Tiered Caching & ETag (Pillar 1)', () => {
     let app: FastifyInstance;
@@ -394,6 +414,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
     it('index.html must reference matching version for all critical CSS and app.js bundles', () => {
       const match = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v(\d+\.\d+)['"]/);
       const v = match ? match[1] : '21.3';
+      expect(indexContent).toContain(`href="src/styles/tailwind.generated.css?v=${v}"`);
       expect(indexContent).toContain(`href="src/styles/stitch-tokens.css?v=${v}"`);
       expect(indexContent).toContain(`href="src/styles/studocu.css?v=${v}"`);
       expect(indexContent).toContain(`href="src/styles/highlight-theme.css?v=${v}"`);
@@ -403,6 +424,7 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
     it('sw.js ASSETS_TO_PRECACHE must reference matching version', () => {
       const match = swContent.match(/const CACHE_NAME = ['"]duydev-studio-v(\d+\.\d+)['"]/);
       const v = match ? match[1] : '21.3';
+      expect(swContent).toContain(`'./src/styles/tailwind.generated.css?v=${v}'`);
       expect(swContent).toContain(`'./src/styles/stitch-tokens.css?v=${v}'`);
       expect(swContent).toContain(`'./src/styles/studocu.css?v=${v}'`);
       expect(swContent).toContain(`'./src/styles/highlight-theme.css?v=${v}'`);
@@ -413,6 +435,88 @@ describe('Battery & Hardware Power Optimization Verification Suite', () => {
       const sameOriginSection = swContent.slice(swContent.indexOf('// 3. Same-origin assets:'));
       expect(sameOriginSection).toContain("fetch(event.request, { cache: 'no-cache' })");
       expect(sameOriginSection).toContain("fetch(event.request)");
+    });
+  });
+
+  describe('6. Dashboard 10-Tier Visual Fidelity, 3-Signal Pause & Observer Lifecycle (Pillar 6)', () => {
+    it('useToolRegistry.js must NOT contain any global layout setInterval(..., 12000) and must bind ResizeObserver for responsive layout sync', () => {
+      expect(toolRegistryContent).not.toMatch(/setInterval\([^,]+,\s*12000\)/);
+      expect(toolRegistryContent).toContain('ResizeObserver');
+    });
+
+    it('DashboardPage.js must initialize IntersectionObserver with rootMargin 80px toggling .tier-offscreen and disconnect on unmount cleanup', () => {
+      expect(dashboardContent).toContain('IntersectionObserver');
+      expect(dashboardContent).toContain("rootMargin: '80px'");
+      expect(dashboardContent).toContain('tier-offscreen');
+      expect(dashboardContent).toContain('tierObserver.disconnect()');
+    });
+
+    it('card-tiers-10.css must keep 10-Tier visuals while pausing animations under .tier-offscreen, html.app-backgrounded, and html.ds-animations-paused', () => {
+      // Must preserve Tier visuals (gradients, shines, particles)
+      expect(cardTiersContent).toContain('.tier-card.tier-ex');
+      expect(cardTiersContent).toContain('.tier-card.tier-ur');
+      expect(cardTiersContent).toContain('.tier-card.tier-lr');
+
+      // Static corner plates must NOT be forced into GPU compositor layers with will-change
+      expect(cardTiersContent).not.toMatch(/\.tier-card\s+\.corner-plate[^{]*\{[^}]*will-change/);
+
+      // Must pause animations under all 3 signals: .tier-offscreen, html.app-backgrounded, html.ds-animations-paused
+      expect(cardTiersContent).toContain('tier-offscreen');
+      expect(cardTiersContent).toContain('html.app-backgrounded');
+      expect(cardTiersContent).toContain('html.ds-animations-paused');
+      expect(cardTiersContent).toContain('animation-play-state: paused !important;');
+    });
+
+    it('app.js must synchronize both html.app-backgrounded and html.ds-animations-paused across visibilitychange, ds:native-app-paused, and ds:native-app-resumed', () => {
+      expect(appJsContent).toContain("classList.add('ds-animations-paused')");
+      expect(appJsContent).toContain("classList.remove('ds-animations-paused')");
+      expect(appJsContent).toContain("classList.toggle('ds-animations-paused'");
+    });
+
+    it('stitch-tokens.css must pause animations and disable transitions under html.ds-animations-paused', () => {
+      expect(stitchContent).toContain('html.ds-animations-paused');
+    });
+  });
+
+  describe('7. Scoped Lucide DOM Mutex & Admin SVG Gauge Diffing (Task 3.3)', () => {
+    it('AdminPage.js, StoragePage.js, and polling/workspace tools must have zero bare lucide.createIcons() calls without { root }', () => {
+      const bareCreateIconsRegex = /createIcons\s*\(\s*(?!\s*\{\s*root\s*:)/;
+
+      const targetFiles = [
+        { name: 'AdminPage.js', content: adminPageContent },
+        { name: 'StoragePage.js', content: storagePageContent },
+        { name: 'useQuizListeners.js', content: quizListenersContent },
+        { name: 'ServerPage.js', content: serverPageContent },
+        { name: 'ArchivePage.js', content: archivePageContent },
+        { name: 'ScribdWorkspace.js', content: scribdWorkspaceContent },
+        { name: 'YoutubeWorkspace.js', content: youtubeWorkspaceContent },
+        { name: 'usePdfDom.js', content: pdfDomContent },
+        { name: 'TiktokWorkspace.js', content: tiktokWorkspaceContent },
+      ];
+
+      for (const file of targetFiles) {
+        const match = file.content.match(bareCreateIconsRegex);
+        expect(match, `File ${file.name} contains bare unscoped createIcons() call: ${match?.[0]}`).toBeNull();
+      }
+    });
+
+    it('AdminPage.js must diff SVG gauges using lastGaugeSignature before mutating #adminGaugesContainer.innerHTML', () => {
+      expect(adminPageContent).toContain('lastGaugeSignature');
+      expect(adminPageContent).toMatch(/gaugeSignature\s*=\s*`?\${[^}]+}\|\${[^}]+}\|\${[^}]+}`?/);
+    });
+
+    it('AdminPage.js must handle ds:native-app-paused and ds:native-app-resumed with clean teardown and signature reset', () => {
+      expect(adminPageContent).toContain("window.addEventListener('ds:native-app-paused'");
+      expect(adminPageContent).toContain("window.addEventListener('ds:native-app-resumed'");
+      expect(adminPageContent).toContain("window.removeEventListener('ds:native-app-paused'");
+      expect(adminPageContent).toContain("window.removeEventListener('ds:native-app-resumed'");
+      expect(adminPageContent).toContain('lastGaugeSignature = null');
+    });
+
+    it('StoragePage.js must deduplicate back-to-back icon refreshes in loadDirectory and scope createIcons to mutated containers', () => {
+      expect(storagePageContent).not.toMatch(/rerenderContentOnly\(\);\s*if\s*\(breadcrumbEl\)[^;]+;\s*if\s*\(tabsEl\)[^;]+;\s*if\s*\(window\.lucide\)\s*window\.lucide\.createIcons\(\);/);
+      const bareCreateIconsRegex = /createIcons\s*\(\s*(?!\s*\{\s*root\s*:)/;
+      expect(storagePageContent.match(bareCreateIconsRegex)).toBeNull();
     });
   });
 });

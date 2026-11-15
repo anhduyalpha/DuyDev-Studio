@@ -4,7 +4,7 @@
  * displays preview + recommended tool actions, dispatches data to selected module.
  */
 
-import { classifySharedPayload, SharePayloadType, isBrowserThumbnailFile } from '../../utilities/shareTargetHelper.js';
+import { classifySharedPayload, SharePayloadType, isBrowserThumbnailFile, consumePendingSharedPayload } from '../../utilities/shareTargetHelper.js';
 import { formatBytes } from '../../utilities/formatters.js';
 import { detectSmartRoute, handoffSmartUrl } from '../../utilities/smartUrlRouter.js';
 
@@ -196,6 +196,9 @@ export function openShareTargetModal(payload) {
   if ((!payload.files || payload.files.length === 0) && !payload.targetRoute) {
     const smart = detectSmartRoute(payload.url || payload.text || '');
     if (smart) {
+      if (payload?.payloadId) {
+        consumePendingSharedPayload(payload.payloadId);
+      }
       document.documentElement.classList.remove('is-share-target');
       if (window.location.hash.startsWith('#share-target')) {
         history.replaceState(null, '', window.location.pathname);
@@ -218,6 +221,9 @@ export function openShareTargetModal(payload) {
 
   // If user selected an action in native bottom sheet, dispatch directly without duplicate dialog
   if (payload.targetRoute) {
+    if (payload?.payloadId) {
+      consumePendingSharedPayload(payload.payloadId);
+    }
     const targetAction = classification.recommendations.find(r => r.route === payload.targetRoute && (!payload.targetMode || r.mode === payload.targetMode))
       || classification.recommendations.find(r => r.route === payload.targetRoute)
       || { label: 'Xử lý', route: payload.targetRoute, mode: payload.targetMode };
@@ -277,6 +283,11 @@ export function openShareTargetModal(payload) {
       </div>
     </div>
   `;
+
+  // Atomic queue: invoke consumePendingSharedPayload only once mounted in DOM
+  if (payload && payload.payloadId) {
+    consumePendingSharedPayload(payload.payloadId);
+  }
 
   // Render Lucide icons safely
   triggerLucideIcons();
@@ -491,7 +502,7 @@ async function dispatchSharedPayloadToTool(action, payload) {
       case '#tool/academia-downloader': {
         const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
         if (targetUrl) {
-          handoffSmartUrl({ toolId: 'academia', route: '#tool/academia-downloader', url: targetUrl });
+          handoffSmartUrl({ toolId: 'academia', route: '#tool/academia', url: targetUrl });
         }
         break;
       }
@@ -499,7 +510,7 @@ async function dispatchSharedPayloadToTool(action, payload) {
       case '#tool/researchgate-downloader': {
         const targetUrl = url || (text?.match(/https?:\/\/\S+/)?.[0]) || text || '';
         if (targetUrl) {
-          handoffSmartUrl({ toolId: 'researchgate', route: '#tool/researchgate-downloader', url: targetUrl });
+          handoffSmartUrl({ toolId: 'researchgate', route: '#tool/researchgate', url: targetUrl });
         }
         break;
       }

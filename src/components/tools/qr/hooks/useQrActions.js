@@ -21,20 +21,155 @@ export function getActiveStyledQr() {
 }
 
 /**
- * Renders the styled dynamic QR preview into the target DOM container.
- * @param {string} containerId - Element ID of the target container
+ * Escapes special characters for standard ZXing Wi-Fi QR encoding.
+ * @param {string} str
+ * @returns {string}
  */
-export function renderStyledQrToContainer(containerId) {
+export function escapeWifiString(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/:/g, '\\:')
+    .replace(/,/g, '\\,');
+}
+
+function escapeVCard(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+/**
+ * Deterministically builds the raw QR payload string for static types.
+ * @param {any} [state=qrState]
+ * @returns {string}
+ */
+export function buildStaticQrPayload(state = qrState) {
+  if (!state) return '';
+  if (typeof state === 'string') return state;
+
+  const tab = state.activeTab || state.type || (state.wifi ? 'wifi' : state.vcard ? 'vcard' : state.vietqr ? 'vietqr' : 'text');
+
+  if (tab === 'wifi') {
+    const wifiData = state.wifi || state;
+    const ssid = escapeWifiString(wifiData.ssid || '');
+    const password = escapeWifiString(wifiData.password || '');
+    const security = wifiData.security || 'WPA';
+    const cleanSecurity = security === 'nopass' ? 'nopass' : security;
+    const hiddenPart = wifiData.hidden ? 'H:true;' : '';
+    return `WIFI:T:${cleanSecurity};S:${ssid};P:${password};${hiddenPart};`;
+  }
+
+  if (tab === 'vcard') {
+    const vcard = state.vcard || state;
+    const fullName = (vcard.fullName || '').trim();
+    if (!fullName) return '';
+
+    const nameParts = fullName.split(/\s+/);
+    let nValue = `;${escapeVCard(fullName)};;;`;
+    if (nameParts.length >= 2) {
+      const family = escapeVCard(nameParts[0]);
+      const given = escapeVCard(nameParts[nameParts.length - 1]);
+      const middle = escapeVCard(nameParts.slice(1, -1).join(' '));
+      nValue = `${family};${given};${middle};;`;
+    }
+
+    const lines = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `N;CHARSET=UTF-8:${nValue}`,
+      `FN;CHARSET=UTF-8:${escapeVCard(fullName)}`
+    ];
+    if (vcard.organization && vcard.organization.trim()) {
+      lines.push(`ORG;CHARSET=UTF-8:${escapeVCard(vcard.organization.trim())}`);
+    }
+    if (vcard.title && vcard.title.trim()) {
+      lines.push(`TITLE;CHARSET=UTF-8:${escapeVCard(vcard.title.trim())}`);
+    }
+    if (vcard.phone && vcard.phone.trim()) {
+      lines.push(`TEL;TYPE=CELL,VOICE:${vcard.phone.trim()}`);
+    }
+    if (vcard.email && vcard.email.trim()) {
+      lines.push(`EMAIL;TYPE=PREF,INTERNET:${vcard.email.trim()}`);
+    }
+    if (vcard.website && vcard.website.trim()) {
+      const rawUrl = vcard.website.trim();
+      const cleanUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+      lines.push(`URL:${cleanUrl}`);
+    }
+    lines.push('END:VCARD');
+    return lines.join('\r\n');
+  }
+
+  if (tab === 'text') {
+    const textData = state.text !== undefined ? state.text : state;
+    if (typeof textData === 'string') return textData;
+    return textData?.content || '';
+  }
+
+  if (tab === 'vietqr') {
+    if (state.generatedResult?.rawPayload) {
+      return state.generatedResult.rawPayload;
+    }
+    const v = state.vietqr || state;
+    return v?.accountNumber ? `VietQR:${v.bankBin || ''}:${v.accountNumber}` : '';
+  }
+
+  if (tab === 'url') {
+    const dyn = state.dynamic || state.url || state;
+    return dyn?.createdQr?.shortUrl || dyn?.targetUrl || '';
+  }
+
+  return '';
+}
+
+/**
+ * Renders the styled dynamic or static QR preview into the target DOM container.
+ * @param {string} [containerId='qrStyledCanvasContainer'] - Element ID of the target container
+ * @param {string} [dataString=null] - Optional raw payload string to encode
+ */
+export function renderStyledQrToContainer(containerId = 'qrStyledCanvasContainer', dataString = null) {
   try {
-    const container = document.getElementById(containerId);
-    if (!container || !window.QRCodeStyling) return;
+    const container = (typeof document !== 'undefined')
+      ? (document.getElementById(containerId)
+         || document.getElementById('qrStyledCanvasContainer')
+         || document.getElementById('dynamicQrCanvasContainer'))
+      : null;
+    if (!container) return;
 
-    const { dynamic = {}, styling = {} } = qrState;
-    if (!dynamic.createdQr) return;
+    let payload = dataString;
+    if (!payload) {
+      if (qrState.activeTab === 'url') {
+        payload = qrState.dynamic?.createdQr?.shortUrl || qrState.dynamic?.targetUrl;
+      } else if (qrState.generatedResult) {
+        payload = qrState.generatedResult.rawPayload || qrState.generatedResult.content;
+      } else {
+        payload = buildStaticQrPayload(qrState);
+      }
+    }
 
-    container.innerHTML = '';
-    const shortUrl = dynamic.createdQr.shortUrl;
+    if (!payload) return;
 
+    // Fallback when window.QRCodeStyling is unavailable
+    if (typeof window === 'undefined' || !window.QRCodeStyling) {
+      if (qrState.generatedResult?.dataUrl || qrState.generatedResult?.content) {
+        if (qrState.generatedResult.format === 'svg' && qrState.generatedResult.content?.startsWith('<svg')) {
+          container.innerHTML = `<div class="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">${qrState.generatedResult.content}</div>`;
+        } else {
+          const imgSrc = qrState.generatedResult.dataUrl || qrState.generatedResult.content;
+          container.innerHTML = `<img src="${imgSrc}" alt="QR Code" class="w-full h-full object-contain rounded-lg">`;
+        }
+      } else {
+        container.innerHTML = `<img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f4f4f5'/><text x='50' y='55' text-anchor='middle' font-size='12' fill='%2371717a'>QR Code</text></svg>" alt="QR Code" class="w-full h-full object-contain rounded-lg">`;
+      }
+      return;
+    }
+
+    const { styling = {} } = qrState;
     const isCustomized = Boolean(styling.isCustomized);
 
     const dotsOptions = {
@@ -56,7 +191,7 @@ export function renderStyledQrToContainer(containerId) {
     activeStyledQr = new window.QRCodeStyling({
       width: 250,
       height: 250,
-      data: shortUrl,
+      data: payload,
       image: (isCustomized && styling.logoUrl) ? styling.logoUrl : undefined,
       dotsOptions,
       cornersSquareOptions: {
@@ -80,7 +215,8 @@ export function renderStyledQrToContainer(containerId) {
       }
     });
 
-    if (container && typeof container.appendChild === 'function') {
+    container.innerHTML = '';
+    if (typeof activeStyledQr.append === 'function') {
       activeStyledQr.append(container);
     }
   } catch (err) {
@@ -553,9 +689,75 @@ export async function generateQrCode(onReRender) {
 }
 
 /**
+ * Downloads the styled QR code (PNG or SVG) from activeStyledQr or falls back to generatedResult.
+ * @param {'png'|'svg'} [extension]
+ */
+export async function downloadStyledQr(extension = null) {
+  const ext = extension || qrState.format || 'png';
+  if (activeStyledQr) {
+    try {
+      const filename = `qrcode-${Date.now()}`;
+      if (ext === 'png') {
+        activeStyledQr.update({ width: 1024, height: 1024 });
+        await activeStyledQr.download({ name: filename, extension: 'png' });
+        activeStyledQr.update({ width: 250, height: 250 });
+      } else {
+        await activeStyledQr.download({ name: filename, extension: 'svg' });
+      }
+      showToast(`Đã tải tệp ${ext.toUpperCase()}`, 'success');
+      return;
+    } catch (err) {
+      console.warn('[QR] activeStyledQr download failed, falling back:', err);
+    }
+  }
+  downloadGeneratedQr();
+}
+
+/**
+ * Copies the styled QR image to clipboard.
+ */
+export async function copyStyledQrImage() {
+  if (activeStyledQr) {
+    try {
+      const blob = await activeStyledQr.getRawData('png');
+      if (blob) {
+        const res = await copyQrImageOrFallback({ blob });
+        if (res.success) {
+          showToast('Đã sao chép ảnh QR vào clipboard!', 'success');
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[QR] activeStyledQr copy failed, falling back:', err);
+    }
+  }
+
+  if (qrState.generatedResult) {
+    const { format, dataUrl, content } = qrState.generatedResult;
+    let blob = null;
+    if (format === 'png' && dataUrl) {
+      try {
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+      } catch {}
+    }
+    const res = await copyQrImageOrFallback({ blob, dataUrl, text: content });
+    if (res.success) {
+      showToast(res.mode === 'image' ? 'Đã sao chép ảnh QR' : 'Đã sao chép nội dung QR', 'success');
+    } else {
+      showToast('Không thể sao chép vào clipboard', 'error');
+    }
+  }
+}
+
+/**
  * Downloads the generated static QR code (PNG or SVG).
  */
 export function downloadGeneratedQr() {
+  if (activeStyledQr) {
+    downloadStyledQr();
+    return;
+  }
   if (!qrState.generatedResult) return;
   const { format, content, dataUrl } = qrState.generatedResult;
   const filename = `qrcode-${Date.now()}.${format}`;

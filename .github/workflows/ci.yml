@@ -1,0 +1,132 @@
+name: Studio Overhaul CI & Android Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-frontend-tests:
+    name: Backend, Frontend & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Node & Python dependencies
+        run: |
+          npm ci
+          npm --prefix server ci
+          python -m pip install --upgrade pip
+          pip install python-docx pymupdf
+
+      - name: Ensure Chromium available for Markdown PDF export tests
+        run: |
+          if [ ! -x /usr/bin/google-chrome ] && [ ! -x /usr/bin/chromium ] && [ ! -x /usr/bin/chromium-browser ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq chromium-browser || sudo apt-get install -y -qq chromium
+          fi
+
+      - name: Prepare Prisma SQLite schema
+        env:
+          DATABASE_URL: "file:./dev.db"
+        run: |
+          cd server
+          npx prisma generate
+          npx prisma db push --skip-generate
+
+      - name: Verify Tailwind CSS & Instant Shell build
+        run: |
+          npm run build:shell
+          npm run build:css
+
+      - name: TypeScript typecheck & server build
+        run: |
+          ./server/node_modules/.bin/tsc -p server/tsconfig.json --noEmit
+          npm run build
+
+      - name: Verify frontend syntax, ES imports, Python & KI index
+        run: |
+          python -m py_compile engines/document/markdown_to_docx.py
+          node scripts/verify-ki-index.mjs
+          node scripts/verify_es_imports.mjs
+          find src sw.js -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Run Vitest unit & route regression suites (21 files)
+        env:
+          DATABASE_URL: "file:./dev.db"
+          NODE_ENV: "test"
+        run: |
+          ./server/node_modules/.bin/vitest run --root server \
+            tests/unit/academic_stream_guard.test.ts \
+            tests/unit/android_push_notifications.test.ts \
+            tests/unit/battery_optimization.test.ts \
+            tests/unit/compression.test.ts \
+            tests/unit/facebook_service.test.ts \
+            tests/unit/hash_streaming.test.ts \
+            tests/unit/instagram_service.test.ts \
+            tests/unit/m1_squircle_hierarchy_adversarial.test.ts \
+            tests/unit/markdown_export.test.ts \
+            tests/unit/media_url_cache.test.ts \
+            tests/unit/pdf_clipboard_paste.test.ts \
+            tests/unit/pwa_lifecycle.test.ts \
+            tests/unit/qr_universal_style.test.ts \
+            tests/unit/share_target.test.ts \
+            tests/unit/share_target_queue.test.ts \
+            tests/unit/storage.test.ts \
+            tests/unit/storage_save_artifact.test.ts \
+            tests/unit/tool_lazy_loader.test.ts \
+            tests/unit/ui_hygiene.test.ts \
+            tests/unit/viewer_hardening.test.ts \
+            tests/unit/viewsplit_dirty_render.test.ts
+
+  android-gradle-tests:
+    name: Android Kotlin Unit Tests & Debug APK Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Accept Android SDK Licenses
+        run: yes | sdkmanager --licenses 2>/dev/null || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Run Android unit tests & build Debug APK
+        run: |
+          cd android
+          gradle testDebugUnitTest assembleDebug --stacktrace --no-daemon

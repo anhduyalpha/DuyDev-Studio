@@ -7,6 +7,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
+import compress from '@fastify/compress';
 import path from 'path';
 import https from 'https';
 import { existsSync, readFileSync } from 'fs';
@@ -46,6 +47,7 @@ import { spotifyRoute } from './api/routes/spotify.route.js';
 import { slideshareRoute } from './api/routes/slideshare.route.js';
 import { academiaRoute } from './api/routes/academia.route.js';
 import { researchgateRoute } from './api/routes/researchgate.route.js';
+import { markdownRoute } from './api/routes/markdown.route.js';
 import { telemetryTracker } from './api/middleware/telemetry.middleware.js';
 import { ipAccessService } from './services/ip-access.service.js';
 import { cookieSessionIssuerHook, apiSecurityGuard, isAllowedOrigin } from './api/middleware/security.middleware.js';
@@ -249,6 +251,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(slideshareRoute);
   await app.register(academiaRoute);
   await app.register(researchgateRoute);
+  await app.register(markdownRoute);
 
   // 6.1 Web Share Target Fallback Routes
   // POST fallback (OS Share Sheet multipart POST when SW is not yet active)
@@ -328,6 +331,13 @@ function isAllowedStaticAsset(pathname: string): boolean {
     clean.startsWith('/static/') || clean.startsWith('/pdfjs/')
   );
 }
+
+  // 6.2 Global HTTP Compression (Brotli + Gzip, skips SSE text/event-stream)
+  await app.register(compress, {
+    global: true,
+    threshold: 1024,
+    encodings: ['br', 'gzip']
+  });
 
   // 7. Unified Server: Serve PWA Frontend (Single-Port Hosting)
   const clientRoot = existsSync(path.resolve(process.cwd(), 'index.html'))

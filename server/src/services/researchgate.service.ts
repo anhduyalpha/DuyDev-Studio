@@ -15,9 +15,17 @@ import { StorageManager } from '../storage/storage.manager.js';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
-import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
+import {
+  ALLOWED_RG_HOSTS,
+  resolveAcademicPdfUrl,
+  assertValidPdfResponse,
+  streamAcademicPdf,
+  DEFAULT_ACADEMIC_UA
+} from './shared/academic-stream.helper.js';
 
-const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+export { ALLOWED_RG_HOSTS };
+
+const DEFAULT_UA = DEFAULT_ACADEMIC_UA;
 
 export interface ResearchGateResolveResult {
   id: string;
@@ -207,9 +215,9 @@ export class ResearchGateService {
     const resolved = await this.resolvePublication(originalUrl || url);
     const pdfSourceUrl = resolved.pdfUrl || url;
 
-    const ALLOWED_RG_HOSTS = ['researchgate.net', 'rgcdn.net', 'openalex.org', 'unpaywall.org', 'doi.org', 'wiley.com', 'springer.com', 'sciencedirect.com', 'nature.com', 'ieee.org', 'mdpi.com', 'frontiersin.org'];
-    const safeUrl = validateSafeMediaUrl(pdfSourceUrl, ALLOWED_RG_HOSTS);
-    const res = await fetch(safeUrl, {
+    const resolvedPdfUrl = await resolveAcademicPdfUrl(pdfSourceUrl, ALLOWED_RG_HOSTS);
+
+    const res = await fetch(resolvedPdfUrl, {
       headers: {
         'User-Agent': DEFAULT_UA,
         'Accept': 'application/pdf,*/*'
@@ -217,9 +225,7 @@ export class ResearchGateService {
       signal: AbortSignal.timeout(30000)
     });
 
-    if (!res.ok) {
-      throw new BadRequestError(`Không thể tải tệp PDF từ máy chủ tài liệu (HTTP ${res.status}).`);
-    }
+    await assertValidPdfResponse(res);
 
     const fileStream = fs.createWriteStream(targetPath);
     const readable = Readable.fromWeb(res.body as any);
@@ -291,41 +297,14 @@ export class ResearchGateService {
     rangeHeader: string | undefined,
     reply: FastifyReply
   ): Promise<void> {
-    const ALLOWED_RG_HOSTS = ['researchgate.net', 'rgcdn.net', 'openalex.org', 'unpaywall.org', 'doi.org', 'wiley.com', 'springer.com', 'sciencedirect.com', 'nature.com', 'ieee.org', 'mdpi.com', 'frontiersin.org'];
-    const safeUrl = validateSafeMediaUrl(url, ALLOWED_RG_HOSTS);
-
-    const headers: Record<string, string> = {
-      'User-Agent': DEFAULT_UA
-    };
-    if (rangeHeader) {
-      headers['Range'] = rangeHeader;
-    }
-
-    const upstreamRes = await fetch(safeUrl, { headers });
-    if (!upstreamRes.ok && upstreamRes.status !== 206) {
-      throw new BadRequestError(`Upstream PDF fetch failed with status ${upstreamRes.status}`);
-    }
-
-    const contentType = upstreamRes.headers.get('content-type') || 'application/pdf';
-    const contentLength = upstreamRes.headers.get('content-length');
-    const contentRange = upstreamRes.headers.get('content-range');
-
-    const replyHeaders: Record<string, string | number> = {
-      'Content-Type': contentType,
-      'Accept-Ranges': 'bytes'
-    };
-
-    if (contentLength) replyHeaders['Content-Length'] = contentLength;
-    if (contentRange) replyHeaders['Content-Range'] = contentRange;
-
-    const disposition = isDownload ? 'attachment' : 'inline';
-    const encodedFilename = encodeURIComponent(filename || 'researchgate_paper.pdf');
-    replyHeaders['Content-Disposition'] = `${disposition}; filename*=UTF-8''${encodedFilename}`;
-
-    reply.code(upstreamRes.status);
-    reply.headers(replyHeaders);
-
-    const readable = Readable.fromWeb(upstreamRes.body as any);
-    return reply.send(readable);
+    return streamAcademicPdf(
+      url,
+      isDownload,
+      filename,
+      rangeHeader,
+      reply,
+      ALLOWED_RG_HOSTS,
+      'researchgate_paper.pdf'
+    );
   }
 }

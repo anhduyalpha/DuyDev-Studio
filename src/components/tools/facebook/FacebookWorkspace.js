@@ -12,6 +12,7 @@ import { readText } from '../../../utilities/clipboard.js';
 import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
+import { sendToTool } from '../../../utilities/toolHandoff.js';
 import {
   renderMediaHistorySection,
   attachMediaHistoryListeners,
@@ -65,11 +66,40 @@ export class FacebookWorkspace {
       }
     };
     window.addEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
+
+    this.handleGlobalPaste = (e) => {
+      if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+        return;
+      }
+      if (document.getElementById('dsModalAdminPwdInput') || document.getElementById('shareTargetPanel')) {
+        return;
+      }
+      const text = e.clipboardData?.getData('text') || '';
+      const cleanUrl = this.sanitizeUrl(text);
+      if (cleanUrl) {
+        e.preventDefault();
+        this.url = cleanUrl;
+        const input = this.container.querySelector('#fbUrlInput');
+        if (input) input.value = this.url;
+        this.updateInputActions();
+        this.resolveVideo();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('paste', this.handleGlobalPaste);
+    }
   }
 
   unmount() {
     // Decouple background network tasks from SPA DOM teardown (KI-FIX-015)
     this.abortController = null;
+
+    if (this.handleGlobalPaste) {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('paste', this.handleGlobalPaste);
+      }
+      this.handleGlobalPaste = null;
+    }
 
     if (this.handlePendingEvent) {
       window.removeEventListener('ds:pending-autostart-ready', this.handlePendingEvent);
@@ -611,6 +641,29 @@ export class FacebookWorkspace {
                 <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
                 <span>${isImage ? 'Xem ảnh trong Studio' : 'Xem toàn màn hình'}</span>
               </button>
+
+              <div class="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-white/5">
+                <button
+                  type="button"
+                  data-action="create-qr"
+                  class="flex-1 min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                  title="Tạo mã QR cho liên kết tải hoặc nguồn"
+                >
+                  <i data-lucide="qr-code" class="w-3.5 h-3.5 text-emerald-500"></i>
+                  <span>Tạo mã QR</span>
+                </button>
+                ${isImage ? `
+                  <button
+                    type="button"
+                    data-action="send-viewsplit"
+                    class="flex-1 min-h-[44px] py-2 px-3 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 dark:bg-cyan-950/30 dark:hover:bg-cyan-900/40 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                    title="So sánh trên ViewSplit"
+                  >
+                    <i data-lucide="columns-2" class="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400"></i>
+                    <span>ViewSplit</span>
+                  </button>
+                ` : ''}
+              </div>
             </div>
 
           </div>
@@ -854,6 +907,23 @@ export class FacebookWorkspace {
           } catch {
             showToast('Không thể sao chép tự động', 'warning');
           }
+        }
+        break;
+      }
+
+      case 'create-qr': {
+        const target = this.videoData?.canonicalUrl || this.videoData?.targetUrl || this.url || window.location.href;
+        sendToTool('qr-studio', { url: target });
+        break;
+      }
+
+      case 'send-viewsplit': {
+        const isImage = this.videoData?.mediaType === 'image';
+        if (isImage) {
+          const selFmt = this.videoData?.formats?.find(f => f.quality === this.selectedQuality) || this.videoData?.formats?.[0];
+          const mediaUrl = selFmt?.url || this.videoData?.cover || '';
+          const fileName = this.buildSafeFileName(this.videoData?.title, 'jpg', this.selectedQuality);
+          sendToTool('view-split', { url: mediaUrl, fileName });
         }
         break;
       }

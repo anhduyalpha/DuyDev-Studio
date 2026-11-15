@@ -14,18 +14,7 @@ import { PANE_TITLES } from '../hooks/useViewSplit.js';
 export function renderViewSplitPixelInspector(state) {
   const { inspectorOpen, pixelInspectorState } = state;
   if (!inspectorOpen) {
-    return `
-      <!-- Collapsed Mini HUD Button -->
-      <button
-        type="button"
-        data-action="toggle-inspector"
-        title="Mở HUD Kính lúp soi điểm ảnh (I)"
-        class="fixed bottom-4 right-4 z-40 p-2.5 rounded-2xl bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black backdrop-blur-xl border border-zinc-200 dark:border-white/15 text-cyan-600 dark:text-cyan-400 shadow-xl transition hover:scale-105 cursor-pointer flex items-center gap-2"
-      >
-        <i data-lucide="zoom-in" class="w-4 h-4"></i>
-        <span class="text-xs font-semibold text-zinc-900 dark:text-white">Loupe</span>
-      </button>
-    `;
+    return '';
   }
 
   const {
@@ -45,7 +34,7 @@ export function renderViewSplitPixelInspector(state) {
   return `
     <div
       id="viewsplit-pixel-inspector-hud"
-      class="fixed bottom-4 right-4 z-40 w-[290px] sm:w-[320px] rounded-2xl bg-white/95 dark:bg-black/85 backdrop-blur-2xl border border-zinc-200/90 dark:border-white/15 shadow-2xl p-3 text-zinc-800 dark:text-zinc-100 select-none animate-fadeIn"
+      class="fixed bottom-24 sm:bottom-4 right-3 sm:right-4 z-40 w-[min(320px,calc(100vw-24px))] rounded-2xl bg-white/95 dark:bg-black/85 backdrop-blur-2xl border border-zinc-200/90 dark:border-white/15 shadow-2xl p-3 text-zinc-800 dark:text-zinc-100 select-none animate-fadeIn"
     >
       <!-- HUD Header (Draggable Handle) -->
       <div

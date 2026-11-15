@@ -134,7 +134,8 @@ export function attachArchivePageListeners(rerender) {
     updateActiveFolderTree(p);
     updateFileTableDOM(archiveManager.archiveData.currentFiles, archiveManager.archiveData, p);
     bindMembers();
-    if (window.lucide) window.lucide.createIcons();
+    const tablePane = document.getElementById('archiveFileTablePane') || document.getElementById('archiveFileTableBody');
+    if (window.lucide && tablePane) window.lucide.createIcons({ root: tablePane });
 
     if (window.scrollY !== currentScrollY) {
       window.scrollTo({ top: currentScrollY, behavior: 'instant' });

@@ -192,70 +192,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    if (typeof tailwind !== 'undefined') {
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            spacing: {
-              '7.5': '1.875rem',
-              '8.5': '2.125rem',
-            },
-            screens: {
-              xs: '420px',
-              sm: '640px',
-              md: '768px',
-              lg: '1024px',
-              xl: '1280px',
-              '2xl': '1536px'
-            },
-            fontFamily: {
-              sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
-              mono: ['"JetBrains Mono"', 'monospace'],
-            },
-            colors: {
-              brand: {
-                400: '#818cf8',
-                500: '#6366f1',
-                600: '#4f46e5',
-              }
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(4px)' },
-                '100%': { opacity: '1', transform: 'none' },
-              },
-              shimmer: {
-                '0%': { transform: 'translateX(-100%)' },
-                '100%': { transform: 'translateX(100%)' },
-              }
-            },
-            animation: {
-              fadeIn: 'fadeIn 0.2s ease-out forwards',
-              shimmer: 'shimmer 1.8s infinite',
-            }
-          }
-        }
-      };
-    }
-  </script>
+  <!-- Pre-Compiled Static Tailwind CSS v3 -->
+  <link rel="stylesheet" href="src/styles/tailwind.generated.css?v=25.0">
 
   <!-- Lucide Icons (Local Zero-Latency Precache with CDN Fallback) -->
   <script src="src/vendor/lucide.min.js"></script>
   <script>if (typeof lucide === 'undefined') { document.write('<script src="https://unpkg.com/lucide@latest"><\/script>'); }</script>
 
   <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=24.68">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=24.68">
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/studocu.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=25.0">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=24.68">
+  <link rel="modulepreload" href="src/app.js?v=25.0">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
 
@@ -591,7 +543,7 @@
           const text = sp.get('text') || '';
           const title = sp.get('title') || '';
           if (url || text || title) {
-            payload = { url, text, title, files: [] };
+            payload = { payloadId: 'url_' + Date.now(), url, text, title, files: [] };
           }
         }
 
@@ -654,9 +606,9 @@
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
         
         <!-- Left: Clean Branding -->
-        <a href="#" aria-label="Về trang chủ DuyDev Studio" class="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0 group no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+        <a href="#" aria-label="Về trang chủ DuyDev Studio" class="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0 group no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl min-w-[44px] min-h-[44px]">
           <img src="src/assets/logo-ds.svg?v=22.12" alt="DuyDev Studio" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain transition-all duration-200 group-hover:scale-105 group-hover:ring-2 group-hover:ring-orange-500/30 group-hover:shadow-md group-hover:shadow-orange-500/10 shrink-0" />
-          <span class="font-bold text-xs sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
+          <span class="hidden xs:inline font-bold text-xs sm:text-base lg:text-lg tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">DuyDev Studio</span>
         </a>
 
         <!-- Center: Minimalist Search Bar (Desktop - Apple Sequoia Frosted Glass) -->
@@ -668,7 +620,7 @@
               id="globalSearchInput"
               role="searchbox"
               aria-label="Tìm kiếm công cụ"
-              placeholder="Tìm kiếm công cụ..." 
+              placeholder="Tìm kiếm trong 21 công cụ..." 
               class="w-full glass-search rounded-xl pl-10 pr-12 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans"
             >
             <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-xs font-mono text-zinc-600 dark:text-zinc-300 glass-pill rounded border border-zinc-200/90 dark:border-white/[0.12]">⌘K</kbd>
@@ -679,22 +631,22 @@
         <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <div class="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-1.5 bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
             <!-- Mobile Search Toggle Button -->
-            <button type="button" id="btnMobileSearchToggle" title="Tìm kiếm công cụ" aria-label="Tìm kiếm công cụ" class="md:hidden inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <button type="button" id="btnMobileSearchToggle" title="Tìm kiếm công cụ" aria-label="Tìm kiếm công cụ" class="md:hidden inline-flex w-9 h-9 min-w-[44px] min-h-[44px] items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="search" class="w-4 h-4"></i>
             </button>
 
             <!-- Storage Drive Link -->
-            <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <a href="#storage" title="Bộ nhớ lưu trữ" aria-label="Bộ nhớ lưu trữ" class="inline-flex w-9 h-9 min-w-[44px] min-h-[44px] items-center justify-center text-zinc-600 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="hard-drive" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
             </a>
 
             <!-- History Link (Desktop only) -->
-            <a href="#history" title="Lịch sử tác vụ" aria-label="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition">
+            <a href="#history" title="Lịch sử tác vụ" aria-label="Lịch sử tác vụ" class="hidden sm:inline-flex w-9 h-9 min-w-[44px] min-h-[44px] items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition">
               <i data-lucide="clock" class="w-4.5 h-4.5"></i>
             </a>
 
             <!-- Trash Bin Link -->
-            <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <a href="#trash" id="headerTrashBtn" title="Thùng rác" aria-label="Thùng rác" class="relative inline-flex w-9 h-9 min-w-[44px] min-h-[44px] items-center justify-center text-zinc-600 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="trash-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
               <span id="headerTrashDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#121215]"></span>
             </a>
@@ -712,12 +664,12 @@
             <button id="btnSoundToggle" 
                     title="Tắt âm thanh" 
                     aria-label="Tắt âm thanh" 
-                    class="inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+                    class="inline-flex w-9 h-9 min-w-[44px] min-h-[44px] items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="volume-2" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
             </button>
 
             <!-- Theme Toggle Button -->
-            <button id="btnThemeToggle" title="Giao diện tối" aria-label="Chuyển sang giao diện tối" class="inline-flex w-9 h-9 items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
+            <button id="btnThemeToggle" title="Giao diện tối" aria-label="Chuyển sang giao diện tối" class="inline-flex w-9 h-9 min-w-[44px] min-h-[44px] items-center justify-center text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition cursor-pointer">
               <i data-lucide="moon" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
             </button>
           </div>
@@ -730,14 +682,15 @@
             id="headerProfileBtn" 
             title="Hồ sơ người dùng" 
             aria-label="Hồ sơ người dùng & Đổi avatar" 
-            class="flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 min-h-[40px] rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
+            class="relative flex items-center gap-1.5 sm:gap-2 p-1 sm:pl-1 sm:pr-2.5 min-w-[44px] min-h-[44px] rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0 select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-2xs"
           >
             <div id="headerUserAvatar" class="relative flex w-8 h-8 min-w-[32px] max-w-[32px] max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr from-indigo-500 to-purple-600 text-white">
               <span class="font-bold select-none">D</span>
             </div>
-            <span id="headerUserNameText" class="hidden sm:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[85px] truncate leading-none text-left">
+            <span id="headerUserNameText" class="hidden xs:inline-block text-xs sm:text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[85px] truncate leading-none text-left">
               Khách
             </span>
+            <span id="headerProfileDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-[#121215]"></span>
           </button>
 
         </div>
@@ -755,7 +708,7 @@
             placeholder="Tìm kiếm trong 21 công cụ..." 
             class="w-full glass-search rounded-xl pl-10 pr-10 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none transition font-sans"
           >
-          <button type="button" id="btnCloseMobileSearch" aria-label="Đóng tìm kiếm" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer">
+          <button type="button" id="btnCloseMobileSearch" aria-label="Đóng tìm kiếm" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 min-w-[36px] min-h-[36px] rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
@@ -763,58 +716,6 @@
     </header>
   
       </div>
-
-      <!-- Frame-0 Fast-Path Profile Restoration (Zero Flash) -->
-      <script>
-        (function() {
-          try {
-            var raw = localStorage.getItem('ds_user_profile') || localStorage.getItem('ds_user_profile_backup');
-            if (raw) {
-              var p = JSON.parse(raw);
-              if (p && p.name) {
-                var nEl = document.getElementById('headerUserNameText');
-                if (nEl) nEl.textContent = p.name;
-                var aEl = document.getElementById('headerUserAvatar');
-                if (aEl) {
-                  var grads = [
-                    'from-indigo-500 to-purple-600 text-white',
-                    'from-amber-500 to-orange-600 text-white',
-                    'from-emerald-500 to-teal-600 text-white',
-                    'from-sky-500 to-blue-600 text-white',
-                    'from-rose-500 to-pink-600 text-white',
-                    'from-violet-500 to-fuchsia-600 text-white'
-                  ];
-                  var h = 0;
-                  for (var i = 0; i < p.name.length; i++) {
-                    h = ((h << 5) - h) + p.name.charCodeAt(i);
-                    h |= 0;
-                  }
-                  var g = grads[Math.abs(h) % grads.length];
-                  aEl.className = 'relative flex w-[30px] h-[30px] sm:w-8 sm:h-8 min-w-[30px] sm:min-w-[32px] max-w-[30px] sm:max-w-[32px] max-h-[30px] sm:max-h-[32px] rounded-full overflow-hidden items-center justify-center font-bold text-xs shadow-xs border border-zinc-300 dark:border-white/20 transition-transform duration-150 group-hover:scale-105 shrink-0 bg-gradient-to-tr ' + g;
-
-                  var words = p.name.trim().split(/\s+/);
-                  var target = words[words.length - 1] || words[0] || 'D';
-                  var initLetter = (target[0] || 'D').toUpperCase();
-
-                  if (p.avatar && (p.avatar.indexOf('data:image/') === 0 || p.avatar.indexOf('http') === 0)) {
-                    aEl.innerHTML = '<img src="' + p.avatar + '" alt="' + p.name + '" class="w-full h-full max-w-full max-h-full object-cover rounded-full pointer-events-none" onerror="this.onerror=null;this.parentElement.innerHTML=\'<span class=\\\'font-bold select-none\\\'>' + initLetter + '</span>\';" />';
-                  } else if (p.avatar && p.avatar.indexOf('preset:') === 0) {
-                    var presets = {
-                      'preset:fox': '🦊', 'preset:cat': '🐱', 'preset:rocket': '🚀', 'preset:lightning': '⚡',
-                      'preset:crown': '👑', 'preset:robot': '🤖', 'preset:owl': '🦉', 'preset:penguin': '🐧',
-                      'preset:art': '🎨', 'preset:game': '🎮', 'preset:coffee': '☕', 'preset:ninja': '🥷'
-                    };
-                    var emoji = presets[p.avatar] || p.avatar.replace('preset:', '');
-                    aEl.innerHTML = '<span class="flex items-center justify-center text-base sm:text-lg select-none leading-none">' + emoji + '</span>';
-                  } else {
-                    aEl.innerHTML = '<span class="font-bold select-none">' + initLetter + '</span>';
-                  }
-                }
-              }
-            }
-          } catch (_) {}
-        })();
-      </script>
 
       <main id="mainContent" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 pt-4 pb-36 sm:pt-8 sm:pb-20 lg:pb-24 min-w-0 overflow-x-clip">
 
@@ -945,14 +846,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1007,9 +910,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1017,22 +917,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="PDF Studio">
           PDF Studio
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Ghép, tách, xoay, nén, đóng dấu và đọc tài liệu PDF vector.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Nén & Ghép
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Tách & Xoay
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Watermark
             </span>
           
@@ -1058,14 +959,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1117,9 +1020,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1127,22 +1027,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Tạo Bài Tập Trắc Nghiệm">
           Tạo Bài Tập Trắc Nghiệm
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Biên soạn đề bài và đáp án A4 chuẩn in ấn từ PDF hoặc Google Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Đề bài A4
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Đáp án & Lời giải
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Agnes AI
             </span>
           
@@ -1168,14 +1069,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1236,9 +1139,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1246,26 +1146,27 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Soi Tệp Nén">
           Soi Tệp Nén
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Duyệt cấu trúc thư mục và trích xuất không cần giải nén.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               .ZIP
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               .RAR
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               .7Z
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Trích xuất
             </span>
           
@@ -1291,14 +1192,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1347,9 +1250,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1357,14 +1257,15 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Nén Tệp ZIP">
           Nén Tệp ZIP
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Nén tệp tin và thư mục thành định dạng ZIP.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               ZIP
             </span>
           
@@ -1390,14 +1291,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1448,9 +1351,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1458,22 +1358,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="File Converter">
           File Converter
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Chuyển đổi hình ảnh, video, âm thanh và tài liệu đa định dạng.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Hình ảnh
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Video & Nhạc
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Tài liệu
             </span>
           
@@ -1499,14 +1400,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1556,9 +1459,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1566,22 +1466,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Văn Bản & Tài Liệu">
           Văn Bản & Tài Liệu
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Chuyển đổi Markdown sang HTML, Word (.docx) và in PDF.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Markdown
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               DOCX
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               PDF
             </span>
           
@@ -1607,14 +1508,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1665,9 +1568,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1675,22 +1575,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="QR Studio">
           QR Studio
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tạo mã QR thanh toán VietQR Napas, Wi-Fi, liên kết và danh bạ.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               VietQR
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Wi-Fi & Link
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Tùy biến
             </span>
           
@@ -1716,14 +1617,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1763,9 +1666,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1773,14 +1673,15 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Quét Mã QR">
           Quét Mã QR
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Đọc nội dung mã QR từ tệp ảnh hoặc clipboard.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Ảnh & Clipboard
             </span>
           
@@ -1898,14 +1799,7 @@
         <!-- Seamless Soft Holographic Foil Sheen -->
         <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
-
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -1956,9 +1850,6 @@
       <span class="tier-badge-indicator"></span>
       <span class="tier-badge-label">✦ UR · MYTHIC</span>
     </div>
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -1966,18 +1857,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Studocu Downloader">
           Studocu Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-pink-600 dark:text-pink-400">
+            Ultra Rare • Thần Thoại Lăng Kính
+          </p>
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải giáo trình & tài liệu Studocu sang PDF rõ nét.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               PDF
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Tài liệu học tập
             </span>
           
@@ -1998,19 +1894,21 @@
     </a><a href="#tool/facebook-downloader"
        class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="facebook-downloader"
-       aria-label="Facebook Downloader - Tải video Reel, bài viết Facebook chất lượng HD/SD, lưu trực tiếp vào Drive."
+       aria-label="Facebook Downloader - Tải video Reel, bài viết và ảnh Facebook chất lượng gốc HD, lưu trực tiếp vào Drive."
        style="--accent: #1877F2; --accent-contrast: #1D4ED8;">
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2044,9 +1942,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2054,22 +1949,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Facebook Downloader">
           Facebook Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
-          Tải video Reel, bài viết Facebook chất lượng HD/SD, lưu trực tiếp vào Drive.
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+          Tải video Reel, bài viết và ảnh Facebook chất lượng gốc HD, lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
-              Video Reel
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+              Video, Reel & Bài viết
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
-              HD & SD MP4
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              MP4 & Ảnh HD
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Lưu Drive
             </span>
           
@@ -2095,14 +1991,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2135,9 +2033,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2145,22 +2040,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Instagram Downloader">
           Instagram Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải video Reels, bài viết và Story Instagram sang MP4 không nén, lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Reels & Story
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               MP4 Full HD
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Lưu Drive
             </span>
           
@@ -2186,14 +2082,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2223,9 +2121,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2233,22 +2128,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Spotify Downloader">
           Spotify Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải bài hát Spotify sang MP3 chất lượng cao, kèm ảnh bìa album và lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               MP3 320kbps
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Ảnh bìa Album
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Lưu Drive
             </span>
           
@@ -2274,14 +2170,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2294,9 +2192,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2304,22 +2199,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="TikTok Downloader">
           TikTok Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Không Logo
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Video & Album Ảnh
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Lưu Drive
             </span>
           
@@ -2345,14 +2241,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2386,9 +2284,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2396,22 +2291,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="YouTube Downloader">
           YouTube Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải video Full HD/4K hoặc trích xuất âm thanh MP3 320kbps siêu tốc, lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               MP4 1080p
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               MP3 320kbps
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Lưu Drive
             </span>
           
@@ -2529,14 +2425,7 @@
         <!-- Seamless Soft Holographic Foil Sheen -->
         <div class="tier-holo-foil-sheen pointer-events-none" aria-hidden="true"></div>
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
-
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2584,9 +2473,6 @@
       <span class="tier-badge-indicator"></span>
       <span class="tier-badge-label">✦ UR · MYTHIC</span>
     </div>
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2594,23 +2480,526 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Scribd Downloader">
           Scribd Downloader
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-pink-600 dark:text-pink-400">
+            Ultra Rare • Thần Thoại Lăng Kính
+          </p>
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tải tài liệu & slide Scribd sang file PDF rõ nét.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               PDF
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Slides
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Drive
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Bottom Metadata Row (Apple Monolithic Aesthetic: Zero divider line clutter) -->
+      <div class="relative z-10 mt-4 flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text opacity-90">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-[#F5F5F7] transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/slideshare-downloader"
+       class="tool-card linear-card tier-card tier-s group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="slideshare-downloader"
+       aria-label="SlideShare Downloader - Tải bài thuyết trình và tài liệu SlideShare sang tệp PDF rõ nét, lưu trực tiếp vào Drive."
+       style="--accent: #0077B5; --accent-contrast: #0369A1;">
+      
+      <div class="tier-inner-frame tier-inner-frame-s pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-amethyst-spotlight pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- 4 Harmonic Arcane Rune Nodes at midpoints -->
+        <div class="tier-rune-nodes-s pointer-events-none" aria-hidden="true">
+          <div class="rune-node node-top">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-bottom">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-left">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-right">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+        </div>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
+            <path d="M 8 8 Q 36 15 48 15 Q 60 15 88 8" stroke="#9333EA" stroke-width="1.8"/>
+            <polygon points="48,2 56,9 48,16 40,9" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" fill="#E9D5FF"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
+            <path d="M 6 9 Q 26 3 36 3 Q 46 3 66 9" stroke="#9333EA" stroke-width="1.5"/>
+            <polygon points="36,1 42,7 36,13 30,7" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 50px Filled Royal Amethyst & Gold Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 38 V 16 A 12 12 0 0 1 16 4 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 30 V 17 A 8 8 0 0 1 17 9 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,9 25,17 17,25 9,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tr" fill="none">
+            <path d="M 46 38 V 16 A 12 12 0 0 0 34 4 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 30 V 17 A 8 8 0 0 0 33 9 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,9 41,17 33,25 25,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 34 A 12 12 0 0 0 16 46 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 20 V 33 A 8 8 0 0 0 17 41 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,25 25,33 17,41 9,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-br" fill="none">
+            <path d="M 46 12 V 34 A 12 12 0 0 1 34 46 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 20 V 33 A 8 8 0 0 1 33 41 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,25 41,33 33,41 25,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Arcane Seal (170px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 170 170" class="watermark-svg" fill="none">
+            <circle cx="85" cy="85" r="80" stroke="#9333EA" stroke-width="1.5" stroke-dasharray="10 5"/>
+            <circle cx="85" cy="85" r="68" stroke="#F59E0B" stroke-width="1" stroke-dasharray="4 4"/>
+            <polygon points="85,15 145,120 25,120" stroke="#9333EA" stroke-width="1.2"/>
+            <polygon points="85,155 25,50 145,50" stroke="#9333EA" stroke-width="1.2"/>
+            <circle cx="85" cy="85" r="42" stroke="#C084FC" stroke-width="1"/>
+          </svg>
+        </div>
+
+      
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
+        <div class="flex items-start justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true">
+          <div class="halo-pulsing-core"></div>
+        </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-ss-chassis" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0284C7" />
+          <stop offset="100%" stop-color="#00669C" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#0077B5" fill-opacity="0.25" stroke="#0077B5" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Solid SlideShare Blue Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-ss-chassis)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M6 3h12c2.2 0 3.3 1 3.6 2.2H2.4C2.7 4 3.8 3 6 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Solid White Presentation Projector Screen -->
+      <rect x="4.5" y="5.5" width="15" height="10" rx="1.8" fill="#FFFFFF" />
+      <!-- Layer 5: Slide Deck Analytics & Growth Bar Charts -->
+      <rect x="6.5" y="10" width="2.2" height="4" rx="0.6" fill="#0284C7" />
+      <rect x="9.8" y="8" width="2.2" height="6" rx="0.6" fill="#0077B5" />
+      <rect x="13.1" y="6.8" width="2.2" height="7.2" rx="0.6" fill="#F59E0B" />
+      <!-- Layer 6: Dynamic Forward Slide Arrow -->
+      <path d="M16.5 8.2l1.8 1.8-1.8 1.8" stroke="#0077B5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Layer 7: Projector Tripod Stand -->
+      <path d="M12 15.5v3M9.5 20.5l2.5-2 2.5 2" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Tử Kim Siêu Việt">
+      <span class="tier-badge-indicator"></span>
+      <span class="tier-badge-label">S · MASTER</span>
+    </div>
+          </div>
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="SlideShare Downloader">
+          SlideShare Downloader
+        </h3>
+        
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-purple-600 dark:text-purple-400">
+            Master • Tử Kim Siêu Việt
+          </p>
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+          Tải bài thuyết trình và tài liệu SlideShare sang tệp PDF rõ nét, lưu trực tiếp vào Drive.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+              PDF HD
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              Slides
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              Lưu Drive
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Bottom Metadata Row (Apple Monolithic Aesthetic: Zero divider line clutter) -->
+      <div class="relative z-10 mt-4 flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text opacity-90">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-[#F5F5F7] transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/academia-downloader"
+       class="tool-card linear-card tier-card tier-s group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="academia-downloader"
+       aria-label="Academia Downloader - Tải bài nghiên cứu, luận văn và giáo trình Academia.edu sang PDF, lưu trực tiếp vào Drive."
+       style="--accent: #4F46E5; --accent-contrast: #3730A3;">
+      
+      <div class="tier-inner-frame tier-inner-frame-s pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-amethyst-spotlight pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- 4 Harmonic Arcane Rune Nodes at midpoints -->
+        <div class="tier-rune-nodes-s pointer-events-none" aria-hidden="true">
+          <div class="rune-node node-top">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-bottom">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-left">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-right">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+        </div>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
+            <path d="M 8 8 Q 36 15 48 15 Q 60 15 88 8" stroke="#9333EA" stroke-width="1.8"/>
+            <polygon points="48,2 56,9 48,16 40,9" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" fill="#E9D5FF"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
+            <path d="M 6 9 Q 26 3 36 3 Q 46 3 66 9" stroke="#9333EA" stroke-width="1.5"/>
+            <polygon points="36,1 42,7 36,13 30,7" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 50px Filled Royal Amethyst & Gold Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 38 V 16 A 12 12 0 0 1 16 4 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 30 V 17 A 8 8 0 0 1 17 9 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,9 25,17 17,25 9,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tr" fill="none">
+            <path d="M 46 38 V 16 A 12 12 0 0 0 34 4 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 30 V 17 A 8 8 0 0 0 33 9 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,9 41,17 33,25 25,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 34 A 12 12 0 0 0 16 46 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 20 V 33 A 8 8 0 0 0 17 41 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,25 25,33 17,41 9,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-br" fill="none">
+            <path d="M 46 12 V 34 A 12 12 0 0 1 34 46 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 20 V 33 A 8 8 0 0 1 33 41 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,25 41,33 33,41 25,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Arcane Seal (170px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 170 170" class="watermark-svg" fill="none">
+            <circle cx="85" cy="85" r="80" stroke="#9333EA" stroke-width="1.5" stroke-dasharray="10 5"/>
+            <circle cx="85" cy="85" r="68" stroke="#F59E0B" stroke-width="1" stroke-dasharray="4 4"/>
+            <polygon points="85,15 145,120 25,120" stroke="#9333EA" stroke-width="1.2"/>
+            <polygon points="85,155 25,50 145,50" stroke="#9333EA" stroke-width="1.2"/>
+            <circle cx="85" cy="85" r="42" stroke="#C084FC" stroke-width="1"/>
+          </svg>
+        </div>
+
+      
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
+        <div class="flex items-start justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true">
+          <div class="halo-pulsing-core"></div>
+        </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-ac-chassis" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#4F46E5" />
+          <stop offset="100%" stop-color="#3730A3" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#4F46E5" fill-opacity="0.25" stroke="#4F46E5" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Solid Academic Indigo Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-ac-chassis)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M6 3h12c2.2 0 3.3 1 3.6 2.2H2.4C2.7 4 3.8 3 6 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Solid Pure White Mortarboard Cap Diamond -->
+      <polygon points="12,5 20.5,9.5 12,14 3.5,9.5" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.8" stroke-linejoin="round" />
+      <!-- Layer 5: Skull Crown Arch under Diamond -->
+      <path d="M6.5 11.8v3c0 2 2.5 3.5 5.5 3.5s5.5-1.5 5.5-3.5v-3" fill="#E0E7FF" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Layer 6: Center Golden Button on Cap -->
+      <circle cx="12" cy="9.5" r="1.3" fill="#F59E0B" />
+      <!-- Layer 7: Golden Honor Tassel & Pendant -->
+      <path d="M20.5 9.5v5.5" stroke="#FDE047" stroke-width="1.6" stroke-linecap="round" />
+      <circle cx="20.5" cy="15.8" r="1.3" fill="#F59E0B" />
+    </svg>
+  
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Tử Kim Siêu Việt">
+      <span class="tier-badge-indicator"></span>
+      <span class="tier-badge-label">S · MASTER</span>
+    </div>
+          </div>
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Academia Downloader">
+          Academia Downloader
+        </h3>
+        
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-purple-600 dark:text-purple-400">
+            Master • Tử Kim Siêu Việt
+          </p>
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+          Tải bài nghiên cứu, luận văn và giáo trình Academia.edu sang PDF, lưu trực tiếp vào Drive.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+              PDF Gốc
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              Luận văn
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              Lưu Drive
+            </span>
+          
+        </div>
+      </div>
+
+      <!-- Bottom Metadata Row (Apple Monolithic Aesthetic: Zero divider line clutter) -->
+      <div class="relative z-10 mt-4 flex items-center justify-between text-xs">
+        <span class="font-mono text-xs uppercase tracking-wider font-semibold tool-accent-text opacity-90">
+          Tiện ích
+        </span>
+        <div class="tier-cta-btn flex items-center gap-1 text-xs font-semibold text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-[#F5F5F7] transition">
+          <span>Mở</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"></i>
+        </div>
+      </div>
+
+    </a><a href="#tool/researchgate-downloader"
+       class="tool-card linear-card tier-card tier-s group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
+       data-tool-id="researchgate-downloader"
+       aria-label="ResearchGate Downloader - Tải công bố khoa học, bài báo và tài liệu ResearchGate sang PDF, lưu trực tiếp vào Drive."
+       style="--accent: #0D9488; --accent-contrast: #0F766E;">
+      
+      <div class="tier-inner-frame tier-inner-frame-s pointer-events-none" aria-hidden="true"></div>
+        <div class="tier-amethyst-spotlight pointer-events-none" aria-hidden="true"></div>
+        
+        <!-- 4 Harmonic Arcane Rune Nodes at midpoints -->
+        <div class="tier-rune-nodes-s pointer-events-none" aria-hidden="true">
+          <div class="rune-node node-top">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-bottom">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-left">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+          <div class="rune-node node-right">
+            <svg viewBox="0 0 16 16" fill="none"><polygon points="8,1 15,8 8,15 1,8" fill="#581C87" stroke="#F59E0B" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#E9D5FF"/></svg>
+          </div>
+        </div>
+
+        <!-- Top Keystone Crest -->
+        <div class="tier-keystone-top pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 96 18" class="keystone-svg" fill="none">
+            <path d="M 8 8 Q 36 15 48 15 Q 60 15 88 8" stroke="#9333EA" stroke-width="1.8"/>
+            <polygon points="48,2 56,9 48,16 40,9" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.5"/>
+            <circle cx="48" cy="9" r="2.5" fill="#E9D5FF"/>
+          </svg>
+        </div>
+        <!-- Bottom Keystone Crest -->
+        <div class="tier-keystone-bottom pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 72 14" class="keystone-svg" fill="none">
+            <path d="M 6 9 Q 26 3 36 3 Q 46 3 66 9" stroke="#9333EA" stroke-width="1.5"/>
+            <polygon points="36,1 42,7 36,13 30,7" fill="#6B21A8" stroke="#F59E0B" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+        <!-- 50px Filled Royal Amethyst & Gold Corner Plates -->
+        <div class="tier-corner-armor tier-corner-armor-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tl" fill="none">
+            <path d="M 4 38 V 16 A 12 12 0 0 1 16 4 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 30 V 17 A 8 8 0 0 1 17 9 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,9 25,17 17,25 9,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-tr" fill="none">
+            <path d="M 46 38 V 16 A 12 12 0 0 0 34 4 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 30 V 17 A 8 8 0 0 0 33 9 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,9 41,17 33,25 25,17" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="17" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-bl" fill="none">
+            <path d="M 4 12 V 34 A 12 12 0 0 0 16 46 H 38" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 9 20 V 33 A 8 8 0 0 0 17 41 H 30" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="17,25 25,33 17,41 9,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="17" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+          <svg viewBox="0 0 50 50" class="corner-plate cp-br" fill="none">
+            <path d="M 46 12 V 34 A 12 12 0 0 1 34 46 H 12" stroke="#9333EA" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M 41 20 V 33 A 8 8 0 0 1 33 41 H 20" stroke="#F59E0B" stroke-width="1.5"/>
+            <polygon points="33,25 41,33 33,41 25,33" fill="#581C87" stroke="#C084FC" stroke-width="1.5"/>
+            <circle cx="33" cy="33" r="3.5" fill="#E9D5FF" stroke="#9333EA"/>
+          </svg>
+        </div>
+
+        <!-- Layer B: Giant Background Arcane Seal (170px) -->
+        <div class="tier-watermark-seal tier-watermark-seal-s pointer-events-none" aria-hidden="true">
+          <svg viewBox="0 0 170 170" class="watermark-svg" fill="none">
+            <circle cx="85" cy="85" r="80" stroke="#9333EA" stroke-width="1.5" stroke-dasharray="10 5"/>
+            <circle cx="85" cy="85" r="68" stroke="#F59E0B" stroke-width="1" stroke-dasharray="4 4"/>
+            <polygon points="85,15 145,120 25,120" stroke="#9333EA" stroke-width="1.2"/>
+            <polygon points="85,155 25,50 145,50" stroke="#9333EA" stroke-width="1.2"/>
+            <circle cx="85" cy="85" r="42" stroke="#C084FC" stroke-width="1"/>
+          </svg>
+        </div>
+
+      
+
+      <div class="relative z-10">
+        <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
+        <div class="flex items-start justify-between mb-3.5 min-h-[44px]">
+          <div class="relative inline-flex items-center justify-center shrink-0">
+            <div class="tier-icon-dual-halo pointer-events-none" aria-hidden="true">
+          <div class="halo-pulsing-core"></div>
+        </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-xs tool-accent-box shrink-0">
+              
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="w-6 h-6 sm:w-6.5 sm:h-6.5 select-none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ds-rg-chassis" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#00CCBB" />
+          <stop offset="100%" stop-color="#0F766E" />
+        </linearGradient>
+      </defs>
+      <!-- Layer 1: Ambient Base Shadow -->
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#0D9488" fill-opacity="0.25" stroke="#0D9488" stroke-opacity="0.4" stroke-width="1.2" />
+      <!-- Layer 2: Solid Mint Teal Chassis -->
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ds-rg-chassis)" />
+      <!-- Layer 3: Specular Top Highlight -->
+      <path d="M6 3h12c2.2 0 3.3 1 3.6 2.2H2.4C2.7 4 3.8 3 6 3z" fill="#FFFFFF" fill-opacity="0.25" />
+      <!-- Layer 4: Solid Pure White Scientific Hexagon Shield -->
+      <path d="M12 4.5l6.5 3.8v7.4L12 19.5l-6.5-3.8V8.3z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round" />
+      <!-- Layer 5: ResearchGate Monogram Brand Mark & Molecular Orbit -->
+      <text x="11.8" y="12.3" font-size="7.5" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="900" fill="#0D9488" text-anchor="middle" dominant-baseline="central" letter-spacing="-0.3px">RG</text>
+      <circle cx="16.2" cy="7.8" r="1.3" fill="#00CCBB" stroke="#FFFFFF" stroke-width="0.8" />
+    </svg>
+  
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <div class="tier-crest-badge shadow-xs shrink-0" title="Royal Amethyst - Tử Kim Siêu Việt">
+      <span class="tier-badge-indicator"></span>
+      <span class="tier-badge-label">S · MASTER</span>
+    </div>
+          </div>
+        </div>
+
+        <!-- Title & Description -->
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="ResearchGate Downloader">
+          ResearchGate Downloader
+        </h3>
+        
+          <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-purple-600 dark:text-purple-400">
+            Master • Tử Kim Siêu Việt
+          </p>
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+          Tải công bố khoa học, bài báo và tài liệu ResearchGate sang PDF, lưu trực tiếp vào Drive.
+        </p>
+
+        <!-- Spec Badges with Primary Engine Hierarchy -->
+        <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+              PDF Khoa học
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              DOI & Full-text
+            </span>
+          
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
+              Lưu Drive
             </span>
           
         </div>
@@ -2635,14 +3024,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2691,9 +3082,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2701,22 +3089,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="ViewSplit">
           ViewSplit
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           So sánh hình ảnh đa khung nhìn, thanh trượt đè Before/After và soi điểm ảnh Pixel Inspector.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               So sánh đa ảnh
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Slider Wipe
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Pixel Inspector
             </span>
           
@@ -2742,14 +3131,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2792,9 +3183,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2802,22 +3190,23 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Mã Băm & Base64">
           Mã Băm & Base64
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Tính mã băm MD5, SHA-256 và mã hóa, giải mã Base64.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               MD5
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               SHA-256
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Base64
             </span>
           
@@ -2843,14 +3232,16 @@
       
       
 
-      <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
-      <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
       
-      <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
-      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
+        <!-- Top Precision Accent Beam: Refined, delicate edge highlight -->
+        <div class="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"></div>
+        
+        <!-- Ambient Tool Identity Bloom: Soft, balanced chromatic aura (Zero Gaussian Blur Thrash) -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full opacity-[0.10] dark:opacity-[0.18] group-hover:opacity-[0.22] dark:group-hover:opacity-[0.28] transition-opacity duration-500 pointer-events-none" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%);"></div>
 
-      <!-- Subtle Ambient Top-Down Surface Tint -->
-      <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+        <!-- Subtle Ambient Top-Down Surface Tint -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[var(--accent)]/[0.03] via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity duration-300 pointer-events-none rounded-[20px]"></div>
+      
 
       <div class="relative z-10">
         <!-- Header: Icon & Tier Badge / Micro Action (Concentric Icon Anchor) -->
@@ -2898,9 +3289,6 @@
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             
-            <div class="w-7 h-7 rounded-full bg-black/[0.03] dark:bg-white/[0.05] dark:border dark:border-white/[0.08] flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-white dark:group-hover:bg-white/[0.12] dark:group-hover:border-white/[0.16] transition-all duration-200 shrink-0">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
-            </div>
           </div>
         </div>
 
@@ -2908,18 +3296,19 @@
         <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="Bộ Nhớ Lưu Trữ">
           Bộ Nhớ Lưu Trữ
         </h3>
-        <p class="text-[13px] text-zinc-500 dark:text-[#A1A1A6] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
+        
+        <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
           Kho lưu trữ và truyền tải tập tin an toàn giữa các thiết bị.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
         <div class="flex flex-wrap gap-1.5 mt-3 min-h-[22px]">
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.04] dark:bg-white/[0.08] text-zinc-800 dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.12] font-semibold">
               Cloud Drive
             </span>
           
-            <span class="px-2 py-0.5 rounded-[8px] text-[10px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 border border-black/[0.03] dark:border-white/[0.06]">
+            <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
               Truyền tệp
             </span>
           
@@ -2958,7 +3347,7 @@
         <div class="flex items-center gap-2">
           <span class="font-bold text-zinc-900 dark:text-zinc-200">DuyDev Studio</span>
           <span>•</span>
-          <span>Studio của Duy cho mụi người dùng</span>
+          <span>Studio của Duy cho mọi người dùng</span>
         </div>
 
         <div class="flex items-center gap-4 text-zinc-700 dark:text-zinc-300 font-medium">
@@ -2977,31 +3366,31 @@
       
     <a href="#" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/90 dark:bg-white/[0.08] shadow-2xs">
       <i data-lucide="layout-grid" class="w-5 h-5 shrink-0 stroke-[2.5]"></i>
-      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Trang chủ</span>
+      <span class="text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Trang chủ</span>
     </a>
   
       
     <a href="#tool/universal-converter" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
       <i data-lucide="refresh-cw" class="w-5 h-5 shrink-0 stroke-2"></i>
-      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Converter</span>
+      <span class="text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Converter</span>
     </a>
   
       
     <a href="#tool/pdf-studio" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
       <i data-lucide="file-text" class="w-5 h-5 shrink-0 stroke-2"></i>
-      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">PDF</span>
+      <span class="text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">PDF</span>
     </a>
   
       
     <a href="#archive" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
       <i data-lucide="archive" class="w-5 h-5 shrink-0 stroke-2"></i>
-      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">File nén</span>
+      <span class="text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">File nén</span>
     </a>
   
       
     <a href="#tool/qr-multi" onclick="if(window.navigator?.vibrate)window.navigator.vibrate(8);try{window.__ds_soundEngine?.playToggle();}catch(_){}" class="flex flex-col items-center justify-center py-1.5 px-1 sm:px-1.5 rounded-xl flex-1 transition-all duration-150 active:scale-95 touch-manipulation select-none min-w-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-medium">
       <i data-lucide="qr-code" class="w-5 h-5 shrink-0 stroke-2"></i>
-      <span class="text-[10px] sm:text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Mã QR</span>
+      <span class="text-[11px] font-semibold mt-0.5 tracking-tight truncate max-w-[68px] leading-tight text-center">Mã QR</span>
     </a>
   
     </nav>
@@ -3027,12 +3416,12 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=24.68"></script>
+  <script type="module" src="src/app.js?v=25.0"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>
     setTimeout(function() {
-      if (!window.__dsAppReady) {
+      if (!window.__DS_APP_HYDRATED) {
         var existing = document.getElementById('appStartupTimeoutHint');
         if (!existing) {
           var toast = document.createElement('div');
@@ -3044,7 +3433,7 @@
           document.body.appendChild(toast);
         }
       }
-    }, 12000);
+    }, 7000);
     window.addEventListener('ds:app-ready', function() {
       var hint = document.getElementById('appStartupTimeoutHint');
       if (hint) hint.remove();

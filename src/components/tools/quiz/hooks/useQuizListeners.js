@@ -40,21 +40,20 @@ export function getCuteQuizProgressQuote(pct, rawStage) {
     }
   }
 
-  // Fallback status based on percentage with cute vibes
-  if (pct < 15) return '🌱 Đang khởi tạo pipeline và kiểm tra tài liệu nguồn thật kỹ lưỡng... ✨';
-  if (pct < 30) return '🔍 Đang phân tích cấu trúc từng trang và trích xuất câu hỏi cho bạn nè... 📄';
-  if (pct < 50) return '📝 Đang phân tích đề bài, nhận diện từng phương án lựa chọn siêu chuẩn xác... ✨';
-  if (pct < 65) return '🧪 Đang phân tích công thức, hình ảnh và tạo lời giải chi tiết từng li từng tí... 💡';
-  if (pct < 80) return '✨ Đang chuẩn hóa LaTeX, công thức toán hóa và đối chiếu dữ liệu cẩn thận... 💖';
-  if (pct < 95) return '🎨 Đang dàn trang A4 siêu đẹp chuẩn Paged Media và xuất PDF cho bạn... 🖨️';
-  if (pct < 100) return '🎁 Đang hoàn tất đóng gói bộ tài liệu đề bài và lời giải xinh lung linh... 🚀';
-  return '🎉 Ten ten! Bộ đề bài và đáp án siêu đẹp của bạn đã sẵn sàng rồi nè! 💖';
+  // Fallback status based on percentage with clean neutral copy
+  if (pct < 15) return 'Đang khởi tạo và kiểm tra tài liệu nguồn...';
+  if (pct < 30) return 'Đang phân tích cấu trúc từng trang và trích xuất câu hỏi...';
+  if (pct < 50) return 'Đang phân tích đề bài, nhận diện từng phương án lựa chọn...';
+  if (pct < 65) return 'Đang phân tích công thức, hình ảnh và tạo lời giải chi tiết...';
+  if (pct < 80) return 'Đang chuẩn hóa LaTeX, công thức và đối chiếu dữ liệu...';
+  if (pct < 95) return 'Đang dàn trang A4 và xuất PDF...';
+  if (pct < 100) return 'Đang hoàn tất đóng gói bộ tài liệu đề bài và lời giải...';
+  return 'Bộ đề thi và đáp án đã sẵn sàng.';
 }
 
 export function attachQuizListeners() {
-  if (window.lucide?.createIcons) window.lucide.createIcons();
-
   const root = document.getElementById('quizWorkspaceRoot');
+  if (root && window.lucide?.createIcons) window.lucide.createIcons({ root: root });
   if (!root) return () => {};
 
   let isTornDown = false;
@@ -218,7 +217,8 @@ export function attachQuizListeners() {
         }
       }
 
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      const cfgEl = document.getElementById('quizConfigContainer') || root;
+      if (cfgEl && window.lucide?.createIcons) window.lucide.createIcons({ root: cfgEl });
       syncGenerateButton();
     } catch (err) {
       console.warn('syncValidationUI warning:', err);
@@ -306,7 +306,8 @@ export function attachQuizListeners() {
       }
     }
 
-    if (window.lucide?.createIcons) window.lucide.createIcons();
+    const rootEl = document.getElementById('quizWorkspaceRoot') || root;
+    if (rootEl && window.lucide?.createIcons) window.lucide.createIcons({ root: rootEl });
 
     // Restore focus if element still exists
     if (activeId) {
@@ -811,7 +812,7 @@ export function attachQuizListeners() {
     if (historyEl) {
       historyEl.innerHTML = renderQuizHistoryList();
       attachHistoryHandlers();
-      if (window.lucide?.createIcons) window.lucide.createIcons();
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: historyEl });
     }
   }
 

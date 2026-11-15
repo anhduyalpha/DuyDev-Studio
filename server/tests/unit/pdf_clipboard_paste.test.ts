@@ -100,12 +100,12 @@ describe('PDF Studio Images-to-PDF Clipboard Paste & A4 Cleanup', () => {
       expect(html).toContain('Chỉ nhận tệp hình ảnh (PNG, JPG, WebP...).');
     });
 
-    it('renders the "Dán ảnh" paste button in initial dropzone when mode is images_to_pdf', () => {
+    it('renders clean "Dán ảnh" paste button without parenthetical hint in initial dropzone when mode is images_to_pdf', () => {
       const html = renderDropzoneQueue({ mode: 'images_to_pdf', files: [] });
 
       expect(html).toContain('id="btnPastePdfImage"');
       expect(html).toContain('Dán ảnh');
-      expect(html).toContain('Ctrl + V');
+      expect(html).not.toContain('Ctrl + V');
     });
 
     it('does NOT render "Dán ảnh" button in other modes (e.g. compress or merge)', () => {
@@ -116,7 +116,7 @@ describe('PDF Studio Images-to-PDF Clipboard Paste & A4 Cleanup', () => {
       expect(htmlMerge).not.toContain('id="btnPastePdfImage"');
     });
 
-    it('renders "Dán ảnh" button in multi-file workspace header for images_to_pdf', () => {
+    it('renders clean "Dán ảnh" button without parenthetical hint in multi-file workspace header for images_to_pdf', () => {
       const mockFiles = [
         { id: 'f-1', name: 'photo1.jpg', size: 1024, type: 'image/jpeg' },
         { id: 'f-2', name: 'photo2.png', size: 2048, type: 'image/png' }

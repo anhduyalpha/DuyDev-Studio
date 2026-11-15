@@ -88,6 +88,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 7000ms Native Splash Watchdog & One-Shot Wakeup Ping State
+    private val splashWatchdogHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val pingProbeHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    @Volatile private var isPingProbeInFlight = false
+    private var pingTimeoutRunnable: Runnable? = null
+    @Volatile private var isRendererDead = false
+    private var isSplashHiding = false
+    private var splashRetryButton: Button? = null
+
+    private val splashWatchdogRunnable = Runnable {
+        if (isFinishing || isDestroyed) return@Runnable
+        if (::splashOverlay.isInitialized && splashOverlay.visibility == View.VISIBLE) {
+            showSplashRetry()
+        }
+    }
+
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermissionRequest: PermissionRequest? = null
     private val sharedUrisList = mutableListOf<Uri>()
@@ -187,21 +203,16 @@ class MainActivity : AppCompatActivity() {
 
         handleIntent(intent)
 
-        if (savedInstanceState == null) {
-            splashOverlay.visibility = View.VISIBLE
-            val baseHost = getActiveHost()
-            val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
-            val launchUrl = if (!targetRoute.isNullOrBlank()) {
-                val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
-                "$baseHost$cleanRoute"
-            } else {
-                baseHost
-            }
-            webView.loadUrl(launchUrl)
-        } else {
+        val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+            ?: IntentUrlRouter.resolveToolRoute(intent?.getStringExtra(Intent.EXTRA_TEXT) ?: intent?.dataString ?: "")
+
+        val hasRestoredState = savedInstanceState != null &&
+            webView.restoreState(savedInstanceState) != null &&
+            !webView.url.isNullOrBlank()
+
+        if (hasRestoredState) {
             splashOverlay.visibility = View.GONE
-            webView.restoreState(savedInstanceState)
-            val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+            cancelSplashWatchdog()
             if (!targetRoute.isNullOrBlank()) {
                 val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
                 val jsRoute = cleanRoute.replace("'", "\\'")
@@ -209,6 +220,17 @@ class MainActivity : AppCompatActivity() {
                     webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
                 }
             }
+        } else {
+            splashOverlay.visibility = View.VISIBLE
+            startSplashWatchdog()
+            val baseHost = getActiveHost()
+            val launchUrl = if (!targetRoute.isNullOrBlank()) {
+                val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
+                "$baseHost$cleanRoute"
+            } else {
+                baseHost
+            }
+            webView.loadUrl(launchUrl)
         }
     }
 
@@ -219,6 +241,8 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
 
         val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+            ?: IntentUrlRouter.resolveToolRoute(intent?.getStringExtra(Intent.EXTRA_TEXT) ?: intent?.dataString ?: "")
+
         if (!targetRoute.isNullOrBlank()) {
             val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
             val jsRoute = cleanRoute.replace("'", "\\'")
@@ -238,12 +262,22 @@ class MainActivity : AppCompatActivity() {
             )
 
             if (isAppLoaded) {
-                // Instantly navigate via hash in 0ms without full-page teardown or black flash
-                webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+                val isAlreadyOnShareTarget = (currentUrl.endsWith("#share-target") || currentUrl.contains("#share-target?")) &&
+                    cleanRoute.startsWith("#share-target")
+                if (isAlreadyOnShareTarget) {
+                    webView.evaluateJavascript("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }", null)
+                } else {
+                    webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+                }
             } else {
                 val activeHost = getActiveHost()
                 val destUrl = "$activeHost$cleanRoute"
                 webView.loadUrl(destUrl)
+            }
+        } else if (AndroidBridge.sharedPayloadJson != null) {
+            val currentUrl = webView.url ?: ""
+            if (currentUrl.endsWith("#share-target") || currentUrl.contains("#share-target?")) {
+                webView.evaluateJavascript("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }", null)
             }
         }
     }
@@ -263,6 +297,67 @@ class MainActivity : AppCompatActivity() {
             } catch (_: Exception) {}
             isWebViewFrozen = false
         }
+        probeWebViewAlive()
+    }
+
+    private fun probeWebViewAlive() {
+        if (!::webView.isInitialized || isFinishing || isDestroyed) return
+        val currentUrl = webView.url
+        if (currentUrl.isNullOrBlank() || currentUrl == "about:blank") return
+
+        pingTimeoutRunnable?.let { pingProbeHandler.removeCallbacks(it) }
+
+        if (isRendererDead) {
+            handleDeadRenderer()
+            return
+        }
+
+        isPingProbeInFlight = true
+        val timeoutRunnable = Runnable {
+            if (!isPingProbeInFlight || isFinishing || isDestroyed) return@Runnable
+            isPingProbeInFlight = false
+            handleDeadRenderer()
+        }
+        pingTimeoutRunnable = timeoutRunnable
+        pingProbeHandler.postDelayed(timeoutRunnable, 350L)
+
+        try {
+            webView.evaluateJavascript("window.__dsAlivePing && window.__dsAlivePing()") { result ->
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    if (!isPingProbeInFlight) return@runOnUiThread
+                    isPingProbeInFlight = false
+                    pingTimeoutRunnable?.let { pingProbeHandler.removeCallbacks(it) }
+
+                    val isAlive = result?.trim('"', '\'') == "ok"
+                    if (isAlive && !isRendererDead) {
+                        if (AndroidBridge.sharedPayloadJson != null) {
+                            evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }")
+                        }
+                        pendingAutoStartScript?.let { script ->
+                            evaluateJs(script)
+                            pendingAutoStartScript = null
+                        }
+                    } else {
+                        handleDeadRenderer()
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            isPingProbeInFlight = false
+            pingTimeoutRunnable?.let { pingProbeHandler.removeCallbacks(it) }
+            handleDeadRenderer()
+        }
+    }
+
+    private fun handleDeadRenderer() {
+        if (isFinishing || isDestroyed) return
+        isRendererDead = false
+        splashOverlay.alpha = 1f
+        splashOverlay.visibility = View.VISIBLE
+        startSplashWatchdog()
+        val activeHost = getActiveHost()
+        webView.loadUrl(activeHost)
     }
 
     fun executeDeepFreeze() {
@@ -342,11 +437,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
-        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
-        if (currentInstance == this) {
-            currentInstance = null
-        }
         if (::webView.isInitialized) {
             try {
                 (webView.parent as? ViewGroup)?.removeView(webView)
@@ -354,6 +444,14 @@ class MainActivity : AppCompatActivity() {
                 webView.clearHistory()
                 webView.destroy()
             } catch (_: Exception) {}
+        }
+        lifecycleHandler.removeCallbacks(deepFreezeRunnable)
+        lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
+        cancelSplashWatchdog()
+        pingTimeoutRunnable?.let { pingProbeHandler.removeCallbacks(it) }
+        isPingProbeInFlight = false
+        if (currentInstance == this) {
+            currentInstance = null
         }
         super.onDestroy()
     }
@@ -417,8 +515,51 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun startSplashWatchdog() {
+        splashWatchdogHandler.removeCallbacks(splashWatchdogRunnable)
+        splashWatchdogHandler.postDelayed(splashWatchdogRunnable, 7000L)
+    }
+
+    fun cancelSplashWatchdog() {
+        splashWatchdogHandler.removeCallbacks(splashWatchdogRunnable)
+    }
+
+    private fun showSplashRetry() {
+        if (!::splashOverlay.isInitialized || isFinishing || isDestroyed) return
+        splashOverlay.visibility = View.VISIBLE
+        splashOverlay.alpha = 1f
+        splashOverlay.isClickable = true
+        splashOverlay.isFocusable = true
+
+        if (splashRetryButton == null) {
+            val btn = Button(this).apply {
+                text = getString(R.string.retry)
+                setTextColor(Color.WHITE)
+                setBackgroundResource(R.drawable.bg_button_primary)
+                setOnClickListener {
+                    visibility = View.GONE
+                    startSplashWatchdog()
+                    webView.reload()
+                }
+            }
+            val density = resources.displayMetrics.density
+            val params = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                (44 * density).toInt()
+            ).apply {
+                topMargin = (24 * density).toInt()
+            }
+            (splashOverlay as? ViewGroup)?.addView(btn, params)
+            splashRetryButton = btn
+        }
+        splashRetryButton?.visibility = View.VISIBLE
+    }
+
     private fun hideSplashOverlay() {
-        if (!::splashOverlay.isInitialized || splashOverlay.visibility == View.GONE) return
+        if (!::splashOverlay.isInitialized || splashOverlay.visibility == View.GONE || isSplashHiding) return
+        isSplashHiding = true
+        cancelSplashWatchdog()
+        splashRetryButton?.visibility = View.GONE
         splashOverlay.isClickable = false
         splashOverlay.isFocusable = false
         splashOverlay.animate()
@@ -427,6 +568,7 @@ class MainActivity : AppCompatActivity() {
             .withEndAction {
                 splashOverlay.visibility = View.GONE
                 splashOverlay.alpha = 1f
+                isSplashHiding = false
             }
             .start()
         splashOverlay.postDelayed({
@@ -434,8 +576,28 @@ class MainActivity : AppCompatActivity() {
                 splashOverlay.visibility = View.GONE
                 splashOverlay.isClickable = false
                 splashOverlay.isFocusable = false
+                isSplashHiding = false
             }
         }, 300L)
+    }
+
+    /**
+     * Called by AndroidBridge when Web SPA finishes initial hydration and is ready for interaction.
+     */
+    fun onAppReady() {
+        if (isFinishing || isDestroyed) return
+        cancelSplashWatchdog()
+        hideSplashOverlay()
+
+        // Flush pending shared payload if present
+        if (AndroidBridge.sharedPayloadJson != null) {
+            evaluateJs("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }")
+        }
+
+        pendingAutoStartScript?.let { script ->
+            evaluateJs(script)
+            pendingAutoStartScript = null
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -750,7 +912,6 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageCommitVisible(view: WebView?, url: String?) {
                 super.onPageCommitVisible(view, url)
-                hideSplashOverlay()
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -760,7 +921,6 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                hideSplashOverlay()
                 swipeRefreshLayout.isRefreshing = false
                 progressBar.visibility = View.GONE
 
@@ -783,6 +943,7 @@ class MainActivity : AppCompatActivity() {
                 super.onReceivedError(view, request, error)
                 if (request?.isForMainFrame == true) {
                     showOffline(true)
+                    showSplashRetry()
                 }
             }
 
@@ -790,6 +951,7 @@ class MainActivity : AppCompatActivity() {
                 view: WebView?,
                 detail: RenderProcessGoneDetail?
             ): Boolean {
+                isRendererDead = true
                 try {
                     (view?.parent as? ViewGroup)?.removeView(view)
                     view?.destroy()
@@ -962,7 +1124,10 @@ class MainActivity : AppCompatActivity() {
             detectedUrl.contains("instagram.com", ignoreCase = true) ||
             detectedUrl.contains("instagr.am", ignoreCase = true) ||
             detectedUrl.contains("spotify.com", ignoreCase = true) ||
-            detectedUrl.contains("spotify.link", ignoreCase = true)
+            detectedUrl.contains("spotify.link", ignoreCase = true) ||
+            detectedUrl.contains("slideshare.net", ignoreCase = true) ||
+            detectedUrl.contains("academia.edu", ignoreCase = true) ||
+            detectedUrl.contains("researchgate.net", ignoreCase = true)
         )
         // In Android 10+, browsers (like Chrome) share links as text/plain and populate ClipData with a tiny
         // preview thumbnail image for the system ShareSheet preview header. If this is a web link share,
@@ -1024,11 +1189,17 @@ class MainActivity : AppCompatActivity() {
                 fileListJson.put(fileObj)
             }
 
+            val detectedRoute = IntentUrlRouter.resolveToolRoute(detectedUrl ?: text)
+            val effectiveTargetRoute = targetRoute ?: detectedRoute
+
             val payload = JSONObject().apply {
+                val now = System.currentTimeMillis()
+                put("timestamp", now)
+                put("payloadId", "sp_${now}_${(1000..9999).random()}")
                 if (subject.isNotBlank()) put("title", subject)
                 if (text.isNotBlank()) put("text", text)
                 if (!detectedUrl.isNullOrBlank()) put("url", detectedUrl)
-                if (targetRoute != null) put("targetRoute", targetRoute)
+                if (effectiveTargetRoute != null) put("targetRoute", effectiveTargetRoute)
                 if (targetMode != null) put("targetMode", targetMode)
                 put("files", fileListJson)
             }
@@ -1037,16 +1208,20 @@ class MainActivity : AppCompatActivity() {
 
             val autoStartScript = if (uris.isEmpty() && !detectedUrl.isNullOrBlank()) {
                 val cleanUrl = detectedUrl.replace("\\", "\\\\").replace("'", "\\'")
-                val toolId = when {
-                    targetRoute?.contains("facebook") == true || cleanUrl.contains("facebook.com", ignoreCase = true) || cleanUrl.contains("fb.watch", ignoreCase = true) || cleanUrl.contains("fb.com", ignoreCase = true) -> "facebook"
-                    targetRoute?.contains("instagram") == true || cleanUrl.contains("instagram.com", ignoreCase = true) || cleanUrl.contains("instagr.am", ignoreCase = true) -> "instagram"
-                    targetRoute?.contains("spotify") == true || cleanUrl.contains("spotify.com", ignoreCase = true) || cleanUrl.contains("spotify.link", ignoreCase = true) -> "spotify"
-                    targetRoute?.contains("youtube") == true || cleanUrl.contains("youtube.com", ignoreCase = true) || cleanUrl.contains("youtu.be", ignoreCase = true) -> "youtube"
-                    targetRoute?.contains("tiktok") == true || cleanUrl.contains("tiktok.com", ignoreCase = true) || cleanUrl.contains("douyin.com", ignoreCase = true) -> "tiktok"
-                    targetRoute?.contains("scribd") == true || cleanUrl.contains("scribd.com", ignoreCase = true) -> "scribd"
-                    targetRoute?.contains("studocu") == true || cleanUrl.contains("studocu.", ignoreCase = true) -> "studocu"
-                    targetRoute?.contains("qr") == true -> "qr"
-                    targetRoute?.contains("hash") == true -> "hash"
+                val routedToolId = IntentUrlRouter.resolveToolId(cleanUrl)
+                val toolId = routedToolId ?: when {
+                    effectiveTargetRoute?.contains("facebook") == true || cleanUrl.contains("facebook.com", ignoreCase = true) || cleanUrl.contains("fb.watch", ignoreCase = true) || cleanUrl.contains("fb.com", ignoreCase = true) -> "facebook"
+                    effectiveTargetRoute?.contains("instagram") == true || cleanUrl.contains("instagram.com", ignoreCase = true) || cleanUrl.contains("instagr.am", ignoreCase = true) -> "instagram"
+                    effectiveTargetRoute?.contains("spotify") == true || cleanUrl.contains("spotify.com", ignoreCase = true) || cleanUrl.contains("spotify.link", ignoreCase = true) -> "spotify"
+                    effectiveTargetRoute?.contains("youtube") == true || cleanUrl.contains("youtube.com", ignoreCase = true) || cleanUrl.contains("youtu.be", ignoreCase = true) -> "youtube"
+                    effectiveTargetRoute?.contains("tiktok") == true || cleanUrl.contains("tiktok.com", ignoreCase = true) || cleanUrl.contains("douyin.com", ignoreCase = true) -> "tiktok"
+                    effectiveTargetRoute?.contains("scribd") == true || cleanUrl.contains("scribd.com", ignoreCase = true) -> "scribd"
+                    effectiveTargetRoute?.contains("studocu") == true || cleanUrl.contains("studocu.", ignoreCase = true) -> "studocu"
+                    effectiveTargetRoute?.contains("slideshare") == true || cleanUrl.contains("slideshare.net", ignoreCase = true) -> "slideshare"
+                    effectiveTargetRoute?.contains("academia") == true || cleanUrl.contains("academia.edu", ignoreCase = true) -> "academia"
+                    effectiveTargetRoute?.contains("researchgate") == true || cleanUrl.contains("researchgate.net", ignoreCase = true) -> "researchgate"
+                    effectiveTargetRoute?.contains("qr") == true -> "qr"
+                    effectiveTargetRoute?.contains("hash") == true -> "hash"
                     else -> "share"
                 }
                 """

@@ -183,7 +183,7 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION, o
   toast.innerHTML = `
     <div class="flex items-center gap-2.5 min-w-0 flex-1">
       <i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i>
-      <span class="toast-message-text truncate leading-relaxed">${cleanMessage}</span>
+      <span class="toast-message-text truncate leading-relaxed"></span>
     </div>
     <button type="button" class="btn-toast-close p-1 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition cursor-pointer shrink-0" title="Đóng">
       <i data-lucide="x" class="w-3.5 h-3.5"></i>
@@ -191,6 +191,7 @@ export function showToast(message, type = 'info', duration = DEFAULT_DURATION, o
   `;
 
   const textSpan = typeof toast.querySelector === 'function' ? toast.querySelector('.toast-message-text') : null;
+  if (textSpan) textSpan.textContent = cleanMessage;
   const toastRecord = createToastRecord(toast, cleanMessage, type, textSpan);
 
   const closeBtn = typeof toast.querySelector === 'function' ? toast.querySelector('.btn-toast-close') : null;

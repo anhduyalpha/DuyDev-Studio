@@ -143,7 +143,7 @@ export function renderTiktokWorkspace() {
               <button
                 id="btnPasteTiktokClipboard"
                 type="button"
-                class="${hasUrl ? 'hidden' : ''} px-2.5 py-1.5 rounded-lg bg-zinc-200/60 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-medium flex items-center gap-1 transition cursor-pointer active:scale-95"
+                class="${hasUrl ? 'hidden' : ''} px-2.5 py-1.5 min-h-[44px] rounded-lg bg-zinc-200/60 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-medium flex items-center justify-center gap-1 transition cursor-pointer active:scale-95"
                 title="Dán từ Clipboard"
               >
                 <i data-lucide="clipboard" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Dán</span>
@@ -726,7 +726,8 @@ async function downloadSlideshowZip(video) {
 }
 
 export function attachTiktokWorkspaceListeners() {
-  if (window.lucide?.createIcons) window.lucide.createIcons();
+  const root = document.getElementById('tiktokWorkspaceRoot');
+  if (root && window.lucide?.createIcons) window.lucide.createIcons({ root: root });
 
   const input = document.getElementById('tiktokUrlInput');
   const btnResolve = document.getElementById('btnResolveTiktok');
@@ -1076,7 +1077,7 @@ export function attachTiktokWorkspaceListeners() {
       }
     }
 
-    if (window.lucide?.createIcons) window.lucide.createIcons();
+    if (resultContainer && window.lucide?.createIcons) window.lucide.createIcons({ root: resultContainer });
   }
 
   function renderHistory() {
@@ -1221,7 +1222,8 @@ export function attachTiktokWorkspaceListeners() {
       renderHistory();
     }
 
-    if (window.lucide?.createIcons) window.lucide.createIcons();
+    const rootEl = document.getElementById('tiktokWorkspaceRoot') || resultContainer;
+    if (rootEl && window.lucide?.createIcons) window.lucide.createIcons({ root: rootEl });
   });
 
   // Migrate legacy localStorage history to storage.js if needed

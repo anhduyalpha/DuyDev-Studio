@@ -12,6 +12,10 @@ import { ViewerConnector } from '../../../common/viewer/FileViewerConnector.js';
 import { openSlideConfirmModal } from '../../../common/SlideConfirmModal.js';
 import { soundEngine } from '../../../../utilities/soundEngine.js';
 import { storage } from '../../../../utilities/storage.js';
+import { saveArtifactToDrive } from '../../../../utilities/driveSaveHelper.js';
+import { consumeHandoff, sendToTool } from '../../../../utilities/toolHandoff.js';
+import { getStorageAuthHeaders } from '../../../../utilities/adminAuth.js';
+import { showToast } from '../../../../utilities/toast.js';
 
 /**
  * Safely refreshes Lucide icons if available in current runtime environment.
@@ -323,6 +327,59 @@ export function setupConverterObserver(manager) {
  * @returns {() => void} Teardown unsubscribe function
  */
 export function attachConverterListeners(manager) {
+  let isMounted = true;
+
+  // 0. Consume cross-tool handoff if available (File, Blob, or URL/fileId)
+  const pendingHandoff = consumeHandoff('universal-converter');
+  if (pendingHandoff) {
+    if (pendingHandoff.file) {
+      manager.addFiles([pendingHandoff.file]);
+    } else if (pendingHandoff.blob) {
+      const f = new File([pendingHandoff.blob], pendingHandoff.fileName || 'file', {
+        type: pendingHandoff.mimeType || pendingHandoff.blob.type || 'application/octet-stream'
+      });
+      manager.addFiles([f]);
+    } else if (pendingHandoff.url || pendingHandoff.fileId) {
+      const downloadUrl = pendingHandoff.url || `/api/v1/files/download/${encodeURIComponent(pendingHandoff.fileId)}`;
+      const headers = downloadUrl.startsWith('/api/v1/storage') ? getStorageAuthHeaders() : {};
+      fetch(downloadUrl, { headers })
+        .then((res) => {
+          if (!res.ok) throw new Error(`Không thể tải tệp (${res.status})`);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (!isMounted) return;
+          const fileName = pendingHandoff.fileName || 'artifact';
+          const mimeType = pendingHandoff.mimeType || blob.type || 'application/octet-stream';
+          const f = new File([blob], fileName, { type: mimeType });
+          manager.addFiles([f]);
+          showToast(`Đã nhận ${fileName} từ công cụ khác`, 'info');
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          showToast(err.message || 'Lỗi khi nhận tệp handoff', 'error');
+        });
+    }
+  }
+
+  // Global Ctrl+V (paste) listener outside input fields
+  const handleGlobalPaste = (e) => {
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+      return;
+    }
+    if (document.getElementById('dsModalAdminPwdInput') || document.getElementById('shareTargetPanel')) {
+      return;
+    }
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      e.preventDefault();
+      manager.addFiles(Array.from(files));
+    }
+  };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('paste', handleGlobalPaste);
+  }
+
   // 1. Dropzone & File Ingestion (Multiple Support)
   const onFilesSelected = (files) => {
     if (files && files.length > 0) {
@@ -550,6 +607,68 @@ export function attachConverterListeners(manager) {
         return;
       }
 
+      // Cross-tool Handoff: Hash Checksum
+      const hashBtn = e.target.closest('.btn-hash-converter-result');
+      if (hashBtn) {
+        const itemId = hashBtn.dataset.itemId;
+        const it = manager.items?.find((x) => x.id === itemId);
+        if (it?.result) {
+          sendToTool('hash-checksum', {
+            fileId: it.result.resultFileId,
+            fileName: it.result.fileName,
+            url: it.result.downloadUrl
+          });
+        }
+        return;
+      }
+
+      // Cross-tool Handoff: ViewSplit Image Compare
+      const vsBtn = e.target.closest('.btn-viewsplit-converter-result');
+      if (vsBtn) {
+        const itemId = vsBtn.dataset.itemId;
+        const it = manager.items?.find((x) => x.id === itemId);
+        if (it?.result) {
+          sendToTool('view-split', {
+            fileId: it.result.resultFileId,
+            fileName: it.result.fileName,
+            url: it.result.downloadUrl
+          });
+        }
+        return;
+      }
+
+      // Individual Save to Drive (/converted)
+      const saveDriveBtn = e.target.closest('.btn-save-drive-converter-result');
+      if (saveDriveBtn) {
+        const itemId = saveDriveBtn.dataset.itemId;
+        const it = manager.items?.find((x) => x.id === itemId);
+        if (it?.result?.resultFileId) {
+          saveArtifactToDrive({
+            fileId: it.result.resultFileId,
+            fileName: it.result.fileName,
+            targetFolder: '/converted',
+            metadata: { tool: 'universal-converter', format: it.targetFormat }
+          });
+        }
+        return;
+      }
+
+      // Batch Save All to Drive (/converted)
+      if (e.target.closest('#btnSaveAllConverterToDrive')) {
+        const completedItems = manager.items?.filter((x) => x.status === 'completed' && x.result) || [];
+        for (const it of completedItems) {
+          if (it.result?.resultFileId) {
+            saveArtifactToDrive({
+              fileId: it.result.resultFileId,
+              fileName: it.result.fileName,
+              targetFolder: '/converted',
+              metadata: { tool: 'universal-converter', format: it.targetFormat }
+            });
+          }
+        }
+        return;
+      }
+
       const retryBtn = e.target.closest('.btn-retry-converter-result');
       if (retryBtn) {
         const itemId = retryBtn.dataset.itemId;
@@ -588,6 +707,10 @@ export function attachConverterListeners(manager) {
   const unsubscribeObserver = setupConverterObserver(manager);
 
   return () => {
+    isMounted = false;
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('paste', handleGlobalPaste);
+    }
     unsubscribeObserver();
     window.removeEventListener('dd:history-updated', handleGlobalHistoryUpdated);
   };

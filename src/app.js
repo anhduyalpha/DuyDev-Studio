@@ -18,7 +18,7 @@ import { taskCoordinator } from './utilities/taskCoordinator.js';
 
 // Pages
 import { renderDashboardPage, attachDashboardListeners } from './pages/DashboardPage.js';
-import { renderToolPage, attachToolPageListeners } from './pages/ToolPage.js';
+import { renderToolPage, attachToolPageListeners, renderToolLoadingSkeleton } from './pages/ToolPage.js';
 import { renderArchivePage, attachArchivePageListeners } from './pages/ArchivePage.js';
 import { renderArchiveCompressWorkspace, attachArchiveCompressListeners } from './components/tools/archive/ArchiveCompressWorkspace.js';
 import { renderHistoryPage, attachHistoryPageListeners } from './pages/HistoryPage.js';
@@ -30,8 +30,20 @@ import { detectSmartRoute, handoffSmartUrl } from './utilities/smartUrlRouter.js
 import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
 import { closeFileViewer } from './components/common/viewer/FileViewerCore.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
-import { retrievePendingSharedData } from './utilities/shareTargetHelper.js';
-import { openShareTargetModal } from './components/common/ShareTargetModal.js';
+import { peekPendingSharedPayload, consumePendingSharedPayload } from './utilities/shareTargetHelper.js';
+
+let _shareModalModulePromise = null;
+function getShareTargetModal() {
+  if (!_shareModalModulePromise) {
+    _shareModalModulePromise = import('./components/common/ShareTargetModal.js');
+  }
+  return _shareModalModulePromise;
+}
+
+// Native Android IPC liveness ping (immediate 0ms response expected by MainActivity watchdog within 350ms)
+if (typeof window !== 'undefined') {
+  window.__dsAlivePing = () => 'ok';
+}
 import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
 import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
@@ -113,9 +125,15 @@ class App {
   constructor() {
     this.currentCleanups = [];
     this.appRoot = document.getElementById('app');
+    this._navigationSeq = 0;
+    this._checkingShareTarget = false;
   }
 
-  init() {
+  async init() {
+    if (typeof window !== 'undefined') {
+      window.__dsAlivePing = () => 'ok';
+    }
+
     if (typeof window !== 'undefined' && window.__IS_DEPRECATED_DOMAIN) {
       console.warn('[DS] Deprecated domain detected. App execution halted in favor of migration screen.');
       return;
@@ -179,8 +197,22 @@ class App {
     this.renderShell();
     checkAndRenderMigrationNotice();
     initGlobalTaskDock();
-    this.handleRoute();
+    await this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
+
+    // Signal app readiness and boot hydration
+    window.__DS_APP_HYDRATED = true;
+    window.__dsAppReady = true;
+    window.dispatchEvent(new CustomEvent('ds:app-ready'));
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.notifyAppReady === 'function') {
+      try {
+        window.AndroidBridge.notifyAppReady();
+      } catch (err) {
+        console.warn('[AndroidBridge] notifyAppReady error:', err);
+      }
+    }
+    const startupHint = document.getElementById('appStartupTimeoutHint');
+    if (startupHint) startupHint.remove();
 
     // Background sync user profile and check for onboarding prompt
     syncProfileWithServer().finally(() => {
@@ -188,20 +220,25 @@ class App {
       storage.syncAllWithServer().catch(() => {});
     });
 
-    // Signal app readiness for any fast-path queued interactions
-    window.__dsAppReady = true;
-    window.dispatchEvent(new CustomEvent('ds:app-ready'));
-    const startupHint = document.getElementById('appStartupTimeoutHint');
-    if (startupHint) startupHint.remove();
-
     // Cold-start share target check (handles Android native intent and Service Worker shares)
     this.checkAndOpenShareTarget();
+
+    // Idle prefetch for ShareTargetModal
+    if (typeof window !== 'undefined') {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => getShareTargetModal().catch(() => {}), { timeout: 3000 });
+      } else {
+        setTimeout(() => getShareTargetModal().catch(() => {}), 1500);
+      }
+    }
 
     // Web Share Target: listen for payloads from Service Worker
     navigator.serviceWorker?.addEventListener('message', (e) => {
       if (e.data?.type === 'DS_SHARE_TARGET_PAYLOAD' && e.data.payload) {
         if (!document.getElementById('shareTargetPanel')) {
-          openShareTargetModal(e.data.payload);
+          getShareTargetModal().then(({ openShareTargetModal }) => {
+            openShareTargetModal(e.data.payload);
+          });
         }
       } else if (e.data?.type === 'DS_SHARE_TARGET_ARRIVED') {
         this.checkAndOpenShareTarget();
@@ -210,13 +247,28 @@ class App {
 
     // Native Android wrapper: listen for payloads arriving via AndroidBridge
     if (typeof window !== 'undefined') {
-      window.addEventListener('ds:native-share-arrived', () => {
-        this.checkAndOpenShareTarget();
+      window.addEventListener('ds:native-share-arrived', async () => {
+        const panel = document.getElementById('shareTargetPanel');
+        if (!panel) {
+          this.checkAndOpenShareTarget();
+        } else {
+          const newPayload = await peekPendingSharedPayload();
+          if (newPayload) {
+            const { openShareTargetModal } = await getShareTargetModal();
+            openShareTargetModal(newPayload);
+          }
+        }
       });
+
+      // Clear any stale paused states if document is currently visible on startup
+      const initialHidden = typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden');
+      document.documentElement.classList.toggle('app-backgrounded', initialHidden);
+      document.documentElement.classList.toggle('ds-animations-paused', initialHidden);
 
       // Native Android lifecycle: suspend audio/video and stop coordinator heartbeat when app pauses
       window.addEventListener('ds:native-app-paused', () => {
         document.documentElement.classList.add('app-backgrounded');
+        document.documentElement.classList.add('ds-animations-paused');
         document.querySelectorAll('audio, video').forEach((media) => {
           try { media.pause(); } catch {}
         });
@@ -227,6 +279,7 @@ class App {
       // Native Android lifecycle: resume heartbeat when app returns to foreground
       window.addEventListener('ds:native-app-resumed', () => {
         document.documentElement.classList.remove('app-backgrounded');
+        document.documentElement.classList.remove('ds-animations-paused');
         taskCoordinator.updateHeartbeatState();
         window.dispatchEvent(new CustomEvent('ds:visibility-change', { detail: { hidden: false } }));
       });
@@ -235,6 +288,7 @@ class App {
       document.addEventListener('visibilitychange', () => {
         const isHidden = document.hidden || document.visibilityState === 'hidden';
         document.documentElement.classList.toggle('app-backgrounded', isHidden);
+        document.documentElement.classList.toggle('ds-animations-paused', isHidden);
         if (isHidden) {
           document.querySelectorAll('audio, video').forEach((media) => {
             try { media.pause(); } catch {}
@@ -266,14 +320,28 @@ class App {
   }
 
   checkAndPromptOnboardingProfile() {
-    if (isProfileConfigured()) return;
+    if (isProfileConfigured()) {
+      try { localStorage.removeItem('ds_profile_needs_onboarding'); } catch {}
+      syncHeaderUserProfile();
+      return;
+    }
     try {
       if (sessionStorage.getItem('ds_profile_prompt_dismissed') === '1') return;
     } catch {}
 
-    // Non-blocking deep-link onboarding: do not interrupt users navigating directly to a tool route
-    const currentHash = window.location.hash || '';
-    if (currentHash && currentHash !== '#' && currentHash !== '#dashboard') {
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const isShare = hash.startsWith('#share-target') || search.includes('hasFiles=1') || search.includes('url=') || search.includes('text=') || Boolean(typeof window !== 'undefined' && window.AndroidBridge?.getSharedPayload?.());
+    const isApk = typeof window !== 'undefined' && (Boolean(window.AndroidBridge) || (typeof navigator !== 'undefined' && navigator.userAgent.includes('DuyDevStudio')) || Boolean(window.__DS_IS_APK));
+    const isDeepLink = hash && hash !== '#' && hash !== '#dashboard';
+
+    // Non-blocking deep-link, share target, and APK launch onboarding:
+    // Do NOT interrupt with blocking ProfileModal. Persist flag for Header.js dot instead.
+    if (isShare || isApk || isDeepLink) {
+      try {
+        localStorage.setItem('ds_profile_needs_onboarding', '1');
+      } catch {}
+      syncHeaderUserProfile();
       return;
     }
 
@@ -314,13 +382,13 @@ class App {
       const hasFiles = searchParams.get('hasFiles') === '1' || hashParams.get('hasFiles') === '1';
       const isShareRoute = hash.startsWith('#share-target') || window.location.pathname.endsWith('/share-target') || hasFiles || Boolean(url || text);
 
-      // 2. Poll IndexedDB with backoff if this is a share event (prevents race condition with SW write)
-      let payload = await retrievePendingSharedData();
+      // 2. Poll with backoff if this is a share event (peeks without consuming until modal/tool consumes)
+      let payload = await peekPendingSharedPayload();
       if (!payload && isShareRoute) {
         for (let i = 0; i < 4; i++) {
           if (document.getElementById('shareTargetPanel')) return;
           await new Promise(r => setTimeout(r, 120));
-          payload = await retrievePendingSharedData();
+          payload = await peekPendingSharedPayload();
           if (payload) break;
         }
       }
@@ -328,7 +396,7 @@ class App {
       // Check again if modal was opened while waiting
       if (document.getElementById('shareTargetPanel')) return;
 
-      // 3. Fallback to URL parameters if IndexedDB had no files
+      // 3. Fallback to URL parameters if no stored payload
       if (!payload && (url || text || title)) {
         payload = { url, text, title, files: [] };
       }
@@ -352,6 +420,9 @@ class App {
       if (!payload.files || payload.files.length === 0) {
         const smart = detectSmartRoute(payload.url || payload.text || '');
         if (smart) {
+          if (payload.payloadId) {
+            consumePendingSharedPayload(payload.payloadId);
+          }
           if (window.location.hash.startsWith('#share-target')) {
             history.replaceState(null, '', window.location.pathname);
           }
@@ -361,6 +432,7 @@ class App {
       }
 
       if (!document.getElementById('shareTargetPanel')) {
+        const { openShareTargetModal } = await getShareTargetModal();
         openShareTargetModal(payload);
       }
     } finally {
@@ -425,7 +497,7 @@ class App {
     });
   }
 
-  handleRoute() {
+  async handleRoute() {
     try {
       const hash = window.location.hash;
       visitorTracker.notifyRouteChange(hash || '#dashboard');
@@ -438,7 +510,7 @@ class App {
 
       // Web Share Target route — open modal over base dashboard view
       if (hash === '#share-target' || hash.startsWith('#share-target?')) {
-        this.renderCurrentView();
+        await this.renderCurrentView();
         this.checkAndOpenShareTarget();
         return;
       }
@@ -492,10 +564,12 @@ class App {
         }
       }
 
-      this.renderCurrentView();
+      await this.renderCurrentView();
       updateThemeUI(getStoredTheme());
       window.scrollTo(0, 0);
-      if (window.lucide) window.lucide.createIcons();
+      if (window.lucide) {
+        try { window.lucide.createIcons(); } catch {}
+      }
     } catch (err) {
       console.error('[Router] Error rendering route:', err);
       const mainContainer = document.getElementById('mainContent');
@@ -519,12 +593,26 @@ class App {
 
   cleanupCurrentView() {
     stopAdminPolling();
+    if (typeof window !== 'undefined' && typeof window.__unmountCurrentTool === 'function') {
+      try {
+        window.__unmountCurrentTool();
+        window.__unmountCurrentTool = null;
+      } catch (e) {
+        console.warn('[Router] unmountCurrentTool error:', e);
+      }
+    }
+    if (toolRegistry && typeof toolRegistry.disconnectResizeObserver === 'function') {
+      toolRegistry.disconnectResizeObserver();
+    }
     this.currentCleanups.forEach(fn => typeof fn === 'function' && fn());
     this.currentCleanups = [];
   }
 
-  renderCurrentView(isSoftUpdate = false) {
+  async renderCurrentView(isSoftUpdate = false) {
     this.cleanupCurrentView();
+    this._navigationSeq = (this._navigationSeq || 0) + 1;
+    const currentSeq = this._navigationSeq;
+
     const hash = window.location.hash;
     if (hash === '#image' || hash === '#tool/image-converter' || hash === '#tool/video-audio') {
       window.location.replace('#tool/universal-converter');
@@ -542,12 +630,33 @@ class App {
       const prevScrollY = isSoftUpdate ? window.scrollY : 0;
       mainContainer.innerHTML = isSoftUpdate ? content.replace(/\banimate-fadeIn\b/g, '') : content;
       cleanup = typeof attachFn === 'function' ? attachFn() : attachFn;
+      if (cleanup && !this.currentCleanups.includes(cleanup)) {
+        this.currentCleanups.push(cleanup);
+      }
       if (isSoftUpdate && prevScrollY > 0) {
         window.scrollTo({ top: prevScrollY, behavior: 'instant' });
       }
     };
-    const dispatchTool = (id, sub = null) => {
-      setView(renderToolPage(id, sub), () => attachToolPageListeners(onSoftReRender));
+    const dispatchTool = async (id, sub = null) => {
+      const tool = toolRegistry.getToolById(id);
+      if (!isSoftUpdate && mainContainer) {
+        mainContainer.innerHTML = renderToolLoadingSkeleton(tool);
+        if (window.lucide) {
+          try { window.lucide.createIcons({ root: mainContainer }); } catch { window.lucide.createIcons(); }
+        }
+      }
+
+      try {
+        const content = await renderToolPage(id, sub);
+        if (currentSeq !== this._navigationSeq) return;
+        setView(content, () => attachToolPageListeners(onSoftReRender));
+        if (window.lucide) {
+          try { window.lucide.createIcons({ root: mainContainer }); } catch { window.lucide.createIcons(); }
+        }
+      } catch (err) {
+        if (currentSeq !== this._navigationSeq) return;
+        console.error('[Router] Error loading tool:', id, err);
+      }
     };
 
     if (!hash || hash === '#' || hash === '#dashboard' || hash === '#share-target' || hash.startsWith('#share-target?') || hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {
@@ -555,7 +664,7 @@ class App {
       const existingGrid = !isSoftUpdate && mainContainer && mainContainer.querySelector('#toolsGridContainer');
       if (existingGrid) {
         cleanup = attachDashboardListeners(onSoftReRender);
-        if (cleanup) this.currentCleanups.push(cleanup);
+        if (cleanup && !this.currentCleanups.includes(cleanup)) this.currentCleanups.push(cleanup);
         return;
       }
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
@@ -563,7 +672,7 @@ class App {
       const cleanHash = hash.replace('#tool/', '');
       const [pathPart, queryPart] = cleanHash.split('?');
       const parts = pathPart.split('/');
-      dispatchTool(parts[0], parts[1] || null);
+      await dispatchTool(parts[0], parts[1] || null);
       if (parts[0] === 'tiktok-downloader' || parts[0] === 'tiktok') {
         const queryParams = new URLSearchParams(queryPart || window.location.search);
         const targetUrl = queryParams.get('url');
@@ -624,25 +733,53 @@ class App {
             }
           }, 100);
         }
+      } else if (parts[0] === 'academia-downloader' || parts[0] === 'academia') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('acUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.getElementById('btnResolveAc');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
+      } else if (parts[0] === 'researchgate-downloader' || parts[0] === 'researchgate') {
+        const queryParams = new URLSearchParams(queryPart || window.location.search);
+        const targetUrl = queryParams.get('url');
+        if (targetUrl) {
+          setTimeout(() => {
+            const input = document.getElementById('rgUrlInput');
+            if (input) {
+              input.value = targetUrl;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              const btn = document.getElementById('btnResolveRg');
+              if (btn) btn.click();
+            }
+          }, 100);
+        }
       }
     } else if (hash === '#qr' || hash.startsWith('#qr/')) {
-      dispatchTool('qr-multi', hash.startsWith('#qr/') ? hash.replace('#qr/', '') : null);
+      await dispatchTool('qr-multi', hash.startsWith('#qr/') ? hash.replace('#qr/', '') : null);
     } else if (hash === '#scan' || hash === '#qr-scan') {
-      dispatchTool('qr-scan');
+      await dispatchTool('qr-scan');
     } else if (hash === '#hash') {
-      dispatchTool('hash-checksum');
+      await dispatchTool('hash-checksum');
     } else if (hash === '#markdown') {
-      dispatchTool('markdown-docs');
+      await dispatchTool('markdown-docs');
     } else if (hash === '#pdf' || hash === '#pdf-studio' || hash.startsWith('#pdf/')) {
-      dispatchTool('pdf-studio', hash.startsWith('#pdf/') ? hash.replace('#pdf/', '') : null);
+      await dispatchTool('pdf-studio', hash.startsWith('#pdf/') ? hash.replace('#pdf/', '') : null);
     } else if (hash === '#converter' || hash === '#universal-converter') {
-      dispatchTool('universal-converter');
+      await dispatchTool('universal-converter');
     } else if (hash === '#studocu' || hash === '#studocu-dl') {
-      dispatchTool('studocu-dl');
+      await dispatchTool('studocu-dl');
     } else if (hash === '#scribd' || hash === '#scribd-archiver' || hash.startsWith('#scribd?') || hash.startsWith('#scribd-archiver?')) {
-      dispatchTool('scribd');
+      await dispatchTool('scribd');
     } else if (hash === '#tiktok' || hash === '#tiktok-downloader' || hash.startsWith('#tiktok?') || hash.startsWith('#tiktok-downloader?')) {
-      dispatchTool('tiktok-downloader');
+      await dispatchTool('tiktok-downloader');
       const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
       const queryParams = new URLSearchParams(queryPart);
       const targetUrl = queryParams.get('url');
@@ -653,7 +790,7 @@ class App {
         });
       }
     } else if (hash === '#youtube' || hash === '#youtube-downloader' || hash.startsWith('#youtube?') || hash.startsWith('#youtube-downloader?')) {
-      dispatchTool('youtube-downloader');
+      await dispatchTool('youtube-downloader');
       const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
       const queryParams = new URLSearchParams(queryPart);
       const targetUrl = queryParams.get('url');
@@ -664,7 +801,7 @@ class App {
         });
       }
     } else if (hash === '#facebook' || hash === '#facebook-downloader' || hash.startsWith('#facebook?') || hash.startsWith('#facebook-downloader?')) {
-      dispatchTool('facebook-downloader');
+      await dispatchTool('facebook-downloader');
       const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
       const queryParams = new URLSearchParams(queryPart);
       const targetUrl = queryParams.get('url');
@@ -680,7 +817,7 @@ class App {
         }, 100);
       }
     } else if (hash === '#instagram' || hash === '#instagram-downloader' || hash.startsWith('#instagram?') || hash.startsWith('#instagram-downloader?')) {
-      dispatchTool('instagram-downloader');
+      await dispatchTool('instagram-downloader');
       const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
       const queryParams = new URLSearchParams(queryPart);
       const targetUrl = queryParams.get('url');
@@ -696,7 +833,7 @@ class App {
         }, 100);
       }
     } else if (hash === '#spotify' || hash === '#spotify-downloader' || hash.startsWith('#spotify?') || hash.startsWith('#spotify-downloader?')) {
-      dispatchTool('spotify-downloader');
+      await dispatchTool('spotify-downloader');
       const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
       const queryParams = new URLSearchParams(queryPart);
       const targetUrl = queryParams.get('url');
@@ -712,15 +849,43 @@ class App {
         }, 100);
       }
     } else if (hash === '#slideshare' || hash === '#slideshare-downloader' || hash.startsWith('#slideshare?') || hash.startsWith('#slideshare-downloader?')) {
-      dispatchTool('slideshare-downloader');
+      await dispatchTool('slideshare-downloader');
     } else if (hash === '#academia' || hash === '#academia-downloader' || hash.startsWith('#academia?') || hash.startsWith('#academia-downloader?')) {
-      dispatchTool('academia-downloader');
+      await dispatchTool('academia-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('acUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.getElementById('btnResolveAc');
+            if (btn) btn.click();
+          }
+        }, 100);
+      }
     } else if (hash === '#researchgate' || hash === '#researchgate-downloader' || hash.startsWith('#researchgate?') || hash.startsWith('#researchgate-downloader?')) {
-      dispatchTool('researchgate-downloader');
+      await dispatchTool('researchgate-downloader');
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+      const queryParams = new URLSearchParams(queryPart);
+      const targetUrl = queryParams.get('url');
+      if (targetUrl) {
+        setTimeout(() => {
+          const input = document.getElementById('rgUrlInput');
+          if (input) {
+            input.value = targetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const btn = document.getElementById('btnResolveRg');
+            if (btn) btn.click();
+          }
+        }, 100);
+      }
     } else if (hash === '#view-split' || hash.startsWith('#view-split/') || hash === '#split' || hash.startsWith('#split/')) {
-      dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);
+      await dispatchTool('view-split', hash.includes('/') ? hash.split('/')[1] : null);
     } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {
-      dispatchTool('quiz-generator');
+      await dispatchTool('quiz-generator');
     } else if (hash === '#archive' || hash === '#archive-inspect') {
       setView(renderArchivePage(), () => attachArchivePageListeners(onSoftReRender));
     } else if (hash === '#server-archive' || hash === '#compress-archive') {
@@ -739,8 +904,10 @@ class App {
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
     }
 
-    if (cleanup) this.currentCleanups.push(cleanup);
-    if (window.lucide) window.lucide.createIcons();
+    if (cleanup && !this.currentCleanups.includes(cleanup)) this.currentCleanups.push(cleanup);
+    if (window.lucide) {
+      try { window.lucide.createIcons(); } catch {}
+    }
   }
 }
 
@@ -796,10 +963,10 @@ if (typeof window !== 'undefined') {
 }
 
 // Start Application on DOM Ready
-function boot() {
+async function boot() {
   try {
     const app = new App();
-    app.init();
+    await app.init();
   } catch (err) {
     console.error('App initialization error:', err);
     const root = document.getElementById('app');

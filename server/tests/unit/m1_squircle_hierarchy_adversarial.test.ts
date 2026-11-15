@@ -60,7 +60,7 @@ describe('Milestone 1 Empirical Adversarial Suite: Concentric Squircle Geometry 
 
     it('1.5 Spec badges maintain optical hierarchy with rounded-[8px]', () => {
       expect(toolCardSource).toContain('rounded-[8px]');
-      expect(toolCardSource).toContain('text-[10px]');
+      expect(toolCardSource).toContain('text-[11px]');
       expect(toolCardSource).toContain('font-mono');
       expect(toolCardSource).toContain('tabular-nums');
     });
@@ -123,9 +123,9 @@ describe('Milestone 1 Empirical Adversarial Suite: Concentric Squircle Geometry 
       expect(categoryFiltersSource).toContain('dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]');
     });
 
-    it('3.2 Inactive pill uses dark:bg-[#16161A] and dark:text-[#86868B] with hover:#F5F5F7', () => {
+    it('3.2 Inactive pill uses dark:bg-[#16161A] and high-contrast dark:text-zinc-400 with hover:#F5F5F7', () => {
       expect(categoryFiltersSource).toContain('dark:bg-[#16161A]');
-      expect(categoryFiltersSource).toContain('dark:text-[#86868B]');
+      expect(categoryFiltersSource).toContain('dark:text-zinc-400');
       expect(categoryFiltersSource).toContain('dark:hover:text-[#F5F5F7]');
     });
 
