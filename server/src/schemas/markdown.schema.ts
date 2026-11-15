@@ -25,8 +25,8 @@ export function sanitizeMarkdownFilename(raw?: string): string {
   // Strip null bytes and control chars
   let clean = raw.replace(/[\x00-\x1f\x7f]/g, '');
 
-  // Extract basename in case path traversal was attempted
-  clean = path.basename(clean);
+  // Extract basename across both Windows and POSIX path separators in case path traversal was attempted
+  clean = path.posix.basename(clean.replace(/\\/g, '/'));
 
   // Strip illegal Windows / POSIX file characters: : * ? " < > | / \
   clean = clean.replace(/[:*?"<>|/\\]/g, '');

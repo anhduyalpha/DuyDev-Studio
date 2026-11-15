@@ -46,7 +46,7 @@ export class StorageManager {
    * Returns path for raw uploaded file
    */
   static getUploadPath(fileId: string, ext = '.bin'): string {
-    const cleanId = path.basename(fileId).replace(/^[.]+/, '') || 'upload';
+    const cleanId = path.posix.basename(String(fileId).replace(/\\/g, '/')).replace(/^[.]+/, '') || 'upload';
     const sanitizedExt = ext.startsWith('.') ? ext : `.${ext}`;
     return StorageManager.sanitizeSafePath(resolvedStoragePaths.uploads, `${cleanId}${sanitizedExt}`);
   }
@@ -55,7 +55,7 @@ export class StorageManager {
    * Returns path for processed artifact
    */
   static getProcessedPath(fileId: string, ext: string): string {
-    const cleanId = path.basename(fileId).replace(/^[.]+/, '') || 'artifact';
+    const cleanId = path.posix.basename(String(fileId).replace(/\\/g, '/')).replace(/^[.]+/, '') || 'artifact';
     const sanitizedExt = ext.startsWith('.') ? ext : `.${ext}`;
     return StorageManager.sanitizeSafePath(resolvedStoragePaths.processed, `${cleanId}${sanitizedExt}`);
   }
@@ -64,7 +64,7 @@ export class StorageManager {
    * Returns path for temporary scratch file
    */
   static getTempPath(tempId: string, ext = '.tmp'): string {
-    const cleanId = path.basename(tempId).replace(/^[.]+/, '') || 'scratch';
+    const cleanId = path.posix.basename(String(tempId).replace(/\\/g, '/')).replace(/^[.]+/, '') || 'scratch';
     const sanitizedExt = ext.startsWith('.') ? ext : `.${ext}`;
     return StorageManager.sanitizeSafePath(resolvedStoragePaths.temp, `${cleanId}${sanitizedExt}`);
   }
@@ -92,8 +92,8 @@ export class StorageManager {
       throw new SecurityException('Null byte injection detected in path');
     }
     const dest = path.resolve(destinationDir);
-    // Strip leading slashes to prevent path.resolve from treating relative paths as root on POSIX
-    const cleanRel = (userPath || '').replace(/^[/\\]+/, '');
+    // Normalize backslashes and strip leading slashes to handle Windows/POSIX paths uniformly
+    const cleanRel = (userPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
     const resolved = path.resolve(dest, cleanRel);
 
     const isWindows = process.platform === 'win32';
