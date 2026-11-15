@@ -18,6 +18,21 @@ const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function resolvePythonBin(): string {
+  if (process.env.PYTHON_BIN && existsSync(process.env.PYTHON_BIN)) return process.env.PYTHON_BIN;
+  const candidates = [
+    path.resolve(process.cwd(), 'engines/document/venv/bin/python3'),
+    path.resolve(process.cwd(), '../engines/document/venv/bin/python3'),
+    path.resolve(process.cwd(), '../engines/document/venv/Scripts/python.exe'),
+    '/home/anhduy/dd-studio/engines/document/venv/bin/python3',
+    '/home/anhduy/dd-studio/engines/document/venv/bin/python'
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
 function resolvePythonScript(): string {
   const candidates = [
     path.resolve(process.cwd(), 'engines/document/markdown_to_docx.py'),
@@ -240,7 +255,7 @@ export async function exportMarkdownHandler(request: FastifyRequest, reply: Fast
   await fs.writeFile(inputMdPath, markdown, 'utf-8');
 
   try {
-    const pythonBin = process.platform === 'win32' ? 'python' : 'python3';
+    const pythonBin = resolvePythonBin();
     const pythonScript = resolvePythonScript();
 
     if (format === 'docx') {
