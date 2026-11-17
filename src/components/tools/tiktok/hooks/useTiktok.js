@@ -21,10 +21,10 @@ const STORAGE_KEY = 'ds_tiktok_history_v1';
  */
 export function extractTiktokUrls(rawText = '') {
   if (!rawText || typeof rawText !== 'string') return [];
-  const regex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?tiktok\.com\/[^\s"<>'`]+/gi;
+  const regex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(?:tiktok|douyin|iesdouyin)\.com\/[^\s"<>'`]+/gi;
   const matches = rawText.match(regex) || [];
   const cleaned = matches.map((u) => {
-    let clean = u.replace(/[.,;:!?]+$/, '').trim();
+    let clean = u.replace(/[.,;:!?)\]]+$/, '').trim();
     if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
       clean = `https://${clean}`;
     }
@@ -99,10 +99,13 @@ export class TiktokManager {
     const mappedToolItems = toolItems.map(t => ({
       id: String(t.id).replace(/^tiktok-/, ''),
       title: t.title || t.fileName,
+      fileName: t.fileName,
       cover: t.cover || t.thumbnail,
       author: t.author,
       duration: t.duration,
-      url: t.downloadUrl || t.originalUrl,
+      url: t.originalUrl || t.downloadUrl,
+      viewUrl: t.viewUrl,
+      downloadUrl: t.downloadUrl,
       driveRelPath: t.driveRelPath,
       isSlideshow: t.mediaType === 'carousel' || (t.quality && t.quality.includes('Ảnh')),
       slideCount: 0,
@@ -127,18 +130,23 @@ export class TiktokManager {
       this.state.recentHistory = updated;
       this.notify({ type: 'history' });
 
+      const fileExt = item.isSlideshow ? 'jpg' : 'mp4';
+      const defaultTitle = item.fileName || item.title || (item.isSlideshow ? 'TikTok Album' : `TikTok Video ${item.id || ''}`).trim();
+      const safeFileName = defaultTitle.toLowerCase().endsWith(`.${fileExt}`) ? defaultTitle : `${defaultTitle}.${fileExt}`;
+
       storage.recordCompletedJob({
         id: `tiktok-${item.id || Date.now()}`,
         toolId: 'tiktok-downloader',
-        toolTitle: 'TikTok Downloader',
-        tool: 'TikTok Downloader',
-        fileName: item.title || (item.isSlideshow ? 'TikTok Album' : 'TikTok Video'),
-        title: item.title,
+        toolTitle: 'TikTok & Douyin Downloader',
+        tool: 'TikTok & Douyin Downloader',
+        fileName: safeFileName,
+        title: item.title || defaultTitle,
         author: item.author,
         cover: item.cover,
         thumbnail: item.cover,
         duration: item.duration,
-        downloadUrl: item.url,
+        viewUrl: item.viewUrl || '',
+        downloadUrl: item.downloadUrl || item.url,
         originalUrl: item.url,
         quality: item.isSlideshow ? `${item.slideCount || 0} Ảnh` : 'HD Video',
         mediaType: item.isSlideshow ? 'carousel' : 'video',
@@ -269,13 +277,21 @@ export class TiktokManager {
       this.state.error = null;
 
       const driveRelPath = data.existingInDrive ? (data.existingInDrive.relPath || data.existingInDrive.path) : null;
+      const safeExt = data.isSlideshow ? 'jpg' : 'mp4';
+      const safeFile = `${(data.title || `TikTok_Video_${data.id || Date.now()}`).replace(/[\\/:*?"<>|#\r\n]+/g, '_').slice(0, 60)}.${safeExt}`;
+      const resolvedMedia = data.videoHdUrl || data.videoUrl || data.images?.[0] || '';
+      const streamViewUrl = resolvedMedia ? tiktokApi.getStreamUrl(resolvedMedia, safeFile, false) : '';
+      const streamDlUrl = resolvedMedia ? tiktokApi.getStreamUrl(resolvedMedia, safeFile, true) : '';
       this.saveHistory({
         id: data.id,
         title: data.title,
+        fileName: safeFile,
         cover: data.cover,
         author: data.author?.nickname || data.author?.uniqueId,
         duration: data.duration,
         url: cleanUrl,
+        viewUrl: streamViewUrl,
+        downloadUrl: streamDlUrl || cleanUrl,
         driveRelPath,
         isSlideshow: Boolean(data.isSlideshow),
         slideCount: data.images?.length || 0,
@@ -434,13 +450,17 @@ export class TiktokManager {
         }
 
         // Step 4: Persist in history with driveRelPath
+        const batchFile = `${(data.title || `TikTok_Video_${data.id || Date.now()}`).replace(/[\\/:*?"<>|#\r\n]+/g, '_').slice(0, 60)}.${data.isSlideshow ? 'zip' : 'mp4'}`;
         this.saveHistory({
           id: data.id,
           title: data.title,
+          fileName: batchFile,
           cover: data.cover,
           author: data.author?.nickname || data.author?.uniqueId,
           duration: data.duration,
           url: targetUrl,
+          viewUrl: data.videoUrl ? tiktokApi.getStreamUrl(data.videoUrl, batchFile, false) : '',
+          downloadUrl: data.videoUrl ? tiktokApi.getStreamUrl(data.videoUrl, batchFile, true) : targetUrl,
           driveRelPath,
           isSlideshow: Boolean(data.isSlideshow),
           timestamp: Date.now()

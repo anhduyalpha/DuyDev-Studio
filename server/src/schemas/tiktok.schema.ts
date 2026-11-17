@@ -7,7 +7,8 @@ export const tiktokResolveBodySchema = z.object({
 export const tiktokStreamQuerySchema = z.object({
   url: z.string().min(1, 'Target media URL is required'),
   download: z.union([z.string(), z.boolean()]).optional(),
-  filename: z.string().optional()
+  filename: z.string().optional(),
+  format: z.enum(['mp3']).optional()
 });
 
 export const tiktokSaveDriveBodySchema = z.object({
@@ -64,6 +65,8 @@ export interface TikTokVideoData {
   audioUrl?: string; // MP3 sound link
   isSlideshow?: boolean;
   images?: string[];
+  livePhotoVideos?: string[];
+  platform?: 'tiktok' | 'douyin';
   stats: {
     views: number;
     likes: number;
@@ -74,6 +77,6 @@ export interface TikTokVideoData {
     commentCount?: number;
     shareCount?: number;
   };
-  extractor: 'ssr' | 'resolver' | 'ytdlp';
+  extractor: 'ssr' | 'resolver' | 'ytdlp' | 'douyin-router' | 'evil0ctal' | 'cobalt';
   existingInDrive?: ExistingDriveItem | null;
 }

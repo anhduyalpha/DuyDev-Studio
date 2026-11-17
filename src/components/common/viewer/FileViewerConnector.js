@@ -324,6 +324,71 @@ if (typeof window !== 'undefined') {
   window.__ddViewerFetch = viewerFetch;
 }
 
+export function detectExternalMediaPlatform(urlStr = '', item = {}) {
+  const hint = `${item.toolId || ''} ${item.tool || ''} ${item.toolTitle || ''} ${item.sourceModule || ''}`.toLowerCase();
+  if (/tiktok|douyin/.test(hint)) return 'tiktok';
+  if (/instagram/.test(hint)) return 'instagram';
+  if (/facebook/.test(hint)) return 'facebook';
+  if (/spotify/.test(hint)) return 'spotify';
+
+  try {
+    const host = new URL(urlStr).hostname.toLowerCase();
+    if (/(?:tiktok|tiktokcdn|tiktokv|muscdn|byteoversea|ibytedtos|tikwm|douyin|iesdouyin|douyinvod|snssdk|amemv|byteimg|pstatp|zjcdn)/.test(host)) {
+      return 'tiktok';
+    }
+    if (/(?:cdninstagram|instagram|instagr\.am)/.test(host)) return 'instagram';
+    if (/(?:fbcdn|fbsbx|facebook|fb\.watch|fb\.com)/.test(host)) return 'facebook';
+    if (/(?:googlevideo|scdn\.co|spotify)/.test(host)) return 'spotify';
+  } catch {}
+  return null;
+}
+
+export function isSocialWebpageUrl(urlStr = '') {
+  if (!urlStr || !/^https?:\/\//i.test(urlStr)) return null;
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
+    const p = parsed.pathname;
+    if (/^(?:(?:www|m|vt|vm|v)\.)?(?:tiktok\.com|douyin\.com|iesdouyin\.com)$/i.test(host)) {
+      if (p === '/' || /\/(?:video|note|photo|item|share|@)|vt\.tiktok|vm\.tiktok|v\.douyin|m\.douyin/i.test(urlStr)) {
+        return 'tiktok';
+      }
+    }
+    if (/^(?:www\.|m\.)?(?:instagram\.com|instagr\.am)$/i.test(host) && /^\/(?:p|reel|reels|tv|stories|share)(?:\/|$)/i.test(p)) {
+      return 'instagram';
+    }
+    if (/^(?:www\.|m\.|mbasic\.|web\.)?(?:facebook\.com|fb\.watch|fb\.com)$/i.test(host) && /\/(?:watch|reel|share|videos|posts|photo|story\.php)/i.test(urlStr)) {
+      return 'facebook';
+    }
+    if (/^(?:open\.)?spotify\.com$|^spotify\.link$/i.test(host)) {
+      return 'spotify';
+    }
+  } catch {}
+  return null;
+}
+
+function isSameOriginUrl(urlStr = '') {
+  if (!urlStr || urlStr.startsWith('/') || urlStr.startsWith('./') || urlStr.startsWith('blob:') || urlStr.startsWith('data:')) {
+    return true;
+  }
+  try {
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return new URL(urlStr, window.location.href).origin === window.location.origin;
+    }
+  } catch {}
+  return false;
+}
+
+function buildProxiedStreamUrl(platform, mediaUrl, fileName = 'media.mp4', isDownload = false) {
+  if (!mediaUrl || !platform) return mediaUrl;
+  const params = new URLSearchParams({
+    url: mediaUrl,
+    filename: fileName || 'media.mp4',
+    download: isDownload ? '1' : '0'
+  });
+  return `/api/v1/${platform}/stream?${params.toString()}`;
+}
+
 export function resolveViewerUrls(item) {
   let fileId = item.fileId || item.resultFileId;
   let viewUrl = item.viewUrl || item.url || item.downloadUrl || '';
@@ -373,8 +438,37 @@ export function resolveViewerUrls(item) {
   }
 
   // 3. Dedicated streaming & download routes: preserve without rewriting
-  if (viewUrl.includes('/api/v1/youtube/stream') || downloadUrl.includes('/api/v1/youtube/stream')) {
-    return { viewUrl: viewUrl || downloadUrl, downloadUrl: downloadUrl || viewUrl, fileId: null };
+  if (
+    /\/api\/v1\/(?:youtube|tiktok|instagram|facebook|spotify)\/stream/i.test(viewUrl) ||
+    /\/api\/v1\/(?:youtube|tiktok|instagram|facebook|spotify)\/stream/i.test(downloadUrl)
+  ) {
+    let fixedView = viewUrl || downloadUrl;
+    let fixedDl = downloadUrl || viewUrl;
+    if (fixedView.includes('download=1')) fixedView = fixedView.replace('download=1', 'download=0');
+    if (fixedDl.includes('download=0')) fixedDl = fixedDl.replace('download=0', 'download=1');
+    return { viewUrl: fixedView, downloadUrl: fixedDl, fileId: null };
+  }
+
+  // 3a. External webpage URL or unproxied CDN URL from social/media platforms -> resolve or proxy cleanly
+  const webPlatform = isSocialWebpageUrl(viewUrl) || isSocialWebpageUrl(downloadUrl);
+  if (webPlatform && !drivePath && !fileId) {
+    const sourceUrl = isSocialWebpageUrl(viewUrl) ? viewUrl : downloadUrl;
+    return {
+      viewUrl: '',
+      downloadUrl: sourceUrl,
+      fileId: null,
+      needsResolve: { platform: webPlatform, sourceUrl }
+    };
+  }
+
+  if (viewUrl && !isSameOriginUrl(viewUrl)) {
+    const cdnPlatform = detectExternalMediaPlatform(viewUrl, item);
+    if (cdnPlatform) {
+      const proxyView = buildProxiedStreamUrl(cdnPlatform, viewUrl, fileName || 'media.mp4', false);
+      const rawDl = downloadUrl && !isSameOriginUrl(downloadUrl) ? downloadUrl : viewUrl;
+      const proxyDl = buildProxiedStreamUrl(cdnPlatform, rawDl, fileName || 'media.mp4', true);
+      return { viewUrl: proxyView, downloadUrl: proxyDl, fileId: null };
+    }
   }
 
   // 3b. Scribd routes: rewrite download to stream to avoid attachment triggers
@@ -454,7 +548,13 @@ export function resolveViewerUrls(item) {
       viewUrl += (viewUrl.includes('?') ? '&' : '?') + `deviceId=${encodeURIComponent(deviceId)}`;
       downloadUrl += (downloadUrl.includes('?') ? '&' : '?') + `deviceId=${encodeURIComponent(deviceId)}`;
     }
-  } else if (viewUrl && !viewUrl.startsWith('blob:') && !viewUrl.startsWith('data:') && !viewUrl.includes('inline=') && !viewUrl.includes('/api/v1/viewer/preview-pdf')) {
+  } else if (
+    viewUrl &&
+    isSameOriginUrl(viewUrl) &&
+    (viewUrl.includes('/api/v1/files/') || viewUrl.includes('/api/v1/storage/') || viewUrl.includes('/api/v1/archive/')) &&
+    !viewUrl.includes('inline=') &&
+    !viewUrl.includes('/api/v1/viewer/preview-pdf')
+  ) {
     if (viewUrl.includes('/api/v1/files/download/')) {
       viewUrl = viewUrl.replace('/api/v1/files/download/', '/api/v1/files/view/');
     } else {
@@ -540,14 +640,21 @@ export const ViewerConnector = {
     }
 
     const rawFile = item.rawFile || item.file || item.blob || null;
-    let { viewUrl, downloadUrl, fileId } = resolveViewerUrls(item);
+    let { viewUrl, downloadUrl, fileId, needsResolve } = resolveViewerUrls(item);
     let isBlob = Boolean(item.isBlob);
 
-    if (!viewUrl && rawFile instanceof Blob) {
+    if (!viewUrl && !needsResolve && rawFile instanceof Blob) {
       viewUrl = URL.createObjectURL(rawFile);
       if (!downloadUrl) downloadUrl = viewUrl;
       isBlob = true;
     }
+
+    const sourceOriginalUrl = item.originalUrl || item.sourceUrl || options.originalUrl || (needsResolve?.sourceUrl) || null;
+    const resolvePlatform = needsResolve?.platform ||
+      (sourceOriginalUrl ? (isSocialWebpageUrl(sourceOriginalUrl) || detectExternalMediaPlatform(sourceOriginalUrl, item)) : null);
+    const resolveMeta = resolvePlatform && sourceOriginalUrl
+      ? { platform: resolvePlatform, sourceUrl: sourceOriginalUrl }
+      : null;
 
     const name = extractFileName(item, viewUrl, downloadUrl);
     const mimeType = item.mimeType || item.mime || item.type || (rawFile ? rawFile.type : '');
@@ -595,7 +702,9 @@ export const ViewerConnector = {
       playlistIndex,
       direction,
       historyItemId: item.historyItemId || options.historyItemId || null,
-      originalUrl: item.originalUrl || options.originalUrl || null,
+      originalUrl: sourceOriginalUrl,
+      resolveMeta,
+      needsResolve: needsResolve || null,
       onRetry: typeof options.onRetry === 'function' ? options.onRetry : (typeof item.onRetry === 'function' ? item.onRetry : null),
       onRemoveBroken: typeof options.onRemoveBroken === 'function' ? options.onRemoveBroken : (typeof item.onRemoveBroken === 'function' ? item.onRemoveBroken : null),
       onSwitchItem: (targetIdx, dir) => {

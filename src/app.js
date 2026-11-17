@@ -4,7 +4,6 @@
  */
 
 import { initTheme, updateThemeUI, getStoredTheme } from './hooks/useTheme.js';
-import { registerServiceWorker, CURRENT_PWA_VERSION } from './utilities/pwa.js';
 import { soundEngine } from './utilities/soundEngine.js';
 import { toolRegistry } from './hooks/useToolRegistry.js';
 import { clearModuleState, clearAllModuleStates } from './utilities/moduleState.js';
@@ -16,42 +15,34 @@ import { renderFooter } from './components/layout/Footer.js';
 import { initGlobalTaskDock } from './components/layout/GlobalTaskDock.js';
 import { taskCoordinator } from './utilities/taskCoordinator.js';
 
-// Pages
+// Core initial view & helpers (all heavy secondary routes/modals lazy-loaded via loadModule)
 import { renderDashboardPage, attachDashboardListeners } from './pages/DashboardPage.js';
-import { renderToolPage, attachToolPageListeners, renderToolLoadingSkeleton } from './pages/ToolPage.js';
-import { renderArchivePage, attachArchivePageListeners } from './pages/ArchivePage.js';
-import { renderArchiveCompressWorkspace, attachArchiveCompressListeners } from './components/tools/archive/ArchiveCompressWorkspace.js';
-import { renderHistoryPage, attachHistoryPageListeners } from './pages/HistoryPage.js';
-import { renderServerPage, attachServerPageListeners } from './pages/ServerPage.js';
-import { renderAdminPage, attachAdminPageListeners, stopAdminPolling } from './pages/AdminPage.js';
-import { renderStoragePage, attachStoragePageListeners } from './pages/StoragePage.js';
-import { renderTermsPage, attachTermsPageListeners } from './pages/TermsPage.js';
 import { detectSmartRoute, handoffSmartUrl } from './utilities/smartUrlRouter.js';
-import { ViewerConnector } from './components/common/viewer/FileViewerConnector.js';
-import { closeFileViewer } from './components/common/viewer/FileViewerCore.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
 import { peekPendingSharedPayload, consumePendingSharedPayload } from './utilities/shareTargetHelper.js';
 
-let _shareModalModulePromise = null;
+const _lazyModules = Object.create(null);
+function loadModule(key, importer) {
+  return (_lazyModules[key] ??= importer().catch((err) => {
+    delete _lazyModules[key];
+    throw err;
+  }));
+}
+let _stopAdminPolling = null;
+
 function getShareTargetModal() {
-  if (!_shareModalModulePromise) {
-    _shareModalModulePromise = import('./components/common/ShareTargetModal.js');
-  }
-  return _shareModalModulePromise;
+  return loadModule('shareTargetModal', () => import('./components/common/ShareTargetModal.js'));
 }
 
 // Native Android IPC liveness ping (immediate 0ms response expected by MainActivity watchdog within 350ms)
 if (typeof window !== 'undefined') {
   window.__dsAlivePing = () => 'ok';
 }
-import { checkAndRenderMigrationNotice } from './components/common/MigrationNoticeModal.js';
-import { visitorTracker } from './utilities/visitorTracker.js';
 import { showToast } from './utilities/toast.js';
 import { getDeviceId } from './utilities/deviceId.js';
 import { isAdminAuthenticated, getAdminToken } from './utilities/adminAuth.js';
 import { initSecurityShield } from './utilities/securityShield.js';
 import { isProfileConfigured, syncProfileWithServer, getUserProfile } from './utilities/userProfile.js';
-import { openProfileModal } from './components/common/ProfileModal.js';
 import { storage } from './utilities/storage.js';
 
 /**
@@ -142,9 +133,7 @@ class App {
     setupGlobalApiFetchInterceptor();
     initSecurityShield();
     initTheme();
-    registerServiceWorker();
     taskCoordinator.init();
-    visitorTracker.init();
 
     // Clean up cache-busting parameter from URL if present (_ds_fresh)
     try {
@@ -153,24 +142,6 @@ class App {
         url.searchParams.delete('_ds_fresh');
         const cleanUrl = url.pathname + (url.search ? url.search : '') + url.hash;
         window.history.replaceState({}, '', cleanUrl);
-      }
-    } catch {}
-
-    // Check if we just completed a Triple-Lock Hard Purge update or launched a newly updated version
-    try {
-      const isHardPurged = sessionStorage.getItem('ds_hard_purged') === 'true';
-      const lastSeenVersion = localStorage.getItem('ds_last_seen_version');
-
-      if (isHardPurged || (lastSeenVersion && lastSeenVersion !== CURRENT_PWA_VERSION)) {
-        if (isHardPurged) sessionStorage.removeItem('ds_hard_purged');
-        localStorage.setItem('ds_last_seen_version', CURRENT_PWA_VERSION);
-        setTimeout(() => {
-          soundEngine.playAppUpdate();
-          const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '');
-          showToast(`Đã cập nhật lên phiên bản ${displayVer} thành công`, 'success');
-        }, 500);
-      } else if (!lastSeenVersion) {
-        localStorage.setItem('ds_last_seen_version', CURRENT_PWA_VERSION);
       }
     } catch {}
 
@@ -186,7 +157,6 @@ class App {
       localStorage.removeItem('ds_last_route');
     } catch {}
 
-
     // Listen to hash changes for client-side SPA routing
     window.addEventListener('hashchange', () => this.handleRoute());
 
@@ -195,7 +165,13 @@ class App {
 
     // Initial render
     this.renderShell();
-    checkAndRenderMigrationNotice();
+    const host = (window.location.hostname || '').toLowerCase();
+    const migrationHint = `${window.location.search || ''}${window.location.hash || ''}`;
+    if (host.includes('alphadaniel') || migrationHint.includes('migration')) {
+      loadModule('migrationNotice', () => import('./components/common/MigrationNoticeModal.js'))
+        .then((m) => m.checkAndRenderMigrationNotice())
+        .catch(() => {});
+    }
     initGlobalTaskDock();
     await this.handleRoute();
     try { sessionStorage.removeItem('ds_auto_recovered'); } catch {}
@@ -213,6 +189,36 @@ class App {
     }
     const startupHint = document.getElementById('appStartupTimeoutHint');
     if (startupHint) startupHint.remove();
+
+    // Defer PWA registration, update announcement & visitor telemetry until interactive
+    loadModule('pwa', () => import('./utilities/pwa.js'))
+      .then(({ registerServiceWorker, CURRENT_PWA_VERSION }) => {
+        registerServiceWorker();
+        try {
+          const isHardPurged = sessionStorage.getItem('ds_hard_purged') === 'true';
+          const lastSeenVersion = localStorage.getItem('ds_last_seen_version');
+
+          if (isHardPurged || (lastSeenVersion && lastSeenVersion !== CURRENT_PWA_VERSION)) {
+            if (isHardPurged) sessionStorage.removeItem('ds_hard_purged');
+            localStorage.setItem('ds_last_seen_version', CURRENT_PWA_VERSION);
+            setTimeout(() => {
+              soundEngine.playAppUpdate();
+              const displayVer = CURRENT_PWA_VERSION.replace('duydev-studio-', '');
+              showToast(`Đã cập nhật lên phiên bản ${displayVer} thành công`, 'success');
+            }, 500);
+          } else if (!lastSeenVersion) {
+            localStorage.setItem('ds_last_seen_version', CURRENT_PWA_VERSION);
+          }
+        } catch {}
+      })
+      .catch(() => {});
+
+    loadModule('visitorTracker', () => import('./utilities/visitorTracker.js'))
+      .then(({ visitorTracker }) => {
+        visitorTracker.init();
+        visitorTracker.notifyRouteChange(window.location.hash || '#dashboard');
+      })
+      .catch(() => {});
 
     // Background sync user profile and check for onboarding prompt
     syncProfileWithServer().finally(() => {
@@ -359,7 +365,13 @@ class App {
       if (document.getElementById('shareTargetPanel') || document.getElementById('dsProfileModalOverlay')) {
         return;
       }
-      openProfileModal({ isOnboarding: true });
+      loadModule('profileModal', () => import('./components/common/ProfileModal.js'))
+        .then(({ openProfileModal }) => {
+          if (!document.getElementById('shareTargetPanel') && !document.getElementById('dsProfileModalOverlay') && !isProfileConfigured()) {
+            openProfileModal({ isOnboarding: true });
+          }
+        })
+        .catch(() => {});
     }, 150);
   }
 
@@ -500,10 +512,16 @@ class App {
   async handleRoute() {
     try {
       const hash = window.location.hash;
-      visitorTracker.notifyRouteChange(hash || '#dashboard');
+      if (_lazyModules.visitorTracker) {
+        _lazyModules.visitorTracker
+          .then(({ visitorTracker }) => visitorTracker.notifyRouteChange(hash || '#dashboard'))
+          .catch(() => {});
+      }
       const isPdfView = hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf');
-      if (!isPdfView) {
-        closeFileViewer();
+      if (!isPdfView && (_lazyModules.viewerConnector || _lazyModules.viewerCore)) {
+        loadModule('viewerCore', () => import('./components/common/viewer/FileViewerCore.js'))
+          .then(({ closeFileViewer }) => closeFileViewer())
+          .catch(() => {});
       }
       this.cleanupCurrentView();
       this.checkAndPromptOnboardingProfile();
@@ -541,14 +559,16 @@ class App {
             } else {
               downloadUrl = fileUrl.replace('/api/v1/files/view/', '/api/v1/files/download/');
             }
-            ViewerConnector.preview({
-              name: fileName,
-              fileName,
-              category: 'pdf',
-              mimeType: 'application/pdf',
-              viewUrl: fileUrl,
-              downloadUrl
-            });
+            loadModule('viewerConnector', () => import('./components/common/viewer/FileViewerConnector.js'))
+              .then(({ ViewerConnector }) => ViewerConnector.preview({
+                name: fileName,
+                fileName,
+                category: 'pdf',
+                mimeType: 'application/pdf',
+                viewUrl: fileUrl,
+                downloadUrl
+              }))
+              .catch(() => {});
           } catch (deepLinkErr) {
             console.warn('[Router] Failed to parse PDF deep-link URL:', deepLinkErr);
           }
@@ -592,7 +612,7 @@ class App {
   }
 
   cleanupCurrentView() {
-    stopAdminPolling();
+    if (typeof _stopAdminPolling === 'function') _stopAdminPolling();
     if (typeof window !== 'undefined' && typeof window.__unmountCurrentTool === 'function') {
       try {
         window.__unmountCurrentTool();
@@ -640,13 +660,27 @@ class App {
     const dispatchTool = async (id, sub = null) => {
       const tool = toolRegistry.getToolById(id);
       if (!isSoftUpdate && mainContainer) {
-        mainContainer.innerHTML = renderToolLoadingSkeleton(tool);
+        if (_lazyModules.toolPage) {
+          try {
+            const { renderToolLoadingSkeleton } = await _lazyModules.toolPage;
+            mainContainer.innerHTML = renderToolLoadingSkeleton(tool);
+          } catch {}
+        } else {
+          mainContainer.innerHTML = `
+            <div class="max-w-4xl mx-auto py-16 flex flex-col items-center justify-center gap-3 text-zinc-400">
+              <div class="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+              <span class="text-xs font-mono">Đang tải ${tool?.name || 'công cụ'}...</span>
+            </div>
+          `;
+        }
         if (window.lucide) {
           try { window.lucide.createIcons({ root: mainContainer }); } catch { window.lucide.createIcons(); }
         }
       }
 
       try {
+        const { renderToolPage, attachToolPageListeners } = await loadModule('toolPage', () => import('./pages/ToolPage.js'));
+        if (currentSeq !== this._navigationSeq) return;
         const content = await renderToolPage(id, sub);
         if (currentSeq !== this._navigationSeq) return;
         setView(content, () => attachToolPageListeners(onSoftReRender));
@@ -657,6 +691,20 @@ class App {
         if (currentSeq !== this._navigationSeq) return;
         console.error('[Router] Error loading tool:', id, err);
       }
+    };
+
+    const mountLazyView = async (key, importer, getHtml, getAttach) => {
+      if (!isSoftUpdate && mainContainer) {
+        mainContainer.innerHTML = `
+          <div class="max-w-4xl mx-auto py-16 flex flex-col items-center justify-center gap-3 text-zinc-400">
+            <div class="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+            <span class="text-xs font-mono">Đang tải...</span>
+          </div>
+        `;
+      }
+      const mod = await loadModule(key, importer);
+      if (currentSeq !== this._navigationSeq) return;
+      setView(getHtml(mod), getAttach(mod));
     };
 
     if (!hash || hash === '#' || hash === '#dashboard' || hash === '#share-target' || hash.startsWith('#share-target?') || hash.startsWith('#view/pdf') || hash.startsWith('#preview/pdf') || hash.startsWith('#reader/pdf')) {
@@ -887,19 +935,19 @@ class App {
     } else if (hash === '#quiz' || hash === '#quiz-generator' || hash === '#tao-bai-tap' || hash === '#tao-bai-tap-trac-nghiem') {
       await dispatchTool('quiz-generator');
     } else if (hash === '#archive' || hash === '#archive-inspect') {
-      setView(renderArchivePage(), () => attachArchivePageListeners(onSoftReRender));
+      await mountLazyView('archive', () => import('./pages/ArchivePage.js'), (m) => m.renderArchivePage(), (m) => () => m.attachArchivePageListeners(onSoftReRender));
     } else if (hash === '#server-archive' || hash === '#compress-archive') {
-      setView(renderArchiveCompressWorkspace(), () => attachArchiveCompressListeners(onSoftReRender));
+      await mountLazyView('archiveCompress', () => import('./components/tools/archive/ArchiveCompressWorkspace.js'), (m) => m.renderArchiveCompressWorkspace(), (m) => () => m.attachArchiveCompressListeners(onSoftReRender));
     } else if (hash === '#history' || hash === '#trash') {
-      setView(renderHistoryPage(hash === '#trash' ? 'trash' : 'history'), () => attachHistoryPageListeners(onSoftReRender));
+      await mountLazyView('history', () => import('./pages/HistoryPage.js'), (m) => m.renderHistoryPage(hash === '#trash' ? 'trash' : 'history'), (m) => () => m.attachHistoryPageListeners(onSoftReRender));
     } else if (hash === '#storage' || hash.startsWith('#storage/') || hash.startsWith('#storage?')) {
-      setView(renderStoragePage(), () => attachStoragePageListeners(onSoftReRender));
+      await mountLazyView('storage', () => import('./pages/StoragePage.js'), (m) => m.renderStoragePage(), (m) => () => m.attachStoragePageListeners(onSoftReRender));
     } else if (hash === '#admin' || hash === '#admin-dashboard' || hash === '#telemetry' || hash === '#monitoring') {
-      setView(renderAdminPage(), () => attachAdminPageListeners(onSoftReRender));
+      await mountLazyView('admin', () => import('./pages/AdminPage.js'), (m) => { _stopAdminPolling = m.stopAdminPolling; return m.renderAdminPage(); }, (m) => () => m.attachAdminPageListeners(onSoftReRender));
     } else if (hash === '#settings' || hash === '#server') {
-      setView(renderServerPage(), () => attachServerPageListeners(onSoftReRender));
+      await mountLazyView('server', () => import('./pages/ServerPage.js'), (m) => m.renderServerPage(), (m) => () => m.attachServerPageListeners(onSoftReRender));
     } else if (hash === '#terms' || hash === '#terms-of-service' || hash === '#dieu-khoan') {
-      setView(renderTermsPage(), () => attachTermsPageListeners(onSoftReRender));
+      await mountLazyView('terms', () => import('./pages/TermsPage.js'), (m) => m.renderTermsPage(), (m) => () => m.attachTermsPageListeners(onSoftReRender));
     } else {
       setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
     }
@@ -911,13 +959,23 @@ class App {
   }
 }
 
-// Expose global Universal File Viewer bridge for tools and deep-links
+// Expose global Universal File Viewer lazy bridge for tools and deep-links
+const getViewerConnector = () =>
+  loadModule('viewerConnector', () => import('./components/common/viewer/FileViewerConnector.js'))
+    .then((m) => m.ViewerConnector);
+
 if (typeof window !== 'undefined') {
-  window.ViewerConnector = ViewerConnector;
-  window.openFileViewer = (item, options) => ViewerConnector.preview(item, options);
+  window.ViewerConnector = {
+    preview: (...args) => getViewerConnector().then((vc) => vc.preview(...args)),
+    open: (...args) => getViewerConnector().then((vc) => vc.open(...args)),
+    openViewer: (...args) => getViewerConnector().then((vc) => vc.openViewer(...args)),
+    previewBlob: (...args) => getViewerConnector().then((vc) => vc.previewBlob(...args)),
+    viewerFetch: (...args) => getViewerConnector().then((vc) => vc.viewerFetch(...args))
+  };
+  window.openFileViewer = (item, options) => window.ViewerConnector.preview(item, options);
   window.__ds_fileViewer = {
-    open: (item, options) => ViewerConnector.preview(item, options),
-    preview: (item, options) => ViewerConnector.preview(item, options)
+    open: (item, options) => window.ViewerConnector.preview(item, options),
+    preview: (item, options) => window.ViewerConnector.preview(item, options)
   };
 
   // Android Native bridge: Intercept any <a download> clicks to route through AndroidBridge.downloadFile

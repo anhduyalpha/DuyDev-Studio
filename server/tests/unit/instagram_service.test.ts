@@ -471,4 +471,71 @@ describe('InstagramService - Tier 1 Cookieless Embed, GraphQL, Cache & SSRF Suit
       }
     });
   });
+
+  describe('6. Reel Poster-Image Downgrade Guard & ScheduledServerJS Video Extraction', () => {
+    it('rejects poster-only <img> in Tier 1A embed for a Reel and escalates to GraphQL returning real MP4', async () => {
+      const reelUrl = 'https://www.instagram.com/reel/CxPosterBugReel/';
+
+      globalThis.fetch = vi.fn().mockImplementation(async (input: any) => {
+        const urlStr = String(input?.url || input);
+        if (urlStr.includes('/embed')) {
+          const posterOnlyEmbed = `
+            <!DOCTYPE html><html><body>
+              <input type="hidden" name="lsd" value="LSD_REEL_BUG" />
+              <div class="EmbedVideo">
+                <img class="EmbeddedMediaImage" src="https://cdninstagram.com/v/reel_poster_cover.jpg" />
+                <span>Watch on Instagram</span>
+              </div>
+            </body></html>
+          `;
+          return new Response(posterOnlyEmbed, { status: 200, headers: { 'content-type': 'text/html' } });
+        }
+        if (urlStr.includes('/graphql/query') || urlStr.includes('/api/graphql')) {
+          return new Response(
+            JSON.stringify({
+              data: {
+                xdt_shortcode_media: {
+                  id: '9911223344',
+                  is_video: true,
+                  media_type: 2,
+                  video_versions: [
+                    { width: 480, height: 854, url: 'https://cdninstagram.com/v/reel_sd.mp4' },
+                    { width: 1080, height: 1920, url: 'https://cdninstagram.com/v/reel_hd.mp4' }
+                  ],
+                  image_versions2: {
+                    candidates: [{ url: 'https://cdninstagram.com/v/reel_poster_cover.jpg' }]
+                  },
+                  owner: { username: 'creator_hd' }
+                }
+              }
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        return new Response('Not found', { status: 404 });
+      });
+
+      const res = await (InstagramService as any).resolveMedia(reelUrl);
+      expect(res.mediaType).toBe('video');
+      expect(res.videoUrl).toBe('https://cdninstagram.com/v/reel_hd.mp4');
+      expect(res.cover).toBe('https://cdninstagram.com/v/reel_poster_cover.jpg');
+      expect(res.medias[0].type).toBe('video');
+      expect(res.medias[0].url).toBe('https://cdninstagram.com/v/reel_hd.mp4');
+    });
+
+    it('formatShortcodeMedia refuses to substitute display_url JPG for a carousel video item lacking video_url', () => {
+      const brokenCarousel = {
+        id: '777888',
+        display_url: 'https://cdninstagram.com/v/cover.jpg',
+        edge_sidecar_to_children: {
+          edges: [
+            { node: { id: 'c1', is_video: false, display_url: 'https://cdninstagram.com/v/p1.jpg' } },
+            { node: { id: 'c2', is_video: true, display_url: 'https://cdninstagram.com/v/v2_thumb.jpg' } }
+          ]
+        }
+      };
+      const out = (InstagramService as any).formatShortcodeMedia(brokenCarousel, 'CxBrokenCarousel', 'p');
+      expect(out).toBeNull();
+    });
+  });
 });

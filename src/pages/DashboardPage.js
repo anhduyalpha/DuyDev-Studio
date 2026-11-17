@@ -8,11 +8,8 @@ import { renderToolCard } from '../components/dashboard/ToolCard.js';
 import { renderRecentActivity, toggleRecentActivity } from '../components/dashboard/RecentActivity.js';
 import { toolRegistry } from '../hooks/useToolRegistry.js';
 import { storage } from '../utilities/storage.js';
-import { ViewerConnector } from '../components/common/viewer/FileViewerConnector.js';
 import { showToast } from '../utilities/toast.js';
 import { copyText, copyQrImageOrFallback } from '../utilities/clipboard.js';
-import { pdfQueueManager } from '../components/tools/pdf/hooks/usePdfQueue.js';
-import { converterManager } from '../components/tools/converter/hooks/useConverter.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { detectSmartRoute, handoffSmartUrl } from '../utilities/smartUrlRouter.js';
 import { soundEngine } from '../utilities/soundEngine.js';
@@ -355,9 +352,12 @@ export function attachDashboardListeners(onReRender) {
 
       if (tool.id === 'pdf-studio') {
         window.location.hash = '#tool/pdf-studio';
-        pdfQueueManager.addFileFromHistory(item).then((ok) => {
-          if (ok) showToast(`Đã nạp ${item.fileName} vào PDF Studio`, 'success');
-        });
+        import('../components/tools/pdf/hooks/usePdfQueue.js')
+          .then(({ pdfQueueManager }) => pdfQueueManager.addFileFromHistory(item))
+          .then((ok) => {
+            if (ok) showToast(`Đã nạp ${item.fileName} vào PDF Studio`, 'success');
+          })
+          .catch(() => {});
         return;
       }
 
@@ -365,9 +365,11 @@ export function attachDashboardListeners(onReRender) {
         window.location.hash = '#tool/universal-converter';
         const url = item.downloadUrl || (item.resultFileId ? `/api/v1/files/download/${item.resultFileId}` : null);
         if (url) {
-          fetch(url)
-            .then((r) => r.blob())
-            .then((blob) => {
+          Promise.all([
+            fetch(url).then((r) => r.blob()),
+            import('../components/tools/converter/hooks/useConverter.js')
+          ])
+            .then(([blob, { converterManager }]) => {
               const file = new File([blob], item.fileName || 'converted-file', { type: blob.type || 'application/octet-stream' });
               converterManager.addFiles([file]);
               showToast(`Đã nạp ${item.fileName} vào File Converter`, 'success');
@@ -406,7 +408,21 @@ export function attachDashboardListeners(onReRender) {
       const url = prevBtn.dataset.previewUrl;
       const name = prevBtn.dataset.fileName;
       const size = Number(prevBtn.dataset.fileSize || 0);
-      if (url) ViewerConnector.preview({ fileName: name, downloadUrl: url, resultSize: size });
+      if (url) {
+        const matched = storage.getLocalHistory().find(
+          (x) => x.downloadUrl === url || x.viewUrl === url || x.originalUrl === url
+        );
+        import('../components/common/viewer/FileViewerConnector.js')
+          .then(({ ViewerConnector }) =>
+            ViewerConnector.preview({
+              ...(matched || {}),
+              fileName: name || matched?.fileName,
+              downloadUrl: url,
+              resultSize: size
+            })
+          )
+          .catch(() => {});
+      }
     }
   };
   if (recentContainer) {

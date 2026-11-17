@@ -52,6 +52,46 @@ describe('Task 1.4 — Lazy Dynamic Tool Loading (ToolPage.js) & Race-Free Route
       });
       expect(topLevelStaticShareImport).toEqual([]);
     });
+
+    it('app.js, DashboardPage.js, and Header.js must defer heavy secondary routes and modals on cold boot', () => {
+      const appContent = fs.readFileSync(appJsPath, 'utf-8');
+      const appStaticLines = appContent
+        .split('\n')
+        .filter((l) => l.trim().startsWith('import '))
+        .join('\n');
+      for (const deferred of [
+        'AdminPage.js',
+        'StoragePage.js',
+        'ServerPage.js',
+        'ToolPage.js',
+        'HistoryPage.js',
+        'ArchivePage.js',
+        'TermsPage.js',
+        'ProfileModal.js',
+        'FileViewerCore.js',
+        'FileViewerConnector.js',
+        'pwa.js'
+      ]) {
+        expect(appStaticLines).not.toContain(deferred);
+      }
+
+      const dashStatic = fs
+        .readFileSync(path.join(rootDir, 'src/pages/DashboardPage.js'), 'utf-8')
+        .split('\n')
+        .filter((l) => l.trim().startsWith('import '))
+        .join('\n');
+      expect(dashStatic).not.toContain('usePdfQueue.js');
+      expect(dashStatic).not.toContain('useConverter.js');
+      expect(dashStatic).not.toContain('FileViewerConnector.js');
+
+      const headerStatic = fs
+        .readFileSync(path.join(rootDir, 'src/components/layout/Header.js'), 'utf-8')
+        .split('\n')
+        .filter((l) => l.trim().startsWith('import '))
+        .join('\n');
+      expect(headerStatic).not.toContain('ProfileModal.js');
+      expect(headerStatic).not.toContain('SoundVolumeModal.js');
+    });
   });
 
   describe('Tool Registry & Loader Coverage', () => {

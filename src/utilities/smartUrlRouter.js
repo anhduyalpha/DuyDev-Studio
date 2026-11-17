@@ -16,7 +16,7 @@ const SCRIBD_REGEX = /(?:https?:\/\/)?(?:www\.)?scribd\.com\/(?:document|doc|pre
 
 // TikTok video/photo/short URL patterns
 const TIKTOK_REGEX = /(?:https?:\/\/)?(?:(?:vt|vm|www|m|v)\.)?tiktok\.com\/[^\s"']+/i;
-const DOUYIN_REGEX = /(?:https?:\/\/)?(?:(?:v|www|m)\.)?douyin\.com\/[^\s"']+/i;
+const DOUYIN_REGEX = /(?:https?:\/\/)?(?:(?:v|www|m)\.)?(?:douyin|iesdouyin)\.com\/[^\s"']+/i;
 
 // YouTube video / shorts / youtu.be URL patterns
 const YOUTUBE_REGEX = /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:youtube\.com|youtu\.be)\/[^\s"'>]*/i;

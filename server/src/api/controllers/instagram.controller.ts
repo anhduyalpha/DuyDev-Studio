@@ -26,7 +26,7 @@ export async function checkDuplicateInstagramHandler(request: FastifyRequest, re
 }
 
 export async function streamInstagramHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, download, filename } = instagramStreamQuerySchema.parse(request.query || {});
+  const { url, download, filename, format } = instagramStreamQuerySchema.parse(request.query || {});
   const isDownload = download === true || download === 'true' || download === '1';
   const rangeHeader = request.headers.range;
 
@@ -35,7 +35,8 @@ export async function streamInstagramHandler(request: FastifyRequest, reply: Fas
     isDownload,
     filename || 'instagram_video.mp4',
     rangeHeader,
-    reply
+    reply,
+    format
   );
 }
 

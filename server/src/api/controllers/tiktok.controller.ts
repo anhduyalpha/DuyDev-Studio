@@ -19,7 +19,7 @@ export async function resolveTikTokHandler(request: FastifyRequest, reply: Fasti
 export async function checkDuplicateTikTokHandler(request: FastifyRequest, reply: FastifyReply) {
   const { url, id } = tiktokCheckDuplicateSchema.parse(request.body || {});
   let expandedUrl = url;
-  if (url && (url.includes('vt.tiktok.com') || url.includes('vm.tiktok.com'))) {
+  if (url && /(?:vt\.tiktok\.com|vm\.tiktok\.com|v\.douyin\.com|m\.douyin\.com|iesdouyin\.com)/i.test(url)) {
     try {
       expandedUrl = await TikTokService.expandUrl(url);
     } catch {}
@@ -32,7 +32,7 @@ export async function checkDuplicateTikTokHandler(request: FastifyRequest, reply
 }
 
 export async function streamTikTokHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, download, filename } = tiktokStreamQuerySchema.parse(request.query || {});
+  const { url, download, filename, format } = tiktokStreamQuerySchema.parse(request.query || {});
   const isDownload = download === true || download === 'true' || download === '1';
   const rangeHeader = request.headers.range;
 
@@ -41,7 +41,8 @@ export async function streamTikTokHandler(request: FastifyRequest, reply: Fastif
     isDownload,
     filename || 'tiktok_video.mp4',
     rangeHeader,
-    reply
+    reply,
+    format
   );
 }
 

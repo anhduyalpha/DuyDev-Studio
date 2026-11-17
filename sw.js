@@ -396,8 +396,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Same-origin assets: Network-First with Cache Fallback for offline PWA
+  // 3. Same-origin assets: Cache-First for immutable (?v=, vendor, assets), Network-First otherwise
   if (url.origin === self.location.origin) {
+    const isImmutableAsset =
+      url.pathname.startsWith('/src/vendor/') ||
+      url.pathname.startsWith('/src/assets/') ||
+      url.searchParams.has('v');
+
+    if (isImmutableAsset) {
+      event.respondWith(
+        caches.open(CACHE_NAME).then((cache) =>
+          cache.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return fetch(event.request).then((response) => {
+              if (response && response.status === 200 && response.type === 'basic') {
+                cache.put(event.request, response.clone()).catch(() => {});
+              }
+              return response;
+            });
+          })
+        )
+      );
+      return;
+    }
+
     const isScriptOrStyle =
       event.request.destination === 'script' ||
       event.request.destination === 'style' ||

@@ -251,13 +251,95 @@ if (typeof window !== 'undefined') {
   window.__ddViewerFetch = viewerFetch;
 }
 
+export async function resolveViewerMediaUrl(state) {
+  const meta = state?.resolveMeta || state?.needsResolve;
+  if (!meta?.platform || !meta?.sourceUrl) return null;
+  const { platform, sourceUrl } = meta;
+  if (!['tiktok', 'instagram', 'facebook', 'spotify'].includes(platform)) return null;
+
+  const res = await viewerFetch(`/api/v1/${platform}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: sourceUrl }),
+    signal: state?.abortSignal
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json?.success || !json?.data) {
+    throw new Error(json?.message || json?.error?.message || `HTTP ${res.status}`);
+  }
+
+  const d = json.data;
+  let rawMedia = '';
+  let resolvedCat = state.category;
+  let ext = extractSafeExtension(state.name, state.mimeType, state.category).toLowerCase();
+
+  if (platform === 'spotify') {
+    rawMedia = d.downloadUrl || '';
+    resolvedCat = FILE_CATEGORIES.AUDIO;
+    ext = 'mp3';
+  } else if (platform === 'tiktok') {
+    if (state.category === FILE_CATEGORIES.AUDIO && d.audioUrl) {
+      rawMedia = d.audioUrl;
+      resolvedCat = FILE_CATEGORIES.AUDIO;
+      ext = 'mp3';
+    } else if (d.isSlideshow && d.images?.length && !d.videoUrl) {
+      rawMedia = d.images[0];
+      resolvedCat = FILE_CATEGORIES.IMAGE;
+      ext = 'jpg';
+    } else {
+      rawMedia = d.videoHdUrl || d.videoUrl || d.images?.[0] || '';
+      resolvedCat = FILE_CATEGORIES.VIDEO;
+      ext = 'mp4';
+    }
+  } else if (platform === 'instagram') {
+    const first = d.medias?.[0];
+    const isVid = first?.type === 'video' || (!first?.type && Boolean(d.videoUrl));
+    rawMedia = first?.url || d.videoUrl || d.imageUrl || d.cover || '';
+    resolvedCat = isVid ? FILE_CATEGORIES.VIDEO : FILE_CATEGORIES.IMAGE;
+    ext = isVid ? 'mp4' : 'jpg';
+  } else if (platform === 'facebook') {
+    const isImg = d.mediaType === 'image';
+    rawMedia = isImg
+      ? (d.formats?.[0]?.url || d.cover || '')
+      : (d.videoHdUrl || d.videoSdUrl || d.formats?.[0]?.url || '');
+    resolvedCat = isImg ? FILE_CATEGORIES.IMAGE : FILE_CATEGORIES.VIDEO;
+    ext = isImg ? 'jpg' : 'mp4';
+  }
+
+  if (!rawMedia) throw new Error('Không tìm thấy luồng phát trực tiếp từ nguồn');
+
+  let safeName = (state.name || d.title || `${platform}_media`).replace(/[\\/:*?"<>|#\r\n]+/g, '_').trim();
+  if (!safeName.toLowerCase().endsWith(`.${ext}`)) safeName = `${safeName}.${ext}`;
+
+  const toStream = (dl) =>
+    `/api/v1/${platform}/stream?${new URLSearchParams({ url: rawMedia, filename: safeName, download: dl ? '1' : '0' }).toString()}`;
+
+  state.name = safeName;
+  state.category = resolvedCat;
+  state.viewUrl = toStream(false);
+  state.downloadUrl = toStream(true);
+  state.mimeType = ext === 'mp3' ? 'audio/mpeg' : ext === 'jpg' ? 'image/jpeg' : 'video/mp4';
+
+  const dlBtn = document.getElementById('btnDownloadViewerFile');
+  if (dlBtn) {
+    dlBtn.href = state.downloadUrl;
+    dlBtn.download = state.name;
+  }
+  const badge = document.getElementById('viewerFileExtBadge');
+  if (badge) badge.textContent = ext.toUpperCase();
+  const nameEl = document.getElementById('viewerFileName');
+  if (nameEl) nameEl.textContent = state.name;
+
+  return { viewUrl: state.viewUrl, downloadUrl: state.downloadUrl, category: state.category };
+}
+
 export function renderFallbackErrorCard(state, reason = '', details = '') {
   const ext = extractSafeExtension(state?.name, state?.mimeType, state?.category);
   const displayReason = reason || 'Định dạng này không hỗ trợ xem trực tiếp hoặc tệp bị lỗi cấu trúc';
   const downloadUrl = state.downloadUrl || state.viewUrl || '#';
   const fileSizeStr = state.size > 0 ? `(${formatBytes(state.size)})` : '';
   const is404 = String(reason || '').includes('404') || String(details || '').includes('404') || String(reason || '').includes('không tồn tại');
-  const hasRetry = Boolean(state.onRetry || state.originalUrl);
+  const hasRetry = Boolean(state.onRetry || state.resolveMeta || state.originalUrl);
   const hasRemove = Boolean(state.onRemoveBroken || state.historyItemId);
 
   return `
@@ -283,13 +365,13 @@ export function renderFallbackErrorCard(state, reason = '', details = '') {
       </div>
 
       <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+        ${hasRetry ? `
+          <button id="btnViewerRetryDownload" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs min-h-[40px]">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            <span>Thử tải lại từ nguồn</span>
+          </button>
+        ` : ''}
         ${is404 ? `
-          ${hasRetry ? `
-            <button id="btnViewerRetryDownload" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-xs min-h-[40px]">
-              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-              <span>Thử tải lại từ nguồn</span>
-            </button>
-          ` : ''}
           ${hasRemove ? `
             <button id="btnViewerRemoveBroken" type="button" class="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 transition cursor-pointer border border-rose-500/20 min-h-[40px]">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -320,7 +402,13 @@ export function showViewerFallbackCard(state, reason = '', details = '') {
 
   const retryBtn = document.getElementById('btnViewerRetryDownload');
   if (retryBtn) {
-    retryBtn.onclick = () => {
+    retryBtn.onclick = async () => {
+      if (state.resolveMeta) {
+        state._hasAutoRefreshed = false;
+        state.needsResolve = state.resolveMeta;
+        openFileViewer(state);
+        return;
+      }
       closeFileViewer();
       if (typeof state.onRetry === 'function') {
         state.onRetry();
@@ -560,6 +648,7 @@ export function openFileViewer(state) {
     state.sessionId = sessionId;
     state.abortSignal = abortSignal;
     state.isCurrentSession = () => sessionId === currentSessionId && !abortSignal.aborted;
+    state.refreshMediaUrl = () => resolveViewerMediaUrl(state);
     state.showErrorFallback = (reason, details) => {
       if (state.isCurrentSession()) {
         showViewerFallbackCard(state, reason, details);
@@ -676,6 +765,7 @@ export function openFileViewer(state) {
   state.sessionId = sessionId;
   state.abortSignal = abortSignal;
   state.isCurrentSession = () => sessionId === currentSessionId && !abortSignal.aborted;
+  state.refreshMediaUrl = () => resolveViewerMediaUrl(state);
   state.showErrorFallback = (reason, details) => {
     if (state.isCurrentSession()) {
       showViewerFallbackCard(state, reason, details);
@@ -689,7 +779,14 @@ export function openFileViewer(state) {
     registerCleanup(() => URL.revokeObjectURL(state.viewUrl));
   }
 
-  const bodyHtml = renderCategoryBody(state);
+  const bodyHtml = state.needsResolve
+    ? `
+      <div class="py-16 flex flex-col items-center justify-center gap-3 text-zinc-400">
+        <div class="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+        <p class="text-xs font-mono">Đang làm mới luồng phát trực tiếp...</p>
+      </div>
+    `
+    : renderCategoryBody(state);
 
   const isFullHeight = [
     FILE_CATEGORIES.PDF,
@@ -777,10 +874,31 @@ export function openFileViewer(state) {
     showToast(ok ? 'Đã sao chép liên kết' : 'Lỗi sao chép', ok ? 'success' : 'error');
   });
 
-  // Attach Specific Renderer Listeners
-  attachCategoryListeners(state, registerCleanup);
+  // Attach Specific Renderer Listeners (or resolve external social webpage URLs first)
+  if (state.needsResolve) {
+    resolveViewerMediaUrl(state)
+      .then(() => {
+        if (!state.isCurrentSession()) return;
+        state.needsResolve = null;
+        const viewerBody = document.getElementById('fileViewerBody');
+        if (viewerBody) {
+          viewerBody.innerHTML = renderCategoryBody(state);
+          if (window.lucide) window.lucide.createIcons({ root: document.getElementById('fileViewerCoreModal') });
+          attachCategoryListeners(state, registerCleanup);
+        }
+      })
+      .catch((err) => {
+        if (!state.isCurrentSession() || err?.name === 'AbortError') return;
+        state.showErrorFallback(
+          'Không thể tải luồng phát từ liên kết nguồn (nội dung có thể đã bị xóa hoặc ở chế độ riêng tư).',
+          err?.message || ''
+        );
+      });
+  } else {
+    attachCategoryListeners(state, registerCleanup);
 
-  if (state.category === FILE_CATEGORIES.FALLBACK) {
-    probeAndUpgradeCategory(state, sessionId, abortSignal);
+    if (state.category === FILE_CATEGORIES.FALLBACK) {
+      probeAndUpgradeCategory(state, sessionId, abortSignal);
+    }
   }
 }

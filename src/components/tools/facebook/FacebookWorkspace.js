@@ -13,6 +13,7 @@ import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
 import { sendToTool } from '../../../utilities/toolHandoff.js';
+import { buildSafeMediaFilename, downloadMediaZip } from '../../../utilities/mediaBatchHelper.js';
 import {
   renderMediaHistorySection,
   attachMediaHistoryListeners,
@@ -617,6 +618,49 @@ export class FacebookWorkspace {
                 <span>${isImage ? 'Tải ảnh về máy (.JPG)' : 'Tải về máy (.MP4)'}</span>
               </button>
 
+              ${isImage && this.videoData.formats?.length > 1 ? `
+                <button
+                  type="button"
+                  id="fbDownloadZipBtn"
+                  data-action="download-zip"
+                  class="w-full min-h-[44px] py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 text-white text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
+                  <span>Tải Tất Cả Ảnh (${this.videoData.formats.length} tệp .ZIP)</span>
+                </button>
+              ` : ''}
+
+              ${!isImage && (activeStreamUrl || this.videoData.cover) ? `
+                <div class="grid grid-cols-2 gap-2">
+                  ${activeStreamUrl ? `
+                    <button
+                      type="button"
+                      data-action="download-media"
+                      data-url="${facebookApi.getStreamUrl(activeStreamUrl, this.buildSafeFileName(this.videoData.title, 'mp3', 'audio'), true, 'mp3')}"
+                      data-filename="${this.buildSafeFileName(this.videoData.title, 'mp3', 'audio')}"
+                      data-mime="audio/mpeg"
+                      class="min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <i data-lucide="music" class="w-3.5 h-3.5 text-emerald-500"></i>
+                      <span>Tải Audio (.MP3)</span>
+                    </button>
+                  ` : ''}
+                  ${this.videoData.cover ? `
+                    <button
+                      type="button"
+                      data-action="download-media"
+                      data-url="${facebookApi.getStreamUrl(this.videoData.cover, this.buildSafeFileName(this.videoData.title, 'jpg', 'cover'), true)}"
+                      data-filename="${this.buildSafeFileName(this.videoData.title, 'jpg', 'cover')}"
+                      data-mime="image/jpeg"
+                      class="${!activeStreamUrl ? 'col-span-2 ' : ''}min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <i data-lucide="image" class="w-3.5 h-3.5 text-amber-500"></i>
+                      <span>Tải Ảnh Bìa (.JPG)</span>
+                    </button>
+                  ` : ''}
+                </div>
+              ` : ''}
+
               <button
                 type="button"
                 id="fbSaveDriveBtn"
@@ -844,10 +888,12 @@ export class FacebookWorkspace {
     ViewerConnector.preview({
       name: fileName,
       fileName,
+      toolId: 'facebook-downloader',
       category: isImage ? 'image' : 'video',
       mimeType: isImage ? 'image/jpeg' : 'video/mp4',
       viewUrl: streamUrl,
-      downloadUrl: streamUrl.replace('download=0', 'download=1')
+      downloadUrl: streamUrl.replace('download=0', 'download=1'),
+      originalUrl: this.url || this.videoData.originalUrl || ''
     });
   }
 
@@ -928,9 +974,39 @@ export class FacebookWorkspace {
         break;
       }
 
+      case 'download-zip': {
+        this.downloadPhotoAlbumZip(btn);
+        break;
+      }
+
       case 'dismiss-alert':
         this.renderAlert(null);
         break;
+    }
+  }
+
+  async downloadPhotoAlbumZip(btn) {
+    const fmts = this.videoData?.formats || [];
+    if (fmts.length < 2) return;
+    const span = btn?.querySelector('span');
+    const origText = span?.textContent || 'Tải Tất Cả Ảnh (.ZIP)';
+    if (btn) btn.disabled = true;
+    try {
+      const entries = fmts.map((f, i) => {
+        const pad = String(i + 1).padStart(2, '0');
+        const ext = f.ext || 'jpg';
+        const name = `facebook_${pad}.${ext}`;
+        return { url: facebookApi.getStreamUrl(f.url, name, false), name };
+      });
+      const zipName = `[Facebook]_${buildSafeMediaFilename(this.videoData?.title, `album_${this.videoData?.id || 'fb'}`, 'zip')}`;
+      await downloadMediaZip(entries, zipName, (status) => {
+        if (span) span.textContent = status;
+      });
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi đóng gói album ZIP', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+      if (span) span.textContent = origText;
     }
   }
 

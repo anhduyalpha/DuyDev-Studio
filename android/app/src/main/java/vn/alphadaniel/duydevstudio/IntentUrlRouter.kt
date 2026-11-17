@@ -12,7 +12,7 @@ object IntentUrlRouter {
 
     private val URL_WITH_SCHEME_REGEX = Regex("""(?i)\bhttps?://[^\s"'<>()]+""")
     private val DOMAIN_PREFIX_REGEX = Regex(
-        """(?i)\b(?:academia\.edu|researchgate\.net|scribd\.com|tiktok\.com|douyin\.com|facebook\.com|fb\.watch|fb\.com|instagram\.com|instagr\.am|youtube\.com|youtu\.be|spotify\.com|spotify\.link|slideshare\.net)(?:/[^\s"'<>()]*)?"""
+        """(?i)\b(?:academia\.edu|researchgate\.net|scribd\.com|tiktok\.com|douyin\.com|iesdouyin\.com|facebook\.com|fb\.watch|fb\.com|instagram\.com|instagr\.am|youtube\.com|youtu\.be|spotify\.com|spotify\.link|slideshare\.net)(?:/[^\s"'<>()]*)?"""
     )
 
     /**
@@ -51,7 +51,7 @@ object IntentUrlRouter {
             isMatchingHost(host, "academia.edu") -> "academia"
             isMatchingHost(host, "researchgate.net") -> "researchgate"
             isMatchingHost(host, "scribd.com") -> "scribd"
-            isMatchingHost(host, "tiktok.com") || isMatchingHost(host, "douyin.com") -> "tiktok"
+            isMatchingHost(host, "tiktok.com") || isMatchingHost(host, "douyin.com") || isMatchingHost(host, "iesdouyin.com") -> "tiktok"
             isMatchingHost(host, "facebook.com") || isMatchingHost(host, "fb.watch") || isMatchingHost(host, "fb.com") -> "facebook"
             isMatchingHost(host, "instagram.com") || isMatchingHost(host, "instagr.am") -> "instagram"
             isMatchingHost(host, "youtube.com") || isMatchingHost(host, "youtu.be") -> "youtube"

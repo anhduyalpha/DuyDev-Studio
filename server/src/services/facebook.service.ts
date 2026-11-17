@@ -22,6 +22,7 @@ import { BadRequestError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 import { BoundedTtlCache, expandRedirectUrl, findExistingDriveMatch } from './shared/media-url-cache.js';
+import { streamTranscodedMp3, tryCobaltResolver } from './shared/media-extractor.helper.js';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -369,6 +370,28 @@ export class FacebookService {
         }
       } catch (e: any) {
         logger.debug({ err: e?.message }, '[Facebook] Tier 2 API skipped');
+      }
+    }
+
+    // Fallback Tier 2B: Optional Cobalt Gateway if COBALT_API_URL is configured
+    if (!resolvedData) {
+      try {
+        const cobalt = await tryCobaltResolver(targetUrl);
+        if (cobalt?.url) {
+          resolvedData = {
+            id: fallbackId,
+            title: cobalt.filename ? cobalt.filename.replace(/\.[^.]+$/, '') : `Facebook Media ${fallbackId}`,
+            author: { name: 'Facebook User' },
+            cover: '',
+            duration: 0,
+            formats: [{ quality: 'hd', label: 'HD', url: cobalt.url, ext: 'mp4' }],
+            videoHdUrl: cobalt.url,
+            extractor: 'resolver',
+            mediaType: 'video'
+          };
+        }
+      } catch (cbErr: any) {
+        logger.debug({ err: cbErr?.message }, '[Facebook] Optional Cobalt tier skipped');
       }
     }
 
@@ -1214,7 +1237,8 @@ export class FacebookService {
     download: boolean,
     filename: string,
     rangeHeader: string | undefined,
-    reply: FastifyReply
+    reply: FastifyReply,
+    format?: 'mp3'
   ): Promise<any> {
     const isDash = targetUrl.startsWith('dash://');
 
@@ -1230,6 +1254,15 @@ export class FacebookService {
         validateSafeMediaUrl(entry.audioUrl, ['fbcdn.net', 'facebook.com', 'fbsbx.com']);
       } catch (e: any) {
         throw new BadRequestError(e.message || 'URL không hợp lệ (SSRF Guard)');
+      }
+
+      if (format === 'mp3') {
+        return streamTranscodedMp3({
+          sourceUrl: entry.audioUrl,
+          headers: { 'User-Agent': DEFAULT_UA, 'Referer': 'https://www.facebook.com/' },
+          filename,
+          reply
+        });
       }
 
       const cleanFilename = (filename || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1289,6 +1322,9 @@ export class FacebookService {
       'User-Agent': isFbLookaside ? FB_EXTERNAL_HIT_UA : DEFAULT_UA,
       'Referer': 'https://www.facebook.com/'
     };
+    if (format === 'mp3') {
+      return streamTranscodedMp3({ sourceUrl: targetUrl, headers, filename, reply });
+    }
     if (rangeHeader) {
       headers['Range'] = rangeHeader;
     }

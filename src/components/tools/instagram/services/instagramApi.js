@@ -53,13 +53,14 @@ export const instagramApi = {
    * @param {boolean} [download=false] 
    * @returns {string}
    */
-  getStreamUrl(mediaUrl, filename = 'instagram_video.mp4', download = false) {
+  getStreamUrl(mediaUrl, filename = 'instagram_video.mp4', download = false, format = '') {
     if (!mediaUrl) return '';
     const params = new URLSearchParams({
       url: mediaUrl,
       filename: filename,
       download: download ? '1' : '0'
     });
+    if (format) params.set('format', format);
     return `/api/v1/instagram/stream?${params.toString()}`;
   },
 

@@ -5,14 +5,12 @@
 import { toggleTheme, getStoredTheme, updateThemeUI } from '../../hooks/useTheme.js';
 import { storage } from '../../utilities/storage.js';
 import { soundEngine } from '../../utilities/soundEngine.js';
-import { openSoundVolumeModal } from '../common/SoundVolumeModal.js';
 import { isAdminAuthenticated } from '../../utilities/adminAuth.js';
 import {
   getUserProfile,
   renderAvatarInnerHtml,
   getAvatarGradient
 } from '../../utilities/userProfile.js';
-import { openProfileModal } from '../common/ProfileModal.js';
 import { toolRegistry } from '../../hooks/useToolRegistry.js';
 
 function escapeHtml(str) {
@@ -302,6 +300,10 @@ export function attachHeaderListeners(onSearch) {
   if (btnSound) {
     let pressTimer = null;
     let isLongPress = false;
+    const triggerSoundModal = () =>
+      import('../common/SoundVolumeModal.js')
+        .then(({ openSoundVolumeModal }) => openSoundVolumeModal())
+        .catch(() => {});
 
     // Single click: toggle mute/unmute (accessible to all users)
     btnSound.addEventListener('click', () => {
@@ -320,7 +322,7 @@ export function attachHeaderListeners(onSearch) {
     btnSound.addEventListener('dblclick', (e) => {
       e.preventDefault();
       if (isAdminAuthenticated()) {
-        openSoundVolumeModal();
+        triggerSoundModal();
       }
     });
 
@@ -328,7 +330,7 @@ export function attachHeaderListeners(onSearch) {
     btnSound.addEventListener('contextmenu', (e) => {
       if (isAdminAuthenticated()) {
         e.preventDefault();
-        openSoundVolumeModal();
+        triggerSoundModal();
       }
     });
 
@@ -338,7 +340,7 @@ export function attachHeaderListeners(onSearch) {
       pressTimer = setTimeout(() => {
         isLongPress = true;
         if (isAdminAuthenticated()) {
-          openSoundVolumeModal();
+          triggerSoundModal();
         }
       }, 400);
     }, { passive: true });
@@ -371,7 +373,9 @@ export function attachHeaderListeners(onSearch) {
   const btnProfile = document.getElementById('headerProfileBtn');
   if (btnProfile) {
     btnProfile.addEventListener('click', () => {
-      openProfileModal({ isOnboarding: false });
+      import('../common/ProfileModal.js')
+        .then(({ openProfileModal }) => openProfileModal({ isOnboarding: false }))
+        .catch(() => {});
     });
   }
 
