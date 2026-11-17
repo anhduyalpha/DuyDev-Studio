@@ -52,13 +52,14 @@ export const tiktokApi = {
    * @param {boolean} [download=false] 
    * @returns {string}
    */
-  getStreamUrl(videoUrl, filename = 'tiktok_video.mp4', download = false) {
+  getStreamUrl(videoUrl, filename = 'tiktok_video.mp4', download = false, format = '') {
     if (!videoUrl) return '';
     const params = new URLSearchParams({
       url: videoUrl,
       filename: filename,
       download: download ? '1' : '0'
     });
+    if (format) params.set('format', format);
     return `/api/v1/tiktok/stream?${params.toString()}`;
   },
 

@@ -8,6 +8,8 @@ import {
 } from '../../schemas/youtube.schema.js';
 import { YouTubeService } from '../../services/youtube.service.js';
 import { BadRequestError } from '../../lib/errors.js';
+import { validateSafeMediaUrl } from '../middleware/security.middleware.js';
+import { Readable } from 'stream';
 
 export async function resolveYouTubeHandler(request: FastifyRequest, reply: FastifyReply) {
   const body = youtubeResolveBodySchema.parse(request.body);
@@ -129,4 +131,36 @@ export async function streamYouTubeHandler(
 
   const stream = fs.createReadStream(filePath);
   return reply.send(stream);
+}
+
+export async function thumbnailYouTubeHandler(
+  request: FastifyRequest<{ Querystring: { url?: string; filename?: string } }>,
+  reply: FastifyReply
+) {
+  const rawUrl = (request.query?.url || '').trim();
+  if (!rawUrl) {
+    throw new BadRequestError('Thiếu liên kết ảnh bìa YouTube');
+  }
+
+  validateSafeMediaUrl(rawUrl, ['ytimg.com', 'ggpht.com', 'googleusercontent.com', 'youtube.com']);
+
+  const upstreamRes = await fetch(rawUrl, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!upstreamRes.ok || !upstreamRes.body) {
+    try { await upstreamRes.body?.cancel(); } catch {}
+    throw new BadRequestError(`Không thể tải ảnh bìa YouTube: HTTP ${upstreamRes.status}`);
+  }
+
+  const safeName = (request.query?.filename || 'youtube_thumbnail.jpg')
+    .replace(/[\\/:*?"<>|\r\n]+/g, '_')
+    .trim() || 'youtube_thumbnail.jpg';
+  const encodedName = encodeURIComponent(safeName);
+  const asciiName = safeName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+
+  reply.header('Content-Type', upstreamRes.headers.get('content-type') || 'image/jpeg');
+  reply.header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
+  return reply.send(Readable.fromWeb(upstreamRes.body as any));
 }

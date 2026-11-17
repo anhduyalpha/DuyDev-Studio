@@ -11,6 +11,7 @@ import { soundEngine } from '../../../utilities/soundEngine.js';
 import { showToast } from '../../../utilities/toast.js';
 import { readText } from '../../../utilities/clipboard.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
+import { buildSafeMediaFilename } from '../../../utilities/mediaBatchHelper.js';
 
 export class YoutubeWorkspace {
   constructor(containerEl) {
@@ -479,6 +480,17 @@ export class YoutubeWorkspace {
                     <i data-lucide="hard-drive" class="w-4 h-4 text-blue-500"></i>
                     <span>Lưu vào Drive</span>
                   </button>
+
+                  ${v.thumbnail ? `
+                    <a
+                      href="/api/v1/youtube/thumbnail?url=${encodeURIComponent(v.thumbnail)}&filename=${encodeURIComponent(buildSafeMediaFilename(v.title, 'youtube_cover', 'jpg'))}"
+                      download="${buildSafeMediaFilename(v.title, 'youtube_cover', 'jpg')}"
+                      class="flex-1 sm:flex-none px-4 py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 active:scale-95 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 font-bold text-xs tracking-wide transition-all flex items-center justify-center gap-2 min-h-[48px] no-underline cursor-pointer"
+                    >
+                      <i data-lucide="image" class="w-4 h-4 text-amber-500"></i>
+                      <span>Ảnh Bìa</span>
+                    </a>
+                  ` : ''}
                 </div>
               </div>
             </div>

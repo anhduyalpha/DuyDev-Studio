@@ -196,11 +196,6 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         setupWebView()
-        unlockHighRefreshRate()
-        setupBackHandler()
-        pruneRedundantCache()
-        requestNotificationPermission()
-
         handleIntent(intent)
 
         val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
@@ -231,6 +226,14 @@ class MainActivity : AppCompatActivity() {
                 baseHost
             }
             webView.loadUrl(launchUrl)
+        }
+
+        // Run secondary display, back gesture, cache cleanup & permission setup after triggering WebView load
+        setupBackHandler()
+        unlockHighRefreshRate()
+        lifecycleHandler.post {
+            pruneRedundantCache()
+            requestNotificationPermission()
         }
     }
 
@@ -564,7 +567,7 @@ class MainActivity : AppCompatActivity() {
         splashOverlay.isFocusable = false
         splashOverlay.animate()
             .alpha(0f)
-            .setDuration(160L)
+            .setDuration(90L)
             .withEndAction {
                 splashOverlay.visibility = View.GONE
                 splashOverlay.alpha = 1f
@@ -578,7 +581,7 @@ class MainActivity : AppCompatActivity() {
                 splashOverlay.isFocusable = false
                 isSplashHiding = false
             }
-        }, 300L)
+        }, 160L)
     }
 
     /**
@@ -1090,6 +1093,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        val action = intent.action
+        val hasSharePayload = action == Intent.ACTION_SEND ||
+            action == Intent.ACTION_SEND_MULTIPLE ||
+            intent.hasExtra(EXTRA_TARGET_ROUTE) ||
+            intent.hasExtra(Intent.EXTRA_TEXT) ||
+            intent.hasExtra(Intent.EXTRA_STREAM) ||
+            intent.hasExtra("explicitUrl") ||
+            intent.data != null
+        if (!hasSharePayload) return
         val targetRoute = intent.getStringExtra(EXTRA_TARGET_ROUTE)
         val targetMode = intent.getStringExtra(EXTRA_TARGET_MODE)
 
@@ -1116,6 +1128,7 @@ class MainActivity : AppCompatActivity() {
             detectedUrl.contains("scribd.com", ignoreCase = true) ||
             detectedUrl.contains("tiktok.com", ignoreCase = true) ||
             detectedUrl.contains("douyin.com", ignoreCase = true) ||
+            detectedUrl.contains("iesdouyin.com", ignoreCase = true) ||
             detectedUrl.contains("youtube.com", ignoreCase = true) ||
             detectedUrl.contains("youtu.be", ignoreCase = true) ||
             detectedUrl.contains("facebook.com", ignoreCase = true) ||

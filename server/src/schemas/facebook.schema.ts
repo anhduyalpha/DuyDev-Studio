@@ -9,7 +9,8 @@ export const facebookStreamQuerySchema = z
     url: z.string().optional().default(''),
     download: z.union([z.string(), z.boolean()]).optional(),
     filename: z.string().optional(),
-    dashToken: z.string().optional()
+    dashToken: z.string().optional(),
+    format: z.enum(['mp3']).optional()
   })
   .refine((v) => Boolean(v.url?.trim() || v.dashToken?.trim()), {
     message: 'Target media URL or dashToken is required'

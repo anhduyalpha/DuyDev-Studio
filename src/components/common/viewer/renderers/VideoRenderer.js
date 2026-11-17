@@ -116,7 +116,7 @@ export function attachVideoListeners(state, registerCleanup) {
   });
 
   let hasRetried = false;
-  // Resilient blob recovery fallback if direct range stream fails
+  // Resilient recovery fallback: 1) Auto re-resolve expired CDN links if originalUrl present, 2) Blob recovery
   video.addEventListener('error', async () => {
     const errCode = video.error?.code;
     let errorMsg = 'Không thể phát trực tiếp định dạng video này trên trình duyệt.';
@@ -128,11 +128,29 @@ export function attachVideoListeners(state, registerCleanup) {
       errorMsg = 'Lỗi kết nối mạng khi tải luồng phát video.';
     }
 
-    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 35 * 1024 * 1024);
+    if (!state._hasAutoRefreshed && typeof state.refreshMediaUrl === 'function') {
+      state._hasAutoRefreshed = true;
+      try {
+        const refreshed = await state.refreshMediaUrl();
+        if (refreshed?.viewUrl && (!state.isCurrentSession || state.isCurrentSession())) {
+          video.src = refreshed.viewUrl;
+          video.play().catch(() => {});
+          return;
+        }
+      } catch (refreshErr) {
+        if (refreshErr?.name === 'AbortError') return;
+      }
+    }
 
-    if (hasRetried || isTooLargeForBlob) {
+    const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 35 * 1024 * 1024);
+    const isExternalRaw = Boolean(state.viewUrl && /^https?:\/\//i.test(state.viewUrl) && !state.viewUrl.startsWith(window.location.origin));
+
+    if (hasRetried || isTooLargeForBlob || isExternalRaw) {
+      const displayMsg = isExternalRaw
+        ? 'Liên kết nguồn chặn phát trực tiếp hoặc đã hết hạn.'
+        : errorMsg;
       if (state.showErrorFallback) {
-        state.showErrorFallback(errorMsg, `MediaError code: ${errCode || 'unknown'}`);
+        state.showErrorFallback(displayMsg, `MediaError code: ${errCode || 'unknown'}`);
         return;
       }
       const container = document.getElementById('videoViewerContainer');
@@ -144,7 +162,7 @@ export function attachVideoListeners(state, registerCleanup) {
           <div class="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center">
             <i data-lucide="alert-triangle" class="w-6 h-6"></i>
           </div>
-          <p class="text-xs text-zinc-300 max-w-sm">${errorMsg}</p>
+          <p class="text-xs text-zinc-300 max-w-sm">${displayMsg}</p>
           <div class="flex items-center gap-2 pt-1">
             <a href="${state.downloadUrl || state.viewUrl}" download="${state.name}" class="px-3.5 py-1.5 rounded-xl bg-white text-zinc-900 text-xs font-semibold inline-flex items-center gap-1.5 shadow-md">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải về video
@@ -160,7 +178,8 @@ export function attachVideoListeners(state, registerCleanup) {
     try {
       const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
       const res = await fetchFn(state.viewUrl, { signal: state.abortSignal });
-      if (res.ok) {
+      const resType = (res.headers?.get('content-type') || '').toLowerCase();
+      if (res.ok && !resType.includes('text/html')) {
         const blob = await res.blob();
         if (state.isCurrentSession && !state.isCurrentSession()) return;
         const blobUrl = URL.createObjectURL(blob);
@@ -168,11 +187,13 @@ export function attachVideoListeners(state, registerCleanup) {
         video.src = blobUrl;
         video.play().catch(() => {});
       } else {
-        const statusText = res.status === 404
-          ? 'Tệp không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
-          : (res.status === 403 || res.status === 401
-              ? `Không có quyền truy cập tệp hoặc phiên làm việc đã hết hạn (HTTP ${res.status}).`
-              : `Máy chủ phản hồi lỗi khi nạp dữ liệu (HTTP ${res.status}).`);
+        const statusText = resType.includes('text/html')
+          ? 'Liên kết nguồn trả về trang web thay vì luồng video trực tiếp.'
+          : res.status === 404
+            ? 'Tệp không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
+            : (res.status === 403 || res.status === 401
+                ? `Không có quyền truy cập tệp hoặc liên kết đã hết hạn (HTTP ${res.status}).`
+                : `Máy chủ phản hồi lỗi khi nạp dữ liệu (HTTP ${res.status}).`);
         if (state.showErrorFallback) {
           state.showErrorFallback(statusText, `HTTP ${res.status}`);
         }
@@ -181,7 +202,10 @@ export function attachVideoListeners(state, registerCleanup) {
       if (e?.name === 'AbortError') return;
       console.warn('Video fallback recovery failed:', e);
       if (state.showErrorFallback) {
-        state.showErrorFallback(errorMsg, e?.message || '');
+        state.showErrorFallback(
+          'Không thể kết nối luồng phát video (liên kết có thể đã hết hạn hoặc bị chặn mạng). Hãy bấm Thử tải lại từ nguồn.',
+          e?.message || ''
+        );
       }
     }
   });

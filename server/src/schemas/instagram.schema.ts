@@ -7,7 +7,8 @@ export const instagramResolveBodySchema = z.object({
 export const instagramStreamQuerySchema = z.object({
   url: z.string().min(1, 'Target media URL is required'),
   download: z.union([z.string(), z.boolean()]).optional(),
-  filename: z.string().optional()
+  filename: z.string().optional(),
+  format: z.enum(['mp3']).optional()
 });
 
 export const instagramSaveDriveBodySchema = z.object({
@@ -55,9 +56,10 @@ export interface InstagramVideoData {
   duration: number;
   videoUrl?: string;
   imageUrl?: string;
+  audioUrl?: string;
   mediaType?: 'video' | 'image' | 'carousel';
   medias: InstagramMediaItem[];
   isCarousel?: boolean;
   existingInDrive?: any;
-  extractor: 'resolver' | 'ytdlp' | 'scraper';
+  extractor: 'resolver' | 'ytdlp' | 'scraper' | 'cobalt';
 }

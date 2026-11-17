@@ -669,4 +669,39 @@ describe('Universal File Viewer Subsystem Hardening Tests', () => {
       expect(extractFileExtension('sample.mp4')).toBe('mp4');
     });
   });
+
+  describe('11. External Social/CDN Media Proxy & Webpage Auto-Resolve Prevention', () => {
+    it('auto-proxies external TikTok/Douyin/Instagram/Facebook CDN URLs through /api/v1/{platform}/stream without appending ?inline=true', () => {
+      const ttCdn = resolveViewerUrls({
+        fileName: 'clip.mp4',
+        viewUrl: 'https://v16-webapp-prime.tiktokcdn.com/video/tos/clip.mp4?expire=999&s=abc'
+      });
+      expect(ttCdn.viewUrl).toContain('/api/v1/tiktok/stream?');
+      expect(ttCdn.viewUrl).toContain('download=0');
+      expect(ttCdn.downloadUrl).toContain('/api/v1/tiktok/stream?');
+      expect(ttCdn.downloadUrl).toContain('download=1');
+      expect(ttCdn.viewUrl).not.toContain('&inline=true');
+
+      const igCdn = resolveViewerUrls({
+        fileName: 'reel.mp4',
+        toolId: 'instagram-downloader',
+        downloadUrl: 'https://scontent-sin6-1.cdninstagram.com/v/t50/reel.mp4?oh=sig'
+      });
+      expect(igCdn.viewUrl).toContain('/api/v1/instagram/stream?');
+      expect(igCdn.viewUrl).not.toContain('inline=true');
+    });
+
+    it('marks social webpage URLs (e.g. legacy TikTok Video history records) with needsResolve instead of feeding HTML to <video>', () => {
+      const legacyRecord = resolveViewerUrls({
+        fileName: 'TikTok Video 7686423991493348628',
+        downloadUrl: 'https://www.tiktok.com/@creator/video/7686423991493348628',
+        toolId: 'tiktok-downloader'
+      });
+      expect(legacyRecord.viewUrl).toBe('');
+      expect(legacyRecord.needsResolve).toEqual({
+        platform: 'tiktok',
+        sourceUrl: 'https://www.tiktok.com/@creator/video/7686423991493348628'
+      });
+    });
+  });
 });

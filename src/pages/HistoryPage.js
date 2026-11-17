@@ -9,7 +9,6 @@ import { soundEngine } from '../utilities/soundEngine.js';
 import { openSlideConfirmModal } from '../components/common/SlideConfirmModal.js';
 import { updateHeaderTrashIndicator } from '../components/layout/Header.js';
 import { renderHistoryItemRow } from '../components/history/HistoryItemRow.js';
-import { openProfileModal } from '../components/common/ProfileModal.js';
 import { saveArtifactToDrive } from '../utilities/driveSaveHelper.js';
 import { sendToTool } from '../utilities/toolHandoff.js';
 
@@ -268,7 +267,9 @@ export function attachHistoryPageListeners(rerender) {
   document.getElementById('btnTabHistory')?.addEventListener('click', () => switchTab('history'));
   document.getElementById('btnTabTrash')?.addEventListener('click', () => switchTab('trash'));
   document.getElementById('btnSyncDevices')?.addEventListener('click', () => {
-    openProfileModal({ initialTab: 'sync' });
+    import('../components/common/ProfileModal.js')
+      .then(({ openProfileModal }) => openProfileModal({ initialTab: 'sync' }))
+      .catch(() => {});
   });
 
   // Seamless in-place search without losing input focus

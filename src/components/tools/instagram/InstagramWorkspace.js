@@ -13,6 +13,7 @@ import { taskCoordinator } from '../../../utilities/taskCoordinator.js';
 import { consumePendingAutoStart } from '../../../utilities/smartUrlRouter.js';
 import { storage } from '../../../utilities/storage.js';
 import { sendToTool } from '../../../utilities/toolHandoff.js';
+import { buildSafeMediaFilename, downloadMediaZip } from '../../../utilities/mediaBatchHelper.js';
 import { renderMediaHistorySection, attachMediaHistoryListeners, escapeHtml } from '../common/MediaHistorySection.js';
 
 export class InstagramWorkspace {
@@ -264,9 +265,25 @@ export class InstagramWorkspace {
     const activeUrl = currentItem.url;
 
     const ext = isVideo ? 'mp4' : 'jpg';
-    const defaultFileName = `${this.mediaData.title || (isVideo ? 'instagram_video' : 'instagram_photo')}.${ext}`;
+    const defaultFileName = buildSafeMediaFilename(this.mediaData.title, isVideo ? 'instagram_video' : 'instagram_photo', ext);
     const proxyStreamUrl = activeUrl ? instagramApi.getStreamUrl(activeUrl, defaultFileName, false) : '';
     const proxyDownloadUrl = activeUrl ? instagramApi.getStreamUrl(activeUrl, defaultFileName, true) : '';
+    const audioBtn = this.container.querySelector('#igDownloadAudioBtn');
+    if (audioBtn) {
+      if (isVideo && (activeUrl || this.mediaData.audioUrl)) {
+        const audioSrc = this.mediaData.audioUrl || activeUrl;
+        const audioFormat = this.mediaData.audioUrl ? '' : 'mp3';
+        audioBtn.href = instagramApi.getStreamUrl(
+          audioSrc,
+          buildSafeMediaFilename(this.mediaData.title, 'instagram_audio', 'mp3'),
+          true,
+          audioFormat
+        );
+        audioBtn.classList.remove('hidden');
+      } else {
+        audioBtn.classList.add('hidden');
+      }
+    }
 
     // Update carousel tabs in place
     const tabs = this.container.querySelectorAll('[data-action="select-media"]');
@@ -560,10 +577,12 @@ export class InstagramWorkspace {
     ViewerConnector.preview({
       name: `${this.mediaData.title || 'Instagram Media'}.${ext}`,
       fileName: `${this.mediaData.title || 'Instagram Media'}.${ext}`,
+      toolId: 'instagram-downloader',
       category: isVideo ? 'video' : 'image',
       mimeType: isVideo ? 'video/mp4' : 'image/jpeg',
       viewUrl: streamUrl,
-      downloadUrl: streamUrl.replace('download=0', 'download=1')
+      downloadUrl: streamUrl.replace('download=0', 'download=1'),
+      originalUrl: this.url || this.mediaData.originalUrl || ''
     });
   }
 
@@ -624,11 +643,41 @@ export class InstagramWorkspace {
         const isVideo = currentItem?.type === 'video';
         if (!isVideo && currentItem) {
           const mediaUrl = currentItem.url || currentItem.thumbnail || '';
-          const fileName = `${this.mediaData?.title || 'instagram_image'}.jpg`;
+          const fileName = buildSafeMediaFilename(this.mediaData?.title, 'instagram_image', 'jpg');
           sendToTool('view-split', { url: mediaUrl, fileName });
         }
         break;
       }
+
+      case 'download-zip': {
+        this.downloadCarouselZip(btn);
+        break;
+      }
+    }
+  }
+
+  async downloadCarouselZip(btn) {
+    const items = this.mediaData?.medias || [];
+    if (items.length < 2) return;
+    const span = btn?.querySelector('span');
+    const origText = span?.textContent || 'Tải Toàn Bộ Album (.ZIP)';
+    if (btn) btn.disabled = true;
+    try {
+      const entries = items.map((m, i) => {
+        const pad = String(i + 1).padStart(2, '0');
+        const ext = m.type === 'video' ? 'mp4' : 'jpg';
+        const name = `instagram_${pad}.${ext}`;
+        return { url: instagramApi.getStreamUrl(m.url, name, false), name };
+      });
+      const zipName = `[Instagram]_${buildSafeMediaFilename(this.mediaData?.title, `album_${this.mediaData?.id || 'ig'}`, 'zip')}`;
+      await downloadMediaZip(entries, zipName, (status) => {
+        if (span) span.textContent = status;
+      });
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi đóng gói album ZIP', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+      if (span) span.textContent = origText;
     }
   }
 
@@ -649,7 +698,16 @@ export class InstagramWorkspace {
     const activeUrl = currentItem?.url || this.mediaData.videoUrl || this.mediaData.imageUrl || '';
 
     const ext = isVideo ? 'mp4' : 'jpg';
-    const defaultFileName = `${this.mediaData.title || (isVideo ? 'instagram_video' : 'instagram_photo')}.${ext}`;
+    const defaultFileName = buildSafeMediaFilename(this.mediaData.title, isVideo ? 'instagram_video' : 'instagram_photo', ext);
+    const mp3FileName = buildSafeMediaFilename(this.mediaData.title, 'instagram_audio', 'mp3');
+    const coverFileName = buildSafeMediaFilename(this.mediaData.title, 'instagram_cover', 'jpg');
+    const audioSource = this.mediaData.audioUrl || activeUrl;
+    const audioDownloadUrl = audioSource
+      ? instagramApi.getStreamUrl(audioSource, mp3FileName, true, this.mediaData.audioUrl ? '' : 'mp3')
+      : '';
+    const coverDownloadUrl = this.mediaData.cover
+      ? instagramApi.getStreamUrl(this.mediaData.cover, coverFileName, true)
+      : '';
 
     const proxyStreamUrl = activeUrl
       ? instagramApi.getStreamUrl(activeUrl, defaultFileName, false)
@@ -773,6 +831,43 @@ export class InstagramWorkspace {
                 <i data-lucide="download" class="w-4 h-4"></i>
                 <span>Tải về máy (.${isVideo ? 'MP4' : 'JPG'})</span>
               </a>
+
+              ${this.mediaData.medias?.length > 1 ? `
+                <button
+                  type="button"
+                  id="igDownloadZipBtn"
+                  data-action="download-zip"
+                  class="w-full min-h-[44px] py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 text-white text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
+                  <span>Tải Toàn Bộ Album (${this.mediaData.medias.length} tệp .ZIP)</span>
+                </button>
+              ` : ''}
+
+              ${audioDownloadUrl || coverDownloadUrl ? `
+                <div class="grid grid-cols-2 gap-2">
+                  <a
+                    id="igDownloadAudioBtn"
+                    href="${audioDownloadUrl}"
+                    download="${mp3FileName}"
+                    class="${isVideo && audioDownloadUrl ? '' : 'hidden '}min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition no-underline cursor-pointer"
+                  >
+                    <i data-lucide="music" class="w-3.5 h-3.5 text-emerald-500"></i>
+                    <span>Tải Audio (.MP3)</span>
+                  </a>
+                  ${coverDownloadUrl ? `
+                    <a
+                      id="igDownloadCoverBtn"
+                      href="${coverDownloadUrl}"
+                      download="${coverFileName}"
+                      class="${!isVideo ? 'col-span-2 ' : ''}min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition no-underline cursor-pointer"
+                    >
+                      <i data-lucide="image" class="w-3.5 h-3.5 text-amber-500"></i>
+                      <span>Tải Ảnh Bìa (.JPG)</span>
+                    </a>
+                  ` : ''}
+                </div>
+              ` : ''}
 
               <button
                 type="button"

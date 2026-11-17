@@ -21,6 +21,12 @@ import { BadRequestError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 import { BoundedTtlCache, expandRedirectUrl, findExistingDriveMatch } from './shared/media-url-cache.js';
+import {
+  extractBalancedJsonAt,
+  streamTranscodedMp3,
+  tryCobaltResolver,
+  unescapeMediaJsonUrl
+} from './shared/media-extractor.helper.js';
 
 export const INSTAGRAM_ALLOWED_HOSTS = ['instagram.com', 'instagr.am', 'cdninstagram.com', 'fbcdn.net'];
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -138,9 +144,20 @@ export class InstagramService {
     validateSafeMediaUrl(canonicalUrl, INSTAGRAM_ALLOWED_HOSTS);
 
     const cacheKey = `${canonicalType}:${shortcode}`;
+    const hasVideoItem = (d: InstagramVideoData | null | undefined): boolean =>
+      Boolean(d && (d.videoUrl || d.medias?.some((m) => m.type === 'video')));
+    const acceptCandidate = (d: InstagramVideoData | null | undefined): InstagramVideoData | null => {
+      if (!d) return null;
+      // Reels are strictly videos — never accept a poster-only image downgrade from scraping tiers
+      if (canonicalType === 'reel' && !hasVideoItem(d)) {
+        logger.debug({ shortcode }, '[Instagram] Rejected image-only result for Reel; escalating tier');
+        return null;
+      }
+      return d;
+    };
 
     // 1. Check Bounded TTL Cache
-    const cached = this.mediaCache.get(cacheKey);
+    const cached = acceptCandidate(this.mediaCache.get(cacheKey));
     if (cached) {
       logger.info({ cacheKey }, '[Instagram] Cache hit');
       const existing = await this.checkExistingInDrive(cached.id, targetUrl);
@@ -157,7 +174,7 @@ export class InstagramService {
     try {
       const embedRes = await this.tryEmbedExtraction(shortcode, canonicalType);
       if (embedRes) {
-        resolvedData = embedRes.data;
+        resolvedData = acceptCandidate(embedRes.data);
         extractedLsd = embedRes.lsd;
         if (resolvedData) {
           logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1A Embed');
@@ -170,7 +187,7 @@ export class InstagramService {
     // --- Tier 1B: Anonymous Web GraphQL Fallback (timeout 4.5s) ---
     if (!resolvedData) {
       try {
-        const gqlRes = await this.tryAnonymousGraphqlExtraction(shortcode, canonicalType, extractedLsd);
+        const gqlRes = acceptCandidate(await this.tryAnonymousGraphqlExtraction(shortcode, canonicalType, extractedLsd));
         if (gqlRes) {
           resolvedData = gqlRes;
           logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1B Anonymous GraphQL');
@@ -183,7 +200,7 @@ export class InstagramService {
     // --- Tier 1C: RapidAPI if configured ---
     if (!resolvedData) {
       try {
-        const apiResult = await this.tryApiExtraction(targetUrl, shortcode);
+        const apiResult = acceptCandidate(await this.tryApiExtraction(targetUrl, shortcode));
         if (apiResult) {
           resolvedData = apiResult;
           logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1C RapidAPI');
@@ -193,10 +210,23 @@ export class InstagramService {
       }
     }
 
+    // --- Tier 1D: Optional Cobalt Gateway Fallback (if COBALT_API_URL configured) ---
+    if (!resolvedData) {
+      try {
+        const cobaltRes = acceptCandidate(await this.tryCobaltFallback(canonicalUrl, shortcode));
+        if (cobaltRes) {
+          resolvedData = cobaltRes;
+          logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 1D Cobalt');
+        }
+      } catch (e: any) {
+        logger.debug({ err: e?.message }, '[Instagram] Tier 1D Cobalt skipped');
+      }
+    }
+
     // --- Tier 2: Hardened yt-dlp CLI (timeout 22s) ---
     if (!resolvedData) {
       try {
-        const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, shortcode);
+        const ytdlpResult = acceptCandidate(await this.tryYtdlpExtraction(targetUrl, shortcode));
         if (ytdlpResult) {
           resolvedData = ytdlpResult;
           logger.info({ id: resolvedData.id }, '[Instagram] Resolved via Tier 2 yt-dlp');
@@ -211,7 +241,9 @@ export class InstagramService {
     }
 
     // Populate cache on successful resolution (NEVER cache failures!)
-    this.mediaCache.set(cacheKey, resolvedData);
+    if (canonicalType !== 'reel' || hasVideoItem(resolvedData)) {
+      this.mediaCache.set(cacheKey, resolvedData);
+    }
 
     // Check Drive duplication
     const existing = await this.checkExistingInDrive(resolvedData.id, targetUrl);
@@ -269,15 +301,16 @@ export class InstagramService {
       return null;
     }
 
-    return this.parseEmbedHtml(html, shortcode);
+    return this.parseEmbedHtml(html, shortcode, canonicalType);
   }
 
   /**
-   * Parses embed HTML for embedded JSON (window.__additionalDataLoaded / gql_data) or DOM fallback tags
+   * Parses embed HTML for embedded JSON (window.__additionalDataLoaded / gql_data / ScheduledServerJS) or DOM fallback tags
    */
   private static parseEmbedHtml(
     html: string,
-    shortcode: string
+    shortcode: string,
+    canonicalType = 'p'
   ): { data: InstagramVideoData | null; lsd: string | null } {
     // Extract LSD token if present
     const lsdMatch =
@@ -305,15 +338,18 @@ export class InstagramService {
       } catch {}
     }
 
-    // 2. Generic script inspection for shortcode_media / xdt_shortcode_media / gql_data
+    // 2. Balanced JSON scan inside <script> tags for shortcode_media / ScheduledServerJS / Polaris media payloads
     if (!mediaData) {
+      const markerRegex = /"(?:xdt_shortcode_media|shortcode_media|gql_data|gql_media)"\s*:\s*\{/g;
       const scriptMatches = html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi);
       for (const sm of scriptMatches) {
         const content = sm[1];
         if (
           content.includes('shortcode_media') ||
           content.includes('xdt_shortcode_media') ||
-          content.includes('gql_data')
+          content.includes('gql_data') ||
+          content.includes('video_versions') ||
+          content.includes('carousel_media')
         ) {
           const jsonMatch = content.match(/(\{[\s\S]*"(?:shortcode_media|xdt_shortcode_media|gql_data)"[\s\S]*\})/);
           if (jsonMatch) {
@@ -330,22 +366,59 @@ export class InstagramService {
               if (mediaData) break;
             } catch {}
           }
+
+          let m: RegExpExecArray | null;
+          markerRegex.lastIndex = 0;
+          while ((m = markerRegex.exec(content)) !== null) {
+            const braceIdx = content.indexOf('{', m.index + m[0].length - 1);
+            const jsonSlice = extractBalancedJsonAt(content, braceIdx);
+            if (jsonSlice) {
+              try {
+                const candidate = JSON.parse(jsonSlice);
+                const resolved = candidate?.shortcode_media || candidate?.xdt_shortcode_media || candidate;
+                if (resolved && (resolved.video_url || resolved.video_versions || resolved.display_url || resolved.carousel_media || resolved.edge_sidecar_to_children)) {
+                  mediaData = resolved;
+                  break;
+                }
+              } catch {}
+            }
+          }
+          if (mediaData) break;
         }
       }
     }
 
     if (mediaData) {
-      const formatted = this.formatShortcodeMedia(mediaData, shortcode);
+      const formatted = this.formatShortcodeMedia(mediaData, shortcode, canonicalType);
       if (formatted) {
         return { data: formatted, lsd };
       }
     }
 
-    // 3. Fallback: Extract directly from captioned embed DOM tags
-    const videoMatch =
+    // 3. Fallback: Extract inline video URLs (HTML <video>, og:video, or escaped script video_url/video_versions)
+    const videoTagMatch =
       html.match(/<video[^>]+src=["']([^"']+)["']/i) ||
-      html.match(/<video[^>]*>[\s\S]*?<source[^>]+src=["']([^"']+)["']/i);
-    const videoUrl = videoMatch?.[1] ? videoMatch[1].replace(/&amp;/g, '&') : undefined;
+      html.match(/<video[^>]*>[\s\S]*?<source[^>]+src=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+property=["']og:video(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i);
+    const scriptVideoMatch =
+      html.match(/"video_url"\s*:\s*"((?:https?:|https?:\\\/\\\/)[^"]+)"/i) ||
+      html.match(/"playback_video_url"\s*:\s*"((?:https?:|https?:\\\/\\\/)[^"]+)"/i) ||
+      html.match(/"video_versions"\s*:\s*\[\s*\{[^}]*?"url"\s*:\s*"((?:https?:|https?:\\\/\\\/)[^"]+)"/i);
+
+    const rawVideoUrl = videoTagMatch?.[1] || scriptVideoMatch?.[1];
+    const videoUrl = rawVideoUrl ? unescapeMediaJsonUrl(rawVideoUrl) : undefined;
+
+    // Detect if Instagram embed represents a video/reel post even when the raw MP4 URL wasn't hydrated in static HTML
+    const hasVideoSignal =
+      canonicalType === 'reel' ||
+      /EmbeddedVideo|ExploreVideo|PlayIcon|Watch on Instagram|video_duration|"is_video"\s*:\s*true|"media_type"\s*:\s*2|"product_type"\s*:\s*"clips"|"video_versions"|"video_url"|"playback_video_url"|<video\b|og:video/i.test(
+        html
+      );
+
+    if (hasVideoSignal && !videoUrl) {
+      // Crucial fix: NEVER downgrade a Reel/Video embed to its poster <img> thumbnail in Tier 1A!
+      return { data: null, lsd };
+    }
 
     let imageUrl: string | undefined;
     const imgMatches = html.matchAll(/<img([^>]+)>/gi);
@@ -442,78 +515,122 @@ export class InstagramService {
       'X-ASBD-ID': DEFAULT_ASBD_ID,
       'X-IG-App-ID': DEFAULT_IG_APP_ID,
       'Origin': 'https://www.instagram.com',
-      'Referer': `https://www.instagram.com/p/${shortcode}/`,
+      'Referer': `https://www.instagram.com/${canonicalType}/${shortcode}/`,
       'Sec-Fetch-Dest': 'empty',
       'Sec-Fetch-Mode': 'cors',
       'Sec-Fetch-Site': 'same-origin'
     };
 
-    const body = `variables=${encodeURIComponent(JSON.stringify({ shortcode }))}&doc_id=8845758582119845`;
+    const attempts = [
+      { endpoint: 'https://www.instagram.com/graphql/query/', docId: '8845758582119845' },
+      { endpoint: 'https://www.instagram.com/api/graphql', docId: '10015901848480474' }
+    ];
 
-    try {
-      const res = await fetch('https://www.instagram.com/graphql/query/', {
-        method: 'POST',
-        headers,
-        body,
-        signal: AbortSignal.timeout(4500)
-      });
+    for (const attempt of attempts) {
+      const body = `variables=${encodeURIComponent(JSON.stringify({ shortcode }))}&doc_id=${attempt.docId}`;
+      try {
+        const res = await fetch(attempt.endpoint, {
+          method: 'POST',
+          headers,
+          body,
+          signal: AbortSignal.timeout(4500)
+        });
 
-      if (!res.ok) {
-        await cancelResponseBody(res);
-        return null;
+        if (!res.ok) {
+          await cancelResponseBody(res);
+          continue;
+        }
+        const json = (await res.json()) as any;
+        const media = json?.data?.xdt_shortcode_media || json?.data?.shortcode_media;
+        if (media) {
+          const formatted = this.formatShortcodeMedia(media, shortcode, canonicalType);
+          if (formatted) return formatted;
+        }
+      } catch {
+        // Try next GraphQL endpoint/doc_id
       }
-      const json = (await res.json()) as any;
-      const media = json?.data?.xdt_shortcode_media || json?.data?.shortcode_media;
-      if (media) {
-        return this.formatShortcodeMedia(media, shortcode);
-      }
-      return null;
-    } catch {
-      return null;
     }
+    return null;
   }
 
   /**
-   * Normalizes shortcode_media / xdt_shortcode_media node into InstagramVideoData
+   * Normalizes shortcode_media / xdt_shortcode_media / Polaris media node into InstagramVideoData
    */
-  private static formatShortcodeMedia(media: any, fallbackShortcode: string): InstagramVideoData | null {
+  private static formatShortcodeMedia(
+    media: any,
+    fallbackShortcode: string,
+    canonicalType = 'p'
+  ): InstagramVideoData | null {
     if (!media) return null;
 
-    const id = String(media.id || fallbackShortcode);
+    const pickVideoUrl = (node: any): string => {
+      if (node?.video_url) return unescapeMediaJsonUrl(String(node.video_url));
+      if (Array.isArray(node?.video_versions) && node.video_versions.length > 0) {
+        const sorted = [...node.video_versions]
+          .filter((v: any) => v?.url)
+          .sort((a: any, b: any) => (Number(b.width || 0) * Number(b.height || 0)) - (Number(a.width || 0) * Number(a.height || 0)));
+        if (sorted[0]?.url) return unescapeMediaJsonUrl(String(sorted[0].url));
+      }
+      return '';
+    };
+
+    const pickImageUrl = (node: any): string => {
+      const raw =
+        node?.display_url ||
+        node?.image_versions2?.candidates?.[0]?.url ||
+        node?.thumbnail_src ||
+        '';
+      return raw ? unescapeMediaJsonUrl(String(raw)) : '';
+    };
+
+    const id = String(media.id || media.pk || fallbackShortcode);
     const caption = (
       media.edge_media_to_caption?.edges?.[0]?.node?.text ||
       media.caption?.text ||
-      media.caption ||
+      (typeof media.caption === 'string' ? media.caption : '') ||
       media.title ||
       ''
     ).trim();
     const title = media.title || caption.replace(/\r?\n/g, ' ').slice(0, 100) || `Instagram Media ${id}`;
-    const rawCover = media.display_url || media.thumbnail_src || '';
-    const cover = rawCover ? String(rawCover).replace(/&amp;/g, '&') : '';
+    const cover = pickImageUrl(media);
     const duration = Number(media.video_duration || 0);
 
     const author = {
-      username: media.owner?.username || 'Instagram User',
-      fullName: media.owner?.full_name
+      username: media.owner?.username || media.user?.username || 'Instagram User',
+      fullName: media.owner?.full_name || media.user?.full_name
     };
 
-    const sidecarEdges = media.edge_sidecar_to_children?.edges;
-    if (Array.isArray(sidecarEdges) && sidecarEdges.length > 1) {
-      // Multi-item Carousel with mixed photo and video items
-      const items: InstagramMediaItem[] = sidecarEdges
-        .map(({ node }: any) => {
-          const isVid = Boolean(node.is_video || node.video_url);
-          const rawUrl = (isVid ? node.video_url : node.display_url) || node.display_url;
-          const url = rawUrl ? String(rawUrl).replace(/&amp;/g, '&') : '';
-          const rawThumb = node.display_url || cover;
-          const thumbnail = rawThumb ? String(rawThumb).replace(/&amp;/g, '&') : '';
+    const rawChildren = Array.isArray(media.edge_sidecar_to_children?.edges) && media.edge_sidecar_to_children.edges.length > 1
+      ? media.edge_sidecar_to_children.edges.map((e: any) => e?.node).filter(Boolean)
+      : Array.isArray(media.carousel_media) && media.carousel_media.length > 1
+        ? media.carousel_media
+        : null;
+
+    if (rawChildren) {
+      // Multi-item Carousel with mixed photo and video items; never substitute thumbnail JPG when a video lacks video_url
+      let missingRequiredVideo = false;
+      const items: InstagramMediaItem[] = rawChildren
+        .map((node: any) => {
+          const isVid = Boolean(node.is_video || node.media_type === 2 || node.video_url || (Array.isArray(node.video_versions) && node.video_versions.length > 0));
+          const vidUrl = pickVideoUrl(node);
+          if (isVid && !vidUrl) {
+            missingRequiredVideo = true;
+            return null;
+          }
+          const thumb = pickImageUrl(node) || cover;
+          const url = isVid ? vidUrl : thumb;
+          if (!url) return null;
           return {
             type: isVid ? ('video' as const) : ('image' as const),
             url,
-            thumbnail
+            thumbnail: thumb || url
           };
         })
-        .filter((i) => Boolean(i.url));
+        .filter((i: InstagramMediaItem | null): i is InstagramMediaItem => Boolean(i && i.url));
+
+      if (missingRequiredVideo) {
+        return null;
+      }
 
       if (items.length > 0) {
         const primaryVideo = items.find((i) => i.type === 'video');
@@ -535,14 +652,25 @@ export class InstagramService {
       }
     }
 
-    const isVideo = Boolean(media.is_video || media.video_url);
-    const rawMediaUrl = isVideo ? media.video_url : media.display_url;
-    if (!rawMediaUrl) return null;
-    const mediaUrl = String(rawMediaUrl).replace(/&amp;/g, '&');
+    const expectsVideo = Boolean(
+      canonicalType === 'reel' ||
+      media.is_video ||
+      media.media_type === 2 ||
+      media.product_type === 'clips' ||
+      media.video_url ||
+      (Array.isArray(media.video_versions) && media.video_versions.length > 0)
+    );
+    const resolvedVideoUrl = pickVideoUrl(media);
+    if (expectsVideo && !resolvedVideoUrl) {
+      return null;
+    }
+
+    const mediaUrl = expectsVideo ? resolvedVideoUrl : cover;
+    if (!mediaUrl) return null;
 
     const items: InstagramMediaItem[] = [
       {
-        type: isVideo ? 'video' : 'image',
+        type: expectsVideo ? 'video' : 'image',
         url: mediaUrl,
         thumbnail: cover || mediaUrl
       }
@@ -555,13 +683,63 @@ export class InstagramService {
       author,
       cover: cover || mediaUrl,
       duration,
-      mediaType: isVideo ? 'video' : 'image',
-      videoUrl: isVideo ? mediaUrl : undefined,
-      imageUrl: !isVideo ? mediaUrl : undefined,
+      mediaType: expectsVideo ? 'video' : 'image',
+      videoUrl: expectsVideo ? mediaUrl : undefined,
+      imageUrl: !expectsVideo ? mediaUrl : undefined,
       medias: items,
       isCarousel: false,
       extractor: 'resolver'
     };
+  }
+
+  /**
+   * Tier 1D: Optional Cobalt Gateway fallback if COBALT_API_URL is configured
+   */
+  private static async tryCobaltFallback(canonicalUrl: string, shortcode: string): Promise<InstagramVideoData | null> {
+    const cobalt = await tryCobaltResolver(canonicalUrl);
+    if (!cobalt) return null;
+
+    if (cobalt.picker && cobalt.picker.length > 0) {
+      const items: InstagramMediaItem[] = cobalt.picker.map((p) => ({
+        type: p.type === 'video' ? 'video' : 'image',
+        url: p.url,
+        thumbnail: p.thumb || p.url
+      }));
+      const primaryVideo = items.find((i) => i.type === 'video');
+      const primaryImage = items.find((i) => i.type === 'image');
+      return {
+        id: shortcode,
+        title: `Instagram Media ${shortcode}`,
+        author: { username: 'Instagram User' },
+        cover: items[0].thumbnail || items[0].url,
+        duration: 0,
+        mediaType: items.length > 1 ? 'carousel' : items[0].type,
+        videoUrl: primaryVideo?.url,
+        imageUrl: primaryImage?.url,
+        medias: items,
+        isCarousel: items.length > 1,
+        extractor: 'cobalt'
+      };
+    }
+
+    if (cobalt.url) {
+      const isImg = /\.(jpe?g|png|webp)(\?|$)/i.test(cobalt.url);
+      return {
+        id: shortcode,
+        title: cobalt.filename ? cobalt.filename.replace(/\.[^.]+$/, '') : `Instagram Media ${shortcode}`,
+        author: { username: 'Instagram User' },
+        cover: cobalt.url,
+        duration: 0,
+        mediaType: isImg ? 'image' : 'video',
+        videoUrl: isImg ? undefined : cobalt.url,
+        imageUrl: isImg ? cobalt.url : undefined,
+        medias: [{ type: isImg ? 'image' : 'video', url: cobalt.url, thumbnail: cobalt.url }],
+        isCarousel: false,
+        extractor: 'cobalt'
+      };
+    }
+
+    return null;
   }
 
   /**
@@ -706,30 +884,60 @@ export class InstagramService {
     };
 
     const medias: InstagramMediaItem[] = [];
+    let resolvedAudioUrl: string | undefined;
 
     for (const entry of entries) {
       let mediaItemUrl = '';
       let isVideo = false;
       const entryCover = entry.thumbnail || cover;
 
-      if (entry.url) {
-        mediaItemUrl = entry.url;
-        isVideo = entry.ext === 'mp4' || (Boolean(entry.vcodec) && entry.vcodec !== 'none');
-      } else if (Array.isArray(entry.formats) && entry.formats.length > 0) {
-        const videoFmt = entry.formats
-          .filter((f: any) => f.url && (f.ext === 'mp4' || (f.vcodec && f.vcodec !== 'none')))
+      if (Array.isArray(entry.formats) && entry.formats.length > 0) {
+        const progressiveMp4 = entry.formats
+          .filter(
+            (f: any) =>
+              f.url &&
+              (f.ext === 'mp4' || !f.ext) &&
+              f.vcodec &&
+              f.vcodec !== 'none' &&
+              f.acodec &&
+              f.acodec !== 'none'
+          )
+          .sort((a: any, b: any) => Number(a.height || 0) - Number(b.height || 0))
           .pop();
 
-        if (videoFmt?.url) {
-          mediaItemUrl = videoFmt.url;
+        const anyVideoFmt = entry.formats
+          .filter((f: any) => f.url && f.vcodec && f.vcodec !== 'none')
+          .sort((a: any, b: any) => Number(a.height || 0) - Number(b.height || 0))
+          .pop();
+
+        const audioFmt = entry.formats.find(
+          (f: any) => f.url && (!f.vcodec || f.vcodec === 'none') && f.acodec && f.acodec !== 'none'
+        );
+        if (audioFmt?.url && !resolvedAudioUrl) {
+          resolvedAudioUrl = audioFmt.url;
+        }
+
+        if (progressiveMp4?.url) {
+          mediaItemUrl = progressiveMp4.url;
           isVideo = true;
-        } else {
-          const anyFmt =
-            entry.formats.filter((f: any) => f.url).pop() || entry.formats[entry.formats.length - 1];
-          if (anyFmt?.url) {
-            mediaItemUrl = anyFmt.url;
-            isVideo = anyFmt.ext === 'mp4' || (Boolean(anyFmt.vcodec) && anyFmt.vcodec !== 'none');
-          }
+        } else if (anyVideoFmt?.url) {
+          mediaItemUrl = anyVideoFmt.url;
+          isVideo = true;
+        }
+      }
+
+      if (!mediaItemUrl && entry.url) {
+        mediaItemUrl = entry.url;
+        isVideo =
+          entry.ext === 'mp4' ||
+          (Boolean(entry.video_ext) && entry.video_ext !== 'none') ||
+          (Boolean(entry.vcodec) && entry.vcodec !== 'none') ||
+          !/\.(jpe?g|png|webp)(\?|$)/i.test(entry.url);
+      } else if (!mediaItemUrl && Array.isArray(entry.formats) && entry.formats.length > 0) {
+        const anyFmt = entry.formats.filter((f: any) => f.url).pop();
+        if (anyFmt?.url) {
+          mediaItemUrl = anyFmt.url;
+          isVideo = anyFmt.ext === 'mp4' || (Boolean(anyFmt.vcodec) && anyFmt.vcodec !== 'none');
         }
       }
 
@@ -769,6 +977,7 @@ export class InstagramService {
       mediaType,
       videoUrl: primaryVideo?.url || (mediaType === 'video' ? medias[0]?.url : undefined),
       imageUrl: primaryImage?.url || (mediaType === 'image' ? medias[0]?.url : undefined),
+      audioUrl: resolvedAudioUrl,
       medias,
       isCarousel,
       extractor: 'ytdlp'
@@ -783,7 +992,8 @@ export class InstagramService {
     download: boolean,
     filename: string,
     rangeHeader: string | undefined,
-    reply: FastifyReply
+    reply: FastifyReply,
+    format?: 'mp3'
   ): Promise<any> {
     validateSafeMediaUrl(targetUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
 
@@ -791,6 +1001,9 @@ export class InstagramService {
       'User-Agent': DEFAULT_UA,
       Referer: 'https://www.instagram.com/'
     };
+    if (format === 'mp3') {
+      return streamTranscodedMp3({ sourceUrl: targetUrl, headers, filename, reply });
+    }
     if (rangeHeader) {
       headers['Range'] = rangeHeader;
     }

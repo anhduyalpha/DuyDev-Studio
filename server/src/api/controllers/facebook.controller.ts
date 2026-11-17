@@ -26,7 +26,7 @@ export async function checkDuplicateFacebookHandler(request: FastifyRequest, rep
 }
 
 export async function streamFacebookHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { url, download, filename, dashToken } = facebookStreamQuerySchema.parse(request.query || {});
+  const { url, download, filename, dashToken, format } = facebookStreamQuerySchema.parse(request.query || {});
   const isDownload = download === true || download === 'true' || download === '1';
   const rangeHeader = request.headers.range;
 
@@ -37,7 +37,8 @@ export async function streamFacebookHandler(request: FastifyRequest, reply: Fast
     isDownload,
     filename || 'facebook_video.mp4',
     rangeHeader,
-    reply
+    reply,
+    format
   );
 }
 

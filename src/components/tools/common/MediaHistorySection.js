@@ -636,7 +636,13 @@ export function attachMediaHistoryListeners({
       } else if (isPptx) {
         targetCat = 'presentation';
         targetMime = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-      } else if (item.toolId === 'facebook-downloader' || item.toolId === 'tiktok-downloader' || ext === 'mp4') {
+      } else if (
+        item.toolId === 'facebook-downloader' ||
+        item.toolId === 'tiktok-downloader' ||
+        item.toolId === 'instagram-downloader' ||
+        item.toolId === 'youtube-downloader' ||
+        ext === 'mp4'
+      ) {
         targetCat = 'video';
         targetMime = 'video/mp4';
       }
@@ -644,6 +650,7 @@ export function attachMediaHistoryListeners({
       ViewerConnector.preview({
         name: item.fileName || item.title || 'Media',
         fileName: item.fileName || item.title || 'Media',
+        toolId: item.toolId,
         path: hasDrive ? item.driveRelPath : undefined,
         category: targetCat,
         mimeType: targetMime || item.mimeType,
@@ -679,7 +686,7 @@ export function attachMediaHistoryListeners({
       }
 
       const hasDrive = Boolean(item.driveRelPath);
-      const downloadUrl = hasDrive
+      const rawDl = hasDrive
         ? StorageService.getDownloadUrl(item.driveRelPath, false)
         : (item.downloadUrl || item.viewUrl);
       const fileName = item.fileName || `${item.title || 'media'}.${item.mediaType === 'audio' ? 'mp3' : 'mp4'}`;
@@ -689,6 +696,26 @@ export function attachMediaHistoryListeners({
       const isPdf = ext === 'pdf';
       const isPptx = ['pptx', 'ppt', 'odp'].includes(ext);
       const mime = isAudio ? 'audio/mpeg' : (isImage ? 'image/jpeg' : (isPdf ? 'application/pdf' : (isPptx ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation' : 'video/mp4')));
+
+      let downloadUrl = rawDl;
+      if (!hasDrive && rawDl && /^https?:\/\//i.test(rawDl) && !rawDl.startsWith(window.location.origin)) {
+        const platMap = {
+          'tiktok-downloader': 'tiktok',
+          'instagram-downloader': 'instagram',
+          'facebook-downloader': 'facebook',
+          'spotify-downloader': 'spotify'
+        };
+        const plat = platMap[item.toolId];
+        if (plat) {
+          const isPostPage = /(?:tiktok\.com\/.*\/video|vt\.tiktok|vm\.tiktok|douyin\.com\/(?:video|note)|v\.douyin|instagram\.com\/(?:p|reel|reels)|facebook\.com\/(?:watch|reel|share)|open\.spotify\.com)/i.test(rawDl);
+          if (isPostPage && typeof onReResolve === 'function') {
+            showToast('Đang trích xuất lại liên kết tải trực tiếp...', 'info', 2000);
+            onReResolve(item.sourceUrl || item.originalUrl || rawDl);
+            return;
+          }
+          downloadUrl = `/api/v1/${plat}/stream?${new URLSearchParams({ url: rawDl, filename: fileName, download: '1' }).toString()}`;
+        }
+      }
 
       triggerDownload(downloadUrl, fileName, mime);
     };

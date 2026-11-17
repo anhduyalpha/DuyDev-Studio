@@ -672,10 +672,12 @@ export class SpotifyWorkspace {
     ViewerConnector.preview({
       name: `${this.trackData.artist} - ${this.trackData.title}.mp3`,
       fileName: `${this.trackData.artist} - ${this.trackData.title}.mp3`,
+      toolId: 'spotify-downloader',
       category: 'audio',
       mimeType: 'audio/mpeg',
       viewUrl: streamUrl,
-      downloadUrl: streamUrl.replace('download=0', 'download=1')
+      downloadUrl: streamUrl.replace('download=0', 'download=1'),
+      originalUrl: this.url || this.trackData.originalUrl || ''
     });
   }
 

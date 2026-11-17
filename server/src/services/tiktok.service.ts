@@ -19,84 +19,143 @@ import { DriveService } from './drive.service.js';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, NotFoundError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import {
+  extractBalancedJsonAt,
+  streamTranscodedMp3,
+  tryCobaltResolver,
+  tryEvilOctalApi
+} from './shared/media-extractor.helper.js';
 
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const DOUYIN_MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
 
 export class TikTokService {
-  /**
-   * Cleans and normalizes raw text input to a TikTok URL
-   */
-  static extractUrl(rawText: string): string {
-    const trimmed = (rawText || '').trim();
-    const urlMatch = trimmed.match(/https?:\/\/(?:[a-zA-Z0-9_-]+\.)?(?:tiktok\.com|douyin\.com)[^\s"'>]*/i);
-    if (!urlMatch) {
-      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết TikTok hoặc Douyin hợp lệ.');
-    }
-    return urlMatch[0];
+  static isDouyinUrl(url: string): boolean {
+    return /(?:douyin\.com|iesdouyin\.com|douyinvod\.com|snssdk\.com|amemv\.com|byteimg\.com|pstatp\.com|zjcdn\.com)/i.test(url || '');
+  }
+
+  static getStreamReferer(targetUrl: string): string {
+    return this.isDouyinUrl(targetUrl) ? 'https://www.douyin.com/' : 'https://www.tiktok.com/';
   }
 
   /**
-   * Expands short TikTok URLs (vt.tiktok.com, vm.tiktok.com) to canonical video URL
+   * Cleans and normalizes raw text input to a TikTok or Douyin URL (supports protocol-less shortlinks & Chinese share copy)
+   */
+  static extractUrl(rawText: string): string {
+    const trimmed = (rawText || '').trim();
+    const urlMatch = trimmed.match(
+      /(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?(?:tiktok\.com|douyin\.com|iesdouyin\.com)\/[^\s"'>]*/i
+    );
+    if (!urlMatch) {
+      throw new BadRequestError('Liên kết không hợp lệ. Vui lòng dán liên kết TikTok hoặc Douyin hợp lệ.');
+    }
+    let clean = urlMatch[0].replace(/[.,;!?)"'\]>]+$/, '');
+    if (!/^https?:\/\//i.test(clean)) {
+      clean = `https://${clean}`;
+    }
+    return clean;
+  }
+
+  /**
+   * Expands short TikTok & Douyin URLs (vt/vm.tiktok.com, v.douyin.com, iesdouyin.com) and canonicalizes modal_id links
    */
   static async expandUrl(rawUrl: string): Promise<string> {
     const cleanUrl = this.extractUrl(rawUrl);
-    if (!cleanUrl.includes('vt.tiktok.com') && !cleanUrl.includes('vm.tiktok.com')) {
-      return cleanUrl;
+
+    const normalizeDouyinModal = (u: string): string => {
+      const modalMatch = u.match(/[?&]modal_id=(\d+)/i);
+      if (modalMatch && u.includes('douyin.com')) {
+        return `https://www.douyin.com/video/${modalMatch[1]}`;
+      }
+      return u;
+    };
+
+    if (!/(?:vt\.tiktok\.com|vm\.tiktok\.com|v\.douyin\.com|m\.douyin\.com|iesdouyin\.com\/share)/i.test(cleanUrl)) {
+      return normalizeDouyinModal(cleanUrl);
     }
 
     try {
       const res = await fetch(cleanUrl, {
         method: 'GET',
-        headers: { 'User-Agent': DEFAULT_UA },
+        headers: {
+          'User-Agent': this.isDouyinUrl(cleanUrl) ? DOUYIN_MOBILE_UA : DEFAULT_UA
+        },
         redirect: 'follow',
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(6500)
       });
-      return res.url || cleanUrl;
+      return normalizeDouyinModal(res.url || cleanUrl);
     } catch (err: any) {
-      logger.warn({ err: err?.message, cleanUrl }, 'Failed to expand short TikTok URL; falling back to original');
-      return cleanUrl;
+      logger.warn({ err: err?.message, cleanUrl }, 'Failed to expand short TikTok/Douyin URL; falling back to original');
+      return normalizeDouyinModal(cleanUrl);
     }
   }
 
   /**
    * Multi-tier resolution:
-   * Tier 1: Direct SSR HTML parser (exact logic from user's n8n workflow)
-   * Tier 2: TikWM direct resolver (returns high-speed CDN playAddr, HD playAddr & MP3)
-   * Tier 3: Local yt-dlp CLI
+   * - Douyin links: Native iesdouyin _ROUTER_DATA -> TikWM -> Optional Evil0ctal/Cobalt -> yt-dlp
+   * - TikTok links: SSR parser -> TikWM HD -> Optional Evil0ctal/Cobalt -> yt-dlp
    */
   static async resolveVideo(rawInput: string): Promise<TikTokVideoData> {
     const targetUrl = await this.expandUrl(rawInput);
-    logger.info({ targetUrl }, '[TikTok] Resolving video...');
+    const isDouyin = this.isDouyinUrl(targetUrl);
+    logger.info({ targetUrl, isDouyin }, '[TikTok/Douyin] Resolving media...');
 
-    // Extract ID from URL if present (video, photo, item)
-    const idMatch = targetUrl.match(/\/(?:video|photo|item)\/(\d+)/i);
+    // Extract ID from URL if present (video, note, photo, item)
+    const idMatch = targetUrl.match(/\/(?:video|note|photo|item)\/(\d+)/i);
     const videoIdFallback = idMatch ? idMatch[1] : `tt_${Date.now()}`;
 
     let resolvedData: TikTokVideoData | null = null;
 
-    // --- Tier 1: SSR Extraction (Native n8n Scrape) ---
-    try {
-      const ssrResult = await this.trySsrExtraction(targetUrl, videoIdFallback);
-      if (ssrResult) {
-        logger.info({ id: ssrResult.id }, '[TikTok] Successfully resolved via Tier 1 SSR parser');
-        resolvedData = ssrResult;
+    // --- Tier 0 (Douyin): Native Cookieless iesdouyin _ROUTER_DATA Extractor ---
+    if (isDouyin) {
+      try {
+        const douyinResult = await this.tryDouyinRouterExtraction(targetUrl, videoIdFallback);
+        if (douyinResult) {
+          logger.info({ id: douyinResult.id }, '[Douyin] Successfully resolved via Tier 0 Native _ROUTER_DATA');
+          resolvedData = douyinResult;
+        }
+      } catch (dyErr: any) {
+        logger.debug({ err: dyErr?.message }, '[Douyin] Tier 0 _ROUTER_DATA extraction skipped/failed');
       }
-    } catch (ssrErr: any) {
-      logger.debug({ err: ssrErr?.message }, '[TikTok] Tier 1 SSR parser bypassed/failed');
     }
 
-    // --- Tier 2: Direct High-Speed Resolver (TikWM) ---
+    // --- Tier 1 (TikTok): SSR Extraction (Native n8n Scrape) ---
+    if (!resolvedData && !isDouyin) {
+      try {
+        const ssrResult = await this.trySsrExtraction(targetUrl, videoIdFallback);
+        if (ssrResult) {
+          logger.info({ id: ssrResult.id }, '[TikTok] Successfully resolved via Tier 1 SSR parser');
+          resolvedData = ssrResult;
+        }
+      } catch (ssrErr: any) {
+        logger.debug({ err: ssrErr?.message }, '[TikTok] Tier 1 SSR parser bypassed/failed');
+      }
+    }
+
+    // --- Tier 2: Direct High-Speed Resolver (TikWM handles both TikTok & Douyin) ---
     if (!resolvedData) {
       try {
         const resolverResult = await this.tryTikwmResolver(targetUrl, videoIdFallback);
         if (resolverResult) {
-          logger.info({ id: resolverResult.id }, '[TikTok] Successfully resolved via Tier 2 Resolver API');
+          logger.info({ id: resolverResult.id }, '[TikTok/Douyin] Successfully resolved via Tier 2 Resolver API');
           resolvedData = resolverResult;
         }
       } catch (resErr: any) {
-        logger.warn({ err: resErr?.message }, '[TikTok] Tier 2 Resolver API failed, falling back to Tier 3');
+        logger.warn({ err: resErr?.message }, '[TikTok/Douyin] Tier 2 Resolver API failed, checking fallback tiers');
+      }
+    }
+
+    // --- Tier 2B: Optional Self-Hosted Evil0ctal / Cobalt Gateway ---
+    if (!resolvedData) {
+      try {
+        const externalRes = await this.tryExternalExtractorFallback(targetUrl, videoIdFallback, isDouyin);
+        if (externalRes) {
+          resolvedData = externalRes;
+        }
+      } catch (extErr: any) {
+        logger.debug({ err: extErr?.message }, '[TikTok/Douyin] Optional external gateway skipped');
       }
     }
 
@@ -105,22 +164,202 @@ export class TikTokService {
       try {
         const ytdlpResult = await this.tryYtdlpExtraction(targetUrl, videoIdFallback);
         if (ytdlpResult) {
-          logger.info({ id: ytdlpResult.id }, '[TikTok] Successfully resolved via Tier 3 yt-dlp');
+          logger.info({ id: ytdlpResult.id }, '[TikTok/Douyin] Successfully resolved via Tier 3 yt-dlp');
           resolvedData = ytdlpResult;
         }
       } catch (ytErr: any) {
-        logger.error({ err: ytErr?.message }, '[TikTok] Tier 3 yt-dlp extraction failed');
+        logger.error({ err: ytErr?.message }, '[TikTok/Douyin] Tier 3 yt-dlp extraction failed');
       }
     }
 
     if (!resolvedData) {
-      throw new BadRequestError('Không thể trích xuất video TikTok này. Video có thể đang ở chế độ riêng tư, bị xóa hoặc bị giới hạn khu vực.');
+      throw new BadRequestError('Không thể trích xuất video TikTok/Douyin này. Video có thể đang ở chế độ riêng tư, bị xóa hoặc bị giới hạn khu vực.');
     }
+
+    resolvedData.platform = isDouyin ? 'douyin' : 'tiktok';
 
     // Check if video already exists in Drive (Post-metadata Video ID & physical file check)
     const existing = await this.checkExistingInDrive(resolvedData.id, targetUrl);
     resolvedData.existingInDrive = existing.exists ? existing.item : null;
     return resolvedData;
+  }
+
+  /**
+   * Tier 0 (Douyin): Native Cookieless iesdouyin _ROUTER_DATA Parser (Video, Notes Photo Album, Live Photo & BGM MP3)
+   */
+  private static async tryDouyinRouterExtraction(targetUrl: string, fallbackId: string): Promise<TikTokVideoData | null> {
+    const idMatch = targetUrl.match(/\/(?:video|note|slides|share\/video)\/(\d+)/i) || targetUrl.match(/[?&]modal_id=(\d+)/i);
+    const awemeId = idMatch?.[1] || fallbackId;
+    if (!/^\d{10,}$/.test(awemeId)) return null;
+
+    const shareUrl = `https://www.iesdouyin.com/share/video/${awemeId}/`;
+    const res = await fetch(shareUrl, {
+      headers: {
+        'User-Agent': DOUYIN_MOBILE_UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Referer': 'https://www.douyin.com/'
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(7000)
+    });
+
+    if (!res.ok) return null;
+    const html = await res.text();
+    const routerIdx = html.indexOf('_ROUTER_DATA');
+    if (routerIdx === -1) return null;
+
+    const braceStart = html.indexOf('{', routerIdx);
+    const jsonText = extractBalancedJsonAt(html, braceStart);
+    if (!jsonText) return null;
+
+    let routerData: any;
+    try {
+      routerData = JSON.parse(jsonText);
+    } catch {
+      return null;
+    }
+
+    const loaderEntries = Object.values(routerData?.loaderData || {}) as any[];
+    let item: any = null;
+    for (const entry of loaderEntries) {
+      if (entry?.videoInfoRes?.item_list?.[0]) {
+        item = entry.videoInfoRes.item_list[0];
+        break;
+      }
+    }
+    if (!item) return null;
+
+    const stripWatermark = (u?: string) => (u ? u.replace(/\/playwm\//g, '/play/') : '');
+
+    // Extract images & Douyin Live Photo video clips for /note/ or photo albums
+    const rawImages = Array.isArray(item.images) ? item.images : [];
+    const isSlideshow = rawImages.length > 0;
+    const images = rawImages
+      .map((img: any) => img?.url_list?.[0] || img?.download_url_list?.[0] || '')
+      .filter(Boolean);
+    const livePhotoVideos = rawImages
+      .map((img: any) => stripWatermark(img?.video?.play_addr?.url_list?.[0] || ''))
+      .filter(Boolean);
+
+    // Pick highest-bitrate unwatermarked MP4 stream
+    const bitRates = Array.isArray(item.video?.bit_rate) ? [...item.video.bit_rate] : [];
+    bitRates.sort((a: any, b: any) => Number(b?.bit_rate || 0) - Number(a?.bit_rate || 0));
+    const hdPlay = stripWatermark(bitRates[0]?.play_addr?.url_list?.[0] || '');
+    const stdPlay = stripWatermark(item.video?.play_addr?.url_list?.[0] || '');
+    const videoUrl = stdPlay || hdPlay || images[0] || '';
+    if (!videoUrl && !isSlideshow) return null;
+
+    const audioUrl = item.music?.play_url?.url_list?.[0] || '';
+    const cover =
+      item.video?.origin_cover?.url_list?.[0] ||
+      item.video?.cover?.url_list?.[0] ||
+      images[0] ||
+      '';
+
+    const statsObj = item.statistics || {};
+    const views = Number(statsObj.play_count || 0);
+    const likes = Number(statsObj.digg_count || 0);
+    const comments = Number(statsObj.comment_count || 0);
+    const shares = Number(statsObj.share_count || 0);
+
+    return {
+      id: String(item.aweme_id || awemeId),
+      title: item.desc || `Douyin Media ${awemeId}`,
+      author: {
+        uniqueId: item.author?.unique_id || item.author?.short_id || String(item.author?.uid || 'douyin_user'),
+        nickname: item.author?.nickname || 'Douyin Creator',
+        avatar: item.author?.avatar_thumb?.url_list?.[0] || ''
+      },
+      cover,
+      duration: Math.round(Number(item.duration || item.video?.duration || 0) / (Number(item.duration || 0) > 1000 ? 1000 : 1)),
+      videoUrl,
+      videoHdUrl: hdPlay && hdPlay !== videoUrl ? hdPlay : undefined,
+      audioUrl: audioUrl || undefined,
+      isSlideshow: isSlideshow || undefined,
+      images: images.length > 0 ? images : undefined,
+      livePhotoVideos: livePhotoVideos.length > 0 ? livePhotoVideos : undefined,
+      platform: 'douyin',
+      stats: {
+        views,
+        likes,
+        comments,
+        shares,
+        playCount: views,
+        diggCount: likes,
+        commentCount: comments,
+        shareCount: shares
+      },
+      extractor: 'douyin-router'
+    };
+  }
+
+  /**
+   * Tier 2B: Optional Self-Hosted Evil0ctal or Cobalt Gateway Fallback
+   */
+  private static async tryExternalExtractorFallback(
+    targetUrl: string,
+    fallbackId: string,
+    isDouyin: boolean
+  ): Promise<TikTokVideoData | null> {
+    if (isDouyin) {
+      const ev = await tryEvilOctalApi(targetUrl);
+      if (ev) {
+        const images = Array.isArray(ev.image_data?.no_watermark_image_list)
+          ? ev.image_data.no_watermark_image_list.filter(Boolean)
+          : undefined;
+        const hdPlay = ev.video_data?.nwm_video_url_HQ || ev.video_data?.nwm_video_url;
+        const stdPlay = ev.video_data?.nwm_video_url || hdPlay || images?.[0] || '';
+        if (stdPlay || (images && images.length > 0)) {
+          return {
+            id: String(ev.aweme_id || fallbackId),
+            title: ev.desc || `Douyin Media ${fallbackId}`,
+            author: {
+              uniqueId: ev.author?.unique_id || ev.author?.short_id || 'douyin_user',
+              nickname: ev.author?.nickname || 'Douyin Creator',
+              avatar: ev.author?.avatar_thumb?.url_list?.[0] || ''
+            },
+            cover: ev.cover_data?.origin_cover?.url_list?.[0] || ev.cover_data?.cover?.url_list?.[0] || images?.[0] || '',
+            duration: Number(ev.duration || 0),
+            videoUrl: stdPlay,
+            videoHdUrl: hdPlay && hdPlay !== stdPlay ? hdPlay : undefined,
+            audioUrl: ev.music?.play_url?.url_list?.[0] || undefined,
+            isSlideshow: Boolean(images && images.length > 0),
+            images,
+            platform: 'douyin',
+            stats: {
+              views: Number(ev.statistics?.play_count || 0),
+              likes: Number(ev.statistics?.digg_count || 0),
+              comments: Number(ev.statistics?.comment_count || 0),
+              shares: Number(ev.statistics?.share_count || 0)
+            },
+            extractor: 'evil0ctal'
+          };
+        }
+      }
+    }
+
+    const cobalt = await tryCobaltResolver(targetUrl);
+    if (cobalt?.url || (cobalt?.picker && cobalt.picker.length > 0)) {
+      const imgs = cobalt.picker?.filter((p) => p.type === 'photo').map((p) => p.url) || [];
+      const vids = cobalt.picker?.filter((p) => p.type === 'video').map((p) => p.url) || [];
+      return {
+        id: fallbackId,
+        title: cobalt.filename ? cobalt.filename.replace(/\.[^.]+$/, '') : `${isDouyin ? 'Douyin' : 'TikTok'} Media ${fallbackId}`,
+        author: { uniqueId: isDouyin ? 'douyin_user' : 'tiktok_user', nickname: isDouyin ? 'Douyin' : 'TikTok', avatar: '' },
+        cover: cobalt.picker?.[0]?.thumb || imgs[0] || '',
+        duration: 0,
+        videoUrl: vids[0] || cobalt.url || imgs[0] || '',
+        audioUrl: cobalt.picker && cobalt.url ? cobalt.url : undefined,
+        isSlideshow: imgs.length > 0 ? true : undefined,
+        images: imgs.length > 0 ? imgs : undefined,
+        livePhotoVideos: vids.length > 0 && imgs.length > 0 ? vids : undefined,
+        platform: isDouyin ? 'douyin' : 'tiktok',
+        stats: { views: 0, likes: 0, comments: 0, shares: 0 },
+        extractor: 'cobalt'
+      };
+    }
+    return null;
   }
 
   /**
@@ -383,12 +622,22 @@ export class TikTokService {
     download: boolean,
     filename: string,
     rangeHeader: string | undefined,
-    reply: FastifyReply
+    reply: FastifyReply,
+    format?: 'mp3'
   ): Promise<void> {
     const upstreamHeaders: Record<string, string> = {
       'User-Agent': DEFAULT_UA,
-      'Referer': 'https://www.tiktok.com/'
+      'Referer': this.getStreamReferer(targetUrl)
     };
+
+    if (format === 'mp3') {
+      return streamTranscodedMp3({
+        sourceUrl: targetUrl,
+        headers: upstreamHeaders,
+        filename,
+        reply
+      });
+    }
 
     if (rangeHeader) {
       upstreamHeaders['Range'] = rangeHeader;
@@ -794,7 +1043,7 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
     const upstreamRes = await fetch(mediaUrl, {
       headers: {
         'User-Agent': DEFAULT_UA,
-        'Referer': 'https://www.tiktok.com/'
+        'Referer': this.getStreamReferer(mediaUrl)
       },
       signal: AbortSignal.timeout(120000)
     });
@@ -836,7 +1085,7 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
         const coverRes = await fetch(cover, {
           headers: {
             'User-Agent': DEFAULT_UA,
-            'Referer': 'https://www.tiktok.com/'
+            'Referer': this.getStreamReferer(cover)
           },
           signal: AbortSignal.timeout(10000)
         });

@@ -182,4 +182,76 @@ describe('TikTok Downloader Suite', () => {
       expect(content).toContain("import { readText } from '../../../utilities/clipboard.js'");
     });
   });
+
+  describe('Douyin Native _ROUTER_DATA & Shortlink Support', () => {
+    it('extracts protocol-less and copy-pasted Douyin URLs and sets Douyin Referer for ByteDance CDNs', async () => {
+      const { extractTiktokUrls } = await import('../../../src/components/tools/tiktok/hooks/useTiktok.js');
+      const messy = '7.41 复制打开抖音 https://v.douyin.com/iYtest123/ 看看';
+      expect(TikTokService.extractUrl(messy)).toBe('https://v.douyin.com/iYtest123/');
+      expect(TikTokService.extractUrl('v.douyin.com/abcXYZ/')).toBe('https://v.douyin.com/abcXYZ/');
+      expect(extractTiktokUrls(messy)).toEqual(['https://v.douyin.com/iYtest123/']);
+      expect(TikTokService.isDouyinUrl('https://www.iesdouyin.com/share/video/1234567890123/')).toBe(true);
+      expect(TikTokService.getStreamReferer('https://v5-dy.byteimg.com/video.mp4')).toBe('https://www.douyin.com/');
+      expect(TikTokService.getStreamReferer('https://v16.tiktokcdn.com/video.mp4')).toBe('https://www.tiktok.com/');
+    });
+
+    it('resolves Douyin /note/ Live Photo albums & unwatermarked MP4 via native _ROUTER_DATA', async () => {
+      const origFetch = globalThis.fetch;
+      const sampleRouterJson = {
+        loaderData: {
+          'video_(id)/page': {
+            videoInfoRes: {
+              item_list: [
+                {
+                  aweme_id: '7398765432109876543',
+                  desc: 'Douyin Note Album Test',
+                  duration: 15000,
+                  author: { nickname: 'Douyin Creator', unique_id: 'dy_01', avatar_thumb: { url_list: ['https://p3.douyinpic.com/av.jpg'] } },
+                  music: { play_url: { url_list: ['https://sf3.byteimg.com/bgm.mp3'] } },
+                  video: {
+                    play_addr: { url_list: ['https://aweme.snssdk.com/aweme/v1/playwm/?video_id=123'] },
+                    origin_cover: { url_list: ['https://p3.douyinpic.com/cover.jpg'] },
+                    bit_rate: [{ bit_rate: 2000000, play_addr: { url_list: ['https://aweme.snssdk.com/aweme/v1/playwm/?video_id=123_hd'] } }]
+                  },
+                  images: [
+                    {
+                      url_list: ['https://p3.douyinpic.com/slide1.jpg'],
+                      video: { play_addr: { url_list: ['https://aweme.snssdk.com/aweme/v1/playwm/?video_id=live1'] } }
+                    },
+                    { url_list: ['https://p3.douyinpic.com/slide2.jpg'] }
+                  ],
+                  statistics: { play_count: 5000, digg_count: 420, comment_count: 15, share_count: 9 }
+                }
+              ]
+            }
+          }
+        }
+      };
+
+      globalThis.fetch = vi.fn().mockImplementation(async (input: any) => {
+        const u = String(input?.url || input);
+        if (u.includes('iesdouyin.com/share/video/')) {
+          return new Response(
+            `<html><script>window._ROUTER_DATA = ${JSON.stringify(sampleRouterJson)}</script></html>`,
+            { status: 200, headers: { 'content-type': 'text/html' } }
+          );
+        }
+        return new Response('Not found', { status: 404 });
+      });
+
+      try {
+        const res = await TikTokService.resolveVideo('https://www.douyin.com/note/7398765432109876543');
+        expect(res.platform).toBe('douyin');
+        expect(res.extractor).toBe('douyin-router');
+        expect(res.videoUrl).toBe('https://aweme.snssdk.com/aweme/v1/play/?video_id=123');
+        expect(res.videoHdUrl).toBe('https://aweme.snssdk.com/aweme/v1/play/?video_id=123_hd');
+        expect(res.isSlideshow).toBe(true);
+        expect(res.images).toEqual(['https://p3.douyinpic.com/slide1.jpg', 'https://p3.douyinpic.com/slide2.jpg']);
+        expect(res.livePhotoVideos).toEqual(['https://aweme.snssdk.com/aweme/v1/play/?video_id=live1']);
+        expect(res.audioUrl).toBe('https://sf3.byteimg.com/bgm.mp3');
+      } finally {
+        globalThis.fetch = origFetch;
+      }
+    });
+  });
 });

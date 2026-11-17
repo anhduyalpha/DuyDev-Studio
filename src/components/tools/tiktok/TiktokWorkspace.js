@@ -19,6 +19,7 @@ import {
   setMediaHistoryExpanded
 } from '../common/MediaHistorySection.js';
 import { storage } from '../../../utilities/storage.js';
+import { buildSafeMediaFilename, downloadMediaZip } from '../../../utilities/mediaBatchHelper.js';
 
 function migrateLegacyTiktokHistory() {
   try {
@@ -234,12 +235,18 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
   const images = isSlideshow ? video.images : [];
 
   const safeId = video?.id || Date.now();
-  const streamUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${safeId}.mp4`);
-  const streamHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${safeId}_HD.mp4`) : '';
-  const downloadUrl = tiktokApi.getStreamUrl(video.videoUrl, `tiktok_${safeId}.mp4`, true);
-  const downloadHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `tiktok_${safeId}_HD.mp4`, true) : '';
-  const audioDownloadUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${safeId}_audio.mp3`, true) : '';
-  const audioStreamUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `tiktok_${safeId}_audio.mp3`) : '';
+  const isDouyin = video.platform === 'douyin' || /(?:douyin|iesdouyin)/i.test(video.videoUrl || '');
+  const prefix = isDouyin ? 'douyin' : 'tiktok';
+  const streamUrl = tiktokApi.getStreamUrl(video.videoUrl, `${prefix}_${safeId}.mp4`);
+  const streamHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `${prefix}_${safeId}_HD.mp4`) : '';
+  const downloadUrl = tiktokApi.getStreamUrl(video.videoUrl, `${prefix}_${safeId}.mp4`, true);
+  const downloadHdUrl = video.videoHdUrl ? tiktokApi.getStreamUrl(video.videoHdUrl, `${prefix}_${safeId}_HD.mp4`, true) : '';
+  const audioSource = video.audioUrl || (!isSlideshow ? video.videoUrl : '');
+  const audioDownloadUrl = audioSource
+    ? tiktokApi.getStreamUrl(audioSource, `${prefix}_${safeId}_audio.mp3`, true, video.audioUrl ? '' : 'mp3')
+    : '';
+  const audioStreamUrl = video.audioUrl ? tiktokApi.getStreamUrl(video.audioUrl, `${prefix}_${safeId}_audio.mp3`) : '';
+  const coverDownloadUrl = video.cover ? tiktokApi.getStreamUrl(video.cover, `${prefix}_${safeId}_cover.jpg`, true) : '';
 
   const firstSlideStream = images.length > 0 ? tiktokApi.getStreamUrl(images[0], `slide_01.jpg`) : '';
   const firstSlideDownload = images.length > 0 ? tiktokApi.getStreamUrl(images[0], `slide_01.jpg`, true) : '';
@@ -407,7 +414,10 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
               </div>
             `}
             <div class="min-w-0 flex-1">
-              <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">${escapeHtml(video.author?.nickname || 'Người dùng TikTok')}</h3>
+              <div class="flex items-center gap-1.5">
+                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">${escapeHtml(video.author?.nickname || (isDouyin ? 'Douyin Creator' : 'Người dùng TikTok'))}</h3>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${isDouyin ? 'bg-zinc-900 text-white dark:bg-white/15 dark:text-zinc-100' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}">${isDouyin ? 'Douyin' : 'TikTok'}</span>
+              </div>
               <p class="text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate">@${escapeHtml(video.author?.uniqueId || 'tiktok_user')}</p>
             </div>
             <div class="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 shrink-0">
@@ -489,17 +499,32 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
               ` : ''}
             `}
 
-            <!-- 3. Download Audio MP3 -->
-            ${video.audioUrl ? `
-              <a
-                id="btnDownloadAudio"
-                href="${audioDownloadUrl}"
-                download
-                class="w-full py-2 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-zinc-700 dark:text-zinc-200 text-xs font-medium flex items-center justify-center gap-2 transition cursor-pointer"
-              >
-                <i data-lucide="music" class="w-3.5 h-3.5 text-emerald-500"></i>
-                <span>Tải Audio (mp3)</span>
-              </a>
+            <!-- 3. Download Audio MP3 & Cover HD -->
+            ${(audioDownloadUrl || coverDownloadUrl) ? `
+              <div class="grid ${audioDownloadUrl && coverDownloadUrl ? 'grid-cols-2' : 'grid-cols-1'} gap-2">
+                ${audioDownloadUrl ? `
+                  <a
+                    id="btnDownloadAudio"
+                    href="${audioDownloadUrl}"
+                    download
+                    class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-zinc-700 dark:text-zinc-200 text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <i data-lucide="music" class="w-3.5 h-3.5 text-emerald-500"></i>
+                    <span>Tải Audio (mp3)</span>
+                  </a>
+                ` : ''}
+                ${coverDownloadUrl ? `
+                  <a
+                    id="btnDownloadCover"
+                    href="${coverDownloadUrl}"
+                    download="${prefix}_${safeId}_cover.jpg"
+                    class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-zinc-700 dark:text-zinc-200 text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <i data-lucide="image" class="w-3.5 h-3.5 text-amber-500"></i>
+                    <span>Tải Ảnh Bìa (.JPG)</span>
+                  </a>
+                ` : ''}
+              </div>
             ` : ''}
 
             <!-- Duplicate Warning Alert Box (when exists in Drive) -->
@@ -610,31 +635,6 @@ function renderResultCard(video, isSavingDrive, savedDriveResult, existingInDriv
 
 
 /**
- * Lazily ensure JSZip library is available in the window context
- */
-async function ensureJSZip() {
-  if (typeof window !== 'undefined' && window.JSZip) return window.JSZip;
-
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src*="jszip"]');
-    if (existing) {
-      if (window.JSZip) return resolve(window.JSZip);
-      existing.addEventListener('load', () => resolve(window.JSZip));
-      existing.addEventListener('error', () => reject(new Error('Không thể nạp thư viện JSZip')));
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = '/src/vendor/jszip.min.js';
-    script.onload = () => {
-      if (window.JSZip) resolve(window.JSZip);
-      else reject(new Error('JSZip không khởi tạo được trên trình duyệt'));
-    };
-    script.onerror = () => reject(new Error('Không thể nạp thư viện JSZip từ máy chủ'));
-    document.head.appendChild(script);
-  });
-}
-
-/**
  * Bundle all slideshow images + background MP3 audio into a single client-side .ZIP
  */
 async function downloadSlideshowZip(video) {
@@ -645,75 +645,33 @@ async function downloadSlideshowZip(video) {
 
   try {
     if (btn) btn.disabled = true;
-    if (textSpan) textSpan.textContent = 'Đang khởi tạo thư viện nén...';
-
-    const JSZipLib = await ensureJSZip();
-    const zip = new JSZipLib();
     const images = Array.isArray(video.images) ? video.images : [];
-
+    const liveVideos = Array.isArray(video.livePhotoVideos) ? video.livePhotoVideos : [];
     if (images.length === 0) {
       throw new Error('Không tìm thấy danh sách ảnh trong album');
     }
 
-    // 1. Fetch each slide image via proxy to avoid CORS blocks
-    for (let i = 0; i < images.length; i++) {
+    const entries = images.map((img, i) => {
       const pad = String(i + 1).padStart(2, '0');
-      if (textSpan) textSpan.textContent = `Đang tải ảnh ${i + 1}/${images.length}...`;
-      const proxiedUrl = tiktokApi.getStreamUrl(images[i], `slide_${pad}.jpg`);
-      const res = await fetch(proxiedUrl);
-      if (!res.ok) throw new Error(`Lỗi tải ảnh slide ${i + 1} (${res.status})`);
-      const blob = await res.blob();
-      zip.file(`slide_${pad}.jpg`, blob);
-    }
-
-    // 2. Fetch background audio if present
-    if (video.audioUrl) {
-      if (textSpan) textSpan.textContent = 'Đang tải nhạc nền...';
-      try {
-        const audioProxiedUrl = tiktokApi.getStreamUrl(video.audioUrl, 'audio.mp3');
-        const audioRes = await fetch(audioProxiedUrl);
-        if (audioRes.ok) {
-          const audioBlob = await audioRes.blob();
-          zip.file('audio.mp3', audioBlob);
-        }
-      } catch (audioErr) {
-        console.warn('[TikTok] Background audio fetch failed:', audioErr);
-      }
-    }
-
-    // 3. Compress into .ZIP file
-    if (textSpan) textSpan.textContent = 'Đang đóng gói file .ZIP...';
-    const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
-      if (textSpan && typeof metadata.percent === 'number') {
-        textSpan.textContent = `Đang nén ${Math.round(metadata.percent)}%...`;
-      }
+      const name = `slide_${pad}.jpg`;
+      return { url: tiktokApi.getStreamUrl(img, name), name };
     });
 
-    // 4. Trigger browser download or native Android APK save
-    const cleanTitle = (video?.title || 'tiktok_album').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40).trim();
-    const zipFileName = `[TikTok]_${cleanTitle || 'album'}_${video?.id || Date.now()}.zip`;
-
-    if (window.AndroidBridge?.saveBase64File) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64data = (reader.result || '').split(',')[1] || '';
-        if (base64data) {
-          window.AndroidBridge.saveBase64File(base64data, zipFileName, 'application/zip');
-          showToast('Đã lưu album ZIP vào máy!', 'success');
-        }
-      };
-      reader.readAsDataURL(zipBlob);
-    } else {
-      const blobUrl = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = zipFileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-      showToast('Tải album ảnh + nhạc thành công!', 'success');
+    for (let i = 0; i < liveVideos.length; i++) {
+      const pad = String(i + 1).padStart(2, '0');
+      const name = `live_${pad}.mp4`;
+      entries.push({ url: tiktokApi.getStreamUrl(liveVideos[i], name), name });
     }
+
+    if (video.audioUrl) {
+      entries.push({ url: tiktokApi.getStreamUrl(video.audioUrl, 'audio.mp3'), name: 'audio.mp3' });
+    }
+
+    const brand = video.platform === 'douyin' ? 'Douyin' : 'TikTok';
+    const zipFileName = `[${brand}]_${buildSafeMediaFilename(video?.title, `album_${video?.id || 'tt'}`, 'zip')}`;
+    await downloadMediaZip(entries, zipFileName, (status) => {
+      if (textSpan) textSpan.textContent = status;
+    });
   } catch (err) {
     console.error('[TikTok] ZIP download error:', err);
     showToast(err.message || 'Lỗi khi đóng gói album ZIP', 'error');
@@ -1123,9 +1081,19 @@ export function attachTiktokWorkspaceListeners() {
       onSaveDrive: async (item) => {
         try {
           showToast('Đang lưu vào Studio Drive...', 'info', 2000);
-          const res = await tiktokApi.saveToDrive(item.downloadUrl || item.originalUrl, false);
-          if (res.success && res.item?.relPath) {
-            tiktokManager.updateHistoryDrivePath(item.id, res.item.relPath);
+          const res = await tiktokApi.saveToDrive({
+            url: item.originalUrl || item.url || item.downloadUrl,
+            title: item.title || item.fileName,
+            id: item.id,
+            originalUrl: item.originalUrl || item.url,
+            cover: item.cover,
+            author: item.author,
+            duration: item.duration,
+            isSlideshow: item.mediaType === 'carousel' || item.isSlideshow
+          });
+          if (res.success && (res.relPath || res.data?.relPath || res.item?.relPath)) {
+            const savedRel = res.relPath || res.data?.relPath || res.item?.relPath;
+            tiktokManager.updateHistoryDrivePath(item.id, savedRel);
             showToast('Đã lưu thành công vào Studio Drive!', 'success');
           } else {
             showToast(res.message || 'Không thể lưu vào Drive', 'error');

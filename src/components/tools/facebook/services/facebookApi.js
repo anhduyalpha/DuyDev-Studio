@@ -56,13 +56,14 @@ export const facebookApi = {
    * @param {boolean} [download=false] 
    * @returns {string}
    */
-  getStreamUrl(videoUrl, filename = 'facebook_video.mp4', download = false) {
+  getStreamUrl(videoUrl, filename = 'facebook_video.mp4', download = false, format = '') {
     if (!videoUrl) return '';
     const params = new URLSearchParams({
       url: videoUrl,
       filename: filename,
       download: download ? '1' : '0'
     });
+    if (format) params.set('format', format);
     return `/api/v1/facebook/stream?${params.toString()}`;
   },
 

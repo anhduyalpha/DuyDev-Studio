@@ -3,6 +3,7 @@ import {
   resolveYouTubeHandler,
   downloadYouTubeHandler,
   streamYouTubeHandler,
+  thumbnailYouTubeHandler,
   saveToDriveYouTubeHandler
 } from '../controllers/youtube.controller.js';
 
@@ -11,5 +12,6 @@ export async function youtubeRoute(app: FastifyInstance) {
   app.post('/api/v1/youtube/download', downloadYouTubeHandler);
   app.get('/api/v1/youtube/stream', streamYouTubeHandler);
   app.get('/api/v1/youtube/stream/:filename', streamYouTubeHandler);
+  app.get('/api/v1/youtube/thumbnail', thumbnailYouTubeHandler);
   app.post('/api/v1/youtube/save-drive', saveToDriveYouTubeHandler);
 }

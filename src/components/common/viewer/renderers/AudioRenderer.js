@@ -154,6 +154,20 @@ export function attachAudioListeners(state, registerCleanup) {
       errorMsg = 'Lỗi kết nối mạng khi tải luồng phát âm thanh.';
     }
 
+    if (!state._hasAutoRefreshed && typeof state.refreshMediaUrl === 'function') {
+      state._hasAutoRefreshed = true;
+      try {
+        const refreshed = await state.refreshMediaUrl();
+        if (refreshed?.viewUrl && (!state.isCurrentSession || state.isCurrentSession())) {
+          audio.src = refreshed.viewUrl;
+          audio.play().catch(() => {});
+          return;
+        }
+      } catch (refreshErr) {
+        if (refreshErr?.name === 'AbortError') return;
+      }
+    }
+
     const isTooLargeForBlob = Boolean(state.size && Number(state.size) > 30 * 1024 * 1024);
 
     // If already retried or too large for memory blob, show error fallback immediately
@@ -174,7 +188,8 @@ export function attachAudioListeners(state, registerCleanup) {
     try {
       const fetchFn = (typeof window !== 'undefined' && window.__ddViewerFetch) || fetch;
       const res = await fetchFn(state.viewUrl, { signal: state.abortSignal });
-      if (res.ok) {
+      const resType = (res.headers?.get('content-type') || '').toLowerCase();
+      if (res.ok && !resType.includes('text/html')) {
         const blob = await res.blob();
         if (state.isCurrentSession && !state.isCurrentSession()) return;
         const blobUrl = URL.createObjectURL(blob);
@@ -182,11 +197,13 @@ export function attachAudioListeners(state, registerCleanup) {
         audio.src = blobUrl;
         audio.play().catch(() => {});
       } else {
-        const statusText = res.status === 404
-          ? 'Tệp không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
-          : (res.status === 403 || res.status === 401
-              ? `Không có quyền truy cập tệp hoặc phiên làm việc đã hết hạn (HTTP ${res.status}).`
-              : `Máy chủ phản hồi lỗi khi nạp âm thanh (HTTP ${res.status}).`);
+        const statusText = resType.includes('text/html')
+          ? 'Liên kết nguồn không trả về luồng âm thanh hợp lệ.'
+          : res.status === 404
+            ? 'Tệp không tồn tại trên máy chủ hoặc liên kết đã hết hạn (HTTP 404).'
+            : (res.status === 403 || res.status === 401
+                ? `Không có quyền truy cập tệp hoặc phiên làm việc đã hết hạn (HTTP ${res.status}).`
+                : `Máy chủ phản hồi lỗi khi nạp âm thanh (HTTP ${res.status}).`);
         if (state.showErrorFallback) {
           state.showErrorFallback(statusText, `HTTP ${res.status}`);
         } else {
@@ -201,7 +218,7 @@ export function attachAudioListeners(state, registerCleanup) {
       if (e?.name === 'AbortError') return;
       console.warn('Audio fallback recovery failed:', e);
       if (state.showErrorFallback) {
-        state.showErrorFallback(errorMsg, e?.message || `MediaError code: ${errCode || 'unknown'}`);
+        state.showErrorFallback('Không thể kết nối luồng âm thanh (liên kết có thể đã hết hạn hoặc bị chặn mạng).', e?.message || `MediaError code: ${errCode || 'unknown'}`);
       } else {
         if (currentTimeEl) currentTimeEl.textContent = 'Lỗi';
         if (playBtn) {

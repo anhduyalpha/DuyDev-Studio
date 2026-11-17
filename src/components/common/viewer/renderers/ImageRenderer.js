@@ -96,6 +96,18 @@ export function attachImageListeners(state, registerCleanup) {
       if (spinner) spinner.classList.add('hidden');
     };
     img.onerror = async () => {
+      if (!state._hasAutoRefreshed && typeof state.refreshMediaUrl === 'function') {
+        state._hasAutoRefreshed = true;
+        try {
+          const refreshed = await state.refreshMediaUrl();
+          if (refreshed?.viewUrl && (!state.isCurrentSession || state.isCurrentSession())) {
+            img.src = refreshed.viewUrl;
+            return;
+          }
+        } catch (refreshErr) {
+          if (refreshErr?.name === 'AbortError') return;
+        }
+      }
       if (!hasRetriedImg && state.viewUrl && !state.viewUrl.startsWith('blob:') && !state.viewUrl.startsWith('data:')) {
         hasRetriedImg = true;
         try {

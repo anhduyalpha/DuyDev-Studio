@@ -103,9 +103,9 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
     });
 
-    it('build.gradle.kts must maintain versionCode >= 2408 and versionName 24.8.0', () => {
-      expect(gradleContent).toContain('versionCode = 2408');
-      expect(gradleContent).toContain('versionName = "24.8.0"');
+    it('build.gradle.kts must maintain versionCode >= 2500 and versionName 25.0.0', () => {
+      expect(gradleContent).toContain('versionCode = 2500');
+      expect(gradleContent).toContain('versionName = "25.0.0"');
     });
   });
 });
