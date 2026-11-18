@@ -23,6 +23,8 @@ import { validateSafeMediaUrl } from '../api/middleware/security.middleware.js';
 import { BoundedTtlCache, expandRedirectUrl, findExistingDriveMatch } from './shared/media-url-cache.js';
 import {
   extractBalancedJsonAt,
+  muxDashTracksToFile,
+  streamMuxedDashMp4,
   streamTranscodedMp3,
   tryCobaltResolver,
   unescapeMediaJsonUrl
@@ -47,12 +49,25 @@ async function cancelResponseBody(res?: Response | null): Promise<void> {
 
 export class InstagramService {
   private static readonly mediaCache = new BoundedTtlCache<InstagramVideoData>(200, 10 * 60 * 1000);
+  private static readonly dashTokenCache = new BoundedTtlCache<{ videoUrl: string; audioUrl: string }>(200, 6 * 60 * 60 * 1000);
 
   /**
    * Clears in-memory resolution cache (for testing and administrative maintenance)
    */
   static clearCache(): void {
     InstagramService.mediaCache.clear();
+    InstagramService.dashTokenCache.clear();
+  }
+
+  private static resolveDashEntry(dashUrl: string): { videoUrl: string; audioUrl: string } {
+    const token = dashUrl.replace('dash://', '').trim();
+    const entry = this.dashTokenCache.get(token);
+    if (!entry) {
+      throw new BadRequestError('DASH token không hợp lệ hoặc đã hết hạn');
+    }
+    validateSafeMediaUrl(entry.videoUrl, INSTAGRAM_ALLOWED_HOSTS);
+    validateSafeMediaUrl(entry.audioUrl, INSTAGRAM_ALLOWED_HOSTS);
+    return entry;
   }
 
   /**
@@ -891,34 +906,64 @@ export class InstagramService {
       let isVideo = false;
       const entryCover = entry.thumbnail || cover;
 
-      if (Array.isArray(entry.formats) && entry.formats.length > 0) {
-        const progressiveMp4 = entry.formats
-          .filter(
-            (f: any) =>
-              f.url &&
-              (f.ext === 'mp4' || !f.ext) &&
-              f.vcodec &&
-              f.vcodec !== 'none' &&
-              f.acodec &&
-              f.acodec !== 'none'
-          )
-          .sort((a: any, b: any) => Number(a.height || 0) - Number(b.height || 0))
+      const allFormats: any[] = [
+        ...(Array.isArray(entry.formats) ? entry.formats : []),
+        ...(Array.isArray(entry.requested_formats) ? entry.requested_formats : [])
+      ].filter((f: any) => f && f.url);
+
+      if (allFormats.length > 0) {
+        const formatScore = (f: any) =>
+          (Number(f.height || 0) * Number(f.width || 0)) || Number(f.height || 0) * 1000 || Number(f.tbr || 0);
+
+        const isExplicitMuxed = (f: any) =>
+          (f.ext === 'mp4' || !f.ext) &&
+          f.vcodec &&
+          f.vcodec !== 'none' &&
+          f.acodec &&
+          f.acodec !== 'none';
+
+        // Instagram's yt-dlp progressive formats ('1','2','3') omit vcodec/acodec metadata
+        // while still containing muxed H.264 + AAC; DASH video-only always sets acodec='none'.
+        const isUnprobedProgressive = (f: any) =>
+          (f.ext === 'mp4' || !f.ext) &&
+          !f.vcodec &&
+          !f.acodec &&
+          !/\.(jpe?g|png|webp|m4a|aac|mp3|ogg)(\?|$)/i.test(String(f.url)) &&
+          !/dash|audio/i.test(String(f.format_id || '')) &&
+          !/dash|audio/i.test(String(f.format_note || ''));
+
+        const progressiveMp4 =
+          allFormats.filter(isExplicitMuxed).sort((a, b) => formatScore(a) - formatScore(b)).pop() ||
+          allFormats.filter(isUnprobedProgressive).sort((a, b) => formatScore(a) - formatScore(b)).pop();
+
+        const anyVideoFmt = allFormats
+          .filter((f: any) => f.vcodec && f.vcodec !== 'none')
+          .sort((a, b) => formatScore(a) - formatScore(b))
           .pop();
 
-        const anyVideoFmt = entry.formats
-          .filter((f: any) => f.url && f.vcodec && f.vcodec !== 'none')
-          .sort((a: any, b: any) => Number(a.height || 0) - Number(b.height || 0))
+        const audioFmt = allFormats
+          .filter((f: any) => (!f.vcodec || f.vcodec === 'none') && f.acodec && f.acodec !== 'none')
+          .sort((a, b) => (Number(a.abr || a.tbr || 0)) - (Number(b.abr || b.tbr || 0)))
           .pop();
 
-        const audioFmt = entry.formats.find(
-          (f: any) => f.url && (!f.vcodec || f.vcodec === 'none') && f.acodec && f.acodec !== 'none'
-        );
         if (audioFmt?.url && !resolvedAudioUrl) {
           resolvedAudioUrl = audioFmt.url;
         }
 
         if (progressiveMp4?.url) {
           mediaItemUrl = progressiveMp4.url;
+          isVideo = true;
+        } else if (anyVideoFmt?.url && audioFmt?.url) {
+          // Mux DASH video-only + DASH audio-only dynamically via ffmpeg instead of serving silent video
+          try {
+            validateSafeMediaUrl(anyVideoFmt.url, INSTAGRAM_ALLOWED_HOSTS);
+            validateSafeMediaUrl(audioFmt.url, INSTAGRAM_ALLOWED_HOSTS);
+            const token = crypto.randomBytes(16).toString('hex');
+            this.dashTokenCache.set(token, { videoUrl: anyVideoFmt.url, audioUrl: audioFmt.url });
+            mediaItemUrl = `dash://${token}`;
+          } catch {
+            mediaItemUrl = anyVideoFmt.url;
+          }
           isVideo = true;
         } else if (anyVideoFmt?.url) {
           mediaItemUrl = anyVideoFmt.url;
@@ -995,12 +1040,28 @@ export class InstagramService {
     reply: FastifyReply,
     format?: 'mp3'
   ): Promise<any> {
-    validateSafeMediaUrl(targetUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
-
     const headers: Record<string, string> = {
       'User-Agent': DEFAULT_UA,
       Referer: 'https://www.instagram.com/'
     };
+
+    if (targetUrl.startsWith('dash://')) {
+      const dashEntry = this.resolveDashEntry(targetUrl);
+      if (format === 'mp3') {
+        return streamTranscodedMp3({ sourceUrl: dashEntry.audioUrl, headers, filename, reply });
+      }
+      return streamMuxedDashMp4({
+        videoUrl: dashEntry.videoUrl,
+        audioUrl: dashEntry.audioUrl,
+        headers,
+        filename: filename || 'instagram_video.mp4',
+        download,
+        reply
+      });
+    }
+
+    validateSafeMediaUrl(targetUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
+
     if (format === 'mp3') {
       return streamTranscodedMp3({ sourceUrl: targetUrl, headers, filename, reply });
     }
@@ -1132,33 +1193,44 @@ export class InstagramService {
       throw new BadRequestError('Không tìm thấy đường dẫn tệp để lưu');
     }
 
-    validateSafeMediaUrl(mediaUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
+    const isDash = mediaUrl.startsWith('dash://');
+    const dashEntry = isDash ? this.resolveDashEntry(mediaUrl) : null;
+    if (!isDash) {
+      validateSafeMediaUrl(mediaUrl, ['cdninstagram.com', 'instagram.com', 'fbcdn.net']);
+    }
 
     const igDir = path.join(resolvedStoragePaths.drive, 'instagram');
     if (!fs.existsSync(igDir)) {
       await fsPromises.mkdir(igDir, { recursive: true });
     }
 
-    logger.info({ mediaUrl, title }, '[Instagram] Saving media directly to Studio Drive...');
+    logger.info({ mediaUrl, title, isDash }, '[Instagram] Saving media directly to Studio Drive...');
 
-    const upstreamRes = await fetch(mediaUrl, {
-      headers: {
-        'User-Agent': DEFAULT_UA,
-        Referer: 'https://www.instagram.com/'
-      },
-      signal: AbortSignal.timeout(120000)
-    });
+    const igHeaders: Record<string, string> = {
+      'User-Agent': DEFAULT_UA,
+      Referer: 'https://www.instagram.com/'
+    };
 
-    if (!upstreamRes.ok || !upstreamRes.body) {
-      await cancelResponseBody(upstreamRes);
-      throw new BadRequestError(`Không thể tải nội dung từ Instagram: HTTP ${upstreamRes.status}`);
+    let upstreamRes: Response | null = null;
+    let upstreamContentType = '';
+    if (!isDash) {
+      upstreamRes = await fetch(mediaUrl, {
+        headers: igHeaders,
+        signal: AbortSignal.timeout(120000)
+      });
+
+      if (!upstreamRes.ok || !upstreamRes.body) {
+        await cancelResponseBody(upstreamRes);
+        throw new BadRequestError(`Không thể tải nội dung từ Instagram: HTTP ${upstreamRes.status}`);
+      }
+      upstreamContentType = upstreamRes.headers.get('content-type') || '';
     }
 
-    const upstreamContentType = upstreamRes.headers.get('content-type') || '';
     const isImage =
-      mediaType === 'image' ||
-      upstreamContentType.startsWith('image/') ||
-      /\.(jpe?g|png|webp)($|\?)/i.test(mediaUrl);
+      !isDash &&
+      (mediaType === 'image' ||
+        upstreamContentType.startsWith('image/') ||
+        /\.(jpe?g|png|webp)($|\?)/i.test(mediaUrl));
 
     const ext = isImage ? 'jpg' : 'mp4';
     const mimeType = isImage ? 'image/jpeg' : 'video/mp4';
@@ -1180,19 +1252,48 @@ export class InstagramService {
       await StorageManager.unlinkSafe(targetFilePath.replace(/\.[^.]+$/, '.thumb.jpg'));
     }
 
-    const fileStream = fs.createWriteStream(targetFilePath);
-    const hash = crypto.createHash('sha256');
     let byteCount = 0;
+    let hashSha256 = '';
 
-    const webStream = Readable.fromWeb(upstreamRes.body as any);
-    webStream.on('data', (chunk: Buffer) => {
-      byteCount += chunk.length;
-      hash.update(chunk);
-    });
+    if (isDash && dashEntry) {
+      const tmpPath = path.join(igDir, `.tmp_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`);
+      try {
+        await muxDashTracksToFile({
+          videoUrl: dashEntry.videoUrl,
+          audioUrl: dashEntry.audioUrl,
+          headers: igHeaders,
+          outputPath: tmpPath
+        });
+        const stat = await fsPromises.stat(tmpPath);
+        byteCount = stat.size;
+        const hash = crypto.createHash('sha256');
+        await new Promise<void>((res, rej) => {
+          const rs = fs.createReadStream(tmpPath);
+          rs.on('data', (chunk) => hash.update(chunk));
+          rs.on('end', () => res());
+          rs.on('error', (err) => rej(err));
+        });
+        hashSha256 = hash.digest('hex');
+        await fsPromises.rename(tmpPath, targetFilePath);
+      } catch (muxErr) {
+        if (fs.existsSync(tmpPath)) {
+          await fsPromises.unlink(tmpPath).catch(() => {});
+        }
+        throw muxErr;
+      }
+    } else {
+      const fileStream = fs.createWriteStream(targetFilePath);
+      const hash = crypto.createHash('sha256');
 
-    await pipeline(webStream, fileStream);
+      const webStream = Readable.fromWeb(upstreamRes!.body as any);
+      webStream.on('data', (chunk: Buffer) => {
+        byteCount += chunk.length;
+        hash.update(chunk);
+      });
 
-    const hashSha256 = hash.digest('hex');
+      await pipeline(webStream, fileStream);
+      hashSha256 = hash.digest('hex');
+    }
 
     // Download thumbnail
     let thumbnailDataUri = '';

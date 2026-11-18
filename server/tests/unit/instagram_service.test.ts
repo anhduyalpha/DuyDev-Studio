@@ -538,4 +538,126 @@ describe('InstagramService - Tier 1 Cookieless Embed, GraphQL, Cache & SSRF Suit
       expect(out).toBeNull();
     });
   });
+
+  describe('7. Audio Preservation & Split DASH Muxing in Tier 2 yt-dlp', () => {
+    it('prefers muxed progressive MP4 ("1"/"2"/"3") with audio over silent DASH video-only 1080p stream', async () => {
+      const reelUrl = 'https://www.instagram.com/reel/Dekx_rtB_wm/';
+
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response('Blocked embed', { status: 403, headers: { 'content-type': 'text/plain' } })
+      );
+
+      const ytdlpPayload = JSON.stringify({
+        id: 'Dekx_rtB_wm',
+        title: 'Local AI Reel',
+        description: 'Full reel with audio',
+        thumbnail: 'https://cdninstagram.com/v/cover.jpg',
+        uploader: 'ai_creator',
+        duration: 18,
+        formats: [
+          {
+            format_id: 'dash-3974383976190376a',
+            ext: 'm4a',
+            vcodec: 'none',
+            acodec: 'mp4a.40.5',
+            tbr: 81.5,
+            url: 'https://instagram.fsgn5-21.fna.fbcdn.net/v/audio_only.m4a'
+          },
+          {
+            format_id: '1',
+            ext: 'mp4',
+            vcodec: null,
+            acodec: null,
+            url: 'https://instagram.fsgn5-21.fna.fbcdn.net/v/progressive_muxed_1.mp4'
+          },
+          {
+            format_id: 'dash-3974405112854929v',
+            ext: 'mp4',
+            width: 1080,
+            height: 1920,
+            vcodec: 'vp09.00.40.08.00.01.01.01.00',
+            acodec: 'none',
+            format_note: 'DASH video',
+            url: 'https://instagram.fsgn5-21.fna.fbcdn.net/v/silent_dash_1080p.mp4'
+          }
+        ]
+      });
+
+      vi.spyOn(childProcess, 'execFile').mockImplementation(((
+        _cmd: any,
+        _args: any,
+        _options: any,
+        callback: any
+      ) => {
+        callback(null, ytdlpPayload, '');
+      }) as any);
+
+      const res = await (InstagramService as any).resolveMedia(reelUrl);
+      expect(res.mediaType).toBe('video');
+      expect(res.videoUrl).toBe('https://instagram.fsgn5-21.fna.fbcdn.net/v/progressive_muxed_1.mp4');
+      expect(res.audioUrl).toBe('https://instagram.fsgn5-21.fna.fbcdn.net/v/audio_only.m4a');
+      expect(res.medias[0].url).toBe('https://instagram.fsgn5-21.fna.fbcdn.net/v/progressive_muxed_1.mp4');
+    });
+
+    it('creates a dash:// mux token when yt-dlp returns ONLY silent DASH video + separate DASH audio', async () => {
+      const reelUrl = 'https://www.instagram.com/reel/CxDashOnly99/';
+
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response('Blocked embed', { status: 403, headers: { 'content-type': 'text/plain' } })
+      );
+
+      const ytdlpPayload = JSON.stringify({
+        id: 'CxDashOnly99',
+        title: 'DASH Only Reel',
+        thumbnail: 'https://cdninstagram.com/v/cover.jpg',
+        uploader: 'dash_creator',
+        duration: 12,
+        formats: [
+          {
+            format_id: 'dash-audio',
+            ext: 'm4a',
+            vcodec: 'none',
+            acodec: 'mp4a.40.5',
+            tbr: 96,
+            url: 'https://cdninstagram.com/v/dash_audio.m4a'
+          },
+          {
+            format_id: 'dash-video-1080p',
+            ext: 'mp4',
+            width: 1080,
+            height: 1920,
+            vcodec: 'vp09.00.40.08',
+            acodec: 'none',
+            format_note: 'DASH video',
+            url: 'https://cdninstagram.com/v/dash_video_silent.mp4'
+          }
+        ]
+      });
+
+      vi.spyOn(childProcess, 'execFile').mockImplementation(((
+        _cmd: any,
+        _args: any,
+        _options: any,
+        callback: any
+      ) => {
+        callback(null, ytdlpPayload, '');
+      }) as any);
+
+      const res = await (InstagramService as any).resolveMedia(reelUrl);
+      expect(res.mediaType).toBe('video');
+      expect(res.videoUrl).toMatch(/^dash:\/\/[a-f0-9]{32}$/);
+      expect(res.audioUrl).toBe('https://cdninstagram.com/v/dash_audio.m4a');
+    });
+
+    it('rejects expired or unknown dash:// tokens in proxyStream with BadRequestError', async () => {
+      const mockReply: any = {
+        status: vi.fn().mockReturnThis(),
+        header: vi.fn().mockReturnThis(),
+        send: vi.fn()
+      };
+      await expect(
+        InstagramService.proxyStream('dash://deadbeefexpired', false, 'ig.mp4', undefined, mockReply)
+      ).rejects.toThrow(BadRequestError);
+    });
+  });
 });
