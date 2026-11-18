@@ -89,8 +89,8 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain('client.focus()');
     });
 
-    it('sw.js cache name must match current release v25.3', () => {
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.3'");
+    it('sw.js cache name must match current release v25.4', () => {
+      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.4'");
     });
   });
 
@@ -103,23 +103,28 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
     });
 
-    it('build.gradle.kts must maintain versionCode >= 2530 and versionName 25.3.0 and bundle full web boot assets', () => {
-      expect(gradleContent).toContain('versionCode = 2530');
-      expect(gradleContent).toContain('versionName = "25.3.0"');
+    it('build.gradle.kts must maintain versionCode >= 2540 and versionName 25.4.0 and bundle full web boot assets', () => {
+      expect(gradleContent).toContain('versionCode = 2540');
+      expect(gradleContent).toContain('versionName = "25.4.0"');
       expect(gradleContent).toContain('syncWebBootAssets');
       expect(gradleContent).toContain('_boot_manifest.txt');
     });
 
-    it('DuyDevApplication & LocalBootCache must provide <1ms local boot interception and instant onPageCommitVisible reveal', () => {
+    it('DuyDevApplication, InstantDashboardView & LocalBootCache must provide 3-tier instant boot (<16ms Frame 0 + RAM WebView pool)', () => {
       const appPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/DuyDevApplication.kt');
       const bootCachePath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/LocalBootCache.kt');
+      const instantDashPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/InstantDashboardView.kt');
       const manifestPath = path.join(rootDir, 'android/app/src/main/AndroidManifest.xml');
 
       expect(fs.existsSync(appPath)).toBe(true);
       expect(fs.existsSync(bootCachePath)).toBe(true);
+      expect(fs.existsSync(instantDashPath)).toBe(true);
       expect(fs.readFileSync(manifestPath, 'utf-8')).toContain('android:name=".DuyDevApplication"');
       expect(mainActContent).toContain('LocalBootCache.intercept');
       expect(mainActContent).toContain('hideSplashOverlay()');
+      expect(mainActContent).toContain('hideInstantDashboard()');
+      expect(mainActContent).toContain('DuyDevApplication.obtainWebView');
+      expect(mainActContent).toContain('DuyDevApplication.parkWarmWebView');
       expect(mainActContent).toContain('LocalBootCache.syncInBackgroundIfNeeded');
 
       const bootCacheSrc = fs.readFileSync(bootCachePath, 'utf-8');

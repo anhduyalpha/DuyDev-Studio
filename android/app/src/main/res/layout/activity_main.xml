@@ -10,13 +10,19 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <WebView
-            android:id="@+id/webView"
+        <FrameLayout
+            android:id="@+id/webViewHost"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/bg_dark" />
+            android:layout_height="match_parent" />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- Tier-1 Frame-0 (<16ms) Interactive Native Instant Dashboard Container -->
+    <FrameLayout
+        android:id="@+id/instantDashboardContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 
     <!-- Top Loading Indicator -->
     <ProgressBar
