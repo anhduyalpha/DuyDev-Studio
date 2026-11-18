@@ -81,7 +81,7 @@ ${bottomNavHtml}
     throw new Error('Could not find target boundaries for #app in index.html');
   }
 
-  const updatedAppSection = `${appStartToken}${shellContent}</div>\n\n  <!-- Immediate Lucide Icon Resolution for Frame 0 (Zero Icon Flash) -->\n  <script>\n    if (window.lucide && typeof window.lucide.createIcons === 'function') {\n      window.lucide.createIcons();\n    }\n  </script>\n\n`;
+  const updatedAppSection = `${appStartToken}${shellContent}</div>\n\n  <!-- Immediate Lucide Icon Resolution for Frame 0 (Safe with deferred lucide.min.js) -->\n  <script>\n    (function() {\n      function hydrateIcons() {\n        if (window.lucide && typeof window.lucide.createIcons === 'function') {\n          window.lucide.createIcons();\n        }\n      }\n      if (window.lucide) hydrateIcons();\n      else document.addEventListener('DOMContentLoaded', hydrateIcons, { once: true });\n    })();\n  </script>\n\n`;
 
   const newIndexHtml = indexHtml.slice(0, startIndex) + updatedAppSection + indexHtml.slice(endIndex);
 

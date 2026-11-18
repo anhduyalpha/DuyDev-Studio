@@ -949,7 +949,23 @@ class App {
     } else if (hash === '#terms' || hash === '#terms-of-service' || hash === '#dieu-khoan') {
       await mountLazyView('terms', () => import('./pages/TermsPage.js'), (m) => m.renderTermsPage(), (m) => () => m.attachTermsPageListeners(onSoftReRender));
     } else {
-      setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
+      const canHydrateInPlace =
+        !isSoftUpdate &&
+        !this._dashboardHydratedOnce &&
+        toolRegistry.currentCategory === 'all' &&
+        !toolRegistry.searchQuery &&
+        document.getElementById('toolsGridContainer') &&
+        document.getElementById('dashboardCategoryBarContainer');
+
+      if (canHydrateInPlace) {
+        cleanup = attachDashboardListeners(onSoftReRender);
+        if (cleanup && !this.currentCleanups.includes(cleanup)) {
+          this.currentCleanups.push(cleanup);
+        }
+      } else {
+        setView(renderDashboardPage(), () => attachDashboardListeners(onSoftReRender));
+      }
+      this._dashboardHydratedOnce = true;
     }
 
     if (cleanup && !this.currentCleanups.includes(cleanup)) this.currentCleanups.push(cleanup);

@@ -11,8 +11,8 @@ android {
         applicationId = "vn.alphadaniel.duydevstudio"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2500
-        versionName = "25.0.0"
+        versionCode = 2510
+        versionName = "25.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,4 +69,23 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation("junit:junit:4.13.2")
+}
+
+val syncWebBootAssets by tasks.registering(Sync::class) {
+    val webRoot = file("${project.rootDir}/..")
+    val targetDir = file("src/main/assets/www")
+    onlyIf { file("$webRoot/index.html").exists() && file("$webRoot/src").exists() }
+    from(webRoot) {
+        include("index.html", "manifest.webmanifest")
+    }
+    from("$webRoot/src") {
+        into("src")
+        include("**/*.js", "**/*.mjs", "**/*.css", "assets/**")
+        exclude("assets/branding/*.png", "vendor/docx-preview.min.js", "vendor/xlsx.full.min.js")
+    }
+    into(targetDir)
+}
+
+tasks.named("preBuild") {
+    dependsOn(syncWebBootAssets)
 }

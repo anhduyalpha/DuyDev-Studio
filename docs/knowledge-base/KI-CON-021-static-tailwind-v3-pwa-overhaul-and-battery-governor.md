@@ -25,12 +25,14 @@ tags:
   - handoff
 ---
 
-# KI-CON-021: Static Tailwind v3, Battery Governor, QR Unified Style & Cross-Tool Handoff (`v25.0`)
+# KI-CON-021: Static Tailwind v3, Battery Governor, QR Unified Style & Cross-Tool Handoff (`v25.1`)
 
 ## 1. Cold Boot & Tri-Point Cache Sync
 - **Static Tailwind CSS**: `index.html` không dùng `cdn.tailwindcss.com`. Mọi utility class được biên dịch trước vào `src/styles/tailwind.generated.css` qua `npm run build:css`. Khi thêm class Tailwind mới ở `src/**` hoặc `index.html`, bắt buộc chạy `npm run build:css` (và `npm run build:shell` nếu sửa cấu trúc shell trong `index.html`) rồi commit file CSS đã build.
-- **Tri-Point Version Sync (`duydev-studio-v25.0`)**: Ba tệp [`sw.js`](file:///sw.js), [`src/utilities/pwa.js`](file:///src/utilities/pwa.js) và [`index.html`](file:///index.html) phải luôn đồng bộ cùng chuỗi version cache (`duydev-studio-v25.0` / `?v=25.0`).
-- **Lazy Tool & Route Dispatch**: [`src/app.js`](file:///src/app.js), [`src/pages/DashboardPage.js`](file:///src/pages/DashboardPage.js), [`src/components/layout/Header.js`](file:///src/components/layout/Header.js), [`src/pages/HistoryPage.js`](file:///src/pages/HistoryPage.js) và [`src/pages/ToolPage.js`](file:///src/pages/ToolPage.js) nạp động toàn bộ route phụ, `pwa.js`, `visitorTracker.js`, modal hồ sơ/âm thanh và `FileViewerConnector` theo nhu cầu, đồng thời [`sw.js`](file:///sw.js) dùng Cache-First cho asset bất biến (`?v=`, `/src/vendor/`, `/src/assets/`) và [`MainActivity.kt`](file:///android/app/src/main/java/vn/alphadaniel/duydevstudio/MainActivity.kt) gọi `webView.loadUrl()` ưu tiên trước tác vụ nền phụ trợ (`versionCode = 2500` / `25.0.0`).
+- **Tri-Point Version Sync (`duydev-studio-v25.1`)**: Ba tệp [`sw.js`](file:///sw.js), [`src/utilities/pwa.js`](file:///src/utilities/pwa.js) và [`index.html`](file:///index.html) phải luôn đồng bộ cùng chuỗi version cache (`duydev-studio-v25.1` / `?v=25.1`).
+- **Zero-Network Cold Boot (`v25.1`)**:
+  - Web/PWA: [`index.html`](file:///index.html) trì hoãn không chặn render với Google Fonts & tool CSS (`media="print" onload`), bật `defer` cho `lucide.min.js`, và preload các module Dashboard lõi; [`sw.js`](file:///sw.js) precache đủ 29 module boot và chuyển `navigate` + `/src/*.js,.css` sang **Stale-While-Revalidate** (`<2ms` từ CacheStorage); [`src/app.js`](file:///src/app.js) hydrate Dashboard tại chỗ (`canHydrateInPlace`) không xoá dựng lại DOM `#appInstantShell`.
+  - Android APK (`versionCode = 2510` / `25.1.0`): [`DuyDevApplication.kt`](file:///android/app/src/main/java/vn/alphadaniel/duydevstudio/DuyDevApplication.kt) làm ấm Chromium `CookieManager`/`WebStorage` sớm; [`build.gradle.kts`](file:///android/app/build.gradle.kts) (`syncWebBootAssets`) đóng gói app shell tĩnh vào `assets/www/`, [`LocalBootCache.kt`](file:///android/app/src/main/java/vn/alphadaniel/duydevstudio/LocalBootCache.kt) chặn phục vụ shell từ flash cục bộ (`<1ms`, bỏ qua `/api/`, `/sw.js`, `Range` và query share) kèm đồng bộ nền sau `onAppReady()`, còn [`MainActivity.kt`](file:///android/app/src/main/java/vn/alphadaniel/duydevstudio/MainActivity.kt) ẩn tức thì `splashOverlay` ngay tại `onPageCommitVisible()`.
 - **HTTP Compression**: [`server/src/app.ts`](file:///server/src/app.ts) tích hợp `@fastify/compress` (Brotli/Gzip) và tách sạch `buildApp()` khỏi `startServer()`.
 
 ## 2. Governor Tiết Kiệm Pin & Hiệu Năng Runtime

@@ -64,6 +64,14 @@ class AndroidBridge(
     }
 
     /**
+     * Clears the native zero-network local boot mirror cache on emergency reset.
+     */
+    @JavascriptInterface
+    fun clearBootCache() {
+        LocalBootCache.clear(activity)
+    }
+
+    /**
      * Report active background tasks from frontend task coordinator.
      * Allows native Activity to perform work-aware sleep without killing active downloads.
      */

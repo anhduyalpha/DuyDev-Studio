@@ -18,6 +18,7 @@ build/
 android/build/
 android/app/build/
 android/.gradle/
+android/app/src/main/assets/www/
 
 # Database (SQLite - all locations)
 *.db
