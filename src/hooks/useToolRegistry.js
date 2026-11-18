@@ -2,6 +2,8 @@
  * useToolRegistry - Central Tool Catalog
  */
 
+import { isRustCoreReady, rustFuzzyScore } from '../utilities/rustCore.js';
+
 const DEFAULT_TOOLS = [
   // 1. PDF Studio Suite
   {
@@ -769,13 +771,23 @@ class ToolRegistry {
   }
 
   getFilteredTools() {
-    return this.tools.filter(tool => {
+    const query = this.searchQuery;
+    const matched = this.tools.filter(tool => {
       const matchCat = this.currentCategory === 'all' || tool.category === this.currentCategory;
       if (!matchCat) return false;
-      if (!this.searchQuery) return true;
+      if (!query) return true;
       const haystack = `${tool.title} ${tool.description} ${tool.tags.join(' ')}`.toLowerCase();
-      return haystack.includes(this.searchQuery);
+      if (haystack.includes(query)) return true;
+      return isRustCoreReady() && rustFuzzyScore(query, haystack) > 0;
     });
+    if (query && isRustCoreReady()) {
+      matched.sort((a, b) => {
+        const aHay = `${a.title} ${a.tags.join(' ')}`.toLowerCase();
+        const bHay = `${b.title} ${b.tags.join(' ')}`.toLowerCase();
+        return rustFuzzyScore(query, bHay) - rustFuzzyScore(query, aHay);
+      });
+    }
+    return matched;
   }
 
   getToolById(id) {

@@ -8,6 +8,8 @@ package-lock.json.bak
 src/vendor/*
 !src/vendor/*.js
 !src/vendor/*.min.js
+!src/vendor/*.wasm
+rust-core/target/
 pdfjs/
 **/pdfjs/
 

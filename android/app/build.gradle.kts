@@ -11,8 +11,8 @@ android {
         applicationId = "vn.alphadaniel.duydevstudio"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2510
-        versionName = "25.1.0"
+        versionCode = 2520
+        versionName = "25.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -80,7 +80,7 @@ val syncWebBootAssets by tasks.registering(Sync::class) {
     }
     from("$webRoot/src") {
         into("src")
-        include("**/*.js", "**/*.mjs", "**/*.css", "assets/**")
+        include("**/*.js", "**/*.mjs", "**/*.css", "**/*.wasm", "assets/**")
         exclude("assets/branding/*.png", "vendor/docx-preview.min.js", "vendor/xlsx.full.min.js")
     }
     into(targetDir)

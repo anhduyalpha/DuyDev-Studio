@@ -231,7 +231,7 @@ object LocalBootCache {
     }
 
     private fun discoverRelativeImports(currentRelPath: String, jsText: String, queue: ArrayDeque<String>) {
-        val importRegex = Regex("""(?:from|import)\s+['"](\.[^'"?]+(?:\.js|\.mjs))['"]""")
+        val importRegex = Regex("""(?:from\s+|import\s*\(\s*|import\s+)['"](\.[^'"?]+(?:\.js|\.mjs))['"]""")
         val baseDir = currentRelPath.substringBeforeLast('/', "")
         for (m in importRegex.findAll(jsText)) {
             val relImport = m.groupValues[1]
@@ -303,6 +303,7 @@ object LocalBootCache {
             clean.endsWith(".html") -> "text/html"
             clean.endsWith(".js") || clean.endsWith(".mjs") -> "application/javascript"
             clean.endsWith(".css") -> "text/css"
+            clean.endsWith(".wasm") -> "application/wasm"
             clean.endsWith(".svg") -> "image/svg+xml"
             clean.endsWith(".png") -> "image/png"
             clean.endsWith(".jpg") || clean.endsWith(".jpeg") -> "image/jpeg"
