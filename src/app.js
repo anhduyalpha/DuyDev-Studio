@@ -20,13 +20,24 @@ import { renderDashboardPage, attachDashboardListeners } from './pages/Dashboard
 import { detectSmartRoute, handoffSmartUrl } from './utilities/smartUrlRouter.js';
 import { renderSlideConfirmModal } from './components/common/SlideConfirmModal.js';
 import { peekPendingSharedPayload, consumePendingSharedPayload } from './utilities/shareTargetHelper.js';
+import { initRustCore } from './utilities/rustCore.js';
 
 const _lazyModules = Object.create(null);
+const _resolvedModules = Object.create(null);
 function loadModule(key, importer) {
-  return (_lazyModules[key] ??= importer().catch((err) => {
-    delete _lazyModules[key];
-    throw err;
-  }));
+  if (_resolvedModules[key]) {
+    return Promise.resolve(_resolvedModules[key]);
+  }
+  return (_lazyModules[key] ??= importer()
+    .then((mod) => {
+      _resolvedModules[key] = mod;
+      return mod;
+    })
+    .catch((err) => {
+      delete _lazyModules[key];
+      delete _resolvedModules[key];
+      throw err;
+    }));
 }
 let _stopAdminPolling = null;
 
@@ -133,6 +144,7 @@ class App {
     setupGlobalApiFetchInterceptor();
     initSecurityShield();
     initTheme();
+    initRustCore().catch(() => {});
     taskCoordinator.init();
 
     // Clean up cache-busting parameter from URL if present (_ds_fresh)
@@ -229,14 +241,11 @@ class App {
     // Cold-start share target check (handles Android native intent and Service Worker shares)
     this.checkAndOpenShareTarget();
 
-    // Idle prefetch for ShareTargetModal
-    if (typeof window !== 'undefined') {
-      if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(() => getShareTargetModal().catch(() => {}), { timeout: 3000 });
-      } else {
-        setTimeout(() => getShareTargetModal().catch(() => {}), 1500);
-      }
-    }
+    // Pointer/touch early pre-trigger + post-Frame-0 RAM preloader for 0ms module switching
+    this.attachPointerPreloader();
+    setTimeout(() => {
+      this.warmAllAppModules();
+    }, 40);
 
     // Web Share Target: listen for payloads from Service Worker
     navigator.serviceWorker?.addEventListener('message', (e) => {
@@ -323,6 +332,54 @@ class App {
         runStorageJanitor();
       } catch {}
     }, 4000);
+  }
+
+  attachPointerPreloader() {
+    if (typeof document === 'undefined' || this._pointerPreloaderBound) return;
+    this._pointerPreloaderBound = true;
+    const prewarmFromEvent = (e) => {
+      const target = e.target?.closest?.('a[href^="#"], [data-tool-id]');
+      if (!target) return;
+      const href = target.getAttribute('href') || '';
+      const rawToolId = target.dataset?.toolId || (href.startsWith('#tool/') ? href.slice(6).split(/[/?]/)[0] : '');
+      if (rawToolId) {
+        loadModule('toolPage', () => import('./pages/ToolPage.js'))
+          .then((m) => m.preloadToolModule?.(rawToolId))
+          .catch(() => {});
+        return;
+      }
+      if (href === '#storage') loadModule('storage', () => import('./pages/StoragePage.js')).catch(() => {});
+      else if (href === '#history' || href === '#trash') loadModule('history', () => import('./pages/HistoryPage.js')).catch(() => {});
+      else if (href === '#archive' || href === '#archive-inspect') loadModule('archive', () => import('./pages/ArchivePage.js')).catch(() => {});
+      else if (href === '#settings' || href === '#server') loadModule('server', () => import('./pages/ServerPage.js')).catch(() => {});
+      else if (href === '#terms') loadModule('terms', () => import('./pages/TermsPage.js')).catch(() => {});
+      else if (href === '#admin') loadModule('admin', () => import('./pages/AdminPage.js')).catch(() => {});
+    };
+    document.addEventListener('pointerdown', prewarmFromEvent, { passive: true });
+    document.addEventListener('mouseover', prewarmFromEvent, { passive: true });
+  }
+
+  async warmAllAppModules() {
+    if (this._warmAllStarted) return;
+    this._warmAllStarted = true;
+    try {
+      const toolPageMod = await loadModule('toolPage', () => import('./pages/ToolPage.js')).catch(() => null);
+      const toolPreload = toolPageMod?.preloadAllToolModules ? toolPageMod.preloadAllToolModules() : Promise.resolve();
+      const secondaryPreload = Promise.allSettled([
+        loadModule('storage', () => import('./pages/StoragePage.js')),
+        loadModule('history', () => import('./pages/HistoryPage.js')),
+        loadModule('archive', () => import('./pages/ArchivePage.js')),
+        loadModule('archiveCompress', () => import('./components/tools/archive/ArchiveCompressWorkspace.js')),
+        loadModule('admin', () => import('./pages/AdminPage.js')),
+        loadModule('server', () => import('./pages/ServerPage.js')),
+        loadModule('terms', () => import('./pages/TermsPage.js')),
+        loadModule('viewerConnector', () => import('./components/common/viewer/FileViewerConnector.js')),
+        loadModule('viewerCore', () => import('./components/common/viewer/FileViewerCore.js')),
+        loadModule('profileModal', () => import('./components/common/ProfileModal.js')),
+        getShareTargetModal()
+      ]);
+      await Promise.allSettled([toolPreload, secondaryPreload]);
+    } catch {}
   }
 
   checkAndPromptOnboardingProfile() {
@@ -658,9 +715,23 @@ class App {
       }
     };
     const dispatchTool = async (id, sub = null) => {
+      const toolPageMod = _resolvedModules.toolPage;
+      if (toolPageMod && toolPageMod.getResolvedToolModule?.(id)) {
+        const syncContent = toolPageMod.renderToolPageSync(id, sub);
+        if (syncContent !== null) {
+          setView(syncContent, () => toolPageMod.attachToolPageListeners(onSoftReRender));
+          if (window.lucide) {
+            try { window.lucide.createIcons({ root: mainContainer }); } catch { window.lucide.createIcons(); }
+          }
+          return;
+        }
+      }
+
       const tool = toolRegistry.getToolById(id);
       if (!isSoftUpdate && mainContainer) {
-        if (_lazyModules.toolPage) {
+        if (toolPageMod?.renderToolLoadingSkeleton) {
+          mainContainer.innerHTML = toolPageMod.renderToolLoadingSkeleton(tool);
+        } else if (_lazyModules.toolPage) {
           try {
             const { renderToolLoadingSkeleton } = await _lazyModules.toolPage;
             mainContainer.innerHTML = renderToolLoadingSkeleton(tool);
@@ -694,6 +765,11 @@ class App {
     };
 
     const mountLazyView = async (key, importer, getHtml, getAttach) => {
+      if (_resolvedModules[key]) {
+        const mod = _resolvedModules[key];
+        setView(getHtml(mod), getAttach(mod));
+        return;
+      }
       if (!isSoftUpdate && mainContainer) {
         mainContainer.innerHTML = `
           <div class="max-w-4xl mx-auto py-16 flex flex-col items-center justify-center gap-3 text-zinc-400">

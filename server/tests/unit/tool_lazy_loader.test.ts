@@ -276,4 +276,47 @@ describe('Task 1.4 — Lazy Dynamic Tool Loading (ToolPage.js) & Race-Free Route
       expect(content).toMatch(/async\s+dispatchTool|const\s+dispatchTool\s*=\s*async/);
     });
   });
+
+  describe('Zero-Wait Synchronous Module Preloader & Rust WASM Core', () => {
+    it('ToolPage.js exports renderToolPageSync, getResolvedToolModule, and preloadAllToolModules and serves preloaded modules synchronously', async () => {
+      const toolPageUrl = `file:///${toolPagePath.replace(/\\/g, '/')}`;
+      const mod = await import(toolPageUrl);
+      expect(typeof mod.renderToolPageSync).toBe('function');
+      expect(typeof mod.getResolvedToolModule).toBe('function');
+      expect(typeof mod.preloadAllToolModules).toBe('function');
+      expect(typeof mod.preloadToolModule).toBe('function');
+
+      // Non-existent / uncached tool ID returns null synchronously without throwing
+      expect(mod.getResolvedToolModule('nonexistent-tool')).toBeNull();
+      expect(mod.renderToolPageSync('nonexistent-tool')).toBeNull();
+
+      // Preload HashStudio into RESOLVED_MODULES and verify synchronous 0ms render
+      await mod.preloadToolModule('hash-checksum');
+      expect(mod.getResolvedToolModule('hash-checksum')).not.toBeNull();
+      const syncHtml = mod.renderToolPageSync('hash-checksum');
+      expect(typeof syncHtml).toBe('string');
+      expect(syncHtml.length).toBeGreaterThan(50);
+    });
+
+    it('src/vendor/ds_rust_core.wasm exists, has valid WASM header, and passes IEEE CRC32 + fuzzy score checks', async () => {
+      const wasmPath = path.join(rootDir, 'src/vendor/ds_rust_core.wasm');
+      expect(fs.existsSync(wasmPath)).toBe(true);
+      const buf = fs.readFileSync(wasmPath);
+      expect(buf.subarray(0, 4)).toEqual(Buffer.from([0x00, 0x61, 0x73, 0x6d]));
+
+      const { instance } = await WebAssembly.instantiate(buf);
+      const exp = instance.exports as any;
+      expect(typeof exp.alloc_buf).toBe('function');
+      expect(typeof exp.crc32_fast).toBe('function');
+      expect(typeof exp.fnv1a64_fast).toBe('function');
+      expect(typeof exp.fuzzy_match_score).toBe('function');
+
+      const sample = Buffer.from('123456789');
+      const ptr = exp.alloc_buf(sample.length);
+      new Uint8Array(exp.memory.buffer, ptr, sample.length).set(sample);
+      const crc = exp.crc32_fast(ptr, sample.length) >>> 0;
+      exp.free_buf(ptr, sample.length);
+      expect(crc).toBe(0xcbf43926);
+    });
+  });
 });

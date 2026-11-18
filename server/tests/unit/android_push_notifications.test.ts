@@ -89,8 +89,8 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain('client.focus()');
     });
 
-    it('sw.js cache name must match current release v25.1', () => {
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.1'");
+    it('sw.js cache name must match current release v25.2', () => {
+      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.2'");
     });
   });
 
@@ -103,10 +103,11 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
     });
 
-    it('build.gradle.kts must maintain versionCode >= 2510 and versionName 25.1.0 and bundle boot assets', () => {
-      expect(gradleContent).toContain('versionCode = 2510');
-      expect(gradleContent).toContain('versionName = "25.1.0"');
+    it('build.gradle.kts must maintain versionCode >= 2520 and versionName 25.2.0 and bundle boot assets', () => {
+      expect(gradleContent).toContain('versionCode = 2520');
+      expect(gradleContent).toContain('versionName = "25.2.0"');
       expect(gradleContent).toContain('syncWebBootAssets');
+      expect(gradleContent).toContain('**/*.wasm');
     });
 
     it('DuyDevApplication & LocalBootCache must provide <1ms local boot interception and instant onPageCommitVisible reveal', () => {

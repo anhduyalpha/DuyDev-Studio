@@ -22,6 +22,7 @@ let currentActiveToolId = 'pdf-studio';
 let currentActiveModule = null;
 let latestRenderToken = 0;
 const MODULE_CACHE = new Map();
+const RESOLVED_MODULES = new Map();
 
 /**
  * Registry of dynamic loaders returning { render, attach }
@@ -255,6 +256,9 @@ const TOOL_ALIASES = {
  * Loads a tool module dynamically with caching
  */
 async function loadToolModule(canonicalId) {
+  if (RESOLVED_MODULES.has(canonicalId)) {
+    return RESOLVED_MODULES.get(canonicalId);
+  }
   if (MODULE_CACHE.has(canonicalId)) {
     return MODULE_CACHE.get(canonicalId);
   }
@@ -266,11 +270,65 @@ async function loadToolModule(canonicalId) {
   MODULE_CACHE.set(canonicalId, promise);
   try {
     const mod = await promise;
+    RESOLVED_MODULES.set(canonicalId, mod);
     return mod;
   } catch (err) {
     MODULE_CACHE.delete(canonicalId);
+    RESOLVED_MODULES.delete(canonicalId);
     throw err;
   }
+}
+
+/**
+ * Returns the already-resolved module synchronously if cached in RAM, or null.
+ */
+export function getResolvedToolModule(toolId = 'pdf-convert') {
+  const canonicalId = TOOL_ALIASES[toolId] || toolId;
+  return RESOLVED_MODULES.get(canonicalId) || null;
+}
+
+/**
+ * Renders a preloaded tool synchronously in 0ms without skeletons or Promise waits.
+ */
+export function renderToolPageSync(toolId = 'pdf-convert', subTab = null) {
+  const canonicalId = TOOL_ALIASES[toolId] || toolId;
+  const mod = RESOLVED_MODULES.get(canonicalId);
+  if (!mod) return null;
+  ++latestRenderToken;
+  currentActiveToolId = toolId;
+  currentActiveModule = mod;
+  return mod.render(subTab, toolId);
+}
+
+/**
+ * Triggers eager RAM warmup for a specific tool ID (e.g. on pointerdown/hover).
+ */
+export function preloadToolModule(toolId) {
+  const canonicalId = TOOL_ALIASES[toolId] || toolId;
+  if (!TOOL_LOADERS[canonicalId]) return Promise.resolve(null);
+  return loadToolModule(canonicalId).catch(() => null);
+}
+
+let _preloadAllPromise = null;
+
+/**
+ * Preloads all 17 tool workspaces into RESOLVED_MODULES in staggered micro-batches
+ * after Frame 0 so clicking any tool opens in 0ms.
+ */
+export function preloadAllToolModules() {
+  if (_preloadAllPromise) return _preloadAllPromise;
+  const ids = Object.keys(TOOL_LOADERS);
+  _preloadAllPromise = (async () => {
+    for (let i = 0; i < ids.length; i += 5) {
+      const batch = ids.slice(i, i + 5);
+      await Promise.all(batch.map((id) => loadToolModule(id).catch(() => null)));
+    }
+    if (typeof window !== 'undefined') {
+      window.__DS_ALL_TOOLS_PRELOADED = true;
+      window.dispatchEvent(new CustomEvent('ds:all-tools-preloaded'));
+    }
+  })();
+  return _preloadAllPromise;
 }
 
 /**
