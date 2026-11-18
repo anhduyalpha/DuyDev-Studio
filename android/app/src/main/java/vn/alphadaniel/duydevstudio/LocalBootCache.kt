@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -11,19 +12,21 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Zero-network cold-boot interceptor and background delta sync for Studio WebView.
- * Serves app-shell HTML/JS/CSS directly from synced flash cache or APK assets (<1ms),
- * while revalidating silently off the critical path after initial render.
+ * In-memory JVM RAM disk + zero-network cold-boot interceptor for Studio WebView.
+ * Preloads the entire web shell, CSS, JS modules, and WASM into a ConcurrentHashMap<String, ByteArray>
+ * and constructs a self-contained HTML+CSS document for 0ms loadDataWithBaseURL rendering.
  */
 object LocalBootCache {
     private const val PREF_NAME = "ds_fastboot_prefs"
     private const val CACHE_DIR_NAME = "fastboot_cache"
     private const val STAGING_DIR_NAME = "fastboot_cache_staging"
     private const val APK_ASSET_ROOT = "www"
+    private const val MANIFEST_FILE = "_boot_manifest.txt"
 
     private val ALLOWED_HOSTS = setOf(
         "studio.duydev.cloud",
@@ -34,24 +37,123 @@ object LocalBootCache {
         "10.0.2.2"
     )
 
+    private val ramCache = ConcurrentHashMap<String, ByteArray>(160)
+    @Volatile
+    private var fastBootInlinedHtml: String? = null
+
     private val syncExecutor = Executors.newSingleThreadExecutor()
+    private val warmupExecutor = Executors.newSingleThreadExecutor()
     private val isSyncing = AtomicBoolean(false)
+    private val isWarming = AtomicBoolean(false)
 
     @Volatile
     private var appContext: Context? = null
 
     fun ensureInitialized(context: Context) {
+        val ctx = context.applicationContext
         if (appContext == null) {
-            appContext = context.applicationContext
+            appContext = ctx
+        }
+        // Synchronously prime index.html + critical CSS into RAM (<2ms) so MainActivity.onCreate has it immediately
+        if (fastBootInlinedHtml == null) {
+            try {
+                primeCriticalHtmlInRam(ctx, MainActivity.PRIMARY_HOST)
+            } catch (_: Exception) {}
+        }
+        if (isWarming.compareAndSet(false, true)) {
+            warmupExecutor.execute {
+                try {
+                    preloadAllAssetsIntoRam(ctx, MainActivity.PRIMARY_HOST)
+                } catch (_: Exception) {
+                } finally {
+                    isWarming.set(false)
+                }
+            }
+        }
+    }
+
+    private fun primeCriticalHtmlInRam(context: Context, activeHost: String) {
+        val host = Uri.parse(activeHost).host?.lowercase(Locale.ROOT) ?: "studio.duydev.cloud"
+        val hostKey = sanitizeHostKey(host, Uri.parse(activeHost).port)
+
+        val indexBytes = loadRawBytes(context, hostKey, "index.html") ?: return
+        ramCache["index.html"] = indexBytes
+        var html = String(indexBytes, Charsets.UTF_8)
+
+        val cssFiles = listOf(
+            "src/styles/tailwind.generated.css",
+            "src/styles/stitch-tokens.css",
+            "src/styles/card-tiers-10.css"
+        )
+        val inlineStyleBuilder = StringBuilder("<style id=\"dsNativeRamInlineCss\">\n")
+        for (cssPath in cssFiles) {
+            val cssBytes = loadRawBytes(context, hostKey, cssPath)
+            if (cssBytes != null) {
+                ramCache[cssPath] = cssBytes
+                inlineStyleBuilder.append(String(cssBytes, Charsets.UTF_8)).append("\n")
+            }
+        }
+        inlineStyleBuilder.append("</style>\n")
+
+        // Demote blocking core stylesheet links to media="print" onload="this.media='all'" since CSS is already inlined above
+        html = html
+            .replace(
+                Regex("""<link\s+rel=["']stylesheet["']\s+href=["']src/styles/(tailwind\.generated|stitch-tokens|card-tiers-10)\.css(\?[^"']*)?["']\s*>"""),
+                """<link rel="stylesheet" href="src/styles/$1.css$2" media="print" onload="this.media='all'">"""
+            )
+            .replace("</head>", "${inlineStyleBuilder}</head>")
+
+        fastBootInlinedHtml = html
+    }
+
+    private fun preloadAllAssetsIntoRam(context: Context, activeHost: String) {
+        val host = Uri.parse(activeHost).host?.lowercase(Locale.ROOT) ?: "studio.duydev.cloud"
+        val hostKey = sanitizeHostKey(host, Uri.parse(activeHost).port)
+
+        val manifestBytes = try {
+            context.assets.open("$APK_ASSET_ROOT/$MANIFEST_FILE").use { it.readBytes() }
+        } catch (_: Exception) {
+            null
+        }
+
+        if (manifestBytes != null) {
+            val lines = String(manifestBytes, Charsets.UTF_8).lines()
+            for (line in lines) {
+                val rel = line.trim()
+                if (rel.isEmpty() || ramCache.containsKey(rel)) continue
+                // Preload all code, styles, WASM, vector icons, and manifest into RAM
+                if (rel.endsWith(".js") || rel.endsWith(".mjs") || rel.endsWith(".css") ||
+                    rel.endsWith(".wasm") || rel.endsWith(".svg") || rel.endsWith(".html") ||
+                    rel.endsWith(".webmanifest")
+                ) {
+                    val bytes = loadRawBytes(context, hostKey, rel)
+                    if (bytes != null) {
+                        ramCache[rel] = bytes
+                    }
+                }
+            }
+        }
+    }
+
+    fun getFastBootIndexHtml(context: Context, activeHost: String): String? {
+        fastBootInlinedHtml?.let { return it }
+        return try {
+            primeCriticalHtmlInRam(context.applicationContext, activeHost)
+            fastBootInlinedHtml
+        } catch (_: Exception) {
+            null
         }
     }
 
     fun clear(context: Context) {
         try {
             val ctx = context.applicationContext
+            ramCache.clear()
+            fastBootInlinedHtml = null
             File(ctx.filesDir, CACHE_DIR_NAME).deleteRecursively()
             File(ctx.filesDir, STAGING_DIR_NAME).deleteRecursively()
             ctx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit().clear().apply()
+            ensureInitialized(ctx)
         } catch (_: Exception) {}
     }
 
@@ -69,7 +171,19 @@ object LocalBootCache {
         val mime = guessMimeType(relPath)
         val encoding = if (isTextMime(mime)) "UTF-8" else null
 
-        val stream = openCachedOrBundledStream(context.applicationContext, hostKey, relPath) ?: return null
+        if (relPath == "index.html") {
+            val inlined = getFastBootIndexHtml(context, "https://$host")
+            if (inlined != null) {
+                val response = WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(inlined.toByteArray(Charsets.UTF_8)))
+                response.responseHeaders = mapOf(
+                    "Access-Control-Allow-Origin" to "*",
+                    "Cache-Control" to "no-cache"
+                )
+                return response
+            }
+        }
+
+        val stream = openRamOrDiskStream(context.applicationContext, hostKey, relPath) ?: return null
         val response = WebResourceResponse(mime, encoding, stream)
         response.responseHeaders = mapOf(
             "Access-Control-Allow-Origin" to "*",
@@ -124,20 +238,30 @@ object LocalBootCache {
         return normalized
     }
 
-    private fun openCachedOrBundledStream(context: Context, hostKey: String, relPath: String): InputStream? {
+    private fun openRamOrDiskStream(context: Context, hostKey: String, relPath: String): InputStream? {
+        ramCache[relPath]?.let { return ByteArrayInputStream(it) }
+
+        val bytes = loadRawBytes(context, hostKey, relPath) ?: return null
+        if (bytes.size <= 512 * 1024) {
+            ramCache[relPath] = bytes
+        }
+        return ByteArrayInputStream(bytes)
+    }
+
+    private fun loadRawBytes(context: Context, hostKey: String, relPath: String): ByteArray? {
         try {
             val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             if (prefs.contains("sig_$hostKey")) {
                 val hostDir = File(File(context.filesDir, CACHE_DIR_NAME), hostKey)
                 val targetFile = File(hostDir, relPath)
                 if (targetFile.isFile && targetFile.canonicalPath.startsWith(hostDir.canonicalPath + File.separator)) {
-                    return FileInputStream(targetFile)
+                    return FileInputStream(targetFile).use { it.readBytes() }
                 }
             }
         } catch (_: Exception) {}
 
         return try {
-            context.assets.open("$APK_ASSET_ROOT/$relPath")
+            context.assets.open("$APK_ASSET_ROOT/$relPath").use { it.readBytes() }
         } catch (_: Exception) {
             null
         }
@@ -181,7 +305,7 @@ object LocalBootCache {
                 val visited = HashSet<String>()
                 val queue = ArrayDeque<String>()
                 for (asset in assets) {
-                    if (asset != "index.html" && !asset.contains("docx-preview") && !asset.contains("xlsx.full")) {
+                    if (asset != "index.html") {
                         queue.add(asset)
                     }
                 }
@@ -191,6 +315,7 @@ object LocalBootCache {
                     if (!visited.add(relPath)) continue
                     val bytes = fetchBytes("$cleanBase/$relPath") ?: continue
                     writeBytesSafe(stagingDir, relPath, bytes)
+                    ramCache[relPath] = bytes
 
                     if (relPath.endsWith(".js", ignoreCase = true) || relPath.endsWith(".mjs", ignoreCase = true)) {
                         val jsText = String(bytes, Charsets.UTF_8)
@@ -203,6 +328,7 @@ object LocalBootCache {
                 targetDir.parentFile?.mkdirs()
                 if (stagingDir.renameTo(targetDir)) {
                     prefs.edit().putString("sig_$hostKey", serverSig).apply()
+                    primeCriticalHtmlInRam(ctx, activeHost)
                 }
             } catch (_: Exception) {
             } finally {

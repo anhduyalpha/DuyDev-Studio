@@ -11,8 +11,8 @@ android {
         applicationId = "vn.alphadaniel.duydevstudio"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2520
-        versionName = "25.2.0"
+        versionCode = 2530
+        versionName = "25.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -76,14 +76,24 @@ val syncWebBootAssets by tasks.registering(Sync::class) {
     val targetDir = file("src/main/assets/www")
     onlyIf { file("$webRoot/index.html").exists() && file("$webRoot/src").exists() }
     from(webRoot) {
-        include("index.html", "manifest.webmanifest")
+        include("index.html", "manifest.webmanifest", "sw.js")
     }
     from("$webRoot/src") {
         into("src")
-        include("**/*.js", "**/*.mjs", "**/*.css", "**/*.wasm", "assets/**")
-        exclude("assets/branding/*.png", "vendor/docx-preview.min.js", "vendor/xlsx.full.min.js")
+        include("**/*")
     }
     into(targetDir)
+    doLast {
+        val manifestFile = file("$targetDir/_boot_manifest.txt")
+        val relPaths = mutableListOf<String>()
+        targetDir.walkTopDown().forEach { f ->
+            if (f.isFile && f.name != "_boot_manifest.txt") {
+                val rel = f.relativeTo(targetDir).invariantSeparatorsPath
+                relPaths.add(rel)
+            }
+        }
+        manifestFile.writeText(relPaths.sorted().joinToString("\n"), Charsets.UTF_8)
+    }
 }
 
 tasks.named("preBuild") {
