@@ -72,6 +72,24 @@ object LocalBootCache {
         }
     }
 
+    private val CRITICAL_BOOT_MODULES = listOf(
+        "src/app.js",
+        "src/hooks/useToolRegistry.js",
+        "src/hooks/useTheme.js",
+        "src/pages/DashboardPage.js",
+        "src/pages/ToolPage.js",
+        "src/utilities/rustCore.js",
+        "src/vendor/ds_rust_core.wasm",
+        "src/components/layout/Header.js",
+        "src/components/layout/BottomNav.js",
+        "src/components/layout/Footer.js",
+        "src/components/dashboard/CategoryFilters.js",
+        "src/components/dashboard/ToolCard.js",
+        "src/utilities/storage.js",
+        "src/utilities/soundEngine.js",
+        "src/utilities/toast.js"
+    )
+
     private fun primeCriticalHtmlInRam(context: Context, activeHost: String) {
         val host = Uri.parse(activeHost).host?.lowercase(Locale.ROOT) ?: "studio.duydev.cloud"
         val hostKey = sanitizeHostKey(host, Uri.parse(activeHost).port)
@@ -85,7 +103,7 @@ object LocalBootCache {
             "src/styles/stitch-tokens.css",
             "src/styles/card-tiers-10.css"
         )
-        val inlineStyleBuilder = StringBuilder("<style id=\"dsNativeRamInlineCss\">\n")
+        val inlineStyleBuilder = StringBuilder("<script>window.__dsAlivePing=function(){return 'ok';};</script>\n<style id=\"dsNativeRamInlineCss\">\n")
         for (cssPath in cssFiles) {
             val cssBytes = loadRawBytes(context, hostKey, cssPath)
             if (cssBytes != null) {
@@ -94,6 +112,16 @@ object LocalBootCache {
             }
         }
         inlineStyleBuilder.append("</style>\n")
+
+        // Synchronously prime the Frame-0 ES module dependency graph + Rust WASM into RAM
+        for (modPath in CRITICAL_BOOT_MODULES) {
+            if (!ramCache.containsKey(modPath)) {
+                val modBytes = loadRawBytes(context, hostKey, modPath)
+                if (modBytes != null) {
+                    ramCache[modPath] = modBytes
+                }
+            }
+        }
 
         // Demote blocking core stylesheet links to media="print" onload="this.media='all'" since CSS is already inlined above
         html = html

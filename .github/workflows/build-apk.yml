@@ -36,7 +36,7 @@ jobs:
       - name: Build Release APK
         run: |
           cd android
-          gradle assembleRelease --stacktrace --no-daemon
+          gradle assembleRelease --stacktrace --no-daemon || (sleep 5 && gradle assembleRelease --stacktrace --no-daemon)
 
       - name: Prepare APK Asset
         run: |

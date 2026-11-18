@@ -17,8 +17,11 @@ import java.net.URL
  * Two-way JavaScript interface bridge between Android native layer and WebView.
  */
 class AndroidBridge(
-    private val activity: MainActivity
+    private val fallbackActivity: MainActivity
 ) {
+    private val activity: MainActivity
+        get() = MainActivity.currentInstance ?: fallbackActivity
+
     companion object {
         @Volatile
         var sharedPayloadJson: String? = null

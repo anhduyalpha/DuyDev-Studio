@@ -57,6 +57,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var webView: WebView
+    private lateinit var webViewHost: FrameLayout
+    private lateinit var instantDashboardContainer: FrameLayout
+    private var instantDashboardView: InstantDashboardView? = null
+    @Volatile private var pendingInstantRoute: String? = null
+    @Volatile private var isInitialBootCompleted = false
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var offlineContainer: View
@@ -210,45 +215,38 @@ class MainActivity : AppCompatActivity() {
         currentInstance = this
         setContentView(R.layout.activity_main)
 
-        initViews()
-        setupWebView()
-        handleIntent(intent)
+        val isDarkPref = getSharedPreferences("ds_prefs", MODE_PRIVATE).getBoolean("is_dark_theme", false)
+        initViews(isDarkPref)
+        updateSystemTheme(isDarkPref)
 
         val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
             ?: IntentUrlRouter.resolveToolRoute(intent?.getStringExtra(Intent.EXTRA_TEXT) ?: intent?.dataString ?: "")
 
-        val hasRestoredState = savedInstanceState != null &&
-            webView.restoreState(savedInstanceState) != null &&
-            !webView.url.isNullOrBlank()
-
-        val isDarkPref = getSharedPreferences("ds_prefs", MODE_PRIVATE).getBoolean("is_dark_theme", false)
-        updateSystemTheme(isDarkPref)
-
-        if (hasRestoredState) {
-            splashOverlay.visibility = View.GONE
-            cancelSplashWatchdog()
-            if (!targetRoute.isNullOrBlank()) {
-                val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
-                val jsRoute = cleanRoute.replace("'", "\\'")
-                webView.post {
-                    webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+        if (DuyDevApplication.hasWarmHydratedWebView()) {
+            // Tier-3 Fast Path (<2ms): Reuse warm hydrated WebView singleton directly from RAM
+            instantDashboardContainer.visibility = View.GONE
+            bootOrAttachWebView(savedInstanceState, targetRoute)
+        } else {
+            // Tier-1 Cold-Start Fast Path (<16ms): Show Native Instant Dashboard on Frame 0 so user sees 0ms black screen
+            val isShareModal = targetRoute?.contains("share-target") == true ||
+                intent?.action == Intent.ACTION_SEND ||
+                intent?.action == Intent.ACTION_SEND_MULTIPLE
+            if (!isShareModal) {
+                if (!targetRoute.isNullOrBlank()) {
+                    pendingInstantRoute = targetRoute
+                }
+                instantDashboardContainer.alpha = 1f
+                instantDashboardContainer.visibility = View.VISIBLE
+            }
+            // Defer Chromium libmonochrome.so inflation until immediately after Frame 0 is painted on screen
+            window.decorView.post {
+                if (!isFinishing && !isDestroyed) {
+                    bootOrAttachWebView(savedInstanceState, targetRoute)
                 }
             }
-        } else {
-            // Never cover WebView with a black splashOverlay — load pre-inlined HTML+CSS directly from JVM RAM
-            splashOverlay.visibility = View.GONE
-            startSplashWatchdog()
-            val baseHost = getActiveHost()
-            val launchUrl = if (!targetRoute.isNullOrBlank()) {
-                val cleanRoute = if (targetRoute.startsWith("#") || targetRoute.startsWith("/")) targetRoute else "#$targetRoute"
-                "$baseHost$cleanRoute"
-            } else {
-                baseHost
-            }
-            loadInstantShell(baseHost, launchUrl)
         }
 
-        // Run secondary display, back gesture, cache cleanup & permission setup after triggering WebView load
+        // Run secondary display, back gesture, cache cleanup & permission setup
         setupBackHandler()
         unlockHighRefreshRate()
         lifecycleHandler.post {
@@ -257,9 +255,99 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun bootOrAttachWebView(savedInstanceState: Bundle?, initialTargetRoute: String?) {
+        val (obtainedWebView, wasAlreadyHydrated) = DuyDevApplication.obtainWebView(this)
+        if (!::webView.isInitialized || webView !== obtainedWebView) {
+            webView = obtainedWebView
+            webViewHost.removeAllViews()
+            webViewHost.addView(
+                webView,
+                FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            )
+            setupWebView()
+        }
+        handleIntent(intent)
+
+        val effectiveRoute = pendingInstantRoute ?: initialTargetRoute
+
+        if (wasAlreadyHydrated && !webView.url.isNullOrBlank() && webView.url != "about:blank") {
+            isInitialBootCompleted = true
+            splashOverlay.visibility = View.GONE
+            cancelSplashWatchdog()
+            ensureWebViewActive()
+            if (!effectiveRoute.isNullOrBlank()) {
+                val cleanRoute = if (effectiveRoute.startsWith("#") || effectiveRoute.startsWith("/")) effectiveRoute else "#$effectiveRoute"
+                val jsRoute = cleanRoute.replace("'", "\\'")
+                pendingInstantRoute = null
+                webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+            }
+            hideInstantDashboard()
+            return
+        }
+
+        val hasRestoredState = savedInstanceState != null &&
+            webView.restoreState(savedInstanceState) != null &&
+            !webView.url.isNullOrBlank()
+
+        if (hasRestoredState) {
+            isInitialBootCompleted = true
+            splashOverlay.visibility = View.GONE
+            cancelSplashWatchdog()
+            if (!effectiveRoute.isNullOrBlank()) {
+                val cleanRoute = if (effectiveRoute.startsWith("#") || effectiveRoute.startsWith("/")) effectiveRoute else "#$effectiveRoute"
+                val jsRoute = cleanRoute.replace("'", "\\'")
+                pendingInstantRoute = null
+                webView.post {
+                    webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+                }
+            }
+            hideInstantDashboard()
+        } else {
+            splashOverlay.visibility = View.GONE
+            startSplashWatchdog()
+            val baseHost = getActiveHost()
+            val launchUrl = if (!effectiveRoute.isNullOrBlank()) {
+                val cleanRoute = if (effectiveRoute.startsWith("#") || effectiveRoute.startsWith("/")) effectiveRoute else "#$effectiveRoute"
+                "$baseHost$cleanRoute"
+            } else {
+                baseHost
+            }
+            loadInstantShell(baseHost, launchUrl)
+        }
+    }
+
+    private fun onInstantRouteSelected(route: String) {
+        val cleanRoute = if (route.startsWith("#") || route.startsWith("/")) route else "#$route"
+        pendingInstantRoute = cleanRoute
+        if (::webView.isInitialized && isInitialBootCompleted) {
+            val jsRoute = cleanRoute.replace("'", "\\'")
+            pendingInstantRoute = null
+            webView.evaluateJavascript("window.location.hash = '$jsRoute';", null)
+            hideInstantDashboard()
+        }
+    }
+
+    private fun hideInstantDashboard() {
+        if (!::instantDashboardContainer.isInitialized || instantDashboardContainer.visibility == View.GONE) return
+        instantDashboardContainer.animate()
+            .alpha(0f)
+            .setDuration(90L)
+            .withEndAction {
+                instantDashboardContainer.visibility = View.GONE
+                instantDashboardContainer.alpha = 1f
+            }
+            .start()
+    }
+
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (!::webView.isInitialized) {
+            val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
+                ?: IntentUrlRouter.resolveToolRoute(intent?.getStringExtra(Intent.EXTRA_TEXT) ?: intent?.dataString ?: "")
+            bootOrAttachWebView(null, targetRoute)
+            return
+        }
         ensureWebViewActive()
         handleIntent(intent)
 
@@ -295,7 +383,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val activeHost = getActiveHost()
                 val destUrl = "$activeHost$cleanRoute"
-                webView.loadUrl(destUrl)
+                loadInstantShell(activeHost, destUrl)
             }
         } else if (AndroidBridge.sharedPayloadJson != null) {
             val currentUrl = webView.url ?: ""
@@ -310,6 +398,7 @@ class MainActivity : AppCompatActivity() {
      * bypassing the ~600ms HTTPS/DNS/ServiceWorker cold navigation delay.
      */
     private fun loadInstantShell(baseHost: String, launchUrl: String) {
+        if (!::webView.isInitialized) return
         val ramHtml = LocalBootCache.getFastBootIndexHtml(this, baseHost)
         if (!ramHtml.isNullOrBlank()) {
             val cleanBase = "${baseHost.trimEnd('/')}/"
@@ -327,18 +416,23 @@ class MainActivity : AppCompatActivity() {
     fun ensureWebViewActive() {
         lifecycleHandler.removeCallbacks(deepFreezeRunnable)
         lifecycleHandler.removeCallbacks(taskSafetyTimeoutRunnable)
-        if (::webView.isInitialized && isWebViewFrozen) {
+        if (!::webView.isInitialized) return
+        val wasFrozen = isWebViewFrozen
+        if (isWebViewFrozen) {
             try {
                 webView.resumeTimers()
                 webView.onResume()
             } catch (_: Exception) {}
             isWebViewFrozen = false
         }
-        probeWebViewAlive()
+        // Only probe liveness after initial boot has completed and when waking from pause/freeze
+        if (isInitialBootCompleted && (wasFrozen || isRendererDead)) {
+            probeWebViewAlive()
+        }
     }
 
     private fun probeWebViewAlive() {
-        if (!::webView.isInitialized || isFinishing || isDestroyed) return
+        if (!::webView.isInitialized || !isInitialBootCompleted || isFinishing || isDestroyed) return
         val currentUrl = webView.url
         if (currentUrl.isNullOrBlank() || currentUrl == "about:blank") return
 
@@ -390,11 +484,10 @@ class MainActivity : AppCompatActivity() {
     private fun handleDeadRenderer() {
         if (isFinishing || isDestroyed) return
         isRendererDead = false
-        splashOverlay.alpha = 1f
-        splashOverlay.visibility = View.VISIBLE
-        startSplashWatchdog()
+        isInitialBootCompleted = false
+        DuyDevApplication.isWarmWebViewHydrated = false
         val activeHost = getActiveHost()
-        webView.loadUrl(activeHost)
+        loadInstantShell(activeHost, activeHost)
     }
 
     fun executeDeepFreeze() {
@@ -470,16 +563,22 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        webView.saveState(outState)
+        if (::webView.isInitialized) {
+            webView.saveState(outState)
+        }
     }
 
     override fun onDestroy() {
         if (::webView.isInitialized) {
             try {
                 (webView.parent as? ViewGroup)?.removeView(webView)
-                webView.stopLoading()
-                webView.clearHistory()
-                webView.destroy()
+                if (isRendererDead) {
+                    webView.stopLoading()
+                    webView.clearHistory()
+                    webView.destroy()
+                } else {
+                    DuyDevApplication.parkWarmWebView(applicationContext, webView)
+                }
             } catch (_: Exception) {}
         }
         lifecycleHandler.removeCallbacks(deepFreezeRunnable)
@@ -493,8 +592,9 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun initViews() {
-        webView = findViewById(R.id.webView)
+    private fun initViews(isDarkPref: Boolean) {
+        webViewHost = findViewById(R.id.webViewHost)
+        instantDashboardContainer = findViewById(R.id.instantDashboardContainer)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         progressBar = findViewById(R.id.progressBar)
         offlineContainer = findViewById(R.id.offlineContainer)
@@ -505,6 +605,16 @@ class MainActivity : AppCompatActivity() {
         btnOpenTailscale = findViewById(R.id.btnOpenTailscale)
         btnOpenLan = findViewById(R.id.btnOpenLan)
         btnOpenCloudflare = findViewById(R.id.btnOpenCloudflare)
+
+        val dashView = InstantDashboardView(this, isDarkPref) { selectedRoute ->
+            onInstantRouteSelected(selectedRoute)
+        }
+        instantDashboardView = dashView
+        instantDashboardContainer.removeAllViews()
+        instantDashboardContainer.addView(
+            dashView,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
 
         swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#6366F1"))
         swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#18181B"))
@@ -517,7 +627,7 @@ class MainActivity : AppCompatActivity() {
 
         btnRetry.setOnClickListener {
             showOffline(false)
-            webView.reload()
+            if (::webView.isInitialized) webView.reload()
         }
 
         btnOpenTailscale.setOnClickListener {
@@ -618,11 +728,22 @@ class MainActivity : AppCompatActivity() {
      */
     fun onAppReady() {
         if (isFinishing || isDestroyed) return
+        isInitialBootCompleted = true
+        DuyDevApplication.isWarmWebViewHydrated = true
         cancelSplashWatchdog()
         hideSplashOverlay()
         if (::progressBar.isInitialized) {
             progressBar.visibility = View.GONE
         }
+
+        // If user clicked a tool card on the Frame-0 Native Instant Dashboard while WebView was booting, hand off now
+        pendingInstantRoute?.let { route ->
+            pendingInstantRoute = null
+            val cleanRoute = if (route.startsWith("#") || route.startsWith("/")) route else "#$route"
+            val jsRoute = cleanRoute.replace("'", "\\'")
+            evaluateJs("window.location.hash = '$jsRoute';")
+        }
+        hideInstantDashboard()
 
         // Flush pending shared payload if present
         if (AndroidBridge.sharedPayloadJson != null) {
@@ -978,8 +1099,18 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                isInitialBootCompleted = true
+                DuyDevApplication.isWarmWebViewHydrated = true
                 swipeRefreshLayout.isRefreshing = false
                 progressBar.visibility = View.GONE
+
+                pendingInstantRoute?.let { route ->
+                    pendingInstantRoute = null
+                    val cleanRoute = if (route.startsWith("#") || route.startsWith("/")) route else "#$route"
+                    val jsRoute = cleanRoute.replace("'", "\\'")
+                    evaluateJs("window.location.hash = '$jsRoute';")
+                }
+                hideInstantDashboard()
 
                 // Notify web application if pending shared payload is ready to be consumed
                 if (AndroidBridge.sharedPayloadJson != null) {
@@ -1009,6 +1140,7 @@ class MainActivity : AppCompatActivity() {
                 detail: RenderProcessGoneDetail?
             ): Boolean {
                 isRendererDead = true
+                DuyDevApplication.destroyWarmWebView()
                 try {
                     (view?.parent as? ViewGroup)?.removeView(view)
                     view?.destroy()
@@ -1047,12 +1179,16 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (customView != null) {
+                if (customView != null && ::webView.isInitialized) {
                     webView.webChromeClient?.onHideCustomView()
                     return
                 }
                 if (offlineContainer.visibility == View.VISIBLE) {
                     finish()
+                    return
+                }
+                if (!::webView.isInitialized) {
+                    moveTaskToBack(true)
                     return
                 }
                 webView.evaluateJavascript("""
@@ -1108,9 +1244,11 @@ class MainActivity : AppCompatActivity() {
         val color = if (isDark) Color.parseColor("#09090B") else Color.parseColor("#F4F4F6")
         window.statusBarColor = color
         window.navigationBarColor = color
+        window.decorView.setBackgroundColor(color)
         if (::webView.isInitialized) {
             webView.setBackgroundColor(color)
         }
+        instantDashboardView?.applyTheme(isDark)
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.isAppearanceLightStatusBars = !isDark
         controller.isAppearanceLightNavigationBars = !isDark
@@ -1308,12 +1446,14 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Notify web application if already loaded
-            webView.evaluateJavascript("""
-                if (typeof window !== 'undefined') {
-                    $autoStartScript
-                    window.dispatchEvent(new CustomEvent('ds:native-share-arrived'));
-                }
-            """.trimIndent(), null)
+            if (::webView.isInitialized) {
+                webView.evaluateJavascript("""
+                    if (typeof window !== 'undefined') {
+                        $autoStartScript
+                        window.dispatchEvent(new CustomEvent('ds:native-share-arrived'));
+                    }
+                """.trimIndent(), null)
+            }
         }
     }
 
@@ -1346,7 +1486,9 @@ class MainActivity : AppCompatActivity() {
      */
     fun evaluateJs(script: String) {
         runOnUiThread {
-            webView.evaluateJavascript(script, null)
+            if (::webView.isInitialized) {
+                webView.evaluateJavascript(script, null)
+            }
         }
     }
 

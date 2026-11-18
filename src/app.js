@@ -245,7 +245,7 @@ class App {
     this.attachPointerPreloader();
     setTimeout(() => {
       this.warmAllAppModules();
-    }, 40);
+    }, 0);
 
     // Web Share Target: listen for payloads from Service Worker
     navigator.serviceWorker?.addEventListener('message', (e) => {
