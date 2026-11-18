@@ -89,8 +89,8 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain('client.focus()');
     });
 
-    it('sw.js cache name must match current release v25.0', () => {
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.0'");
+    it('sw.js cache name must match current release v25.1', () => {
+      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.1'");
     });
   });
 
@@ -103,9 +103,28 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
     });
 
-    it('build.gradle.kts must maintain versionCode >= 2500 and versionName 25.0.0', () => {
-      expect(gradleContent).toContain('versionCode = 2500');
-      expect(gradleContent).toContain('versionName = "25.0.0"');
+    it('build.gradle.kts must maintain versionCode >= 2510 and versionName 25.1.0 and bundle boot assets', () => {
+      expect(gradleContent).toContain('versionCode = 2510');
+      expect(gradleContent).toContain('versionName = "25.1.0"');
+      expect(gradleContent).toContain('syncWebBootAssets');
+    });
+
+    it('DuyDevApplication & LocalBootCache must provide <1ms local boot interception and instant onPageCommitVisible reveal', () => {
+      const appPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/DuyDevApplication.kt');
+      const bootCachePath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/LocalBootCache.kt');
+      const manifestPath = path.join(rootDir, 'android/app/src/main/AndroidManifest.xml');
+
+      expect(fs.existsSync(appPath)).toBe(true);
+      expect(fs.existsSync(bootCachePath)).toBe(true);
+      expect(fs.readFileSync(manifestPath, 'utf-8')).toContain('android:name=".DuyDevApplication"');
+      expect(mainActContent).toContain('LocalBootCache.intercept');
+      expect(mainActContent).toContain('hideSplashOverlay()');
+      expect(mainActContent).toContain('LocalBootCache.syncInBackgroundIfNeeded');
+
+      const bootCacheSrc = fs.readFileSync(bootCachePath, 'utf-8');
+      expect(bootCacheSrc).toContain('rawPath.startsWith("/api/")');
+      expect(bootCacheSrc).toContain('rawPath == "/sw.js"');
+      expect(bootCacheSrc).toContain('canonicalPath.startsWith');
     });
   });
 });

@@ -3,18 +3,18 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v25.0';
+const CACHE_NAME = 'duydev-studio-v25.1';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/tailwind.generated.css?v=25.0',
-  './src/styles/stitch-tokens.css?v=25.0',
-  './src/styles/card-tiers-10.css?v=25.0',
-  './src/styles/studocu.css?v=25.0',
-  './src/styles/scribd.css?v=25.0',
-  './src/styles/highlight-theme.css?v=25.0',
+  './src/styles/tailwind.generated.css?v=25.1',
+  './src/styles/stitch-tokens.css?v=25.1',
+  './src/styles/card-tiers-10.css?v=25.1',
+  './src/styles/studocu.css?v=25.1',
+  './src/styles/scribd.css?v=25.1',
+  './src/styles/highlight-theme.css?v=25.1',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
@@ -22,50 +22,44 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/docx-preview.min.js',
   './src/vendor/xlsx.full.min.js',
   './src/vendor/lucide.min.js',
-  './src/app.js?v=25.0',
-  './src/utilities/soundEngine.js?v=24.10',
+  './src/app.js?v=25.1',
+  './src/app.js',
+  './src/hooks/useTheme.js',
+  './src/hooks/useToolRegistry.js',
+  './src/pages/DashboardPage.js',
+  './src/components/layout/Header.js',
+  './src/components/layout/BottomNav.js',
+  './src/components/layout/Footer.js',
+  './src/components/layout/GlobalTaskDock.js',
+  './src/components/common/SlideConfirmModal.js',
+  './src/components/common/ToolIcons.js',
+  './src/components/dashboard/CategoryFilters.js',
+  './src/components/dashboard/RecentActivity.js',
+  './src/components/dashboard/TierFrameAssets.js',
+  './src/components/dashboard/ToolCard.js',
+  './src/components/dashboard/dashboardSwipeController.js',
+  './src/utilities/adminAuth.js',
+  './src/utilities/clipboard.js',
+  './src/utilities/deviceId.js',
+  './src/utilities/formatters.js',
+  './src/utilities/moduleState.js',
+  './src/utilities/notificationHelper.js',
+  './src/utilities/securityShield.js',
+  './src/utilities/shareTargetHelper.js',
+  './src/utilities/smartUrlRouter.js',
+  './src/utilities/soundEngine.js',
+  './src/utilities/storage.js',
+  './src/utilities/taskCoordinator.js',
+  './src/utilities/toast.js',
+  './src/utilities/userProfile.js',
   './src/utilities/releaseNotes.js?v=24.44',
-  './src/utilities/notificationHelper.js?v=23.70',
-  './src/utilities/smartUrlRouter.js?v=24.44',
   './src/utilities/tierViewportGovernor.js',
   './src/components/common/SoundVolumeModal.js?v=24.66',
-  './src/hooks/useToolRegistry.js',
-  './src/components/tools/scribd/ScribdWorkspace.js',
-  './src/components/tools/slideshare/SlideshareWorkspace.js',
-  './src/components/tools/academia/AcademiaWorkspace.js',
-  './src/components/tools/researchgate/ResearchgateWorkspace.js',
-  './src/components/tools/youtube/YoutubeWorkspace.js?v=24.17',
-  './src/pages/DashboardPage.js',
-  './src/components/layout/Footer.js',
-  './src/components/dashboard/dashboardSwipeController.js',
-  './src/components/dashboard/ToolCard.js',
-  './src/components/dashboard/TierFrameAssets.js',
-  './src/components/common/ToolIcons.js',
   './src/components/common/MigrationNoticeModal.js',
-  './src/components/tools/tiktok/TiktokWorkspace.js',
-  './src/components/tools/tiktok/hooks/useTiktok.js',
-  './src/components/tools/tiktok/services/tiktokApi.js',
-  './src/components/tools/viewsplit/ViewSplitWorkspace.js?v=22.30',
-  './src/components/tools/viewsplit/hooks/useViewSplit.js?v=22.30',
-  './src/components/tools/viewsplit/hooks/useViewSplitDom.js?v=22.30',
-  './src/components/tools/viewsplit/components/ViewSplitPane.js?v=22.30',
-  './src/components/tools/viewsplit/components/ViewSplitToolbar.js?v=22.30',
-  './src/components/tools/viewsplit/components/ViewSplitSliderOverlay.js?v=22.30',
-  './src/components/tools/viewsplit/components/ViewSplitPixelInspector.js?v=22.30',
-  './src/utilities/shareTargetHelper.js',
   './src/utilities/storageJanitor.js',
   './src/utilities/visitorTracker.js',
   './src/components/common/ShareTargetModal.js',
-  './src/pages/TermsPage.js',
-  './src/pages/AdminPage.js?v=22.52',
-  './src/components/admin/AdminVisualizers.js?v=22.30',
-  './src/components/admin/AdminAiAgentsCard.js?v=22.50',
-  './src/components/admin/AdminEngineTimeoutsCard.js?v=22.50',
-  './src/components/admin/AdminOperationsInspectorModal.js?v=22.50',
-  './src/components/admin/AdminIpTrafficManager.js?v=22.52',
-  './src/components/admin/AdminUsersManager.js?v=22.50',
-  './src/components/admin/AdminFailedJobsInspector.js?v=22.52',
-  './src/components/admin/AdminSoundControlCard.js',
+  './src/assets/logo-ds.svg?v=22.12',
   './src/assets/logo-ds.svg?v=22.52',
   './src/assets/icon-192.png?v=22.12',
   './src/assets/icon-512.png?v=22.12',
@@ -355,27 +349,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. App Shell Navigation: Network-First with Cache Fallback for offline PWA
-  // Always fetches the fresh index.html from server when online to prevent stale UI and eliminate double loading.
-  // Falls back to Cache Storage if network is offline or unreachable.
+  // 2. App Shell Navigation: Stale-While-Revalidate (<2ms Cache-First + silent background refresh)
+  // Serves precached index.html instantly to eliminate network RTT wait while keeping shell fresh.
   if (event.request.mode === 'navigate') {
+    const revalidatePromise = fetch(event.request, { cache: 'no-cache' })
+      .then(async (networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put('./index.html', networkResponse.clone()).catch(() => {});
+          await cache.put(event.request, networkResponse.clone()).catch(() => {});
+        }
+        return networkResponse;
+      })
+      .catch(() => null);
+
+    event.waitUntil(revalidatePromise);
+
     event.respondWith(
       (async () => {
-        try {
-          const fetchPromise = fetch(event.request, { cache: 'no-cache' });
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Navigation network timeout')), 3000)
-          );
-          const networkResponse = await Promise.race([fetchPromise, timeoutPromise]);
-          if (networkResponse && networkResponse.status === 200) {
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(event.request, networkResponse.clone()).catch(() => {});
-            return networkResponse;
-          }
-        } catch (err) {
-          // Network failed or device is offline - fall back to Cache Storage below
-        }
-
         try {
           const cache = await caches.open(CACHE_NAME);
           const cached = (await cache.match(event.request, { ignoreSearch: true })) ||
@@ -385,7 +376,12 @@ self.addEventListener('fetch', (event) => {
             return cached;
           }
         } catch (err) {
-          console.warn('[SW] Navigation cache fallback warning:', err);
+          console.warn('[SW] Navigation cache lookup warning:', err);
+        }
+
+        const fresh = await revalidatePromise;
+        if (fresh && fresh.status === 200) {
+          return fresh;
         }
 
         return (await caches.match('./index.html')) ||
@@ -396,7 +392,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Same-origin assets: Cache-First for immutable (?v=, vendor, assets), Network-First otherwise
+  // 3. Same-origin assets: Cache-First for immutable (?v=, vendor, assets), SWR (<2ms) for JS/CSS
   if (url.origin === self.location.origin) {
     const isImmutableAsset =
       url.pathname.startsWith('/src/vendor/') ||
@@ -425,9 +421,31 @@ self.addEventListener('fetch', (event) => {
       event.request.destination === 'style' ||
       /\.(js|mjs|css)$/i.test(url.pathname);
 
-    const networkFetch = isScriptOrStyle
-      ? fetch(event.request, { cache: 'no-cache' })
-      : fetch(event.request);
+    if (isScriptOrStyle) {
+      const revalidateAsset = fetch(event.request, { cache: 'no-cache' })
+        .then(async (networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, networkResponse.clone()).catch(() => {});
+          }
+          return networkResponse;
+        })
+        .catch(() => null);
+
+      event.waitUntil(revalidateAsset);
+
+      event.respondWith(
+        caches.open(CACHE_NAME).then(async (cache) => {
+          const cached = await cache.match(event.request);
+          if (cached) return cached;
+          const fresh = await revalidateAsset;
+          return fresh || new Response('', { status: 503, statusText: 'Offline' });
+        })
+      );
+      return;
+    }
+
+    const networkFetch = fetch(event.request);
 
     event.respondWith(
       networkFetch

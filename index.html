@@ -187,29 +187,35 @@
     }
   </style>
   
-  <!-- Google Fonts: Plus Jakarta Sans (Primary UI), Inter & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans (Non-blocking async swap so first paint never stalls) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   
   <!-- Pre-Compiled Static Tailwind CSS v3 -->
-  <link rel="stylesheet" href="src/styles/tailwind.generated.css?v=25.0">
+  <link rel="stylesheet" href="src/styles/tailwind.generated.css?v=25.1">
 
-  <!-- Lucide Icons (Local Zero-Latency Precache with CDN Fallback) -->
-  <script src="src/vendor/lucide.min.js"></script>
-  <script>if (typeof lucide === 'undefined') { document.write('<script src="https://unpkg.com/lucide@latest"><\/script>'); }</script>
+  <!-- Lucide Icons (Deferred so #appInstantShell paints Frame 0 without parser stall) -->
+  <script src="src/vendor/lucide.min.js" defer></script>
 
-  <!-- Stitch Design Tokens & Custom CSS -->
-  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=25.0">
-  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=25.0">
-  <link rel="stylesheet" href="src/styles/studocu.css?v=25.0">
-  <link rel="stylesheet" href="src/styles/scribd.css?v=25.0">
-  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=25.0">
+  <!-- Stitch Design Tokens & Core Card CSS -->
+  <link rel="stylesheet" href="src/styles/stitch-tokens.css?v=25.1">
+  <link rel="stylesheet" href="src/styles/card-tiers-10.css?v=25.1">
+  <!-- Tool-only CSS loaded non-blocking so Dashboard paints Frame 0 immediately -->
+  <link rel="stylesheet" href="src/styles/studocu.css?v=25.1" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="src/styles/scribd.css?v=25.1" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="src/styles/highlight-theme.css?v=25.1" media="print" onload="this.media='all'">
 
   <!-- High-Priority Module Preloads for Instant First Paint & Seamless Hydration -->
-  <link rel="modulepreload" href="src/app.js?v=25.0">
+  <link rel="modulepreload" href="src/app.js?v=25.1">
   <link rel="modulepreload" href="src/hooks/useToolRegistry.js">
+  <link rel="modulepreload" href="src/hooks/useTheme.js">
   <link rel="modulepreload" href="src/pages/DashboardPage.js">
+  <link rel="modulepreload" href="src/components/layout/Header.js">
+  <link rel="modulepreload" href="src/components/layout/BottomNav.js">
+  <link rel="modulepreload" href="src/components/dashboard/CategoryFilters.js">
+  <link rel="modulepreload" href="src/components/dashboard/ToolCard.js">
+  <link rel="modulepreload" href="src/utilities/storage.js">
 
   <!-- Share Target Fast-Path Critical CSS (Instant styling before Tailwind compilation) -->
   <style>
@@ -243,6 +249,9 @@
       try {
         localStorage.clear();
         sessionStorage.clear();
+        if (window.AndroidBridge && typeof window.AndroidBridge.clearBootCache === 'function') {
+          try { window.AndroidBridge.clearBootCache(); } catch (_) {}
+        }
         if ('caches' in window) {
           var keys = await caches.keys();
           await Promise.all(keys.map(function(k) { return caches.delete(k); }));
@@ -2165,7 +2174,7 @@
     </a><a href="#tool/tiktok-downloader"
        class="tool-card linear-card group relative overflow-hidden p-4 sm:p-5 !rounded-[20px] touch-manipulation active:scale-[0.985] transition-transform duration-150 ease-out cursor-pointer flex flex-col justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/80 dark:focus-visible:ring-indigo-400 no-underline"
        data-tool-id="tiktok-downloader"
-       aria-label="TikTok Downloader - Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive."
+       aria-label="TikTok & Douyin Downloader - Tải video, album ảnh, ảnh bìa và nhạc MP3 TikTok/Douyin không logo, lưu trực tiếp vào Drive."
        style="--accent: #EE1D52; --accent-contrast: #EE1D52;">
       
       
@@ -2196,12 +2205,12 @@
         </div>
 
         <!-- Title & Description -->
-        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="TikTok Downloader">
-          TikTok Downloader
+        <h3 class="font-semibold text-zinc-900 dark:text-[#F5F5F7] text-base sm:text-lg group-hover:text-[var(--accent)] transition tracking-[-0.025em] truncate" title="TikTok & Douyin Downloader">
+          TikTok & Douyin Downloader
         </h3>
         
         <p class="text-[13px] text-zinc-600 dark:text-[#B4B4BB] mt-1 leading-[1.45] line-clamp-2 min-h-[2.25rem]">
-          Tải video & album ảnh slideshow TikTok không logo, âm thanh MP3 và lưu trực tiếp vào Drive.
+          Tải video, album ảnh, ảnh bìa và nhạc MP3 TikTok/Douyin không logo, lưu trực tiếp vào Drive.
         </p>
 
         <!-- Spec Badges with Primary Engine Hierarchy -->
@@ -2212,7 +2221,7 @@
             </span>
           
             <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
-              Video & Album Ảnh
+              Video, Album & MP3
             </span>
           
             <span class="px-2 py-0.5 rounded-[8px] text-[11px] font-mono font-medium tracking-tight tabular-nums bg-black/[0.02] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-300 border border-black/[0.04] dark:border-white/[0.07]">
@@ -3402,11 +3411,17 @@
     </div>
   </div>
 
-  <!-- Immediate Lucide Icon Resolution for Frame 0 (Zero Icon Flash) -->
+  <!-- Immediate Lucide Icon Resolution for Frame 0 (Safe with deferred lucide.min.js) -->
   <script>
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
-    }
+    (function() {
+      function hydrateIcons() {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }
+      if (window.lucide) hydrateIcons();
+      else document.addEventListener('DOMContentLoaded', hydrateIcons, { once: true });
+    })();
   </script>
 
   <!-- Non-blocking deferred vendor engines -->
@@ -3416,7 +3431,7 @@
   <script src="src/vendor/jszip.min.js" defer></script>
 
   <!-- Main ES Module Bootstrapper -->
-  <script type="module" src="src/app.js?v=25.0"></script>
+  <script type="module" src="src/app.js?v=25.1"></script>
 
   <!-- Startup Fallback Watchdog (Guarantees user is never trapped if network fails) -->
   <script>

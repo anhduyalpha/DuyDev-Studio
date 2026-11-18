@@ -136,9 +136,11 @@
             android:layout_marginBottom="24dp" />
 
         <ProgressBar
+            android:id="@+id/splashSpinner"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:indeterminateTint="@color/accent_indigo" />
+            android:indeterminateTint="@color/accent_indigo"
+            android:visibility="gone" />
 
     </LinearLayout>
 

@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var offlineContainer: View
     private lateinit var customViewContainer: FrameLayout
     private lateinit var splashOverlay: View
+    private lateinit var splashSpinner: ProgressBar
     private lateinit var btnRetry: Button
     private lateinit var btnOpenTailscale: Button
     private lateinit var btnOpenLan: Button
@@ -101,6 +102,21 @@ class MainActivity : AppCompatActivity() {
         if (isFinishing || isDestroyed) return@Runnable
         if (::splashOverlay.isInitialized && splashOverlay.visibility == View.VISIBLE) {
             showSplashRetry()
+        }
+    }
+
+    private val showSplashSpinnerRunnable = Runnable {
+        if (isFinishing || isDestroyed) return@Runnable
+        if (::splashOverlay.isInitialized && splashOverlay.visibility == View.VISIBLE && ::splashSpinner.isInitialized) {
+            splashSpinner.visibility = View.VISIBLE
+        }
+    }
+
+    @Volatile private var hasCommittedFirstFrame = false
+    private val showProgressBarRunnable = Runnable {
+        if (isFinishing || isDestroyed) return@Runnable
+        if (!hasCommittedFirstFrame && ::progressBar.isInitialized) {
+            progressBar.visibility = View.VISIBLE
         }
     }
 
@@ -466,6 +482,7 @@ class MainActivity : AppCompatActivity() {
         offlineContainer = findViewById(R.id.offlineContainer)
         customViewContainer = findViewById(R.id.customViewContainer)
         splashOverlay = findViewById(R.id.splashOverlay)
+        splashSpinner = findViewById(R.id.splashSpinner)
         btnRetry = findViewById(R.id.btnRetry)
         btnOpenTailscale = findViewById(R.id.btnOpenTailscale)
         btnOpenLan = findViewById(R.id.btnOpenLan)
@@ -520,11 +537,15 @@ class MainActivity : AppCompatActivity() {
 
     fun startSplashWatchdog() {
         splashWatchdogHandler.removeCallbacks(splashWatchdogRunnable)
+        splashWatchdogHandler.removeCallbacks(showSplashSpinnerRunnable)
+        splashWatchdogHandler.postDelayed(showSplashSpinnerRunnable, 550L)
         splashWatchdogHandler.postDelayed(splashWatchdogRunnable, 7000L)
     }
 
     fun cancelSplashWatchdog() {
         splashWatchdogHandler.removeCallbacks(splashWatchdogRunnable)
+        splashWatchdogHandler.removeCallbacks(showSplashSpinnerRunnable)
+        splashWatchdogHandler.removeCallbacks(showProgressBarRunnable)
     }
 
     private fun showSplashRetry() {
@@ -562,26 +583,16 @@ class MainActivity : AppCompatActivity() {
         if (!::splashOverlay.isInitialized || splashOverlay.visibility == View.GONE || isSplashHiding) return
         isSplashHiding = true
         cancelSplashWatchdog()
+        if (::splashSpinner.isInitialized) {
+            splashSpinner.visibility = View.GONE
+        }
         splashRetryButton?.visibility = View.GONE
+        splashOverlay.animate().cancel()
         splashOverlay.isClickable = false
         splashOverlay.isFocusable = false
-        splashOverlay.animate()
-            .alpha(0f)
-            .setDuration(90L)
-            .withEndAction {
-                splashOverlay.visibility = View.GONE
-                splashOverlay.alpha = 1f
-                isSplashHiding = false
-            }
-            .start()
-        splashOverlay.postDelayed({
-            if (::splashOverlay.isInitialized) {
-                splashOverlay.visibility = View.GONE
-                splashOverlay.isClickable = false
-                splashOverlay.isFocusable = false
-                isSplashHiding = false
-            }
-        }, 160L)
+        splashOverlay.visibility = View.GONE
+        splashOverlay.alpha = 1f
+        isSplashHiding = false
     }
 
     /**
@@ -591,6 +602,9 @@ class MainActivity : AppCompatActivity() {
         if (isFinishing || isDestroyed) return
         cancelSplashWatchdog()
         hideSplashOverlay()
+        if (::progressBar.isInitialized) {
+            progressBar.visibility = View.GONE
+        }
 
         // Flush pending shared payload if present
         if (AndroidBridge.sharedPayloadJson != null) {
@@ -601,6 +615,14 @@ class MainActivity : AppCompatActivity() {
             evaluateJs(script)
             pendingAutoStartScript = null
         }
+
+        // Schedule background delta cache check strictly off the critical cold-boot path
+        val hostToSync = getActiveHost()
+        lifecycleHandler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                LocalBootCache.syncInBackgroundIfNeeded(applicationContext, hostToSync)
+            }
+        }, 1500L)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -738,9 +760,11 @@ class MainActivity : AppCompatActivity() {
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 if (newProgress < 100) {
-                    progressBar.visibility = View.VISIBLE
-                    progressBar.progress = newProgress
+                    if (::progressBar.isInitialized) {
+                        progressBar.progress = newProgress
+                    }
                 } else {
+                    splashWatchdogHandler.removeCallbacks(showProgressBarRunnable)
                     progressBar.visibility = View.GONE
                     swipeRefreshLayout.isRefreshing = false
                 }
@@ -910,15 +934,25 @@ class MainActivity : AppCompatActivity() {
                         } catch (_: Exception) {}
                     }
                 }
+                LocalBootCache.intercept(this@MainActivity, request)?.let { return it }
                 return super.shouldInterceptRequest(view, request)
             }
 
             override fun onPageCommitVisible(view: WebView?, url: String?) {
                 super.onPageCommitVisible(view, url)
+                hasCommittedFirstFrame = true
+                splashWatchdogHandler.removeCallbacks(showProgressBarRunnable)
+                if (::progressBar.isInitialized) {
+                    progressBar.visibility = View.GONE
+                }
+                hideSplashOverlay()
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                hasCommittedFirstFrame = false
+                splashWatchdogHandler.removeCallbacks(showProgressBarRunnable)
+                splashWatchdogHandler.postDelayed(showProgressBarRunnable, 300L)
                 showOffline(false)
             }
 
