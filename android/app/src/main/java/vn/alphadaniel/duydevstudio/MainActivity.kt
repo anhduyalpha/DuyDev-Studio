@@ -221,6 +221,9 @@ class MainActivity : AppCompatActivity() {
             webView.restoreState(savedInstanceState) != null &&
             !webView.url.isNullOrBlank()
 
+        val isDarkPref = getSharedPreferences("ds_prefs", MODE_PRIVATE).getBoolean("is_dark_theme", false)
+        updateSystemTheme(isDarkPref)
+
         if (hasRestoredState) {
             splashOverlay.visibility = View.GONE
             cancelSplashWatchdog()
@@ -232,7 +235,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } else {
-            splashOverlay.visibility = View.VISIBLE
+            // Never cover WebView with a black splashOverlay — load pre-inlined HTML+CSS directly from JVM RAM
+            splashOverlay.visibility = View.GONE
             startSplashWatchdog()
             val baseHost = getActiveHost()
             val launchUrl = if (!targetRoute.isNullOrBlank()) {
@@ -241,7 +245,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 baseHost
             }
-            webView.loadUrl(launchUrl)
+            loadInstantShell(baseHost, launchUrl)
         }
 
         // Run secondary display, back gesture, cache cleanup & permission setup after triggering WebView load
@@ -298,6 +302,20 @@ class MainActivity : AppCompatActivity() {
             if (currentUrl.endsWith("#share-target") || currentUrl.contains("#share-target?")) {
                 webView.evaluateJavascript("if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('ds:native-share-arrived')); }", null)
             }
+        }
+    }
+
+    /**
+     * Feeds the self-contained RAM-cached HTML+CSS shell directly into Chromium via loadDataWithBaseURL,
+     * bypassing the ~600ms HTTPS/DNS/ServiceWorker cold navigation delay.
+     */
+    private fun loadInstantShell(baseHost: String, launchUrl: String) {
+        val ramHtml = LocalBootCache.getFastBootIndexHtml(this, baseHost)
+        if (!ramHtml.isNullOrBlank()) {
+            val cleanBase = "${baseHost.trimEnd('/')}/"
+            webView.loadDataWithBaseURL(cleanBase, ramHtml, "text/html", "UTF-8", launchUrl)
+        } else {
+            webView.loadUrl(launchUrl)
         }
     }
 
@@ -660,13 +678,14 @@ class MainActivity : AppCompatActivity() {
         webView.isHorizontalScrollBarEnabled = false
         // Default LAYER_TYPE_NONE enables Chromium multi-threaded tiled GPU compositor without offscreen FBO thrashing
         webView.setLayerType(View.LAYER_TYPE_NONE, null)
-        webView.setBackgroundColor(Color.parseColor("#09090B"))
+        val isDarkPref = getSharedPreferences("ds_prefs", MODE_PRIVATE).getBoolean("is_dark_theme", false)
+        webView.setBackgroundColor(if (isDarkPref) Color.parseColor("#09090B") else Color.parseColor("#F4F4F6"))
 
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(webView, true)
 
-        // Initialize ServiceWorkerController for offline-first PWA caching
+        // Initialize ServiceWorkerController for offline-first PWA caching + RAM cache interception
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             val swController = android.webkit.ServiceWorkerController.getInstance()
             swController.setServiceWorkerClient(object : android.webkit.ServiceWorkerClient() {
@@ -693,6 +712,7 @@ class MainActivity : AppCompatActivity() {
                             } catch (_: Exception) {}
                         }
                     }
+                    LocalBootCache.intercept(this@MainActivity, request)?.let { return it }
                     return super.shouldInterceptRequest(request)
                 }
             })
@@ -1067,7 +1087,8 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             val now = System.currentTimeMillis()
                             if (now - lastBackPressTime < 2000L) {
-                                finish()
+                                // Keep Activity & WebView GPU surface warm in RAM instead of destroying on exit
+                                moveTaskToBack(true)
                             } else {
                                 lastBackPressTime = now
                                 Toast.makeText(this@MainActivity, "Nhấn quay lại lần nữa để thoát", Toast.LENGTH_SHORT).show()
@@ -1083,9 +1104,13 @@ class MainActivity : AppCompatActivity() {
      * Dynamically update system status bar and navigation bar colors and icon brightness.
      */
     fun updateSystemTheme(isDark: Boolean) {
+        getSharedPreferences("ds_prefs", MODE_PRIVATE).edit().putBoolean("is_dark_theme", isDark).apply()
         val color = if (isDark) Color.parseColor("#09090B") else Color.parseColor("#F4F4F6")
         window.statusBarColor = color
         window.navigationBarColor = color
+        if (::webView.isInitialized) {
+            webView.setBackgroundColor(color)
+        }
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.isAppearanceLightStatusBars = !isDark
         controller.isAppearanceLightNavigationBars = !isDark
