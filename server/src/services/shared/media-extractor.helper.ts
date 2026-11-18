@@ -251,3 +251,142 @@ export async function streamTranscodedMp3({
 
   return reply.send(ffmpeg.stdout);
 }
+
+function buildFfmpegHeadersArg(headers: Record<string, string>): string {
+  return Object.entries(headers)
+    .map(([k, v]) => `${k}: ${v}\r\n`)
+    .join('');
+}
+
+/**
+ * Streams a muxed MP4 by combining split DASH video + audio URLs via ffmpeg copy without touching disk.
+ */
+export function streamMuxedDashMp4({
+  videoUrl,
+  audioUrl,
+  headers,
+  filename,
+  download,
+  reply
+}: {
+  videoUrl: string;
+  audioUrl: string;
+  headers: Record<string, string>;
+  filename: string;
+  download: boolean;
+  reply: FastifyReply;
+}): any {
+  const cleanName = (filename || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim() || 'video.mp4';
+  const encodedName = encodeURIComponent(cleanName);
+  const asciiName = cleanName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '\\"');
+
+  reply.status(200);
+  reply.header('Content-Type', 'video/mp4');
+  reply.header(
+    'Content-Disposition',
+    download ? `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}` : 'inline'
+  );
+
+  const headerStr = buildFfmpegHeadersArg(headers);
+  const inputArgs = (url: string) => (headerStr ? ['-headers', headerStr, '-i', url] : ['-i', url]);
+
+  const ffmpeg = spawn(
+    'ffmpeg',
+    [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-y',
+      ...inputArgs(videoUrl),
+      ...inputArgs(audioUrl),
+      '-map',
+      '0:v:0',
+      '-map',
+      '1:a:0',
+      '-shortest',
+      '-c',
+      'copy',
+      '-movflags',
+      'frag_keyframe+empty_moov',
+      '-f',
+      'mp4',
+      'pipe:1'
+    ],
+    { stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+
+  let settled = false;
+  const cleanupFfmpeg = () => {
+    if (settled) return;
+    settled = true;
+    try {
+      if (!ffmpeg.killed) ffmpeg.kill('SIGKILL');
+    } catch {}
+  };
+
+  ffmpeg.stderr.on('data', () => {});
+  reply.raw?.on('close', cleanupFfmpeg);
+  (reply as any).request?.raw?.on('close', cleanupFfmpeg);
+  ffmpeg.on('error', (err) => {
+    logger.warn({ err: err?.message }, '[MediaExtractor] ffmpeg DASH mux spawn error');
+    cleanupFfmpeg();
+  });
+  ffmpeg.stdout.on('close', () => {
+    settled = true;
+  });
+
+  return reply.send(ffmpeg.stdout);
+}
+
+/**
+ * Muxes split DASH video + audio URLs into an MP4 file on disk (+faststart).
+ */
+export async function muxDashTracksToFile({
+  videoUrl,
+  audioUrl,
+  headers,
+  outputPath
+}: {
+  videoUrl: string;
+  audioUrl: string;
+  headers: Record<string, string>;
+  outputPath: string;
+}): Promise<void> {
+  const headerStr = buildFfmpegHeadersArg(headers);
+  const inputArgs = (url: string) => (headerStr ? ['-headers', headerStr, '-i', url] : ['-i', url]);
+
+  await new Promise<void>((resolve, reject) => {
+    const ffmpeg = spawn(
+      'ffmpeg',
+      [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-y',
+        ...inputArgs(videoUrl),
+        ...inputArgs(audioUrl),
+        '-map',
+        '0:v:0',
+        '-map',
+        '1:a:0',
+        '-shortest',
+        '-c',
+        'copy',
+        '-movflags',
+        '+faststart',
+        outputPath
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] }
+    );
+
+    let stderr = '';
+    ffmpeg.stderr.on('data', (d) => {
+      stderr += d.toString();
+    });
+    ffmpeg.on('error', reject);
+    ffmpeg.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`ffmpeg DASH mux failed with code ${code}: ${stderr.slice(-300)}`));
+    });
+  });
+}
