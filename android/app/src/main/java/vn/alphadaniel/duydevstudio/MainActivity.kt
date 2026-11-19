@@ -222,29 +222,9 @@ class MainActivity : AppCompatActivity() {
         val targetRoute = intent?.getStringExtra(EXTRA_TARGET_ROUTE)
             ?: IntentUrlRouter.resolveToolRoute(intent?.getStringExtra(Intent.EXTRA_TEXT) ?: intent?.dataString ?: "")
 
-        if (DuyDevApplication.hasWarmHydratedWebView()) {
-            // Tier-3 Fast Path (<2ms): Reuse warm hydrated WebView singleton directly from RAM
-            instantDashboardContainer.visibility = View.GONE
-            bootOrAttachWebView(savedInstanceState, targetRoute)
-        } else {
-            // Tier-1 Cold-Start Fast Path (<16ms): Show Native Instant Dashboard on Frame 0 so user sees 0ms black screen
-            val isShareModal = targetRoute?.contains("share-target") == true ||
-                intent?.action == Intent.ACTION_SEND ||
-                intent?.action == Intent.ACTION_SEND_MULTIPLE
-            if (!isShareModal) {
-                if (!targetRoute.isNullOrBlank()) {
-                    pendingInstantRoute = targetRoute
-                }
-                instantDashboardContainer.alpha = 1f
-                instantDashboardContainer.visibility = View.VISIBLE
-            }
-            // Defer Chromium libmonochrome.so inflation until immediately after Frame 0 is painted on screen
-            window.decorView.post {
-                if (!isFinishing && !isDestroyed) {
-                    bootOrAttachWebView(savedInstanceState, targetRoute)
-                }
-            }
-        }
+        // Always keep simplified native mockup hidden so only the 100% real Web Dashboard (#appInstantShell from RAM) renders with zero UI flash
+        instantDashboardContainer.visibility = View.GONE
+        bootOrAttachWebView(savedInstanceState, targetRoute)
 
         // Run secondary display, back gesture, cache cleanup & permission setup
         setupBackHandler()

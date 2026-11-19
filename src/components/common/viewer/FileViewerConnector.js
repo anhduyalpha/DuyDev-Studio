@@ -4,11 +4,24 @@
  * Normalizes items from any module (History, Trash, Converter, Archive, MediaStudio, QR, Storage)
  */
 
-import { openFileViewer, FILE_CATEGORIES } from './FileViewerCore.js';
+import { openFileViewer } from './FileViewerCore.js';
 import { StorageService } from '../../../services/storageService.js';
 import { getAdminToken } from '../../../utilities/adminAuth.js';
 
-export { FILE_CATEGORIES };
+export const FILE_CATEGORIES = {
+  IMAGE: 'image',
+  AUDIO: 'audio',
+  VIDEO: 'video',
+  PDF: 'pdf',
+  WORD: 'word',
+  SHEET: 'sheet',
+  PRESENTATION: 'presentation',
+  HTML: 'html',
+  FONT: 'font',
+  TEXT: 'text',
+  ARCHIVE: 'archive',
+  FALLBACK: 'fallback'
+};
 
 const SERVER_CONVERTED_EXTS = ['doc', 'dot', 'odt', 'rtf', 'ppt', 'pptx', 'odp'];
 

@@ -89,8 +89,8 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(swContent).toContain('client.focus()');
     });
 
-    it('sw.js cache name must match current release v25.4', () => {
-      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.4'");
+    it('sw.js cache name must match current release v25.5', () => {
+      expect(swContent).toContain("const CACHE_NAME = 'duydev-studio-v25.5'");
     });
   });
 
@@ -103,31 +103,34 @@ describe('Android Native & Web Push Notification Subsystem', () => {
       expect(mainActContent).toContain('swipeRefreshLayout.setOnChildScrollUpCallback { _, _ -> true }');
     });
 
-    it('build.gradle.kts must maintain versionCode >= 2540 and versionName 25.4.0 and bundle full web boot assets', () => {
-      expect(gradleContent).toContain('versionCode = 2540');
-      expect(gradleContent).toContain('versionName = "25.4.0"');
+    it('build.gradle.kts must maintain versionCode >= 2550 and versionName 25.5.0 and bundle full web boot assets', () => {
+      expect(gradleContent).toContain('versionCode = 2550');
+      expect(gradleContent).toContain('versionName = "25.5.0"');
       expect(gradleContent).toContain('syncWebBootAssets');
       expect(gradleContent).toContain('_boot_manifest.txt');
     });
 
-    it('DuyDevApplication, InstantDashboardView & LocalBootCache must provide 3-tier instant boot (<16ms Frame 0 + RAM WebView pool)', () => {
+    it('DuyDevApplication & LocalBootCache must provide RAM WebView pool and never corrupt script tags or flash simplified UI', () => {
       const appPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/DuyDevApplication.kt');
       const bootCachePath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/LocalBootCache.kt');
-      const instantDashPath = path.join(rootDir, 'android/app/src/main/java/vn/alphadaniel/duydevstudio/InstantDashboardView.kt');
+      const indexHtmlPath = path.join(rootDir, 'index.html');
       const manifestPath = path.join(rootDir, 'android/app/src/main/AndroidManifest.xml');
 
       expect(fs.existsSync(appPath)).toBe(true);
       expect(fs.existsSync(bootCachePath)).toBe(true);
-      expect(fs.existsSync(instantDashPath)).toBe(true);
       expect(fs.readFileSync(manifestPath, 'utf-8')).toContain('android:name=".DuyDevApplication"');
       expect(mainActContent).toContain('LocalBootCache.intercept');
       expect(mainActContent).toContain('hideSplashOverlay()');
-      expect(mainActContent).toContain('hideInstantDashboard()');
       expect(mainActContent).toContain('DuyDevApplication.obtainWebView');
       expect(mainActContent).toContain('DuyDevApplication.parkWarmWebView');
       expect(mainActContent).toContain('LocalBootCache.syncInBackgroundIfNeeded');
 
       const bootCacheSrc = fs.readFileSync(bootCachePath, 'utf-8');
+      expect(bootCacheSrc).toContain('lastIndexOf("</head>"');
+      expect(bootCacheSrc).not.toContain('.replace("</head>"');
+
+      const indexHtmlSrc = fs.readFileSync(indexHtmlPath, 'utf-8');
+      expect(indexHtmlSrc).toContain('<\\/head>');
       expect(bootCacheSrc).toContain('rawPath.startsWith("/api/")');
       expect(bootCacheSrc).toContain('rawPath == "/sw.js"');
       expect(bootCacheSrc).toContain('canonicalPath.startsWith');
