@@ -3,18 +3,18 @@
  * Provides offline caching, app installability, instant updates, and Level 2 Share Target API
  */
 
-const CACHE_NAME = 'duydev-studio-v25.4';
+const CACHE_NAME = 'duydev-studio-v25.5';
 
 const ASSETS_TO_PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './src/styles/tailwind.generated.css?v=25.4',
-  './src/styles/stitch-tokens.css?v=25.4',
-  './src/styles/card-tiers-10.css?v=25.4',
-  './src/styles/studocu.css?v=25.4',
-  './src/styles/scribd.css?v=25.4',
-  './src/styles/highlight-theme.css?v=25.4',
+  './src/styles/tailwind.generated.css?v=25.5',
+  './src/styles/stitch-tokens.css?v=25.5',
+  './src/styles/card-tiers-10.css?v=25.5',
+  './src/styles/studocu.css?v=25.5',
+  './src/styles/scribd.css?v=25.5',
+  './src/styles/highlight-theme.css?v=25.5',
   './src/vendor/highlight.min.js',
   './src/vendor/thinking-orbs.js',
   './src/vendor/qr-code-styling.js',
@@ -23,7 +23,7 @@ const ASSETS_TO_PRECACHE = [
   './src/vendor/xlsx.full.min.js',
   './src/vendor/lucide.min.js',
   './src/vendor/ds_rust_core.wasm',
-  './src/app.js?v=25.4',
+  './src/app.js?v=25.5',
   './src/app.js',
   './src/hooks/useTheme.js',
   './src/hooks/useToolRegistry.js',

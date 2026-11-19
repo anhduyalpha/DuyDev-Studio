@@ -103,7 +103,8 @@ object LocalBootCache {
             "src/styles/stitch-tokens.css",
             "src/styles/card-tiers-10.css"
         )
-        val inlineStyleBuilder = StringBuilder("<script>window.__dsAlivePing=function(){return 'ok';};</script>\n<style id=\"dsNativeRamInlineCss\">\n")
+        // Strictly emit ONLY <style> tags (never <script>...</script>) so HTML script parsing can never be interrupted
+        val inlineStyleBuilder = StringBuilder("<style id=\"dsNativeRamInlineCss\">\n")
         for (cssPath in cssFiles) {
             val cssBytes = loadRawBytes(context, hostKey, cssPath)
             if (cssBytes != null) {
@@ -124,12 +125,16 @@ object LocalBootCache {
         }
 
         // Demote blocking core stylesheet links to media="print" onload="this.media='all'" since CSS is already inlined above
-        html = html
-            .replace(
-                Regex("""<link\s+rel=["']stylesheet["']\s+href=["']src/styles/(tailwind\.generated|stitch-tokens|card-tiers-10)\.css(\?[^"']*)?["']\s*>"""),
-                """<link rel="stylesheet" href="src/styles/$1.css$2" media="print" onload="this.media='all'">"""
-            )
-            .replace("</head>", "${inlineStyleBuilder}</head>")
+        html = html.replace(
+            Regex("""<link\s+rel=["']stylesheet["']\s+href=["']src/styles/(tailwind\.generated|stitch-tokens|card-tiers-10)\.css(\?[^"']*)?["']\s*>"""),
+            """<link rel="stylesheet" href="src/styles/$1.css$2" media="print" onload="this.media='all'">"""
+        )
+
+        // Inject strictly before the final closing </head> tag (never replace all occurrences of "</head>")
+        val lastHeadCloseIdx = html.lastIndexOf("</head>", ignoreCase = true)
+        if (lastHeadCloseIdx != -1) {
+            html = html.substring(0, lastHeadCloseIdx) + inlineStyleBuilder.toString() + html.substring(lastHeadCloseIdx)
+        }
 
         fastBootInlinedHtml = html
     }

@@ -11,8 +11,8 @@ android {
         applicationId = "vn.alphadaniel.duydevstudio"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2540
-        versionName = "25.4.0"
+        versionCode = 2550
+        versionName = "25.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
